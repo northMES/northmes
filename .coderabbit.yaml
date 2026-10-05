@@ -1,0 +1,286 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit review settings for NorthMES. docs/agents/coderabbit.md explains
+# how CodeRabbit fits the handoff flow and what the maintainer does by hand.
+# Base: the gqlPrune file (quiet bot, skip release and dependency bot PRs),
+# plus monorepo path filters and path instructions.
+# Schema: https://coderabbit.ai/integrations/schema.v2.json
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+tone_instructions: >-
+  Plain technical English. Name the rule, the file and the fix. No praise,
+  no emojis, no em or en dashes.
+
+reviews:
+  # chill: balanced feedback. handoff sends every unresolved thread back to the
+  # coder, so a nitpicky profile would mean more fix rounds per task.
+  profile: chill
+
+  # CodeRabbit requests changes when it posts actionable comments, resolves the
+  # threads a later review sees addressed, and approves a reviewed head commit
+  # once its threads are resolved. handoff's PR node treats an approval as
+  # "nothing to send back", so a clean review ends the wait at once.
+  request_changes_workflow: true
+  # handoff opens every PR with the maintainer's token, so the maintainer is
+  # the author. Keep this on so "@coderabbitai approve" and
+  # "@coderabbitai resolve" work on those PRs.
+  allow_author_approval: true
+
+  # The summary goes into the walkthrough comment, not the PR description:
+  # handoff writes and rewrites the description (Closes #N, screenshots).
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+
+  # Skip messages ("review needs a manual trigger", "rate limited") stay on, in
+  # the walkthrough comment, so the maintainer sees why no review came.
+  review_status: true
+  # No CodeRabbit check run or commit status on the head commit. handoff's PR
+  # node reads the whole check rollup; a CodeRabbit check that stays pending
+  # would hold the run with no time limit. The PR node waits for CodeRabbit
+  # through waitForReviewers instead, which has a timeout.
+  review_progress: false
+  commit_status: false
+  fail_commit_status: false
+
+  in_progress_fortune: false
+  poem: false
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  # Keep the "Prompt for AI Agents" block: handoff passes review comments to
+  # the coder agent as they are.
+  enable_prompt_for_ai_agents: true
+
+  auto_review:
+    enabled: true
+    # Only PRs to the default branch (main) are reviewed; drafts are skipped.
+    drafts: false
+    # Review every push. handoff's PR node waits for a review of the head
+    # commit after each push, so a push without a review waits out
+    # reviewTimeoutMinutes. Each push uses one review from the allowance
+    # either way: a manual "@coderabbitai review" costs the same.
+    # Below 10 stars CodeRabbit still reviews only on request.
+    auto_incremental_review: true
+    # The coder commits once per failing test and once per fix, so the default
+    # pause after 5 reviewed commits would stop reviews after the first round.
+    auto_pause_after_reviewed_commits: 0
+    ignore_title_keywords:
+      - 'chore(main): release'
+    ignore_usernames:
+      - 'renovate[bot]'
+      - 'dependabot[bot]'
+
+  # Generated, vendored and ignored files. CodeRabbit already skips lock
+  # files, dist, node_modules, binaries, images (including *.svg), *.csv,
+  # *.map, and directories named generated, __generated__ or gen by default.
+  path_filters:
+    - '!pnpm-lock.yaml'
+    - '!skills-lock.json'
+    # Committed GraphQL snapshots written by `northmes schema print`.
+    - '!schema/*.graphql'
+    - '!modules/*/schema.graphql'
+    # pnpm gen output: Kysely types (db.gen.ts), typed documents, CSS sources.
+    - '!**/*.gen.ts'
+    - '!**/*.gen.css'
+    - '!**/__snapshots__/**'
+    - '!apps/docs/reference/**'
+    - '!**/CHANGELOG.md'
+    # Third-party agent skills, vendored from mattpocock/skills.
+    - '!.claude/skills/**'
+    # Internal research notes (gitignored, listed in case one is committed).
+    - '!docs/research/**'
+    - '!docs/project-brief.md'
+
+  path_instructions:
+    - path: 'modules/*/server/**'
+      instructions: |
+        Server code of a NorthMES module (NestJS, Kysely, Postgres).
+        - Commands are the single write path. Every write runs through a registered command handler, and every GraphQL Mutation field maps to one. Flag inserts, updates or deletes in resolvers, jobs, event handlers or services that bypass the command pipeline.
+        - The pipeline loads the target and calls can(principal, permission, target.scope_id), or checks the requested scope for a create, before any write. Flag a write path without that check. Permission ids follow <module>.<entity>:<action>.
+        - Writes run inside the audit context opened by audit.begin_command in the command transaction. Flag code that writes outside a command transaction or opens its own audit row.
+        - Queries run in the scoped transaction helper that sets read_scopes and write_scopes. Flag queries that run outside that helper, and code that calls set_config for scopes itself.
+        - A module reads and writes only tables in its own schema. Another module's data comes through that module's <Id>ApiModule. Flag any Kysely query or SQL that names another module's schema.
+        - <Id>ApiModule holds plain providers and no resolvers.
+        - Flag sql.raw, sql.lit, and sql.ref or sql.id with non-literal input.
+        - Time values are Temporal types or UTC instant strings. Flag Date objects passed as query parameters.
+        - Only modules/ai/server/model-call.ts may import streamText, generateText or embed from the ai package.
+
+    - path: 'modules/*/{domain,server/domain}/**'
+      instructions: |
+        Pure domain code (plain TypeScript). Flag any import of @nestjs/*, kysely or pg, and any use of process.env.
+
+    - path: '**/migrations/**/*.sql'
+      instructions: |
+        Forward-only SQL migration, named <UTC yyyymmddHHMMss>_<slug>.sql, run as the module's owner role (nm_mod_<sql name>, for example nm_mod_production_start) in one transaction per file.
+        - The file carries an expand or contract marker. cascade, drop table, dropping a constraint on a referenced table and key type changes need the contract marker. Prefer expand/contract over one breaking change, so the previous release's image still runs on the new schema.
+        - Every new table enables row level security and has policies, or the PR names an allowlist entry with a reason. Policies are split: FOR SELECT on read_scopes, and separate FOR INSERT (WITH CHECK), FOR UPDATE (USING and WITH CHECK) and FOR DELETE (USING) on write_scopes. Write scopes are a subset of read scopes, so no write policy may allow a scope that the select policy hides. Flag any FOR ALL policy. Do not ask for FORCE ROW LEVEL SECURITY: release 1 does not use it.
+        - Tables live in the module's own schema and are owned by its nm_mod_<sql name> role. nm_app gets SELECT, INSERT, UPDATE and DELETE only; flag any TRUNCATE grant.
+        - Child tables carry scope_id copied from their parent. Every audited table has a uuid id column and the audit.capture_row trigger, or an allowlist entry with a reason.
+        - Flag bytea columns and columns whose name contains secret, ciphertext, password, token or key unless the PR declares them secret.
+        - The file runs inside a transaction, so CREATE INDEX CONCURRENTLY is not available. Do not suggest it.
+
+    - path: 'modules/*/web/**'
+      instructions: |
+        Module web remote (React, Module Federation). WCAG 2.2 AA:
+        - Every interactive element works by keyboard, and every drag has a single-pointer alternative (2.5.7).
+        - Pointer targets are at least 24 by 24 CSS px (2.5.8); sizes come from the --nm-target-min token through @northmes/ui.
+        - State is never shown by color alone (1.4.1); pair color with text, an icon or a pattern.
+        - Every control has an accessible name and a visible label. Focus stays visible and is not hidden by sticky regions (2.4.11).
+        - Status changes are announced through announce() from @northmes/web-sdk, not ad hoc aria-live regions.
+        Build screens from @northmes/ui components. Flag direct imports of @base-ui/* or Radix, raw colors or sizes that are not tokens, and dynamic class names. A remote ships no CSS of its own.
+
+    - path: 'packages/ui/**'
+      instructions: |
+        @northmes/ui: shared primitives on Base UI, tokens and presentational patterns. Every interactive primitive meets WCAG 2.2 AA by default: keyboard operation, a single-pointer alternative for any drag, targets of at least 24 by 24 CSS px through --nm-target-min, no state by color alone, an accessible name and label, visible focus. Flag imports of Apollo, TanStack Router or GraphQL.
+
+    - path: 'packages/{contracts,sdk,web-sdk,ui,web-build,testing}/**'
+      instructions: |
+        MIT-licensed package. It must not import AGPL code: flag any import or package.json dependency on @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or any path under modules/*/server, modules/*/web, modules/*/domain or apps/. The package.json license field stays MIT. A changed or removed export is a breaking change: the PR title needs ! and the docs change in the same PR.
+
+    - path: 'modules/*/contracts/**'
+      instructions: |
+        MIT-licensed module contracts package (@northmes/<module>-contracts). It may depend on @northmes/contracts and other MIT packages only. Flag imports from the module's server, web or domain code, from other modules' AGPL packages, or from apps/. Changing a slot's props means a new slot version (v2) while v1 stays for one deprecation window; events are versioned too, so a changed event payload needs a new event version.
+
+    - path: '**/*.test.{ts,tsx}'
+      instructions: |
+        Tests are written first: a behaviour change in the PR comes with a test that fails without it. Integration tests (*.int.test.ts) start their own Postgres with @testcontainers/postgresql through the harness in @northmes/testing; flag a shared database, a hard-coded DATABASE_URL or tests that depend on each other's data. Tests use the mocked AI provider; real model calls belong only in *.ai.test.ts files, which run only through pnpm test:ai or pnpm test:e2e:ai. Test names use glossary terms.
+
+    - path: '**/e2e/**'
+      instructions: |
+        Playwright end-to-end tests against the built app and a Postgres started with @testcontainers/postgresql. No shared database. No real AI provider: the stub OpenAI-compatible server stands in, except in runs started by pnpm test:e2e:ai.
+
+    - path: 'docs/adr/**'
+      instructions: |
+        ADRs follow docs/adr/template.md (MADR). Front matter has status, date, decision-makers, consulted, informed, release and needs-confirmation. A new ADR has status proposed; flag a new ADR with status accepted, because only the maintainer accepts ADRs. Each Confirmation item names a test, lint rule or CI check that a task can carry; flag Confirmation text that names none.
+
+    - path: '{docs/**,**/*.md,.github/**/*.md,apps/docs/**/*.mdx}'
+      instructions: |
+        Plain technical prose. Flag em dashes and en dashes, Title Case headings (headings use sentence case), curly quotes, emojis in headings or bullets, and filler phrases. Docs describe the system as it is, not as a diff. MDX under apps/docs uses only plain Markdown plus Card, Steps, Tabs, CodeGroup, callouts, ParamField, ResponseField and Update.
+
+    - path: '.coderabbit.yaml'
+      instructions: |
+        CodeRabbit reads this file from the PR's own branch, so a change here already applies to the review of this PR. Flag any change that drops a path instruction, excludes source, test or migration files through path_filters, or turns off request_changes_workflow or auto_incremental_review, and say so in the summary.
+
+    - path: '.github/workflows/**'
+      instructions: |
+        Every action is pinned by full commit SHA with a version comment. permissions are least privilege, set per job, with a read-only default at the top. No pull_request_target trigger. actions/checkout sets persist-credentials: false. Flag ${{ github.event.* }} values interpolated straight into run scripts.
+
+  finishing_touches:
+    # handoff's coder writes code and tests in its own worktree. Commits or
+    # stacked PRs from CodeRabbit would race handoff's force-with-lease push.
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  pre_merge_checks:
+    # All checks warn and never block. CI and the branch ruleset are the gate.
+    docstrings:
+      mode: 'off'
+    title:
+      mode: warning
+      requirements: >-
+        The title is the release note line. Format: type(module): outcome for
+        users, as a Conventional Commit, for example
+        "feat(planning): show late orders on the board". feat, fix, security,
+        perf and revert reach the changelog. A breaking change has ! before the
+        colon. The text describes what users get, not how the code changed.
+    description:
+      mode: 'off'
+    issue_assessment:
+      mode: warning
+    custom_checks:
+      - name: MIT packages import no AGPL code
+        mode: warning
+        instructions: >-
+          Scope: changed files under packages/contracts, packages/sdk,
+          packages/web-sdk, packages/ui, packages/web-build, packages/testing
+          and modules/*/contracts. Fail if any of them adds an import, a
+          re-export or a package.json dependency that points at
+          @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or a
+          path under modules/*/server, modules/*/web, modules/*/domain or
+          apps/. Fail if a package.json license field in that scope changes
+          from MIT. Pass otherwise, including when no file in scope changed.
+      - name: Row-level security on new tables
+        mode: warning
+        instructions: >-
+          Scope: added or changed .sql files under any migrations directory.
+          Fail if a CREATE TABLE statement in the diff has no ALTER TABLE ...
+          ENABLE ROW LEVEL SECURITY for that table in the same PR, unless the
+          PR description names the table in an allowlist entry with a reason.
+          Fail if any CREATE POLICY in the diff uses FOR ALL or omits the FOR
+          clause. Pass otherwise, including when no migration changed.
+      - name: Behaviour change has a test
+        mode: warning
+        instructions: >-
+          Scope: changed files under modules/, packages/ and examples/,
+          migrations and contracts included, excluding docs directories,
+          generated files (*.gen.ts, *.gen.css, schema.graphql) and test
+          files. Test files are files named *.test.ts, *.test.tsx or
+          *.int.test.ts and files under an e2e directory. Fail if at least one
+          file in scope changed and the PR adds or changes no test file. Pass
+          otherwise. A pure refactor fails this check by design; the PR
+          description then says why no test changed.
+
+  tools:
+    # Biome is the project's linter and formatter; one linter, one rule set.
+    biome:
+      enabled: true
+    eslint:
+      enabled: false
+    oxc:
+      enabled: false
+    # Squawk checks Postgres migrations for unsafe schema changes.
+    squawk:
+      enabled: true
+    # SQLFluff and LanguageTool would apply style rules this repository does
+    # not use (SQL layout, general English grammar).
+    sqlfluff:
+      enabled: false
+    languagetool:
+      enabled: false
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+chat:
+  art: false
+  # Reply only when mentioned with @coderabbitai. handoff posts its own
+  # comments on the PR, and chat has its own hourly limit.
+  auto_reply: false
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  code_guidelines:
+    enabled: true
+    # Every CLAUDE.md and AGENTS.md is read by default, each scoped to its
+    # own directory. Add the root glossary.
+    filePatterns:
+      - GLOSSARY.md
+
+# Issues are shaped with handoff, and run agents read issue comments as part
+# of their context. CodeRabbit stays out of the issues.
+issue_enrichment:
+  auto_enrich:
+    enabled: false
+  planning:
+    enabled: false
+    auto_planning:
+      enabled: false
+  labeling:
+    auto_apply_labels: false
