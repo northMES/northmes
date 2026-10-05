@@ -380,7 +380,7 @@ Behaviour-affecting configuration lives in audited database tables as Zod-define
 
 ## Boot sequence
 
-Role `all` boots in a fixed order. Any hard failure exits with code 1 and lists every problem it found in one message ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Step 1 parses the environment against the Zod configuration schema through `@nestjs/config` and reads the secret files; a bad value stops boot before any manifest is imported ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed).
+Role `all` boots in a fixed order. Any hard failure exits with code 1 and lists every problem it found in one message ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Step 1 parses the environment against the Zod configuration schema through `@nestjs/config` and reads the secret files; a bad value stops boot before any manifest is imported ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 
 ```mermaid
 flowchart TD
@@ -408,7 +408,7 @@ flowchart TD
 
 | Step | What happens | Fails hard on |
 |---|---|---|
-| 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed) | an invalid or missing environment key; a missing, empty or other-readable secret file; an unreadable config file; a version field that differs from the image |
+| 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)) | an invalid or missing environment key; a missing, empty or other-readable secret file; an unreadable config file; a version field that differs from the image |
 | 2. Resolve hook | `module.registerHooks` maps host-provided packages imported from any plugin root to the host's copy | |
 | 3. Manifests | import every manifest; manifests import only `defineModule`, so no Nest code loads | missing `exports["./manifest"]`, import error, invalid id |
 | 4. Catalog checks | duplicate ids, derived-name collisions, `dependsOn` present, no cycles, no core module depending on a plugin, `northmes` range, key prefixes, slot ownership; topological order with core first | any of these |
@@ -532,7 +532,7 @@ Each check below is a test or CI job that a task carries.
 | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) | release 1 scope and the scope rule |
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the pure scheduling package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | developer environment and the skeleton gate |
-| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | configuration, the environment schema and secret files at boot step 1 (proposed) |
+| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | configuration, the environment schema and secret files at boot step 1 |
 
 ## Open items
 

@@ -436,7 +436,7 @@ Codes named by the decisions so far:
 | `core.secret_reentry_required` | an outbound URL changed without a new secret |
 | `core.list.bad_argument`, `core.list.invalid_cursor`, `core.list.ref_search_too_broad` | list argument errors (`BAD_USER_INPUT`) |
 | `planning.board.range_too_large` | board range above its day or row limit |
-| `core.request.malformed`, `core.request.too_large`, `core.request.unsupported_media_type`, `core.request.rate_limited` | request and transport errors on REST routes; working defaults (M-51) |
+| `core.request.malformed`, `core.request.too_large`, `core.request.unsupported_media_type`, `core.request.rate_limited` | request and transport errors on REST routes (M-51) |
 | `core.internal` | a masked error |
 
 ### The exception filter
@@ -450,7 +450,7 @@ Exceptions that are not a `DomainError`:
 
 1. `PermissionGuard` and `PrincipalGuard` throw a `DomainError` (`core.forbidden` with `details.permission`, or kind `unauthenticated`) and never return false, because a guard that returns false makes Nest throw its own `ForbiddenException`.
 2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`.
-3. Other 4xx statuses are transport errors. They keep their HTTP status and carry a core code: 413 `core.request.too_large`, 415 `core.request.unsupported_media_type` and 429 `core.request.rate_limited` with a `Retry-After` header. The code names are working defaults (M-51 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents)).
+3. Other 4xx statuses are transport errors. They keep their HTTP status and carry a core code: 413 `core.request.too_large`, 415 `core.request.unsupported_media_type` and 429 `core.request.rate_limited` with a `Retry-After` header. The code names answer M-51 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents).
 4. A 5xx status and anything else is masked.
 5. Core's user-management handlers translate a Better Auth `APIError` from `auth.api` into `core.user.*` codes ([0011][adr-0011]). An `APIError` that escapes them is masked.
 6. A `GraphQLError` thrown by module code is masked like any unknown error, because modules throw `DomainError`.
@@ -667,7 +667,7 @@ Boot asserts that Better Auth's `enableSessionForAPIKeys` is false and that `dis
 | `x-northmes-client-build` | request | `createNorthmesClient` | build the tab booted with |
 | `x-northmes-operator-session` | request | station client | operator bearer for the station's open operator session; stored hashed |
 | `x-northmes-build` | response and `connection_ack` | gateway | `<version>+<supergraphHash>` |
-| `x-northmes-correlation-id` | response | server | the request's correlation id; a client-sent correlation header is ignored (working default, M-52) |
+| `x-northmes-correlation-id` | response | server | the request's correlation id; a client-sent correlation header is ignored (M-52) |
 
 Request logs redact `cookie`, `authorization`, `x-api-key`, the operator-session header and `set-cookie` ([0046](../adr/0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md)).
 

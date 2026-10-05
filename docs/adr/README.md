@@ -92,7 +92,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-05 the index holds 60 ADRs: 32 accepted and 28 proposed, 57 for release 1 and 3 for a later release. 14 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0005, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052 and 0053.
+On 2026-10-05 the index holds 60 ADRs: 33 accepted and 27 proposed, 57 for release 1 and 3 for a later release. 15 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0005, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053 and 0060.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -155,6 +155,6 @@ On 2026-10-05 the index holds 60 ADRs: 32 accepted and 28 proposed, 57 for relea
 | 0057 | [Scheduling domain as a pure package in the planning module](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | proposed | 1 | maintainer |
 | 0058 | [Developer environment: source exports, one stack script and one gate command](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | 1 | |
 | 0059 | [Time-series storage port with an open default backend](0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | later | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
-| 0060 | [Configuration with @nestjs/config, one Zod environment schema and secret files](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | proposed | 1 | |
+| 0060 | [Configuration with @nestjs/config, one Zod environment schema and secret files](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | 1 | |
 
 Next free number: 0061. Only Krister Johansson sets a status to accepted.

@@ -232,7 +232,7 @@ These changes still need a new image: a plugin that needs another version of a h
 
 ### Configuration for plugins
 
-A plugin reads no environment variables. `pnpm plugin:check` refuses an import of `@nestjs/config` or `@northmes/sdk/config`, and Biome's `style/noProcessEnv` covers the in-repo example plugins. A plugin's behaviour comes from its settings, which are audited ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed).
+A plugin reads no environment variables. `pnpm plugin:check` refuses an import of `@nestjs/config` or `@northmes/sdk/config`, and Biome's `style/noProcessEnv` covers the in-repo example plugins. A plugin's behaviour comes from its settings, which are audited ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 
 ### Fail hard or degrade
 
@@ -426,7 +426,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | licenses, the dependency gate, the MIT package set |
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the scheduling domain package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | the skeleton and when the examples land |
-| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | plugins read no environment variables (proposed) |
+| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | plugins read no environment variables |
 
 ## Open items
 

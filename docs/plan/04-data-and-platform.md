@@ -780,7 +780,7 @@ Required tests: two transactions that commit out of insertion order are both del
 
 Settings are Zod definitions (`defineSettings`) in module contracts packages. Their values are stored in audited database tables at company and plant scope and rendered by the shared `SettingsForm`. Adding a module setting is one field in that module's settings schema. See [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
 
-- Behaviour-affecting configuration never lives in environment variables. Environment variables hold only infrastructure settings and the paths of secret files ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed). This is one of the regulated readiness rules ([15-regulated-readiness.md](15-regulated-readiness.md)).
+- Behaviour-affecting configuration never lives in environment variables. Environment variables hold only infrastructure settings and the paths of secret files ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). This is one of the regulated readiness rules ([15-regulated-readiness.md](15-regulated-readiness.md)).
 - Switches that look like infrastructure but change behaviour are audited settings commands. Examples: enabling `/mcp` for the installation, and a connector's shadow or live write-back mode.
 - A settings change bumps `core.config_revision` (see [Configuration revision](#configuration-revision)), and the next command row records the new revision.
 - Settings fields without a label and a description are refused at boot.

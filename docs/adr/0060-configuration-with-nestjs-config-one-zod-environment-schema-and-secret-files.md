@@ -1,7 +1,7 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-10-05
-decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+decision-makers: Krister Johansson
 consulted: Krister Johansson
 informed: contributors, plugin authors, coding agents and pilot IT
 release: "1"
@@ -88,7 +88,7 @@ Chosen option: "`@nestjs/config` 12 with a Zod environment schema, a `secrets` n
 ### Other entry points and tests
 
 * `northmes migrate` runs boot steps 1 to 10 without listening ([ADR 0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md)). In that mode `apps/server` validates `migrateEnvSchema`, the `secrets` namespace holds only the owner password, and step 5 runs as `nm_owner`. Providers that read keys or secrets the migrate schema lacks get the placeholders that `northmes schema print` uses; they construct no pool other than the owner's and send nothing.
-* `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container ([ADR 0011](0011-principals-credentials-and-same-origin-rules.md)) with `migrateEnvSchema`. Whether they also need the Better Auth secret, which [ADR 0047](0047-secrets-and-the-installation-key.md) gives only to `app`, is open (M-53 in [16 open questions](../plan/16-open-questions.md#design-points-from-the-plan-documents)).
+* `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container ([ADR 0011](0011-principals-credentials-and-same-origin-rules.md)) with `migrateEnvSchema`. If Better Auth needs its secret to create a user, the `migrate` service also receives `auth_secret` ([ADR 0047](0047-secrets-and-the-installation-key.md); M-53 in [16 open questions](../plan/16-open-questions.md#design-points-from-the-plan-documents), answered 2026-10-05).
 * `northmes db bootstrap` runs without the Nest app and parses `bootstrapEnvSchema`: `DATABASE_URL`, `POSTGRES_PASSWORD_FILE` and the password file of each login role it creates.
 * `northmes schema print` registers `ConfigModule` with a fixed placeholder record and placeholder secrets through `load`, with `validatePredefined: false`, `skipProcessEnv: true` and no `validate`. Providers that inject `ConfigService` or `secretsConfig.KEY` resolve, no pool is constructed, and `DATABASE_URL` stays unset ([ADR 0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md)).
 * `@northmes/testing` exports `configForTest(overrides)`. It validates the record with the same `loadEnv` and registers the result through `load`, with `ignoreEnvFile: true`, `validatePredefined: false`, `skipProcessEnv: true` and no `validate`, so `forRoot` neither reads nor writes `process.env`. Two apps built in one Vitest process, as `createReplicas(2)` does, share no values ([ADR 0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md)). The end-to-end fixture passes the environment, with `NODE_ENV=test`, to the spawned server.
@@ -139,7 +139,7 @@ Chosen option: "`@nestjs/config` 12 with a Zod environment schema, a `secrets` n
 
 * The earlier attempt's services used `@nestjs/config` with a Zod validate function per service. The `@nestjs/config` 12.0.0 sources show that `forRoot` runs `validate` when it is called, writes validated values into `process.env`, and creates `load` factories only at Nest create.
 * Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) boot sequence, [0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) database roles, [0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) migrate, [0010](0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) Better Auth telemetry, [0011](0011-principals-credentials-and-same-origin-rules.md) public origin and admin commands, [0017](0017-zod-contracts-as-the-single-source-for-inputs.md) Zod, [0022](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) settings, [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) plugin check, [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) test fixtures, [0044](0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md) `northmes.env`, [0047](0047-secrets-and-the-installation-key.md) secrets per service, [0048](0048-documentation-on-docs7-at-docs-northmes-dev.md) configuration reference, [0058](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) stack script and dev secrets.
-* Once this ADR is accepted, step 1 of the boot sequence in ADR 0002 also covers the environment, and the statement in ADRs 0022 and 0051 that environment variables hold "infrastructure settings and secrets" reads "infrastructure settings and the paths of secret files".
+* Step 1 of the boot sequence in ADR 0002 also covers the environment, and the statement in ADRs 0022 and 0051 that environment variables hold "infrastructure settings and secrets" reads "infrastructure settings and the paths of secret files".
 * Plan: [02 architecture](../plan/02-architecture.md) (boot sequence), [12 operations and security](../plan/12-operations-and-security.md) (`northmes.env` and secrets).
 * Nest configuration documentation: https://docs.nestjs.com/application/configuration
 * Revisit when a deployment target other than Compose needs another secret source, or when `@nestjs/config` changes its validation interface.
