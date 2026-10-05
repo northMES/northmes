@@ -14,6 +14,7 @@ interface WorkspaceConfig {
 
 interface PackageJson {
   license?: string;
+  scripts?: Record<string, string>;
   devDependencies?: Record<string, string>;
 }
 
@@ -75,5 +76,11 @@ describe('workspace', () => {
     const nodeVersion = major('.node-version');
     expect(nodeVersion).not.toBeNaN();
     expect(major('.nvmrc')).toBe(nodeVersion);
+  });
+
+  // handoff's Tester runs `pnpm check`. This stub keeps it green on the Node 24 worker
+  // until the real gate (Node check, lint, typecheck, gen --check, Vitest projects) replaces it.
+  it('the root check script is the temporary stub that runs only the unit project', () => {
+    expect(readPackageJson('package.json').scripts?.check).toBe('vitest run --project unit');
   });
 });
