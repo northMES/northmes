@@ -2008,6 +2008,8 @@ Notes: D1 also settles the design project's bound design system, which is not us
 
 ##### E04-S01-T01 ui: Design the tokens, contrast and component states (D1)
 
+Issue: northMES/northmes#189.
+
 Labels: `task`, `design`, `human`, `area: web`. Blocked by: none. D1 runs beside E02 in weeks 2 and 3 ([0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)).
 
 ```markdown
@@ -2073,6 +2075,8 @@ Tests first:
 - `e2e/not-found.spec.ts`: "an unknown path under a loaded module shows its not-found page with a title and one h1".
 
 ##### E04-S02-T01 web: Design the shell, navigation and station frame (D2)
+
+Issue: northMES/northmes#190.
 
 Labels: `task`, `design`, `human`, `area: web`. Blocked by: E04-S01-T01. D2 runs beside E02 in weeks 2 and 3 ([0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)).
 
