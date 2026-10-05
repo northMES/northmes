@@ -668,6 +668,8 @@ flowchart LR
 
 ### Order of design work
 
+Status on 2026-10-05: a variations round of five look-and-feel directions (`ui-d1-directions.dc.html` in the design project) chose Direction A, Graphite (`ui-d1-direction-a.dc.html`): IBM Plex Sans for interface text and IBM Plex Mono for numbers, both under the SIL Open Font License and self-hosted in the product, a 6 px corner radius and 36 px controls. D1 builds the token base and the contrast table from it.
+
 1. D1 tokens and contrast: settle the bound design system (remove the Broadsheet binding or move to a new project), the token base with the fixes above, the contrast table per pair with ratios from the repository test, the order palette and group colors, the block text rule, the state marker set, the two-tone focus ring, the font and icon set, and the shadcn components in every state, including the 24 px checkbox hit area.
 2. D2 shell and navigation: sidebar with core, module and plugin sections in a stable order, collapsed rail and 320 px sheet; top bar with breadcrumb, page actions slot, help menu and user menu; plant switcher as a menu of links; skip link and landmarks; title pattern; module unavailable placeholder and error panel; the station frame.
 3. D3 planning board and D4 operator station, in either order once D2 is approved. New kinds of screens get a variations round (three or more options) before the spec page.

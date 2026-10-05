@@ -975,7 +975,7 @@ Tests first:
 
 Labels: `task`, `human`, `area: ci` (interactive session, approval cards). Blocked by: E00-S03-T01, E00-S04-T03, E00-S05-T03, E00-S06-T02, E01-S01-T01.
 
-Status on 2026-10-05: the three graphs are imported, with `northmes-guided` as the default; the repository's skills are in the library group `northmes`; the planner, plan reviewer and coder name `tdd`, `codebase-design` and `context7`. The agent notes, the setup command, the milestones and the run configuration deny remain.
+Status on 2026-10-05: the three graphs are imported, with `northmes-guided` as the default; the repository's skills are in the library group `northmes`; the planner, plan reviewer and coder name `tdd`, `codebase-design` and `context7`. The setup command and the agent notes are set: until `scripts/handoff/setup.sh` exists the setup command runs `pnpm install --frozen-lockfile` when a `package.json` exists, and nothing before that. The milestones and the run configuration deny remain.
 
 ```markdown
 Plan: E00-S07-T01
