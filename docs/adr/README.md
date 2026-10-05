@@ -30,6 +30,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 - Every decision that the plan in `docs/plan` lists has an ADR.
 - A session also offers an ADR when a decision is hard to reverse, surprising without context and a real trade-off.
 - A changed decision gets a new ADR. The old ADR's status becomes `superseded by ADR-NNNN`, and its text stays as it was.
+- A new ADR that changes only part of an accepted ADR leaves that ADR accepted and its text unchanged. The new ADR names the parts it replaces in a section headed "Changes to ADR NNNN", and the rest of the old ADR stands. The old ADR is superseded only when the new one replaces its whole decision.
 
 ### Steps
 

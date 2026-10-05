@@ -608,6 +608,8 @@ scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility,
 .github/PULL_REQUEST_TEMPLATE.md (new): validation impact none, UI only, records, security, calculation or data migration
 .coderabbit.yaml (already on main and valid; keep reviews.auto_review.auto_incremental_review, reviews.request_changes_workflow, reviews.allow_author_approval and reviews.review_progress true, and reviews.commit_status and reviews.fail_commit_status false)
 test/meta/github-files.test.ts (new)
+scripts/repo/check-ruleset.mjs (new) and scripts/repo/check-ruleset.test.ts (new): reads the main ruleset through the GitHub API; a weekly CI job, repo settings, runs it (ADR 0065)
+scripts/repo/commit-authors.mjs (new) and scripts/repo/commit-authors.test.ts (new): the pull request check ci / commit authors (ADR 0065)
 Seam: the test parses the YAML and Markdown files.
 
 ## Tests first
@@ -616,6 +618,8 @@ Seam: the test parses the YAML and Markdown files.
 - github-files.test.ts: ".coderabbit.yaml turns on incremental reviews, review_progress, request_changes_workflow and allow_author_approval, and turns off commit_status and fail_commit_status"
 - github-files.test.ts: "scripts/labels.sh creates epic, story, task, human, design and spike"
 - github-files.test.ts: ".bestpractices.json names the project id"
+- check-ruleset.test.ts: "a ruleset with 0 required approvals fails naming required_approving_review_count"
+- commit-authors.test.ts: "a commit whose author has no GitHub login fails naming its sha"
 
 ## Design
 none
