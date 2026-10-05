@@ -14,6 +14,9 @@ allowBuilds:
   protobufjs: false
   ssh2: false
 
+catalogMode: strict
+
 catalog:
+  typescript: 6.0.3
   vitest: 5.0.1
   yaml: 2.9.1

@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    typescript:
+      specifier: 6.0.3
+      version: 6.0.3
     vitest:
       specifier: 5.0.1
       version: 5.0.1
@@ -17,6 +20,9 @@ importers:
 
   .:
     devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(vite@8.3.2(yaml@2.9.1))
@@ -324,6 +330,11 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   vite@8.3.2:
     resolution: {integrity: sha512-SQr1x6W5vVSbROg7vsyXIaxK9b0G7zsT68acdWWRmnBUsgDieLCRG+Rep9WdZgcposvv/GSnr4GUUBqB3vXq6w==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -623,6 +634,8 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
+
+  typescript@6.0.3: {}
 
   vite@8.3.2(yaml@2.9.1):
     dependencies:
