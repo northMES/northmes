@@ -1,3 +1,12 @@
+packages:
+  - apps/*
+  - modules/*
+  - modules/*/contracts
+  - modules/*/web
+  - modules/planning/domain
+  - packages/*
+  - examples/*
+
 pmOnFail: ignore
 
 allowBuilds:

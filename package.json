@@ -1,6 +1,7 @@
 {
   "name": "northmes",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@12.6.0",
   "devDependencies": {
     "vitest": "catalog:",
