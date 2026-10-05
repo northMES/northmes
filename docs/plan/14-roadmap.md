@@ -1712,13 +1712,13 @@ Acceptance criteria:
 - `setupSeconds = retoolSeconds + fixedSeconds` and `runSecondsFor(n)` takes the ceiling of whole cycles in scaled integers, divided by the planning factor, rounded up to the second; retool is not divided by the planning factor.
 - TC1, TC2, TC3, TC4 and TC11 give the durations and ends in the worked example.
 - Cycle time entered as seconds or as pieces per hour (TC12) gives the stored seconds; display rounding never feeds back into the calculation.
-- Invalid rates (quantity below 0, cycles or pieces per cycle at or below 0, planning factor outside (0, 2]) give a per-row "invalid rates" result while other rows are computed.
+- Invalid rates (quantity below 0, cycles or pieces per cycle at or below 0, cycle seconds below 0, planning factor outside (0, 2]) give a per-row "invalid rates" result while other rows are computed.
 - A lint test fails on any Nest, pg or `process.env` import in the package, and on `localeCompare` or `Intl.Collator` in domain code.
 
 Tests first:
 
 - `modules/planning/domain/src/duration.test.ts`: "TC1 ends Fri 2026-11-06 14:30 local"; "TC4 with 7 201 pieces ends 14:31"; "TC11 asserts 146 700 s"; "quantity 0 gives setup only and no send-ahead release".
-- `modules/planning/domain/test/purity.test.ts`: "no file imports @nestjs, pg or process.env".
+- `modules/planning/domain/test/domain-imports.test.ts`: "no file imports @nestjs, pg or process.env"; "no domain file calls localeCompare or Intl.Collator".
 
 #### E03-S03 planning: Resolve override rates and freeze them on placement
 
@@ -1738,7 +1738,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `modules/planning/domain/src/rates.test.ts`: "TC5 tool override gives 56 700 s"; "operation equipment cycleSeconds wins over the operation"; "a fixed row keeps its frozen run seconds after the operation changes".
+- `modules/planning/domain/src/duration.test.ts`: "TC5 tool override gives 56 700 s"; "operation equipment cycleSeconds wins over the operation"; "a fixed row keeps its frozen run seconds after the operation changes".
 
 #### E03-S04 planning: Place job orders backward from the deadline
 
@@ -1758,7 +1758,9 @@ Acceptance criteria:
 
 Tests first:
 
-- `modules/planning/domain/src/plan.test.ts`: "TC9 releases operation 20 at Mon 07:40"; "TC10 with startOfDay gives a latest start of Fri 2026-11-06 06:30"; "TC10 with endOfShift gives Mon 2026-11-09 06:30"; "priority 1 gets the just-in-time slot under shortage".
+- `modules/planning/domain/src/release.test.ts`: "TC9 releases operation 20 at Mon 07:40".
+- `modules/planning/domain/src/deadline.test.ts`: "TC10 with startOfDay gives a latest start of Fri 2026-11-06 06:30"; "TC10 with endOfShift gives Mon 2026-11-09 06:30".
+- `modules/planning/domain/src/plan.test.ts`: "priority 1 gets the just-in-time slot under shortage".
 
 Notes: the earlier attempt's defects to fix test-first are listed with the port in [07-production-planning.md](07-production-planning.md).
 
@@ -2457,7 +2459,8 @@ Acceptance criteria:
 
 Tests first:
 
-- `packages/contracts/src/units/convert.test.ts`: fast-check "converting to canonical and back returns the value" against the mathjs oracle; "420 pieces per hour is 8.571428... s".
+- `packages/sdk/src/units/convert.test.ts`: fast-check "a round trip through canonical stays within 1e-12 relative" against the mathjs oracle.
+- `packages/sdk/src/units/cycle-time.test.ts`: "420 pieces per hour stores 3600/420 s and reads back as 420 after display rounding".
 - `apps/server/test/gateway/unit-enums.test.ts`: "a unit enum defined in two subgraphs fails composition unless it is the shared one".
 
 #### E06-S02 sdk: Page, filter, sort, search and group every list as a connection
