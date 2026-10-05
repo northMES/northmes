@@ -68,4 +68,12 @@ describe('workspace', () => {
     }
     expect(readPackageJson('package.json').devDependencies?.typescript).toBe('catalog:');
   });
+
+  it('.node-version and .nvmrc name the same Node major', () => {
+    const major = (path: string) => Number.parseInt(readText(path).trim().replace(/^v/, ''), 10);
+
+    const nodeVersion = major('.node-version');
+    expect(nodeVersion).not.toBeNaN();
+    expect(major('.nvmrc')).toBe(nodeVersion);
+  });
 });
