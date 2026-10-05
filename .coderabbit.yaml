@@ -190,11 +190,14 @@ reviews:
     title:
       mode: warning
       requirements: >-
-        The title is the release note line. Format: type(module): outcome for
-        users, as a Conventional Commit, for example
+        The title is a Conventional Commit: type(module): outcome, for example
         "feat(planning): show late orders on the board". feat, fix, security,
-        perf and revert reach the changelog. A breaking change has ! before the
-        colon. The text describes what users get, not how the code changed.
+        perf and revert reach the changelog, so their title is the release note
+        line and describes what users get. A change with no user-visible
+        outcome uses a type that stays out of the changelog: docs, chore, ci,
+        test, refactor or build. That type is correct for such a change and
+        needs no release note. A breaking change has ! before the colon. The
+        text describes the outcome, not how the code changed.
     description:
       mode: 'off'
     issue_assessment:
