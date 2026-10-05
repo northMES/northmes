@@ -2045,7 +2045,7 @@ Labels: `task`, `design`, `human`, `area: web`. Blocked by: none. D1 runs beside
 ```markdown
 Plan: E04-S01-T01
 Owning story: E04-S01 (issue number once it exists). UI tasks waiting on this: the UI tasks of E04-S01.
-Page: ui-<issue>-tokens.dc.html (variations page first: no)
+Page: ui/ui-<issue>-tokens.dc.html (variations page first: no)
 
 ## Frames
 - The token base: shadcn neutral with the fixes for input borders, the focus ring, accent and muted text
@@ -2113,7 +2113,7 @@ Labels: `task`, `design`, `human`, `area: web`. Blocked by: E04-S01-T01. D2 runs
 ```markdown
 Plan: E04-S02-T01
 Owning story: E04-S02 (issue number once it exists). UI tasks waiting on this: the UI tasks of E04-S02 to E04-S05 and the sign-in task of E05-S05.
-Page: shell-<issue>-navigation.dc.html (variations page first: yes, the shell is a new kind of screen)
+Page: shell/shell-<issue>-navigation.dc.html (variations page first: yes, the shell is a new kind of screen)
 
 ## Frames
 - Sidebar with core, module and plugin sections in a stable order, one group per module and nav entries nested one level; the collapsed rail; the 320 px sheet
@@ -2135,7 +2135,7 @@ shadcn components by name, tokens from D1, keyboard and focus order, landmarks, 
 docs/adr/0019-web-shell-with-react-module-federation-remotes.md, docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/plan/06-web-and-ux.md (shell layout, failure handling, order of design work); the approved D1 page
 
 ## Output
-docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames Shell.dc.html and StationFrame.dc.html that later pages mount; Design section on the waiting UI tasks
+docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames shell/Shell.dc.html and shell/StationFrame.dc.html that later pages mount; Design section on the waiting UI tasks
 
 ## Acceptance criteria
 - [ ] Every frame in the list exists in light and dark
