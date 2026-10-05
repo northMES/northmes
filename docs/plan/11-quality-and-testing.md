@@ -11,7 +11,7 @@ NorthMES is built test first. Every change starts with a failing test, integrati
 | Source exports, one stack script, one gate command | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | none |
 | Configuration, `configForTest` and the end-to-end environment | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | none |
 | Node and TypeScript pins, runtime test | [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | maintainer (Node pin after the week-1 test; TypeScript 6.0.x) |
-| Pinned database image for tests | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | none |
+| Pinned database image for tests | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
 | Time-series contract suite and benchmark gate (later) | [0059](../adr/0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
 | Time, Temporal and the time zone matrix | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | none |
 | Presentation formatters, the locale leg and the format lint | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | none |
@@ -23,6 +23,7 @@ NorthMES is built test first. Every change starts with a failing test, integrati
 | Plugin checks and example plugins in CI | [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) | accepted | maintainer (no third-party plugin on the pilot; web-only plugins degrade); product owner (unpaid-invoice validator) |
 | Version checks, API reports, N-1 widget | [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) | accepted | maintainer (no range override in 0.x) |
 | Schema snapshot and composition corpus | [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) | accepted | none |
+| Route families, the boot route check and the later OpenAPI diff gate | [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | none |
 | Ops tests: restore drill, upgrade and rollback | [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md) | proposed | maintainer and pilot IT (disk layout, offsite target, RPO and RTO); product owner (upgrade window) |
 | Required checks and CI runners | [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md) | accepted | none |
 | Requirement ids in tests, validation impact | [0051](../adr/0051-regulated-readiness-no-regret-rules.md) | accepted | lawyer (signature path, CRA role); product owner (regulated profile switch) |
@@ -106,7 +107,7 @@ Root scripts:
 | `pnpm test:ai`, `pnpm test:e2e:ai` | The live AI suites | A person, or the scheduled live workflow |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+Every CI gate step except the pull request checks (`ci / linked issue`, `ci / pr title` and, from the first public route, `ci / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
 
 ## Testcontainers harness
 
@@ -374,13 +375,22 @@ The ruleset on `main` requires these checks, strict (the branch must be up to da
 
 | Check | Runs |
 |---|---|
-| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration, web and types projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists) and `ci / cla` (before the first outside pull request). |
+| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration, web and types projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists), `ci / cla` (before the first outside pull request) and `ci / openapi diff` (with the first public route). |
 | `ci / a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
 | `CodeQL` | GitHub's default setup for `actions` and `javascript-typescript` |
 
 `ci / gate` is the one aggregate check, so jobs inside `ci.yml` change without a ruleset edit. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
+
+`ci / openapi diff` is a job inside `ci / gate` that ships with the first public route; release 1 has none ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
+
+- It runs `oasdiff breaking` on `schema/openapi-v1.json` against the base branch with `--fail-on ERR`, so each pull request sees only its own changes.
+- oasdiff is a release binary pinned and checked against its checksum, or `oasdiff/oasdiff-action/breaking` pinned by digest ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
+- In 0.x an ERR-level break fails unless the pull request title carries `!`, the breaking-change marker of [ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), which also bumps the minor and puts the break in the changelog. From 1.0 every ERR-level break in the public API fails, with or without `!`, and a break needs a new API major.
+- WARN-level findings are reported and do not block.
+- Like `ci / pr title`, it reads the pull request, so it is not part of `pnpm check`. `pnpm openapi:diff` runs the same comparison locally and only reports.
+- `test/meta/openapi-diff.test.ts` runs the job's script on fixture pairs: a removed response field under a title without `!` exits 1, the same change titled `feat(planning)!:` exits 0, an added optional response field exits 0, and at version 1.0.0 a removed field exits 1 even with `!`.
 
 ### Other checks on pull requests
 
@@ -410,7 +420,7 @@ Blacksmith runners run the trusted test and build jobs: unit and integration in 
 | Check | Fails on | ADR |
 |---|---|---|
 | `test/meta/collection.test.ts` | A test file in no suffix project or in two | [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) |
-| `test/meta/gates.test.ts` | A Tester command other than `pnpm check`; a CI gate step that runs a script `check` or `check:full` does not contain; a `CLAUDE.md` whose first non-heading line is not `@AGENTS.md` | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) |
+| `test/meta/gates.test.ts` | A Tester command other than `pnpm check`; a CI gate step, other than the pull request checks, that runs a script `check` or `check:full` does not contain; a `CLAUDE.md` whose first non-heading line is not `@AGENTS.md` | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) |
 | `test/meta/doc-links.test.ts` | A relative Markdown link in `docs/plan`, `docs/adr`, `docs/agents` or `GLOSSARY.md` whose target `git ls-files` does not list; any Markdown link into the gitignored `docs/research` folder; a backticked repository path in `AGENTS.md`, `CLAUDE.md` or `docs/agents` that `git ls-files` does not list and that the test's list of planned paths does not hold (each planned path names the task that creates it). Backticked paths in `docs/plan` and `docs/adr` name files that later tasks create and are not checked | [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) |
 | Domain path meta test | The task template, the Vitest config, the Biome domain override, `tests-changed.mjs` and `.coderabbit.yaml` name different domain paths | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) |
 | Domain import lint | Nest, Kysely, `pg` or `process.env` in `modules/planning/domain` | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) |
@@ -426,8 +436,8 @@ Blacksmith runners run the trusted test and build jobs: unit and integration in 
 | Fixture lint | The organisation number pattern in any tracked file, or a deny-listed customer name under `fixtures/` or `docs/sources/` | none; part of the data processing rules in [12](12-operations-and-security.md#gdpr-basics) |
 | `pnpm gen --check` | A generated file that differs from what `pnpm gen` writes | [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) |
 | Lockfile test | More than one `@nestjs/core` or `@nestjs/graphql` resolution | [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) |
-| Route test | An HTTP route that neither uses `PrincipalResolver` nor is marked `@Public` | [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) |
-| Boot checks in the integration suite | A Mutation field without a command handler; a resolver field with neither permission nor `@Public` metadata; a table without the audit trigger or an allowlist entry | [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0012](../adr/0012-commands-as-the-single-write-path.md) |
+| Route test, `apps/server/test/rest/routes.int.test.ts` | An HTTP route that neither uses `PrincipalResolver` nor is marked `@Public`; a route outside the release 1 list, which gives each route's family or puts it on the root allowlist | [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) |
+| Boot checks in the integration suite | A Mutation field without a command handler; a resolver field with neither permission nor `@Public` metadata; a table without the audit trigger or an allowlist entry; a REST controller path outside `/api/v<major>/` that is not on the root allowlist; a REST controller off the root allowlist that was not declared through `ApiController`; two controllers on one method and path; a public controller whose module segment is not its owner's id; a REST controller that a plugin root reaches, until the public API exists | [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) |
 
 ## Claude Code hooks and their limits in handoff runs
 

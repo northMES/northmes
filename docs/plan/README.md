@@ -163,12 +163,14 @@ E02 needs:
 - [x] [0041][adr-0041] test layout and harness (accepted)
 - [ ] [0058][adr-0058] developer environment (proposed)
 - [x] [0060][adr-0060] configuration and the environment schema (accepted)
+- [x] [0062][adr-0062] web form contracts, URL view state and module link manifests (accepted)
+- [x] [0064][adr-0064] REST routes under /api/v1, reserved ids and slugs, the boot route check (accepted)
 
 E03 and the rest of M0 need:
 
 - [ ] [0029][adr-0029] per-planner drafts, soft locks and the plan revision (accepted; needs-confirmation: product owner)
 - [ ] [0055][adr-0055] release 1 scope and the scope rule (accepted; needs-confirmation: maintainer, ledger additions)
-- [x] [0005][adr-0005] Postgres 18 official image with pgBackRest (accepted)
+- [ ] [0005][adr-0005] Postgres 18 official image with pgBackRest (accepted; needs-confirmation: maintainer, the pgBackRest source fallback)
 - [ ] [0004][adr-0004] monorepo tooling and the Node pin after the week 1 test (proposed)
 - [ ] [0057][adr-0057] scheduling domain as a pure package (proposed)
 
@@ -185,6 +187,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 | ADR | Part Krister confirms | Question |
 |---|---|---|
 | [0004][adr-0004] | Node pin after the week-1 test; TypeScript 6.0.x | M-01 |
+| [0005][adr-0005] | the pgBackRest source fallback until PGDG publishes 2.59.3 | none |
 | [0007][adr-0007] | one plant at a time | M-12 |
 | [0010][adr-0010] | operator placeholder email | M-08 |
 | [0013][adr-0013] | lifecycle classes; tool results as exports | M-06, M-07 |
@@ -250,7 +253,6 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 | M-34 | The server decimal library and GraphQL decimal scalar for article quantities | [0023][adr-0023] |
 | M-35 | One spelling for error codes | [0012][adr-0012] |
 | M-36 | The base of the problem `type` URI in REST errors | [0012][adr-0012] |
-| M-37 | How REST routes take the plant | [0010][adr-0010] |
 | M-38 | The route for the audit export | [0013][adr-0013] |
 | M-39 | Whether the shell or the core remote owns the chat panel code | [0035][adr-0035] |
 | M-40 | The manifest key names for lifecycle classes, audit field declarations and subscriptions | [0003][adr-0003] |
@@ -319,3 +321,5 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 [adr-0058]: ../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
 [adr-0059]: ../adr/0059-time-series-storage-port-with-an-open-default-backend.md
 [adr-0060]: ../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md
+[adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
+[adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md

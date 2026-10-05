@@ -37,7 +37,7 @@ flowchart LR
     Review["Proposal review panel (planning remote)"]
   end
   subgraph App["NorthMES app, api role"]
-    Chat["POST /api/ai/chat"]
+    Chat["POST /api/v1/ai/chat"]
     Mcp["POST /mcp"]
     AiMod["ai module: model-call.ts"]
     Runner["Shared tool runner"]
@@ -65,7 +65,7 @@ Tools are defined once in the MIT SDK as plain data. One shared runner parses th
 |---|---|---|
 | `@northmes/sdk`, subpath `/ai` | MIT | The types-only AI port: model aliases, capabilities, run context, requests, results, usage, availability. No AI SDK type crosses it. |
 | `@northmes/sdk`, subpath `/mcp` | MIT | `defineTool`: Zod input and output schemas, handler, annotations, permission. Independent of the MCP SDK. |
-| `modules/ai` | AGPL-3.0-or-later | The port implementation on the Vercel AI SDK 7 (`ai`) with `@ai-sdk/azure`, `@ai-sdk/openai-compatible` and `@openrouter/ai-sdk-provider`; `modules/ai/server/model-call.ts`; provider configs, alias bindings, budgets, feature enablement; `POST /api/ai/chat`; usage tables. |
+| `modules/ai` | AGPL-3.0-or-later | The port implementation on the Vercel AI SDK 7 (`ai`) with `@ai-sdk/azure`, `@ai-sdk/openai-compatible` and `@openrouter/ai-sdk-provider`; `modules/ai/server/model-call.ts`; provider configs, alias bindings, budgets, feature enablement; `POST /api/v1/ai/chat`; usage tables. |
 | Core host | AGPL-3.0-or-later | The `/mcp` controller, the shared tool runner and both adapters, the `AiRunRegistry`. |
 | `modules/planning` | AGPL-3.0-or-later | The planning tool handlers, `planning.proposal` and `planning.proposal_item`, the review panel. See [07-production-planning.md](07-production-planning.md). |
 | `@northmes/testing` | MIT | The AI mock helpers used by unit and integration tests. |
@@ -208,7 +208,7 @@ Each guard has a test. These are integration or unit tests in `modules/ai` and t
 | Tool errors stay generic | A tool that throws a Postgres unique violation on a key that is not a code key: the next mocked prompt holds `internal` and the correlation id, not the DETAIL text, and so does the MCP `tools/call` result. |
 | Timeouts | A stub server that accepts the connection and never answers ends with `provider_timeout`. |
 | Entra authority | With `AZURE_AUTHORITY_HOST=https://evil.test` set, the Entra factory sends its token request to `login.microsoftonline.com`. |
-| No file downloads | `POST /api/ai/chat` with a file part returns 400. A `model-call.ts` unit test with a file part and a spy download function is rejected and the spy is never called. |
+| No file downloads | `POST /api/v1/ai/chat` with a file part returns 400. A `model-call.ts` unit test with a file part and a spy download function is rejected and the spy is never called. |
 | Secret bound to host | Changing a base URL without a new secret fails with `core.secret_reentry_required`. |
 | Cache follows config | After a config update commits, the next call uses the new base URL and secret; a removed config gives `no-provider`. |
 | Personal fields redacted | The same tool through MCP and through `toAgentTool`, with an operator who reported scrap, returns neither the operator's id nor name. |
@@ -245,7 +245,7 @@ Whether tool results sent to a model count as exports is open. The working defau
 
 ### Chat route
 
-- `POST /api/ai/chat` in the `api` role: a Nest controller using `pipeUIMessageStreamToResponse` with `keepAliveMs`, so plant proxies do not cut idle streams. The browser uses `useChat` from `@ai-sdk/react`. Caddy flushes `text/event-stream` at once ([ADR 0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md)).
+- `POST /api/v1/ai/chat` in the `api` role: a Nest controller using `pipeUIMessageStreamToResponse` with `keepAliveMs`, so plant proxies do not cut idle streams. The browser uses `useChat` from `@ai-sdk/react`. Caddy flushes `text/event-stream` at once ([ADR 0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md)).
 - Auth is the session cookie plus the same-origin check of [ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md); the chat uses a fetch-based client so it can send the CSRF header.
 - The body is parsed with a strict Zod schema: roles `user` or `assistant` only, part types `text` and `step-start` only, at most 40 messages and 40 000 characters. Client-supplied tool parts and system messages are dropped.
 - Chat history stays in the browser for the session. Server-side history with a retention setting is a later company setting.
@@ -450,7 +450,7 @@ Besides the guard tests in [Model calls and data-leak guards](#model-calls-and-d
 | Audit | An MCP `planning_find_orders` call with the `late` filter writes no command row. |
 | Audit | A read handler that attempts an INSERT fails with "cannot execute INSERT in a read-only transaction". |
 | Audit | Editing the OpenRouter key writes one change row with a redacted diff. |
-| Chat route | `POST /api/ai/chat` with 41 messages returns 400. |
+| Chat route | `POST /api/v1/ai/chat` with 41 messages returns 400. |
 | Tool results | A fixture with 500 late orders returns 50 rows with `total` 500 in under 20 000 characters of JSON. |
 | Tool results | In a six-turn mocked conversation, the sixth prompt carries full tool results only for turns 5 and 6. |
 | Plant | A scripted call with no plant from a chat started on plant B runs at plant B, and `ai.ai_call.plant_id` is plant B. |

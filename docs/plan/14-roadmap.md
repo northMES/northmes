@@ -1,6 +1,6 @@
 # Roadmap
 
-This roadmap turns release 1 under option B into delivery work. It holds the checkpoints that set the pilot date, the weekly ledger row that measures velocity, the epics in dependency order with their stories, the tasks of the first two weeks, the cut list and the critical path. A later session creates the GitHub issues from it with the handoff plugin, and coding agents build the tasks. The release 1 scope is in [01-product-and-scope.md](01-product-and-scope.md), the delivery rules in [13-delivery-and-github.md](13-delivery-and-github.md), the risks in [17-risks.md](17-risks.md) and the open questions in [16-open-questions.md](16-open-questions.md). ADR [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) decides the scope and the rule that measured velocity sets the pilot date. ADR [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) decides the delivery workflow. Terms follow [GLOSSARY.md](../../GLOSSARY.md).
+This roadmap turns release 1 under option B into delivery work. It holds the checkpoints that set the pilot date, the weekly ledger row that measures velocity, the epics in dependency order with their stories, the tasks of the first two weeks, the cut list, the critical path and an outline of the public API epic that follows release 1. A later session creates the GitHub issues from it with the handoff plugin, and coding agents build the tasks. The release 1 scope is in [01-product-and-scope.md](01-product-and-scope.md), the delivery rules in [13-delivery-and-github.md](13-delivery-and-github.md), the risks in [17-risks.md](17-risks.md) and the open questions in [16-open-questions.md](16-open-questions.md). ADR [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) decides the scope and the rule that measured velocity sets the pilot date. ADR [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) decides the delivery workflow. Terms follow [GLOSSARY.md](../../GLOSSARY.md).
 
 ## How to turn this roadmap into issues
 
@@ -41,7 +41,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 |---|---|---|---|
 | Day 1 | Thu 2026-10-15 | The written request to the pilot's Pyramid administrator and the Pyramid reseller is sent (the questions are in [08-pyramid-connector.md](08-pyramid-connector.md#17-questions-for-the-pyramid-administrator)). The request for the data processing agreement is sent. The product owner session is booked. The private companion repository for internal research exists and is pushed, and SP0 (E01-S01) is done; both were done on 2026-10-05. Krister confirms the persona list and the epic order, which clears the needs-confirmation of ADR 0049. | |
 | Week 1 | by Fri 2026-10-23 | handoff's `setup_project` reports ready (E00). The Node 26 hook tests, the time zone suite and the benchmarks have run on the `node:26` Debian image (E01-S05). A Windows PC of the pilot's planner PC class is in hand for SP3 and the NVDA passes. The product owner session has taken place. | Node 26 or Node 24 LTS ([0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)) |
-| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
+| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
 | SP3 verdict | Fri 2026-11-06 | The board spike is measured on the planner-class PC: 60 fps while scrolling at day zoom, p95 frame time at most 33 ms while dragging at week zoom, no long task over 50 ms, and keyboard move mode steps one snap and one machine. `e2e/board-perf.spec.ts` exists. | An interactive board, or one more week that limits the rendered range |
 | Skeleton target | Fri 2026-11-13 | `e2e/skeleton.spec.ts` is green on the built `all` process. The Pyramid write method names have arrived. | If the spec is red, hardening freezes: only skeleton tasks run until it is green. |
 | M1 | Fri 2026-11-20 | `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate`. The SP3 second-fail deadline has passed. The first weekly ledger rows exist. | If SP3 failed twice: the job order table view with the shared Move dialog plus a read-only timeline carries planning (cut 8). |
@@ -713,7 +713,7 @@ ADRs: [0001](../adr/0001-record-architecture-decisions-in-madr.md), [0049](../ad
 
 Acceptance criteria:
 
-- `docs/adr/README.md` lists ADRs 0001 to 0059 with status, release and needs-confirmation, and `pnpm adr:next` prints the next free number.
+- `docs/adr/README.md` lists every ADR file with its title, status, release and needs-confirmation, and `pnpm adr:next` prints the next free number.
 - `docs/plan/README.md` holds the weekly ledger table, the persona list, the epic order and the checklist of ADRs that M0 needs.
 - The links in `docs/agents/domain.md` resolve.
 - `docs/sources/` holds the spike sources and the earlier attempt's scheduling rules (code and specs only), and no gate collects them.
@@ -1490,9 +1490,9 @@ Goal: port the integration spike test-first into the repository, so that one pro
 
 Who it is for: Maintainer. Also: Plugin developer.
 
-ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
-Out of scope: the frontend widget plugin, `plugin check` and packaging `@northmes/web-build` for use outside the workspace (moved to E21, inside M2); Better Auth and real permissions (E05); audit (E05); hardening of the shell (E04).
+Out of scope: the frontend widget plugin, `plugin check` and packaging `@northmes/web-build` for use outside the workspace (moved to E21, inside M2); Better Auth and real permissions (E05); audit (E05); hardening of the shell (E04); `@nestjs/swagger`, the OpenAPI document and public routes, which wait for [the public API epic after release 1](#after-release-1-the-public-api-epic).
 
 Estimate: timeboxed to about 20 working days, part of the platform estimate of 35 to 51 raw days (internal research notes 18, 19 and 20). Depends on: E00, E01-S05. Milestone: green by 2026-11-13; required in `ci / gate` from M1 (2026-11-20). If the spec is red on 2026-11-13, hardening freezes; if still red on 2026-11-27, the remotes take the tested Rsbuild path.
 
@@ -1506,12 +1506,13 @@ As a plugin developer, I want boot to read every manifest and stop with one mess
 
 Module: platform (`packages/sdk`, `apps/server`). Blocked by: E00-S07-T01, E01-S05-T02. Design: none.
 
-ADRs: [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
+ADRs: [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - `@northmes/sdk` exports `defineModule`, `moduleNames` and `HOST_PROVIDED`; a manifest imports only `defineModule` and loads without Nest.
 - `moduleNames('production-start')` derives `productionStart`, `production_start`, the owner role `nm_mod_production_start` and the remote name; two modules with colliding derived names stop boot.
+- The module ids `web`, `station` and `auth` are reserved, because they are the first-party and library segments under `/api/v1` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)); a module or plugin with one of these ids stops boot with a named message.
 - A bad `northmes` range, a missing dependency, a cycle, a wrong key prefix, a core module depending on a plugin and a contribution to a slot of a module it does not depend on each exit 1 with a named message, and several problems are listed together.
 - Modules load in topological order with core first.
 - `apps/server` imports `ConfigModule.forRoot` with `ignoreEnvFile`, `cache`, `validate: loadEnv(serverEnvSchema)` and the `secrets` namespace from `@northmes/sdk/config` before every module; an invalid environment exits 1 before any manifest import and lists every bad key without its value.
@@ -1520,7 +1521,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `apps/server/test/catalog.test.ts`: "a missing dependency exits 1 naming both modules"; "three problems are listed as 3 problems"; "image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0".
+- `apps/server/test/catalog.test.ts`: "a missing dependency exits 1 naming both modules"; "three problems are listed as 3 problems"; "image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0"; "module ids web, station and auth are each refused as reserved, and the message names the id".
 - `packages/sdk/test/module-names.test.ts`: "production-start derives productionStart and production_start".
 - `packages/sdk/test/config/server-env.test.ts`: "a missing public origin, PORT 70000 and role web are listed together without their values"; "NODE_ENV defaults to production and NORTHMES_ROLE to all".
 - `packages/sdk/test/config/secrets.test.ts`: "a missing, empty or world-readable secret file fails naming its key"; "one trailing newline is trimmed"; "a dev-marked secret fails with NODE_ENV production".
@@ -1556,15 +1557,18 @@ Notes: E05-S02 adds the audit trigger to the template. The `db-test` skill comes
 
 As a plugin developer, I want each module's code-first subgraph composed at boot behind one `/graphql` endpoint, so that a module adds types and fields without configuring GraphQL itself.
 
-Module: platform (`packages/sdk`, `apps/server`). Blocked by: E02-S01. Design: none.
+Module: platform (`packages/sdk`, `packages/contracts`, `apps/server`). Blocked by: E02-S01. Design: none.
 
-ADRs: [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md).
+ADRs: [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - `defineSubgraph` with the in-process driver builds one subgraph per module; `@graphql-hive/gateway-runtime` serves `/graphql` over HTTP, graphql-ws and SSE through the in-process transport.
 - A root field without its module prefix, a type owned by two modules or a non-nullable contributed field fails composition, and the process exits naming the field and both subgraphs.
-- The isolation check fails boot when a resolver-bearing Nest module is reachable from two subgraph roots, printing both import paths.
+- The isolation check fails boot when a resolver-bearing Nest module is reachable from two subgraph roots, printing both import paths. Its reachability walk also assigns each controller to the module root that reaches it, or to the host.
+- `@northmes/sdk/rest` exports `ApiController({ module, family })`, which builds the controller path `api/v<major>/<module>/` and records the module and the family for the route check. The server calls neither `app.setGlobalPrefix` nor `app.enableVersioning`.
+- `@northmes/contracts` exports the API major, `API_MAJOR`, and a path function, `apiPath` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)); `ApiController` takes the major from it.
+- The boot route check exits 1 and names the controller when a REST controller path does not start with `api/v<major>/` and is not on the root allowlist (`/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths), when a controller off the root allowlist was not declared through `ApiController`, when two controllers register the same method and path (naming both), and when a public controller's module segment differs from its owner's id.
 - `northmes schema print` writes `schema/api.graphql`, `schema/supergraph.graphql` and each module's `schema.graphql` from in-repo modules only, with `DATABASE_URL` unset and no pool created.
 - The boot log shows the supergraph hash.
 
@@ -1573,8 +1577,10 @@ Tests first:
 - `apps/server/test/gateway/composition.test.ts`: "a root field without a module prefix fails with its rule id".
 - `apps/server/test/gateway/boot.int.test.ts`: "a composition error exits with code 1".
 - `apps/server/test/schema/print.int.test.ts`: "print with DATABASE_URL unset constructs zero pools and equals the committed files".
-
-Notes: `pnpm gen` gets its first stage (schema). The `graphql-subgraph` skill comes with this story.
+- `packages/sdk/test/rest/api-controller.test.ts`: "ApiController({ module: "web", family: "first-party" }) registers api/v1/web and records family first-party and module web".
+- `packages/contracts/test/api-path.test.ts`: "API_MAJOR is 1 and apiPath for web/modules returns /api/v1/web/modules".
+- `apps/server/test/boot/routes.int.test.ts`: "a controller at api/web/modules makes boot exit 1 naming the class"; "a controller declared with plain @Controller off the root allowlist makes boot exit 1 naming the class"; "two controllers on POST /api/v1/web/client-errors make boot exit 1 naming both classes"; "a public controller with module segment scheduling inside the planning module makes boot exit 1 naming both ids"; "the health controller at /health passes as a root route".
+Notes: `pnpm gen` gets its first stage (schema). The `graphql-subgraph` skill comes with this story. The route check sits in this story because it reuses the isolation check's reachability walk. Release 1 has no public route, so the public-segment rule runs only against fixtures until the public API epic ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)). The plugin rule of the route check arrives with plugin loading in E02-S04.
 
 #### E02-S04 platform: Run a validatable command vetoed by a drop-in plugin
 
@@ -1582,7 +1588,7 @@ As a plugin developer, I want my built plugin dropped into `plugins/` to veto a 
 
 Module: platform, planning, `examples/plugin-validator`. Blocked by: E02-S02, E02-S03. Design: none.
 
-ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md).
+ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
@@ -1592,12 +1598,14 @@ Acceptance criteria:
 - A payload that does not match the validator's MIT contract schema is rejected with `core.validator_contract_mismatch`.
 - The SDK exception filter, registered once as `APP_FILTER`, writes `code`, `errorCode` and `details` into the GraphQL error that carries `core.command_rejected`; the correlation id arrives with E05-S01.
 - With the resolve hook, a plugin outside the host tree and a plugin with its own Nest copy boot against the host's packages; a plugin that bundles host packages fails boot as designed.
+- The boot route check also exits 1 when a plugin root reaches a REST controller, naming the plugin id; plugins add no REST controller until the public API epic ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 
 Tests first:
 
 - `apps/server/test/command-bus.test.ts`: "a payload with quantity as an object is rejected with core.validator_contract_mismatch and the handler spy is not called".
 - `apps/server/test/plugins/resolve-hook.int.test.ts`: "a plugin outside the host tree boots with the hook"; "a plugin bundling @nestjs/graphql fails boot".
 - `examples/plugin-validator/test/validator.int.test.ts`: "a release over the example limit is rejected".
+- `apps/server/test/boot/plugin-controller.int.test.ts` (boots the built server in a child process, because `createTestApp` takes in-repo modules only): "a fixture plugin whose Nest module reaches a controller makes boot exit 1 naming the plugin id".
 
 Notes: the resolve-hook test is required in `ci / gate` from M1. Fact commands never become validatable in release 1.
 
@@ -1607,11 +1615,12 @@ As a planner, I want the shell to load the planning module's screen at run time,
 
 Module: web (`apps/web`, `packages/web-sdk`, `packages/web-build`, `packages/contracts`, `modules/planning/web`, `modules/planning/contracts`). Blocked by: E02-S03. Design: none (tracer screen; the design rule for UI tasks does not apply). Its tasks carry `human` and run in a session, because `handoff-demo` arrives with E02-S08.
 
-ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
-- `apps/web` is a pure `@module-federation/runtime` host: it fetches `GET /api/web/modules`, registers the listed remotes and builds the route tree from each remote's `routes(plantRoute)`.
+- `apps/web` is a pure `@module-federation/runtime` host: it fetches `GET /api/v1/web/modules`, registers the listed remotes and builds the route tree from each remote's `routes(plantRoute)`.
+- The module list controller is declared with `ApiController({ module: "web", family: "first-party" })` (E02-S03), so its path comes from the helper and not from a string literal, and the shell builds the module list URL with `apiPath`.
 - The planning remote exposes `./module = defineWebModule(...)` built through `defineRemoteConfig`, and its board stub screen lists production orders with core's article names.
 - Shared singletons (react, react-dom, the router, Apollo Client, `@northmes/web-sdk`, `@northmes/ui`) are never bundled into a remote; a guard fixture that bundles one fails the build. Each remote bundles its own `zod`, `@northmes/contracts` and `@northmes/<id>-contracts` copies on purpose, and the guard lets them pass.
 - Nest serves each remote at `/modules/<id>/<version>/` with immutable caching; a disabled module never appears in any browser request.
@@ -1978,12 +1987,12 @@ ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [00
 Acceptance criteria:
 
 - Remotes load in parallel with a timeout (planner 10 s, station 30 s), a per-remote indicator after 2 s and retries.
-- `/api/web/modules` lists each enabled, permitted and compatible remote with a SHA-384 hash of its manifest; at boot the server checks the files each `mf-manifest.json` lists and marks a module degraded with `integrity: null` when one is missing.
+- `/api/v1/web/modules` lists each enabled, permitted and compatible remote with a SHA-384 hash of its manifest; at boot the server checks the files each `mf-manifest.json` lists and marks a module degraded with `integrity: null` when one is missing.
 - A failed remote gets a placeholder route with a title and an `h1`, and an "(unavailable)" menu entry in its usual position.
 - A minimal status route in the shell survives a broken core remote.
 - `/assets/browser-check.js` shows a plain page naming the browser and the minimum version below Chrome and Edge 111, Firefox 128 or Safari 16.4.
 - In-repo remotes ship no CSS; a remote that emits CSS bytes fails the build.
-- The sidebar comes only from routes: the shell builds each module's group, headed by its manifest `web.label`, from the routes whose `screenRoute` carries `nav`, ordered by `nav.order` and then by declaration order, with `nav.parent` nesting one level. `/api/web/modules` adds `modules[].kind`, so core comes first and plugins sit in their own section. `help` entries appear in the help menu under their module label.
+- The sidebar comes only from routes: the shell builds each module's group, headed by its manifest `web.label`, from the routes whose `screenRoute` carries `nav`, ordered by `nav.order` and then by declaration order, with `nav.parent` nesting one level. `/api/v1/web/modules` adds `modules[].kind`, so core comes first and plugins sit in their own section. `help` entries appear in the help menu under their module label.
 - An unknown path under a loaded module shows that module's not-found page with a title, one `h1` and a link to its first nav entry; the router's default not-found component covers every other path.
 
 Tests first:
@@ -2110,11 +2119,11 @@ As a plant admin, I want browser errors from every remote stored in the installa
 
 Module: web, core (`apps/web`, `apps/server`). Blocked by: E04-S02. Design: none.
 
-ADRs: [0043](../adr/0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md), [0052](../adr/0052-error-telemetry-opt-in-and-deferred.md).
+ADRs: [0043](../adr/0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md), [0052](../adr/0052-error-telemetry-opt-in-and-deferred.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
-- `POST /api/web/client-errors` (authenticated, same-origin, rate-limited, 8 kB body cap) stores `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` grouped by fingerprint with counts.
+- `POST /api/v1/web/client-errors` (a first-party route declared with `ApiController`; authenticated, same-origin, rate-limited, 8 kB body cap) stores `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` grouped by fingerprint with counts.
 - `createRoot` error callbacks and window `error` and `unhandledrejection` handlers report; CSP reports reach the same endpoint.
 - Placeholder and route error components show the stage and the code.
 - Nothing leaves the installation.
@@ -2196,9 +2205,9 @@ Goal: build the platform server pieces every module uses: the command pipeline w
 
 Who it is for: Plant admin. Also: Planner, Plugin developer, Maintainer.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
-Out of scope: station credentials (E11), MCP tokens (E12), the reporting schema, single sign-on, company mode across plants, the pseudonymization command.
+Out of scope: station credentials (E11), MCP tokens (E12), integration tokens (the public API epic after release 1), the reporting schema, single sign-on, company mode across plants, the pseudonymization command.
 
 Estimate: audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated. Depends on: E02. Milestone: M2. Tasks in E05-S03 to E05-S08 touch authentication, row-level security or secrets, so they carry `human` and run on the guided graph.
 
@@ -2264,18 +2273,22 @@ As a plant admin, I want my company and its plants in one scope tree, so that ev
 
 Module: core. Blocked by: E05-S02. Design: none.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - A Better Auth organization is a company; `core.plant.id` equals the plant's node id in `core.scope` (company root, plant children).
 - Each plant has a slug unique per company, an IANA zone and a production day start; an unknown slug is NOT_FOUND and never falls back to a default plant.
+- The plant slug schema in core's contracts refuses `api`, `graphql`, `mcp`, `health`, `modules`, `assets` and `station`, because a plant slug is the first segment of an SPA path and these are server paths or the station mount ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 - The principal plugin validates `x-northmes-plant` against role assignments with the ancestor walk; an unauthorized plant fails with FORBIDDEN, `core.plant_forbidden` and one `permission.denied` security event.
 - One principal resolution serves a request that touches three subgraphs.
 
 Tests first:
 
 - `apps/server/test/gateway/principal.int.test.ts`: "a viewer at A with header B gets core.plant_forbidden and one security event"; "one session lookup serves three subgraphs".
+- `modules/core/contracts/test/plant-slug.test.ts`: "slugs api, graphql, mcp, health, modules, assets and station are refused"; "slug hel is accepted".
+
+Notes: public API paths will carry the plant slug (`/api/v<major>/<module-id>/plants/{plant}/...`), so renaming a slug would break integrations as well as bookmarks and links. This story decides whether a slug can be renamed at all.
 
 #### E05-S04 core: Filter every table by transaction-local read and write scopes
 
@@ -2302,15 +2315,16 @@ Tests first:
 
 As a plant admin, I want to sign in with a username or email and a password, and to create the first admin from the command line, so that nobody on the plant network can claim admin rights before IT finishes setup.
 
-Module: core (`modules/core`, `apps/server`). Blocked by: E05-S03. Design: sign-in page (part of design task D2).
+Module: core (`modules/core`, `apps/server`, `apps/web`). Blocked by: E05-S03. Design: sign-in page (part of design task D2).
 
-ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md).
+ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - `better-auth` 1.7.x is pinned exactly; it runs on its Kysely adapter with its own pool as `nm_auth` in schema `auth`, and its SQL is generated into core migrations with a drift test.
+- Better Auth runs with `basePath: "/api/v1/auth"`, and `toNodeHandler(auth)` is mounted at `/api/v1/auth/*` before body parsing; the sign-in page calls the same path, so a Better Auth client in the browser takes the same `basePath`. This is the library family under `/api/v1` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 - Sign-up is disabled, `immutableUsername` is on, the session cookie is `SameSite=Strict`, the cookie cache is at most 60 s, and rate-limit storage is in the database.
-- Every `/admin/*` path is disabled; boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
+- Every `/admin/*` path under `/api/v1/auth` is disabled; boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
 - `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container, write a security event under surface `cli` and print a temporary password once.
 - Sign-in, failed sign-in and sign-out write security events.
 - `nm_app` reads user names only through the `security_invoker` view `core.user_directory(id, name, username, banned)` and has no grant on `auth.account` or `auth.session`; only `nm_auth` reaches the `auth` schema.
@@ -2320,6 +2334,8 @@ Tests first:
 - `modules/core/test/auth/drift.int.test.ts`: "Better Auth's generated SQL equals the committed migration".
 - `modules/core/test/auth/grants.int.test.ts`: "as nm_app, select from auth.account fails"; "as nm_app, select from core.user_directory returns the seeded planner".
 - `apps/server/test/cli/admin-create.int.test.ts`: "admin create writes one security event and a temporary password".
+- `modules/core/test/auth/base-path.int.test.ts`: "GET /api/v1/auth/get-session without a cookie returns 200 with a null body"; "GET /api/auth/get-session returns 404".
+- `apps/web/test/auth-client.test.ts`: "the auth client requests its session from /api/v1/auth/get-session".
 - `e2e/sign-in.spec.ts`: "a wrong password shows the error and keeps the username".
 
 #### E05-S06 core: Grant roles per plant and check permissions at the row's scope
@@ -2351,20 +2367,24 @@ As a plant admin, I want cookie-authenticated requests from other origins refuse
 
 Module: core (`apps/server`). Blocked by: E05-S05. Design: none.
 
-ADRs: [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md).
+ADRs: [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - The gateway runs with `cors: false` and CSRF prevention on the `x-northmes-csrf` header; a middleware rejects unsafe methods unless `Origin` equals `NORTHMES_PUBLIC_ORIGIN` or `Sec-Fetch-Site` is same-origin, and writes a security event.
 - The WebSocket upgrade refuses a foreign origin with 403; the socket principal comes only from the handshake cookie; `onConnect` closes with 4401 without a session and 4403 on lost plant membership.
-- One credential-by-surface table drives the guards; `/graphql` and `/api/web` accept session and station cookies only.
+- One credential-by-surface table drives the guards; `/graphql` and `/api/v1/web` accept session and station cookies only.
 - Denials are collected per request and written as one security event per (permission, scope) after the transaction ends, so a rollback keeps them; each is also a structured log line.
 - Better Auth's limiter guards sign-in; only Caddy is a trusted proxy.
+- One route inventory test lists every route of the `api` role, Better Auth's mount included, and checks its guard metadata and its family against the release 1 list in [05-graphql-and-apis.md](05-graphql-and-apis.md#endpoints-in-release-1). The list holds `/api/v1/auth/*`, `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/station`, `/api/v1/ai/chat` and `/api/v1/pyramid-connector/import-file`, plus the root routes `/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths. A route outside the list fails the test, and release 1 has no route in the public family ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 
 Tests first:
 
 - `apps/server/test/gateway/same-origin.int.test.ts`: "a form-urlencoded mutation with a valid cookie gets 403 and writes no audit.command row"; "a WebSocket with a foreign origin gets 403 on upgrade".
 - `apps/server/test/security-events.int.test.ts`: "a denial inside a rolled-back command is still recorded".
+- `apps/server/test/rest/routes.int.test.ts`: "every route uses PrincipalResolver or carries @Public"; "every route is in exactly one family or on the root allowlist, and is on the release 1 list"; "the release 1 list holds /api/v1/web/modules, /api/v1/web/client-errors, /api/v1/station, /api/v1/ai/chat, /api/v1/pyramid-connector/import-file, Better Auth at /api/v1/auth and the root routes"; "every route outside the root allowlist starts with /api/v1/"; "no route is in the public family"; "the health routes sit at the root".
+
+Notes: `apps/server/test/rest/routes.int.test.ts` is the one route inventory test. [Plan 05](05-graphql-and-apis.md#tests), [ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md) and [ADR 0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md) name the same file. The list names routes that later stories build (E09-S03, E11-S02, E14-S01); the test fails only on a route that is not on it.
 
 #### E05-S08 core: Manage users and operators as commands
 
@@ -2777,14 +2797,14 @@ Acceptance criteria:
 
 - `core.presentation` in `@northmes/core-contracts` is one `defineSettings` schema with `dateFormat` (`iso`, `dmyDot`, `dmySlash`, `mdySlash`; default `iso`), `hourCycle` (`h23`, `h12`; default `h23`) and `numberFormat` (`spaceComma`, `commaPoint`, `pointComma`; default `spaceComma`), each with a label and a description, at company scope with a plant override. It has no time zone key and refuses one.
 - The server resolves each field from the plant value, then the company value, then the default, and reports its source. Editing needs `core.settings:manage`; reading the resolved values needs only a session or station cookie for the plant.
-- `GET /api/web/modules?plant=<slug>` returns `plant { id, slug, name, timeZone, presentation }` with the resolved values. `ShellProvider` fills `PresentationProvider` from it, so boot needs no extra query, and `usePlantTime()` returns bound formatters.
+- `GET /api/v1/web/modules?plant=<slug>` returns `plant { id, slug, name, timeZone, presentation }` with the resolved values. `ShellProvider` fills `PresentationProvider` from it, so boot needs no extra query, and `usePlantTime()` returns bound formatters.
 - The plant switch swaps the presentation context together with the permission set. A settings change shows on the next load, plant switch or reconnect.
 - GraphQL, REST, MCP tools, events, the audit export and the rollback CSV never use the settings: instants stay ISO 8601 with offset, and numbers keep a point decimal without grouping.
 
 Tests first:
 
 - `modules/core/test/presentation-settings.int.test.ts`: "a plant value overrides the company value per field"; "a field without a plant value returns the company value with source company"; "a field with neither returns the default with source default"; "a timeZone key is refused"; "a change bumps config_revision and writes one change row".
-- `apps/server/test/rest/web-modules.int.test.ts`: "/api/web/modules?plant=p2 returns p2's timeZone and resolved presentation"; "a station cookie for p2 gets the same values".
+- `apps/server/test/rest/web-modules.int.test.ts`: "/api/v1/web/modules?plant=p2 returns p2's timeZone and resolved presentation"; "a station cookie for p2 gets the same values".
 - A wire test: with the company set to `dmyDot`, `h12` and `commaPoint`, a GraphQL `Instant` field is byte-identical to a run with the defaults.
 
 - `e2e/presentation.spec.ts`: the company uses `dmyDot` and plant P2 overrides it with `iso`; an order deadline shows `25.10.2026` at P1 and `2026-10-25` after switching to P2; the switch causes no document navigation when the module set is unchanged. The spec also runs in a Playwright project with locale `en-US` and shows the same strings.
@@ -3291,11 +3311,11 @@ As a plant admin, I want to upload a Pyramid XML file and import it, so that the
 
 Module: pyramid-connector. Blocked by: E09-S02. Design: file upload on the integration card (canonical list and form page).
 
-ADRs: [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md).
+ADRs: [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
-- One endpoint takes one file of at most 25 MB with content type `text/xml` or `application/xml` and records its SHA-256 as the input digest.
+- One first-party endpoint, `POST /api/v1/pyramid-connector/import-file`, declared with `ApiController` under the module's own id, takes one file of at most 25 MB with content type `text/xml` or `application/xml` and records its SHA-256 as the input digest.
 - Uploading needs `pyramidConnector.import:upload` at company scope (admin only by default); a cross-origin upload is refused.
 - The import job acts for the uploader and writes run, order and inbox records like a poll.
 - The first import of an operation creates one job order on the given equipment with Pyramid's planned times.
@@ -3558,12 +3578,12 @@ As an operator, I want to scan my badge to sign in at the station and switch ope
 
 Module: core, production-start. Blocked by: E11-S01, E05-S08. Design: D4.
 
-ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md).
+ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
 - Badges are dated rows `core.badge_assignment(user_id, badge_hmac, valid_from, valid_to)`; the HMAC uses the `badge-v1` purpose key and is redacted in audit.
-- Sign-in and sign-out are the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` with principal station, surface station and `acting_for` the user.
+- Sign-in and sign-out are the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` under the first-party route `POST /api/v1/station`, with principal station, surface station and `acting_for` the user.
 - One open operator session per station; a new sign-in ends the previous one with reason `replaced`.
 - Badge input is read only in the focused badge field and on the Switch operator screen; no global key listener. A PIN, when enabled, is one field that accepts paste.
 - Five unknown badges within 60 s lock badge sign-in on that station for 5 minutes and write a security event.
@@ -3900,11 +3920,11 @@ As a planner, I want to ask a question and see the answer stream in, so that I g
 
 Module: ai. Blocked by: E13-S03, E05-S07. Design: none.
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
 
 Acceptance criteria:
 
-- `POST /api/ai/chat` in the `api` role streams with keep-alive, under session cookie auth and the same-origin check.
+- `POST /api/v1/ai/chat`, a first-party route declared with `ApiController` under the module id `ai`, in the `api` role streams with keep-alive, under session cookie auth and the same-origin check.
 - The body is parsed strictly: roles user or assistant, part types text and step-start, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped.
 - The request carries the route plant; the instructions stay identical between runs, and one line of time context (plant, now, production day and the plant's presentation values, for example "dates 24.10.2026, 24-hour clock, decimal comma") follows the cached prefix. Tool outputs stay ISO 8601 and canonical.
 - Chat runs register with an `AiRunRegistry`; at shutdown they abort with reason `server-restarting` and get up to 5 s to settle their `ai_call` rows.
@@ -4670,7 +4690,7 @@ Who it is for: Plugin developer.
 
 ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
-Out of scope: the public npm SDK, `create-northmes-plugin`, the app repository, per-organization enablement; any third-party plugin on the pilot.
+Out of scope: the public npm SDK, `create-northmes-plugin`, the app repository, per-organization enablement; any third-party plugin on the pilot; REST controllers in plugins, which boot refuses until [the public API epic](#after-release-1-the-public-api-epic) (E02-S04).
 
 Estimate: the two examples 2 and plugin build, pack and check 2 to 3 raw days (internal research note 20); the widget remote 1 to 2 (internal research note 19); partly spent in E02. Depends on: E02. Milestone: M2.
 
@@ -4747,7 +4767,7 @@ Acceptance criteria:
 - `pnpm gen` writes `modules/<id>/web/links.snapshot.json` (patterns, params, search keys, defaults and accepted enum values), and a CI check fails when a link pattern, param or search key from the previous release's snapshot disappears without a `moved` entry.
 - `defineModuleLinks(id, entries, { moved })` records moved patterns, and `movedRoutes(parent, links)` redirects each old pattern to its new one with `replace`, params mapped by name and the search kept. A moved entry stays for at least one minor release, so the links of an N-1 plugin keep working.
 - A web-only plugin on a removed slot gets status `incompatible` and boot succeeds; a plugin with a server part on an unknown slot still fails boot.
-- `/api/web/modules` checks each remote's shared versions; a committed N-1 widget build loads in Playwright on pull requests that touch the singleton list or the federation packages.
+- `/api/v1/web/modules` checks each remote's shared versions; a committed N-1 widget build loads in Playwright on pull requests that touch the singleton list or the federation packages.
 - API Extractor writes a committed report per MIT package; the lockfile holds one `@nestjs/core` and one `@nestjs/graphql` resolution.
 
 Tests first:
@@ -4887,3 +4907,19 @@ flowchart LR
   E10 --> Install
   E18 --> Install
 ```
+
+## After release 1: the public API epic
+
+This epic is not in the ledger. It has no epic id and no estimate, and its tasks earn no ledger credit. It starts with the first public route: when an outside system needs the integration API, or when Data collection's ingestion endpoint is built at `/api/v1/<owning-module-id>/...` ([0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md)). It gets its id and its shaping file then, and the outlines below become its stories. [ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) holds the design.
+
+Release 1 already builds the parts that are cheap now and hard to change later: the reserved module ids (E02-S01), `ApiController` and the boot route check (E02-S03), the reserved plant slugs (E05-S03), Better Auth under `/api/v1/auth` (E05-S05) and the route inventory test over the paths under `/api/v1` (E05-S07). Public routes are `/api/v<major>/<module-id>/...` and are the only routes in the OpenAPI document. When the public API moves to v2, the first-party routes and the shell move in the same release.
+
+1. sdk: Declare public routes. `ApiController({ module, family: "public" })` adds the module's tag. An operation helper sets the operationId (the module's GraphQL name followed by an upper-case letter; a command route's operationId is its mutation name) and applies the command's permission. `@northmes/contracts` exports the `Problem` schema. Test: `packages/sdk/test/rest/api-controller.test.ts`.
+2. platform: Print the OpenAPI snapshot without a database. `@nestjs/swagger` and `zod-openapi` arrive, each in its own pull request at a version older than Renovate's `minimumReleaseAge`. `northmes openapi print` runs in `pnpm gen` after `northmes schema print` and writes `schema/openapi-v1.json`: OpenAPI 3.1 through `zod-openapi`, one document per API major built in `apps/server`, one tag per module, component ids owned as in GraphQL. Tests: `apps/server/test/openapi/print.int.test.ts`, `document.test.ts` and `components.test.ts`, and an extension of `test/meta/gen.test.ts`.
+3. ci: Fail a breaking API change. An oasdiff job in `ci / gate` compares the snapshot with the base branch. In 0.x an ERR-level break fails unless the pull request title has `!`; from 1.0 every break in the public API fails. Test: `test/meta/openapi-diff.test.ts`.
+4. core: Issue integration tokens. A token is bound to a scope node and has a prefix, an expiry, rotation, an issuing screen, the audit surface `api` and per-token rate limits in a Postgres throttler store. Public routes accept these tokens only and ignore cookies; `/graphql` and `/mcp` reject them. Test: additions to `apps/server/test/credentials-by-surface.int.test.ts`.
+5. `<module>`: Serve public reads and commands, in the first module that gets a public route. Reads are `GET /api/v<major>/<module-id>/<resource>`. Writes are command routes `POST /api/v<major>/<module-id>/commands/<command>` with the body `contract.input` and the operationId equal to the mutation name. Plant-scoped routes take the plant as the path segment `/plants/{plant}/`, and creates are idempotent through the client uuidv7 `id`. Tests: `apps/server/test/rest/v1-commands.int.test.ts` and `v1-reads.int.test.ts`.
+6. platform: Serve the document. Each installation serves `GET /api/v1/openapi.json`, its plugins' public routes included, to a signed-in user or an integration token. docs.northmes.dev renders the committed snapshot, and the image ships no Swagger UI. Test: `apps/server/test/rest/openapi-json.int.test.ts`.
+7. plugins: Let plugins add public routes, only under `/api/v<major>/<plugin-id>/`. The boot route check accepts them, and `pnpm plugin:check <id>` checks a plugin's prefix, operationIds and component names against the snapshot. Test: additions to `apps/server/test/boot/plugin-controller.int.test.ts`.
+
+v1 stays served for one minor release after v2 starts in 0.x, and after 1.0 until the supported minor that last served v1 ends its fix window.

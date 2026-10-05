@@ -18,7 +18,7 @@ Every module and plugin has one kebab-case id matching `[a-z][a-z0-9]*(-[a-z0-9]
 
 | Name | `production-start` | `example-validator` | Used for |
 |---|---|---|---|
-| id | `production-start` | `example-validator` | manifest, config, URL segment, static path `/modules/<id>/<version>/` |
+| id | `production-start` | `example-validator` | manifest, config, URL segment, static path `/modules/<id>/<version>/`, REST path segment `/api/v<major>/<id>/` |
 | GraphQL name | `productionStart` | `exampleValidator` | subgraph name, root field prefix (`productionStartReportQuantity`), permission and command prefix (`productionStart.report:create`) |
 | SQL name | `production_start` | `example_validator` | Postgres schema, owner role `nm_mod_production_start`, event prefix (`production_start.report.created`) |
 | remote name | `productionStart` | `exampleValidator` | Module Federation remote name, which allows no hyphen |
@@ -45,6 +45,7 @@ modules/<id>/
     domain/               pure rules: no Nest, no SQL; they throw domain errors, not Nest exceptions
     graphql/              object types, entity references, field resolvers
     commands/             one handler per command
+    rest/                 REST controllers declared with ApiController; public ones later under rest/v<major>/
     infrastructure/       Kysely queries on this module's schema only, generated DB types
     mcp/                  tool definitions (defineTool)
   contracts/              @northmes/<id>-contracts (MIT)
@@ -103,7 +104,7 @@ export default defineModule({
 
 | Field | Content | Checked by |
 |---|---|---|
-| `id` | the kebab-case id | catalog: pattern, duplicates, derived-name collisions |
+| `id` | the kebab-case id | catalog: pattern, reserved ids, duplicates, derived-name collisions |
 | `version` | imported from the package's `package.json`, never typed by hand | CI: every in-repo manifest version equals the root `package.json` version |
 | `northmes` | the NorthMES range the module accepts, written by release automation as `>=X.Y.0-0 <X.(Y+1).0-0`; for a plugin, `northmes plugin build` writes it from `peerDependencies['@northmes/sdk']` | boot: `semver.satisfies` with `includePrerelease`; boot refuses a plugin whose range and peer dependency differ |
 | `dependsOn` | ids of the modules this module calls, references or extends | catalog: present, no cycles, no core module depending on a plugin; sets the topological order (core first) for migrations, server imports and validators |
@@ -143,13 +144,14 @@ defineWebModule({
 
 `defineWebModule` has no nav field. A route declares its own sidebar entry through the `nav` option of `screenRoute`, and the shell builds the module's nav entries from the routes that `routes(plantRoute)` returns. Each route takes its path segment and search definition from its entry in the module's link manifest (`defineModuleLinks` in the module's MIT contracts package), so a path is written once; station routes sit in the manifest's separate `station` section ([06 web and UX](06-web-and-ux.md#routes-and-typed-links), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 
-A build check compares `id`, `version` and `northmesRange` with the backend manifest. The shell checks only that `id` and `version` equal the server's entry in `/api/web/modules`, because the server already filtered on the range. A module owns `/$plant/<id>/*` and nothing else; the shell rejects a route tree whose path differs from the id ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
+A build check compares `id`, `version` and `northmesRange` with the backend manifest. The shell checks only that `id` and `version` equal the server's entry in `/api/v1/web/modules`, because the server already filtered on the range. A module owns `/$plant/<id>/*` and nothing else; the shell rejects a route tree whose path differs from the id ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
 
 ## Catalog checks at boot
 
 Boot step 4 reads every manifest and runs these checks before any Nest code loads. All problems go into one message, and the process exits with code 1 ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)):
 
 - duplicate ids and derived-name collisions;
+- no module or plugin uses a reserved id: `web` and `station` are the path segments of the host's first-party routes and `auth` is Better Auth's, all under `/api/v1` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md));
 - every `dependsOn` entry is installed; no cycles; no core module depends on a plugin;
 - every `northmes` range accepts the image version, and a plugin's range equals the one derived from its SDK peer dependency;
 - every permission, command and event key carries the module's prefix;
@@ -157,7 +159,13 @@ Boot step 4 reads every manifest and runs these checks before any Nest code load
 - every validator targets a command its owner declares validatable, from a module that depends on that owner;
 - the topological order puts core first.
 
-Later boot steps add the migration check, the isolation check, the Mutation-to-command check and composition; [02 architecture](02-architecture.md#boot-sequence) lists them all.
+Later boot steps add the migration check, the isolation check, the Mutation-to-command check, composition and the route check; [02 architecture](02-architecture.md#boot-sequence) lists them all.
+
+## REST controllers
+
+A module's REST controllers live in `server/rest/` and belong to its `<Id>Module`, the manifest's `server` entry, so REST adds no manifest key. Each controller is declared with `ApiController({ module, family })` from `@northmes/sdk/rest`, which builds its path under `/api/v<major>/<module-id>/`; the server sets no Nest global prefix and uses no Nest URI versioning. The family is first-party for a route that only the shell, the remotes and the stations from the same image call, such as `/api/v1/ai/chat` and `/api/v1/pyramid-connector/import-file`, and public for a route that outside callers use. Release 1 has no public route. When the public API arrives, a public controller goes under `server/rest/v<major>/`, and its request and response schemas go in the module's MIT contracts package under `contracts/src/rest/v<major>/` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
+
+At boot the reachability walk of the isolation check assigns each controller to the module root that reaches it, or to the host. The route check then exits 1 naming the controller when its path does not start with `api/v<major>/` and is not on the root allowlist, when a controller off the root allowlist was not declared through `ApiController`, when two controllers register the same method and path, when a public controller's module segment differs from its owner's id, or when a plugin root reaches a controller (see [REST routes and plugins](#rest-routes-and-plugins)). The route families and the reserved path segments are in [05 GraphQL and APIs](05-graphql-and-apis.md#route-families-and-reserved-path-segments).
 
 ## Release 1 modules
 
@@ -165,7 +173,7 @@ Later boot steps add the migration check, the isolation check, the Mutation-to-c
 |---|---|---|---|---|
 | `core` | `core` / `core` | none | plant, scope tree, equipment groups, equipment, tools, articles, routings and operations, operation equipment, calendars, warehouses, customers; roles, role assignments, the permission catalog, credential bindings, badge assignments, station operator sessions; settings and the configuration revision; `core.event`; the Better Auth `auth` schema | yes: master data, settings, System health |
 | `audit` | `audit` / `audit` | see [Open items](#open-items) | command, change and security event tables with monthly partitions; `begin_command`, the capture trigger, partition and security event functions | not decided |
-| `ai` | `ai` / `ai` | `core` | provider configurations, alias bindings, budgets and budget state, `ai_call`, `provider_health`; the AI port implementation; `/api/ai/chat` | not decided (provider settings, usage) |
+| `ai` | `ai` / `ai` | `core` | provider configurations, alias bindings, budgets and budget state, `ai_call`, `provider_health`; the AI port implementation; `/api/v1/ai/chat` | not decided (provider settings, usage) |
 | `planning` | `planning` / `planning` | `core` | production orders, production order operations, job orders, production order demand, per-planner drafts, soft locks, the plan revision, agent proposals, autoplan; owns slots `planning/board/side/v1`, `planning/order/panels/v1`, `planning/board/block-fields/v1` and `planning/board/header/v1` | yes: planning board, orders |
 | `production-start` | `productionStart` / `production_start` | `core`, `planning` | station reports; reports progress through planning's `reportOperationProgress` | yes: `/station/$stationId`, and a panel in `planning/order/panels/v1` |
 | `pyramid-connector` | `pyramidConnector` / `pyramid_connector` | `core`, `planning` | run log, raw payloads, import inbox, pending changes, external links, last-seen and last-sent values, write-back state; the poll cron and the write-back consumer | not decided (import log, inbox, file upload) |
@@ -233,6 +241,10 @@ These changes still need a new image: a plugin that needs another version of a h
 - A plugin removed from the config leaves its schema. System health lists leftover schemas of modules no longer installed; `northmes plugin purge <id>` comes later.
 - Release 1 has no plugin database API for writing a plugin's own tables at run time. Whether the example validator keeps a table of its own is open ([Open items](#open-items)).
 
+### REST routes and plugins
+
+A plugin adds no REST controller until the public API exists. CI never sees a plugin's routes and the route inventory test cannot list them, so the boot route check is the only place to check them, and it stops boot when a plugin root reaches a controller. A plugin exposes its own data through its subgraph. Once the public API exists, a plugin may add public routes under `/api/v<major>/<plugin-id>/` only; a first-party route or a route under another id still stops boot ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
+
 ### Configuration for plugins
 
 A plugin reads no environment variables. `pnpm plugin:check` refuses an import of `@nestjs/config` or `@northmes/sdk/config`, and Biome's `style/noProcessEnv` covers the in-repo example plugins. A plugin's behaviour comes from its settings, which are audited ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
@@ -242,6 +254,7 @@ A plugin reads no environment variables. `pnpm plugin:check` refuses an import o
 | Situation | Result |
 |---|---|
 | a configured plugin with a server part fails to load, has an invalid manifest or fails composition | boot stops; the plugin is never skipped, because a skipped validator removes a business rule without anyone noticing |
+| a plugin's Nest module reaches a REST controller | boot stops, and the route check names the plugin id |
 | a web-only plugin (no server part, no migrations) contributes to a slot that no longer exists | status `incompatible`; boot continues (needs the maintainer's confirmation) |
 | a validator throws or times out at run time | that command is rejected; everything else works |
 | a plugin's remote files are missing or its manifest hash differs | the module list marks it with `integrity: null`; the shell shows the placeholder |
@@ -250,7 +263,7 @@ System health shows a "Modules and plugins" table with id, version, range, statu
 
 ### Installed versus enabled, and trust
 
-Release 1 knows only "installed": a plugin in the config is in the supergraph and in the module list after a restart. Per-organization enablement waits for an installation with more than one company; it will be a run-time check in the permission guard, the command bus and `/api/web/modules`.
+Release 1 knows only "installed": a plugin in the config is in the supergraph and in the module list after a restart. Per-organization enablement waits for an installation with more than one company; it will be a run-time check in the permission guard, the command bus and `/api/v1/web/modules`.
 
 Plugins run with full access in the server process and in the page, and the docs say so. No third-party plugin runs on the pilot installation (needs the maintainer's confirmation).
 
@@ -326,8 +339,8 @@ Every `@northmes/*` package, every module package, the example plugins and the i
 | plugin range against its peer dependency | boot catalog | the manifest range differs from the range derived from `peerDependencies['@northmes/sdk']` |
 | in-repo versions | CI | an in-repo manifest version differs from the root version, or an example range excludes it |
 | remote against manifest | remote build | `defineWebModule` id, version or range differ from the backend manifest |
-| remote against server entry | shell | id or version differ from the `/api/web/modules` entry |
-| shared web versions | `/api/web/modules` | react is another major or newer than the shell's; router or Apollo is another minor; `@northmes/web-sdk` or `@northmes/ui` is another 0.minor |
+| remote against server entry | shell | id or version differ from the `/api/v1/web/modules` entry |
+| shared web versions | `/api/v1/web/modules` | react is another major or newer than the shell's; router or Apollo is another minor; `@northmes/web-sdk` or `@northmes/ui` is another 0.minor |
 | N-1 widget | Playwright on pull requests that touch the singleton list or the federation packages | the previous release's committed widget build fails to render, logs an error or violates the CSP |
 | plugin composition | `pnpm plugin:check <id>` | the plugin's SDL does not compose against the committed snapshot |
 | composition corpus | CI | the in-repo examples, `test/plugin-corpus` SDL and the built package of any plugin the pilot runs do not compose with a changed module |
@@ -346,10 +359,10 @@ Core is AGPL-3.0-or-later. The packages a plugin needs are MIT, so a plugin's ow
 
 | Package | License | Holds |
 |---|---|---|
-| `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`, `version`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`, `defineList`, `listSearch`, `defineSearch` and the `searchKey` helpers, `urlSearch`, `defineModuleLinks`, `measured`), the unit catalog, `resolveWallClock` and the millisecond window functions, the value enums of `dateFormat`, `hourCycle` and `numberFormat`, the `Presentation` type, `DEFAULT_PRESENTATION`, and the pure formatters and parsers on the subpath `format` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)) |
+| `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`, `version`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`, `defineList`, `listSearch`, `defineSearch` and the `searchKey` helpers, `urlSearch`, `defineModuleLinks`, `measured`), the unit catalog, `resolveWallClock` and the millisecond window functions, the value enums of `dateFormat`, `hourCycle` and `numberFormat`, the `Presentation` type, `DEFAULT_PRESENTATION`, the pure formatters and parsers on the subpath `format` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)), and the API major and `apiPath` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)) |
 | `@northmes/<id>-contracts` | MIT | one per module; listed under [Package shape](#package-shape) |
-| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, and the server-only `/errors` and `/config`, which plugins may not import |
-| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider (which fills the presentation context from `/api/web/modules`), the Apollo client factory, data hooks, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `movedRoutes`, `usePlantTime()`, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
+| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, `/rest` (`ApiController`), and the server-only `/errors` and `/config`, which plugins may not import |
+| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider (which fills the presentation context from `/api/v1/web/modules`), the Apollo client factory, data hooks, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `movedRoutes`, `usePlantTime()`, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
 | `@northmes/ui` | MIT, shared singleton | primitives on one locked base, tokens, presentational patterns, `LinkProvider`, `PresentationProvider` and `usePresentation()`, `DateTimeText` and `MeasureText`, the form engine `useZodForm` and the named react-hook-form exports; no Apollo, TanStack Router or GraphQL imports |
 | `@northmes/web-build` | MIT | `defineRemoteConfig`, the shared list, build guards, `sources.gen.css` |
 | `@northmes/testing` | MIT | the Testcontainers harness, the app factory, `given` factories, clients, contract suites, the AI mock, accessibility helpers, the catalog lint |
@@ -390,6 +403,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | per-organization plugin enablement | an installation with more than one company |
 | an audited range override during 0.x | not planned (needs the maintainer's confirmation) |
 | a plugin database API and an SDK jobs API with a system principal for plugins | a pilot need |
+| public API routes from plugins, under `/api/v<major>/<plugin-id>/` | the first public route, which arrives with the first outside system or Data collection's ingestion endpoint ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)) |
 | MIT service interfaces so plugins can call core services in process | later; release 1 plugins use GraphQL references, validators, slots and events |
 | slot prop types in each module's contracts package through declaration merging | later |
 | enabling a remote without a page reload | later |
@@ -402,7 +416,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 
 ## Tests and checks
 
-- `catalog.test.ts`: a bad range, a missing dependency, a cycle, a wrong key prefix, a contribution without a dependency on the slot owner, an unknown validator target and a validator without `dependsOn` each exit 1 with a named message, and several problems are listed together. Config 0.3.0 with image 0.4.0 throws naming both; image 0.4.0-rc.1 with range `>=0.3.0 <0.5.0` passes; peer `^0.3.0` against manifest range `>=0.3.0 <0.5.0` fails.
+- `catalog.test.ts`: a bad range, a missing dependency, a cycle, a wrong key prefix, a contribution without a dependency on the slot owner, an unknown validator target and a validator without `dependsOn` each exit 1 with a named message, and several problems are listed together. The module ids `auth`, `web` and `station` are refused as reserved. Config 0.3.0 with image 0.4.0 throws naming both; image 0.4.0-rc.1 with range `>=0.3.0 <0.5.0` passes; peer `^0.3.0` against manifest range `>=0.3.0 <0.5.0` fails.
 - Command bus unit test: input `{ quantity: { value: 1500, unit: "pcs" } }` against a payload schema `z.object({ quantity: z.number() })` is rejected with `core.validator_contract_mismatch`, and the handler spy is not called. A contract test validates planning's built payload against its MIT schema.
 - Validator limit tests: a validator slower than its limit rejects the command; a throwing validator is masked and the command does not run.
 - Slot tests: a web-only widget on a removed slot gets status `incompatible` and boot succeeds; a plugin with a server part on an unknown slot still fails boot.
@@ -410,6 +424,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 - Lockfile test: `pnpm-lock.yaml` holds one `@nestjs/core` and one `@nestjs/graphql` resolution, each with a single peer suffix, examples included.
 - Plugin migration tests on Testcontainers Postgres: a plugin's `ALTER TABLE core.<table>`, a `CREATE TABLE ... AS SELECT` from planning and a `CREATE TABLE` in the core schema are refused and change nothing; checksum drift is caught; two concurrent `northmes migrate` runs apply each file once.
 - `migrate-guards.test.ts`: a module migration that would drop a plugin's foreign key raises an error naming the key; health lists the schema of a plugin removed from the config.
+- Route check tests: in `apps/server/test/boot/routes.int.test.ts`, two controllers on `POST /api/v1/web/client-errors` make boot exit 1 naming both classes. `apps/server/test/boot/plugin-controller.int.test.ts` boots the built server in a child process, and a fixture plugin whose Nest module reaches a controller makes boot exit 1 naming the plugin id.
 - Composition corpus test: a pull request fixture with a breaking planning change fails when composed with a corpus SDL.
 - `plugin-outside` CI job, described above.
 - Nightly Compose test with `example-validator` in a site image: `northmes migrate` applies its migration and `app` reaches ready.
@@ -434,6 +449,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | plugins read no environment variables |
 | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | the formatters in `@northmes/contracts`, the presentation context in `@northmes/ui` |
 | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | link manifests, nav entries from routes, the search helpers in `@northmes/contracts`, the link pattern check |
+| [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | reserved module ids, REST controllers and `ApiController`, the route check, no REST controllers in plugins until the public API exists |
 
 ## Open items
 

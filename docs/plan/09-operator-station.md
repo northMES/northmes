@@ -27,7 +27,7 @@ The station is part of release 1 by the maintainer's decision ([ADR 0055](../adr
 | `dependsOn` | `core`, `planning` |
 
 - The shell has a second mount point, `/station/$stationId`, with a full-screen layout and no sidebar. The production-start remote returns its station routes from `stationRoutes(stationRoute)` ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). Their paths come from the `station` section of the production-start link manifest, `defineModuleLinks(id, entries, { station: { ... } })`, whose builders take `stationId` instead of `plant` ([06-web-and-ux.md](06-web-and-ux.md), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
-- For a station principal, `/api/web/modules` returns the station mount and its modules, with the station plant's zone and resolved presentation values, so station times and numbers follow the plant's settings ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Station remotes load with a 30 s timeout. Every station chunk preloads right after sign-in.
+- For a station principal, `/api/v1/web/modules` returns the station mount and its modules, with the station plant's zone and resolved presentation values, so station times and numbers follow the plant's settings ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Station remotes load with a 30 s timeout. Every station chunk preloads right after sign-in.
 - The station device identity, operator sessions and badges live in core. Reports live in `production_start`. Production-start reports progress by calling `planning.reportOperationProgress` in the same transaction, so planning has no dependency on production-start ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)).
 - Production-start also contributes a panel to planning's order panel slot, so planners see reported quantities on an order.
 
@@ -70,7 +70,7 @@ Principal resolution. The gateway's principal plugin has a station branch:
 - A command precondition rejects a station principal whose target equipment is not bound to the station (FORBIDDEN, error code `productionStart.station_equipment`).
 - When a station cookie is present, session cookies are ignored, except on sign-out and on the admin deregistration route.
 - Station subscriptions authorize against the station ceiling only and carry no operator, because a browser WebSocket cannot send the operator header. Stations cannot send mutations over the WebSocket.
-- The same-origin check covers `/api/station` and `/graphql` ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
+- The same-origin check covers `/api/v1/station` and `/graphql` ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
 
 Limits, presence and revocation:
 
@@ -92,7 +92,7 @@ Every station command is audited with principal type `station`, `acting_for` the
 
 ### 3.2 Sign-in commands
 
-- Sign-in, sign-out and replacement are the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` under `/api/station`, with principal station, surface station and `acting_for` the user. The Better Auth plugin endpoint is not used for them.
+- Sign-in, sign-out and replacement are the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` under `/api/v1/station`, with principal station, surface station and `acting_for` the user. The Better Auth plugin endpoint is not used for them.
 - Methods: badge (the default), username and password, and badge plus PIN when the station's PIN option is on. Personal login runs through the same command, so no Better Auth session cookie is left on the shared device.
 - One open session per station: a partial unique index on `core.station_operator_session (station_id) where ended_at is null`. The sign-in command ends the open session in the same transaction with end reason `replaced` and retries once on 23505.
 - The job order's state does not change when the operator changes. After a new sign-in, the header shows who started the job and when, for example "5001.20 started 12:02 by Anna Berg, last report 13:58".

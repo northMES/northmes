@@ -39,11 +39,11 @@ Chosen option: "One `defineModule` for modules and plugins, three packages per m
 
 ### One id, derived names
 
-Every module and plugin has one kebab-case id matching `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The SDK function `moduleNames` derives every other name. The host refuses two modules whose derived names collide.
+Every module and plugin has one kebab-case id matching `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The SDK function `moduleNames` derives every other name. The host refuses two modules whose derived names collide, and refuses the ids `web`, `station` and `auth`, which are the first-party and library path segments under `/api/v1` ([ADR 0064](0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 
 | Name | Example for `production-start` | Used for |
 |---|---|---|
-| id | `production-start` | manifest, config, URL segment `/$plant/production-start`, static path `/modules/production-start/<version>/` |
+| id | `production-start` | manifest, config, URL segment `/$plant/production-start`, static path `/modules/production-start/<version>/`, REST path segment `/api/v<major>/production-start/` |
 | gql | `productionStart` | subgraph name, root field prefix (`productionStartReportQuantity`), permission and command prefix |
 | sql | `production_start` | Postgres schema, owner role `nm_mod_production_start`, event prefix (`production_start.report.created`) |
 | remote | `productionStart` | Module Federation remote name, which allows no hyphens |
@@ -131,7 +131,7 @@ The `web` data is static because the remote is a separate build that the browser
 ### Confirmation
 
 * `moduleNames` unit tests: `production-start` yields `productionStart`, `production_start`, `nm_mod_production_start` and remote `productionStart`; ids such as `Planning`, `-a`, `a-` and `a--b` are rejected.
-* Catalog test: two modules whose derived names collide make boot exit 1 naming both ids; a validator for an undeclared command and a slot contribution outside the `dependsOn` closure each exit 1.
+* Catalog test: two modules whose derived names collide make boot exit 1 naming both ids; a validator for an undeclared command and a slot contribution outside the `dependsOn` closure each exit 1; the module ids `web`, `station` and `auth` are each refused as reserved, and the message names the id.
 * Manifest load test: importing every in-repo manifest in a fresh process loads no `@nestjs/*` package.
 * Isolation contract suite with five fixtures: a sub-module of another module, an untyped `@Resolver()`, a global host module, an API module importing its own resolver module, and a typed control. Each failing fixture makes boot exit 1 with the named import path; the control boots.
 * Remote build check: a remote whose `defineWebModule` version differs from its manifest fails `pnpm plugin:build` and the in-repo remote build.

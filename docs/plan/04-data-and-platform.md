@@ -7,7 +7,7 @@ This document describes the platform layer that every NorthMES module builds on:
 | Topic | ADR | Status | Still to confirm |
 |---|---|---|---|
 | Module-owned schemas, process roles | [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) | accepted | none |
-| Database image | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | none |
+| Database image | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
 | Kysely, migrations, roles, keys and versions | [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | proposed | none |
 | Tenancy and the scope tree | [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md) | accepted | product owner (customer order line scope); maintainer (one plant at a time) |
 | Row-level security | [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md) | proposed | none |
@@ -525,7 +525,7 @@ Permission cache rules (one replica in the pilot):
 - User management (create, ban, reset password, assign roles) runs as NorthMES commands that check `can()` at the target user's assignment scopes, write command rows and call `auth.api` on the server. No user gets a Better Auth admin role. The guard refuses sessions with `impersonatedBy` set.
 - No web setup route exists. `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container, open an audit context with surface `cli`, write a security event and print a temporary password once.
 
-Required tests: a planner whose role is removed gets `FORBIDDEN` on the next move without waiting for the TTL; a banned user's next request with a cached cookie is `UNAUTHENTICATED` within 60 seconds; a plant A admin who edits a company role gets `FORBIDDEN`; `POST /api/auth/admin/impersonate-user` returns 404; creating a user with a retired username fails; deleting `auth.user` directly fails with a foreign key violation.
+Required tests: a planner whose role is removed gets `FORBIDDEN` on the next move without waiting for the TTL; a banned user's next request with a cached cookie is `UNAUTHENTICATED` within 60 seconds; a plant A admin who edits a company role gets `FORBIDDEN`; `POST /api/v1/auth/admin/impersonate-user` returns 404; creating a user with a retired username fails; deleting `auth.user` directly fails with a foreign key violation.
 
 ## Principals and credentials
 
@@ -546,7 +546,7 @@ Rules:
 - Principal type `agent` and surface `assistant` exist from the first audit migration, before the partitioned audit tables hold data.
 - Only job names a manifest registers as system jobs may run as a system principal. A job a user started (autoplan from the board) runs as that user with surface `job`.
 - `audit.begin_command` with surface `sql` requires an active support user and a reason.
-- Each credential works only on its surfaces. `/graphql` and `/api/web` accept session and station cookies only. `/mcp` accepts only a bearer JWT whose `aud` is the public origin plus `/mcp`, or a personal access token of api-key `configId` `mcp`; it ignores cookies. The GraphQL guard rejects `mcp` tokens, so an agent that can read its token cannot call the commit mutation as the user.
+- Each credential works only on its surfaces. `/graphql` and `/api/v1/web` accept session and station cookies only. `/mcp` accepts only a bearer JWT whose `aud` is the public origin plus `/mcp`, or a personal access token of api-key `configId` `mcp`; it ignores cookies. The GraphQL guard rejects `mcp` tokens, so an agent that can read its token cannot call the commit mutation as the user.
 - Personal access tokens expire within 90 days. Each call's rights are the token's scopes intersected with a live `can()`.
 - Boot asserts that `enableSessionForAPIKeys` is false and that `disabledPaths` contains the api-key client endpoints and `/token`.
 - A station key alone grants only `core.station:signIn` and reading its own station record. Operator sign-in and sign-out at a station are the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut`. The station design is in [09-operator-station.md](09-operator-station.md) and [ADR 0033](../adr/0033-online-operator-station-in-the-production-start-module.md).

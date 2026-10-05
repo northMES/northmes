@@ -1,6 +1,6 @@
 # GraphQL and APIs
 
-NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the same Node process as every module. Each module and plugin is a GraphQL Federation subgraph that is built in process, and an embedded Hive Gateway runtime composes the subgraphs into a supergraph at boot and serves queries, mutations and subscriptions over HTTP, graphql-ws and SSE. Every list follows one connection convention with filter, orderBy, search and group by. Every error follows one `DomainError` model. Live screens receive ids from subscriptions fed by the event tail and refetch what they show. Release 1 adds a short list of REST routes (Better Auth, the web module list, browser error reports, the AI chat stream, station sign-in, the Pyramid file upload and health) and one MCP endpoint with eight planning tools. This document gives the rules, names, limits and tests that the tasks implementing these parts follow.
+NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the same Node process as every module. Each module and plugin is a GraphQL Federation subgraph that is built in process, and an embedded Hive Gateway runtime composes the subgraphs into a supergraph at boot and serves queries, mutations and subscriptions over HTTP, graphql-ws and SSE. Every list follows one connection convention with filter, orderBy, search and group by. Every error follows one `DomainError` model. Live screens receive ids from subscriptions fed by the event tail and refetch what they show. Release 1 adds a short list of REST routes under `/api/v1` (Better Auth, the web module list, browser error reports, the AI chat stream, station sign-in and the Pyramid file upload), the health probes at the root and one MCP endpoint with eight planning tools. A public REST API for outside systems, described in OpenAPI, comes later. This document gives the rules, names, limits and tests that the tasks implementing these parts follow.
 
 ## Decisions in this document
 
@@ -23,8 +23,9 @@ NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the
 | Web codegen and Apollo Client | [0020][adr-0020] | proposed | maintainer (Base UI; token base) |
 | API reports, version ranges, event schema diffs | [0038][adr-0038] | accepted | maintainer (no range override in 0.x) |
 | Slot ids and plugin checks | [0037][adr-0037] | accepted | maintainer (no third-party plugin on the pilot; web-only plugins degrade); product owner (unpaid-invoice validator) |
-| Presentation settings in `/api/web/modules`, week labels, machine-readable output | [0061][adr-0061] | accepted | none |
+| Presentation settings in `/api/v1/web/modules`, week labels, machine-readable output | [0061][adr-0061] | accepted | none |
 | Measured input limits, link manifests and link snapshots | [0062][adr-0062] | accepted | none |
+| REST route families under `/api/v<major>`, reserved path segments, the boot route check, the public API and OpenAPI later | [0064][adr-0064] | accepted | none |
 
 Related plan documents: [02-architecture.md](02-architecture.md) (process roles and boot order), [03-modules-and-extensibility.md](03-modules-and-extensibility.md) (module packages, manifests, plugins), [04-data-and-platform.md](04-data-and-platform.md) (command pipeline, row-level security, audit, event log), [06-web-and-ux.md](06-web-and-ux.md) (shell, remotes, `DataTable`), [07-production-planning.md](07-production-planning.md) (board queries and planning commands), [09-operator-station.md](09-operator-station.md), [10-ai-and-agents.md](10-ai-and-agents.md), [11-quality-and-testing.md](11-quality-and-testing.md), [12-operations-and-security.md](12-operations-and-security.md), [13-delivery-and-github.md](13-delivery-and-github.md). Terms follow [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -34,16 +35,16 @@ Related plan documents: [02-architecture.md](02-architecture.md) (process roles 
 |---|---|---|---|---|
 | `/graphql` | HTTP POST; graphql-ws over a WebSocket upgrade; SSE with `Accept: text/event-stream` | session cookie, station cookie | web shell, module remotes, stations | [0015][adr-0015], [0018][adr-0018] |
 | `/mcp` | HTTP POST (MCP Streamable HTTP) | bearer only: personal access token or a JWT whose `aud` is the public origin plus `/mcp`; cookies are ignored | MCP clients | [0034][adr-0034] |
-| `/api/auth/*` | HTTP | Better Auth handles sign-in itself | sign-in, sign-out, session | [0010][adr-0010] |
-| `/api/web/modules` | HTTP GET | session cookie, station cookie | shell boot and plant switch | [0019][adr-0019] |
-| `/api/web/client-errors` | HTTP POST | session cookie, station cookie | shell and remotes | [0043][adr-0043] |
-| `/api/ai/chat` | HTTP POST, streamed response | session cookie | AI chat panel | [0035][adr-0035] |
-| `/api/station` | HTTP POST | station cookie | station sign-in and sign-out | [0033][adr-0033] |
-| Pyramid XML upload (path not fixed yet) | HTTP POST, multipart | session cookie | company admin | [0032][adr-0032] |
+| `/api/v1/auth/*` | HTTP | Better Auth handles sign-in itself | sign-in, sign-out, session | [0010][adr-0010] |
+| `/api/v1/web/modules` | HTTP GET | session cookie, station cookie | shell boot and plant switch | [0019][adr-0019] |
+| `/api/v1/web/client-errors` | HTTP POST | session cookie, station cookie | shell and remotes | [0043][adr-0043] |
+| `/api/v1/ai/chat` | HTTP POST, streamed response | session cookie | AI chat panel | [0035][adr-0035] |
+| `/api/v1/station` | HTTP POST | station cookie | station sign-in and sign-out | [0033][adr-0033] |
+| `/api/v1/pyramid-connector/import-file` | HTTP POST, multipart | session cookie | company admin (Pyramid XML upload) | [0032][adr-0032] |
 | `/health`, `/health/live`, `/health/ready` | HTTP GET | none (routes marked `@Public`) | customer monitoring, release CI, System health | [0043][adr-0043] |
 | `/modules/<id>/<version>/` | static files, immutable caching | none | shell loading remotes | [0019][adr-0019] |
 
-The `api` role serves all of these; the pilot runs role `all`, which contains `api` ([0002][adr-0002]). The `worker` role serves only its own health endpoint.
+The `api` role serves all of these; the pilot runs role `all`, which contains `api` ([0002][adr-0002]). The `worker` role serves only its own health endpoint. Each path under `/api/v1/` belongs to one route family, and the others are root routes ([Route families and reserved path segments](#route-families-and-reserved-path-segments)).
 
 ## GraphQL Federation in one process
 
@@ -173,7 +174,7 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 
 ### The principal, once per request
 
-- A gateway plugin resolves the principal in `onContextBuilding`, once per client request, through `PrincipalResolver(request, plant)` from the SDK. The same resolver serves REST controllers, `/api/ai/chat` and `/mcp` ([0010][adr-0010], [0011][adr-0011]).
+- A gateway plugin resolves the principal in `onContextBuilding`, once per client request, through `PrincipalResolver(request, plant)` from the SDK. The same resolver serves REST controllers, `/api/v1/ai/chat` and `/mcp` ([0010][adr-0010], [0011][adr-0011]).
 - Session path: Better Auth database sessions with a cookie cache whose `maxAge` is at most 60 s.
 - Station path: the resolver verifies the key in the `__Host-nm_station` cookie, loads `core.credential`, takes the plant from the credential's scope and rejects a differing `x-northmes-plant`. On HTTP it adds the operator from `x-northmes-operator-session` after checking that the operator session is open and belongs to this station. When a station cookie is present, session cookies are ignored except on sign-out and admin deregistration ([0033][adr-0033]).
 - Plant: the Apollo HTTP link sends the route plant's id in `x-northmes-plant`. The resolver validates it against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode: core.plant_forbidden`, data null and one `permission.denied` security event. No request falls back to a default plant, and the plant is never stored on the session ([0007][adr-0007]).
@@ -600,7 +601,7 @@ sequenceDiagram
 | `retryWait` | backoff capped at 10 s, with jitter |
 | `shouldRetry` | false for close codes 4400, 4401 and 4403 |
 | `keepAlive` | 10 000 ms; a pong timeout closes with 4499 after 5 s |
-| on `connected` after a retry | refetch every active query; compare `/api/web/modules` versions and integrity |
+| on `connected` after a retry | refetch every active query; compare `/api/v1/web/modules` versions and integrity |
 
 The graphql-ws 6.3.0 defaults (5 attempts, no keep-alive) gave up after about 31 to 46 s, shorter than any upgrade, and events committed in the gap were never sent.
 
@@ -631,7 +632,7 @@ While the client is reconnecting, the shell shows "Live updates paused, reconnec
 
 - The gateway adds `x-northmes-build: <version>+<supergraphHash>` to every `/graphql` response and to the graphql-ws `connection_ack` payload.
 - `createNorthmesClient` sends `x-northmes-client-build` and compares the server value with the value it booted with.
-- A blocking reload dialog opens on a mismatch, on `GRAPHQL_VALIDATION_FAILED`, on a failed dynamic import, and on a changed supergraph hash or manifest integrity in `/api/web/modules`. Meanwhile the link refuses mutations, and the server rejects a stale mutation with `core.client_outdated`.
+- A blocking reload dialog opens on a mismatch, on `GRAPHQL_VALIDATION_FAILED`, on a failed dynamic import, and on a changed supergraph hash or manifest integrity in `/api/v1/web/modules`. Meanwhile the link refuses mutations, and the server rejects a stale mutation with `core.client_outdated`.
 - Stations reload by themselves only when no form holds unsent input.
 
 ### Shutdown
@@ -643,7 +644,7 @@ Role `all` shuts down in this order: readiness returns 503; graphql-ws is dispos
 Without these rules, Yoga (under the gateway runtime) with `cors` undefined reflects any `Origin` with credentials and executes form-encoded mutations. `SameSite=Lax` blocks only cross-site requests, and other applications on the customer's intranet domain count as same-site. A WebSocket upgrade has no CORS at all ([0011][adr-0011]).
 
 - The gateway runs with `cors: false` and `csrfPrevention: { requestHeaders: ['x-northmes-csrf'] }`. The Apollo HTTP link and the SSE client send the header. Yoga's check covers only requests without a content type or with a content type that skips preflight, so JSON requests rely on the middleware below.
-- A global Nest middleware, mounted before the gateway and before every cookie-authenticated controller (the Pyramid upload, `/api/web`, `/api/ai/chat`, `/api/station`), rejects unsafe methods with 403 unless `Origin` equals `NORTHMES_PUBLIC_ORIGIN`, or, when `Origin` is absent, `Sec-Fetch-Site` is `same-origin`. Each rejection writes a security event.
+- A global Nest middleware, mounted before the gateway and before every cookie-authenticated controller (`/api/v1/pyramid-connector/import-file`, `/api/v1/web/*`, `/api/v1/ai/chat`, `/api/v1/station`), rejects unsafe methods with 403 unless `Origin` equals `NORTHMES_PUBLIC_ORIGIN`, or, when `Origin` is absent, `Sec-Fetch-Site` is `same-origin`. Each rejection writes a security event.
 - The WebSocket upgrade listener runs the same function, answers 403 and destroys the socket on a foreign origin.
 - Better Auth's `trustedOrigins` is `[NORTHMES_PUBLIC_ORIGIN]`. The session cookie is `SameSite=Strict`. The station cookie is `__Host-nm_station` with `SameSite=Strict` and `Path=/`.
 - `/mcp` is exempt from the cookie rule because it accepts bearer credentials only, and it checks `Origin` and `Host` itself.
@@ -655,10 +656,10 @@ One table drives `PrincipalGuard` and the gateway plugin:
 
 | Endpoint | Accepts | Rejects |
 |---|---|---|
-| `/graphql`, `/api/web/*` | session cookie, station cookie | personal access tokens of `configId` `mcp`, any token whose `aud` is `/mcp` |
+| `/graphql`, `/api/v1/web/*` | session cookie, station cookie | personal access tokens of `configId` `mcp`, any token whose `aud` is `/mcp` |
 | `/mcp` | bearer JWT with `aud` = `NORTHMES_PUBLIC_ORIGIN + '/mcp'`, or a personal access token of `configId` `mcp` (prefix `nms_mcp_`) | cookies (ignored) |
-| `/api/station` | station cookie; registration uses a pairing code that an admin approves from a signed-in PC ([09-operator-station.md](09-operator-station.md)) | |
-| `/api/ai/chat`, Pyramid upload | session cookie | |
+| `/api/v1/station` | station cookie; registration uses a pairing code that an admin approves from a signed-in PC ([09-operator-station.md](09-operator-station.md)) | |
+| `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file` | session cookie | |
 
 Boot asserts that Better Auth's `enableSessionForAPIKeys` is false and that `disabledPaths` contains every `/admin/*` path, the api-key client endpoints and `/token`.
 
@@ -677,26 +678,60 @@ Request logs redact `cookie`, `authorization`, `x-api-key`, the operator-session
 
 ### Rate limiting
 
-Better Auth's limiter, with database storage, guards the sign-in endpoints. The station key config turns that limiter off and uses a per-station limit instead: 5 unknown badges within 60 s lock badge sign-in on that station for 5 minutes and write a security event. `@nestjs/throttler` keeps counters in memory while one replica runs (for example on `/api/web/client-errors`); a Postgres `ThrottlerStorage` is written when a second replica exists. Only Caddy is a trusted proxy.
+Better Auth's limiter, with database storage, guards the sign-in endpoints. The station key config turns that limiter off and uses a per-station limit instead: 5 unknown badges within 60 s lock badge sign-in on that station for 5 minutes and write a security event. `@nestjs/throttler` keeps counters in memory while one replica runs (for example on `/api/v1/web/client-errors`); a Postgres `ThrottlerStorage` is written when a second replica exists. Only Caddy is a trusted proxy.
 
 ## REST endpoints in release 1
 
-The Pyramid connector runs in process, so release 1 has no integration REST API, no API tokens for outside systems and no idempotency store ([0031][adr-0031]). The integration API with scoped tokens bound to a scope node, OpenAPI generated from the Zod contracts (Nest 12 Standard Schema with `@nestjs/swagger` 12 and zod-openapi) and an oasdiff gate come when the first outside system needs them ([0017][adr-0017], [0055][adr-0055]).
+The Pyramid connector runs in process, so release 1 has no integration REST API, no public route, no API tokens for outside systems and no idempotency store ([0031][adr-0031]). Every route below is a first-party, library or root route. The public API with integration tokens bound to a scope node, OpenAPI generated from the Zod contracts and an oasdiff gate come with the first public route, which arrives with the first outside system or Data collection's ingestion endpoint ([0017][adr-0017], [0055][adr-0055], [0064][adr-0064]); [The public API and OpenAPI, later](#the-public-api-and-openapi-later) records the design.
 
-Every REST route either resolves its principal through `PrincipalResolver` or carries `@Public`, and a test lists every route and fails on one that does neither. REST routes take the plant from the request path and never default it for a user with several plants (see [Open items](#open-items) for the routes that carry it elsewhere). Request bodies are parsed with Zod.
+Every REST route either resolves its principal through `PrincipalResolver` or carries `@Public`, and the route inventory test, `apps/server/test/rest/routes.int.test.ts`, lists every route and fails on one that does neither. No REST route defaults the plant for a user with several plants. Public routes will take it from the path segment `/plants/{plant}/` (M-37). The first-party routes take it from the request: `/api/v1/web/modules` from `?plant=` and `/api/v1/ai/chat` from the route's plant that the request carries. Request bodies are parsed with Zod.
 
 | Route | Method | Permission or credential | Limits and behaviour |
 |---|---|---|---|
-| `/api/auth/*` | Better Auth | none before sign-in | `toNodeHandler(auth)` mounted before body parsing; sign-up disabled; `/admin/*`, api-key client endpoints and `/token` answer 404 |
-| `/api/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per company; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes, each with its `kind` (`core`, `module` or `plugin`), a SHA-384 hash of its manifest and `integrity: null` for a module with missing files, plus permissions per plant and `plant { id, slug, name, timeZone, presentation }` with the plant's resolved presentation values ([06-web-and-ux.md](06-web-and-ux.md), [0061][adr-0061]) |
+| `/api/v1/auth/*` | Better Auth | none before sign-in | `toNodeHandler(auth)` mounted before body parsing; sign-up disabled; `/admin/*`, api-key client endpoints and `/token` answer 404 |
+| `/api/v1/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per company; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes, each with its `kind` (`core`, `module` or `plugin`), a SHA-384 hash of its manifest and `integrity: null` for a module with missing files, plus permissions per plant and `plant { id, slug, name, timeZone, presentation }` with the plant's resolved presentation values ([06-web-and-ux.md](06-web-and-ux.md), [0061][adr-0061]) |
 | `/modules/<id>/<version>/*` | GET | public | immutable caching; remotes hold no data |
-| `/api/web/client-errors` | POST | session or station | same-origin, rate-limited, 8 kB body cap; body `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` with `stage` one of `manifest`, `entry`, `validate`, `render`, `slot`, `chunk`, `csp`, `insecure-context`; CSP reports go to the same route; rows group by fingerprint with counts in a core table on the audit no-trigger list |
-| `/api/ai/chat` | POST | session; `ai.assistant:use` plus each tool's permission at the named plant | strict Zod body: roles `user` or `assistant`, part types `text` and `step-start`, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped; a file part or a 41st message returns 400; the request carries the route's plant; the response is the AI SDK UI message stream with keep-alive; a budget stop ends it with `data-ai-stop budget-exhausted` ([10-ai-and-agents.md](10-ai-and-agents.md)) |
-| `/api/station` | POST | station cookie | the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` with principal station, surface `station` and `acting_for` the user ([09-operator-station.md](09-operator-station.md)) |
-| Pyramid XML upload | POST, multipart | `pyramidConnector.import:upload` at company scope, admin only by default | one file, at most 25 MB (413 above), content type `text/xml` or `application/xml`; the SHA-256 of the file is the input digest; the import job acts for the uploader; a foreign `Origin` gets 403 and enqueues nothing ([08-pyramid-connector.md](08-pyramid-connector.md)) |
+| `/api/v1/web/client-errors` | POST | session or station | same-origin, rate-limited, 8 kB body cap; body `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` with `stage` one of `manifest`, `entry`, `validate`, `render`, `slot`, `chunk`, `csp`, `insecure-context`; CSP reports go to the same route; rows group by fingerprint with counts in a core table on the audit no-trigger list |
+| `/api/v1/ai/chat` | POST | session; `ai.assistant:use` plus each tool's permission at the named plant | strict Zod body: roles `user` or `assistant`, part types `text` and `step-start`, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped; a file part or a 41st message returns 400; the request carries the route's plant; the response is the AI SDK UI message stream with keep-alive; a budget stop ends it with `data-ai-stop budget-exhausted` ([10-ai-and-agents.md](10-ai-and-agents.md)) |
+| `/api/v1/station` | POST | station cookie | the commands `core.stationOperatorSignIn` and `core.stationOperatorSignOut` with principal station, surface `station` and `acting_for` the user ([09-operator-station.md](09-operator-station.md)) |
+| `/api/v1/pyramid-connector/import-file` | POST, multipart | `pyramidConnector.import:upload` at company scope, admin only by default | one file, at most 25 MB (413 above), content type `text/xml` or `application/xml`; the SHA-256 of the file is the input digest; the import job acts for the uploader; a foreign `Origin` gets 403 and enqueues nothing ([08-pyramid-connector.md](08-pyramid-connector.md)) |
 | `/health`, `/health/live`, `/health/ready` | GET | public | see below |
 
 The upload stores no file. The connector parses the XML into its own raw payload, inbox and run-log tables, which are command-only ([0032][adr-0032]). A general file storage port comes later ([0054][adr-0054]).
+
+### Route families and reserved path segments
+
+Every REST route under `/api/v<major>/` belongs to one of three route families: public, first-party and library ([0064][adr-0064]). Root routes stay at the root, outside the families.
+
+| Family | Paths | Called by | Promise |
+|---|---|---|---|
+| Public API | `/api/v<major>/<module-id>/...`; none in release 1 | outside systems, with integration tokens | the compatibility promise of its API major; the only routes in the OpenAPI document |
+| First-party | `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/station`, `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file` | the shell, the remotes and the stations from the same image | none; a route may change in any lockstep minor, build matching keeps its callers in step, and it never appears in the OpenAPI document |
+| Library | `/api/v1/auth/*`: Better Auth's `toNodeHandler` with `basePath` `/api/v1/auth` | the shell's sign-in, sign-out and session | Better Auth's own; Better Auth defines the routes under its base path |
+| Root routes (outside the families) | `/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths (`/`, `/$plant/...`, `/station/$stationId`) | probes, GraphQL and MCP clients, browsers | outside the API versions, because these are probes, protocols and static mounts, not REST API routes |
+
+- First-party routes share the version segment with the public API. When the public API moves to v2, the first-party routes move in the same release, together with the shell.
+- Host-owned first-party routes sit under `web` and `station`. Module-owned ones sit under the owner's id, such as `ai` and `pyramid-connector`, so a public route and a first-party route may share a module segment. The family comes from the controller's declaration, not from the path.
+- One SDK helper, `ApiController({ module, family })` from `@northmes/sdk/rest`, builds every controller path. The server calls neither `app.setGlobalPrefix` nor `app.enableVersioning`: with a global prefix and URI versioning every root controller must sit on an `exclude` list, and a forgotten entry moves a route without any error.
+- The boot route check (step 10 in [02-architecture.md](02-architecture.md#boot-sequence)) reads the helper's metadata. It stops boot when a REST controller path does not start with `api/v<major>/` and is not on the root allowlist, when a controller off the root allowlist was not declared through `ApiController`, when two controllers register the same method and path (Express would serve the first without an error), when a public controller's module segment differs from its owner's id, and when a plugin root reaches a controller before the public API exists ([03-modules-and-extensibility.md](03-modules-and-extensibility.md#rest-routes-and-plugins)).
+- The catalog check refuses the module ids `web`, `station` and `auth`, because they are the first-party and library segments under `/api/v1`.
+- Core's plant slug schema refuses the slugs `api`, `graphql`, `mcp`, `health`, `modules`, `assets` and `station`, because a plant slug is the first segment of an SPA URL and these words are server paths or the station mount ([06-web-and-ux.md](06-web-and-ux.md#shell-routes-and-mount-points)).
+
+Accepted ADRs written before [0064][adr-0064], such as [0019][adr-0019] for the module list, name the first-party routes without the `v1` segment. The paths in this plan follow [0064][adr-0064].
+
+### The public API and OpenAPI, later
+
+Release 1 builds no Swagger tooling and no public route. `@nestjs/swagger`, zod-openapi, the committed `schema/openapi-v1.json`, the oasdiff gate, `GET /api/v1/openapi.json` and integration tokens arrive with the first public route, each new dependency in its own pull request ([0064][adr-0064]). That work follows this design:
+
+- There is one OpenAPI 3.1 document per API major, built in `apps/server` from every module the process loads, with one tag per module. zod-openapi converts the Zod schemas from the contracts packages, and the converter throws on a schema from any other library.
+- An operationId starts with the module's GraphQL name followed by an upper-case letter, as `NORTHMES_ROOT_FIELD_PREFIX` requires of root fields. A component takes its name from `.meta({ id })` and has one owning module, as `NORTHMES_TYPE_OWNERSHIP` requires of types. Shared components (the problem, the field error, the time scalars, the unit enums and page info) come only from `@northmes/contracts` and print identically, as `NORTHMES_SDK_TYPE_DRIFT` requires.
+- Writes are command routes, `POST /api/v<major>/<module-id>/commands/<command>`, with the body `contract.input` and an operationId equal to the mutation name, for example `planningReleaseProductionOrder`. The command bus parses the body once, so a REST caller gets the same `fieldErrors` as a GraphQL caller, in an `application/problem+json` body ([REST errors](#rest-errors)).
+- Reads are resource routes, `GET /api/v<major>/<module-id>/<resource>` and `/<resource>/{id}`. Each response has a Zod output schema in the contracts package, and lists follow the connection and cursor conventions in [List conventions](#list-conventions).
+- Plant-scoped routes take the plant as a path segment, `/api/v<major>/<module-id>/plants/{plant}/...` (M-37).
+- Public creates are idempotent through the client uuidv7 `id` that create command inputs already carry, so no idempotency store is needed.
+- docs.northmes.dev renders the committed snapshot, which holds the in-repo modules. Each installation serves `GET /api/v1/openapi.json`, its plugins' public routes included, to a signed-in user or an integration token. The image ships no Swagger UI.
+- The oasdiff gate compares `schema/openapi-v1.json` with the base branch ([Schema snapshot and diff gates](#schema-snapshot-and-diff-gates)). From 1.0 a break in the public API needs a new API major.
+- When v2 starts, v1 stays for one minor release while NorthMES is on 0.x. After 1.0 it stays until the supported minor that last served v1 ends its fix window.
 
 ### Health endpoints
 
@@ -772,6 +807,8 @@ MCP Apps views, WebMCP, an autoplan tool, admin and import tools, per-organizati
 6. Database types, only when the migrations hash changed, because kysely-codegen needs a migrated database.
 7. Generated reference docs.
 
+With the first public route, `northmes openapi print` joins the list right after step 1 and writes `schema/openapi-v1.json`. Like `northmes schema print`, it builds from the fixed list of in-repo modules, never reads `northmes.config.json` and runs with `DATABASE_URL` unset. Its output is the committed snapshot that docs.northmes.dev renders ([0064][adr-0064]).
+
 `pnpm gen --check` writes to a temporary directory and diffs against the committed files. Output is deterministic (`lexicographicSortSchema`, sorted keys). Generated paths are marked `linguist-generated`, and the rule for a merge conflict in a generated file is "run `pnpm gen`". `pnpm check` includes `pnpm gen --check`.
 
 `northmes schema print` builds the subgraphs of a fixed list of in-repo modules without listening. It never reads `northmes.config.json`, completes with `DATABASE_URL` unset and constructs no database pool. The example plugins stay out of the snapshot; `pnpm plugin:check <id>` prints a plugin's SDL and composes it against the snapshot. `schema/api.graphql` is the client-facing schema printed from the composition's public SDL: it has no `join__` types and hides `@inaccessible` fields.
@@ -793,7 +830,7 @@ GraphQL reference pages for the docs site are generated by an in-house graphql-j
 
 ## Schema snapshot and diff gates
 
-The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each `modules/<id>/schema.graphql`, the closure schemas and each `modules/<id>/web/links.snapshot.json`.
+The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each `modules/<id>/schema.graphql`, the closure schemas and each `modules/<id>/web/links.snapshot.json`. With the first public route, `schema/openapi-v1.json` joins them.
 
 | Gate | Compares | In 0.x | From 1.0 |
 |---|---|---|---|
@@ -805,8 +842,9 @@ The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each 
 | Link patterns | link patterns and search keys against the previous release's snapshot | a removed pattern without a `moved` entry fails | fails |
 | Event schemas | event JSON Schemas against the previous release; an added field counts as breaking | a breaking change bumps the minor version | as [0038][adr-0038] |
 | API Extractor | committed report per MIT package against the code | `@internal` by default, `@beta` for what the example plugins use | `@public` from 1.0 |
+| OpenAPI diff (oasdiff), from the first public route | `schema/openapi-v1.json` against the base branch | an ERR-level break blocks unless the pull request title has `!` | every break in the public API blocks |
 
-Versions stay lockstep 0.x through the pilot, and a breaking change bumps the minor version; the pull request title marks it with `!` ([0038][adr-0038]). There is no blanket freeze of `@key` entity fields and no release-candidate contract channel ([0037][adr-0037]).
+Versions stay lockstep 0.x through the pilot, and a breaking change bumps the minor version; the pull request title marks it with `!` ([0038][adr-0038]). The oasdiff gate reads that marker, so a public API break in 0.x is explicit and lands in the changelog ([0064][adr-0064]). There is no blanket freeze of `@key` entity fields and no release-candidate contract channel ([0037][adr-0037]).
 
 ## Tests
 
@@ -819,7 +857,8 @@ Integration and end-to-end tests run against Postgres from `@testcontainers/post
 | `gateway/guards.int.test.ts` | a resolver field without permission or `@Public` makes boot exit 1 and name `Type.field`; a contributed field returns `FORBIDDEN` without the permission while its parent object returns; anonymous `{ __schema { types { name } } }` returns `UNAUTHENTICATED`; a 13-level query returns a depth error; a document over `maxCost` is refused |
 | `gateway/principal.int.test.ts` | a viewer at A with header B gets `FORBIDDEN` `core.plant_forbidden`, data null and one security event with `detail.plant` B; one session lookup serves a request that touches three subgraphs; a personal access token on `/graphql` gets 401; a mutation with a stale `x-northmes-client-build` gets `core.client_outdated` |
 | `gateway/same-origin.int.test.ts` | `OPTIONS /graphql` from a foreign origin gets no `Access-Control-Allow-Origin`; a form-urlencoded mutation with a valid cookie gets 403 and writes no `audit.command` row; a JSON POST from a foreign origin gets 403 and from the public origin succeeds; a WebSocket with a foreign origin gets 403 on upgrade; a socket that sends `connectionParams { cookie }` without a cookie header gets `UNAUTHENTICATED` |
-| `routes.int.test.ts` * | every route uses `PrincipalResolver` or is marked `@Public` |
+| `rest/routes.int.test.ts` * | every route uses `PrincipalResolver` or is marked `@Public`; every route is in exactly one family or on the root allowlist, and is on the release 1 list; the release 1 list holds `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/station`, `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file`, Better Auth at `/api/v1/auth` and the root routes; every route outside the root allowlist starts with `/api/v1/`; no route is in the public family; the health routes sit at the root |
+| `boot/routes.int.test.ts` * | a controller at `api/web/modules` makes boot exit 1 naming the class; a controller declared with plain `@Controller` off the root allowlist makes boot exit 1 naming the class; two controllers on `POST /api/v1/web/client-errors` make boot exit 1 naming both classes; a public controller with module segment `scheduling` inside the planning module makes boot exit 1 naming both ids; the health controller at `/health` passes as a root route |
 | `lists/*.int.test.ts` | seven `orderBy` cases walk all rows forward and backward; a deleted cursor row; a cursor from another `orderBy` refused; operators against hand-written SQL including NULL semantics; `deadlineAtDate: { eq: "2026-10-26" }` across the Europe/Stockholm DST change; `some` and `none`; a reference search over 1 000 ids refused; a hidden customer returns typed `NOT_FOUND`; 100 orders with customers in 3 statements; group limits |
 | `schema/print.int.test.ts` | print with `DATABASE_URL` unset constructs zero pools, finishes under 5 s and equals the committed files; adding a plugin to `northmes.config.json` leaves the snapshot unchanged |
 | `test/meta/gen.test.ts` | `pnpm gen` twice leaves an empty diff; adding a field to a planning resolver makes `pnpm gen --check` exit 1 and name `schema/api.graphql` |
@@ -831,7 +870,7 @@ Integration and end-to-end tests run against Postgres from `@testcontainers/post
 | `tool-bridge.int.test.ts` * | the agent's tool list equals the SDK planning toolset filtered by `can()` for the user at the named plant |
 | `mcp/tools.int.test.ts` | every tool declares both annotations and an `outputSchema`, and its `structuredContent` validates; a plant A user never gets plant B rows; calls work in both protocol eras; a session cookie without a bearer gets 401 with `resource_metadata`; read calls write no command row; the propose tool writes exactly one |
 | `mcp/schema-subset.test.ts` | the propose input passes the schema lint; a `z.union` input fails |
-| `rest/pyramid-upload.int.test.ts` | a 26 MB upload returns 413; a user with the permission at one plant only gets 403; a multipart POST from a foreign origin gets 403 and enqueues nothing |
+| `rest/pyramid-upload.int.test.ts` | on `/api/v1/pyramid-connector/import-file`, a 26 MB upload returns 413; a user with the permission at one plant only gets 403; a multipart POST from a foreign origin gets 403 and enqueues nothing |
 | `rest/ai-chat.int.test.ts` | a file part returns 400; 41 messages return 400 |
 | `rest/web-modules.int.test.ts` | no cookie returns 401; `?plant=B` for a viewer at A returns 403; `?plant=B` returns plant B's `timeZone` and resolved presentation values, and a station cookie at plant B gets the same values |
 | `shutdown.int.test.ts` | a 1.5 s mutation with `app.close()` after 300 ms returns 200 with one `audit.command` row; readiness returns 503 during shutdown |
@@ -840,13 +879,13 @@ Integration and end-to-end tests run against Postgres from `@testcontainers/post
 
 | Item | Working default | Who decides |
 |---|---|---|
-| Path of the Pyramid XML upload route | owned by the Pyramid connector module; fixed in its file-mode task | task author, recorded in [0032][adr-0032] |
 | Route for the audit export | the export format and its command are release 1 ([0013][adr-0013]), but the release 1 REST list names no export route; any export route uses `PrincipalResolver` and writes its command before streaming | maintainer |
 | GraphQL decimal scalar and server decimal library for article quantities | `FloatFilter` in the prototype only | [0023][adr-0023] |
 | Base of the problem `type` URI | `https://docs.northmes.dev/errors/<errorCode>`; the docs site generates no error pages in release 1 | maintainer |
 | Spelling of error codes | codes start with the module id; `core.crossScopeReference` is camelCase while other codes use snake_case, and some station codes in [09-operator-station.md](09-operator-station.md) are written in upper case; settle one form before the first release, because codes are never renamed | maintainer |
 | Name of the instant filter input | `DateTimeFilter` over `Instant` values, as in the list prototype | list kit task |
-| Plant on REST routes | the rule says "from the path", but `/api/web/modules` takes `?plant=` and `/api/ai/chat` carries the route's plant in the request | maintainer |
+| Integration tokens for the public API | bound to a scope node; their `configId`, prefix, expiry, issuing UI, rotation, audit surface and per-token rate limits are not designed yet | maintainer, with the first public route ([0064][adr-0064]) |
+| Whether a plant slug can be renamed | public paths carry the slug, so a rename breaks integrations as well as bookmarks | the plant slug task (E05-S03) |
 | `/mcp` off by default per installation; personal access tokens before OAuth | as described above | maintainer ([0034][adr-0034]) |
 | Whether tool results sent to a model count as exports | they do not; `ai.ai_call` records in-app tool use and MCP reads go to the log | maintainer ([0013][adr-0013]) |
 | Final `maxCost` and depth limit | 20 000 and 12 until measured from persisted documents | measured after the first screens |
@@ -893,3 +932,4 @@ Further open questions are collected in [16-open-questions.md](16-open-questions
 [adr-0058]: ../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
 [adr-0061]: ../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md
 [adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
+[adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md

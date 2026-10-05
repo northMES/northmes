@@ -26,10 +26,10 @@ flowchart LR
   subgraph app["app container: one Node process, role all"]
     direction TB
     origin["Same-origin middleware"]
-    web["Shell, /modules/id/version/,<br/>/api/web/modules"]
+    web["Shell, /modules/id/version/,<br/>/api/v1/web/modules"]
     gql["/graphql<br/>embedded Hive Gateway"]
     subs["In-process subgraphs<br/>core, planning, production-start,<br/>pyramid-connector, ai, plugins"]
-    chat["/api/ai/chat"]
+    chat["/api/v1/ai/chat"]
     mcp["/mcp"]
     runner["Shared tool runner"]
     bus["Command bus<br/>validators, audit context, outbox"]
@@ -80,7 +80,7 @@ One image starts in one of three roles. There is no `web` role and no `ingest` r
 | Role | Runs | Does not run |
 |---|---|---|
 | `all` | everything in the two rows below, in one process; the pilot runs one `all` replica | |
-| `api` | catalog and boot checks; every module's Nest module; the subgraphs and the embedded gateway on `/graphql` (HTTP, graphql-ws and SSE); `/mcp`; `/api/ai/chat`; the event tail; static files and `/api/web/modules`; the command bus with validators; pg-boss in send-only use | pg-boss workers, cron, the sequencer, connector polling |
+| `api` | catalog and boot checks; every module's Nest module; the subgraphs and the embedded gateway on `/graphql` (HTTP, graphql-ws and SSE); `/mcp`; `/api/v1/ai/chat`; the event tail; static files and `/api/v1/web/modules`; the command bus with validators; pg-boss in send-only use | pg-boss workers, cron, the sequencer, connector polling |
 | `worker` | catalog and boot checks; every module's Nest module; the command bus with validators; event handlers; pg-boss workers and cron; the sequencer; connector polling; a health endpoint | subgraph schemas, the gateway, static files, `/mcp` |
 
 Every role loads the same configuration and every plugin, so a command that a worker runs (an ERP import, for example) passes the same validators as one from the UI. Each `api` replica composes its own supergraph at boot and reports its hash on readiness, so replicas with different configurations show up.
@@ -295,7 +295,7 @@ The committed snapshot (`schema/api.graphql`, `schema/supergraph.graphql` and ea
 
 `apps/web` is a pure `@module-federation/runtime` host on Vite, with no federation build plugin ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). It boots in this order:
 
-1. Fetch `GET /api/web/modules`, which lists the remotes that are installed, enabled, compatible and permitted for the user at the plant, each with a SHA-384 hash of its manifest. The response also carries the plant (id, slug, name, time zone) and its resolved presentation values, which the shell renders through `PresentationProvider` from `@northmes/ui`, so the shell and every remote read one context ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
+1. Fetch `GET /api/v1/web/modules`, which lists the remotes that are installed, enabled, compatible and permitted for the user at the plant, each with a SHA-384 hash of its manifest. The response also carries the plant (id, slug, name, time zone) and its resolved presentation values, which the shell renders through `PresentationProvider` from `@northmes/ui`, so the shell and every remote read one context ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 2. Register the remotes and load them in parallel with a timeout (planner 10 s, station 30 s), a per-remote indicator after 2 s and retries.
 3. Validate each module object with `validateWebModule`.
 4. Call `routes(plantRoute)` on each remote, and add a placeholder route plus an "(unavailable)" menu entry in its usual position for each remote that failed.
@@ -309,18 +309,18 @@ In-repo remotes ship no CSS; the shell builds one Tailwind sheet from generated 
 
 ## HTTP endpoints and credentials
 
-REST in release 1 is limited to the endpoints below plus Better Auth's handler. There is no integration REST API until an outside system needs one ([ADR 0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md)).
+REST in release 1 is limited to the endpoints below plus Better Auth's handler on `/api/v1/auth/*`. There is no integration REST API until an outside system needs one ([ADR 0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md)). Every REST route sits under `/api/v<major>/`, and only probes, protocols and static mounts stay at the root. Apart from Better Auth, the routes under `/api/v1/` in release 1 are first-party routes: only the shell, the remotes and the stations from the same image call them, and they carry no compatibility promise. Public routes for outside callers come later under `/api/v<major>/<module-id>/` ([05 GraphQL and APIs](05-graphql-and-apis.md#route-families-and-reserved-path-segments), [ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 
 | Path | Purpose | Accepts |
 |---|---|---|
 | `/`, `/assets/*` | shell `index.html` (`no-cache`, CSP header) and hashed shell assets | no credential |
 | `/modules/<id>/<version>/*` | remote files; remotes hold no data | no credential |
-| `/api/web/modules` | module list for the shell, with the plant and its resolved presentation values | session or station cookie; 401 without one, 403 for an unauthorized plant |
+| `/api/v1/web/modules` | module list for the shell, with the plant and its resolved presentation values | session or station cookie; 401 without one, 403 for an unauthorized plant |
 | `/graphql` (HTTP, graphql-ws, SSE) | the supergraph | session or station cookie; HTTP requests carry `x-northmes-csrf`; every request carries `x-northmes-plant` |
-| `/api/web/client-errors` | browser errors to a core table, grouped by fingerprint | session or station cookie; same-origin; rate-limited; 8 kB body cap |
-| `/api/ai/chat` | streaming assistant chat | session cookie; same-origin |
-| `/api/station` | operator sign-in and sign-out at a station (`core.stationOperatorSignIn`, `core.stationOperatorSignOut`) | station cookie `__Host-nm_station`; same-origin |
-| Pyramid XML upload | file-mode import | session with the connector's upload permission at company scope (admins only by default); one file of at most 25 MB |
+| `/api/v1/web/client-errors` | browser errors to a core table, grouped by fingerprint | session or station cookie; same-origin; rate-limited; 8 kB body cap |
+| `/api/v1/ai/chat` | streaming assistant chat | session cookie; same-origin |
+| `/api/v1/station` | operator sign-in and sign-out at a station (`core.stationOperatorSignIn`, `core.stationOperatorSignOut`) | station cookie `__Host-nm_station`; same-origin |
+| `/api/v1/pyramid-connector/import-file` | Pyramid XML upload for file-mode import | session with the connector's upload permission at company scope (admins only by default); same-origin; one file of at most 25 MB |
 | `/mcp` | MCP toolset | bearer only: a personal access token with prefix `nms_mcp_` or a JWT whose `aud` is the public origin plus `/mcp`; cookies are ignored |
 | `/health`, `/health/live`, `/health/ready` | health and probes | no credential; polled by the Compose healthcheck and the customer's monitoring |
 
@@ -338,7 +338,7 @@ flowchart LR
   run["Shared tool runner<br/>parse input, check permission at the named plant,<br/>run in an RLS-scoped transaction,<br/>validate output, redact personal fields"]
   read[("Read-only transaction<br/>no audit context")]
   prop["planning_propose_changes<br/>one audited command, a proposal"]
-  chat["/api/ai/chat"]
+  chat["/api/v1/ai/chat"]
   port["AI port in @northmes/sdk/ai"]
   aimod["ai module: model-call.ts<br/>aliases, budgets, ai_call rows"]
   prov["Customer's provider<br/>OpenRouter, Azure OpenAI,<br/>OpenAI-compatible"]
@@ -392,7 +392,7 @@ flowchart TD
   s6 --> s7["7 Nest create, one subgraph per module"]
   s7 --> s8["8 Isolation check"]
   s8 --> s9["9 Static mounts for shell and remotes"]
-  s9 --> s10["10 Init: schemas, validators, composition,<br/>gateway warm-up, graphql-ws"]
+  s9 --> s10["10 Init: schemas, validators, composition,<br/>route check, gateway warm-up, graphql-ws"]
   s10 --> s11["11 Mount the MCP endpoint"]
   s11 --> s12["12 Listen"]
   s12 --> s13["13 Start workers: pg-boss, sequencer, cron"]
@@ -411,13 +411,13 @@ flowchart TD
 | 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)) | an invalid or missing environment key; a missing, empty or other-readable secret file; an unreadable config file; a version field that differs from the image |
 | 2. Resolve hook | `module.registerHooks` maps host-provided packages imported from any plugin root to the host's copy | |
 | 3. Manifests | import every manifest; manifests import only `defineModule`, so no Nest code loads | missing `exports["./manifest"]`, import error, invalid id |
-| 4. Catalog checks | duplicate ids, derived-name collisions, `dependsOn` present, no cycles, no core module depending on a plugin, `northmes` range, key prefixes, slot ownership; topological order with core first | any of these |
+| 4. Catalog checks | duplicate ids, derived-name collisions, reserved ids (`web`, `station` and `auth`, the first-party and library path segments under `/api/v1`), `dependsOn` present, no cycles, no core module depending on a plugin, `northmes` range, key prefixes, slot ownership; topological order with core first | any of these |
 | 5. Migration check | as `nm_app`, compare applied migrations with the files of every installed module | pending files; a database whose schema compatibility number exceeds what the image accepts |
 | 6. Server imports | `await manifest.server()` in dependency order | import error, missing default export, a configured plugin that fails to load |
 | 7. Nest create | instantiate modules; one subgraph per module through `defineSubgraph` | dependency injection errors |
-| 8. Isolation check | compute, the way Nest does, which resolver classes each subgraph root reaches | a resolver-bearing module reachable from two subgraph roots or through a global module; the message prints both import paths |
+| 8. Isolation check | compute, the way Nest does, which resolver classes each subgraph root reaches; the same walk assigns each REST controller to the module root that reaches it, or to the host | a resolver-bearing module reachable from two subgraph roots or through a global module; the message prints both import paths |
 | 9. Static mounts | shell assets and `/modules/<id>/<version>/` per installed remote | |
-| 10. Init | build subgraph schemas, discover and check validators, compose with the NorthMES rules, warm the gateway with `getSchema()`, start graphql-ws on `noServer`; check that every Mutation field maps to a command handler and every resolver field has permission or `@Public` metadata | schema build error (the message names the subgraph and its config entry), composition error, validator registration error, unmapped mutation, unguarded field |
+| 10. Init | build subgraph schemas, discover and check validators, compose with the NorthMES rules, warm the gateway with `getSchema()`, start graphql-ws on `noServer`; check that every Mutation field maps to a command handler and every resolver field has permission or `@Public` metadata; run the route check over the metadata of the SDK helper `ApiController({ module, family })` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)) | schema build error (the message names the subgraph and its config entry), composition error, validator registration error, unmapped mutation, unguarded field; a REST controller path that does not start with `api/v<major>/` and is not on the root allowlist (`/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths); a controller off the root allowlist that was not declared through `ApiController`; two controllers on one method and path; a public controller whose module segment differs from its owner's id; a controller reachable from a plugin root, until the public API exists. Each message names the controller class; a duplicate names both classes and a plugin controller names the plugin id. With the first public route the check also enforces the operationId and component rules in [05](05-graphql-and-apis.md#the-public-api-and-openapi-later) |
 | 11. MCP | mount `/mcp` with tools from the modules' `mcp` entries | |
 | 12. Listen | HTTP and WebSocket on one port | port in use (the message names `PORT`) |
 | 13. Workers | pg-boss start with `migrate: false`, the sequencer, cron | |
@@ -432,7 +432,7 @@ These states degrade instead of stopping the process:
 
 | State | Behaviour |
 |---|---|
-| a module's remote files are missing, or a manifest hash does not match | `/api/web/modules` lists it with `integrity: null`; the shell shows a placeholder route and an "(unavailable)" menu entry |
+| a module's remote files are missing, or a manifest hash does not match | `/api/v1/web/modules` lists it with `integrity: null`; the shell shows a placeholder route and an "(unavailable)" menu entry |
 | a remote fails in the browser, or a slot contribution throws | the route error component, or the per-contribution error boundary in `<Slot>` |
 | a web-only plugin targets a slot that no longer exists | status `incompatible`; boot continues (pending confirmation, see [03](03-modules-and-extensibility.md)) |
 | a validator times out or throws at run time | that command is rejected; everything else works |
@@ -501,7 +501,8 @@ Each check below is a test or CI job that a task carries.
 - Boot guard tests: a resolver field without permission or `@Public` metadata makes boot exit naming `Type.field`; anonymous introspection returns UNAUTHENTICATED; a 13-level query returns a depth error.
 - `migrate --check` test: a planning fixture with `quantity: Float!` plus the example validator build (`@external quantity: Int!`) exits 1 naming `example-validator`, `EXTERNAL_TYPE_MISMATCH` and `ProductionOrder.quantity`, and the migration table is unchanged.
 - `migrate-guards.test.ts`: a `drop table ... cascade` that would remove a plugin's foreign key raises a migration error naming the key.
-- Route list test: every REST route uses `PrincipalResolver` or is marked `@Public`.
+- Route inventory test, `apps/server/test/rest/routes.int.test.ts`: every REST route uses `PrincipalResolver` or is marked `@Public`; every route is in exactly one family or on the root allowlist, and is on the release 1 list; the release 1 list holds `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/station`, `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file`, Better Auth at `/api/v1/auth` and the root routes; every route outside the root allowlist starts with `/api/v1/`; no route is in the public family; the health routes sit at the root.
+- Boot route check tests: in `apps/server/test/boot/routes.int.test.ts`, two controllers on `POST /api/v1/web/client-errors` make boot exit 1 naming both classes; `apps/server/test/boot/plugin-controller.int.test.ts` boots the built server in a child process, and a fixture plugin whose Nest module reaches a controller makes boot exit 1 naming the plugin id.
 - Connector contract test: the Pyramid connector subscribes to no `planning.draft.*` and no `*.soft_lock_changed` event.
 - Readiness test: with the database paused at start and resumed after 40 s, `/health/ready` returns 200 within 60 s; with `LISTEN` reconnects blocked for 150 s, the process exits non-zero and a restarted process becomes ready.
 - Two-replica integration tests in CI.
@@ -535,6 +536,7 @@ Each check below is a test or CI job that a task carries.
 | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | configuration, the environment schema and secret files at boot step 1 |
 | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | the plant and its presentation values in the shell's module list |
 | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | sidebar entries from routes, link manifests |
+| [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | REST routes under `/api/v<major>`, the reserved module ids, the controller walk in step 8 and the route check in step 10 |
 
 ## Open items
 

@@ -52,7 +52,13 @@ Chosen option: "In-process connector modules with per-field ownership and pendin
 
 ### No integration REST API in release 1
 
-The connector runs in process, so release 1 needs no integration REST API, no API tokens for outside systems and no idempotency store for them. REST in release 1 is limited to the Pyramid XML upload, `/api/web/modules`, `/api/web/client-errors`, `/api/ai/chat`, `/api/station`, the health endpoints and Better Auth ([05-graphql-and-apis.md](../plan/05-graphql-and-apis.md)). The integration API, with scoped tokens bound to a scope node, OpenAPI generated from the Zod contracts and an oasdiff check in CI, comes when an outside system needs it. Krister Johansson decided that machine data ingestion later goes through a core REST endpoint, with MQTT and OPC UA as adapters; that is work for Data collection and separate from ERP connectors.
+The connector runs in process, so release 1 needs no integration REST API and no API tokens for outside systems. REST in release 1 is limited to these routes ([05-graphql-and-apis.md](../plan/05-graphql-and-apis.md)), in the route families of [ADR 0064](0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md):
+
+* First-party routes: the Pyramid XML upload `POST /api/v1/pyramid-connector/import-file`, `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/ai/chat` and `/api/v1/station`.
+* The library family: Better Auth at `/api/v1/auth/*`.
+* Root routes: the health endpoints.
+
+The integration API is the public API family of ADR 0064, `/api/v<major>/<module-id>/...`, and release 1 has no route in it. It comes when an outside system needs it, with integration tokens bound to a scope node, OpenAPI generated from the Zod contracts and an oasdiff gate in CI. Its creates are idempotent through the client uuidv7 `id` that create command inputs already carry, so it needs no idempotency store. Krister Johansson decided that machine data ingestion later goes through a core REST endpoint, with MQTT and OPC UA as adapters; that is work for Data collection and separate from ERP connectors. As a public route, the ingestion endpoint sits under the id of the module that owns the ingestion port ([ADR 0059](0059-time-series-storage-port-with-an-open-default-backend.md)).
 
 ### Imports write only changed rows
 
@@ -105,7 +111,7 @@ Until the product owner answers, ownership is per field as below. Live write-bac
 * Spread rule unit case: job orders of 5 and 5, the first started, going from 10 to 12 gives 5 and 7.
 * `rejected-changes.int.test.ts`: quantity 8 on a started order creates one pending change; after reject, three more polls with 8 create none and the order shows the "differs from ERP" flag; a poll with 9 creates a new pending change.
 * `settings.test.ts` in the connector: the schema refuses `writeBackMode: live` until a write method is configured and field ownership is answered.
-* A route inventory test (proposed name `rest-routes.int.test.ts`) lists the REST routes of the `api` role and fails on a route outside the release 1 list above.
+* The route inventory test `apps/server/test/rest/routes.int.test.ts`, the one plan 05 and [ADR 0011](0011-principals-credentials-and-same-origin-rules.md) name, lists the routes of the `api` role and fails on a route that is neither on the release 1 list above nor on the root allowlist. It checks routes by family: every route is a first-party route, Better Auth's library route or a root route on the allowlist (the health routes, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths), and no route is in the public family.
 
 ## Pros and cons of the options
 
@@ -129,7 +135,7 @@ Until the product owner answers, ownership is per field as below. Live write-bac
 ### An outside connector service over an integration REST API
 
 * Good, because connectors could be written in any language and released on their own.
-* Bad, because release 1 would need scoped tokens, an idempotency store, a versioned public API and a second deployable for one connector.
+* Bad, because release 1 would need scoped tokens, idempotent writes, a versioned public API and a second deployable for one connector.
 
 ### A generic CSV or Excel import first
 
@@ -138,6 +144,6 @@ Until the product owner answers, ownership is per field as below. Live write-bac
 
 ## More information
 
-* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) module rules, [0003](0003-module-package-shape-and-the-definemodule-manifest.md) module package, [0012](0012-commands-as-the-single-write-path.md) commands, [0013](0013-audit-trail-written-in-the-command-transaction.md) system principals, [0014](0014-outbox-event-log-and-pg-boss-jobs.md) outbox and jobs, [0027](0027-planned-duration-formula-and-override-precedence.md) duration, [0029](0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) drafts and the commit command, [0032](0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md) Pyramid connector, [0033](0033-online-operator-station-in-the-production-start-module.md) operator reporting, [0039](0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md) license, [0055](0055-release-1-scope-under-option-b-and-the-scope-rule.md) scope.
+* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) module rules, [0003](0003-module-package-shape-and-the-definemodule-manifest.md) module package, [0012](0012-commands-as-the-single-write-path.md) commands, [0013](0013-audit-trail-written-in-the-command-transaction.md) system principals, [0014](0014-outbox-event-log-and-pg-boss-jobs.md) outbox and jobs, [0027](0027-planned-duration-formula-and-override-precedence.md) duration, [0029](0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) drafts and the commit command, [0032](0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md) Pyramid connector, [0033](0033-online-operator-station-in-the-production-start-module.md) operator reporting, [0039](0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md) license, [0055](0055-release-1-scope-under-option-b-and-the-scope-rule.md) scope, [0064](0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) route families and the public API.
 * Plan: [08-pyramid-connector.md](../plan/08-pyramid-connector.md), sections 1, 10 and 18; [07-production-planning.md](../plan/07-production-planning.md), section "ERP changes on planned orders"; [05-graphql-and-apis.md](../plan/05-graphql-and-apis.md); [16-open-questions.md](../plan/16-open-questions.md); [17-risks.md](../plan/17-risks.md), R-03 and R-10.
 * Revisit when the product owner answers field ownership and the spread rule, when a second connector arrives (shared core import service), and when an outside system needs the integration API.

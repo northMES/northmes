@@ -7,7 +7,7 @@ The pilot runs NorthMES on one Linux host at the plant with Docker Compose: Cadd
 | Topic | ADR | Status | Still to confirm |
 |---|---|---|---|
 | Compose bundle and mandatory TLS | [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md) | accepted | pilot IT (TLS option, bind address) |
-| Database image, bootstrap and extension updates | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | none |
+| Database image, bootstrap and extension updates | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
 | Configuration, the environment schema and secret files | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | none |
 | Backups, restore drills, upgrades and rollback | [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md) | proposed | maintainer and pilot IT (disk layout, offsite target, RPO and RTO); product owner (upgrade window) |
 | Health endpoints, shutdown, System health | [0043](../adr/0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md) | accepted | none |
@@ -15,6 +15,7 @@ The pilot runs NorthMES on one Linux host at the plant with Docker Compose: Cadd
 | Secrets and the installation key | [0047](../adr/0047-secrets-and-the-installation-key.md) | proposed | pilot IT (escrow location) |
 | Identity, sessions, station credentials | [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) | accepted | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
 | Principals, credentials, same-origin rules, rate limiting | [0011](../adr/0011-principals-credentials-and-same-origin-rules.md) | proposed | none |
+| Route families under `/api/v1`, credentials per family, the later public API | [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | none |
 | Security events, personal data, retention | [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) | accepted | maintainer (lifecycle classes; tool results as exports); lawyer (retention, erasure) |
 | Station principal and network | [0033](../adr/0033-online-operator-station-in-the-production-start-module.md) | accepted | product owner (reporting in NorthMES or Pyramid, corrections, operators per station); pilot IT (station network, hardware) |
 | Outbound URLs for AI providers | [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md) | accepted | lawyer (AI Act Article 50); maintainer (Google in release 1) |
@@ -344,7 +345,7 @@ Admins see, on one page: errors and browser errors grouped by fingerprint; faile
 - Every security event is also a log line, `{type: 'security_event', kind, principal, scope, correlationId}`, so a customer log collector sees failed sign-ins.
 - MCP reads are not audited; they go to the structured log with the correlation id.
 - OpenTelemetry sits behind the optional `observability` profile. The SDK loads only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set and otherwise runs with `OTEL_SDK_DISABLED=true`. When the profile was researched (internal research note 15), the published NestJS instrumentation did not yet cover Nest 12, and the all-in-one backends were meant for development or needed several GB of memory, so the profile is for a debugging session, not for permanent use.
-- Browser errors reach the installation's own database through `POST /api/web/client-errors` (authenticated, same-origin, rate-limited, 8 kB body cap; CSP reports go there too). Server errors are recorded by fingerprint by the exception filter, the jobs wrapper and the tool runner ([05-graphql-and-apis.md](05-graphql-and-apis.md#graphql-errors)). System health shows both, and nothing leaves the installation. Opt-in error telemetry to the project is a decided principle built later, off by default ([ADR 0052](../adr/0052-error-telemetry-opt-in-and-deferred.md)).
+- Browser errors reach the installation's own database through `POST /api/v1/web/client-errors` (authenticated, same-origin, rate-limited, 8 kB body cap; CSP reports go there too). Server errors are recorded by fingerprint by the exception filter, the jobs wrapper and the tool runner ([05-graphql-and-apis.md](05-graphql-and-apis.md#graphql-errors)). System health shows both, and nothing leaves the installation. Opt-in error telemetry to the project is a decided principle built later, off by default ([ADR 0052](../adr/0052-error-telemetry-opt-in-and-deferred.md)).
 - No Sentry SDK runs in the server.
 
 ## Secrets and the installation key
@@ -374,19 +375,38 @@ One offline escrow, kept in two places, holds the material needed to recover on 
 The shell, `/graphql`, `/api` and every remote share one origin, so there is no CORS and the session cookie works everywhere ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
 
 - The gateway runs with `cors: false` and `csrfPrevention: { requestHeaders: ['x-northmes-csrf'] }`; the Apollo HTTP link in `web-sdk` sends the header.
-- A global Nest middleware, mounted before the gateway and every cookie-authenticated controller (the Pyramid upload, `/api/web`, `/api/ai/chat`, `/api/station`), rejects unsafe methods unless `Origin` equals `NORTHMES_PUBLIC_ORIGIN`, or `Sec-Fetch-Site` is `same-origin` when `Origin` is absent, and writes a security event. Better Auth's `trustedOrigins` is `[NORTHMES_PUBLIC_ORIGIN]`.
+- A global Nest middleware, mounted before the gateway and every first-party route (`/api/v1/web/*`, `/api/v1/station`, `/api/v1/ai/chat` and `/api/v1/pyramid-connector/import-file`), rejects unsafe methods unless `Origin` equals `NORTHMES_PUBLIC_ORIGIN`, or `Sec-Fetch-Site` is `same-origin` when `Origin` is absent, and writes a security event. Better Auth's `trustedOrigins` is `[NORTHMES_PUBLIC_ORIGIN]`.
 - The WebSocket upgrade listener runs the same check, answers 403 and destroys the socket on a foreign origin. The WebSocket principal comes only from the handshake cookie, never from `connectionParams`; graphql-ws closes with 4401 without a session and 4403 on lost plant membership.
 - The session cookie is `SameSite=Strict`; the station cookie is `__Host-nm_station` (`SameSite=Strict`, `Path=/`). Database sessions use a cookie cache of at most 60 seconds, so a banned user's cached cookie stops working within a minute.
 - The page CSP is strict `'self'`, with `img-src` and `connect-src` kept to self.
+
+Credentials follow the route family ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)). Every REST route lives under `/api/v<major>/`, and `ApiController({ module, family })` records its family on the controller. Public and first-party routes share the version segment, so the guard and the same-origin middleware read the family from that metadata, not from a path prefix.
+
+- First-party routes (`/api/v1/web/*`, `/api/v1/station`, `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file`) serve only the shell, the remotes and the stations of the same image. They accept the cookies in the table below and pass the same-origin middleware.
+- Better Auth's handler at `/api/v1/auth/*` is the library family, guarded by `trustedOrigins` and `disabledPaths`.
+- Root routes (`/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths) stay at the root, outside the families.
+- Public routes, `/api/v<major>/<module-id>/...`, arrive with the first outside system or Data collection's ingestion endpoint. Release 1 has none.
 
 Credentials are bound to surfaces:
 
 | Surface | Accepts | Refuses |
 |---|---|---|
-| `/graphql`, `/api/web` | Session and station cookies | MCP tokens (api-key `configId` `mcp`) and any token whose `aud` is `/mcp`, so an agent holding its MCP token cannot call the commit mutation as the user |
-| `/api/station` | The station cookie plus an operator session token | Session cookies, except on sign-out and admin deregistration |
-| `/mcp` | A bearer JWT whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/mcp'`, or a personal access token with prefix `nms_mcp_` that expires within 90 days | Cookies; `/mcp` checks `Origin` and `Host` itself and returns 404 while the installation setting is off |
+| `/graphql`, `/api/v1/web` | Session and station cookies | MCP tokens (api-key `configId` `mcp`) and any token whose `aud` is `/mcp`, so an agent holding its MCP token cannot call the commit mutation as the user; integration tokens (later) |
+| `/api/v1/station` | The station cookie plus an operator session token | Session cookies, except on sign-out and admin deregistration |
+| `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file` | The session cookie | Bearer tokens |
+| `/mcp` | A bearer JWT whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/mcp'`, or a personal access token with prefix `nms_mcp_` that expires within 90 days | Cookies; integration tokens (later); `/mcp` checks `Origin` and `Host` itself and returns 404 while the installation setting is off |
 | Better Auth `/admin/*` | Nothing: every path is in `disabledPaths`; user management runs as NorthMES commands | Sessions with `impersonatedBy` set |
+| Public routes (later) | A bearer integration token bound to a scope node | Cookies, which they ignore, and MCP tokens |
+| `GET /api/v1/openapi.json` (later) | The session cookie or an integration token | Anonymous requests and MCP tokens |
+
+Later, with the first public route ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
+
+- Public routes accept bearer integration tokens only and ignore cookies, so they are exempt from the same-origin middleware in the same way as `/mcp`.
+- `/graphql`, `/mcp` and every first-party route refuse integration tokens.
+- Commands that arrive through a public route record the audit surface `api`.
+- Rate limits count per integration token in a Postgres `ThrottlerStorage` (see [Rate limiting](#rate-limiting)).
+- The token design (`configId`, prefix, expiry, issuing UI, rotation) is decided then.
+- The image serves no Swagger UI, so the page CSP stays strict `'self'`. The API reference is rendered on docs.northmes.dev from the committed snapshot.
 
 Boot refuses to start when `BETTER_AUTH_TELEMETRY` is set, when `enableSessionForAPIKeys` is true, or when `disabledPaths` lacks the api-key client endpoints and `/token`. Sign-up is disabled. Better Auth is pinned exactly and upgraded on purpose, with its release notes read and a migration ([ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md)). Whether the pilot needs multi-factor sign-in is decided after the pilot says whether it falls under the Swedish Cybersecurity Act (the NIS2 implementation); the candidates are Microsoft Entra ID as the Microsoft provider or Better Auth's `twoFactor` plugin after a review of its advisories ([ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md)).
 
@@ -396,9 +416,10 @@ Boot refuses to start when `BETTER_AUTH_TELEMETRY` is set, when `enableSessionFo
 
 - Better Auth's limiter, with database storage, guards the sign-in endpoints.
 - The station key configuration has Better Auth's limiter off and a per-station limit instead: 5 unknown badges within 60 seconds lock badge sign-in on that station for 5 minutes and write a security event. A terminal server or NAT can put many users behind one IP, so badge limits are per station, not per address.
-- `@nestjs/throttler` keeps counters in memory while one replica runs. A Postgres `ThrottlerStorage` is written when a second replica exists; the Redis storage package does not support Nest 12, and Redis is not part of release 1.
+- `@nestjs/throttler` keeps counters in memory while one replica runs. A Postgres `ThrottlerStorage` is written when a second replica exists, or with the first public route, whichever comes first; the Redis storage package does not support Nest 12, and Redis is not part of release 1.
+- Public routes (later) are limited per integration token, because in-memory counters do not limit an outside client across replicas ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 - Only Caddy is a trusted proxy. Caddy ignores incoming `X-Forwarded-For` values from clients.
-- `/api/web/client-errors` is rate-limited, and AI runs are capped per user ([10-ai-and-agents.md](10-ai-and-agents.md#usage-metering-budgets-and-audit)).
+- `/api/v1/web/client-errors` is rate-limited, and AI runs are capped per user ([10-ai-and-agents.md](10-ai-and-agents.md#usage-metering-budgets-and-audit)).
 
 ## Supply chain
 

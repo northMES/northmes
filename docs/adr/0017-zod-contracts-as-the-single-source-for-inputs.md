@@ -12,7 +12,7 @@ needs-confirmation: ""
 
 ## Context and problem statement
 
-A NorthMES command receives input from several surfaces: GraphQL mutations from the web, the station REST route, the Pyramid import job, MCP tools, the in-app assistant's tools, and later an integration REST API. Command validators, settings, event payloads and web forms need the same shapes. If each surface declares its own input type, the shapes drift: the earlier attempt held 137 GraphQL input classes that mirrored a contracts type by hand (internal research note 33).
+A NorthMES command receives input from several surfaces: GraphQL mutations from the web, the station REST route, the Pyramid import job, MCP tools, the in-app assistant's tools, and later the public API, the REST routes for outside systems. Command validators, settings, event payloads and web forms need the same shapes. If each surface declares its own input type, the shapes drift: the earlier attempt held 137 GraphQL input classes that mirrored a contracts type by hand (internal research note 33).
 
 This ADR decides where input shapes are declared and how each surface gets its types and validation from that one declaration. It covers the module contracts packages (`@northmes/<id>-contracts`, MIT), `@northmes/contracts`, the GraphQL kit in `@northmes/sdk/graphql`, REST controllers, MCP tool definitions and the form engine in `@northmes/ui`.
 
@@ -44,7 +44,7 @@ Rules:
 * `objectFromZod` builds output types for the master-data kit from the same kind of definition ([ADR 0022][adr-0022]).
 * The time scalars `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` are validated with Zod in the subgraph driver ([ADR 0024][adr-0024]). Codegen maps them to the branded string types exported by `@northmes/contracts`, and the contracts' time value schemas output the same brands, so `z.output` of a contract input is assignable to the generated mutation input type without a cast.
 * A Zod parse failure becomes `BAD_USER_INPUT` with `fieldErrors: [{ path, message, code }]` in the error extensions.
-* REST routes in release 1 parse their request bodies with Zod. When the integration REST API arrives, its routes pass the same schemas to Nest 12 Standard Schema (`@Body({ schema })`), and `@nestjs/swagger` 12 builds OpenAPI with zod-openapi as converter for named components ([ADR 0031][adr-0031]).
+* REST routes in release 1 are first-party routes and parse their request bodies with Zod. Release 1 has no public API ([ADR 0031][adr-0031]). When it arrives, its routes pass the same schemas to Nest 12 Standard Schema: a write is a command route, `POST /api/v<major>/<module-id>/commands/<command>`, with `@Body({ schema: contract.input })` and an operationId equal to the mutation name, and the command pipeline's parse of `contract.input` stays the one parse, so REST returns the same `fieldErrors` as GraphQL. `@nestjs/swagger` 12 builds one OpenAPI 3.1 document per API major, with zod-openapi converting every schema and `.meta({ id })` naming the components. [ADR 0064][adr-0064] gives the route families, the path shape, the converter and the document.
 * Validator payloads, `defineSettings` schemas, `defineEvent` payloads and the input and output schemas of `defineTool` (MCP and assistant tools) are Zod too. Agent-visible tool inputs stay in a portable subset without unions, records or recursion ([ADR 0034][adr-0034]).
 * Web forms validate `contract.fields`: `useZodForm` in `@northmes/ui` uses react-hook-form 7 with the Standard Schema resolver, and `useCommandForm` in `@northmes/web-sdk` binds it to the command's mutation, adds `id`, `expectedVersion` and the shared reason argument, and maps `fieldErrors` onto fields ([ADR 0020][adr-0020]). One function in `@northmes/web-sdk` maps every `fieldErrors` entry, from Zod or from a `DomainError`: the field name is the path joined with a dot, and an entry with no registered field goes to the error summary ([ADR 0062][adr-0062]).
 * `nestjs-zod`, `nestjs-graphql-zod`, `zod-to-nestjs-graphql` and `@asteasolutions/zod-to-openapi` are not used.
@@ -71,7 +71,7 @@ export const releaseProductionOrder = defineCommandContract({
 * Bad, because the factory accepts only what GraphQL inputs can express; a union or record in a command input fails at boot, and the author must restructure the contract.
 * Bad, because GraphQL input and enum names come from `.meta({ id })`; renaming one changes the public schema, which GraphQL Inspector reports ([ADR 0015][adr-0015]).
 * Bad, because NorthMES owns the factory and must follow changes in Zod's JSON Schema output across Zod majors.
-* Neutral, because OpenAPI generation waits until the integration REST API exists.
+* Neutral, because OpenAPI generation waits for the first public route ([ADR 0064][adr-0064]).
 
 ### Confirmation
 
@@ -84,7 +84,7 @@ export const releaseProductionOrder = defineCommandContract({
 * Web, `packages/web-sdk/test/field-errors.test.ts` (proposed name): `operations.1.cycleTime` lands on that field; an unknown path lands in the summary.
 * Types, `modules/planning/web/test/commands.test-d.ts` (proposed name, `types` Vitest project): `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 * `mcp/schema-subset.test.ts`: the propose tool's input passes the schema lint, and a `z.union` input fails.
-* `test/meta/forbidden-deps.test.ts` (proposed name): fails when `nestjs-zod`, `nestjs-graphql-zod` or `zod-to-nestjs-graphql` appears in any workspace `package.json`.
+* `test/meta/forbidden-deps.test.ts` (proposed name): fails when `nestjs-zod`, `nestjs-graphql-zod`, `zod-to-nestjs-graphql` or `@asteasolutions/zod-to-openapi` appears in any workspace `package.json`.
 
 ## Pros and cons of the options
 
@@ -111,10 +111,10 @@ export const releaseProductionOrder = defineCommandContract({
 
 ## More information
 
-* Related ADRs: [0012][adr-0012] (command pipeline and error model), [0015][adr-0015] (subgraphs and schema snapshot), [0020][adr-0020] (forms), [0022][adr-0022] (contracts packages, master-data kit), [0024][adr-0024] (time scalars), [0031][adr-0031] (no integration REST API in release 1), [0034][adr-0034] (MCP tool schemas), [0062][adr-0062] (form contracts, field error mapping, measured limits).
+* Related ADRs: [0012][adr-0012] (command pipeline and error model), [0015][adr-0015] (subgraphs and schema snapshot), [0020][adr-0020] (forms), [0022][adr-0022] (contracts packages, master-data kit), [0024][adr-0024] (time scalars), [0031][adr-0031] (no integration REST API in release 1), [0034][adr-0034] (MCP tool schemas), [0062][adr-0062] (form contracts, field error mapping, measured limits), [0064][adr-0064] (route families, OpenAPI from the contracts).
 * Plan: [05-graphql-and-apis.md](../plan/05-graphql-and-apis.md) (mutations are commands, error extensions), [03-modules-and-extensibility.md](../plan/03-modules-and-extensibility.md) (contracts packages), [06-web-and-ux.md](../plan/06-web-and-ux.md) (forms).
 * Open point for the first command task: the SDK derives `expectedVersion` from a shared `version` value type in `@northmes/contracts`, and the factory maps an integer to `Int` only when the schema carries 32-bit bounds. What `z.toJSONSchema` emits for `z.int()` was not verified; the task gives `version` explicit bounds if needed.
-* Revisit when the integration REST API is built (OpenAPI from the same schemas, an oasdiff gate), when a maintained library covers Zod-to-Nest-GraphQL for the pinned majors, or when `@Args()` gains a schema option.
+* Revisit when the first public route is built (OpenAPI from the same schemas and the oasdiff gate, as [ADR 0064][adr-0064] designs them), when a maintained library covers Zod-to-Nest-GraphQL for the pinned majors, or when `@Args()` gains a schema option.
 
 [adr-0012]: 0012-commands-as-the-single-write-path.md
 [adr-0015]: 0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md
@@ -124,3 +124,4 @@ export const releaseProductionOrder = defineCommandContract({
 [adr-0031]: 0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md
 [adr-0034]: 0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md
 [adr-0062]: 0062-web-form-contracts-url-view-state-and-module-link-manifests.md
+[adr-0064]: 0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md

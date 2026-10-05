@@ -105,7 +105,7 @@ The mapper turns typed records into canonical commands. Every command runs throu
 
 File mode imports an uploaded Pyramid XML response through the same parser and mapper.
 
-- One REST endpoint in the `api` role, proposed path `POST /api/pyramid-connector/import-file`. It is cookie-authenticated, so the same-origin check and the CSRF header apply ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
+- One REST endpoint in the `api` role, `POST /api/v1/pyramid-connector/import-file`, a first-party route of the connector ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)). It is cookie-authenticated, so the same-origin check and the CSRF header apply ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
 - One file per request, at most 25 MB, content type `text/xml` or `application/xml`.
 - The SHA-256 of the file is the input digest on the command row.
 - Permission `pyramidConnector.import:upload` at company scope, held by the admin role only by default.
