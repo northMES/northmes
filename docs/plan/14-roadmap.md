@@ -2685,7 +2685,7 @@ Acceptance criteria:
 - Core's manifest ships the company admin role, and the permission sync in `northmes migrate` gives it every installed permission, plugins' included (M-61).
 - `--id` makes a run idempotent: the same id and input exits 0 with `replayed: true` and prints no password; the same id with other input exits 3; a run that failed after Better Auth's write completes when it runs again.
 - Every write is a command with principal type `system`, the system principal `core.cli`, surface `cli`, the company node as scope and the required `--reason`, plus one security event (`cli.company_created` or `cli.company_admin_added`). Exit codes: 0 done, 1 unexpected error, 2 usage error, 3 refused, 4 company not found. No command prompts or takes a password as a flag. A temporary password appears only on standard output, never in a command row, a security event or a log line.
-- `northmes installation show` and `northmes installation set <key> <value> --reason <text> [--json]` read and write `core.installation_setting` with a command row and one security event `cli.installation_setting_changed`; `set` refuses an unknown key with exit 2. Each key arrives with the story that reads it: `mcp.enabled` in E12-S04, `outbound.allowedHosts` in E13-S02 and `audit.securityEventRetentionDays` in E05-S13 (M-60). The table carries the audit capture trigger, and its statement trigger bumps `core.config_revision`.
+- `northmes installation show [--json]` reads `core.installation_setting` and writes no command row and no security event. `northmes installation set <key> <value> --reason <text> [--json]` writes it with a command row and one security event `cli.installation_setting_changed`; `set` refuses an unknown key with exit 2. Each key arrives with the story that reads it: `mcp.enabled` in E12-S04, `outbound.allowedHosts` in E13-S02 and `audit.securityEventRetentionDays` in E05-S13 (M-60). The table carries the audit capture trigger, and its statement trigger bumps `core.config_revision`.
 - No GraphQL field, page or HTTP path creates a company; the organization plugin's paths are disabled in E05-S05.
 
 Tests first:
@@ -3086,7 +3086,7 @@ Tests first:
 - `packages/testing/test/plant-fixture.int.test.ts`: "a plant from the fixture is open unless the test asks for one in setup".
 - `apps/server/test/catalog.test.ts`: "a plugin manifest with a setup key exits 1 naming the plugin".
 - `apps/server/test/rest/web-modules.int.test.ts`: "a plant in setup is listed for a setup holder with setupState inProgress and left out for a planner"; "a planner asking for a plant in setup gets 200 with setupState inProgress and no modules".
-- `apps/web/test/landing.test.tsx`: "a company admin of a company in setup goes from / to its company wizard"; "a planner whose plants are all in setup reads that the company is being set up".
+- `apps/web/test/landing.test.tsx`: "a company admin of a company in setup goes from / to its company wizard"; "a company admin of two companies in setup goes from / to /admin"; "a planner whose plants are all in setup reads that the company is being set up".
 - `apps/web/test/plant-switcher.test.tsx`: "a plant in setup carries Setup in its link text".
 - `e2e/company-setup.spec.ts`: "after company create, the first admin signs in, changes the password, lands in the company wizard, creates plant hel, adds a calendar and one machine, opens the plant, and a planner then opens /hel".
 

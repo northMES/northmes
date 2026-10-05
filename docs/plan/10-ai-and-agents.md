@@ -171,7 +171,7 @@ Writes to provider configs, alias bindings, prices, budgets, feature enablement 
 
 - Secrets are encrypted with `node:crypto` AES-256-GCM under the installation key with a versioned keyring ([ADR 0047](../adr/0047-secrets-and-the-installation-key.md)). The associated data covers table, row, column and the normalized endpoint host.
 - A config update that changes a base URL without a new secret fails with `core.secret_reentry_required`, so Test connection can never send a stored key to a new host.
-- Admin-set outbound URLs follow one rule: private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host (a LAN Ollama is a normal case), `169.254.0.0/16` and the database host are always blocked, and Test connection reports only reachable, not reachable or auth failed.
+- Admin-set outbound URLs follow one rule: private targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host (a LAN Ollama is a normal case), link-local targets (`169.254.0.0/16`) and the database host are always blocked with no exception, and Test connection reports only reachable, not reachable or auth failed.
 - The provider cache is keyed by (provider config id, config revision) and is invalidated with the permission cache, so an edited base URL, a rotated secret or a removed config takes effect without a restart.
 - Keys never reach the browser. All model calls run on the server.
 

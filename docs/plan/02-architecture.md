@@ -316,7 +316,7 @@ REST in release 1 is limited to the endpoints below plus Better Auth's handler o
 | `/`, `/assets/*` | shell `index.html` (`no-cache`, CSP header) and hashed shell assets | no credential |
 | `/modules/<id>/<version>/*` | remote files; remotes hold no data | no credential |
 | `/api/v1/web/modules` | module list for the shell, with the plant and its resolved presentation values | session or station cookie; 401 without one, 403 for an unauthorized plant |
-| `/graphql` (HTTP, graphql-ws, SSE) | the supergraph | session or station cookie; HTTP requests carry `x-northmes-csrf`; every request carries `x-northmes-plant` |
+| `/graphql` (HTTP, graphql-ws, SSE) | the supergraph | session or station cookie; HTTP requests carry `x-northmes-csrf`; every plant-scoped operation carries `x-northmes-plant`, and an operation from `/admin` selects only core's plant-free admin fields and carries none ([0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)) |
 | `/api/v1/web/client-errors` | browser errors to a core table, grouped by fingerprint | session or station cookie; same-origin; rate-limited; 8 kB body cap |
 | `/api/v1/ai/chat` | streaming assistant chat | session cookie; same-origin |
 | `/api/v1/station` | operator sign-in and sign-out at a station (`core.stationOperatorSignIn`, `core.stationOperatorSignOut`) | station cookie `__Host-nm_station`; same-origin |

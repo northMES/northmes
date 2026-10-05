@@ -821,7 +821,7 @@ See [ADR 0047](../adr/0047-secrets-and-the-installation-key.md).
 - The installation key file is a Compose secret. Losing it means re-entering every integration secret.
 - One offline escrow, kept in two places, holds the installation key with the other recovery material. Where the pilot keeps it is confirmed by pilot IT; the escrow and the quarterly restore test are in [12-operations-and-security.md](12-operations-and-security.md).
 - Secret columns are declared secret in the manifest, so the audit trail writes "redacted" and the classification check passes.
-- Admin-set outbound URLs: private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, which `northmes installation set` changes on the host; `169.254.0.0/16` and the database host are always blocked.
+- Admin-set outbound URLs: private targets need an entry in the installation setting `outbound.allowedHosts`, which `northmes installation set` changes on the host; link-local targets (`169.254.0.0/16`) and the database host are always blocked, with no exception.
 
 Required tests: changing an OpenAI-compatible base URL to another host without a new key returns `core.secret_reentry_required` and the egress mock records zero requests; a base URL of `169.254.169.254` or the database host is refused before any connection; editing a provider key writes one change row with a redacted diff.
 
