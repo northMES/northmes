@@ -9,11 +9,11 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034 |
-| Web | 0019, 0020, 0021, 0053 |
+| Web | 0019, 0020, 0021, 0053, 0061, 0062 |
 | Production planning | 0025, 0026, 0027, 0028, 0029, 0030 |
 | ERP integration and the Pyramid connector | 0031, 0032 |
 | Operator station | 0033 |
@@ -92,7 +92,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-05 the index holds 60 ADRs: 33 accepted and 27 proposed, 57 for release 1 and 3 for a later release. 15 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0005, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053 and 0060.
+On 2026-10-05 the index holds 63 ADRs: 36 accepted and 27 proposed, 60 for release 1 and 3 for a later release. 17 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062 and 0063.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -156,5 +156,8 @@ On 2026-10-05 the index holds 60 ADRs: 33 accepted and 27 proposed, 57 for relea
 | 0058 | [Developer environment: source exports, one stack script and one gate command](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | 1 | |
 | 0059 | [Time-series storage port with an open default backend](0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | later | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
 | 0060 | [Configuration with @nestjs/config, one Zod environment schema and secret files](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | 1 | |
+| 0061 | [Presentation settings for dates, clocks and numbers with one pinned locale](0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | 1 | |
+| 0062 | [Web form contracts, URL view state and module link manifests](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | 1 | |
+| 0063 | [Agent skills from library authors, pinned in the repository](0063-agent-skills-from-library-authors-pinned-in-the-repository.md) | accepted | 1 | |
 
-Next free number: 0061. Only Krister Johansson sets a status to accepted.
+Next free number: 0064. Only Krister Johansson sets a status to accepted.

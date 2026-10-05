@@ -8,6 +8,7 @@ This document says how NorthMES work moves from the plan to a released version. 
 |---|---|---|
 | [0001](../adr/0001-record-architecture-decisions-in-madr.md) | accepted | ADRs in MADR, numbered by a script, and the rule that a task moves to Ready only when every linked ADR is accepted |
 | [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) | accepted | handoff on GitHub issues, thin vertical slices, Claude Design per task, the installed skills, the persona list, gate time measurement |
+| [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md) | accepted | Agent skills from library authors, pinned in the repository |
 | [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md) | accepted | The `northMES` organization, rulesets, CI runners, supply chain, agents on GitHub, the offline image bundle |
 | [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) | accepted | One version for everything, lockstep 0.x, release-please, API reports |
 | [0048](../adr/0048-documentation-on-docs7-at-docs-northmes-dev.md) | accepted | The docs site on Docs7 at docs.northmes.dev, public names under northmes.dev, the mail addresses |
@@ -185,7 +186,7 @@ Code review blocking rules (every graph):
 - a change that contradicts a linked ADR;
 - an acceptance criterion the diff does not implement, or behaviour the issue did not ask for.
 
-The tests-changed check (`scripts/handoff/tests-changed.mjs`) runs `git diff --name-only origin/main...HEAD` and exits 1 when a non-generated file under `modules/**`, `packages/**` or `examples/**` changed and no `*.test.ts`, `*.test.tsx` or `*.int.test.ts` file did. The Tester and the coder run `pnpm check`, the one gate command ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)): turbo lint and typecheck, `pnpm gen --check`, then `vitest run` over the unit, integration and web projects. `test/meta/gates.test.ts` fails when the Tester command in a committed graph file is anything else, or when a coder instruction does not name `pnpm check`. `pnpm test:handoff` stays only as an alias that runs `pnpm check`.
+The tests-changed check (`scripts/handoff/tests-changed.mjs`) runs `git diff --name-only origin/main...HEAD` and exits 1 when a non-generated file under `modules/**`, `packages/**` or `examples/**` changed and no `*.test.ts`, `*.test.tsx`, `*.int.test.ts` or `*.test-d.ts` file did. The Tester and the coder run `pnpm check`, the one gate command ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)): turbo lint and typecheck, `pnpm gen --check`, then `vitest run` over the unit, integration, web and types projects. `test/meta/gates.test.ts` fails when the Tester command in a committed graph file is anything else, or when a coder instruction does not name `pnpm check`. `pnpm test:handoff` stays only as an alias that runs `pnpm check`.
 
 ### Node instructions
 
@@ -564,7 +565,7 @@ An approved page is frozen. A later change copies it under a new issue number, a
 
 ## Agent skills in the repository
 
-Skills are installed in `.claude/skills`, pinned by commit in `skills-lock.json`, with each source's license reproduced in `.claude/skills/THIRD_PARTY_LICENSE.md` ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)). Ten come from `mattpocock/skills` at `24fe0ef`. Eight more were added on 2026-10-05 after a license and fit review against the ADRs. `.claude/settings.json` denies `npm` and `npx`, which `apollo-client` and `playwright-cli` pre-approve, and `CLAUDE.md` says that an ADR wins where a skill's example differs.
+Skills are installed in `.claude/skills`, pinned by commit in `skills-lock.json`, with each source's license reproduced in `.claude/skills/THIRD_PARTY_LICENSE.md` ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md)). Ten come from `mattpocock/skills` at `24fe0ef`. Eight more were added on 2026-10-05 after a license and fit review against the ADRs ([ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md), proposed). `.claude/settings.json` denies `npm` and `npx`, which `apollo-client` and `playwright-cli` pre-approve, and `CLAUDE.md` says that an ADR wins where a skill's example differs.
 
 | Skill | Invoked by | Used in |
 |---|---|---|
@@ -578,7 +579,7 @@ Skills are installed in `.claude/skills`, pinned by commit in `skills-lock.json`
 | `to-questionnaire` | user | One questionnaire per person for questions only they can answer; its output files are gitignored |
 | `wait-what` | user | Re-states the last reply in plain English with glossary terms |
 | `improve-codebase-architecture` | user | Interactive sessions only, once two or more modules have weeks of history on `main` |
-| `vitest` (antfu/skills) | model | Coder and code review; Vitest 5 configuration, projects and fixtures |
+| `vitest` (antfu/skills) | model | Coder; Vitest 5 configuration, projects and fixtures |
 | `pnpm` (antfu/skills) | model | Coder; pnpm 12 settings in `pnpm-workspace.yaml`, catalogs and `allowBuilds`. ADRs 0004 and 0050 win over its CI and Docker examples |
 | `turborepo` (vercel/turborepo) | model | Coder; reads the docs that ship in `node_modules/turbo` for the installed version |
 | `apollo-client` (apollographql/skills) | model | Coder on web packages; Apollo Client 4 imports, data masking and preloading. The session cookie of ADR 0011 wins over its bearer-token example |
@@ -601,7 +602,7 @@ A pin moves only after reading the skills' changelog between the two commits, re
 - `docs/agents/domain.md` sets the ADR format and the glossary rules; `docs/agents/issue-tracker.md` sets how issues are created; `docs/agents/coderabbit.md` describes the CodeRabbit setup.
 - People and interactive sessions open an issue before a change; contributors use the GitHub issue forms and send pull requests. Run agents put follow-ups in the pull request description.
 - ADR numbers come from the ADR numbering script, never from scanning `docs/adr/`. Until the script exists, the planning session numbers ADRs by hand from `docs/adr/README.md`. A new ADR has status `proposed`; only Krister sets `accepted`.
-- Generated files (schema snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict. Generated paths are marked `linguist-generated` in `.gitattributes`.
+- Generated files (schema snapshots, link snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict. Generated paths are marked `linguist-generated` in `.gitattributes`.
 - Meta tests keep the rules true: `test/meta/gates.test.ts` (every CI gate step runs a script that `pnpm check` or `pnpm check:full` contains; the handoff Tester runs `pnpm check`; root scripts only), `test/meta/doc-links.test.ts` (a relative Markdown link in `docs/plan`, `docs/adr`, `docs/agents` or `GLOSSARY.md` must point at a file `git ls-files` lists, no Markdown link may point into the private research folder, and a backticked repository path in `AGENTS.md`, `CLAUDE.md` or `docs/agents` must exist in `git ls-files` or be on the test's list of planned paths, each of which names the task that creates it; backticked paths in `docs/plan` and `docs/adr` name files later tasks create and are not checked), `test/meta/collection.test.ts` (every test file belongs to exactly one Vitest project).
 
 ## GitHub organization and repository
@@ -658,7 +659,7 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 | Workflow and job | Trigger | Runs |
 |---|---|---|
 | `ci.yml` `ci / lint + typecheck + build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint, typecheck and build (Biome in CI mode, `tsc`, the import rules that keep MIT packages free of AGPL code) |
-| `ci.yml` `ci / test (TZ=UTC)` | pull request, push to `main` | Vitest unit, integration and web projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload |
+| `ci.yml` `ci / test (TZ=UTC)` | pull request, push to `main` | Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload |
 | `ci.yml` `ci / test (TZ=Europe/Stockholm)` | pull request, push to `main` | The same with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
 | `ci.yml` `ci / e2e` | pull request, push to `main` | Build, `playwright install --with-deps chromium`, Playwright against the built `all` process; traces on failure. Includes `e2e/skeleton.spec.ts` |
 | `ci.yml` `ci / a11y` | pull request, push to `main` | axe over the board states; a separate job from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |

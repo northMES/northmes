@@ -54,7 +54,7 @@ Every module and plugin has one kebab-case id matching `[a-z][a-z0-9]*(-[a-z0-9]
 |---|---|---|
 | `@northmes/module-<id>` | AGPL-3.0-or-later | manifest, `server/`, `migrations/`, `schema.graphql`, `docs/`, `test/`; exports `./manifest` and `./api` |
 | `@northmes/<id>-web` | AGPL-3.0-or-later | the Vite remote, built with `@northmes/web-build` |
-| `@northmes/<id>-contracts` | MIT | Zod inputs of public and validatable commands, validator payload schemas, event payloads, the settings schema, error codes, master-data definitions, slot prop types, link helpers |
+| `@northmes/<id>-contracts` | MIT | Zod inputs of public and validatable commands, validator payload schemas, event payloads, the settings schema, error codes, master-data definitions, slot prop types, the module's link manifest (`defineModuleLinks`) |
 
 ```text
 modules/<id>/
@@ -165,6 +165,6 @@ The `web` data is static because the remote is a separate build that the browser
 
 ## More information
 
-* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) boot sequence, [0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) migrations and owner roles, [0013](0013-audit-trail-written-in-the-command-transaction.md) lifecycle classes, [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) subgraphs, [0019](0019-web-shell-with-react-module-federation-remotes.md) remotes, [0022](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) shared packages, [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) plugins, [0038](0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) versions and ranges, [0040](0040-dependency-license-policy-ci-gate-and-sbom.md) license gate, [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) scheduling package.
+* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) boot sequence, [0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) migrations and owner roles, [0013](0013-audit-trail-written-in-the-command-transaction.md) lifecycle classes, [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) subgraphs, [0019](0019-web-shell-with-react-module-federation-remotes.md) remotes, [0022](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) shared packages, [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) plugins, [0038](0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) versions and ranges, [0040](0040-dependency-license-policy-ci-gate-and-sbom.md) license gate, [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) scheduling package, [0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) the link manifest in the contracts package.
 * Plan: [03 modules and extensibility](../plan/03-modules-and-extensibility.md), [02 architecture](../plan/02-architecture.md).
 * Revisit when the public SDK is published after the pilot (the `@internal` and `@beta` tags then move to `@public` for the stable parts), or when plugins need in-process access to core services beyond GraphQL references, validators, events and slots.

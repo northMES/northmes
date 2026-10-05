@@ -6,7 +6,7 @@ CodeRabbit is a GitHub App (`coderabbitai[bot]`) that reviews pull requests to `
 
 CodeRabbit reviews a pull request when it opens and again after every push, with no pause after a number of reviewed commits. It skips drafts, release PRs (`chore(main): release`) and PRs from `renovate[bot]` and `dependabot[bot]`. While the repository has fewer than 10 stars, CodeRabbit reviews only after an `@coderabbitai review` comment. The review profile is `chill`.
 
-It does not review the lockfiles (`pnpm-lock.yaml`, `skills-lock.json`), the committed GraphQL snapshots (`schema/*.graphql`, `modules/*/schema.graphql`), `pnpm gen` output (`*.gen.ts`, `*.gen.css`), Vitest snapshots, generated reference docs under `apps/docs/reference`, `CHANGELOG.md`, the vendored skills in `.claude/skills`, or the internal research material, which is gitignored and filtered only in case a file is committed. CodeRabbit's own defaults also skip images (including `*.svg`), `*.csv`, `*.map` and directories named `generated`, `__generated__` or `gen`.
+It does not review the lockfiles (`pnpm-lock.yaml`, `skills-lock.json`), the committed GraphQL snapshots (`schema/*.graphql`, `modules/*/schema.graphql`), `pnpm gen` output (`*.gen.ts`, `*.gen.css`, `modules/*/web/links.snapshot.json`), Vitest snapshots, generated reference docs under `apps/docs/reference`, `CHANGELOG.md`, the vendored skills in `.claude/skills`, or the internal research material, which is gitignored and filtered only in case a file is committed. CodeRabbit's own defaults also skip images (including `*.svg`), `*.csv`, `*.map` and directories named `generated`, `__generated__` or `gen`.
 
 Path instructions tell it what to flag per area:
 

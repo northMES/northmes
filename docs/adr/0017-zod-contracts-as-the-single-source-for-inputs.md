@@ -38,21 +38,23 @@ Chosen option: "An own `inputFromZod` factory that builds input classes at boot,
 
 Rules:
 
-* Each command's input schema lives in the owning module's MIT contracts package inside `defineCommandContract({ name, input, permission, validatable, reason, signature })`. That schema is the single source. The command pipeline parses the input with it as its first step, before permission, audit and validators ([ADR 0012][adr-0012]).
+* Each command declares its user-editable fields once, in the owning module's MIT contracts package: `defineCommandContract({ name, target, fields, permission, validatable, reason, signature })`. `fields` is a `z.object` with any synchronous refinements. `target` is `new`, `existing` or `none`. The SDK derives `contract.input` as `fields.extend({ id: z.uuid() })` for `new`, `fields.extend({ id: z.uuid(), expectedVersion: version })` for `existing`, and `fields` for `none`. `.extend()` with new keys keeps the refinements, while `.pick()`, `.omit()` and `.partial()` throw on a refined object in Zod 4, so no form derives its schema from the input. The pipeline parses `contract.input` as its first step, before permission, audit and validators ([ADR 0012][adr-0012]); forms validate `contract.fields`.
 * `inputFromZod(name, schema)` in `@northmes/sdk/graphql` walks `z.toJSONSchema(schema, { io: "input" })` and applies `@InputType` and `@Field` programmatically. It supports scalars, enums, lists, nested named objects, nullability and defaults, and throws at boot, naming the field path, on anything else. An integer maps to `Int` only when it is bounded to 32 bits. Enum and nested object names come from `.meta({ id })`.
+* Contract inputs may use `.refine` and `.superRefine` with synchronous checks. `z.toJSONSchema` leaves checks out, so they pass `inputFromZod`, and both the pipeline parse and the browser resolver run them with the same messages and paths. A rule that needs stored data is a handler check that throws a `DomainError` with `fieldErrors`, never a refinement. A cross-field rule between measured fields is a handler check too, because the contract validates measured values in the unit the person typed and the browser never converts ([ADR 0062][adr-0062]). Contracts use no async refinements: the pipeline parses synchronously, and `useZodForm` sets the resolver mode to sync. `.meta({ id })` is the last call on a named schema, because `.refine()` returns a schema that does not keep the id. A transform appears only as `z.codec` or as a pipe whose input side `inputFromZod` supports.
 * `objectFromZod` builds output types for the master-data kit from the same kind of definition ([ADR 0022][adr-0022]).
-* The time scalars `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` are validated with Zod in the subgraph driver ([ADR 0024][adr-0024]).
+* The time scalars `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` are validated with Zod in the subgraph driver ([ADR 0024][adr-0024]). Codegen maps them to the branded string types exported by `@northmes/contracts`, and the contracts' time value schemas output the same brands, so `z.output` of a contract input is assignable to the generated mutation input type without a cast.
 * A Zod parse failure becomes `BAD_USER_INPUT` with `fieldErrors: [{ path, message, code }]` in the error extensions.
 * REST routes in release 1 parse their request bodies with Zod. When the integration REST API arrives, its routes pass the same schemas to Nest 12 Standard Schema (`@Body({ schema })`), and `@nestjs/swagger` 12 builds OpenAPI with zod-openapi as converter for named components ([ADR 0031][adr-0031]).
 * Validator payloads, `defineSettings` schemas, `defineEvent` payloads and the input and output schemas of `defineTool` (MCP and assistant tools) are Zod too. Agent-visible tool inputs stay in a portable subset without unions, records or recursion ([ADR 0034][adr-0034]).
-* Web forms bind the same schemas: `useZodForm` in `@northmes/ui` uses react-hook-form 7 with the Standard Schema resolver, and `useCommandForm` in `@northmes/web-sdk` binds it to the command's mutation and maps `fieldErrors` onto fields ([ADR 0020][adr-0020]).
+* Web forms validate `contract.fields`: `useZodForm` in `@northmes/ui` uses react-hook-form 7 with the Standard Schema resolver, and `useCommandForm` in `@northmes/web-sdk` binds it to the command's mutation, adds `id`, `expectedVersion` and the shared reason argument, and maps `fieldErrors` onto fields ([ADR 0020][adr-0020]). One function in `@northmes/web-sdk` maps every `fieldErrors` entry, from Zod or from a `DomainError`: the field name is the path joined with a dot, and an entry with no registered field goes to the error summary ([ADR 0062][adr-0062]).
 * `nestjs-zod`, `nestjs-graphql-zod`, `zod-to-nestjs-graphql` and `@asteasolutions/zod-to-openapi` are not used.
 
 ```ts
 // modules/planning/contracts/src/commands/release-production-order.ts (MIT), sketch
 export const releaseProductionOrder = defineCommandContract({
   name: "planning.releaseProductionOrder",   // mutation planningReleaseProductionOrder
-  input: z.object({ id: z.uuid(), expectedVersion: z.int() }),
+  target: "existing",                        // contract.input adds id and expectedVersion
+  fields: z.object({}),                      // releasing has no user-editable fields
   permission: "planning.productionOrder:release",
   validatable: true,
   reason: "optional",
@@ -73,11 +75,14 @@ export const releaseProductionOrder = defineCommandContract({
 
 ### Confirmation
 
-* `packages/sdk/src/graphql/input-from-zod.test.ts` (proposed name): scalars, enums, lists, nested named objects, nullability and defaults map to the expected SDL; a 32-bit bounded integer becomes `Int`; a `z.union` field throws at boot and names the field path; enum and object names come from `.meta({ id })`.
+* `packages/sdk/src/graphql/input-from-zod.test.ts` (proposed name): scalars, enums, lists, nested named objects, nullability and defaults map to the expected SDL; a 32-bit bounded integer becomes `Int`; a `z.union` field throws at boot and names the field path; enum and object names come from `.meta({ id })`; a nested object refined after `.meta({ id })` fails at boot and the message says to call `.meta` last; a `superRefine` on the input leaves the printed SDL unchanged.
+* `packages/contracts/test/define-command-contract.test.ts` (proposed name): target `existing` adds `id` and `expectedVersion` and keeps the `superRefine` from `fields`.
 * A snapshot of each module's printed SDL, enforced by `pnpm gen --check` in `pnpm check`.
 * Boot check: every Mutation field maps to a registered command handler, so no mutation bypasses the contract parse ([ADR 0012][adr-0012]).
-* `gateway/errors.int.test.ts` (proposed name): an invalid mutation input returns `BAD_USER_INPUT` with `fieldErrors` paths that match the Zod issue paths.
-* Web: a `useCommandForm` test maps a server `fieldErrors` response onto the matching fields and keeps the entered values.
+* `gateway/errors.int.test.ts` (proposed name): an invalid mutation input returns `BAD_USER_INPUT` with `fieldErrors` paths that match the Zod issue paths; a failed `superRefine` returns `fieldErrors` with the refinement path.
+* Web, `packages/web-sdk/test/use-command-form.test.tsx` (proposed name): a server `fieldErrors` response lands on the matching fields and keeps the entered values; a cross-field refinement shows the same message and path in the browser as the server returns; an update form sends `expectedVersion` from the entity.
+* Web, `packages/web-sdk/test/field-errors.test.ts` (proposed name): `operations.1.cycleTime` lands on that field; an unknown path lands in the summary.
+* Types, `modules/planning/web/test/commands.test-d.ts` (proposed name, `types` Vitest project): `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 * `mcp/schema-subset.test.ts`: the propose tool's input passes the schema lint, and a `z.union` input fails.
 * `test/meta/forbidden-deps.test.ts` (proposed name): fails when `nestjs-zod`, `nestjs-graphql-zod` or `zod-to-nestjs-graphql` appears in any workspace `package.json`.
 
@@ -106,9 +111,9 @@ export const releaseProductionOrder = defineCommandContract({
 
 ## More information
 
-* Related ADRs: [0012][adr-0012] (command pipeline and error model), [0015][adr-0015] (subgraphs and schema snapshot), [0020][adr-0020] (forms), [0022][adr-0022] (contracts packages, master-data kit), [0024][adr-0024] (time scalars), [0031][adr-0031] (no integration REST API in release 1), [0034][adr-0034] (MCP tool schemas).
+* Related ADRs: [0012][adr-0012] (command pipeline and error model), [0015][adr-0015] (subgraphs and schema snapshot), [0020][adr-0020] (forms), [0022][adr-0022] (contracts packages, master-data kit), [0024][adr-0024] (time scalars), [0031][adr-0031] (no integration REST API in release 1), [0034][adr-0034] (MCP tool schemas), [0062][adr-0062] (form contracts, field error mapping, measured limits).
 * Plan: [05-graphql-and-apis.md](../plan/05-graphql-and-apis.md) (mutations are commands, error extensions), [03-modules-and-extensibility.md](../plan/03-modules-and-extensibility.md) (contracts packages), [06-web-and-ux.md](../plan/06-web-and-ux.md) (forms).
-* Open point for the first command task: the contract sketch uses `z.int()` for `expectedVersion`, and the factory maps an integer to `Int` only when the schema carries 32-bit bounds. What `z.toJSONSchema` emits for `z.int()` was not verified; the task adds explicit bounds or a shared `version` value type in `@northmes/contracts` if needed.
+* Open point for the first command task: the SDK derives `expectedVersion` from a shared `version` value type in `@northmes/contracts`, and the factory maps an integer to `Int` only when the schema carries 32-bit bounds. What `z.toJSONSchema` emits for `z.int()` was not verified; the task gives `version` explicit bounds if needed.
 * Revisit when the integration REST API is built (OpenAPI from the same schemas, an oasdiff gate), when a maintained library covers Zod-to-Nest-GraphQL for the pinned majors, or when `@Args()` gains a schema option.
 
 [adr-0012]: 0012-commands-as-the-single-write-path.md
@@ -118,3 +123,4 @@ export const releaseProductionOrder = defineCommandContract({
 [adr-0024]: 0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md
 [adr-0031]: 0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md
 [adr-0034]: 0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md
+[adr-0062]: 0062-web-form-contracts-url-view-state-and-module-link-manifests.md

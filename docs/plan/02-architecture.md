@@ -113,7 +113,7 @@ modules/
   pyramid-connector/
   ai/
 packages/
-  contracts/         @northmes/contracts (MIT): shared value types and definition functions
+  contracts/         @northmes/contracts (MIT): shared value types, definition functions and formatters
   sdk/               @northmes/sdk (MIT): defineModule, server helpers, tool and AI port types
   web-sdk/           @northmes/web-sdk (MIT): web module contract, slots, Apollo client factory
   ui/                @northmes/ui (MIT): primitives, tokens, form engine
@@ -295,13 +295,13 @@ The committed snapshot (`schema/api.graphql`, `schema/supergraph.graphql` and ea
 
 `apps/web` is a pure `@module-federation/runtime` host on Vite, with no federation build plugin ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). It boots in this order:
 
-1. Fetch `GET /api/web/modules`, which lists the remotes that are installed, enabled, compatible and permitted for the user at the plant, each with a SHA-384 hash of its manifest.
+1. Fetch `GET /api/web/modules`, which lists the remotes that are installed, enabled, compatible and permitted for the user at the plant, each with a SHA-384 hash of its manifest. The response also carries the plant (id, slug, name, time zone) and its resolved presentation values, which the shell renders through `PresentationProvider` from `@northmes/ui`, so the shell and every remote read one context ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 2. Register the remotes and load them in parallel with a timeout (planner 10 s, station 30 s), a per-remote indicator after 2 s and retries.
 3. Validate each module object with `validateWebModule`.
 4. Call `routes(plantRoute)` on each remote, and add a placeholder route plus an "(unavailable)" menu entry in its usual position for each remote that failed.
 5. Create the TanStack Router route tree once and render.
 
-Each remote exposes `./module = defineWebModule({ id, version, northmesRange, permissions, routes(plantRoute), nav, widgets })` and is built with Vite and an exactly pinned `@module-federation/vite` through `defineRemoteConfig` in `@northmes/web-build`. The shared singletons are react, react-dom, react/jsx-runtime, @tanstack/react-router, @apollo/client, @apollo/client/react, @northmes/web-sdk and @northmes/ui, all with `import: false` and `requiredVersion: false`. Mount points are `/$plant` and `/station/$stationId`.
+Each remote exposes `./module = defineWebModule({ id, version, northmesRange, permissions, routes(plantRoute), stationRoutes?, widgets, help?, typePolicies? })` and is built with Vite and an exactly pinned `@module-federation/vite` through `defineRemoteConfig` in `@northmes/web-build`. The shared singletons are react, react-dom, react/jsx-runtime, @tanstack/react-router, @apollo/client, @apollo/client/react, @northmes/web-sdk and @northmes/ui, all with `import: false` and `requiredVersion: false`. Mount points are `/$plant` and `/station/$stationId`. A module's sidebar entries come from its routes: the shell builds them from the routes whose `screenRoute` declares `nav`, and each route takes its path from the module's link manifest in its MIT contracts package ([06 web and UX](06-web-and-ux.md#routes-and-typed-links), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 
 Nest serves each installed remote at `/modules/<id>/<version>/` with immutable caching for hashed files and `no-cache` with an ETag for `mf-manifest.json` and `remoteEntry.js`. At boot the server checks the files each `mf-manifest.json` lists and marks a module degraded with `integrity: null` when one is missing. Shell, `/graphql`, `/api` and every remote share one origin, so there is no CORS and the session cookie works everywhere. The CSP is strict `'self'`, and the SPA makes no CDN calls.
 
@@ -315,7 +315,7 @@ REST in release 1 is limited to the endpoints below plus Better Auth's handler. 
 |---|---|---|
 | `/`, `/assets/*` | shell `index.html` (`no-cache`, CSP header) and hashed shell assets | no credential |
 | `/modules/<id>/<version>/*` | remote files; remotes hold no data | no credential |
-| `/api/web/modules` | module list for the shell | session or station cookie; 401 without one, 403 for an unauthorized plant |
+| `/api/web/modules` | module list for the shell, with the plant and its resolved presentation values | session or station cookie; 401 without one, 403 for an unauthorized plant |
 | `/graphql` (HTTP, graphql-ws, SSE) | the supergraph | session or station cookie; HTTP requests carry `x-northmes-csrf`; every request carries `x-northmes-plant` |
 | `/api/web/client-errors` | browser errors to a core table, grouped by fingerprint | session or station cookie; same-origin; rate-limited; 8 kB body cap |
 | `/api/ai/chat` | streaming assistant chat | session cookie; same-origin |
@@ -533,6 +533,8 @@ Each check below is a test or CI job that a task carries.
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the pure scheduling package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | developer environment and the skeleton gate |
 | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | configuration, the environment schema and secret files at boot step 1 |
+| [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | the plant and its presentation values in the shell's module list |
+| [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | sidebar entries from routes, link manifests |
 
 ## Open items
 

@@ -8,6 +8,9 @@ The NorthMES web app is one browser shell (`apps/web`) that loads one React remo
 |---|---|---|
 | [0019 Web shell with React Module Federation remotes](../adr/0019-web-shell-with-react-module-federation-remotes.md) | accepted | Runtime host, remote contract, singletons, CSS rule, plant switch, browser floor |
 | [0020 Frontend libraries](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md) | proposed | TanStack Router, Apollo Client 4, codegen, shadcn on Base UI, forms, design tokens |
+| [0017 Zod contracts as the single source for inputs](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md) | proposed | One schema per command for the pipeline, GraphQL inputs and forms; fieldErrors |
+| [0012 Commands as the single write path](../adr/0012-commands-as-the-single-write-path.md) | proposed | Parse step, DomainError, error extensions |
+| [0062 Web form contracts, URL view state and module link manifests](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | The URL search serializer and `defineSearch`, link manifests and moved routes, nav entries from routes, the contracts packages and Zod that remotes bundle, measured inputs, the package homes of these names |
 | [0021 Accessibility target WCAG 2.2 AA](../adr/0021-accessibility-target-wcag-2-2-aa.md) | accepted | Target, shell services, gates, board accessibility |
 | [0022 Shared building blocks](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | Package map, promotion rule, master-data kit, settings |
 | [0018 Realtime subscriptions](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md) | accepted | Per-plant client, reconnect rules, stale tabs after an upgrade |
@@ -16,6 +19,7 @@ The NorthMES web app is one browser shell (`apps/web`) that loads one React remo
 | [0043 Health endpoints and System health](../adr/0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md) | accepted | Browser errors reach the server |
 | [0035 AI provider port](../adr/0035-ai-provider-port-with-customer-configured-providers.md) | accepted | Chat panel accessibility and disclosure text |
 | [0024 Time](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | Time scalars, plant time display, Temporal bootstrap |
+| [0061 Presentation settings for dates, clocks and numbers with one pinned locale](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | `core.presentation` with `dateFormat`, `hourCycle` and `numberFormat`, the formatters in `@northmes/contracts`, the pinned base locale, `PresentationProvider`, the Intl lint, presentation kept out of machine-readable output |
 | [0023 SI units](../adr/0023-si-units-with-a-northmes-unit-catalog.md) | accepted | Unit-aware number input and unit arguments |
 | [0053 Translation](../adr/0053-translation-english-first-general-translation-later.md) | accepted | English first, plain-string labels, `lang` on master data text |
 | [0011 Principals, credentials and same-origin rules](../adr/0011-principals-credentials-and-same-origin-rules.md) | proposed | CSRF header, WebSocket close codes |
@@ -77,6 +81,7 @@ The shell, `/graphql`, `/api` and every remote share one origin. There is no COR
 - Because the shell runs no federation plugin, it scans no package exports. That removes the cause of the earlier white page, where share proxies were built from scanned barrel exports and the shell and remotes ended up with separate React contexts.
 - The React Compiler runs through its Babel preset in the shell and in every remote ([0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md)).
 - The shell entry is a two-step bootstrap: it awaits the conditional Temporal polyfill import, then imports the app ([0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). No other web code imports `temporal-polyfill`.
+- The shell creates the router with `parseSearch: urlSearch.parse` and `stringifySearch: urlSearch.stringify` from `@northmes/contracts`. `parse` returns every value as the string in the URL and never parses JSON. `stringify` writes strings as they are, arrays as comma lists (it refuses an item that contains a comma), `true` as `1` and numbers in plain decimal, and drops `undefined`, `null`, empty strings and empty arrays. The `searchKey` helpers decode from that string form and also accept the typed form that `navigate` passes. Link builders in the contracts packages use the same `stringify` ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 
 The federation setup, as tested in the web spike (internal research note 19):
 
@@ -128,6 +133,7 @@ The shell owns a few code-based routes of its own and two mount points for remot
 | Status route | shell | Minimal status page that still renders when the core remote fails, because System health lives in the core remote |
 | "All pages" index | shell | Lists every route title (WCAG 2.4.5), built from the same titles as the route suite |
 | `/$plant/<id>/$` placeholder | shell | Added for each module that failed to load |
+| Unknown path under `/$plant/<id>/` | shell | Each loaded module's subtree gets a `notFoundComponent` with the title `Page not found · <module label> · Plant A · NorthMES`, one `h1` and a link to the module's first nav entry. The router's `defaultNotFoundComponent` covers all other paths |
 
 Remotes return code-based route subtrees from `routes(plantRoute)` and, for the station, `stationRoutes(stationRoute)`. Screens inside a module are lazy (`lazyRouteComponent`), and their chunks load from the remote's own path on first navigation. TanStack Router builds its route tree once, when the router is created, so a change in the set of loaded modules means a full page load.
 
@@ -144,7 +150,7 @@ sequenceDiagram
   B->>S: two-step bootstrap: Temporal polyfill if needed, then app
   S->>S: secure context check (crypto.subtle)
   S->>N: GET /api/web/modules?plant={slug} (no-store)
-  N-->>S: modules, per-plant permissions, build identity
+  N-->>S: modules, plant and presentation values, per-plant permissions, build identity
   S->>R: registerRemotes, loadRemote(id/module) in parallel, timeout
   R-->>S: mf-manifest.json (SHA-384 checked), entry, ./module
   S->>S: validateWebModule, id and version equal the server entry
@@ -166,14 +172,16 @@ sequenceDiagram
 The plant is in the URL and in a header on every request; it is never stored on the session, so a planner can keep two plants open in two tabs ([0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md)). The plant switcher is a menu of links (WCAG 3.2.2) and lives in the shell only. On a plant change the shell fetches `/api/web/modules?plant=<new>`:
 
 - If the set of module ids and versions differs, it does a full navigation with `window.location.assign`.
-- Otherwise it swaps the permission set and the per-plant Apollo client. The `$plant` route renders the client provider for its plant; the old client is stopped and disposed.
+- Otherwise it swaps the permission set, the presentation context and the per-plant Apollo client. The presentation context is the new plant's `timeZone` and resolved presentation values in `PresentationProvider` ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). The `$plant` route renders the client provider for its plant; the old client is stopped and disposed.
+
+Each plant link keeps the current route and its search when the route's only path param is `$plant`. On a route with entity params, the link goes to the nearest ancestor route without them and drops the search. The full navigation uses the same target when the module set differs.
 
 Nav items and slot contributions filter on the current plant's permissions ([0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
 
 ### Shell layout
 
-- Top bar: breadcrumb, a page actions slot that remotes fill through the `TopBarActions` portal from `@northmes/ui`, the live-updates status, one help menu at a fixed place (WCAG 3.2.6) and the user menu. Modules add entries to the help menu and never add their own top-level help.
-- Sidebar: core items first, then module items, then plugins in their own section, in the stable order the manifests declare (`order` is required, WCAG 3.2.3). Order never follows usage.
+- Top bar: breadcrumb, a page actions slot that remotes fill through the `TopBarActions` portal from `@northmes/ui`, the live-updates status, one help menu at a fixed place (WCAG 3.2.6) and the user menu. Modules add entries to the help menu through `help` in `defineWebModule`, where they appear grouped by module, and never add their own top-level help.
+- Sidebar: core items first, then module items, then plugins in their own section, in the stable order the manifests declare (`order` is required, WCAG 3.2.3). Order never follows usage. Each module is one sidebar group, headed by its manifest `web.label`, at its manifest order. Its items are its nav entries, ordered by `nav.order` and then by declaration order. `nav.parent` nests an entry one level under another entry of the same module. `/api/web/modules` adds `modules[].kind` (`core`, `module` or `plugin`), which puts core first and plugins in their own section. A module that failed to load shows its header with "(unavailable)" and no items.
 - One shell aside slot, where the AI chat panel mounts so it survives route changes. At most one panel docks beside `main`; below about 640 px the chat panel opens as a modal sheet ([0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [10-ai-and-agents.md](10-ai-and-agents.md)).
 - One `Toaster`, one dialog stack, and `aria-busy` on `main` while a route loads.
 
@@ -192,8 +200,8 @@ export interface WebModule {
   readonly permissions: readonly string[];
   routes?(parent: PlantRoute): AnyRoute;            // subtree under /$plant/<id>; absent for a contribution-only plugin
   stationRoutes?(parent: StationRoute): AnyRoute;   // production-start only in release 1
-  readonly nav: readonly NavItem[];                 // { id, label, to, permission?, order? }
   readonly widgets: readonly SlotContribution[];    // contributions to slots other modules own
+  readonly help?: readonly HelpEntry[];             // { id, label, href }; shown in the help menu, grouped by module
   readonly typePolicies?: TypePolicies;             // merged into each per-plant Apollo client
 }
 
@@ -207,7 +215,7 @@ export interface SlotContribution<S extends SlotId = SlotId> {
 }
 ```
 
-`validateWebModule(value, expectedId)` returns a list of errors and fails on: a missing default export, an id other than the expected one, non-string `version` or `northmesRange`, `routes` that is not a function, non-array `nav`, `widgets` or `permissions`, and a contribution without `label`.
+`validateWebModule(value, expectedId)` returns a list of errors and fails on: a missing default export, an id other than the expected one, non-string `version` or `northmesRange`, `routes` that is not a function, non-array `widgets` or `permissions`, and a contribution without `label`.
 
 ### Rules the shell and CI enforce
 
@@ -215,8 +223,11 @@ export interface SlotContribution<S extends SlotId = SlotId> {
 |---|---|
 | A module owns `/$plant/<id>/*` and nothing else | Shell boot check: the returned route path equals the id |
 | Id, version and range in `defineWebModule` equal the backend manifest | Build check in `@northmes/web-build` ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md)) |
-| Every `nav[].to` matches a route in the module's own tree | Vitest test per remote |
+| A nav entry exists only on a route with a title | Vitest test per remote |
 | Every leaf route has a title | Per-remote Vitest harness that walks `module.routes(plantRoute)` ([0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
+| Every link manifest entry equals the `fullPath` of a route in the module's tree, with the same params and search definition | Per-remote Vitest harness |
+| A link pattern or search key that the previous release published still exists or is covered by a `moved` entry | `pnpm gen` writes `modules/<id>/web/links.snapshot.json` (patterns, params, search keys, their defaults and the enum values each key accepts), and a CI check compares it with the previous release's snapshot, as for slot ids |
+| No app path is written as a string literal in `to=`, `href=`, `navigate({ to })`, `redirect({ to })` or `page.goto()` in `modules/*/web`, `examples/*/web`, `apps/web` and `e2e`; paths come from link builders | A pattern check script next to the styling check, with an allowlist entry that needs a reason |
 | Labels are plain strings, never React nodes | Contract types; a later command palette and translation read them |
 | A contribution's slot belongs to a module in the contributor's `dependsOn` closure | Boot catalog check and the shell's acceptance check against the module list ([0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)) |
 | A remote queries only fields of its own module and its `dependsOn` closure | Codegen per web package against its closure schema |
@@ -224,10 +235,28 @@ export interface SlotContribution<S extends SlotId = SlotId> {
 
 ### Routes and typed links
 
-- `screenRoute({ parent, path, title, nav, permission, component })` from `@northmes/web-sdk` wraps `createRoute`. It stores the title in `staticData` and sets the page `head`, declares the nav entry, checks the permission before load, and sets pending and error components. Route, title and nav entry are one declaration.
+- `screenRoute({ parent, link, title, nav, permission, search, component })` from `@northmes/web-sdk` wraps `createRoute`. `link` is the route's entry in the module's link manifest (see below). A route takes its search definition (see [View state in the URL](#view-state-in-the-url)) from its link manifest entry, or from the `search` option when it has no `link`; passing both is a type error. A route without `link` is a pathless layout route: it takes an `id`, never a `path`, and its `search` serves its children. It stores the title in `staticData` and sets the page `head`, declares the nav entry, checks the permission before load, and sets pending and error components. Route, title and nav entry are one declaration. `nav` takes `{ label, order?, parent?, search? }` or a list of them, stored in `staticData.nav`. `parent` is the link manifest entry of the route whose nav entry is the parent (for example `parent: planningLinks.orders`). After `routes(plantRoute)`, the shell walks the returned tree, as it does for titles, and builds the module's nav entries from the routes that carry `nav`. Each entry's `to` is the route's own `fullPath`, its search is the entry's preset search, and its permission is the route's permission. A module's nav entries come only from its routes; `defineWebModule` has no nav list ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 - `@northmes/web-sdk/routes` exports `createShellRoutes()` and the types `RootRoute`, `PlantRoute` and `StationRoute`. The shell calls the function once; modules use only the types.
 - Each module has a type-only `register.ts` that declares TanStack Router's `Register` for "the shell skeleton plus my own subtree". Links and `useParams` inside a module are then typed; the spike showed that unknown paths and missing params fail typecheck.
-- Links to another module's screens cannot be typed that way, because no TypeScript program sees every route. A module that wants to be linked to exports small pure link helpers from its MIT contracts package, for example `planningLinks.order(plant, orderId)` returning a string ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md)).
+- Each module with screens declares its link manifest once, in its MIT contracts package ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md)), from its first screen ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)). `defineModuleLinks` lives in `@northmes/contracts` and imports no router:
+
+  ```ts
+  export const planningLinks = defineModuleLinks("planning", {
+    board: { path: "board", search: boardSearch },
+    orders: {
+      path: "orders",
+      search: listSearch(productionOrderList),
+      children: { order: { path: "$orderId" } },
+    },
+  });
+  ```
+
+  Paths use the router's `$param` syntax, and each segment is either literal or exactly one `$param`. The manifest nests like the route tree. `screenRoute({ parent, link: planningLinks.orders.order, ... })` takes its path segment and search definition from the entry, so each path is written once. Each entry is a builder: `planningLinks.orders.order({ plant, orderId }, search?)` returns `{ to, params, search, href }`. Parameter names come from the pattern through template-literal types, `plant` is required on every plant route entry, values are `encodeURIComponent`-ed, an empty value throws, and `search` is typed from the entry's definition. Inside the module, `to`, `params` and `search` spread into `Link`, and `register.ts` checks them. Other modules, server code such as MCP tools, and e2e specs use `href`, because no TypeScript program sees every module's routes.
+
+  A module with station routes declares them in a separate section of the options argument, `defineModuleLinks(id, entries, { station: { ... } })`. Those builders take `stationId` instead of `plant` and build `/station/$stationId/...`, and the `fullPath` and snapshot checks cover them.
+- `defineModuleLinks(id, entries, { moved: { <old full pattern>: <new full pattern> } })` takes moved patterns in the same options argument, so no entry name is reserved. The remote adds `movedRoutes(parent, planningLinks)` from `@northmes/web-sdk`: routes whose `beforeLoad` throws `redirect({ href, replace: true })`, with params mapped by name and the search kept. The target can be in another module, because it is a full pattern string. A moved entry stays for at least one minor release, so the links of an N-1 plugin keep working.
+- A link against the dependency direction is a slot contribution: the dependent module contributes the link or a panel to a slot that the target screen owns, as production-start does in `planning/order/panels/v1`.
+- `useBreadcrumbs()` in `@northmes/web-sdk` returns `{ label, href }` for each route match whose route has a title. `PageFrame` takes `crumbs` and an optional `entityLabel`, which replaces the last crumb and the specific part of the document title ("Order 1001 · Plant A · NorthMES").
 
 ### Remotes in release 1
 
@@ -260,7 +289,7 @@ Rules:
 - Every remote declares every share as `{ singleton: true, import: false, requiredVersion: false }`. A remote never bundles a fallback and fails loudly when the shell does not provide a share.
 - One list, `packages/web-build/shared.mjs`, feeds the shell and every remote config. A unit test asserts that the shell's `registerShared` keys equal that list.
 - Every subpath is a separate share key. A remote that imports an unshared subpath silently gets a private copy (the spike reproduced this with `@apollo/client/cache`). Shared web packages are single-entry, export every name explicitly (Biome `noReExportAll` as an error) and add no new share keys ([0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)).
-- The `northmes:no-bundled-singletons` guard in `@northmes/web-build` fails a remote build when any chunk contains a module from a singleton package, from `packages/web-sdk/src`, from `graphql`, or from a package on the forbidden-bundle list. That list derives from `@northmes/ui`'s own dependencies (sonner, the primitive library, floating-ui, react-hook-form and the rest), so a remote reaches those only through `@northmes/ui` exports.
+- The `northmes:no-bundled-singletons` guard in `@northmes/web-build` fails a remote build when any chunk contains a module from a singleton package, from `packages/web-sdk/src`, from `graphql`, or from a package on the forbidden-bundle list. That list derives from `@northmes/ui`'s own dependencies (sonner, the primitive library, floating-ui, react-hook-form and the rest), so a remote reaches those only through `@northmes/ui` exports. The derived list leaves out the packages every remote bundles on purpose: `zod`, `@northmes/contracts` and the `@northmes/<id>-contracts` packages. Each remote bundles its own Zod copy. A schema reaches `@northmes/ui` only as a value: the form engine uses the Standard Schema interface, and `SettingsForm` and `EntityForm` read labels through schema metadata, which Zod 4 keeps in a registry on `globalThis`. Shared code never uses `instanceof` on Zod classes ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 - `@module-federation/vite` is pinned exactly; every shared and federation package is in the strict pnpm catalog with `overrides` that point the singletons at the catalog. Renovate's `minimumReleaseAge` is strict for the Module Federation packages, and upgrades run on a branch with the contract suite ([0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
 - `/api/web/modules` checks each remote's shared versions: react the same major and not newer, router and Apollo the same minor, `@northmes/web-sdk` and `@northmes/ui` the same 0.minor. A committed N-1 build of the widget plugin loads in Playwright on pull requests that touch the singleton list or the federation packages ([0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)).
 - Remotes set `dts: false` and do not use `@module-federation/bridge-react`; remote components render inside the shell's own React tree.
@@ -275,6 +304,18 @@ The spike reproduced the reason for these rules: a remote's own unprefixed Tailw
 - The shell builds one Tailwind sheet. `pnpm gen` writes `apps/web/src/styles/sources.gen.css` with one explicit `@source` directory per remote's workspace dependency closure plus `packages/web-sdk/src`. It never scans built `dist` JS. Wildcard directory segments are not used, because Tailwind matched nothing for `modules/*/web/src` in the spike.
 - Dynamic class names are banned by a review rule. Palette classes go through `@source inline()`. Board block colors are a CSS variable, not a class per color.
 - Anything built through the plugin path (the examples and customer plugins) ships a sheet with a plugin prefix and no preflight, with tokens mapped from the shell's CSS variables. A check requires every utility selector in a plugin sheet to carry its prefix.
+- `@northmes/ui` publishes `theme.css` (MIT): the `@theme inline` mapping from Tailwind's theme names (colors, radius, fonts, the board and status tokens) to the shell's CSS variables, plus the dark variant. It holds no token values and no preflight. The shell's sheet imports the same file, so in-repo modules and plugins use the same class names, and a plugin's classes differ only by its prefix (`acme:bg-primary`).
+- `pluginStyles({ prefix })` in `@northmes/web-build` writes the plugin's stylesheet entry and wires it into the build:
+
+  ```css
+  @layer theme, base, components, utilities;
+  @import "tailwindcss/theme.css" layer(theme) prefix(acme);
+  @import "tailwindcss/utilities.css" layer(utilities) prefix(acme);
+  @import "@northmes/ui/theme.css";
+  ```
+
+  Token values stay in the shell, so a token change reaches every plugin without a rebuild. A plugin never copies token values, and NorthMES ships no Tailwind JS config, because Tailwind 4 is configured in CSS.
+- The docs site generates a tokens and utilities page from `theme.css` and the token files, and the plugin guide shows the stylesheet entry above.
 - Design tokens are CSS variables in `@northmes/ui`. Module styling uses tokens and components; a pattern check rejects raw color classes and status palette utilities in module web sources.
 - `forced-color-adjust: none` appears only in the color swatch components; a CI grep fails on any other use.
 
@@ -317,6 +358,8 @@ The shell takes remote URLs only from this endpoint, never from query parameters
 | `modules[].manifestUrl` | `/modules/<id>/<version>/mf-manifest.json` |
 | `modules[].integrity` | `sha384-...` of the manifest, or `null` when the server marked the module degraded |
 | `modules[].label`, `order` | From the backend manifest, so a failed module keeps its menu entry and position |
+| `modules[].kind` | `core`, `module` or `plugin`; the sidebar puts core first and plugins in their own section |
+| `plant` | `{ id, slug, name, timeZone, presentation }`, where `presentation` holds the resolved `dateFormat`, `hourCycle` and `numberFormat`; the shell fills `PresentationProvider` from it ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)) |
 | Per-plant permissions | The permission set of the user at this plant, used by nav items, contributions and `can()` in the shell |
 | Build identity | Version and supergraph hash, compared on reconnect to detect an upgrade |
 
@@ -346,7 +389,7 @@ Nothing leaves the installation. Error telemetry to the project is opt-in and bu
 
 The normalized cache is the only GraphQL cache; there is no TanStack Query. Instants stay ISO strings in the cache. A paged table needs no field policy, because every argument is part of the store key. An infinite list uses `relayStylePagination(["filter", "orderBy", "search"])`. After a mutation or an event that touches a listed id, a screen refetches its active list query.
 
-Route loaders preload with Apollo's `createQueryPreloader`. Operations live in `.graphql` files next to the screen. GraphQL Code Generator with `typescript-operations` and `typed-document-node` writes one typed-document file per web package from its closure schema, with const enums. There are no generated hooks; screens call Apollo's hooks with typed documents and read fragments with `useFragment`. `@unmask` is allowed where the board needs raw speed.
+Route loaders preload with Apollo's `createQueryPreloader`. Operations live in `.graphql` files next to the screen. GraphQL Code Generator with `typescript-operations` and `typed-document-node` writes one typed-document file per web package from its closure schema, with const enums. Codegen maps `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` to the branded types exported by `@northmes/contracts`. The contracts' time value schemas output the same brands, so `z.output` of a contract input is assignable to the generated mutation input type without a cast. A type test per command asserts this. There are no generated hooks; screens call Apollo's hooks with typed documents and read fragments with `useFragment`. `@unmask` is allowed where the board needs raw speed.
 
 ### Live data, reconnects and upgrades
 
@@ -396,18 +439,18 @@ Each slot contribution renders in its own error boundary, keyed by contribution 
 - A remote edit reaches the page through React Fast Refresh across the federation boundary and keeps component state (63 to 230 ms in the spike). An edit to the shell's `main.tsx` reloads the page.
 - The `northmes:restart-on-shared-export-change` plugin restarts a remote's dev server when a shared package's entry file changes; the page needs one reload. The shell never restarts.
 - A new Tailwind class in a remote file appears without a reload, because the shell's sheet scans the module's source directory.
-- `pnpm gen` writes, in a fixed order, the schema snapshots, the closure schema per web package, the typed documents and `sources.gen.css` (database types and reference docs follow). `pnpm gen --check` fails on drift.
+- `pnpm gen` writes, in a fixed order, the schema snapshots, the closure schema per web package, the typed documents, `sources.gen.css` and the link snapshots (`modules/<id>/web/links.snapshot.json`) (database types and reference docs follow). `pnpm gen --check` fails on drift.
 
 If the number of Vite watchers becomes a problem, a `pnpm dev --web <id>` option that runs only named remotes as dev servers and serves the rest from their last build is the planned fallback; it is not built in release 1.
 
 ## Shared web packages
 
-All three are MIT, import nothing AGPL, and carry an API Extractor report from the first commit (`@internal` by default, `@beta` for what the example plugins use). Each has a section in the root `AGENTS.md` that states what it owns, what it refuses and its test floor ([0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)).
+All three are MIT, import nothing AGPL, and carry an API Extractor report from the first commit (`@internal` by default, `@beta` for what the example plugins use). Each has a section in the root `AGENTS.md` that states what it owns, what it refuses and its test floor ([0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)). The view state, link and form names in the table follow [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), and the presentation names follow [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md); the formatters themselves are pure functions in `@northmes/contracts` (see [Time, numbers and units](#time-numbers-and-units)).
 
 | Package | Owns | Refuses | Shared at run time |
 |---|---|---|---|
-| `@northmes/web-sdk` | `defineWebModule`, `validateWebModule`, contract and slot prop types, `createShellRoutes` and route types, `screenRoute`, `ShellProvider` and `useShell` (rendered only by the shell), `createNorthmesClient`, `useConnection`, `useListState`, `useCommandForm`, `usePermission` and `<Can>`, `announce()`, `<Slot>` and the slot registry, `formatPlantTime`, `<PlantDateTime>` and `usePlantTime()`, `masterDataRoutes` and `MasterDataLookup` | Module domain logic | singleton |
-| `@northmes/ui` | shadcn 4 components on Base UI, tokens and the two-tone focus ring, presentational patterns (see [UI patterns](#ui-patterns)), the form engine `useZodForm`; block and swatch text color through `textColorFor` from `@northmes/contracts` | Apollo, TanStack Router and GraphQL imports, so later MCP Apps views can use it | singleton |
+| `@northmes/web-sdk` | `defineWebModule`, `validateWebModule`, contract and slot prop types, `createShellRoutes` and route types, `screenRoute`, `movedRoutes`, `ShellProvider` (rendered only by the shell; it fills `PresentationProvider` from `/api/web/modules`) and `useShell`, `createNorthmesClient`, `useConnection`, `useListState`, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `useCommandForm`, `usePermission` and `<Can>`, `announce()`, `<Slot>` and the slot registry, `usePlantTime()` (formatters bound to the plant's zone and presentation values), `masterDataRoutes` and `MasterDataLookup` | Module domain logic | singleton |
+| `@northmes/ui` | shadcn 4 components on Base UI, tokens and the two-tone focus ring, presentational patterns (see [UI patterns](#ui-patterns)), `LinkProvider`, `PresentationProvider` and `usePresentation()` (which returns `DEFAULT_PRESENTATION` outside a provider), the form engine `useZodForm` and, exported by name, the react-hook-form pieces module forms need: `useFieldArray`, `useWatch`, `useController`, `useFormContext`, `FormProvider` and the types `FieldPath`, `FieldValues`, `UseFormReturn` and `SubmitHandler`; block and swatch text color through `textColorFor` from `@northmes/contracts` | Apollo, TanStack Router and GraphQL imports, so later MCP Apps views can use it | singleton |
 | `@northmes/web-build` | `defineRemoteConfig({ id, version })`, the shared list `shared.mjs`, the browser floor and explicit `build.target`, the `no-bundled-singletons`, no-CSS and restart guards, the `sources.gen.css` generator, plugin build helpers | Run-time code | build time only |
 
 `defineRemoteConfig` names the `./module` expose once and writes it into both the federation config and Rolldown's `input`, so a remote's `vite.config.ts` is two lines. It declares `@module-federation/vite`, `@vitejs/plugin-react` and `@tailwindcss/vite` as dependencies, so it also works outside the workspace.
@@ -433,8 +476,9 @@ A composite with a judgement (`DataTable`, `EntityForm`) is promoted to a shared
 | `StatusBadge` | Order status, archived, connector health | Icon plus text, never color alone |
 | `EmptyState`, `LoadingState`, `ErrorState` | Every list and detail | See [Page states](#page-states) |
 | `ConfirmDialog` | Archive, break lock, release | Optional or required reason field, focus restore, correct button roles |
-| `DateTimeText` | Board detail, lists, history, station | Zone label when the user's zone differs |
-| `QuantityInput` | Station report, order quantity | Decimal value; unit restricted to one dimension |
+| `DateTimeText` | Board detail, lists, history, station | Reads `PresentationProvider`; zone label when the browser zone differs from the plant zone |
+| `MeasureText` | Lists, detail pages, history | Measured value with the catalog symbol and display decimals; the accessible name uses the unit's full name |
+| `QuantityInput` | Station report, order quantity | Decimal value parsed with the plant's number format; unit restricted to one dimension |
 | `ColorSwatchPicker` | Equipment group, equipment | 20-color palette plus any color; text by `textColorFor` |
 | `Lookup` | Register references, cross-module pickers | Typeahead plus browse dialog |
 | `DefinitionList`, `IdentifierLink` | Detail screens, tables | |
@@ -442,11 +486,24 @@ A composite with a judgement (`DataTable`, `EntityForm`) is promoted to a shared
 
 Primitives follow the accessibility rules below: `Button`, `IconButton` (a required `label` prop, 36 px default), `Field` (label, description and error wired; the description accepts children), `Input`, `NumberField`, `Select`, `Combobox`, `Checkbox` with a 24 px hit area, `Dialog`, `Sheet`, `Menu`, `Tabs`, `Table`, `Tooltip`, `VisuallyHidden`, `SkipLink`, `Toaster`. No component accepts a prop it silently ignores, and coverage includes all of `packages/ui/src`. Not in `@northmes/ui` in release 1: the plant switcher (shell only), timeline primitives (the board only), charts and comments.
 
+Components in `@northmes/ui` that navigate (the `DataTable` row link, `IdentifierLink`, `EmptyState` actions and the `PageFrame` breadcrumb) take an `href` and render it through the link component from `LinkProvider` in `@northmes/ui`. Without a provider, the component is a plain `<a>`, so `@northmes/ui` tests and later MCP Apps views need no router. `@northmes/web-sdk` exports `ModuleLink`, which renders `<a href>`, preloads on intent and, on an unmodified primary click, calls `router.navigate({ href })`. The shell mounts `<LinkProvider component={ModuleLink}>` once, inside `RouterProvider`. Module code renders a cross-module link as `<ModuleLink href={planningLinks.orders.order({ plant, orderId }).href}>`.
+
+### View state in the URL
+
+State a coworker needs to see the same view lives in the URL: the open tab, filters, sort, grouping, search, page, board zoom and visible range, and the selected entity whose panel is open. State that only this person needs stays in component state: an open dialog or menu, hover, focus, collapsed groups and paused live updates.
+
+- `defineSearch({ <key>: searchKey.<kind>(...) })` in `@northmes/contracts` declares a route's keys as Zod 4 schemas with defaults. Each key falls back to its default on its own, so one bad key never resets the others or renders the error component ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
+- `screenRoute` sets `validateSearch` from the route's search definition: the `search` of its link manifest entry, or the `search` option on a route without a `link`. Passing both is a type error. It adds `stripSearchParams(defaults)` so defaults never appear in the URL, and sets `loaderDeps` to the keys marked data, so a tab or panel change does not rerun the loader. These options sit on the route object that `routes(plantRoute)` returns, never in a lazy file.
+- `useViewState(Route)` in `@northmes/web-sdk` returns the typed values and `setView`. `setView(patch, { push? })` merges into the current search, removes a key set to `undefined` and keeps the scroll position. It replaces the history entry unless `push` is true. Opening a detail panel or switching a tab passes `push: true`, so Back undoes it.
+- `listSearch(listDefinition)` in `@northmes/contracts` is `defineSearch` plus the list keys, and `useListState` reads the state of a route that uses it (see [Lists](#lists)).
+- `EntityDetailPage` keeps the open tab in the `tab` key: `general` is the default, `history` is the History tab, and a slot tab uses its contribution id. An unknown id falls back to `general`.
+- When a key in the URL fails its schema, the route drops it with a replace navigation, and `PageFrame` shows a polite status: "This link had 1 setting that no longer applies, so it was ignored." Changing a default, removing a search key or removing an enum value a key accepts is a URL contract change, and the link snapshot (`modules/<id>/web/links.snapshot.json`, see [Rules the shell and CI enforce](#rules-the-shell-and-ci-enforce)) records it.
+
 ### Lists
 
 A list is a Relay connection on the server ([0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [05-graphql-and-apis.md](05-graphql-and-apis.md)). On the web:
 
-- `useListState(listDefinition)` builds the route's `validateSearch` schema from the list declaration in the module's contracts package and strips defaults from the URL. URL parameters: `q` (search), one key per filter field (`status=planned,active`, `deadline=2026-10-01..2026-10-31`, `customer=<id>`), `sort=deadlineAt,-priority`, `group=status`, `size=50`, `after` or `before` (the opaque cursor) and `archived=1`. It returns valid values with defaults, the GraphQL variables, `setFilter`, `setSort`, `setGroup`, `next`, `previous` and `clear`. Any change to filter, sort, search or size drops the cursor.
+- `useListState(listDefinition)` reads the state of a route whose search is `listSearch(listDefinition)`: `defineSearch` plus the list keys, built from the list declaration in the module's contracts package (see [View state in the URL](#view-state-in-the-url)). It returns valid values with defaults, the GraphQL variables, `setFilter`, `setSort`, `setGroup`, `next`, `previous` and `clear`. Any change to filter, sort, search or size drops the cursor. URL parameters: `q` (search), one key per filter field, `sort=deadlineAt,-priority`, `group=status`, `size=50`, `page`, `after` or `before` (the opaque cursor) and `archived=1`. A filter's URL key is its GraphQL filter field name (`status=planned,active`, `deadlineAtDate=2026-10-01..2026-10-31`, `customerId=<id>`). Reserved keys: `q`, `sort`, `group`, `size`, `page`, `after`, `before`, `archived`, `view` and `tab`. `defineList` throws at definition time when a filterable field's key equals a reserved key. `page` is the 1-based page counter behind "Rows 51 to 100 of 500"; it travels with the cursor and is dropped with it.
 - `useConnection(document, variables)` runs the query with `errorPolicy: "all"`, turns relation-path `NOT_FOUND` and `FORBIDDEN` errors into cell states, and returns rows, `pageInfo`, `totalCount`, `aggregates` and groups.
 - `DataTable` uses TanStack Table v9 with manual sorting, paging, filtering and grouping, so the server does all four. Keyset paging shows Previous and Next, not page numbers; "Rows 51 to 100 of 500" comes from a page counter in the URL plus `totalCount`. Sortable headers come from the codegen const enum `<T>SortField` and set `aria-sort`. Lists without `totalCount` (append-only lists such as the audit list) show Previous and Next only.
 - Group by: the toolbar's "Group by" picks one `<T>GroupBy` value; the table renders group rows from `groupedAggregates` (key, count, sums), and expanding a group loads its rows with the key added to the filter. Filter chips show counts from the same `groupedAggregates` call.
@@ -454,13 +511,14 @@ A list is a Relay connection on the server ([0016](../adr/0016-graphql-list-conv
 
 ### Detail pages and the History tab
 
-`EntityDetailPage` renders General, History and slot tabs (Comments come later). A hidden or unknown entity shows the not-found state, because owners throw a typed `NOT_FOUND`. `HistoryTab` reads the audit trail's field diffs for record-class tables only, filtered by the reader's field permissions, with labels from the entity's definition ([0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)). Draft tables and operational logs have no History tab.
+`EntityDetailPage` renders General, History and slot tabs (Comments come later). A hidden or unknown entity shows the not-found state, because owners throw a typed `NOT_FOUND`. `HistoryTab` reads the audit trail's field diffs for record-class tables only, filtered by the reader's field permissions, with labels from the entity's definition ([0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)). Diff values are formatted by the field's kind in the definition: instants in plant time, local dates and times as dates and times, metric values with the canonical unit symbol and display decimals, and an `_entry_value` and `_entry_unit` pair as one value, all with the plant's presentation values ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Draft tables and operational logs have no History tab.
 
 ### Forms
 
-- `useZodForm` (in `@northmes/ui`) binds react-hook-form to a Zod contract. `useCommandForm({ contract, mutation, toInput, optimistic? })` (in `@northmes/web-sdk`) binds it to a command mutation: it maps `fieldErrors` and DomainError details to fields, keeps entered values after a server error (WCAG 3.3.7), announces success, and accepts an optional `optimisticResponse`. Station mutations never use `optimisticResponse`.
+- `useZodForm` (in `@northmes/ui`) binds react-hook-form to a Zod contract. `useCommandForm({ contract, mutation, entity?, optimistic? })` (in `@northmes/web-sdk`) binds it to a command mutation: it maps `fieldErrors` to fields, keeps entered values after a server error (WCAG 3.3.7), announces success, and accepts an optional `optimisticResponse`. Station mutations never use `optimisticResponse`. The form validates `contract.fields`. `useCommandForm` adds `id` (a new uuidv7 for target `new`, `entity.id` for `existing`), `expectedVersion` from `entity.version`, and the shared reason argument. Form field names equal the schema paths. An input edited in another shape is one field component bound to one path (a plant date-time field for a `LocalDateTime`, `QuantityInput` for `{ value, unit }`), never a second schema or a `toInput` step.
+- One function in `@northmes/web-sdk` maps every `fieldErrors` entry, from Zod or from a DomainError. The react-hook-form name is the path joined with a dot. An entry with no registered field goes to `root.server` and the error summary. No form keeps a map from issue paths to field names.
 - Every input goes through `Field`, which wires label, description, `aria-invalid` and `aria-describedby`. On submit an error summary at the top receives focus and links to each field. Messages state the rule and the fix ("Scrap can be at most 37, the remaining quantity").
-- Labels carry units ("Good quantity (pcs)"). Date and cycle time fields show a format hint.
+- Labels carry units ("Good quantity (pcs)"). Date, time and number fields parse with the `@northmes/contracts` helpers for the plant's presentation values and show a format hint; date fields take theirs from `dateFormatHint` (see [Time, numbers and units](#time-numbers-and-units)).
 - Updates send `expectedVersion`; `core.version_conflict` shows an inline conflict message with a way to reload the entity, and the entered values stay.
 - Every mutation accepts the shared optional reason input. `ConfirmDialog` asks for a reason where the command requires one (break lock: 3 to 500 characters).
 - Create-type commands send a client-generated uuidv7 id, so a retry after a restart is harmless.
@@ -482,17 +540,32 @@ Settings are `defineSettings` Zod schemas in a module's contracts package, store
 
 Every data-bound region designs and tests all of its states.
 
-### Time and units
+### Time, numbers and units
 
-- `formatPlantTime` formats instants in the plant zone and adds the short zone name when the offset differs from the hour before or after (DST). Screens show plant times with a zone label when the user's zone differs. A lint fails on `Intl.DateTimeFormat` without `timeZone` ([0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)).
-- Date and time inputs take plant-local values and are labelled with the zone. Only the server turns a local date-time into an instant.
-- Metric values arrive from GraphQL in the unit a screen asks for through the field's unit argument (for example `cycleTime(unit: PIECES_PER_HOUR)`). The unit-aware number input sends the value with its unit, and the server converts ([0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md)). Display decimals come from the unit catalog. Article quantities show in the article's stock unit.
+Dates, clock times and numbers follow the plant's presentation settings: one `core.presentation` schema in `@northmes/core-contracts` on the settings kit (see [Settings](#settings)), with three fields ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). The company sets each field and a plant can override it. The server resolves each field from the plant value, then the company value, then the default, and `/api/web/modules` returns the resolved values with the plant's `timeZone`. The settings change how values are shown and typed, never what is stored or sent.
+
+| Field | Values | Default |
+|---|---|---|
+| `dateFormat` | `iso` (2026-10-25), `dmyDot` (25.10.2026), `dmySlash` (25/10/2026), `mdySlash` (10/25/2026) | `iso` |
+| `hourCycle` | `h23` (14:05, and 00:05 after midnight, never 24:05), `h12` (2:05 pm) | `h23` |
+| `numberFormat` | `spaceComma` (1 234,5, grouped with U+00A0), `commaPoint` (1,234.5), `pointComma` (1.234,5) | `spaceComma` |
+
+- All formatting goes through pure functions in `@northmes/contracts` (subpath `format`), so the web, the station, the server and later reports print the same strings: `formatPlantDate`, `formatPlantTime`, `formatPlantDateTime`, `formatPlantDay`, `formatIsoWeek`, `formatNumber`, `formatMeasure`, `measureAccessibleName` and `formatQuantity`, and the parsers `parseNumber`, `parsePlantDate`, `parsePlantTime` and `dateFormatHint`. The shell fills `PresentationProvider` in `@northmes/ui` from `/api/web/modules`, so the shell and every remote read one context through the `@northmes/ui` singleton and boot needs no extra query. `DateTimeText`, `MeasureText`, `NumberField`, `QuantityInput` and the date input read it, and `usePlantTime()` in `@northmes/web-sdk` returns bound formatters.
+- The formatters use one base locale, `en-GB-u-ca-gregory-nu-latn`, for English text parts: month and weekday names, day period and short zone names. They set `hourCycle` explicitly, pass component options only (never `dateStyle`, `timeStyle` or `toLocaleString` defaults, because native Temporal and `temporal-polyfill` differ in them) and assemble numeric layout from `formatToParts`. No code uses the process or browser default locale. Intl instances are created lazily and cached per zone and options. When General Translation arrives, the base locale follows the UI language and the settings still own the layout. A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat`, `toLocaleString`, `toLocaleDateString` and `toLocaleTimeString` outside `packages/contracts/src/format/` ([0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
+- `core.plant.time_zone` is the only zone. No settings schema has a time zone key, and `core.presentation` refuses one. `formatPlantTime` formats instants in the plant zone and adds the short zone name when the offset differs from the hour before or after (DST). Screens show plant times with a zone label when the browser zone differs from the plant zone.
+- Date and time inputs take plant-local values and are labelled with the zone. They accept ISO dates and 24-hour times under every setting and refuse impossible dates such as 2026-02-31. Only the server turns a local date-time into an instant.
+- Weeks start on Monday everywhere, date pickers included. Week numbers follow ISO 8601 and pair `yearOfWeek` with `weekOfYear` through `formatIsoWeek`: 2026-W53 in group keys and lists, W53 on board ticks where the year is shown. The first day of the week and other week numbering are not settings in release 1, because the SQL week buckets and the calendar anchors are Monday-based. Trigger: a plant in a region with Sunday or Saturday weeks.
+- `formatNumber` rounds to at most the given decimals, drops trailing zeros, groups from four digits, uses the group and decimal signs of `numberFormat` and writes the minus as ASCII U+002D, so copied values paste into spreadsheets. `parseNumber` accepts the setting's decimal sign, and its group sign only between groups of three; under `spaceComma` a point also reads as the decimal sign. Other input is refused with the expected form in the message. `formatQuantity` passes the `numeric(18,6)` string to `Intl.NumberFormat`, which formats strings exactly.
+- A form or detail field shows the entry value in its entry unit when one exists, else the unit in the screen's design. A list column or board field shows one unit, named in its header or label and chosen in the screen's design, and passes it as the GraphQL unit argument (for example `cycleTime(unit: PIECES_PER_HOUR)`). Release 1 has no preferred-unit setting. Display decimals come from the unit catalog. Article quantities show in the article's stock unit.
+- The unit-aware number input parses with the plant's number format and sends the value with its unit, and the server converts ([0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md)).
+- A contract validates a measured input in the unit the person typed: `{ value, unit }` with a finite value and a unit of the field's dimension, through `measured(dimension, { min?, max? })` in `@northmes/contracts`. `min` and `max` are canonical values carried as metadata. The pipeline converts the value, then checks the limits. A failure returns `fieldErrors` at the field's path with the limit stated in the unit the person typed. The browser shows that message after submit and never converts. A cross-field rule between measured fields is a handler check that throws a `DomainError` with `fieldErrors`, never a refinement ([0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
+- Presentation settings never reach machine-readable output. GraphQL, REST, MCP tools, events, the audit export and the rollback CSV carry ISO 8601 instants with offset, the `Local*` scalars, and canonical values with a point decimal and no grouping ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 
 ## Master-data kit UI
 
 One `defineMasterData` definition in a module's MIT contracts package yields the register's GraphQL types and list, the form, the picker and the lookup ([0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)). The web side:
 
-- `masterDataRoutes(definition, overrides)` returns the list, detail and create and edit routes as `screenRoute` entries, so title, nav entry and permission come with them.
+- `masterDataRoutes(definition, link, overrides)` returns the list, detail and create and edit routes as `screenRoute` entries under the register's link manifest entry (for example `coreLinks.tools`), so paths, title, nav entry and permission come with them.
 - List: `EntityListPage` with `DataTable`, columns, search, filters and sorts from the definition's list declaration, and an archived toggle (`archived=1`, `includeArchived` on the server).
 - Detail: `EntityDetailPage` with General (sections from the definition), History and slot tabs.
 - Form: `EntityForm` from the definition's fields, with `ui` hints from field metadata (`textarea`, `swatch`). Codes are unique per scope; the server's `core.code_taken` maps to the code field.
@@ -500,7 +573,7 @@ One `defineMasterData` definition in a module's MIT contracts package yields the
 - Picker: `<MasterDataLookup definition={tool} />`. Another module renders it with the owner's generated lookup documents from the owner's contracts package, so no module writes its own picker.
 - Translatable names use `localizedText`; the form edits the name and its translations, and lists render the resolved name with `lang` (see [Language](#language)).
 
-The kit is built with equipment groups and tools first, because they differ in fields and allowed scope levels. Further release 1 registers are warehouses, customers and equipment. Escape levels are documented and counted: 0 changes the definition, 1 adds fields, commands, tabs or row actions, 2 replaces one screen with `masterDataRoutes(def, { list: ToolList })`, 3 leaves the kit. If three of the first five registers need level 2 or 3, the kit is reworked before more registers use it. Articles, routings, operation equipment and calendars are not registers; they use `EntityListPage`, `EntityDetailPage` and the command forms directly.
+The kit is built with equipment groups and tools first, because they differ in fields and allowed scope levels. Further release 1 registers are warehouses, customers and equipment. Escape levels are documented and counted: 0 changes the definition, 1 adds fields, commands, tabs or row actions, 2 replaces one screen with `masterDataRoutes(def, link, { list: ToolList })`, 3 leaves the kit. If three of the first five registers need level 2 or 3, the kit is reworked before more registers use it. Articles, routings, operation equipment and calendars are not registers; they use `EntityListPage`, `EntityDetailPage` and the command forms directly.
 
 ## Accessibility: WCAG 2.2 AA
 
@@ -600,7 +673,7 @@ The board and the job order table view have a "Pause live updates" control insid
 
 ### Language
 
-The UI ships in English only ([0053](../adr/0053-translation-english-first-general-translation-later.md)). User-facing text stays literal in JSX and labels are plain strings, so wrapping them for General Translation (`gt-react`) later is mechanical. Translatable master data keeps a translations column from its first migration (`localizedText`: `name` plus `translations` of field, locale and text; resolution by exact tag, then base language, then default). A company data-language setting gives master data text its `lang` attribute (3.1.2), and translated values carry their translation's `lang`. Board block names are built through `aria-labelledby` from visible spans that carry `lang` plus visually hidden spans for times and states, so an article name in Swedish keeps its language inside an English name.
+The UI ships in English only ([0053](../adr/0053-translation-english-first-general-translation-later.md)). Dates, clock times and numbers follow the plant's presentation settings, not the UI language (see [Time, numbers and units](#time-numbers-and-units)). User-facing text stays literal in JSX and labels are plain strings, so wrapping them for General Translation (`gt-react`) later is mechanical. Translatable master data keeps a translations column from its first migration (`localizedText`: `name` plus `translations` of field, locale and text; resolution by exact tag, then base language, then default). A company data-language setting gives master data text its `lang` attribute (3.1.2), and translated values carry their translation's `lang`. Board block names are built through `aria-labelledby` from visible spans that carry `lang` plus visually hidden spans for times and states, so an article name in Swedish keeps its language inside an English name.
 
 ### AI chat panel
 
@@ -619,7 +692,7 @@ The chat panel follows [0035](../adr/0035-ai-provider-port-with-customer-configu
 | Biome a11y rules (recommended set at error) | Every web package | Static JSX violations; `noAutofocus` stays on, and the station badge field uses a ref |
 | Component a11y tests in a Vitest browser-mode project | `packages/ui`, kit routes, board fixtures | axe violations (happy-dom cannot run axe's contrast rule); first tests: `Field` wiring, `IconButton` name, `HoverCard` focus and Escape, board key handling on a fixture grid, cluster merging at a given width, `textColorFor` |
 | Token contrast test | `packages/ui` | A token pair below 4.5:1 (text) or 3:1 (non-text) in light or dark; runs before the first component |
-| Per-remote route harness | Each remote | A leaf route without a title; a `nav[].to` without a route |
+| Per-remote route harness | Each remote | A leaf route without a title; a nav entry on a route without a title; a link manifest entry without a matching route |
 | Playwright route suite | e2e | Enumerates `router.routesById` at run time with the example plugins enabled; per route: axe, a unique title, exactly one `h1`, first Tab focuses the skip link and the skip link moves focus into `main` |
 | axe per route and state | e2e | Tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`; states include board loaded, move mode, detail panel open, cluster popover open, station form with errors, idle warning shown; `incomplete` results are reported, not failed |
 | `ci / a11y` | Required job from the first board pull request | `e2e/a11y/board.axe.spec.ts` over the populated, locked block, move mode and paused states |
@@ -647,7 +720,7 @@ Internal research note 21 measured the shadcn defaults: they fail 1.4.11 for `--
 
 Rules:
 
-- `@northmes/ui` is the source of truth. Tokens are oklch CSS variables in `:root` and `.dark`, mapped with `@theme inline`. The first token task settles the file names in `packages/ui`.
+- `@northmes/ui` is the source of truth. Tokens are oklch CSS variables in `:root` and `.dark`, mapped with `@theme inline` in the published `theme.css` (see [CSS rules](#css-rules)). The first token task settles the other file names in `packages/ui`.
 - The token contrast test reads the token values and asserts a declared list of pairs in both themes with `culori`: `toGamut("rgb", "oklch")` first, then `wcagContrast`. Text pairs need 4.5:1; input border, focus ring halves and block border on lane need 3:1.
 - NorthMES tokens on top of shadcn: order status, lateness, lock owner, board tokens, equipment group colors and the 20-color order palette. The palette values are set in design task D1.
 - Fonts are self-hosted and bundled; the app makes no CDN calls. Icons come from `lucide-react` through `@northmes/ui`.
@@ -668,7 +741,7 @@ flowchart LR
 
 ### Order of design work
 
-Status on 2026-10-05: a variations round of five look-and-feel directions (`ui-d1-directions.dc.html` in the design project) chose Direction A, Graphite (`ui-d1-direction-a.dc.html`): IBM Plex Sans for interface text and IBM Plex Mono for numbers, both under the SIL Open Font License and self-hosted in the product, a 6 px corner radius and 36 px controls. D1 builds the token base and the contrast table from it. Decided with the direction (Krister, 2026-10-05): IBM Plex Mono stays the font for numbers, because numbers use digits and Latin letters, which it covers; every screen, stations included, defaults to the light theme, and each user or station can switch to dark; the primary stays near-black (`#22272c` light, `#e9ebee` dark), so the order colors carry the color on the board; D1 removes the Broadsheet design-system binding from the design project and keeps the project and its pages.
+Status on 2026-10-05: a variations round of five look-and-feel directions (`ui-d1-directions.dc.html` in the design project) chose Direction A, Graphite (`ui-d1-direction-a.dc.html`): IBM Plex Sans for interface text and IBM Plex Mono for numbers, both under the SIL Open Font License and self-hosted in the product, a 6 px corner radius and 36 px controls. D1 builds the token base and the contrast table from it. Decided with the direction (Krister, 2026-10-05): IBM Plex Mono stays the font for numbers, because numbers use digits and Latin letters, which it covers; every screen, stations included, defaults to the light theme, and each user or station can switch to dark; the primary stays near-black (`#22272c` light, `#e9ebee` dark), so the order colors carry the color on the board; D1 removes the Broadsheet design-system binding from the design project and keeps the project and its pages. The theme choice is stored per browser in `localStorage` under one key, and the shell entry applies it before the first render. It is not a setting and is not audited, because it changes no behaviour ([0051](../adr/0051-regulated-readiness-no-regret-rules.md) rule 6). A station keeps its choice per device ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 
 1. D1 tokens and contrast: settle the bound design system (remove the Broadsheet binding or move to a new project), the token base with the fixes above, the contrast table per pair with ratios from the repository test, the order palette and group colors, the block text rule, the state marker set, the two-tone focus ring, the font and icon set, and the shadcn components in every state, including the 24 px checkbox hit area.
 2. D2 shell and navigation: sidebar with core, module and plugin sections in a stable order, collapsed rail and 320 px sheet; top bar with breadcrumb, page actions slot, help menu and user menu; plant switcher as a menu of links; skip link and landmarks; title pattern; module unavailable placeholder and error panel; the station frame.
@@ -715,7 +788,7 @@ Each line is a candidate story; the delivery session splits it into thin vertica
 | Work | Package | Depends on | Key tests |
 |---|---|---|---|
 | Shared list, `defineRemoteConfig`, guards, browser floor | `@northmes/web-build` | none | Guard fixture remote that bundles an Apollo subpath fails; fixture remote importing sonner fails naming the package; empty-CSS check |
-| Contract, `validateWebModule`, route types, `screenRoute`, `ShellProvider` | `@northmes/web-sdk` | web-build | `validateWebModule` error cases; contribution without `label` fails |
+| Contract, `validateWebModule`, route types, `screenRoute`, `ShellProvider`, `defineModuleLinks` | `@northmes/web-sdk`, `@northmes/contracts` | web-build | `validateWebModule` error cases; contribution without `label` fails; `order({ plant: "plant-a", orderId: "a/b" }).href` is `/plant-a/planning/orders/a%2Fb`; an empty `orderId` throws; `define-module-links.test-d.ts` rejects a missing `orderId`, an extra argument, an unknown entry, an undeclared search key and a status value outside the enum |
 | Tokens with fixes, focus ring, primitives, token contrast test | `@northmes/ui` | design D1 | Token contrast test; component a11y tests |
 | Shell boot, federation instance, placeholders, error component, status route | `apps/web` | web-sdk, ui, design D2 | Playwright contract test: every module validated, every nav entry renders; degraded-path specs; CSP fixture |
 | Static mounts, cache headers, `/api/web/modules`, boot file check | `apps/server` | catalog | Disabled module never appears in any browser request; missing file marks the module degraded |

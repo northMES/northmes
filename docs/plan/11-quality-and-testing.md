@@ -14,6 +14,8 @@ NorthMES is built test first. Every change starts with a failing test, integrati
 | Pinned database image for tests | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | none |
 | Time-series contract suite and benchmark gate (later) | [0059](../adr/0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
 | Time, Temporal and the time zone matrix | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | none |
+| Presentation formatters, the locale leg and the format lint | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | none |
+| The `types` project, the link pattern check and the path literal check | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | none |
 | Accessibility target and gates | [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) | accepted | product owner (is pause live updates wanted) |
 | Autoplan performance budget | [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md) | proposed | product owner (frozen window, overdue rows, apply path, child orders) |
 | Board spike and its performance exit | [0030](../adr/0030-a-planning-board-built-in-house.md) | proposed | product owner (weekly volumes); pilot IT (planner PC); lawyer (FullCalendar fallback only) |
@@ -50,6 +52,7 @@ Related plan documents: [04-data-and-platform.md](04-data-and-platform.md) (data
 |---|---|---|---|---|
 | Pure unit | `*.test.ts` in domain, contracts and other packages | Nothing outside the process; `now` and the plant zone are arguments | `pnpm check`, hooks, handoff Tester, `ci / gate` | duration function, `plan()`, `resolveWallClock`, millisecond windows; property tests with `fast-check`; plan output as a text table compared with `toMatchFileSnapshot` |
 | Web component | `*.test.tsx` | happy-dom with the React plugin | `pnpm check` | screen states, form wiring, board key handling on a fixture grid |
+| Type | `*.test-d.ts` | The TypeScript compiler through Vitest typecheck mode; nothing runs | `pnpm check`, `ci / gate` | `@ts-expect-error` on a link builder call with a missing param; `z.output` of a command contract's input assignable to the generated mutation input type |
 | Component accessibility | Vitest browser mode | Chromium through `@vitest/browser-playwright` | see [Vitest projects](#vitest-projects-keyed-by-file-suffix) | axe on `Field`, `IconButton`, `HoverCard`, the board fixture grid |
 | Integration | `*.int.test.ts` | Testcontainers Postgres, the Nest app in the test process (`createTestApp`), pg-boss, `LISTEN` | `pnpm check`, `ci / gate` | commands through the pipeline, GraphQL through `gqlClient`, jobs, subscriptions |
 | Database seam | `*.int.test.ts` in `packages/testing` and module migration tests | Testcontainers Postgres, raw SQL as `nm_app` or `nm_owner` | `pnpm check` | RLS matrix, exclusion constraints, catalog lint, migration runner |
@@ -74,10 +77,11 @@ One root `vitest.config.ts` defines the projects. Vitest runs outside Turborepo;
 | browser accessibility project | A suffix the task that adds the project picks, outside every other glob | Vitest browser mode, `@vitest/browser-playwright` with Chromium, `vitest-browser-react` | Not decided (see [Open questions](#open-questions)) |
 | `ai` | `**/*.ai.test.ts` | The integration global setup, one worker, a per-run call counter | `pnpm test:ai` only |
 | `ops` | `**/*.ops.test.ts` | Docker and the Compose file | nightly |
+| `types` | `**/*.test-d.ts` | Vitest typecheck mode, no runtime | `pnpm check` |
 
 Every project excludes `node_modules`, `dist` and `docs/sources`. The browser project exists because happy-dom cannot run axe's contrast rule.
 
-Two more projects run the scheduling domain and time suites again with a different setup file: one with native Temporal (Node 26) and one that replaces the global `Temporal` with `temporal-polyfill`, because Safari users run the polyfill ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). If the week-1 test pins Node 24 instead, Temporal is behind a flag there and the native leg needs that flag ([ADR 0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)).
+Two more projects run the scheduling domain, time and format suites (the format suite is `packages/contracts/src/format/`) again with a different setup file: one with native Temporal (Node 26) and one that replaces the global `Temporal` with `temporal-polyfill`, because Safari users run the polyfill ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). If the week-1 test pins Node 24 instead, Temporal is behind a flag there and the native leg needs that flag ([ADR 0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)).
 
 Rules:
 
@@ -93,7 +97,7 @@ Root scripts:
 
 | Script | Runs | Used by |
 |---|---|---|
-| `pnpm check` | turbo `lint` and `typecheck`, `pnpm gen --check`, then `vitest run` over `unit`, `integration` and `web` | The one gate: handoff's Tester, `ci / gate`, a developer before pushing |
+| `pnpm check` | turbo `lint` and `typecheck`, `pnpm gen --check`, then `vitest run` over `unit`, `integration`, `web` and `types` | The one gate: handoff's Tester, `ci / gate`, a developer before pushing |
 | `pnpm check:full` | `pnpm check`, the Europe/Stockholm leg and the end-to-end suite | Release 1's done conditions require it to pass on `main`; CI jobs call the parts it contains |
 | `pnpm test:unit`, `pnpm test:int` | One project | Local work |
 | `pnpm test:watch` | `vitest --project unit` | The TDD loop |
@@ -180,7 +184,8 @@ Domain code takes `now` and the plant zone as arguments (a `Clock` port in servi
 | Native Temporal | Node 26 | | The production runtime | nightly |
 | Forced polyfill | the global replaced by `temporal-polyfill` | | Browsers without native Temporal | nightly |
 | Chromium without Temporal | a Playwright project whose init script deletes `globalThis.Temporal` | | The shell's two-step bootstrap loads the polyfill before any remote; hovering a block at 2027-03-28T01:00Z shows 03:00 | `ci / e2e` |
-| Browser zone | Playwright projects with `timezoneId` `Europe/Stockholm` and `America/New_York` | | Screens show plant time with a zone label when the user's zone differs | `ci / e2e` |
+| Browser zone | Playwright projects with `timezoneId` `Europe/Stockholm` and `America/New_York` | | Screens show plant time with a zone label when the browser zone differs from the plant zone | `ci / e2e` |
+| Locale | The format suite under `LANG=en_US.UTF-8` and under `LANG=fi_FI.UTF-8` (Node takes its default locale from `LANG`), and a Playwright project with locale `en-US` | | A formatter that depends on the process or browser default locale; every formatted string must be identical across the runs ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)) | The Playwright project in `ci / e2e`; the two `LANG` runs are placed by the task that adds them (see [Open questions](#open-questions)) |
 
 Fixtures exist from the first calendar test: Stockholm on 2026-10-25 (the repeated hour) and 2027-03-28 (the missing hour), the same two nights for a Helsinki plant, a night shift across midnight and across each change, and two plants in different zones in one company report. Property tests with `fast-check` convert random plant-local times between 2026 and 2030 to instants and back and check the gap and overlap rules, and check that a shift's capacity equals the sum of its real instants. The planning document lists the time and calendar test files ([07-production-planning.md](07-production-planning.md)).
 
@@ -248,6 +253,7 @@ flowchart LR
 - A worker-scoped `stack` fixture clones `e2e_<parallelIndex>` from the template, spawns `node apps/server/dist/main.js` with `NODE_ENV=test`, `NORTHMES_ROLE=all`, `PORT=0` and that database, waits for the port line on stdout and sets `baseURL`. Workers never share data. Spawning the built server avoids Playwright's TypeScript loader.
 - The optional `stack2` fixture starts a second server on the same worker database for cross-replica realtime specs.
 - Authentication: per worker, a fixture creates a planner and an operator in the worker's plant with Better Auth `testUtils`, writes `storageState` files keyed by `parallelIndex` and exposes `asPlanner` and `asOperator` contexts. `testUtils` lives in a test-only auth instance that refuses to start under `NODE_ENV=production` and is not in the production image ([ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md)).
+- Specs build URLs with the link builders from the contracts packages, for example `page.goto(planningLinks.orders.order({ plant, orderId }).href)`.
 - External systems are stubs started by fixtures: the fake PWS server for Pyramid and a stub OpenAI-compatible server configured as the test company's AI provider.
 - Realtime: two browser contexts (planner A and planner B); `page.routeWebSocket()` closes the subscription socket to test refetch after reconnect; `context.setOffline(true)` drives the station's disconnected state; `page.clock` fixes browser time.
 - Automated tests run on Chromium, installed with `playwright install --with-deps chromium`. Edge or Firefox projects join only if the browser versions pilot IT reports make them necessary. Traces are uploaded on failure.
@@ -368,7 +374,7 @@ The ruleset on `main` requires these checks, strict (the branch must be up to da
 
 | Check | Runs |
 |---|---|
-| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration and web projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists) and `ci / cla` (before the first outside pull request). |
+| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration, web and types projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists) and `ci / cla` (before the first outside pull request). |
 | `ci / a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
@@ -390,6 +396,7 @@ Only the checks above are required by the ruleset. The checks below run on pull 
 | GraphQL Inspector | Diffs the committed API schema; report only in 0.x, and its entity-field diff goes into the release notes; a gate at 1.0 | Every pull request |
 | API Extractor | A committed report per MIT package, so a changed public API shows in the diff | Every pull request |
 | Slot ids | Fails when a slot id from the previous release's snapshot disappears | Every pull request |
+| Link patterns | Fails when a link pattern, param or search key from the previous release's `links.snapshot.json` disappears without a `moved` entry | Every pull request |
 | Event schemas | Diffs event JSON Schemas; an added field counts as breaking | Every pull request |
 | N-1 widget | Loads the committed previous widget build in Playwright | Pull requests that touch the shared singleton list or the federation packages |
 | Socket | Checks new dependencies | Pull requests that change a manifest or the lockfile |
@@ -411,7 +418,8 @@ Blacksmith runners run the trusted test and build jobs: unit and integration in 
 | SQL lints | `sql.raw`, `sql.lit`, and `sql.ref` or `sql.id` with non-literal input; a `TRUNCATE` grant; `northmes.audit_id` outside the audit module | [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) |
 | Migration lint | `cascade`, `drop table`, dropping constraints on referenced tables or a key type change in a file without the contract marker | [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md) |
 | Classification lint | A `bytea` column, or a column named like secret, ciphertext, password, token or key, that is not declared secret or allowed with a reason | [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) |
-| Time lints | `Intl.DateTimeFormat` without `timeZone`; module-scope Temporal calls in shared packages; imports of `temporal-polyfill` or `@js-temporal/polyfill` outside host entries | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
+| Time and format lints | `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat`, `toLocaleString`, `toLocaleDateString` or `toLocaleTimeString` outside `packages/contracts/src/format/` (a fixture remote that calls `toLocaleDateString()` or `new Intl.NumberFormat()` proves that the rule fails); module-scope Temporal calls in shared packages; imports of `temporal-polyfill` or `@js-temporal/polyfill` outside host entries | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) |
+| Path literal check | An app path written as a string literal in `to=`, `href=`, `navigate({ to })`, `redirect({ to })` or `page.goto()` in `modules/*/web`, `examples/*/web`, `apps/web` or `e2e` without an allowlist entry that gives a reason. `test/meta/path-literals.test.ts` checks that a fixture `<Link to="/x">` in a module web file fails and a builder call passes | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) |
 | AI import lint | `streamText`, `generateText`, `embed` or `registerTelemetry` imported outside `modules/ai/server/model-call.ts` | [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md) |
 | Live workflow lint | A `pull_request` trigger on the live AI workflow | [0042](../adr/0042-ai-in-tests-mocked-by-default-opt-in-live-runs.md) |
 | Contracts lint | `batch_row` in a contracts package | [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md) |
@@ -451,6 +459,7 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Which suffix selects the browser accessibility project, and does it run in `pnpm check` or only in CI? | not assigned | Decided by the task that adds the project |
 | The coverage threshold for the scheduling domain | not assigned | Set by the task that adds the gate |
 | Does the hostile-zone leg and the Temporal variant projects also run on pull requests that touch time code? | not assigned | Nightly only |
+| Do the two `LANG` runs of the format suite run in `pnpm check` or only in CI? | not assigned | Decided by the task that adds them |
 | Do the pilot's planner PCs and stations need Edge or Firefox projects in Playwright? | pilot IT | Chromium only |
 | Is the pilot host amd64, so the image smoke and bundle jobs match it? | pilot IT | amd64 |
 | Where does the Playwright package live (`apps/e2e` or a root `e2e` folder)? | not assigned | Specs use `e2e/...` paths as the ADRs name them |

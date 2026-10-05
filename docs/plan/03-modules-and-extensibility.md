@@ -31,7 +31,7 @@ Each module folder holds three workspace packages, each with its own `license` f
 |---|---|---|
 | `@northmes/module-<id>` | AGPL-3.0-or-later | manifest, `server/`, `migrations/`, `schema.graphql`, docs, tests |
 | `@northmes/<id>-web` | AGPL-3.0-or-later | the Vite remote, built with `@northmes/web-build` |
-| `@northmes/<id>-contracts` | MIT | Zod inputs of public and validatable commands, validator payload schemas, event payloads, the settings schema, error codes, master-data definitions, slot prop types and link helpers |
+| `@northmes/<id>-contracts` | MIT | Zod inputs of public and validatable commands, validator payload schemas, event payloads, the settings schema, error codes, master-data definitions, slot prop types and the module's link manifest (`defineModuleLinks`) |
 
 The planning module adds a fourth package, `@northmes/planning-domain` (AGPL) in `modules/planning/domain`: the pure scheduling domain (duration and release functions, `plan()`, `validate()`, `judgeMove`, snapping, `projectMaterial`) with no Nest, Kysely, pg or `process.env` imports ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)).
 
@@ -135,10 +135,13 @@ defineWebModule({
   id, version, northmesRange, permissions,
   routes(plantRoute),          // code-based route subtree under /$plant/<id>
   stationRoutes(stationRoute), // optional; production-start's operator screen under /station/$stationId
-  nav,                         // { id, label, to, permission?, order? }
   widgets,                     // slot contributions
+  help,                        // optional; entries in the shell's help menu, grouped by module
+  typePolicies,                // optional; merged into each per-plant Apollo client
 });
 ```
+
+`defineWebModule` has no nav field. A route declares its own sidebar entry through the `nav` option of `screenRoute`, and the shell builds the module's nav entries from the routes that `routes(plantRoute)` returns. Each route takes its path segment and search definition from its entry in the module's link manifest (`defineModuleLinks` in the module's MIT contracts package), so a path is written once; station routes sit in the manifest's separate `station` section ([06 web and UX](06-web-and-ux.md#routes-and-typed-links), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 
 A build check compares `id`, `version` and `northmesRange` with the backend manifest. The shell checks only that `id` and `version` equal the server's entry in `/api/web/modules`, because the server already filtered on the range. A module owns `/$plant/<id>/*` and nothing else; the shell rejects a route tree whose path differs from the id ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
 
@@ -330,6 +333,7 @@ Every `@northmes/*` package, every module package, the example plugins and the i
 | composition corpus | CI | the in-repo examples, `test/plugin-corpus` SDL and the built package of any plugin the pilot runs do not compose with a changed module |
 | GraphQL schema diff | CI | report only in 0.x (the entity-field diff goes into the release notes); a gate at 1.0 |
 | slot ids | CI | a slot id from the previous release's snapshot disappears |
+| link patterns | CI | a link pattern or search key from the previous release's snapshot disappears without a `moved` entry |
 | MIT API reports | CI | an API Extractor report changed without being committed; tags are `@internal` by default, `@beta` for what the examples use, `@public` only at 1.0 |
 | event schemas | CI | an event JSON Schema changed; an added field counts as breaking |
 | upgrade composition | `upgrade.sh` | `northmes migrate --check` from the new image with the site's config and plugins fails |
@@ -342,11 +346,11 @@ Core is AGPL-3.0-or-later. The packages a plugin needs are MIT, so a plugin's ow
 
 | Package | License | Holds |
 |---|---|---|
-| `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`), the unit catalog, `resolveWallClock` and the millisecond window functions |
+| `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`, `version`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`, `defineList`, `listSearch`, `defineSearch` and the `searchKey` helpers, `urlSearch`, `defineModuleLinks`, `measured`), the unit catalog, `resolveWallClock` and the millisecond window functions, the value enums of `dateFormat`, `hourCycle` and `numberFormat`, the `Presentation` type, `DEFAULT_PRESENTATION`, and the pure formatters and parsers on the subpath `format` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)) |
 | `@northmes/<id>-contracts` | MIT | one per module; listed under [Package shape](#package-shape) |
 | `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, and the server-only `/errors` and `/config`, which plugins may not import |
-| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider, the Apollo client factory, data hooks, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
-| `@northmes/ui` | MIT, shared singleton | primitives on one locked base, tokens, presentational patterns, the form engine `useZodForm`; no Apollo, TanStack Router or GraphQL imports |
+| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider (which fills the presentation context from `/api/web/modules`), the Apollo client factory, data hooks, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `movedRoutes`, `usePlantTime()`, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
+| `@northmes/ui` | MIT, shared singleton | primitives on one locked base, tokens, presentational patterns, `LinkProvider`, `PresentationProvider` and `usePresentation()`, `DateTimeText` and `MeasureText`, the form engine `useZodForm` and the named react-hook-form exports; no Apollo, TanStack Router or GraphQL imports |
 | `@northmes/web-build` | MIT | `defineRemoteConfig`, the shared list, build guards, `sources.gen.css` |
 | `@northmes/testing` | MIT | the Testcontainers harness, the app factory, `given` factories, clients, contract suites, the AI mock, accessibility helpers, the catalog lint |
 | the generator package | MIT | module, entity and command generators (see below) |
@@ -367,7 +371,7 @@ Rules:
 
 Code repeated between modules becomes shared packages, patterns and generators ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)):
 
-- Cross-cutting rules (command pipeline, scoped transactions, error mapping, field guards, provenance, archive semantics, plant time display) are shared from their first use and ship with their runtime and a fail-closed check in the same task. No decorator, manifest key or flag ships without the code that reads it.
+- Cross-cutting rules (command pipeline, scoped transactions, error mapping, field guards, provenance, archive semantics, plant time, date and number display) are shared from their first use and ship with their runtime and a fail-closed check in the same task. No decorator, manifest key or flag ships without the code that reads it.
 - A composite with a judgement (`DataTable`, `EntityForm`) is promoted at its third use, or at the second when both users ship in release 1. The second copy carries `// shared-candidate: #<issue>`, and a copy detector over `modules/*` fails on a third copy.
 - A change to a shared package is its own task and pull request, ordered before the module tasks that use it.
 - The master-data kit turns one `defineMasterData` definition into the table template, GraphQL types and list, form, picker and lookup for one register.
@@ -410,6 +414,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 - `plugin-outside` CI job, described above.
 - Nightly Compose test with `example-validator` in a site image: `northmes migrate` applies its migration and `app` reaches ready.
 - Build checks: an in-repo remote that emits CSS bytes fails; a plugin stylesheet with an unprefixed utility selector fails; an MIT package that imports an AGPL one fails.
+- Link checks: `modules/planning/web/test/routes.links.test.tsx` (every `planningLinks` entry matches a route `fullPath`); `modules/planning/web/test/routes.moved.test.tsx` (`/plant-a/planning/orders/1?tab=history` redirects to `/plant-a/planning/production-orders/1?tab=history` with replace); the link snapshot check test (a removed pattern without a `moved` entry fails and names the pattern).
 
 ## Decisions in this document
 
@@ -427,6 +432,8 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the scheduling domain package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | the skeleton and when the examples land |
 | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | plugins read no environment variables |
+| [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | the formatters in `@northmes/contracts`, the presentation context in `@northmes/ui` |
+| [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | link manifests, nav entries from routes, the search helpers in `@northmes/contracts`, the link pattern check |
 
 ## Open items
 

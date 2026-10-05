@@ -23,6 +23,8 @@ NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the
 | Web codegen and Apollo Client | [0020][adr-0020] | proposed | maintainer (Base UI; token base) |
 | API reports, version ranges, event schema diffs | [0038][adr-0038] | accepted | maintainer (no range override in 0.x) |
 | Slot ids and plugin checks | [0037][adr-0037] | accepted | maintainer (no third-party plugin on the pilot; web-only plugins degrade); product owner (unpaid-invoice validator) |
+| Presentation settings in `/api/web/modules`, week labels, machine-readable output | [0061][adr-0061] | accepted | none |
+| Measured input limits, link manifests and link snapshots | [0062][adr-0062] | accepted | none |
 
 Related plan documents: [02-architecture.md](02-architecture.md) (process roles and boot order), [03-modules-and-extensibility.md](03-modules-and-extensibility.md) (module packages, manifests, plugins), [04-data-and-platform.md](04-data-and-platform.md) (command pipeline, row-level security, audit, event log), [06-web-and-ux.md](06-web-and-ux.md) (shell, remotes, `DataTable`), [07-production-planning.md](07-production-planning.md) (board queries and planning commands), [09-operator-station.md](09-operator-station.md), [10-ai-and-agents.md](10-ai-and-agents.md), [11-quality-and-testing.md](11-quality-and-testing.md), [12-operations-and-security.md](12-operations-and-security.md), [13-delivery-and-github.md](13-delivery-and-github.md). Terms follow [GLOSSARY.md](../../GLOSSARY.md).
 
@@ -194,6 +196,7 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 - Naming: the command `planning.releaseProductionOrder` is the mutation `planningReleaseProductionOrder`.
 - The pipeline runs in this order: parse the input with the command's Zod contract; load the target and check permission at its scope; open the audit context; take the optional reason; check `expectedVersion`; run command validators (veto only); a reserved signature stage (declared, not built); execute; write outbox events. One transaction is one audit command. Details are in [04-data-and-platform.md](04-data-and-platform.md).
 - Input types come from the Zod schema in `@northmes/<id>-contracts`. `inputFromZod(name, schema)` walks `z.toJSONSchema(schema, { io: "input" })` and builds `@InputType` classes. It supports scalars, enums, lists, nested named objects, nullability and defaults, and throws at boot on anything else. An integer maps to `Int` only when it is bounded to 32 bits. Enum and nested object names come from `.meta({ id })`. nestjs-zod is not used ([0017][adr-0017]).
+- Contract inputs may use `.refine` and `.superRefine` with synchronous checks. `z.toJSONSchema` leaves checks out, so they pass `inputFromZod`, and both the pipeline parse and the browser resolver run them with the same messages and paths. A rule that needs stored data is a handler check that throws a `DomainError` with `fieldErrors`, never a refinement. A cross-field rule between measured fields is a handler check too, because the contract validates measured values in the unit the person typed and the browser never converts ([0062][adr-0062]). Contracts use no async refinements: the pipeline parses synchronously, and `useZodForm` sets the resolver mode to sync. `.meta({ id })` is the last call on a named schema, because `.refine()` returns a schema that does not keep the id. A transform appears only as `z.codec` or as a pipe whose input side `inputFromZod` supports ([0017][adr-0017]).
 - Every mutation accepts the same optional reason input, so the contract stays fixed when a later compliance profile requires reasons ([0051](../adr/0051-regulated-readiness-no-regret-rules.md)). Commands that check versions take `expectedVersion`. Create-type commands take a client-generated uuidv7 `id` and insert with `on conflict do nothing`, so a retry after a restart is harmless.
 - The gateway rejects a mutation whose `x-northmes-client-build` differs from the server build with `core.client_outdated`. Queries pass, and so do API keys and MCP clients that send no header.
 - Stations send mutations over HTTP only, never over the WebSocket, with `AbortSignal.timeout(15000)` and without `optimisticResponse` ([09-operator-station.md](09-operator-station.md)).
@@ -341,7 +344,7 @@ Measured in the list prototype (internal research note 34): 100 orders with thei
 - `groupBy` takes 1 to 3 keys from `<T>GroupBy`: plain fields (`STATUS`, `PRIORITY`), plant-time buckets (`DEADLINE_AT_DAY`, `DEADLINE_AT_WEEK`, `DEADLINE_AT_MONTH`, `DEADLINE_AT_PRODUCTION_DAY`) and references (`CUSTOMER`). `first` is 1 to 500, default 100.
 - `keys` is a typed object, not a list of strings: `keys { status deadlineAtWeek customer { name } }`. A reference key resolves through Federation in the same request. A key not grouped is null.
 - `having` takes `count: IntFilter` and `sum` per field. Groups order by their keys, ascending with nulls last, unless `orderBy` names keys or `COUNT`.
-- Buckets are computed in SQL, which may turn an instant into local time: `(col at time zone $zone)::date`, `date_trunc('week', ...)` with ISO weeks from Monday, `date_trunc('month', ...)`, and the production day as `((col at time zone $zone) - $dayStart::interval)::date`.
+- Buckets are computed in SQL, which may turn an instant into local time: `(col at time zone $zone)::date`, `date_trunc('week', ...)` with ISO weeks from Monday, `date_trunc('month', ...)`, and the production day as `((col at time zone $zone) - $dayStart::interval)::date`. The label of a week key comes from `formatIsoWeek` in `@northmes/contracts`, which pairs the ISO week-year with the week number (`2026-W53`), never the calendar year ([0061][adr-0061]).
 - Waits: `having` on `avg`, `min` and `max`; ordering groups by sums.
 
 Screens use group by for filter chips with counts (`groupedAggregates(groupBy: [STATUS]) { keys { status } count }` in the same request as the page) and for load per machine per production day.
@@ -385,7 +388,7 @@ export const orders = listKit(productionOrderList, {
 });
 ```
 
-`listKit` generates, registered in the owning module and visible in the committed subgraph SDL: `<T>Filter` with enum and relation filters, `<T>SortField`, `<T>OrderBy`, `<T>GroupBy`, `<T>GroupKeys`, `<T>Aggregates` with its `Sum`, `Avg`, `Min` and `Max` types, `<T>Group`, `<T>Having`, `<T>GroupOrderBy`, `<T>Edge`, `<T>Connection`, the argument types, the `<T>ConnectionResolver`, reference fields and nested connection loaders. The SQL side (filter compiler, plant dates, reference search, keyset with the null split, aggregates, groups, nested batching, cursor codec) is shared code that reads the declaration. The master-data kit's `list` block is this declaration ([0022][adr-0022]).
+`defineList` comes from `@northmes/contracts`. `listKit` generates, registered in the owning module and visible in the committed subgraph SDL: `<T>Filter` with enum and relation filters, `<T>SortField`, `<T>OrderBy`, `<T>GroupBy`, `<T>GroupKeys`, `<T>Aggregates` with its `Sum`, `Avg`, `Min` and `Max` types, `<T>Group`, `<T>Having`, `<T>GroupOrderBy`, `<T>Edge`, `<T>Connection`, the argument types, the `<T>ConnectionResolver`, reference fields and nested connection loaders. The SQL side (filter compiler, plant dates, reference search, keyset with the null split, aggregates, groups, nested batching, cursor codec) is shared code that reads the declaration. The master-data kit's `list` block is this declaration ([0022][adr-0022]).
 
 ### SQL and index rules for lists
 
@@ -408,16 +411,17 @@ The web side (`useListState`, `useConnection`, `DataTable`, URL state) is in [06
 | Unit enums | per dimension, for example `CycleTimeUnit` with `SECOND`, `MINUTE`, `PIECES_PER_HOUR`, `PIECES_PER_MINUTE` | Output fields take a unit argument with a default: `cycleTime(unit: CycleTimeUnit! = SECOND)`. The server converts GraphQL inputs to the canonical unit. |
 | Article quantities | decimal | `numeric(18,6)` in the article's stock unit. The GraphQL decimal scalar is not chosen yet. |
 
-The subgraph driver validates the time scalars with Zod, and codegen maps them to branded string types in the web packages ([0024][adr-0024]).
+The subgraph driver validates the time scalars with Zod, and codegen maps them to the branded string types exported by `@northmes/contracts`, which the contracts' time value schemas also output ([0024][adr-0024]).
 
 ## Error model
 
 ### DomainError and the code catalog
 
-- One error type, `DomainError { code, kind, message, details? }`, lives in the SDK ([0012][adr-0012]).
+- One error type, `DomainError { code, kind, message, details?, fieldErrors? }`, lives in the SDK ([0012][adr-0012]).
 - `code` is stable and module-scoped: it starts with the owning module's id. Codes are never renamed after a release.
 - `kind` is one of `validation`, `unauthenticated`, `not_found`, `forbidden`, `conflict`, `precondition`, `unavailable`.
 - Each module declares its codes with `defineErrors` in its contracts package, each with its kind and an optional Zod schema for `details`. The docs and a TypeScript union for the web are generated from the declarations.
+- A `DomainError` may carry `fieldErrors: [{ path, message, code }]` with paths relative to the command input. A `defineErrors` entry may declare `field: <dot path>`, and a thrown error of that code fills `fieldErrors` from it. The exception filter writes them to `extensions.fieldErrors` in the same shape as a Zod failure. `toDomainError` maps a code-key violation to `core.code_taken` with `fieldErrors` on the definition's `code` field.
 - Result unions (errors as data) are not used.
 
 Codes named by the decisions so far:
@@ -684,7 +688,7 @@ Every REST route either resolves its principal through `PrincipalResolver` or ca
 | Route | Method | Permission or credential | Limits and behaviour |
 |---|---|---|---|
 | `/api/auth/*` | Better Auth | none before sign-in | `toNodeHandler(auth)` mounted before body parsing; sign-up disabled; `/admin/*`, api-key client endpoints and `/token` answer 404 |
-| `/api/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per company; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes with a SHA-384 hash of each manifest and `integrity: null` for a module with missing files, plus permissions per plant ([06-web-and-ux.md](06-web-and-ux.md)) |
+| `/api/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per company; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes, each with its `kind` (`core`, `module` or `plugin`), a SHA-384 hash of its manifest and `integrity: null` for a module with missing files, plus permissions per plant and `plant { id, slug, name, timeZone, presentation }` with the plant's resolved presentation values ([06-web-and-ux.md](06-web-and-ux.md), [0061][adr-0061]) |
 | `/modules/<id>/<version>/*` | GET | public | immutable caching; remotes hold no data |
 | `/api/web/client-errors` | POST | session or station | same-origin, rate-limited, 8 kB body cap; body `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` with `stage` one of `manifest`, `entry`, `validate`, `render`, `slot`, `chunk`, `csp`, `insecure-context`; CSP reports go to the same route; rows group by fingerprint with counts in a core table on the audit no-trigger list |
 | `/api/ai/chat` | POST | session; `ai.assistant:use` plus each tool's permission at the named plant | strict Zod body: roles `user` or `assistant`, part types `text` and `step-start`, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped; a file part or a 41st message returns 400; the request carries the route's plant; the response is the AI SDK UI message stream with keep-alive; a budget stop ends it with `data-ai-stop budget-exhausted` ([10-ai-and-agents.md](10-ai-and-agents.md)) |
@@ -764,8 +768,9 @@ MCP Apps views, WebMCP, an autoplan tool, admin and import tools, per-organizati
 2. One closure schema per web package.
 3. Typed documents per web package.
 4. CSS sources (`sources.gen.css`).
-5. Database types, only when the migrations hash changed, because kysely-codegen needs a migrated database.
-6. Generated reference docs.
+5. Link snapshots, `modules/<id>/web/links.snapshot.json`, from each module's link manifest ([0062][adr-0062]).
+6. Database types, only when the migrations hash changed, because kysely-codegen needs a migrated database.
+7. Generated reference docs.
 
 `pnpm gen --check` writes to a temporary directory and diffs against the committed files. Output is deterministic (`lexicographicSortSchema`, sorted keys). Generated paths are marked `linguist-generated`, and the rule for a merge conflict in a generated file is "run `pnpm gen`". `pnpm check` includes `pnpm gen --check`.
 
@@ -778,7 +783,7 @@ GraphQL Code Generator setup per web package ([0020][adr-0020]):
 - `typescript-operations` and `typed-document-node`, one generated file per web package;
 - `.graphql` files next to the screens that use them;
 - `enumType: "const"`, so sort fields and other enums exist at run time;
-- `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` mapped to branded string types;
+- `Instant`, `LocalDate`, `LocalTime` and `LocalDateTime` mapped to the branded string types exported by `@northmes/contracts`;
 - data masking on, with `@unmask` where the board needs raw speed;
 - no generated hooks: screens use Apollo Client 4 hooks and `createQueryPreloader` with the typed documents.
 
@@ -788,7 +793,7 @@ GraphQL reference pages for the docs site are generated by an in-house graphql-j
 
 ## Schema snapshot and diff gates
 
-The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each `modules/<id>/schema.graphql` and the closure schemas.
+The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each `modules/<id>/schema.graphql`, the closure schemas and each `modules/<id>/web/links.snapshot.json`.
 
 | Gate | Compares | In 0.x | From 1.0 |
 |---|---|---|---|
@@ -797,6 +802,7 @@ The committed files are `schema/api.graphql`, `schema/supergraph.graphql`, each 
 | Plugin corpus | the pull request's subgraphs composed with the in-repo examples, the SDL in `test/plugin-corpus` and the built package of any plugin the pilot runs | blocks | blocks |
 | GraphQL Inspector | `schema/api.graphql` against the base branch | reports; its entity-field diff goes into the release notes | blocks |
 | Slot ids | slot ids against the previous release's snapshot | a removed slot id fails | fails |
+| Link patterns | link patterns and search keys against the previous release's snapshot | a removed pattern without a `moved` entry fails | fails |
 | Event schemas | event JSON Schemas against the previous release; an added field counts as breaking | a breaking change bumps the minor version | as [0038][adr-0038] |
 | API Extractor | committed report per MIT package against the code | `@internal` by default, `@beta` for what the example plugins use | `@public` from 1.0 |
 
@@ -804,7 +810,7 @@ Versions stay lockstep 0.x through the pilot, and a breaking change bumps the mi
 
 ## Tests
 
-Integration and end-to-end tests run against Postgres from `@testcontainers/postgresql` and send operations to `/graphql` of a role `all` app ([0041][adr-0041]). AI is mocked by default ([0042][adr-0042]). Vitest projects follow the file suffix: `*.test.ts` is unit, `*.int.test.ts` is integration, `*.test.tsx` is web; Playwright specs end in `.spec.ts`. Names marked with an asterisk come from the decisions; the others are proposed names for the tasks.
+Integration and end-to-end tests run against Postgres from `@testcontainers/postgresql` and send operations to `/graphql` of a role `all` app ([0041][adr-0041]). AI is mocked by default ([0042][adr-0042]). Vitest projects follow the file suffix: `*.test.ts` is unit, `*.int.test.ts` is integration, `*.test.tsx` is web, `*.test-d.ts` is types (Vitest typecheck mode); Playwright specs end in `.spec.ts`. Names marked with an asterisk come from the decisions; the others are proposed names for the tasks.
 
 | Test | Asserts |
 |---|---|
@@ -827,7 +833,7 @@ Integration and end-to-end tests run against Postgres from `@testcontainers/post
 | `mcp/schema-subset.test.ts` | the propose input passes the schema lint; a `z.union` input fails |
 | `rest/pyramid-upload.int.test.ts` | a 26 MB upload returns 413; a user with the permission at one plant only gets 403; a multipart POST from a foreign origin gets 403 and enqueues nothing |
 | `rest/ai-chat.int.test.ts` | a file part returns 400; 41 messages return 400 |
-| `rest/web-modules.int.test.ts` | no cookie returns 401; `?plant=B` for a viewer at A returns 403 |
+| `rest/web-modules.int.test.ts` | no cookie returns 401; `?plant=B` for a viewer at A returns 403; `?plant=B` returns plant B's `timeZone` and resolved presentation values, and a station cookie at plant B gets the same values |
 | `shutdown.int.test.ts` | a 1.5 s mutation with `app.close()` after 300 ms returns 200 with one `audit.command` row; readiness returns 503 during shutdown |
 
 ## Open items
@@ -885,3 +891,5 @@ Further open questions are collected in [16-open-questions.md](16-open-questions
 [adr-0054]: ../adr/0054-file-storage-port-with-a-postgres-driver.md
 [adr-0055]: ../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md
 [adr-0058]: ../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
+[adr-0061]: ../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md
+[adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md

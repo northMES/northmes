@@ -26,8 +26,8 @@ The station is part of release 1 by the maintainer's decision ([ADR 0055](../adr
 | Packages | `@northmes/module-production-start`, `@northmes/production-start-web`, `@northmes/production-start-contracts` (MIT) |
 | `dependsOn` | `core`, `planning` |
 
-- The shell has a second mount point, `/station/$stationId`, with a full-screen layout and no sidebar. The production-start remote returns its station routes from `stationRoutes(stationRoute)` ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
-- For a station principal, `/api/web/modules` returns the station mount and its modules. Station remotes load with a 30 s timeout. Every station chunk preloads right after sign-in.
+- The shell has a second mount point, `/station/$stationId`, with a full-screen layout and no sidebar. The production-start remote returns its station routes from `stationRoutes(stationRoute)` ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). Their paths come from the `station` section of the production-start link manifest, `defineModuleLinks(id, entries, { station: { ... } })`, whose builders take `stationId` instead of `plant` ([06-web-and-ux.md](06-web-and-ux.md), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
+- For a station principal, `/api/web/modules` returns the station mount and its modules, with the station plant's zone and resolved presentation values, so station times and numbers follow the plant's settings ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Station remotes load with a 30 s timeout. Every station chunk preloads right after sign-in.
 - The station device identity, operator sessions and badges live in core. Reports live in `production_start`. Production-start reports progress by calling `planning.reportOperationProgress` in the same transaction, so planning has no dependency on production-start ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)).
 - Production-start also contributes a panel to planning's order panel slot, so planners see reported quantities on an order.
 
@@ -162,7 +162,7 @@ Rules:
 ### 4.4 Screen rules
 
 - Interactive targets follow the CSS variable `--nm-target-min`: 24 px by default, 44 px in the station layout, final value after a glove test on pilot hardware. Every `@northmes/ui` primitive reads it, so shell chrome and plugin panels follow.
-- The quantity field is a `NumberField` with a visible unit and `inputmode="numeric"`. While the app keypad is visible, the field uses `inputmode="none"`, and a System keyboard toggle brings the device keyboard back.
+- The quantity field is a `NumberField` with a visible unit. It uses `inputmode="numeric"` when the stock unit has 0 display decimals and `inputmode="decimal"` otherwise. The app keypad shows a decimal key, labelled with the plant's decimal sign, only when the stock unit has display decimals. The field parses with the plant's number format ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). While the app keypad is visible, the field uses `inputmode="none"`, and a System keyboard toggle brings the device keyboard back.
 - Enter in a station number field never submits; only the Send button does. A badge scanned into the wrong field therefore cannot send a report.
 - Errors show as text next to the field with `aria-invalid`, and an error summary at the top receives focus on submit and links to each field. Messages state the rule and the fix.
 - Scrap reasons are a `fieldset` with the legend "Scrap reason" and large radio buttons; with more than about eight reasons, a searchable list. Within one report, the last scrap reason stays selected.

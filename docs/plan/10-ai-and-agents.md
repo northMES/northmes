@@ -16,6 +16,7 @@ NorthMES calls language models only through a provider that the customer configu
 | Drafts and soft locks that proposals feed | [ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) | accepted |
 | Chat panel accessibility | [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) | accepted |
 | MIT license of `@northmes/sdk` | [ADR 0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | proposed |
+| Presentation values in the time context line, ISO 8601 and canonical tool outputs | [ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted |
 
 ## Ground rules
 
@@ -254,8 +255,8 @@ Whether tool results sent to a model count as exports is open. The working defau
 
 - The chat request carries the route plant ([ADR 0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md)). The server fills a missing plant argument with it and states the plant in the instructions.
 - The runner checks `ai.assistant:use` together with each tool's permission at the plant the call names. A refusal returns a typed not-permitted result and writes one `permission.denied` event with surface `assistant`.
-- The instructions are identical between runs, so provider prompt caching survives. One line of time context goes in the turn after the cached prefix, for example "Plant P1, now 2026-10-24T21:00+02:00, production day 2026-10-24".
-- Tool outputs give local time with offset plus the zone id. Wall-clock inputs are resolved on the server with `resolveWallClock` ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)).
+- The instructions are identical between runs, so provider prompt caching survives. One line of time context goes in the turn after the cached prefix, for example "Plant P1, now 2026-10-24T21:00+02:00, production day 2026-10-24, dates 24.10.2026, 24-hour clock, decimal comma". The line gives the plant's presentation values, so the model's prose writes dates and numbers as the screens do ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
+- Tool outputs give local time with offset plus the zone id, and canonical values with the unit in the key; they stay ISO 8601 and canonical whatever the presentation values. Wall-clock inputs are resolved on the server with `resolveWallClock` ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)).
 - Read tools take a `view` argument (`committed` or `draft`). The assistant defaults to the caller's draft; MCP defaults to the committed plan ([ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md)).
 
 ### Tool results
@@ -272,7 +273,7 @@ The panel follows [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) an
 - It mounts through one shell aside slot, so it survives route changes. Below about 640 px it opens as a modal sheet; at most one panel docks beside main.
 - Opening moves focus to the input; Escape or Close returns focus to the trigger. A Stop button shows while streaming.
 - The streaming message renders outside any live region with `aria-busy`; the finished message is appended once to a `role=log` list.
-- Model Markdown headings map to h3 to h6. Tool results render as tables with caption and `th`. Links print as plain text with the full URL; only same-origin paths stay clickable. No raw HTML and no remote images.
+- Model Markdown headings map to h3 to h6. Tool results render as tables with caption and `th`, with values formatted by the web formatters and the plant's presentation values. Links print as plain text with the full URL; only same-origin paths stay clickable. No raw HTML and no remote images.
 - Each assistant message carries a visible "AI-generated" label in its accessible name. The chat header and the proposal review show a fixed text: "Written by an AI assistant. Check before you commit." No setting removes it.
 - The request carries `answerLanguage`, and messages get `lang`.
 
@@ -455,7 +456,7 @@ Besides the guard tests in [Model calls and data-leak guards](#model-calls-and-d
 | Plant | A scripted call with no plant from a chat started on plant B runs at plant B, and `ai.ai_call.plant_id` is plant B. |
 | Permissions | A user with `ai.assistant:use` at plant A only and planning read at A and B gets not-permitted for a call at B, and the recorded provider request holds no plant B order numbers. |
 | Time | `planning_machine_schedule` for a night shift across the autumn DST change queries the correct UTC window and returns local times with the new offset; the spring twin too. |
-| Caching | The instructions string is identical for two runs at different clocks. |
+| Caching | The instructions string is identical for two runs at different clocks, and for two runs with different presentation values. |
 | Late facts | The deadline rule, `asOf` and the fallback flag come back for a late fixture order; GraphQL and the tool return the same ids; the filter works with the `ai` module disabled. |
 | Rendering | A model message with a Markdown link to an outside host renders no anchor. |
 | Test connection | A stub OpenRouter that answers the probe with a no-matching-endpoint 404 marks the binding unusable with reason `routing`, and enabling the feature fails. A stub that returns a tool call records the `tools` capability. |

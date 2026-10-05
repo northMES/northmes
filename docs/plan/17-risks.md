@@ -401,7 +401,7 @@ Mitigations:
 - Boot throws unless `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` gives 01:00Z.
 - A Kysely plugin throws on `Date` parameters, and `pnpm db:types --verify` fails on any generated `Date` type. Every database role pins its session zone to UTC.
 - The time zone matrix runs Node and Postgres under UTC and Europe/Stockholm, plus a hostile leg under Pacific/Chatham. Native-Temporal and forced-polyfill projects run in Vitest, and a Chromium Playwright project deletes `globalThis.Temporal`. Daylight saving and Helsinki fixtures exist from the first calendar test.
-- A lint fails on `Intl.DateTimeFormat` without `timeZone`. The production day start is validated against the zone's transitions for 10 years.
+- A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat` and `toLocale*String` calls outside `packages/contracts/src/format/` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). The production day start is validated against the zone's transitions for 10 years.
 - Nobody installs or upgrades in a daylight saving week (2027-10-31 and 2028-03-26). If the pilot window covers the night of 2027-10-31, that night runs on the installed system with the daylight saving suites green.
 
 Early warning signals:

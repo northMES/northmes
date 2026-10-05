@@ -93,7 +93,6 @@ The full lists are in [13 delivery and GitHub](../plan/13-delivery-and-github.md
 ### Skills and personas
 
 * Ten skills are installed in `.claude/skills` at commit `24fe0ef`, recorded in `skills-lock.json`, with the MIT notice: grilling, grill-me, grill-with-docs, domain-modeling, tdd, codebase-design, writing-for-agents, to-questionnaire, wait-what and improve-codebase-architecture. handoff's library group `northmes` enables tdd and codebase-design on the planner and coder; the run configuration denies grilling and domain-modeling. The project skills (db-test, vertical-slice, graphql-subgraph, web-remote, dst-test) are written by the E02 tasks that build each extension point. The pin moves only after reading the changelog.
-* On 2026-10-05 Krister Johansson added eight skills from other sources after a license and fit review against the ADRs: apollo-client (apollographql/skills), vitest and pnpm (antfu/skills), turborepo (vercel/turborepo), playwright-cli (microsoft/playwright-cli), wrdn-authz (getsentry/warden-skills), secret-serialization (getsentry/skills) and diagnosing-bugs (mattpocock/skills). Each is pinned by commit in `skills-lock.json`, and `.claude/skills/THIRD_PARTY_LICENSE.md` reproduces each source's license. `.claude/settings.json` denies `npm` and `npx`, which some of them pre-approve.
 * Issues, issue forms and design header frames share one persona list in [docs/plan/README.md](../plan/README.md): Planner, Operator, Plant admin, Plugin developer, Maintainer, Hosting partner.
 
 ### First weeks
@@ -115,7 +114,7 @@ Day 1 (2026-10-15) sends the written requests to the Pyramid administrator and b
 * `test/meta/gates.test.ts`: the Tester command in each committed graph file is `pnpm check`, and each coder instruction names `pnpm check` ([ADR 0058](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
 * `test/meta/agent-files.test.ts`: `CLAUDE.md` starts with `@AGENTS.md`, and neither `AGENTS.md` nor `CLAUDE.md` mentions handoff.
 * Graph file test: the plan reviewer instructions in all three graph files name 15 files and 12 steps, and every graph runs `scripts/handoff/tests-changed.mjs`.
-* Skills test: `.claude/skills` holds exactly the skills in `skills-lock.json`, each at its pinned commit, and `THIRD_PARTY_LICENSE.md` names every source.
+* Skills test: `.claude/skills` holds exactly the ten skills in `skills-lock.json`, pinned at `24fe0ef`.
 * Persona test: the persona options in the issue forms equal the list in `docs/plan/README.md`.
 * `ci / linked issue` requires `Closes #N`; `ci / pr title` checks the `type(module): outcome` format.
 * Plan checks: SP3 has no `blocked_by` on E07; E09 comes before E08's data-wiring story (E08-S10) in Project order; E17 targets a date on or before 2027-02-26 (M3); `e2e/board-perf.spec.ts` exists by 2026-11-06; no E03 task is Ready before the E02 foundation pull request is merged.

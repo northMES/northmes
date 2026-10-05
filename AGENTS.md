@@ -9,7 +9,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Test-driven, one behaviour at a time: write its failing test, make it pass, then refactor.
 - Each integration and end-to-end test run starts its own Postgres with `@testcontainers/postgresql`.
 - Tests call the mocked AI provider. Tests against a real model live in `*.ai.test.ts` and run only through `pnpm test:ai` or `pnpm test:e2e:ai`.
-- Generated files (schema snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict.
+- Generated files (schema snapshots, link snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict.
 - Run every command as `pnpm` or `git` from the repository root, through a root script, `pnpm --filter` or `pnpm -C`.
 - Start the subject of a commit that adds a failing test with `test:`.
 - Bring a new dependency in its own pull request, at a version older than Renovate's `minimumReleaseAge` window.

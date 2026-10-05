@@ -414,7 +414,7 @@ Open for the product owner: break and night shift times, the even and odd week r
 
 ### The production day
 
-Each plant has `production_day_start`. `productionDayOf(instant) = (local(instant) minus production_day_start).date` on the wall clock. A night shift that crosses midnight belongs to the production day it started on, and shift figures are attributed by shift start date. The setting is validated against the zone's transitions for 10 years, so a start inside the spring gap or the repeated autumn hour is refused. Production days are 23 or 25 hours long on transition weekends. A versioned plant setting waits until the product owner says whether the day start can change. Open: the pilot's day start (00:00, 06:00 or 07:00).
+Each plant has `production_day_start`, a `core.plant` column next to the zone. `productionDayOf(instant) = (local(instant) minus production_day_start).date` on the wall clock. A night shift that crosses midnight belongs to the production day it started on, and shift figures are attributed by shift start date. The value is validated against the zone's transitions for 10 years, so a start inside the spring gap or the repeated autumn hour is refused. Production days are 23 or 25 hours long on transition weekends. A versioned plant setting waits until the product owner says whether the day start can change. Open: the pilot's day start (00:00, 06:00 or 07:00).
 
 ### Calendar tests
 
@@ -444,7 +444,7 @@ Each plant has `production_day_start`. `productionDayOf(instant) = (local(instan
 - GraphQL uses the shared scalars `Instant` (offset required), `LocalDate`, `LocalTime` and `LocalDateTime` (no offset). Only the server turns a `LocalDateTime` into an instant ([05-graphql-and-apis.md](05-graphql-and-apis.md)).
 - In the browser, instants stay ISO strings in the Apollo cache and become epoch milliseconds once at the board's data edge.
 - Board time snaps with offset-preserving `ZonedDateTime.round`. Hour ticks come from exact instants; day ticks from `startOfDay()` plus one day.
-- `formatPlantTime` in `@northmes/web-sdk` formats instants in the plant zone and adds the short zone name when the offset differs from the hour before or after. A lint fails on `Intl.DateTimeFormat` without `timeZone`. Screens show plant time with a zone label when the user's zone differs.
+- `formatPlantTime` in `@northmes/contracts` (subpath `format`) formats instants in the plant zone with the plant's hour cycle and adds the short zone name when the offset differs from the hour before or after. It uses the pinned base locale `en-GB-u-ca-gregory-nu-latn`, never the process or browser default, so `02:30 CEST` reads the same on every host ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat` and `toLocaleString`, `toLocaleDateString` and `toLocaleTimeString` calls outside `packages/contracts/src/format/`. Screens show plant time with a zone label when the browser zone differs from the plant zone.
 - Autoplan, availability and the board work in epoch milliseconds inside loops and use Temporal only at the edges.
 
 | Case | Input | Expected |
@@ -454,7 +454,7 @@ Each plant has `production_day_start`. `productionDayOf(instant) = (local(instan
 | TIME3 break in the gap | break [02:30, 03:15) on 2026-03-29 | resolves to an empty or forward window, never an inverted one |
 | TIME4 snapping | `snap(2026-10-25T01:10Z, 15 min)` | 01:15Z; snap is monotone |
 | TIME5 ticks | hour ticks for the plant days 2026-10-25 and 2027-03-28 | 25 and 23 |
-| TIME6 labels | `formatPlantTime` for 2026-10-25T00:30Z and 01:30Z | `02:30 CEST` and `02:30 CET` |
+| TIME6 labels | `formatPlantTime` in `Europe/Stockholm` with `h23` for 2026-10-25T00:30Z and 01:30Z, under `LANG=en_US.UTF-8` and `LANG=fi_FI.UTF-8` | `02:30 CEST` and `02:30 CET` under both |
 | TIME7 hostile zone | domain suite under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham`; native Temporal and forced polyfill | identical results |
 
 ## Autoplan
@@ -823,6 +823,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Dark mode.
 - The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). `BoardFieldSlot` carries `accessibleText`; block field renderers are synchronous and cheap, hover renderers may fetch.
 - `BoardBlock` carries explicit fields for draft (`none`, `mine`, `proposal`), late, conflict, material shortage and progress.
+- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids.
 
 ### Cut from release 1
 
@@ -1043,7 +1044,8 @@ Planning settings are Zod definitions in `@northmes/planning-contracts`, stored 
 | `softLockIdleExpiry` | duration | not decided | Open (product owner) |
 | `countPurchaseRequisitions` | boolean | not decided | Open (product owner) |
 | `boardBlockFields`, `boardHoverFields` | lists of field ids (core fields, ERP free-field keys, slot fields) | set in the board design task | Plan proposal |
-| `core.plant.production_day_start` | local time, validated against the zone | not decided | Open (product owner) |
+
+The production day start is not a planning setting. It is the `core.plant` column `production_day_start`, a local time validated against the zone, next to the plant's `time_zone` ([The production day](#the-production-day)). Its value for the pilot is still open with the product owner.
 
 A product owner answer still missing on 2026-10-30 becomes a setting whose default is recorded in the ADR that owns the rule ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [ADR 0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md)). Until a default is recorded, tests set these settings explicitly.
 
@@ -1078,9 +1080,9 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 
 ### Time and calendar tests
 
-- `packages/contracts`: `resolve-wall-clock.test.ts` (TIME1 to TIME3, monotonic property in `Europe/Stockholm`, `America/Santiago`, `Australia/Lord_Howe`), `windows.test.ts` (fast-check: work conserved; no segment in non-working time; `subtractWork(addWork(s, d).end, d) >= s`; `null` only when availability is short; additive and monotonic in work).
+- `packages/contracts`: `resolve-wall-clock.test.ts` (TIME1 to TIME3, monotonic property in `Europe/Stockholm`, `America/Santiago`, `Australia/Lord_Howe`), `windows.test.ts` (fast-check: work conserved; no segment in non-working time; `subtractWork(addWork(s, d).end, d) >= s`; `null` only when availability is short; additive and monotonic in work), `src/format/plant-time.test.ts` (TIME6).
 - `modules/core`: `availability.test.ts` (CAL1 to CAL6, CAL11), `calendar-version.int.test.ts` (CAL7, TC13), `production-day.test.ts` (CAL8, CAL9).
-- `modules/planning/web`: `time-scale.test.ts` (TIME4, TIME5), and `format-plant-time.test.ts` in `@northmes/web-sdk` (TIME6).
+- `modules/planning/web`: `time-scale.test.ts` (TIME4, TIME5).
 - The domain suites run under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham`, with native Temporal and with the forced polyfill (TIME7).
 
 ### Integration tests (`modules/planning/server`, Testcontainers)
@@ -1094,6 +1096,10 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - DR7 `release.int.test.ts`: release copies the routing with `source_operation_id` and `source_operation_version`; editing the routing afterwards leaves the order unchanged; a child order in another plant fails with `core.crossScopeReference`.
 - DR8 `pending-change.int.test.ts`: with order 1001 in A's draft and no live lock, an ERP quantity change applies; with a live lock it becomes pending and `job_order.version` is unchanged; B's accept while A holds the order is refused with A's name; A's accept rebases A's draft row and A's save succeeds. Spread rule unit case: job orders of 5 and 5, the first started, going from 10 to 12 gives 5 and 7.
 - DR9 `events.int.test.ts`: after a 500-row apply a subscriber receives at most 2 messages; the connector subscribes to no `planning.draft.*` and no `*.soft_lock_changed` event, so a soft lock enqueues zero write-back jobs.
+
+### Web tests (`modules/planning/web`)
+
+- `test/board-search.test.tsx` (board URL keys, [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)): `?zoom=week&from=2026-11-02&order=<id>` opens that range with the panel open; Earlier and Later replace the history entry; an order id outside the range opens the panel's not-found state.
 
 ### End-to-end and accessibility (Playwright on the built `all` process)
 
@@ -1177,3 +1183,5 @@ User (plan proposals in this document): split as a draft change, the hard-lock c
 - [ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md) Regulated readiness: no-regret rules
 - [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) Release 1 scope under option B and the scope rule
 - [ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) Scheduling domain as a pure package in the planning module
+- [ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) Presentation settings for dates, clocks and numbers with one pinned locale
+- [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) Web form contracts, URL view state and module link manifests

@@ -27,6 +27,8 @@ This document describes the platform layer that every NorthMES module builds on:
 | Translations column | [0053](../adr/0053-translation-english-first-general-translation-later.md) | accepted | none |
 | File storage port (later) | [0054](../adr/0054-file-storage-port-with-a-postgres-driver.md) | proposed | none |
 | Time-series storage port (later) | [0059](../adr/0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
+| Presentation settings, formatters, machine-readable output | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | none |
+| Measured input limits after the contract parse | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | none |
 
 Related plan documents: [02-architecture.md](02-architecture.md) (process roles and boot), [03-modules-and-extensibility.md](03-modules-and-extensibility.md) (module packages and manifests), [05-graphql-and-apis.md](05-graphql-and-apis.md) (error model, lists, subscriptions), [11-quality-and-testing.md](11-quality-and-testing.md) (test harness), [12-operations-and-security.md](12-operations-and-security.md) (Compose, backups, upgrades), [15-regulated-readiness.md](15-regulated-readiness.md).
 
@@ -451,7 +453,7 @@ flowchart TD
 
 | Step | Rule |
 |---|---|
-| 1. Parse | A parse failure is `BAD_USER_INPUT` with `fieldErrors`. Measured values arrive with a unit and are converted to canonical SI before any validation (see [Units](#units-and-the-unit-catalog)). |
+| 1. Parse | A parse failure is `BAD_USER_INPUT` with `fieldErrors`. Measured values arrive as `{ value, unit }`, and the contract validates them in the unit the person typed. After the parse, the pipeline converts them to canonical SI and then checks their limits, so limits compare canonical values (see [Units](#units-and-the-unit-catalog)). |
 | 2. Scopes | The transaction helper sets both scope settings as its first statement. |
 | 3. Permission | The pipeline loads the target and calls `can(principal, permission, target.scope_id)`, or uses the requested scope for creates. The reference resolver checks that every referenced row is at the same scope or an ancestor. The field guard on the GraphQL type stays a coarse gate. |
 | 4. Audit context | One transaction is one audit command. Nested commands share the outer command's audit id. |
@@ -784,8 +786,12 @@ Settings are Zod definitions (`defineSettings`) in module contracts packages. Th
 - Switches that look like infrastructure but change behaviour are audited settings commands. Examples: enabling `/mcp` for the installation, and a connector's shadow or live write-back mode.
 - A settings change bumps `core.config_revision` (see [Configuration revision](#configuration-revision)), and the next command row records the new revision.
 - Settings fields without a label and a description are refused at boot.
+- The settings reader resolves each field on its own: the plant value, then the company value, then the default. It returns each field's effective value with its source (`default`, `company` or `plant`), so a plant settings form shows the value the plant inherits.
+- Core defines one presentation schema, `core.presentation`, with `dateFormat` (`iso`, `dmyDot`, `dmySlash`, `mdySlash`; default `iso`), `hourCycle` (`h23`, `h12`; default `h23`) and `numberFormat` (`spaceComma`, `commaPoint`, `pointComma`; default `spaceComma`), at company scope with a plant override. These settings change how values are shown and typed, never what is stored or sent. The schema has no time zone key and refuses one, because `core.plant.time_zone` is the only zone ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 - One installation policy object, the compliance profile, holds compliance-sensitive behaviour. Release 1 ships only the standard profile. Switching to a regulated profile is one-way and CLI-only ([ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md)).
-- The settings cascade below company and plant (user level) is a cut candidate if velocity is low.
+- The settings cascade below company and plant (user level) is a cut candidate if velocity is low. When it arrives, a user value of a presentation field comes before the plant value. The time zone never gets a user value.
+
+Required tests (`modules/core/test/presentation-settings.int.test.ts` on Testcontainers Postgres): a plant value overrides the company value per field; a field without a plant value returns the company value with source `company`; a field with neither returns the default with source `default`; a `timeZone` key is refused; a change bumps `config_revision` and writes one change row.
 
 ## Secrets and the installation key
 
@@ -852,10 +858,10 @@ Absolute temperature is stored in degree Celsius, which is an SI unit with a spe
 ### API rules
 
 - GraphQL exposes a per-dimension enum and a unit argument, for example `cycleTime(unit: CycleTimeUnit! = SECOND)` with `SECOND`, `MINUTE`, `PIECES_PER_HOUR` and `PIECES_PER_MINUTE`. Rate units convert by reciprocal (seconds = 3600 / pieces per hour). Unit enums and unit inputs are SDK-shared types; a plugin never emits its own copy.
-- Mutations take `{ value, unit }` inputs and convert to canonical before validation, so limits and cross-field rules compare canonical values.
+- Mutations take `{ value, unit }` inputs. The contract validates them in the unit the person typed, through `measured(dimension, { min?, max? })` in `@northmes/contracts`. The pipeline converts them to canonical after the contract parse and before limit checks, so limits compare canonical values; a limit failure returns `fieldErrors` at the field's path with the limit stated in the unit the person typed. A cross-field rule between measured fields is a handler check that throws a `DomainError` with `fieldErrors`, never a refinement ([ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 - MCP tools and outbox events carry canonical values with the unit in the key (`cycleTimeSeconds`), never a bare number.
 - Filters on measured fields carry one unit for their bounds, converted before SQL; a rate unit swaps the bounds. Sorting is on the canonical column.
-- Display rounding happens only in the web formatter and at external boundaries that demand it.
+- Display rounding happens only in the formatters in `@northmes/contracts`, which the web uses, and at external boundaries that demand it ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 
 Open: whether "pieces per hour" means pieces or cycles when one cycle makes several pieces (product owner); which stock units the pilot uses; the server decimal library and the GraphQL decimal scalar.
 
@@ -868,9 +874,12 @@ The full time design is in [ADR 0024](../adr/0024-time-utc-instants-plant-wall-c
 - Facts are `timestamptz` instants in UTC. Each plant has an IANA time zone. Plant-local definitions (shifts, breaks, deviations, ERP deadlines) are stored as wall-clock `time`, `date` or `timestamp` plus the plant zone.
 - SQL converts instants to local time, never local time to instants. Only TypeScript turns a local time into an instant, through `resolveWallClock`.
 - Session zones are pinned to UTC per role. Partition bounds are explicit UTC values. Exports run in UTC and add the plant zone.
+- Machine-readable output (GraphQL, REST, MCP, outbox events, the audit export, the rollback CSV) never uses presentation settings. Instants are ISO 8601 with offset, numbers use a point decimal and no grouping, and units are canonical and named in the key or the argument. A later human-readable report is formatted on the server with the `@northmes/contracts` formatters and the resolved presentation of the plant it covers, and names the zone; release 1 has no such report ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 - Record times come from the database clock; a device's own time is stored as data next to it.
 - Calendar code reads "today" from a settable `core.clock_now()`, so tests can fix the date.
 - Integration tests run Node and Postgres under UTC and under Europe/Stockholm, plus one leg with the server in Pacific/Chatham that asserts every pool reports `current_setting('TimeZone') = 'UTC'`.
+
+Required test: with the company set to `dmyDot`, `h12` and `commaPoint`, a GraphQL `Instant` field, an MCP tool result and the audit export are byte-identical to a run with the defaults.
 
 ## Health checks per module
 

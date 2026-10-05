@@ -21,7 +21,7 @@ A review of the planned setup found four gaps:
 * Three gates existed: lint, typecheck and test locally, `pnpm test:handoff` in handoff, and `ci / gate` in CI. A change that passed one failed another, and each mismatch cost a coder round through the pull request.
 * The month-1 list for the walking skeleton summed to about 27 to 38 days against about 20 working days.
 
-This ADR decides package exports for tests and dev, the script that brings up a working stack, the gate command, the rule for commands, the agent rule files and the skeleton timebox. Node and TypeScript pins are in [ADR 0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md); the Vitest projects and the Testcontainers harness are in [ADR 0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md). This ADR is the "dev environment" item on the list of ADRs the E02 foundation epic needs, which must be accepted by M0 (2026-10-30).
+This ADR decides package exports for tests and dev, the script that brings up a working stack, the gate command, the rule for commands, the agent rule files and the skeleton timebox. Node and TypeScript pins are in [ADR 0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md); the Vitest projects and the Testcontainers harness are in [ADR 0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), and the `types` project for `*.test-d.ts` is in [ADR 0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md). This ADR is the "dev environment" item on the list of ADRs the E02 foundation epic needs, which must be accepted by M0 (2026-10-30).
 
 ## Decision drivers
 
@@ -76,7 +76,7 @@ One script serves `pnpm dev`, the end-to-end global setup and handoff's `handoff
 
 | Script | Runs | Used by |
 |---|---|---|
-| `pnpm check` | the Node major assertion ([ADR 0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)), turbo `lint` and `typecheck`, `pnpm gen --check` ([ADR 0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md)), then `vitest run` over the `unit`, `integration` and `web` projects | handoff's Tester, a developer before pushing, `ci / gate` |
+| `pnpm check` | the Node major assertion ([ADR 0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)), turbo `lint` and `typecheck`, `pnpm gen --check` ([ADR 0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md)), then `vitest run` over the `unit`, `integration`, `web` and `types` projects | handoff's Tester, a developer before pushing, `ci / gate` |
 | `pnpm check:full` | `pnpm check`, the Europe/Stockholm leg and the end-to-end suite | release 1's done conditions on `main`; CI jobs run its parts |
 
 * Every CI gate step runs a script that `pnpm check` or `pnpm check:full` contains.

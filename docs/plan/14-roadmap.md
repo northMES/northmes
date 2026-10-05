@@ -41,7 +41,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 |---|---|---|---|
 | Day 1 | Thu 2026-10-15 | The written request to the pilot's Pyramid administrator and the Pyramid reseller is sent (the questions are in [08-pyramid-connector.md](08-pyramid-connector.md#17-questions-for-the-pyramid-administrator)). The request for the data processing agreement is sent. The product owner session is booked. The private companion repository for internal research exists and is pushed, and SP0 (E01-S01) is done; both were done on 2026-10-05. Krister confirms the persona list and the epic order, which clears the needs-confirmation of ADR 0049. | |
 | Week 1 | by Fri 2026-10-23 | handoff's `setup_project` reports ready (E00). The Node 26 hook tests, the time zone suite and the benchmarks have run on the `node:26` Debian image (E01-S05). A Windows PC of the pilot's planner PC class is in hand for SP3 and the NVDA passes. The product owner session has taken place. | Node 26 or Node 24 LTS ([0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)) |
-| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
+| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
 | SP3 verdict | Fri 2026-11-06 | The board spike is measured on the planner-class PC: 60 fps while scrolling at day zoom, p95 frame time at most 33 ms while dragging at week zoom, no long task over 50 ms, and keyboard move mode steps one snap and one machine. `e2e/board-perf.spec.ts` exists. | An interactive board, or one more week that limits the rendered range |
 | Skeleton target | Fri 2026-11-13 | `e2e/skeleton.spec.ts` is green on the built `all` process. The Pyramid write method names have arrived. | If the spec is red, hardening freezes: only skeleton tasks run until it is green. |
 | M1 | Fri 2026-11-20 | `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate`. The SP3 second-fail deadline has passed. The first weekly ledger rows exist. | If SP3 failed twice: the job order table view with the shared Move dialog plus a read-only timeline carries planning (cut 8). |
@@ -124,7 +124,7 @@ Goal: put on `main` everything a handoff run needs before it starts. That is the
 
 Who it is for: Maintainer. Also: Plugin developer, who reads the same contributor files.
 
-ADRs: [0001](../adr/0001-record-architecture-decisions-in-madr.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
+ADRs: [0001](../adr/0001-record-architecture-decisions-in-madr.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md).
 
 Out of scope: product code; the release workflow beyond the configuration SP2 verifies (E01-S03, E18); the docs site (E19); `.claude/launch.json` with `handoff-demo`, which arrives with the stack script (E02-S08) before the first UI task; the CLA text and `ci / cla`, which come before the first outside pull request (E19-S06).
 
@@ -218,7 +218,7 @@ Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; AD
 Plan: E00-S01-T02
 
 ## Goal
-Make pnpm check the one gate command. It runs turbo lint and typecheck, then pnpm gen --check, then vitest run over the unit, integration and web projects. pnpm check:full adds the Europe/Stockholm leg and e2e. handoff's Tester and the coder instructions in the three graphs name pnpm check; pnpm test:handoff stays only as an alias that runs pnpm check, so a graph version imported before this rule runs the same gate. pnpm gen runs a fixed, empty stage list until generators exist, so later tasks add stages in a fixed order.
+Make pnpm check the one gate command. It runs turbo lint and typecheck, then pnpm gen --check, then vitest run over the unit, integration, web and types projects. pnpm check:full adds the Europe/Stockholm leg and e2e. handoff's Tester and the coder instructions in the three graphs name pnpm check; pnpm test:handoff stays only as an alias that runs pnpm check, so a graph version imported before this rule runs the same gate. pnpm gen runs a fixed, empty stage list until generators exist, so later tasks add stages in a fixed order.
 
 ## Where in the code
 package.json root scripts: check, check:full, test:handoff, test, test:unit, test:int, test:tz, lint, typecheck, build, gen
@@ -336,7 +336,7 @@ Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; AD
 Plan: E00-S02-T02
 
 ## Goal
-One root Vitest config with projects keyed on the file suffix: unit is **/*.test.ts minus **/*.int.test.ts, **/*.ai.test.ts and **/*.ops.test.ts; integration is **/*.int.test.ts; web is **/*.test.tsx with the React plugin and happy-dom; ai is **/*.ai.test.ts and runs only through pnpm test:ai; ops is **/*.ops.test.ts and runs nightly. All exclude node_modules, dist and docs/sources, and the coverage include follows the same globs. The global setup asserts the Node major. A meta test proves every tracked test file lands in exactly one project, and a lint keeps every Postgres image reference on infra/pg-image.json.
+One root Vitest config with projects keyed on the file suffix: unit is **/*.test.ts minus **/*.int.test.ts, **/*.ai.test.ts and **/*.ops.test.ts; integration is **/*.int.test.ts; web is **/*.test.tsx with the React plugin and happy-dom; types is **/*.test-d.ts in Vitest typecheck mode and runs in pnpm check; ai is **/*.ai.test.ts and runs only through pnpm test:ai; ops is **/*.ops.test.ts and runs nightly. All exclude node_modules, dist and docs/sources, and the coverage include follows the same globs. The global setup asserts the Node major. A meta test proves every tracked test file lands in exactly one project, and a lint keeps every Postgres image reference on infra/pg-image.json.
 
 ## Where in the code
 vitest.config.ts
@@ -349,6 +349,7 @@ Seam: collection.test.ts runs vitest list in a child process; pg-image exports s
 - collection.test.ts: "every tracked test file belongs to exactly one project"
 - collection.test.ts: "a file named x.int.test.ts lands in integration only"
 - collection.test.ts: "a file named x.ai.test.ts lands in ai only and pnpm check does not run it"
+- collection.test.ts: "a file named x.test-d.ts lands in types only"
 - pg-image.test.ts: "no tracked Compose file, Dockerfile or test names a postgres image other than infra/pg-image.json's"
 
 ## Design
@@ -357,6 +358,7 @@ none
 ## ADRs
 docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md
 docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
+docs/adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md (the types project)
 
 ## Out of scope
 The browser-mode project for component accessibility tests (E04-S01), Playwright projects (E02-S08).
@@ -365,7 +367,7 @@ The browser-mode project for component accessibility tests (E04-S01), Playwright
 test(testing): key Vitest projects on the file suffix
 
 ## Acceptance criteria
-- [ ] pnpm check runs the unit, integration and web projects
+- [ ] pnpm check runs the unit, integration, web and types projects
 - [ ] collection.test.ts fails on a test file that matches no project
 - [ ] scan() reports an in-memory Dockerfile with FROM postgres:17
 - [ ] docs/sources files are never collected
@@ -377,7 +379,7 @@ As a maintainer, I want the license, contributor, security and agent rule files 
 
 Module: repo. Blocked by: E00-S01. Design: none.
 
-ADRs: [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
+ADRs: [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md).
 
 Acceptance criteria:
 
@@ -390,7 +392,7 @@ Acceptance criteria:
 Tests first:
 
 - `test/meta/private-paths.test.ts`: "git ls-files lists nothing under docs/research"; "docs/project-brief.md and rp-manifest.md are not tracked".
-- `test/meta/agent-files.test.ts`: "CLAUDE.md starts with @AGENTS.md"; "AGENTS.md and CLAUDE.md do not mention handoff".
+- `test/meta/agent-files.test.ts`: "CLAUDE.md starts with @AGENTS.md"; "AGENTS.md and CLAUDE.md do not mention handoff"; ".claude/skills holds exactly the skills in skills-lock.json, each at its pinned commit, and THIRD_PARTY_LICENSE.md names every source".
 - `test/meta/spdx.test.ts`: "every source file starts with an SPDX header that matches its package license".
 
 Notes: the additions to `LICENSE` that ADR [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) proposes wait for that ADR's acceptance. The CLA files and `ci / cla` come before the first outside pull request (E19-S06).
@@ -422,7 +424,9 @@ Seam: tests read files and git ls-files output.
 - agent-files.test.ts: "AGENTS.md says every command runs as pnpm or git from the repository root"
 - agent-files.test.ts: "AGENTS.md states the dependency release-age rule"
 - agent-files.test.ts: "AGENTS.md and CLAUDE.md do not mention handoff"
-- agent-files.test.ts: ".claude/skills holds exactly the skills in skills-lock.json at their pinned refs"
+- agent-files.test.ts: ".claude/skills holds exactly the skills in skills-lock.json, each at its pinned commit, and THIRD_PARTY_LICENSE.md names every source"
+- agent-files.test.ts: "each source section of .claude/skills/THIRD_PARTY_LICENSE.md lists the skills skills-lock.json takes from that source and the full commit it pins, and holds a license text"
+- agent-files.test.ts: ".claude/settings.json denies Bash(npm *) and Bash(npx *)"
 - spdx.test.ts: "every .ts and .tsx file under apps, modules, packages and examples starts with an SPDX header matching its package license"
 
 ## Design
@@ -432,6 +436,7 @@ none
 docs/adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md
 docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md
 docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md
+docs/adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md
 
 ## Out of scope
 CLA.md, CLA-corporate.md and ci / cla (E19-S06); the additions to LICENSE proposed in docs/adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md; TRADEMARKS.md.
@@ -856,7 +861,7 @@ As a maintainer, I want the setup script, the tests-changed check and the sessio
 
 Module: handoff. Blocked by: E00-S02. Design: none.
 
-ADRs: [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md).
+ADRs: [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md).
 
 Acceptance criteria:
 
@@ -877,7 +882,7 @@ Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; AD
 Plan: E00-S06-T01
 
 ## Goal
-handoff's graphs call two scripts. setup.sh runs once per worktree: pnpm install --frozen-lockfile, then a pull of the image named in infra/pg-image.json, then a Playwright Chromium install when Playwright is installed. tests-changed.mjs runs git diff --name-only origin/main...HEAD and exits 1 when a non-generated file under modules/, packages/ or examples/ changed and no *.test.ts, *.test.tsx or *.int.test.ts file did. Generated files are *.gen.*, schema snapshots under schema/ and modules/*/schema.graphql, and pnpm-lock.yaml.
+handoff's graphs call two scripts. setup.sh runs once per worktree: pnpm install --frozen-lockfile, then a pull of the image named in infra/pg-image.json, then a Playwright Chromium install when Playwright is installed. tests-changed.mjs runs git diff --name-only origin/main...HEAD and exits 1 when a non-generated file under modules/, packages/ or examples/ changed and no *.test.ts, *.test.tsx, *.int.test.ts or *.test-d.ts file did. Generated files are *.gen.*, schema snapshots under schema/ and modules/*/schema.graphql, link snapshots (modules/*/web/links.snapshot.json), and pnpm-lock.yaml.
 
 ## Where in the code
 scripts/handoff/setup.sh (new)
@@ -888,6 +893,7 @@ Seam: tests-changed exports judge(changedPaths) returning { ok, reason }; the CL
 ## Tests first
 - tests-changed.test.ts: "a source change without a test change fails"
 - tests-changed.test.ts: "a source change with a test change passes"
+- tests-changed.test.ts: "a source change with only a *.test-d.ts change passes"
 - tests-changed.test.ts: "only generated files changed passes"
 - tests-changed.test.ts: "a change under docs only passes"
 - graphs.test.ts: "the plan-review instructions in every graph name 15 files and 12 steps"
@@ -922,7 +928,7 @@ Plan: E00-S06-T02
 Interactive Claude Code sessions run related tests after each edit and the changed tests before stop. handoff runs disable hooks, so this only serves sessions. When the edited file is itself a test, the hook drops --passWithNoTests so an empty match fails. A PreToolUse hook on Bash blocks vitest -u and --update unless the user asked for a snapshot update.
 
 ## Where in the code
-.claude/settings.json (new): PostToolUse, Stop and PreToolUse hooks
+.claude/settings.json (on main with the npm and npx deny rules of ADR 0063): add PostToolUse, Stop and PreToolUse hooks and keep the deny rules
 scripts/hooks/related-tests.mjs, scripts/hooks/changed-tests.mjs (new)
 scripts/hooks/block-snapshot-update.mjs (new)
 scripts/hooks/related-tests.test.ts (new)
@@ -939,6 +945,7 @@ none
 
 ## ADRs
 docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md
+docs/adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md
 
 ## Out of scope
 handoff run configuration.
@@ -958,7 +965,7 @@ As a maintainer, I want the NorthMES project set up in handoff with its graphs a
 
 Module: handoff. Blocked by: E00-S01 to E00-S06, E01-S01. Design: none.
 
-ADRs: [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md).
+ADRs: [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md).
 
 Acceptance criteria:
 
@@ -984,7 +991,7 @@ Plan: E00-S07-T01
 Finish the handoff setup. SP0 is done (2026-10-05): handoff supports a repository and plan Project owned by an organization. The transfer is done (E01-S01-T02, 2026-10-05), so add_project targets northmes/northmes directly. In a Claude Code session: import the three graphs from docs/agents/handoff/graphs; project settings, with the handoff run rules in the agent notes; one GitHub milestone per release; setup_project until ready. handoff's scheduler is not used: the operating session starts each run with start_run and names the graph, and the first runs use northmes-guided.
 
 ## Where in the code
-docs/agents/handoff/graphs/northmes-guided.json, northmes-standard.json and northmes-lean.json: the planner and coder nodes name the library skills tdd and codebase-design and the MCP server context7, and the plan reviewer names context7 (imported 2026-10-05). Node instructions follow the rules in docs/plan/13-delivery-and-github.md (Node instructions), and each node sets its effort where handoff supports it. Project settings: setup command sh scripts/handoff/setup.sh; empty teardown; agent notes (tests start their own Postgres with @testcontainers/postgresql, so runs need no shared database and no .env; run every command as pnpm or git from the repository root, since any other command, docker included, waits for a person's permission; port 3000 belongs to handoff and the app takes its port from PORT; name anything created outside the worktree after HANDOFF_RUN_SHORT; put follow-ups in the pull request description; return needs_input when a dependency you need was released within Renovate's minimumReleaseAge window); UI paths apps/web/**, modules/*/web/**, packages/ui/**, packages/web-sdk/**; plan budget 15 files and 12 steps; library group northmes with tdd and codebase-design on the planner and coder.
+docs/agents/handoff/graphs/northmes-guided.json, northmes-standard.json and northmes-lean.json: the planner and coder nodes name the library skills tdd and codebase-design and the MCP server context7, and the plan reviewer names context7 (imported 2026-10-05); the coder also names vitest, pnpm, turborepo, apollo-client and playwright-cli, and the code review node names wrdn-authz and secret-serialization (docs/adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md). Node instructions follow the rules in docs/plan/13-delivery-and-github.md (Node instructions), and each node sets its effort where handoff supports it. Project settings: setup command sh scripts/handoff/setup.sh; empty teardown; agent notes (tests start their own Postgres with @testcontainers/postgresql, so runs need no shared database and no .env; run every command as pnpm or git from the repository root, since any other command, docker included, waits for a person's permission; port 3000 belongs to handoff and the app takes its port from PORT; name anything created outside the worktree after HANDOFF_RUN_SHORT; put follow-ups in the pull request description; return needs_input when a dependency you need was released within Renovate's minimumReleaseAge window); UI paths apps/web/**, modules/*/web/**, packages/ui/**, packages/web-sdk/**; plan budget 15 files and 12 steps; library group northmes with tdd and codebase-design on the planner and coder.
 
 ## Tests first
 - Session check: setup_project returns ready true
@@ -996,6 +1003,7 @@ none
 ## ADRs
 docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md
 docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md
+docs/adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md
 
 ## Out of scope
 The demo seed command and .claude/launch.json handoff-demo (E02-S08), handoff's scheduler (not used), creating issues beyond E00 and E01.
@@ -1006,7 +1014,7 @@ chore(handoff): enable library skills and Context7 in the graphs
 ## Acceptance criteria
 - [ ] setup_project reports ready
 - [ ] The three graphs import without a compile error
-- [ ] The planner and coder nodes of all three graphs name the library skills tdd and codebase-design and the MCP server context7
+- [ ] The planner and coder nodes of all three graphs name the library skills tdd and codebase-design and the MCP server context7; the coder also names vitest, pnpm, turborepo, apollo-client and playwright-cli, and the code review node names wrdn-authz and secret-serialization
 - [ ] The run configuration denies the grilling and domain-modeling skills (docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), and the pull request description says where the deny is set
 - [ ] The plan Project shows Status Shaping, Ready, Running, In review and Done, with the Size field left empty
 - [ ] pnpm check passes in a worktree made by the setup command
@@ -1482,7 +1490,7 @@ Goal: port the integration spike test-first into the repository, so that one pro
 
 Who it is for: Maintainer. Also: Plugin developer.
 
-ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
+ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Out of scope: the frontend widget plugin, `plugin check` and packaging `@northmes/web-build` for use outside the workspace (moved to E21, inside M2); Better Auth and real permissions (E05); audit (E05); hardening of the shell (E04).
 
@@ -1597,22 +1605,28 @@ Notes: the resolve-hook test is required in `ci / gate` from M1. Fact commands n
 
 As a planner, I want the shell to load the planning module's screen at run time, so that modules ship their own screens without a shell rebuild.
 
-Module: web (`apps/web`, `packages/web-sdk`, `packages/web-build`, `modules/planning/web`). Blocked by: E02-S03. Design: none (tracer screen; the design rule for UI tasks does not apply). Its tasks carry `human` and run in a session, because `handoff-demo` arrives with E02-S08.
+Module: web (`apps/web`, `packages/web-sdk`, `packages/web-build`, `packages/contracts`, `modules/planning/web`, `modules/planning/contracts`). Blocked by: E02-S03. Design: none (tracer screen; the design rule for UI tasks does not apply). Its tasks carry `human` and run in a session, because `handoff-demo` arrives with E02-S08.
 
-ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md).
+ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - `apps/web` is a pure `@module-federation/runtime` host: it fetches `GET /api/web/modules`, registers the listed remotes and builds the route tree from each remote's `routes(plantRoute)`.
 - The planning remote exposes `./module = defineWebModule(...)` built through `defineRemoteConfig`, and its board stub screen lists production orders with core's article names.
-- Shared singletons (react, react-dom, the router, Apollo Client, `@northmes/web-sdk`, `@northmes/ui`) are never bundled into a remote; a guard fixture that bundles one fails the build.
+- Shared singletons (react, react-dom, the router, Apollo Client, `@northmes/web-sdk`, `@northmes/ui`) are never bundled into a remote; a guard fixture that bundles one fails the build. Each remote bundles its own `zod`, `@northmes/contracts` and `@northmes/<id>-contracts` copies on purpose, and the guard lets them pass.
 - Nest serves each remote at `/modules/<id>/<version>/` with immutable caching; a disabled module never appears in any browser request.
 - A remote that fails to load gets a placeholder route and an "(unavailable)" menu entry in its usual position.
 - The page runs under a strict CSP of `'self'` with zero violations.
+- The planning remote's routes take their paths from `planningLinks` in `@northmes/planning-contracts`, declared with `defineModuleLinks` from `@northmes/contracts`; each builder returns `{ to, params, search, href }`.
+- No app path is written as a string literal in `to=`, `href=`, `navigate({ to })`, `redirect({ to })` or `page.goto()` in `modules/*/web`, `examples/*/web`, `apps/web` and `e2e`; paths come from link builders, and a pattern check fails on a literal unless an allowlist entry gives a reason.
 
 Tests first:
 
-- `packages/web-build/test/guards.test.ts`: "a remote bundling @apollo/client fails naming the package".
+- `packages/web-build/test/guards.test.ts`: "a remote bundling @apollo/client fails naming the package"; "a fixture remote that bundles zod and @northmes/planning-contracts passes".
+- `packages/contracts/test/define-module-links.test.ts`: "order({ plant: plant-a, orderId: a/b }).href is /plant-a/planning/orders/a%2Fb"; "an empty orderId throws".
+- `packages/contracts/test/define-module-links.test-d.ts`: a missing `orderId`, an extra argument and an unknown entry fail typecheck.
+- `modules/planning/web/test/routes.links.test.tsx`: "every planningLinks entry matches a route fullPath".
+- `test/meta/path-literals.test.ts`: "a fixture `<Link to="/x">` in a module web file fails, and a builder call passes".
 - `apps/server/test/rest/web-modules.int.test.ts`: "a disabled module is not listed".
 - `e2e/shell-degraded.spec.ts`: "a missing remote shows the placeholder and the menu entry".
 
@@ -1884,11 +1898,11 @@ Tests first:
 
 ### E04 web: Ship the shell, design tokens and shared UI patterns
 
-Goal: turn the skeleton shell into the shell every module screen mounts in. It covers tokens that pass contrast in light and dark, the shell services that make every page accessible, the plant switch, live updates that survive restarts, stale-tab detection, browser error reports and the page and form patterns. Module screens then add only their own content.
+Goal: turn the skeleton shell into the shell every module screen mounts in. It covers tokens that pass contrast in light and dark, the shell services that make every page accessible, the sidebar built from routes, the plant switch, live updates that survive restarts, stale-tab detection, browser error reports, and the page, form and formatting patterns. Module screens then add only their own content.
 
 Who it is for: Planner. Also: Operator, Plant admin, Plugin developer.
 
-ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0053](../adr/0053-translation-english-first-general-translation-later.md).
+ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Out of scope: the board (E08), the station screens (E11), the chat panel (E14), lists and `DataTable` (E06-S03), the ci / a11y gate and screen-reader passes (E20).
 
@@ -1959,7 +1973,7 @@ As a planner, I want a broken or slow module to show a clear placeholder while t
 
 Module: web (`apps/web`, `apps/server`). Blocked by: E04-S01, design task D2. Design: D2 shell and navigation (a design task under this story).
 
-ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md).
+ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -1969,12 +1983,17 @@ Acceptance criteria:
 - A minimal status route in the shell survives a broken core remote.
 - `/assets/browser-check.js` shows a plain page naming the browser and the minimum version below Chrome and Edge 111, Firefox 128 or Safari 16.4.
 - In-repo remotes ship no CSS; a remote that emits CSS bytes fails the build.
+- The sidebar comes only from routes: the shell builds each module's group, headed by its manifest `web.label`, from the routes whose `screenRoute` carries `nav`, ordered by `nav.order` and then by declaration order, with `nav.parent` nesting one level. `/api/web/modules` adds `modules[].kind`, so core comes first and plugins sit in their own section. `help` entries appear in the help menu under their module label.
+- An unknown path under a loaded module shows that module's not-found page with a title, one `h1` and a link to its first nav entry; the router's default not-found component covers every other path.
 
 Tests first:
 
 - `apps/server/test/web/integrity.int.test.ts`: "a missing remote file marks the module degraded".
 - `e2e/shell-degraded.spec.ts`: "a remote that times out shows the placeholder after 10 s".
 - `packages/web-build/test/css-guard.test.ts`: "a remote emitting CSS fails".
+- `apps/web/test/nav-from-routes.test.ts`: "a screenRoute with nav appears under its module, ordered by nav.order"; "a route that the plant's permissions deny has no entry"; "a nav entry with a preset search links to that search".
+- `apps/web/test/sidebar.test.tsx`: "entries without order keep declaration order"; "a nested entry renders under its parent"; "a plugin module renders in the plugins section"; "help entries appear in the help menu under their module label".
+- `e2e/not-found.spec.ts`: "an unknown path under a loaded module shows its not-found page with a title and one h1".
 
 ##### E04-S02-T01 web: Design the shell, navigation and station frame (D2)
 
@@ -1986,11 +2005,11 @@ Owning story: E04-S02 (issue number once it exists). UI tasks waiting on this: t
 Page: shell-<issue>-navigation.dc.html (variations page first: yes, the shell is a new kind of screen)
 
 ## Frames
-- Sidebar with core, module and plugin sections in a stable order; the collapsed rail; the 320 px sheet
-- Top bar with breadcrumb, page actions slot, help menu and user menu
+- Sidebar with core, module and plugin sections in a stable order, one group per module and nav entries nested one level; the collapsed rail; the 320 px sheet
+- Top bar with breadcrumb, page actions slot, help menu with entries grouped by module, and user menu
 - Plant switcher as a menu of links
 - Skip link, landmarks and the title pattern ("Planning board · Plant A · NorthMES")
-- The module unavailable placeholder with its "(unavailable)" menu entry, the error panel and the minimal status route
+- The module unavailable placeholder with its "(unavailable)" menu entry, the module not-found page, the error panel and the minimal status route
 - The blocking reload dialog and the "Live updates paused, reconnecting" banner
 - The sign-in page, with a wrong password that keeps the username
 - The station frame
@@ -2019,9 +2038,9 @@ docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames Sh
 
 As a planner using a keyboard or a screen reader, I want every page to have a title, a heading, landmarks and spoken status messages, so that I can find my way and hear what changed.
 
-Module: web (`apps/web`, `packages/web-sdk`). Blocked by: E04-S02. Design: D2.
+Module: web (`apps/web`, `packages/web-sdk`, `packages/ui`). Blocked by: E04-S02. Design: D2.
 
-ADRs: [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md).
+ADRs: [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -2030,12 +2049,18 @@ Acceptance criteria:
 - A skip link, landmarks, one help menu in a fixed place and a stable sidebar order exist on every page.
 - `announce()` writes to polite and assertive live regions outside `#root` through a short queue; `notify()` goes to the toaster only.
 - A per-remote Vitest harness fails on a leaf route without a title.
+- `useBreadcrumbs()` returns `{ label, href }` for each route match whose route has a title; `PageFrame` takes the crumbs and an optional `entityLabel`, which replaces the last crumb and the specific part of the document title ("Order 1001 · Plant A · NorthMES").
+- `IdentifierLink` and the `PageFrame` breadcrumb take an `href` and render through the `LinkProvider` component in `@northmes/ui`, or a plain `<a>` without a provider. The shell mounts `<LinkProvider component={ModuleLink}>` once inside `RouterProvider`. `ModuleLink` in `@northmes/web-sdk` renders `<a href>`, preloads on intent and, on an unmodified primary click, calls `router.navigate({ href })`, so a cross-module link never reloads the document.
 
 Tests first:
 
 - `packages/web-sdk/test/announce.test.tsx`: "two messages in a row are both read".
 - `modules/planning/web/test/routes.titles.test.tsx`: "every leaf route has a title".
 - `e2e/a11y/shell.spec.ts`: "focus moves to the h1 after navigation".
+- `packages/web-sdk/test/use-breadcrumbs.test.tsx`: "a detail route yields module, list and entity crumbs".
+- `packages/ui/test/page-frame.test.tsx`: "entityLabel sets the last crumb and the title".
+- `packages/web-sdk/test/module-link.test.tsx`: "a plain click navigates without a document load"; "a ctrl click and a middle click are left to the browser".
+- `packages/ui/test/identifier-link.test.tsx`: "renders through the provided link component and falls back to an anchor".
 
 #### E04-S04 web: Switch plants without mixing their data
 
@@ -2043,18 +2068,19 @@ As a planner who works in two plants, I want to switch plant from the shell and 
 
 Module: web (`apps/web`, `packages/web-sdk`). Blocked by: E04-S02, E05-S03. Design: D2.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - The plant slug is in the URL (`/$plant/...`) and in the `x-northmes-plant` header on every request; the plant is never stored on the session.
 - `createNorthmesClient({ plantId })` returns one Apollo client per plant with its own graphql-ws client; a plant switch disposes the old one.
 - When the new plant's module set or versions differ, the shell does one full navigation; otherwise it swaps the permission set and the client.
+- Each plant link keeps the current route and its search when the route's only path param is `$plant`. On a route with entity params it goes to the nearest ancestor route without them and drops the search, and the full navigation uses the same target.
 - Nav entries and widgets follow the current plant's permissions.
 
 Tests first:
 
-- `apps/web/test/plant-switch.test.tsx`: "a different module set triggers one document navigation".
+- `apps/web/test/plant-switch.test.tsx`: "a different module set triggers one document navigation"; "on /plant-a/planning/orders/1 the plant-b link is /plant-b/planning/orders".
 - `e2e/plant-switch.spec.ts`: "two tabs on two plants each show only their own orders".
 
 #### E04-S05 web: Keep live updates through restarts and catch stale tabs
@@ -2101,17 +2127,20 @@ Notes: System health shows the rows (E16-S03).
 
 #### E04-S07 ui: Build pages and forms from shared patterns
 
-As a plugin developer, I want page states, forms and plant time display as shared patterns, so that every screen looks and behaves the same and I write only the content.
+As a plugin developer, I want page states, forms and the display of dates, times and numbers as shared patterns, so that every screen looks and behaves the same and I write only the content.
 
-Module: ui, web-sdk (`packages/ui`, `packages/web-sdk`). Blocked by: E04-S03, design task for the canonical list and form page. Design: the canonical list and form page (a design task under this story).
+Module: ui, web-sdk, contracts (`packages/ui`, `packages/web-sdk`, `packages/contracts`). Blocked by: E04-S03, design task for the canonical list and form page. Design: the canonical list and form page (a design task under this story).
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0053](../adr/0053-translation-english-first-general-translation-later.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - `PageFrame` covers loading (a skeleton of the populated layout), empty with the action that creates the first item, error with a way out, and populated.
-- `useZodForm` in `@northmes/ui` and `useCommandForm` in `@northmes/web-sdk` run Zod validation from the command contract, show an error summary, map server `fieldErrors` to fields and keep values on a server error.
-- `formatPlantTime` formats instants in the plant zone and adds the short zone name when the offset changes; a lint fails on `Intl.DateTimeFormat` without `timeZone`.
+- `useZodForm` in `@northmes/ui` and `useCommandForm({ contract, mutation, entity?, optimistic? })` in `@northmes/web-sdk` validate `contract.fields`, show an error summary, map server `fieldErrors` to fields and keep values on a server error. `useCommandForm` adds `id` (a new uuidv7 for target `new`, `entity.id` for `existing`), `expectedVersion` from `entity.version` and the shared reason argument.
+- One function in `@northmes/web-sdk` maps every `fieldErrors` entry, from Zod or a DomainError, to the field at its dot path, or to the error summary when no field has that path.
+- `@northmes/ui` exports by name the react-hook-form pieces module forms need (`useFieldArray`, `useWatch`, `useController`, `useFormContext`, `FormProvider` and their types).
+- Formatters and parsers in `@northmes/contracts` (subpath `format`) take a presentation value and use the base locale `en-GB-u-ca-gregory-nu-latn`, an explicit `hourCycle` and component options only. `PresentationProvider` and `usePresentation()` in `@northmes/ui` return `DEFAULT_PRESENTATION` (`iso`, `h23`, `spaceComma`) outside a provider, and `DateTimeText` reads them.
+- A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat` and `toLocale*String` calls outside `packages/contracts/src/format/`.
 - Master data text renders with its `lang` attribute.
 - `@northmes/ui` imports no Apollo, router or GraphQL code.
 
@@ -2119,7 +2148,11 @@ Tests first:
 
 - `packages/ui/test/page-frame.test.tsx`: one test per state.
 - `packages/web-sdk/test/use-command-form.test.tsx`: "a server error keeps the typed values and focuses the summary".
-- `packages/web-sdk/test/format-plant-time.test.ts`: "a time in the repeated autumn hour shows the zone name".
+- `packages/web-sdk/test/field-errors.test.ts`: "operations.1.cycleTime lands on that field"; "an unknown path lands in the summary".
+- `packages/ui/test/form-exports.test.ts`: "every name on the form export list is exported and appears in the API report".
+- The format tests of ADR 0061's Confirmation (`plant-time`, `plant-date`, `number` and `week` in `packages/contracts/src/format/`) and `packages/ui/test/date-time-text.test.tsx`, under the locale, Temporal and TZ legs; a fixture remote that calls `toLocaleDateString()` fails the lint.
+
+Notes: `formatMeasure` and `formatQuantity` need the unit catalog and arrive with E06-S06. E06-S13 fills `PresentationProvider` with each plant's resolved values.
 
 #### E04-S08 web: Run every remote with Fast Refresh in pnpm dev
 
@@ -2457,11 +2490,11 @@ Notes: ADR 0013 awaits a lawyer's confirmation on retention, so the default peri
 
 ### E06 core: Hold master data, units, settings and plant calendars
 
-Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings and plant calendars that yield availability windows. A new register then costs one definition and a handful of files.
+Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, and plant calendars that yield availability windows. A new register then costs one definition and a handful of files.
 
 Who it is for: Plant admin. Also: Planner, Plugin developer.
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Out of scope: CSV and Excel import of registers, list export, the reporting schema, the screen and plugin generators.
 
@@ -2494,11 +2527,12 @@ As a planner, I want every list to page, filter, sort, search and group the same
 
 Module: sdk (`packages/sdk`, `packages/contracts`). Blocked by: E05-S04, E05-S12. Design: none.
 
-ADRs: [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md).
+ADRs: [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - One declaration in a contracts package generates the connection type, typed filters with `and`, `or` and `not`, `orderBy` (at most three keys, nulls last, `id` appended), `search`, `aggregates` and `groupedAggregates` (1 to 3 keys, at most 500 groups).
+- `defineList` comes from `@northmes/contracts`, so a remote that reads a list declaration loads no Nest code. It throws at definition time when a filterable field's URL key equals a reserved key (`q`, `sort`, `group`, `size`, `page`, `after`, `before`, `archived`, `view`, `tab`).
 - Page size defaults to 25 and ranges 1 to 100; cursors are opaque, and a cursor from another `orderBy` is refused with `core.list.invalid_cursor`.
 - Relations resolve as objects: to-one through a request DataLoader, to-many as a nested connection, to another module as a nullable Federation reference with `<ref>Id` filters.
 - Instants declared as plant dates also get `<field>Date` and `<field>ProductionDay` filters in the plant zone.
@@ -2509,25 +2543,35 @@ Tests first:
 - `packages/sdk/test/lists/order-by.int.test.ts`: "seven orderBy cases walk all rows forward and backward".
 - `packages/sdk/test/lists/plant-date.int.test.ts`: "deadlineAtDate eq 2026-10-26 is correct across the Stockholm DST change".
 - `apps/server/test/gateway/limits.int.test.ts`: "a 13-level query returns a depth error".
+- `packages/contracts/test/define-list.test.ts`: "a filter field named sort throws".
+- `packages/contracts/test/pure-imports.test.ts`: "importing every @northmes/*-contracts package in a fresh process loads no @nestjs/* or react module".
 
 #### E06-S03 web: Show lists in one DataTable with URL state
 
-As a planner, I want list filters, sort and grouping kept in the URL, so that I can share a filtered list and come back to it.
+As a planner, I want list filters, sort, grouping and the open tab kept in the URL, so that I can share the view I see and come back to it.
 
-Module: web-sdk, ui. Blocked by: E06-S02, E04-S07. Design: the canonical list and form page.
+Module: contracts, web-sdk, ui, web. Blocked by: E06-S02, E04-S07. Design: the canonical list and form page.
 
-ADRs: [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
+ADRs: [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
-- `useListState` round-trips filters, sort, search and grouping through the URL; `useConnection` pages with Previous and Next.
+- `useListState` round-trips filters, sort, search and grouping through the URL for a route whose search is `listSearch(listDefinition)`; a filter change drops `after`, `before` and `page`; `useConnection` pages with Previous and Next.
+- `defineSearch`, search definitions on link manifest entries and `screenRoute`, and `useViewState` cover tabs and panels.
+- The shell's router parses and writes search through `urlSearch` from `@northmes/contracts`: every value parses as its string, arrays are comma lists and `true` is `1`. Link builders use the same `stringify`.
+- A key that fails its schema falls back to its default on its own, is dropped with a replace navigation and is announced once.
 - `DataTable` shows sortable headers with `aria-sort`, filter chips with counts and group rows.
 - Errors are classified (invalid cursor, forbidden, network) with a way out.
 - The table works with the keyboard and passes axe in the browser-mode project.
 
 Tests first:
 
-- `packages/web-sdk/test/use-list-state.test.tsx`: "URL state round trip".
+- `packages/web-sdk/test/use-list-state.test.tsx`: "URL state round trip"; "a filter change drops after, before and page".
+- `packages/web-sdk/test/use-view-state.test.tsx`: "a tab change and a filter change in one tick both reach the URL"; "a value equal to its default removes the key"; "a tab change does not rerun the loader"; "?status=bogus&q=x keeps q and falls back on status"; "a removed enum value in the URL is dropped and announced once".
+- `packages/ui/test/entity-detail-page.test.tsx`: "?tab=history opens the History tab".
+- `packages/contracts/test/url-search.test.ts`: "q=1001 round-trips as the string 1001"; "status=planned decodes as a one-item list and status=planned,active as two items"; "deadlineAtDate=2026-10-01..2026-10-31 round-trips"; "an item containing a comma is refused".
+- `apps/web/test/router-search.test.tsx`: "navigate with typed search writes the documented URL, and useSearch reads back equal values".
+- `packages/contracts/test/define-module-links.test-d.ts`: a search key the entry does not declare and a status value outside the enum fail typecheck; a type test in `packages/web-sdk`: a `screenRoute` call that passes both `link` and `search` fails typecheck.
 - `packages/ui/test/data-table.a11y.test.tsx`: "sortable headers expose aria-sort".
 
 #### E06-S04 core: Define a register once with the master-data kit
@@ -2536,11 +2580,12 @@ As a plugin developer, I want one `defineMasterData` definition to yield the tab
 
 Module: core, sdk, web-sdk. Blocked by: E06-S02, E06-S03, E05-S02. Design: the canonical list and form page.
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - Equipment groups (company or plant level) and tools (level as the product owner decides; plant by default) are the first two registers built with the kit.
+- `masterDataRoutes(definition, link, overrides)` mounts a register's list, detail, create and edit routes under its entry in core's link manifest (for example `coreLinks.tools`), so paths, title, nav entry and permission come with them. A copied list or detail URL opens the same tab, filters and sort in another browser.
 - Codes are unique per scope through the exclusion constraint over `scope_span` with btree_gist; a plant code that clashes with a company code fails with the code-clash error, which hides the other plant's key.
 - Codes compare case-insensitively through a stored `code_key`, and an archived row keeps its code (working defaults until the product owner answers).
 - Records are archived, never deleted; lists hide archived rows unless `includeArchived: true`.
@@ -2550,6 +2595,7 @@ Tests first:
 
 - `packages/testing/src/contracts/master-data.contract.ts` run from `modules/core/test/registers.contract.test.ts`: "a plant code equal to a company code is refused"; "T-100 in two plants is allowed".
 - `modules/core/test/code-clash.int.test.ts`: "the clash error does not reveal the other plant's id".
+- `e2e/view-link.spec.ts`: "a copied URL opens the same tab, filters and sort in a second browser context".
 
 Notes: if three of the first five registers need escape level 2 or 3, the kit is reworked before more registers use it.
 
@@ -2559,27 +2605,28 @@ As a plant admin, I want to register equipment with its group, color and plannab
 
 Module: core. Blocked by: E06-S04. Design: canonical list and form page.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
 
 Acceptance criteria:
 
-- Plant settings hold the IANA zone and the production day start; a start inside the spring gap or the repeated autumn hour of the next 10 years is rejected.
+- The plant record holds the IANA zone (`core.plant.time_zone`) and the production day start (`core.plant.production_day_start`); a start inside the spring gap or the repeated autumn hour of the next 10 years is rejected.
+- The plant form's zone picker lists the ids the server accepts (`pg_timezone_names` filtered by Temporal), served by core. It never uses the browser's `Intl.supportedValuesOf("timeZone")`.
 - Equipment always sits at plant level, belongs to a group and carries IsPlannable and IsOee flags; only plannable or OEE equipment appears on the board.
 - Group colors keep an existing color, else the import color, else one of the 20 palette colors; colors group but never carry state.
 - Translatable names use the `localizedText` shape with a translations column from the first migration.
 
 Tests first:
 
-- `modules/core/test/plant-settings.test.ts`: "a production day start of 02:30 in Europe/Stockholm is rejected".
+- `modules/core/test/plant-record.test.ts`: "a production day start of 02:30 in Europe/Stockholm is rejected".
 - `modules/core/test/equipment.int.test.ts`: "non-plannable equipment is not in the board's equipment list".
 
 #### E06-S06 core: Hold articles, routings and operations with cycle time in units
 
-As a planner, I want each operation's cycle time, retool time, lead time and rates stored in canonical units with what was typed, so that durations are exact and screens show the entry unit.
+As a planner, I want each operation's cycle time, retool time, lead time and rates stored in canonical units with what was typed, so that durations are exact and forms and detail views show the entry unit.
 
-Module: core. Blocked by: E06-S04, E06-S01. Design: canonical list and form page.
+Module: core, contracts, ui. Blocked by: E06-S04, E06-S01. Design: canonical list and form page.
 
-ADRs: [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md).
+ADRs: [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
 
 Acceptance criteria:
 
@@ -2587,12 +2634,14 @@ Acceptance criteria:
 - Routings hold operations with cycle time, retool, fixed and lead time in seconds (`cycle_time_s` and so on), OEE target as a fraction, pieces per cycle, cycles per piece and StartNextAfterQuantity.
 - A value typed in another unit keeps `<name>_entry_value` and `<name>_entry_unit`.
 - Operation equipment and operation tools carry their overrides; "do not update" blocks import updates on operation and operation equipment.
-- A unit-aware number input labels the unit in its accessible name.
+- A unit-aware number input labels the unit in its accessible name. It parses with the plant's number format: the decimal sign always, the group sign only between groups of three, and a point as the decimal sign under `spaceComma`, so "12,5" gives 12.5. Other input is refused with the expected form in the message.
+- `formatMeasure`, `measureAccessibleName` and `formatQuantity` in `@northmes/contracts` print measured values with the catalog symbol, rounded to the unit's display decimals without trailing zeros, and stock quantities with every digit; `MeasureText` in `@northmes/ui` uses them.
 
 Tests first:
 
 - `modules/core/test/operations.int.test.ts`: "cycle time entered as 420 pieces per hour stores 3600/420 s and keeps the entry"; "do not update blocks an import change".
 - `packages/ui/test/unit-input.test.tsx`: "the accessible name includes the unit".
+- `packages/contracts/src/format/measure.test.ts`: "3600/420 s requested as PIECES_PER_HOUR prints 420 with the catalog symbol"; "formatQuantity keeps every digit of 123456789012.123456"; "a value rounds to its unit's display decimals and drops trailing zeros".
 
 #### E06-S07 core: Hold customers and warehouses at company level
 
@@ -2618,18 +2667,20 @@ As a plant admin, I want module settings edited in one form and every change aud
 
 Module: core, contracts, ui. Blocked by: E05-S02, E04-S07. Design: settings page (canonical list and form page).
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - `defineSettings` (Zod) in a contracts package declares a module's settings; values are stored at company and plant scope in audited tables.
-- `SettingsForm` renders the definition and saves through a command.
+- `SettingsForm` renders the definition and saves through a command. It reads labels through schema metadata, so a schema built with a remote's own Zod copy renders.
+- The SDK settings reader returns each field's effective value with its source (`default`, `company`, `plant`). At plant scope, `SettingsForm` shows the inherited company or default value for each field without a plant value, and offers to clear a plant value.
 - Statement triggers bump `core.config_revision` on changes to settings, roles, assignments, retention and installed modules, and every audit command row carries the revision.
 - Behaviour switches that look like infrastructure (the `/mcp` switch, connector shadow or live mode) are settings commands.
 
 Tests first:
 
-- `modules/core/test/settings.int.test.ts`: "a plant value overrides the company value"; "a change bumps config_revision and writes a change row".
+- `modules/core/test/settings.int.test.ts`: "a plant value overrides the company value"; "a change bumps config_revision and writes a change row"; "a field without a plant value reports source company".
+- `packages/ui/test/settings-form.test.tsx`: "labels render from a schema built with a second Zod copy".
 
 Notes: the settings cascade below company and plant is cut candidate 1.
 
@@ -2714,6 +2765,32 @@ Tests first:
 
 Notes: this story is cut item 1 (with `objectFromZod` and the settings cascade). Take it only if velocity allows at M2.
 
+#### E06-S13 core: Set date, clock and number format per company and plant
+
+As a plant admin, I want to set how dates, clock times and numbers are shown and typed for the company, with a plant override, so that every screen writes them the way people at the plant read them.
+
+Module: core, web (`modules/core`, `modules/core/contracts`, `apps/server`, `apps/web`, `packages/web-sdk`). Blocked by: E06-S08, E04-S07, E04-S04, E07-S01. Design: settings page (canonical list and form page).
+
+ADRs: [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
+
+Acceptance criteria:
+
+- `core.presentation` in `@northmes/core-contracts` is one `defineSettings` schema with `dateFormat` (`iso`, `dmyDot`, `dmySlash`, `mdySlash`; default `iso`), `hourCycle` (`h23`, `h12`; default `h23`) and `numberFormat` (`spaceComma`, `commaPoint`, `pointComma`; default `spaceComma`), each with a label and a description, at company scope with a plant override. It has no time zone key and refuses one.
+- The server resolves each field from the plant value, then the company value, then the default, and reports its source. Editing needs `core.settings:manage`; reading the resolved values needs only a session or station cookie for the plant.
+- `GET /api/web/modules?plant=<slug>` returns `plant { id, slug, name, timeZone, presentation }` with the resolved values. `ShellProvider` fills `PresentationProvider` from it, so boot needs no extra query, and `usePlantTime()` returns bound formatters.
+- The plant switch swaps the presentation context together with the permission set. A settings change shows on the next load, plant switch or reconnect.
+- GraphQL, REST, MCP tools, events, the audit export and the rollback CSV never use the settings: instants stay ISO 8601 with offset, and numbers keep a point decimal without grouping.
+
+Tests first:
+
+- `modules/core/test/presentation-settings.int.test.ts`: "a plant value overrides the company value per field"; "a field without a plant value returns the company value with source company"; "a field with neither returns the default with source default"; "a timeZone key is refused"; "a change bumps config_revision and writes one change row".
+- `apps/server/test/rest/web-modules.int.test.ts`: "/api/web/modules?plant=p2 returns p2's timeZone and resolved presentation"; "a station cookie for p2 gets the same values".
+- A wire test: with the company set to `dmyDot`, `h12` and `commaPoint`, a GraphQL `Instant` field is byte-identical to a run with the defaults.
+
+- `e2e/presentation.spec.ts`: the company uses `dmyDot` and plant P2 overrides it with `iso`; an order deadline shows `25.10.2026` at P1 and `2026-10-25` after switching to P2; the switch causes no document navigation when the module set is unchanged. The spec also runs in a Playwright project with locale `en-US` and shows the same strings.
+
+Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one.
+
 ### E07 planning: Plan orders in per-planner drafts and run autoplan
 
 Goal: hold production orders, their operations and job orders, customer orders and demand, and let each planner change the plan in a private draft under soft locks that Save commits through one command. Autoplan runs as a job on the pure scheduling package and applies through the same command. Write-back, the board, proposals and the station all build on this command and its events.
@@ -2732,7 +2809,7 @@ As a planner, I want to create a production order for an article and release it 
 
 Module: planning. Blocked by: E06-S06. Design: production order list and detail (canonical list and form page).
 
-ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -2741,11 +2818,14 @@ Acceptance criteria:
 - Job orders are record class: DELETE and TRUNCATE are revoked from `nm_app`, and autoplan never deletes or recreates them.
 - `planningReleaseProductionOrder` stays validatable, with its validator payload in the MIT contracts package.
 - The production order list uses the list kit; the detail page shows operations and job orders.
+- `z.output` of the release contract's input is assignable to the generated `PlanningReleaseProductionOrderInput` without a cast.
+- Order deadlines on the list and the detail page follow the plant's presentation settings.
 
 Tests first:
 
 - `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order".
 - `modules/planning/test/status-transitions.test.ts`: "a finished job order cannot return to planned".
+- `modules/planning/web/test/commands.test-d.ts`: `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 
 #### E07-S02 planning: Link customer order lines to production orders
 
@@ -2918,7 +2998,7 @@ Goal: build the planning board in house as a resource timeline, plus the job ord
 
 Who it is for: Planner.
 
-ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
+ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Out of scope: the cuts above; proposed rows from agents (E15-S03 adds that state); FullCalendar or any commercial scheduler component.
 
@@ -2930,7 +3010,7 @@ As a planner, I want machines grouped by equipment group on a time axis in plant
 
 Module: planning (`modules/planning/web`). Blocked by: E01-S04, design task D3, E04-S07. Design: D3 planning board (a design task under this story).
 
-ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
+ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -2939,10 +3019,13 @@ Acceptance criteria:
 - Non-working time is shaded per machine from availability windows.
 - Blocks are at least 24 px tall; blocks narrower than 24 px merge into cluster targets whose names carry state counts.
 - `e2e/board-perf.spec.ts` runs against the real board core instead of the spike fixture.
+- Tick labels come from the `@northmes/contracts` formatters: clock times follow `hourCycle`, days read like "Tue 3 Nov" and ISO weeks like `W53`.
+- The board URL keeps `zoom=<preset id>` and `from=<plant-local date>`, with the defaults (the default preset, the current production day) stripped; Earlier and Later replace the history entry.
 
 Tests first:
 
 - `modules/planning/web/src/board/core/scale.test.ts`: "day ticks on 2026-10-25 span 25 hours"; "culling returns only blocks in the visible range".
+- `modules/planning/web/test/board-search.test.tsx`: "Earlier and Later replace the history entry".
 - `modules/planning/web/test/board/cluster.test.tsx`: "four narrow blocks render one cluster named with 2 late".
 
 #### E08-S02 planning: Show block fields, states and the hover card
@@ -2951,7 +3034,7 @@ As a planner, I want each block to show the fields I chose and its state in text
 
 Module: planning. Blocked by: E08-S01. Design: D3.
 
-ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
+ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -2960,10 +3043,12 @@ Acceptance criteria:
 - Block text is black or white from `textColorFor`, and every block has a foreground-colored border.
 - Each block's accessible name is built through `aria-labelledby` from visible spans with `lang` plus hidden spans for times and states.
 - `BoardFieldSlot` carries `accessibleText`; core and plugins fill fields through it.
+- `order=<production order id>` in the board URL opens that order's detail panel, so a shared link shows the same order.
 
 Tests first:
 
 - `modules/planning/web/test/board/block-name.test.tsx`: "a late block in my draft is named with its times and both states".
+- `modules/planning/web/test/board-search.test.tsx`: "`?zoom=week&from=2026-11-02&order=<id>` opens that range with the panel open"; "an order id outside the range opens the panel's not-found state".
 - `e2e/a11y/board.axe.spec.ts`: "the board passes axe with wcag22aa in every block state".
 
 #### E08-S03 planning: Move a block by pointer into my draft
@@ -3054,7 +3139,7 @@ As a planner who uses a screen reader, I want a table of job orders with deadlin
 
 Module: planning. Blocked by: E07-S09, E06-S03. Design: D3 (table view page).
 
-ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md).
+ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -3062,6 +3147,7 @@ Acceptance criteria:
 - A "Late only" filter uses the same query as the late-order tool.
 - The shared Move dialog moves a row into my draft.
 - Late rows show the engine's facts: deadline rule, `asOf`, delay and whether the forward fallback ran.
+- The board URL keeps `view=table`, so a shared link opens the table view.
 
 Tests first:
 
@@ -3630,7 +3716,7 @@ As a planner, I want an agent to find orders, open one, and list late orders wit
 
 Module: planning, core. Blocked by: E12-S01, E07-S09. Design: none.
 
-ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md).
+ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
 
 Acceptance criteria:
 
@@ -3641,7 +3727,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `modules/planning/test/tools/find-orders.int.test.ts`: "the late filter returns the deadline rule, asOf and the fallback flag"; "GraphQL and the tool return the same ids".
+- `modules/planning/test/tools/find-orders.int.test.ts`: "the late filter returns the deadline rule, asOf and the fallback flag"; "GraphQL and the tool return the same ids"; "with the company set to dmyDot, h12 and commaPoint the tool result is byte-identical to a run with the defaults".
 
 #### E12-S03 planning: Answer schedule, capacity, material and duration questions
 
@@ -3814,19 +3900,19 @@ As a planner, I want to ask a question and see the answer stream in, so that I g
 
 Module: ai. Blocked by: E13-S03, E05-S07. Design: none.
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
 
 Acceptance criteria:
 
 - `POST /api/ai/chat` in the `api` role streams with keep-alive, under session cookie auth and the same-origin check.
 - The body is parsed strictly: roles user or assistant, part types text and step-start, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped.
-- The request carries the route plant; the instructions stay identical between runs, and one line of time context (plant, now, production day) follows the cached prefix.
+- The request carries the route plant; the instructions stay identical between runs, and one line of time context (plant, now, production day and the plant's presentation values, for example "dates 24.10.2026, 24-hour clock, decimal comma") follows the cached prefix. Tool outputs stay ISO 8601 and canonical.
 - Chat runs register with an `AiRunRegistry`; at shutdown they abort with reason `server-restarting` and get up to 5 s to settle their `ai_call` rows.
 
 Tests first:
 
 - `apps/server/test/rest/ai-chat.int.test.ts`: "a file part returns 400"; "41 messages return 400".
-- `modules/ai/test/instructions.test.ts`: "the instructions string is identical for two runs at different clocks".
+- `modules/ai/test/instructions.test.ts`: "the instructions string is identical for two runs at different clocks"; "the instructions string is identical for two runs with different presentation values".
 
 #### E14-S02 ai: Let the assistant call the planning tools in process
 
@@ -4578,11 +4664,11 @@ Notes: labelled `human`.
 
 ### E21 plugins: Build the example plugins outside the workspace
 
-Goal: finish the plugin path the skeleton started: the frontend widget example in the board's side slot, `plugin check` against the committed schema, a CI job that builds both examples from packed packages outside the repository and loads them into a running image, and the compatibility checks for slots and shared versions.
+Goal: finish the plugin path the skeleton started: the frontend widget example in the board's side slot, `plugin check` against the committed schema, a CI job that builds both examples from packed packages outside the repository and loads them into a running image, and the compatibility checks for slots, link patterns and shared versions.
 
 Who it is for: Plugin developer.
 
-ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md).
+ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Out of scope: the public npm SDK, `create-northmes-plugin`, the app repository, per-organization enablement; any third-party plugin on the pilot.
 
@@ -4601,11 +4687,13 @@ Acceptance criteria:
 - `example-widget` contributes to `planning/board/side/v1` with a required label, an `order` and a permission; `<Slot>` renders it in `WidgetFrame` as a section with `aria-labelledby`.
 - Each contribution has its own error boundary keyed by contribution id, reset by the selected entity, and focus moves to the fallback when it was inside the widget.
 - The plugin's stylesheet carries the plugin prefix and no preflight; a check fails on an unprefixed utility selector.
+- `pluginStyles({ prefix })` in `@northmes/web-build` writes the stylesheet entry from Tailwind's `theme.css` and `utilities.css` with the prefix and `@northmes/ui/theme.css`; `example-widget` uses it and copies no token value.
 
 Tests first:
 
 - `examples/plugin-widget/test/widget.test.tsx`: "a throwing widget shows its fallback and the board keeps working".
-- `packages/web-build/test/plugin-css.test.ts`: "an unprefixed utility selector fails".
+- `packages/web-build/test/plugin-css.test.ts`: "an unprefixed utility selector fails"; "pluginStyles with prefix acme emits acme:bg-primary reading var(--primary) and no preflight rules".
+- `packages/ui/test/theme-css.test.ts`: "every token variable in the token files has a mapping in theme.css, and theme.css holds no color value".
 
 #### E21-S02 plugins: Check a plugin against the committed schema
 
@@ -4638,6 +4726,7 @@ Acceptance criteria:
 
 - The `plugin-outside` CI job packs the MIT packages, installs an example from the tarballs in a temporary directory, builds it, drops it into a plugins directory, boots and runs the example e2e spec.
 - `@northmes/web-build` declares every build dependency, so it works outside the workspace.
+- The packed `@northmes/ui` includes `theme.css`, and the outside build of `example-widget` resolves it from the tarball.
 - A nightly Compose test runs a site image `FROM ghcr.io/northmes/northmes:<v>` with `example-validator` copied into `plugins/`; migrate applies its migration and app reaches ready.
 
 Tests first:
@@ -4646,15 +4735,17 @@ Tests first:
 
 #### E21-S04 plugins: Keep slots and shared versions compatible across releases
 
-As a plugin developer, I want slot and shared-version changes caught in CI, so that my plugin keeps working through a 0.x upgrade or fails with a clear status.
+As a plugin developer, I want slot, link pattern and shared-version changes caught in CI, so that my plugin and its links keep working through a 0.x upgrade or fail with a clear status.
 
 Module: plugins, web, ci. Blocked by: E21-S03. Design: none.
 
-ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
 - A CI check fails when a slot id from the previous release's snapshot disappears; changing a slot's props means adding `v2` and keeping `v1` for one deprecation window.
+- `pnpm gen` writes `modules/<id>/web/links.snapshot.json` (patterns, params, search keys, defaults and accepted enum values), and a CI check fails when a link pattern, param or search key from the previous release's snapshot disappears without a `moved` entry.
+- `defineModuleLinks(id, entries, { moved })` records moved patterns, and `movedRoutes(parent, links)` redirects each old pattern to its new one with `replace`, params mapped by name and the search kept. A moved entry stays for at least one minor release, so the links of an N-1 plugin keep working.
 - A web-only plugin on a removed slot gets status `incompatible` and boot succeeds; a plugin with a server part on an unknown slot still fails boot.
 - `/api/web/modules` checks each remote's shared versions; a committed N-1 widget build loads in Playwright on pull requests that touch the singleton list or the federation packages.
 - API Extractor writes a committed report per MIT package; the lockfile holds one `@nestjs/core` and one `@nestjs/graphql` resolution.
@@ -4663,6 +4754,8 @@ Tests first:
 
 - `apps/server/test/slots.int.test.ts`: "a web-only widget on a removed slot is incompatible and boot succeeds".
 - `e2e/widget-n-1.spec.ts`: "the frozen N-1 widget renders with no console error and no CSP violation".
+- `modules/planning/web/test/routes.moved.test.tsx`: "/plant-a/planning/orders/1?tab=history redirects to /plant-a/planning/production-orders/1?tab=history with replace".
+- The link snapshot check's own test: "a removed pattern without a moved entry fails and names the pattern".
 
 ### E22 core: Keep the regulated path open
 
@@ -4701,18 +4794,18 @@ As a plant admin, I want to export audit records in a documented format with tim
 
 Module: audit. Blocked by: E05-S11. Design: export action on the audit list.
 
-ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md).
 
 Acceptance criteria:
 
 - An export is a command whose detail holds its filters, row count and format version, written before streaming.
-- The format is JSON Lines plus a manifest with field labels, an id-to-label dictionary and plant zones; instants carry their UTC offset and the plant's IANA zone.
+- The format is JSON Lines plus a manifest with field labels, an id-to-label dictionary and plant zones; instants carry their UTC offset and the plant's IANA zone. Presentation settings never change it.
 - Migrations that rename an audited column record the mapping, and the export applies it.
 - The format is documented on the docs site with its version.
 
 Tests first:
 
-- `modules/audit/test/export.int.test.ts`: "an export writes its command before the first line"; "a renamed column exports under its new label with the mapping".
+- `modules/audit/test/export.int.test.ts`: "an export writes its command before the first line"; "a renamed column exports under its new label with the mapping"; "with the company set to dmyDot, h12 and commaPoint the export is byte-identical to a run with the defaults".
 
 #### E22-S03 repo: Carry requirement ids in tests and validation impact on each PR
 

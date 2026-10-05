@@ -9,7 +9,8 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | `company` (Company) | The business that uses NorthMES and owns its plants, master data and customers. Better Auth calls it an organization; ISA-95 calls it the enterprise. | tenant; organization outside the auth module |
 | `plant` (Plant) | One production site of a company, with its own time zone, machines, calendars and production orders. ISA-95 calls it a site; ERPs often tell plants apart by warehouse or department. | site, factory, location |
 | `scope` | A node in the scope tree (company, plant, and later area and line) that a row, a code and a role assignment belong to. | level, tenant |
-| plant time | The wall-clock time in the plant's time zone, which every screen shows with a zone label when it differs from the user's own. | local time (ambiguous), server time |
+| plant time | The wall-clock time in the plant's time zone, which every screen shows with a zone label when the browser zone differs from the plant zone. | local time (ambiguous), server time |
+| presentation settings | The company and plant settings that decide how dates, clock times and numbers are shown and typed: the date format, the hour cycle and the number format in `core.presentation`. Stored and transmitted values never change with them, and the plant's time zone is not one of them. | locale (NorthMES pins one base locale), regional settings, display preferences |
 
 ## Master data
 
