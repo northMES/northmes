@@ -1,0 +1,9 @@
+{
+  "name": "northmes",
+  "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "devDependencies": {
+    "vitest": "catalog:",
+    "yaml": "catalog:"
+  }
+}
