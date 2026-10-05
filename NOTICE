@@ -1,0 +1,19 @@
+NorthMES
+Copyright 2026 Krister Johansson trading as Flexmatic
+
+NorthMES is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version. The license text is in the LICENSE file.
+
+NorthMES is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+details.
+
+Third-party files
+
+The agent skills in .claude/skills are copied from
+https://github.com/mattpocock/skills at the commit pinned in skills-lock.json
+and are licensed under the MIT License. Their copyright and license notice is
+in .claude/skills/THIRD_PARTY_LICENSE.md.

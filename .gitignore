@@ -1,0 +1,13 @@
+# Internal material: kept out of the public repository (decided 2026-10-04).
+# The brief and research notes move to a private companion repository.
+/docs/project-brief.md
+/docs/research/
+
+node_modules/
+.DS_Store
+
+# Output of the to-questionnaire skill (may hold product owner material).
+/to-questionnaire-*.md
+
+# Personal Claude Code instructions (maintainer only).
+CLAUDE.local.md
