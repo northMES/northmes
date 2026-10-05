@@ -975,6 +975,8 @@ Tests first:
 
 Labels: `task`, `human`, `area: ci` (interactive session, approval cards). Blocked by: E00-S03-T01, E00-S04-T03, E00-S05-T03, E00-S06-T02, E01-S01-T01.
 
+Status on 2026-10-05: the three graphs are imported, with `northmes-guided` as the default; the repository's skills are in the library group `northmes`; the planner, plan reviewer and coder name `tdd`, `codebase-design` and `context7`. The agent notes, the setup command, the milestones and the run configuration deny remain.
+
 ```markdown
 Plan: E00-S07-T01
 
@@ -982,7 +984,7 @@ Plan: E00-S07-T01
 Finish the handoff setup. SP0 is done (2026-10-05): handoff supports a repository and plan Project owned by an organization. The transfer is done (E01-S01-T02, 2026-10-05), so add_project targets northmes/northmes directly. In a Claude Code session: import the three graphs from docs/agents/handoff/graphs; project settings, with the handoff run rules in the agent notes; one GitHub milestone per release; setup_project until ready. handoff's scheduler is not used: the operating session starts each run with start_run and names the graph, and the first runs use northmes-guided.
 
 ## Where in the code
-docs/agents/handoff/graphs/northmes-guided.json, northmes-standard.json and northmes-lean.json: after the skills are imported into the library group northmes, add "library": { "groups": ["northmes"] } to the planner and coder nodes and import the three graphs again. Node instructions follow the rules in docs/plan/13-delivery-and-github.md (Node instructions), and each node sets its effort where handoff supports it. Project settings: setup command sh scripts/handoff/setup.sh; empty teardown; agent notes (tests start their own Postgres with @testcontainers/postgresql, so runs need no shared database and no .env; run every command as pnpm or git from the repository root, since any other command, docker included, waits for a person's permission; port 3000 belongs to handoff and the app takes its port from PORT; name anything created outside the worktree after HANDOFF_RUN_SHORT; put follow-ups in the pull request description; return needs_input when a dependency you need was released within Renovate's minimumReleaseAge window); UI paths apps/web/**, modules/*/web/**, packages/ui/**, packages/web-sdk/**; plan budget 15 files and 12 steps; library group northmes with tdd and codebase-design on the planner and coder.
+docs/agents/handoff/graphs/northmes-guided.json, northmes-standard.json and northmes-lean.json: the planner and coder nodes name the library skills tdd and codebase-design and the MCP server context7, and the plan reviewer names context7 (imported 2026-10-05). Node instructions follow the rules in docs/plan/13-delivery-and-github.md (Node instructions), and each node sets its effort where handoff supports it. Project settings: setup command sh scripts/handoff/setup.sh; empty teardown; agent notes (tests start their own Postgres with @testcontainers/postgresql, so runs need no shared database and no .env; run every command as pnpm or git from the repository root, since any other command, docker included, waits for a person's permission; port 3000 belongs to handoff and the app takes its port from PORT; name anything created outside the worktree after HANDOFF_RUN_SHORT; put follow-ups in the pull request description; return needs_input when a dependency you need was released within Renovate's minimumReleaseAge window); UI paths apps/web/**, modules/*/web/**, packages/ui/**, packages/web-sdk/**; plan budget 15 files and 12 steps; library group northmes with tdd and codebase-design on the planner and coder.
 
 ## Tests first
 - Session check: setup_project returns ready true
@@ -999,12 +1001,12 @@ docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md
 The demo seed command and .claude/launch.json handoff-demo (E02-S08), handoff's scheduler (not used), creating issues beyond E00 and E01.
 
 ## Changelog
-chore(handoff): enable the northmes library group in the graphs
+chore(handoff): enable library skills and Context7 in the graphs
 
 ## Acceptance criteria
 - [ ] setup_project reports ready
 - [ ] The three graphs import without a compile error
-- [ ] The planner and coder nodes of all three graphs name the library group northmes, and the group holds tdd and codebase-design only
+- [ ] The planner and coder nodes of all three graphs name the library skills tdd and codebase-design and the MCP server context7
 - [ ] The run configuration denies the grilling and domain-modeling skills (docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), and the pull request description says where the deny is set
 - [ ] The plan Project shows Status Shaping, Ready, Running, In review and Done, with the Size field left empty
 - [ ] pnpm check passes in a worktree made by the setup command

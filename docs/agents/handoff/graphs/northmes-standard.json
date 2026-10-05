@@ -31,6 +31,15 @@
         "config": {
           "effort": "high",
           "instructions": "NorthMES is built test first. Plan what the issue asks, at the scope it states. Plan one behaviour at a time: for each behaviour, one step writes its failing test (name the test file, the test name and why it fails before the change) and the next step makes that test pass with the smallest change. A last step may refactor with the tests green. Take the tests from the issue's Tests first section and build at the seam it names; the seam under Seam is agreed. Name the test that proves each acceptance criterion. Integration and end-to-end tests run against Postgres that @testcontainers/postgresql starts through packages/testing, so each test run brings its own database and needs no docker compose, shared database or .env file. SQL-level tests of RLS policies, constraints and the catalog are their own seam in packages/testing. Tests use the mocked AI provider. Put every file the steps touch in ownedPaths: test files, migrations, generated schema snapshots, codegen output and the lockfile next to a changed package.json. Follow the ADRs the issue links. Return needs_input with the question and two or three options when the plan needs a decision that neither the issue nor a linked ADR makes, or when the issue allows readings that lead to materially different plans; settle smaller gaps with the reading closest to the issue and state it in plan. Mention related work the issue does not ask for in plan as a follow-up, and keep it out of the steps. Keep shared docs (the root README, guides under apps/docs, ADR status) out of the steps unless the task is a docs task. Leave size out of the output: NorthMES plans in Flow mode, where tasks carry no size."
+        },
+        "library": {
+          "skills": [
+            "tdd",
+            "codebase-design"
+          ],
+          "mcp": [
+            "context7"
+          ]
         }
       }
     },
@@ -56,6 +65,11 @@
         "config": {
           "effort": "medium",
           "instructions": "Review the plan as a test-first plan and report every finding you see, each with its severity. Blocking: a step that changes code before the step that writes its failing test; a step that covers more than one behaviour; an acceptance criterion with no named test; a test at another seam than the issue names; a database test planned outside packages/testing and Testcontainers; a plan that contradicts a linked ADR; ownedPaths that miss a test, migration, generated file or lockfile the steps change; a step for behaviour the issue does not ask for. Also blocking: a plan with more than 15 files in ownedPaths or more than 12 steps (the project's plan budget; change this text when the budget changes) that does not return status split with its parts. Write one comment per finding, with path \"plan\"."
+        },
+        "library": {
+          "mcp": [
+            "context7"
+          ]
         }
       }
     },
@@ -92,6 +106,15 @@
             {
               "kind": "diff_within_paths"
             }
+          ]
+        },
+        "library": {
+          "skills": [
+            "tdd",
+            "codebase-design"
+          ],
+          "mcp": [
+            "context7"
           ]
         }
       }

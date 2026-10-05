@@ -111,7 +111,7 @@ A person is involved in a lean run only when:
 - Retrying the coder after a failed contract check. The graph editor never connects a node to itself, so the lean graph moves the tests-changed check into its own tester node, whose `fail` port is a normal bounded loop.
 - Two edges from the demo to the pull request (one for `done`, one for `skipped`). A graph holds at most one edge between two nodes; `compileGraph` throws on a second. The lean and standard graphs use one edge without a port and with the condition `{"always": true}`. The editor keeps such an edge as a custom route.
 - Reading the `human` label inside a graph. Conditions cannot test whether a list contains a value, so the operating session reads the label before it starts a run and passes the guided graph.
-- The `northmes` library group. The graph files enable no library skills, because a node that names a group the library does not have fails. After the skills are imported into the group (Settings, Library), add `"library": { "groups": ["northmes"] }` to the planner and coder nodes in these files and import them again.
+- Library skills and MCP servers. The planner and coder nodes name the skills `tdd` and `codebase-design` and the MCP server `context7` under `library`, and the plan reviewer names `context7`. Runs pass `--strict-mcp-config`, so a node gets no other MCP server. A node that names something the library does not have fails, so a new skill is imported first (Settings, Library, or `pnpm handoff library import-repo northMES/northmes --group northmes` from the handoff checkout) and the graphs are imported again afterwards, with `northmes-guided` last so it stays the default.
 
 ## Before the first run
 
