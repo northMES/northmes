@@ -599,21 +599,21 @@ Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T02, 
 Plan: E00-S04-T03
 
 ## Goal
-Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / gate, license gate, dependency audit and CodeQL, required thread resolution, no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
+Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / gate, license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed changes kept on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
 
 ## Where in the code
 scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility, area: core, area: planning, area: sdk, area: web, area: docs, area: deploy, area: ci
 .bestpractices.json (new), README.md (badge)
 .github/ISSUE_TEMPLATE/config.yml, bug_report.yml, feature_request.yml, plugin_request.yml (new)
 .github/PULL_REQUEST_TEMPLATE.md (new): validation impact none, UI only, records, security, calculation or data migration
-.coderabbit.yaml (already on main and valid; keep reviews.auto_review.auto_incremental_review and reviews.request_changes_workflow true)
+.coderabbit.yaml (already on main and valid; keep reviews.auto_review.auto_incremental_review, reviews.request_changes_workflow, reviews.allow_author_approval and reviews.review_progress true, and reviews.commit_status and reviews.fail_commit_status false)
 test/meta/github-files.test.ts (new)
 Seam: the test parses the YAML and Markdown files.
 
 ## Tests first
 - github-files.test.ts: "every issue form's persona list equals the persona table in docs/plan/README.md"
 - github-files.test.ts: "the PR template asks for one of the six validation impacts"
-- github-files.test.ts: ".coderabbit.yaml enables incremental reviews and the request-changes workflow"
+- github-files.test.ts: ".coderabbit.yaml turns on incremental reviews, review_progress, request_changes_workflow and allow_author_approval, and turns off commit_status and fail_commit_status"
 - github-files.test.ts: "scripts/labels.sh creates epic, story, task, human, design and spike"
 - github-files.test.ts: ".bestpractices.json names the project id"
 
@@ -622,6 +622,7 @@ none
 
 ## ADRs
 docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md
+docs/adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md
 docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md
 
 ## Out of scope

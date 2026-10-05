@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034 |
@@ -92,7 +92,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-05 the index holds 64 ADRs: 37 accepted and 27 proposed, 61 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
+On 2026-10-05 the index holds 65 ADRs: 37 accepted and 28 proposed, 62 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -160,5 +160,6 @@ On 2026-10-05 the index holds 64 ADRs: 37 accepted and 27 proposed, 61 for relea
 | 0062 | [Web form contracts, URL view state and module link manifests](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | 1 | |
 | 0063 | [Agent skills from library authors, pinned in the repository](0063-agent-skills-from-library-authors-pinned-in-the-repository.md) | accepted | 1 | |
 | 0064 | [REST routes under /api/v1 and OpenAPI from Zod contracts](0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | 1 | |
+| 0065 | [CodeRabbit check run and a required approval on main](0065-coderabbit-check-run-and-a-required-approval-on-main.md) | proposed | 1 | |
 
-Next free number: 0065. Only Krister Johansson sets a status to accepted.
+Next free number: 0066. Only Krister Johansson sets a status to accepted.
