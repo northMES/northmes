@@ -171,7 +171,7 @@ Writes to provider configs, alias bindings, prices, budgets, feature enablement 
 
 - Secrets are encrypted with `node:crypto` AES-256-GCM under the installation key with a versioned keyring ([ADR 0047](../adr/0047-secrets-and-the-installation-key.md)). The associated data covers table, row, column and the normalized endpoint host.
 - A config update that changes a base URL without a new secret fails with `core.secret_reentry_required`, so Test connection can never send a stored key to a new host.
-- Admin-set outbound URLs follow one rule: private and link-local targets need an installation-level allowlist entry (a LAN Ollama is a normal case), `169.254.0.0/16` and the database host are always blocked, and Test connection reports only reachable, not reachable or auth failed.
+- Admin-set outbound URLs follow one rule: private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host (a LAN Ollama is a normal case), `169.254.0.0/16` and the database host are always blocked, and Test connection reports only reachable, not reachable or auth failed.
 - The provider cache is keyed by (provider config id, config revision) and is invalidated with the permission cache, so an edited base URL, a rotated secret or a removed config takes effect without a restart.
 - Keys never reach the browser. All model calls run on the server.
 
@@ -352,7 +352,7 @@ stateDiagram-v2
 
 - One `/mcp` endpoint inside the Nest app in the `api` role ([ADR 0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md)), built on `@modelcontextprotocol/server` v2 directly (not `@rekog/mcp-nest`) with `legacy: "stateless"`, so clients of the 2026-07-28 protocol revision and 2025-era clients both work from one endpoint.
 - `/mcp` validates `Origin` and `Host` itself, because the SDK handler checks neither.
-- `/mcp` is disabled per installation by default and enabled through an audited setting ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md); behaviour switches never live in environment variables). `POST /mcp` returns 404 while it is off.
+- `/mcp` is disabled per installation by default and enabled with the audited command `northmes installation set mcp.enabled true` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md); behaviour switches never live in environment variables). `POST /mcp` returns 404 while it is off.
 - `tools/list` is filtered by the union of the user's plant permissions, with `cacheScope: "private"`, a short `ttlMs` and `listChanged: false`. Every call re-checks permission at the plant it names.
 
 ### Release 1 toolset

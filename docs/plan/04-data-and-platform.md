@@ -13,6 +13,7 @@ This document describes the platform layer that every NorthMES module builds on:
 | Row-level security | [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md) | proposed | none |
 | Code uniqueness and cross-scope references | [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md) | proposed | product owner (case-insensitive codes, archived codes, level of operation tools) |
 | Identity, roles and permissions | [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) | accepted | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
+| Companies created by the CLI, plant creation and setup, plant slugs unique per installation | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md) | proposed | maintainer (the /admin path; the ledger estimate; installation settings by CLI; the company admin role holding every installed permission) |
 | Principals, credentials, same-origin rules | [0011](../adr/0011-principals-credentials-and-same-origin-rules.md) | proposed | none |
 | Commands as the single write path | [0012](../adr/0012-commands-as-the-single-write-path.md) | proposed | none |
 | Audit trail | [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) | accepted | maintainer (lifecycle classes; tool results as exports); lawyer (retention, erasure) |
@@ -251,7 +252,7 @@ Required tests:
 
 ## Tenancy and the scope tree
 
-A Better Auth organization is a company. Plants live in `core.plant`, and each plant's id equals its node id in `core.scope`, the scope tree. The tree has the company as root and plants as children; areas and lines can join later below plants. One installation serves one customer, which may hold several companies. See [ADR 0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md).
+A Better Auth organization is a company. Plants live in `core.plant`, and each plant's id equals its node id in `core.scope`, the scope tree. The tree has the company as root and plants as children; areas and lines can join later below plants. One installation serves one customer, which may hold several companies. The installation is not a node in the tree, and no role is held at it: the people who run the host create companies with the CLI (see [Companies, plants and setup](#companies-plants-and-setup)). See [ADR 0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md) and [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
 
 ```sql
 -- core.scope (shape; the core migration is the source)
@@ -287,11 +288,25 @@ Customer order lines follow the working proposal in [ADR 0007](../adr/0007-tenan
 
 ### One plant per request
 
-In release 1 every request carries exactly one plant: the route `/$plant/...` and the `x-northmes-plant` header that the Apollo link sends. The plant is never stored on the session, so a planner can keep two plants open in two browser tabs. The URL carries a plant slug that is unique per company. An unknown slug is `NOT_FOUND`, never a fallback to a default plant. Before one installation holds two companies, either the company joins the URL or a slug outside the session's organization is rejected.
+In release 1 every request from a plant route carries exactly one plant: the route `/$plant/...` and the `x-northmes-plant` header that the Apollo link sends. The plant is never stored on the session, so a planner can keep two plants open in two browser tabs. The URL carries a plant slug that is unique per installation, so a user with plants in several companies keeps `/$plant` URLs, and the server never reads Better Auth's active organization on the session. An unknown slug is `NOT_FOUND`, never a fallback to a default plant. Requests from `/admin` carry no plant; the gateway serves them only when every root field in the operation is one of core's plant-free admin fields ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
 
 Company mode (`x-northmes-plant: *`, `/_company/<id>/*`) and `core.code_holders` wait for a customer with several plants in use.
 
-The gateway validates `x-northmes-plant` against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode` `core.plant_forbidden`, and writes one `permission.denied` security event.
+The gateway validates `x-northmes-plant` against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode` `core.plant_forbidden`, and writes one `permission.denied` security event. A plant whose setup is not complete admits only holders of `core.setup:manage`; any other principal with a role there gets `FORBIDDEN` with `core.plant_not_ready` and no security event (see [Companies, plants and setup](#companies-plants-and-setup)).
+
+### Companies, plants and setup
+
+The installation is one NorthMES deployment: one database, one image version and one customer. It has no node in the scope tree and no roles, so the tree, spans and the code constraint stay as they are. Users get permissions only through roles ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+
+- Companies are created only by the CLI on the host, in the one-off migrate container: `northmes company create --name <text> --admin-username <username> [--id <uuidv7>] [--admin-name <text>] [--admin-email <address>] --reason <text> [--json]`. In one command it creates the Better Auth organization on the server (its slug is the company id, and the first admin is its owner member), the company node, the company's `core.setup` row and the first admin's assignment of core's company admin role. A new user gets a temporary password, printed once.
+- `northmes company add-admin --company <id> --username <username> ... --reason <text>` gives an existing company another company admin. It is the recovery path when a company has lost every company admin. `northmes company list` prints companies, setup state, plant counts and admin usernames. `northmes admin reset-password` stays. `northmes admin create` is removed.
+- The commands never prompt, take no password as a flag, print one JSON object with `--json`, and exit 0 (done), 1 (unexpected error), 2 (usage), 3 (refused) or 4 (company not found). A replay with the same `--id` and the same input creates nothing. A temporary password appears only on standard output, never in a command row, a security event or a log line. Each write is a command with principal type `system`, the seeded system principal `core.cli`, surface `cli`, the company node as scope and the required `--reason`, plus one security event.
+- Core's manifest ships the company admin role. The permission sync gives it every installed permission, those of plugins included, so its holder can assign any role and do every setup step (M-61).
+- `core.createPlant({ id, companyId, name, slug, timeZone, productionDayStart })` needs `core.plant:create` at the company node. It creates the plant node, the `core.plant` row and the plant's `core.setup` row. A slug that another plant of the installation uses returns `fieldErrors` on `slug` with `core.plant_slug_taken`, and the message names no company. The zone and the production day start can change during setup until the plant's first calendar version exists.
+- `core.setup (scope_id, kind, started_at, started_by, completed_at, completed_by, version)` holds one row per company and per plant; `core.setup_step (scope_id, step_key, status, recorded_by, recorded_at, reason, version)` records confirmed and skipped steps. Modules declare their wizard steps in the manifest's `setup` key and register a check `isComplete(scopeId)`. `core.completeSetup` re-runs every required check and opens the plant; for the first plant it also completes the company's row. Both tables bump `core.config_revision`.
+- A plant is open when its `core.setup` row has `completed_at`. Until then the plant check admits only holders of `core.setup:manage`, and an open plant never closes again. Connector jobs run outside the plant check, so an import during setup works.
+- Installation-wide settings live in `core.installation_setting` and are set only by `northmes installation set <key> <value> --reason <text>` on the host, audited the same way (M-60). Each key arrives with the code that reads it: `outbound.allowedHosts`, `mcp.enabled` and `audit.securityEventRetentionDays` (E05-S13) in release 1, `events.retentionDays` with the event retention cron. The table carries the audit capture trigger.
+- The principal resolver and the plant check read `core.plant`, `core.scope`, `core.role_assignment` and `core.setup` before a request has scopes, and every request reads `core.installation_setting`. The task that builds these tables records how row-level security covers each one, with policies on the node id or an allowlist entry with a reason.
 
 ## Row-level security
 
@@ -479,7 +494,7 @@ Better Auth handles identity and sessions. NorthMES core tables hold roles, assi
 
 - `better-auth` 1.7.x, pinned exactly. Upgrades are deliberate: read the release notes, generate the schema migration, run the drift test.
 - Better Auth keeps users, accounts, sessions, organization membership (`member.role` is only `owner` or `member`) and API key secrets.
-- Enabled plugins: username (email or username plus password), organization, admin (only for server-side `auth.api` calls from NorthMES commands; every `/admin/*` HTTP path is disabled) and api-key (station keys and MCP personal access tokens). Dynamic access control and teams are off. Any other plugin is reviewed against its advisory history before it is enabled.
+- Enabled plugins: username (email or username plus password), organization and admin (both only for server-side `auth.api` calls from NorthMES commands and the CLI; every `/organization/*` and `/admin/*` HTTP path is in `disabledPaths`, so no signed-in user creates an organization over HTTP, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)) and api-key (station keys and MCP personal access tokens). Dynamic access control and teams are off. Any other plugin is reviewed against its advisory history before it is enabled.
 - Built-in Kysely adapter with its own pool as `nm_auth` and `schemaName: "auth"`. Ids are uuids (`advanced.database.generateId: "uuid"`).
 - Database sessions with a cookie cache whose `maxAge` is at most 60 seconds. Rate-limit storage in the database. Sign-up disabled. `immutableUsername: true`. Session cookie `SameSite=Strict`.
 - Boot refuses to start when `BETTER_AUTH_TELEMETRY` is set. The `testUtils` entry point is not in the production image.
@@ -490,20 +505,23 @@ Better Auth handles identity and sessions. NorthMES core tables hold roles, assi
 | Table | Holds |
 |---|---|
 | `core.scope` | The scope tree |
-| `core.plant` | Plants; `id` equals the scope node id |
+| `core.plant` | Plants; `id` equals the scope node id; `slug` is unique per installation |
 | `core.permission` | The permission catalog from installed manifests: key, module id, installed flag |
 | `core.role` | Organization, key, name, permissions, origin (`module` default role or `custom`), module id |
 | `core.role_assignment` | `(user, scope node, role)` |
+| `core.setup`, `core.setup_step` | Setup state per company and plant node, and the confirmed and skipped wizard steps ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)) |
+| `core.installation_setting` | `(key, value, version)`: installation-wide settings that only `northmes installation set` writes ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)) |
 | `core.credential` | Credential bindings: kind, Better Auth key or client id, scope, created by, revoked at. Audit rows reference this table, not the Better Auth key row, because expired keys are deleted |
 | `core.badge_assignment` | `(user_id, badge_hmac, valid_from, valid_to)`; `badge_hmac` declared redact, computed with the `badge-v1` purpose key, key version stored |
 | `core.retired_username` | HMAC of each retired username; user creation checks it |
-| `core.system_principal` | `(id, module_id, key, display_name)`, seeded by migration per connector and per system job |
+| `core.system_principal` | `(id, module_id, key, display_name)`, seeded by migration per connector, per system job and once for the CLI (`core.cli`) |
 
 ### Permissions and `can()`
 
 - Permission ids follow `<module>.<entity>:<action>`, for example `planning.productionOrder:release`.
 - `can(principal, permission, scopeId)` walks from the scope to the root and checks the principal's assignments on the way. A company role is an assignment at the root node and applies to every plant.
-- Modules ship default roles in their manifests. Company admins create custom roles from module permissions.
+- A user gets permissions only through roles; direct permission grants are not built.
+- Modules ship default roles in their manifests. Company admins create custom roles from module permissions. Core's company admin role holds every installed permission (see [Companies, plants and setup](#companies-plants-and-setup)).
 - Editing roles needs `core.role:manage` at company scope. Assigning a role at scope S needs the assignment permission plus every permission of that role at S. Who may edit and assign roles at which scope is confirmed by the product owner.
 - The permission catalog and default-role sync run inside `northmes migrate`.
 - The principal is resolved once per request in one indexed query.
@@ -523,7 +541,7 @@ Permission cache rules (one replica in the pilot):
 - A username is never reassigned.
 - Foreign keys from core to `auth.user` are `ON DELETE RESTRICT`. The person id is `auth.user.id` everywhere, `acting_for` included.
 - User management (create, ban, reset password, assign roles) runs as NorthMES commands that check `can()` at the target user's assignment scopes, write command rows and call `auth.api` on the server. No user gets a Better Auth admin role. The guard refuses sessions with `impersonatedBy` set.
-- No web setup route exists. `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container, open an audit context with surface `cli`, write a security event and print a temporary password once.
+- No web setup route exists. `northmes company create`, `northmes company add-admin` and `northmes admin reset-password` run in the one-off migrate container, open an audit context with surface `cli` under the system principal `core.cli`, write a security event and print a temporary password once for a new user or a reset. `company create` creates a company together with its first company admin, and `company add-admin` restores a company that has lost every company admin ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
 
 Required tests: a planner whose role is removed gets `FORBIDDEN` on the next move without waiting for the TTL; a banned user's next request with a cached cookie is `UNAUTHENTICATED` within 60 seconds; a plant A admin who edits a company role gets `FORBIDDEN`; `POST /api/v1/auth/admin/impersonate-user` returns 404; creating a user with a retired username fails; deleting `auth.user` directly fails with a foreign key violation.
 
@@ -537,7 +555,7 @@ A principal is whoever runs a command or a query. Every request resolves exactly
 | `user` | A person through an MCP client | Personal access token (`nms_mcp_` prefix) | `mcp` | none |
 | `agent` | The in-app planning assistant, one fixed system principal per feature (`planning.assistant`) | The user's session credential | `assistant` | the user |
 | `station` | A registered operator station | Station key in the `__Host-nm_station` cookie | `station` | the signed-in operator |
-| `system` | A connector run or a registered system job, from `core.system_principal` | none | `connector` or `job` | none |
+| `system` | A connector run, a registered system job or a CLI command (`core.cli`), from `core.system_principal` | none | `connector`, `job` or `cli` | none |
 | `user` | The person who started a job (autoplan from the board) | not specified | `job` | none |
 | `user` | A support engineer fixing data by hand | not specified | `sql` | none |
 
@@ -654,7 +672,7 @@ Whether tool results sent to a model count as exports is open. Working default: 
 
 - `audit.record_security_events(events jsonb)` is `SECURITY DEFINER` with a pinned `search_path`. It runs on a separate pool connection after the business transaction ends, so a rollback keeps the event.
 - A request-scoped denial collector in the gateway, the MCP and assistant runner and the REST guard dedupes per request and writes one row per `(permission, scope)` with `detail.count`.
-- Kinds include sign-in, failed sign-in, sign-out, `permission.denied`, `auth.station_sign_in`, `auth.station_sign_in_failed` (keyed hash of the scan, no plaintext), `auth.station_sign_out` with reason `explicit`, `idle_client`, `idle_server`, `replaced` or `revoked`, lockouts and restores.
+- Kinds include sign-in, failed sign-in, sign-out, `permission.denied`, `auth.station_sign_in`, `auth.station_sign_in_failed` (keyed hash of the scan, no plaintext), `auth.station_sign_out` with reason `explicit`, `idle_client`, `idle_server`, `replaced` or `revoked`, lockouts, restores, and the CLI events `cli.company_created`, `cli.company_admin_added`, `cli.password_reset` and `cli.installation_setting_changed` (names proposed), whose `detail` never holds a password.
 - Every security event is also a JSON log line `{type: 'security_event', kind, principal, scope, correlationId}`, so the customer's log collector sees failed sign-ins.
 
 ### Connector runs
@@ -669,11 +687,11 @@ Each Pyramid poll opens a run command (surface `connector`, `detail` with the pa
 
 ### Configuration revision
 
-`core.config_revision` is bumped by statement triggers on settings, roles, assignments, retention and installed-module tables. The installed catalog (module ids, versions, manifest hashes, supergraph hash) is folded into it, and one boot command is written only when the catalog changes. The build identity sits in OCI labels and `/app/build.json`.
+`core.config_revision` is bumped by statement triggers on settings, roles, assignments, retention, installed-module, setup (`core.setup`, `core.setup_step`) and installation setting tables. The installed catalog (module ids, versions, manifest hashes, supergraph hash) is folded into it, and one boot command is written only when the catalog changes. The build identity sits in OCI labels and `/app/build.json`.
 
 ### Retention and personal data
 
-- Security event partitions are dropped after a default period held in an audited settings row, through a definer drop function. `ai.ai_call` has monthly partitions with a 13-month default. Audit command and change rows have no limit by default; the customer can set one. The periods per category are confirmed by the lawyer.
+- Security event partitions are dropped after a default period held in the installation setting `audit.securityEventRetentionDays`, through a definer drop function. A monthly partition holds the events of every company, so the period is one value for the installation. `ai.ai_call` has monthly partitions with a 13-month default. Audit command and change rows have no limit by default; the customer can set one. The periods per category are confirmed by the lawyer.
 - Production records, reports and audit rows store a person id, never a name. Names, emails and badge HMACs live only on the user and badge tables. The `auth` schema has no capture trigger by design, which keeps old names out of the trail.
 - Erasure means pseudonymization. A later `core.pseudonymizeUser` command, built when the first erasure request arrives, updates `auth.user`, deletes accounts and sessions, revokes credentials, ends role and badge assignments and writes `user.pseudonymized`. Each pseudonymization is also a log line kept outside the database, and the restore runbook replays erasures newer than the restore point.
 - Raw ERP payloads, the import inbox and run logs are command-only, so whole payloads never enter the append-only trail.
@@ -750,7 +768,7 @@ create table core.inbox (
 - Consumers keep an inbox: a handler that writes to Postgres inserts `(consumer, event_id)` into `core.inbox` with `on conflict do nothing` in its transaction and skips the work when no row was inserted. Calls to outside systems are made idempotent by state transfer instead.
 - Ordering for write-back: a `stately` queue with `singletonKey` set to the production order id allows at most one queued and one active job per order; the handler reads the current state and writes it back, so ten quick moves become one or two calls.
 - Every event carries `entity_version` and `schema_version`. Every job payload carries `schema_version`. A handler parks an unknown version in a dead-letter state instead of retrying.
-- Retention: a nightly cron deletes events older than an installation setting in batches, and inbox rows of the same age. The default period is not decided. pg-boss cleans its own tables.
+- Retention: a nightly cron deletes events older than the installation setting `events.retentionDays` in batches, and inbox rows of the same age. The default period is not decided. pg-boss cleans its own tables.
 
 ### pg-boss
 
@@ -783,7 +801,7 @@ Required tests: two transactions that commit out of insertion order are both del
 Settings are Zod definitions (`defineSettings`) in module contracts packages. Their values are stored in audited database tables at company and plant scope and rendered by the shared `SettingsForm`. Adding a module setting is one field in that module's settings schema. See [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
 
 - Behaviour-affecting configuration never lives in environment variables. Environment variables hold only infrastructure settings and the paths of secret files ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). This is one of the regulated readiness rules ([15-regulated-readiness.md](15-regulated-readiness.md)).
-- Switches that look like infrastructure but change behaviour are audited settings commands. Examples: enabling `/mcp` for the installation, and a connector's shadow or live write-back mode.
+- Switches that look like infrastructure but change behaviour are audited commands. Examples: enabling `/mcp` for the installation with `northmes installation set mcp.enabled true` on the host, and a connector's shadow or live write-back mode as a settings command.
 - A settings change bumps `core.config_revision` (see [Configuration revision](#configuration-revision)), and the next command row records the new revision.
 - Settings fields without a label and a description are refused at boot.
 - The settings reader resolves each field on its own: the plant value, then the company value, then the default. It returns each field's effective value with its source (`default`, `company` or `plant`), so a plant settings form shows the value the plant inherits.
@@ -803,7 +821,7 @@ See [ADR 0047](../adr/0047-secrets-and-the-installation-key.md).
 - The installation key file is a Compose secret. Losing it means re-entering every integration secret.
 - One offline escrow, kept in two places, holds the installation key with the other recovery material. Where the pilot keeps it is confirmed by pilot IT; the escrow and the quarterly restore test are in [12-operations-and-security.md](12-operations-and-security.md).
 - Secret columns are declared secret in the manifest, so the audit trail writes "redacted" and the classification check passes.
-- Admin-set outbound URLs: private and link-local targets need an installation-level allowlist entry; `169.254.0.0/16` and the database host are always blocked.
+- Admin-set outbound URLs: private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, which `northmes installation set` changes on the host; `169.254.0.0/16` and the database host are always blocked.
 
 Required tests: changing an OpenAI-compatible base URL to another host without a new key returns `core.secret_reentry_required` and the egress mock records zero requests; a base URL of `169.254.169.254` or the database host is refused before any connection; editing a provider key writes one change row with a redacted diff.
 
@@ -936,6 +954,9 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Are operation tools company-level or plant-level? | product owner | Not set; the span check covers both |
 | Customer order line scope and supply between plants | product owner | Lines at the delivering plant or company; no cross-plant supply |
 | Who may edit and assign roles at which scope? | product owner | `core.role:manage` at company scope |
+| How does a company get a company admin back when its last one is removed? (M-58) | maintainer | Answered: `northmes company add-admin` on the host |
+| Who sets installation-wide settings now that no role sits above a company? (M-60) | maintainer | `northmes installation set` on the host |
+| Does core's company admin role hold every installed permission? (M-61) | maintainer | Yes |
 | Pieces per hour: pieces or cycles? | product owner | Not set |
 | Does the pilot need Power BI or Excel access? | product owner | No; the reporting schema waits |
 | How long are raw pulses kept online? (PO-80) | product owner | 90 days |
