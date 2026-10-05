@@ -7,10 +7,14 @@ interface WorkspaceConfig {
   packages?: string[];
   pmOnFail?: string;
   allowBuilds?: Record<string, boolean>;
+  catalogMode?: string;
+  catalog?: Record<string, string>;
+  catalogs?: Record<string, Record<string, string>>;
 }
 
 interface PackageJson {
   license?: string;
+  devDependencies?: Record<string, string>;
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -52,5 +56,16 @@ describe('workspace', () => {
       expect(license, path).toEqual(expect.any(String));
       expect(license, path).not.toBe('');
     }
+  });
+
+  it('the catalog pins exactly one TypeScript 6.0 version', () => {
+    const workspace = readWorkspace();
+
+    expect(workspace.catalogMode).toBe('strict');
+    expect(workspace.catalog?.typescript).toMatch(/^6\.0\.\d+$/);
+    for (const [name, catalog] of Object.entries(workspace.catalogs ?? {})) {
+      expect(catalog.typescript, `catalogs.${name}`).toBeUndefined();
+    }
+    expect(readPackageJson('package.json').devDependencies?.typescript).toBe('catalog:');
   });
 });
