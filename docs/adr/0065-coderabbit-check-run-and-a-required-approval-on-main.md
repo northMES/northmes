@@ -27,7 +27,7 @@ CodeRabbit's configuration reference and changelog say:
 handoff's PR node behaves as follows:
 
 * Its CI status is the state of the head commit's check rollup, except for checks named after a reviewer in `waitForReviewers`. Since Krister-Johansson/handoff#657, such a check, CodeRabbit's included, counts as that reviewer's progress: it does not count toward CI or `requireChecks`, a pending one does not hold the node as CI pending, a failed one does not go to the coder, and `reviewTimeoutMinutes` bounds the wait.
-* It counts a reviewer as started on the head commit when the reviewer reviewed that commit or when a check named after the reviewer is in progress there. The node's `reviewRequest` setting uses this to ask only a reviewer that has not started. None of the three NorthMES graphs sets `reviewRequest` yet; [pull request #209](https://github.com/northMES/northmes/pull/209), which is open, adds it to all three.
+* It counts a reviewer as started on the head commit when the reviewer reviewed that commit or when a check named after the reviewer is in progress there. The node's `reviewRequest` setting uses this to ask only a reviewer that has not started. All three NorthMES graphs set `reviewRequest` ([pull request #209](https://github.com/northMES/northmes/pull/209)).
 * Its review decision is GitHub's review decision for the pull request. Its `ready` port needs a decision other than changes requested, and changes requested sends the run back to the coder.
 
 ## Decision drivers
@@ -47,7 +47,7 @@ handoff's PR node behaves as follows:
 
 ## Decision outcome
 
-Chosen option: "Check run plus 1 required approving review", because it shows CodeRabbit in the merge box and, once pull request #209 merges, lets handoff see a review in progress, while the gate is an approval. CodeRabbit gives that approval on Krister's pull requests, and Krister gives it on the pull requests that CodeRabbit skips.
+Chosen option: "Check run plus 1 required approving review", because it shows CodeRabbit in the merge box and lets handoff see a review in progress, while the gate is an approval. CodeRabbit gives that approval on Krister's pull requests, and Krister gives it on the pull requests that CodeRabbit skips.
 
 Settings:
 
@@ -76,7 +76,7 @@ The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `
 ### Consequences
 
 * Good, because the merge box shows CodeRabbit's check on the head commit, so Krister sees whether a review is running or done.
-* Good, because handoff counts the check in progress as a started review. Once pull request #209 merges, the pull request step asks CodeRabbit only when it has not started, and the check run lets handoff see a review in progress.
+* Good, because handoff counts the check in progress as a started review, so the pull request step asks CodeRabbit only when it has not started.
 * Good, because GitHub refuses to merge a pull request whose head commit has no approval. A run that went on after `reviewTimeoutMinutes` with no CodeRabbit review at all stops at the merge step with `merge_failed` instead of merging.
 * Good, because the CodeRabbit check is not required and a review error does not fail it, so the pull requests that CodeRabbit skips are not held by its check.
 * Bad, because a CodeRabbit check that stays in progress shows as a pending check on the pull request, and handoff's dashboard list of pull requests shows it as CI pending. handoff's PR node does not wait on it as CI (Krister-Johansson/handoff#657); `reviewTimeoutMinutes` bounds the wait for CodeRabbit.
@@ -98,7 +98,7 @@ Inspection steps, not checks: `gh api repos/northmes/northmes/rulesets/<id>` sho
 
 ### Check run plus 1 required approving review
 
-* Good, because CodeRabbit is visible in the merge box, and once pull request #209 merges, handoff sees a review in progress.
+* Good, because CodeRabbit is visible in the merge box, and handoff sees a review in progress.
 * Good, because GitHub enforces the gate, and stale approval dismissal ties the approval to the head commit.
 * Good, because Krister can approve the pull requests that CodeRabbit skips, so none of them needs a bypass actor.
 * Bad, because every push needs a new approval, and a check that stays in progress shows as pending on the pull request (handoff's PR node bounds it by `reviewTimeoutMinutes` since Krister-Johansson/handoff#657).
@@ -112,7 +112,7 @@ Inspection steps, not checks: `gh api repos/northmes/northmes/rulesets/<id>` sho
 
 ### Check run only, 0 required approvals
 
-* Good, because CodeRabbit is visible in the merge box, and once pull request #209 merges, handoff sees a review in progress.
+* Good, because CodeRabbit is visible in the merge box, and handoff sees a review in progress.
 * Bad, because nothing on GitHub requires CodeRabbit's approval before a merge.
 * Bad, because a check that stays in progress holds a handoff run, as in the chosen option.
 
