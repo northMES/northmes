@@ -1,4 +1,5 @@
-import { globSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -30,6 +31,10 @@ function readWorkspace(): WorkspaceConfig {
 
 function readPackageJson(path: string): PackageJson {
   return JSON.parse(readText(path)) as PackageJson;
+}
+
+function git(...args: string[]): string {
+  return spawnSync('git', args, { cwd: root, encoding: 'utf8' }).stdout;
 }
 
 describe('workspace', () => {
@@ -82,5 +87,25 @@ describe('workspace', () => {
   // until the real gate (Node check, lint, typecheck, gen --check, Vitest projects) replaces it.
   it('the root check script is the temporary stub that runs only the unit project', () => {
     expect(readPackageJson('package.json').scripts?.check).toBe('vitest run --project unit');
+  });
+});
+
+// This test runs git, so it needs a git work tree. In a worktree `.git` is a file; existsSync accepts both.
+describe.skipIf(!existsSync(`${root}.git`))('repository', () => {
+  it('.gitignore ignores internal material and build output, and none of it is tracked', () => {
+    const ignored = [
+      'docs/research/x.md',
+      'docs/project-brief.md',
+      'rp-manifest.md',
+      'dist/x',
+      'packages/sdk/dist/index.js',
+      '.turbo/x',
+      'coverage/x',
+      'x.tsbuildinfo',
+      '.env',
+    ];
+
+    expect(git('check-ignore', ...ignored).split('\n').filter(Boolean)).toEqual(ignored);
+    expect(git('ls-files', 'docs/research', 'docs/project-brief.md', 'rp-manifest.md')).toBe('');
   });
 });
