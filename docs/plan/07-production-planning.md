@@ -830,7 +830,7 @@ Resize (block length follows from quantity, rates and the calendar), the compres
 
 ### Block states
 
-No state maps to a hue. The fill is always the order color, every block has a 1 px border in the foreground token, and black or white block text is chosen per fill with `textColorFor` (at least 4.58:1 for any sRGB fill). State markers use the block's text color.
+No state maps to a hue. The fill is always the order color, every block has a 1 px border in the `block-border` token (the foreground token in the light theme, a light token of its own in the dark theme, [06-web-and-ux.md](06-web-and-ux.md)), and black or white block text is chosen per fill with `textColorFor` (at least 4.58:1 for any sRGB fill). State markers use the block's text color.
 
 | State | Cue besides color | Accessible name text |
 |---|---|---|
