@@ -2,9 +2,17 @@
 # The brief and research notes move to a private companion repository.
 /docs/project-brief.md
 /docs/research/
+/rp-manifest.md
 
 node_modules/
 .DS_Store
+
+# Build output and local state.
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+.env
 
 # Output of the to-questionnaire skill (may hold product owner material).
 /to-questionnaire-*.md
