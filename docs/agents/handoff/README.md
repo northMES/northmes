@@ -33,7 +33,7 @@ handoff's scheduler is not used. An operating Claude Code session with handoff's
 3. It follows the run with `get_run`, `get_run_events` and `list_attention`, and brings every question, paths question, permission request, failed step, loop that ran out and merge decision to Krister. It answers a gate, a question or a permission request only with Krister's decision, and repairs, resolves or cancels a run only when Krister says so.
 4. It keeps one run active at first, and two after two runs have finished without a collision on owned paths.
 5. It batches gate questions so Krister answers gates in two batches a day.
-6. While the repository has fewer than 10 stars, it posts `@coderabbitai review` when a pull request opens and after each later push from the pull request step (see "Before the first run").
+6. It checks that CodeRabbit reviewed each new commit of a run's pull request. The pull request step asks by itself (see "Before the first run"); the session posts `@coderabbitai review` only on pull requests it opens itself.
 7. Before it starts the run of a UI task, and again before Krister answers its plan gate where the graph has one, it compares the approved etag in the issue's Design section with the design project's current etag, and brings a mismatch to Krister.
 
 ### Where run rules live
@@ -130,7 +130,7 @@ handoff's support for repositories and Projects owned by a GitHub organization i
 
 The pull request step sets `noChecksAfterMinutes` to 30: handoff treats CI as passed when no check has started within that time. 30 minutes leaves room for a queued runner. The ruleset's required checks still stop a merge that GitHub has not seen pass.
 
-While the repository has fewer than 10 stars, CodeRabbit reviews only after an `@coderabbitai review` comment. handoff does not post it and the coder has no `gh`, so in the guided and standard phases Krister or the operating session posts it when a pull request opens and after each later push from the pull request step (a fix round, or the catch-up with `main` after the merge step's `update` edge). A push without it waits out the 30 minutes.
+While the repository has fewer than 10 stars, CodeRabbit reviews only after an `@coderabbitai review` comment. The pull request step in all three graphs sets `reviewRequest` (`{ "reviewer": "coderabbitai[bot]", "comment": "@coderabbitai review", "afterMinutes": 2 }`): when CodeRabbit has not reviewed the newest commit two minutes after a push, the step posts that comment, once per commit. It covers the pull request opening, each fix round and the catch-up with `main` after the merge step's `update` edge. CodeRabbit's check run is off in `.coderabbit.yaml`, so handoff cannot see a review in progress and may ask once while CodeRabbit is already working; CodeRabbit then answers that it is reviewing. Pull requests a session opens get the comment from that session.
 
 ## Import the graphs
 

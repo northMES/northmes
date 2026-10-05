@@ -202,7 +202,12 @@
             "coderabbitai[bot]"
           ],
           "reviewTimeoutMinutes": 30,
-          "sendReviewComments": true
+          "sendReviewComments": true,
+          "reviewRequest": {
+            "reviewer": "coderabbitai[bot]",
+            "comment": "@coderabbitai review",
+            "afterMinutes": 2
+          }
         }
       }
     },

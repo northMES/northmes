@@ -230,7 +230,12 @@
           ],
           "reviewTimeoutMinutes": 30,
           "sendReviewComments": true,
-          "join": "any"
+          "join": "any",
+          "reviewRequest": {
+            "reviewer": "coderabbitai[bot]",
+            "comment": "@coderabbitai review",
+            "afterMinutes": 2
+          }
         }
       }
     },
