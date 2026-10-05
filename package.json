@@ -3,6 +3,9 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "check": "vitest run --project unit"
+  },
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:",
