@@ -464,7 +464,7 @@ The label list lives in `scripts/labels.sh` (`gh label create --force`), so the 
 | Size | Present (`setup_plan` adds it) and left empty. handoff draws every card without a size at the same default length in the Flow view; a running card fills with the share of its graph's steps that have passed |
 | Start, Target, Estimate | Not used; they belong to Timeline mode |
 | Priority | Not used; the order is Project order |
-| Milestone | One per release, on epics and stories |
+| Milestone | One per release (`Release 1` for release 1), set on the epic; its stories and tasks inherit it in handoff ([handoff notes](../agents/handoff/README.md#the-plan)) |
 
 Issue types and issue fields are not used for planning; they would store the labels' facts a second time.
 
