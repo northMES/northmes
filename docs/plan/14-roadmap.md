@@ -409,7 +409,7 @@ Add the files every contributor and agent reads first. AGENTS.md holds the tool-
 
 ## Where in the code
 LICENSE (AGPL-3.0-or-later), NOTICE, README.md (with the CodeRabbit badge below), CONTRIBUTING.md (states that outside pull requests are not merged until the contributor license agreement check exists), CODE_OF_CONDUCT.md (conduct@northmes.dev), SECURITY.md (security@northmes.dev, private vulnerability reporting, supported versions, response target), GOVERNANCE.md, AGENTS.md, CLAUDE.md, .github/CODEOWNERS (* @Krister-Johansson), .gitignore
-NOTICES.md: third-party notices for vendored files, including the MIT notice of the ten agent skills in .claude/skills at the commit pinned in skills-lock.json
+NOTICES.md: third-party notices for vendored files, pointing to .claude/skills/THIRD_PARTY_LICENSE.md for the agent skills at the commits pinned in skills-lock.json
 README.md badge, verbatim: ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/northMES/northmes?utm_source=oss&utm_medium=github&utm_campaign=northMES%2Fnorthmes&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 SPDX headers on every .ts file already on main
 test/meta/private-paths.test.ts, test/meta/agent-files.test.ts, test/meta/spdx.test.ts (new)
@@ -422,7 +422,7 @@ Seam: tests read files and git ls-files output.
 - agent-files.test.ts: "AGENTS.md says every command runs as pnpm or git from the repository root"
 - agent-files.test.ts: "AGENTS.md states the dependency release-age rule"
 - agent-files.test.ts: "AGENTS.md and CLAUDE.md do not mention handoff"
-- agent-files.test.ts: ".claude/skills holds exactly the ten skills in skills-lock.json at ref 24fe0ef"
+- agent-files.test.ts: ".claude/skills holds exactly the skills in skills-lock.json at their pinned refs"
 - spdx.test.ts: "every .ts and .tsx file under apps, modules, packages and examples starts with an SPDX header matching its package license"
 
 ## Design
@@ -444,7 +444,7 @@ docs(repo): add license, contributor, security and agent files
 - [ ] SECURITY.md names security@northmes.dev, private vulnerability reporting and the supported-versions table
 - [ ] CODE_OF_CONDUCT.md names conduct@northmes.dev
 - [ ] CLAUDE.md begins with @AGENTS.md, and neither CLAUDE.md nor AGENTS.md mentions handoff
-- [ ] NOTICES.md names each vendored skill with its MIT notice
+- [ ] NOTICES.md points to the license notice of each vendored skill source
 - [ ] README.md shows the CodeRabbit pull request reviews badge for northMES/northmes
 - [ ] The three meta tests pass
 ```

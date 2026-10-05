@@ -13,7 +13,7 @@ details.
 
 Third-party files
 
-The agent skills in .claude/skills are copied from
-https://github.com/mattpocock/skills at the commit pinned in skills-lock.json
-and are licensed under the MIT License. Their copyright and license notice is
-in .claude/skills/THIRD_PARTY_LICENSE.md.
+The agent skills in .claude/skills are copied from the repositories named in
+.claude/skills/THIRD_PARTY_LICENSE.md at the commits pinned in
+skills-lock.json. Each keeps its source's license (MIT or Apache-2.0), and that
+file reproduces each license and copyright notice.

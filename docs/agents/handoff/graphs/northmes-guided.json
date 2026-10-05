@@ -116,7 +116,12 @@
         "library": {
           "skills": [
             "tdd",
-            "codebase-design"
+            "codebase-design",
+            "vitest",
+            "pnpm",
+            "turborepo",
+            "apollo-client",
+            "playwright-cli"
           ],
           "mcp": [
             "context7"
@@ -161,6 +166,12 @@
           "level": "high",
           "effort": "medium",
           "instructions": "Report every finding you see, each with its severity, covering correctness and the NorthMES rules. Blocking: an acceptance criterion the diff does not implement, or behaviour the issue did not ask for; a behaviour change without a test; a test that would pass without the change; code committed before its failing test where the plan put the test first; a database test outside the Testcontainers harness in packages/testing, or one that connects as a superuser; a new table without row-level security enabled and split policies (FOR SELECT on read_scopes, separate FOR INSERT, FOR UPDATE and FOR DELETE policies on write_scopes, rather than one FOR ALL policy), or without the audit trigger or an allowlist entry with a reason; a write that bypasses the command pipeline; a module that reads another module's tables; a contributed GraphQL field that is not nullable, or a root field without the module prefix; a web remote that bundles its own copy of a shared singleton; an interactive element without an accessible name; state shown by color alone; a color or size on a screen that is not a token; a change that contradicts a linked ADR. Release 1 enables row-level security without FORCE ROW LEVEL SECURITY, so a table without FORCE is correct."
+        },
+        "library": {
+          "skills": [
+            "wrdn-authz",
+            "secret-serialization"
+          ]
         }
       }
     },

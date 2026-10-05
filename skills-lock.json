@@ -1,12 +1,26 @@
 {
   "version": 1,
   "skills": {
+    "apollo-client": {
+      "source": "apollographql/skills",
+      "ref": "222dfc07720227bd0f330bd1b45a9741b1c97bee",
+      "sourceType": "github",
+      "skillPath": "skills/apollo-client/SKILL.md",
+      "computedHash": "008c067a3d480ab905aa37aab113b8dc54028e29e593610866b7ea8131377ce1"
+    },
     "codebase-design": {
       "source": "mattpocock/skills",
       "ref": "24fe0ef7737efae15c87225755e9f6f5965e4888",
       "sourceType": "github",
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
+    },
+    "diagnosing-bugs": {
+      "source": "mattpocock/skills",
+      "ref": "24fe0ef7737efae15c87225755e9f6f5965e4888",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "computedHash": "b35c6a6e37c61ca3169532fbab2300dea26f2ad190e1d2dac065800b8b2bb0aa"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -43,6 +57,27 @@
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "ac2c94885f34ff8492dc12aa4543182f661f32ea1722b8d6b6c2c7045af33ae3"
     },
+    "playwright-cli": {
+      "source": "microsoft/playwright-cli",
+      "ref": "b85c7a736bb473bf55b584e54a09ffa698d6d871",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-cli/SKILL.md",
+      "computedHash": "ffbd59a973d4e2c19c6ecc31254a14497069c362f1d1820b6a6cfbe62de34a73"
+    },
+    "pnpm": {
+      "source": "antfu/skills",
+      "ref": "e53a142a2420e8cd812cfe9ed0484ab01bc856aa",
+      "sourceType": "github",
+      "skillPath": "skills/pnpm/SKILL.md",
+      "computedHash": "d1bd6f4fd38ff1ba33b857223c58a832d1cd5b488163ba0d389db449be472603"
+    },
+    "secret-serialization": {
+      "source": "getsentry/skills",
+      "ref": "d18b7aa8ba878354e5c348310230e652f7690f9c",
+      "sourceType": "github",
+      "skillPath": "skills/secret-serialization/SKILL.md",
+      "computedHash": "c314fb6f92e1a08d94667264edf964b0df9666c11bc451233e97336714361bd6"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "ref": "24fe0ef7737efae15c87225755e9f6f5965e4888",
@@ -57,12 +92,33 @@
       "skillPath": "skills/productivity/to-questionnaire/SKILL.md",
       "computedHash": "befbec7005695163741a57bc94810dc5048fb766baaa485d5160b1d7f86335c1"
     },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "ref": "129acf0dd5b83a21344d8ee383e426e05070cbb5",
+      "sourceType": "github",
+      "skillPath": "skills/turborepo/SKILL.md",
+      "computedHash": "9681d8dfeb5e6cdff767f1bcaba5d7ac55732a9d6c02ee120f44229f8ec25e7e"
+    },
+    "vitest": {
+      "source": "antfu/skills",
+      "ref": "e53a142a2420e8cd812cfe9ed0484ab01bc856aa",
+      "sourceType": "github",
+      "skillPath": "skills/vitest/SKILL.md",
+      "computedHash": "21af2b13d47d31f3094b61c0f41abc8d6a7eed0df3c9a4029ea671f6978b7209"
+    },
     "wait-what": {
       "source": "mattpocock/skills",
       "ref": "24fe0ef7737efae15c87225755e9f6f5965e4888",
       "sourceType": "github",
       "skillPath": "skills/productivity/wait-what/SKILL.md",
       "computedHash": "1921c02ea4046fd8f9c219140780233fe6e22e2fe4442961378da2ac31f3f403"
+    },
+    "wrdn-authz": {
+      "source": "getsentry/warden-skills",
+      "ref": "daf01f970a28450627a8d2d61d9915a742a735e2",
+      "sourceType": "github",
+      "skillPath": "skills/wrdn-authz/SKILL.md",
+      "computedHash": "42077017fd3e26e8a6ec43d1e5c059e8db77bffd7c41cbc479685189546f7b06"
     },
     "writing-for-agents": {
       "source": "mattpocock/skills",

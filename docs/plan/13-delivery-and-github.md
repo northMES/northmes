@@ -99,7 +99,7 @@ handoff runs graphs of coding agents on GitHub issues. Its operational files liv
 
 ### Library skills
 
-The planner and the coder enable the library skills `tdd` and `codebase-design`, which also gives those nodes the Skill tool, and the MCP server `context7`, so they read current library documentation; the plan reviewer enables `context7` as well. Each node names them under its `library` key in the graph files. Runs pass `--strict-mcp-config`, so a node has only the MCP servers its `library` key names. The library's `tdd` comes from `mattpocock/skills`, because handoff's import skips a skill whose name the library already holds from another source; the other skills of this repository are in the library group `northmes`, imported on 2026-10-05. The run configuration (`<HANDOFF_HOME>/claude-config/settings.json`) is to deny `Skill(grilling)` and `Skill(domain-modeling)`, which belong to interactive planning (E00-S07-T01). A node that names a skill or server the library lacks fails, so the project skills that E02 writes are imported before a graph names them.
+The planner and the coder enable the library skills `tdd` and `codebase-design`, which also gives those nodes the Skill tool, and the MCP server `context7`, so they read current library documentation; the plan reviewer enables `context7` as well. The coder also enables `vitest`, `pnpm`, `turborepo`, `apollo-client` and `playwright-cli`, and the code review node enables `wrdn-authz` and `secret-serialization`. Each node names them under its `library` key in the graph files. Runs pass `--strict-mcp-config`, so a node has only the MCP servers its `library` key names. The library's `tdd` comes from `mattpocock/skills`, because handoff's import skips a skill whose name the library already holds from another source; the other skills of this repository are in the library group `northmes`, imported on 2026-10-05. The run configuration (`<HANDOFF_HOME>/claude-config/settings.json`) is to deny `Skill(grilling)` and `Skill(domain-modeling)`, which belong to interactive planning (E00-S07-T01). A node that names a skill or server the library lacks fails, so the project skills that E02 writes are imported before a graph names them.
 
 ### The graphs
 
@@ -564,7 +564,7 @@ An approved page is frozen. A later change copies it under a new issue number, a
 
 ## Agent skills in the repository
 
-Ten skills from `mattpocock/skills` are installed in `.claude/skills` at commit `24fe0ef`, recorded in `skills-lock.json`, with the MIT notice in `.claude/skills/THIRD_PARTY_LICENSE.md` ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)).
+Skills are installed in `.claude/skills`, pinned by commit in `skills-lock.json`, with each source's license reproduced in `.claude/skills/THIRD_PARTY_LICENSE.md` ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)). Ten come from `mattpocock/skills` at `24fe0ef`. Eight more were added on 2026-10-05 after a license and fit review against the ADRs. `.claude/settings.json` denies `npm` and `npx`, which `apollo-client` and `playwright-cli` pre-approve, and `CLAUDE.md` says that an ADR wins where a skill's example differs.
 
 | Skill | Invoked by | Used in |
 |---|---|---|
@@ -578,12 +578,22 @@ Ten skills from `mattpocock/skills` are installed in `.claude/skills` at commit 
 | `to-questionnaire` | user | One questionnaire per person for questions only they can answer; its output files are gitignored |
 | `wait-what` | user | Re-states the last reply in plain English with glossary terms |
 | `improve-codebase-architecture` | user | Interactive sessions only, once two or more modules have weeks of history on `main` |
+| `vitest` (antfu/skills) | model | Coder and code review; Vitest 5 configuration, projects and fixtures |
+| `pnpm` (antfu/skills) | model | Coder; pnpm 12 settings in `pnpm-workspace.yaml`, catalogs and `allowBuilds`. ADRs 0004 and 0050 win over its CI and Docker examples |
+| `turborepo` (vercel/turborepo) | model | Coder; reads the docs that ship in `node_modules/turbo` for the installed version |
+| `apollo-client` (apollographql/skills) | model | Coder on web packages; Apollo Client 4 imports, data masking and preloading. The session cookie of ADR 0011 wins over its bearer-token example |
+| `playwright-cli` (microsoft/playwright-cli) | model | Coder, for end-to-end specs and for checking a built UI, run as `pnpm exec playwright` |
+| `wrdn-authz` (getsentry/warden-skills) | model | Code review; authorization defects in resolvers, commands, guards and tools. Row-level security scopes count as tenant scoping |
+| `secret-serialization` (getsentry/skills) | model | Code review; secrets that reach logs, errors, spans or serialized config |
+| `diagnosing-bugs` (mattpocock/skills) | model | Interactive sessions for bugs and regressions; on the coder only for a bug-fix task |
 
 Not installed: `code-review` (it would replace the built-in skill handoff's code review node calls), `handoff` (a name clash with the plugin), `to-spec`, `to-tickets`, `implement`, `implement-spec`, `wayfinder`, `triage` and `setup-matt-pocock-skills` (they create issues or run work outside handoff's Project and runs).
 
 Project skills, written by the E02 tasks that build each extension point: `db-test` (the Testcontainers harness, `given` factories, two-instance helpers), `vertical-slice` (how a story splits into tasks), `graphql-subgraph` (`defineSubgraph`, prefix and nullability rules, schema print and codegen), `web-remote` (the remote config factory, singletons, typed documents, slots) and `dst-test` (the Stockholm and Helsinki daylight saving nights and a non-UTC `TZ`). Each joins the `northmes` library group when it lands.
 
-The pin moves only after reading the skills' changelog between the two commits and reviewing the diff under `.claude/skills`.
+TanStack Table v9 ships its own skills inside `@tanstack/table-core` and `@tanstack/react-table`; agents read them from `node_modules`, because their names collide in one folder and the installed copy matches the installed version. Reviewed on 2026-10-05 and left out, because they contradict ADRs, lack a license or add little to the ADRs and Context7: supabase-postgres-best-practices, apollo-federation, graphql-schema, the TanStack Router skills, shadcn, react-hook-form, kysely-postgres, ai-sdk, the Better Auth and Module Federation skills (no license), and the third-party NestJS, Zod, pg-boss, Docker and accessibility skills.
+
+A pin moves only after reading the skills' changelog between the two commits, reviewing the diff under `.claude/skills` and running the user-level `skill-scanner` skill (getsentry/skills) over the changed folders.
 
 ## Repository rules for agents
 
