@@ -372,7 +372,7 @@ Created with `create_task` under the story, labelled `design` and `human`. Worke
 ```markdown
 Plan: E08-S02-T01
 Owning story: #38. UI tasks waiting on this: #43, #44.
-Page: planning-38-board.dc.html (variations page first: yes)
+Page: planning/planning-38-board.dc.html (variations page first: yes)
 
 ## Frames
 - States: populated, empty, loading, error; domain states: committed, in my draft, held by another planner, hard-locked, started, proposed, conflict, late, overdue, finish pending, material warning
@@ -384,7 +384,7 @@ Page: planning-38-board.dc.html (variations page first: yes)
 shadcn components by name, tokens, keyboard and focus order, ARIA roles, names and announcements, slot ids, final English copy, WCAG 2.2 criteria by number
 
 ## References
-docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/adr/0030-a-planning-board-built-in-house.md; earlier pages: shell-12-navigation.dc.html
+docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/adr/0030-a-planning-board-built-in-house.md; earlier pages: shell/shell-12-navigation.dc.html
 
 ## Output
 docs/design/planning/planning-38-board.md and its PNGs; Design section on #43 and #44
@@ -538,11 +538,11 @@ After these, a design is made only when the next task needs it. Design sessions 
 
 ### Steps for one page
 
-1. The design session reads the issue and the design project's README rules, then builds the page `<area>-<issue>-<slug>.dc.html` (`area` is `ui`, `shell` or a module id) with a header frame first, then the states, widths, themes, long-strings frame, keyboard and focus frames and the build notes. It runs the verify loop: rendered, console clean, no failed requests, screenshots looked at.
+1. The design session reads the issue and the design project's `README.md` (the rules and the index of pages), then builds the page `<area>-<issue>-<slug>.dc.html` in its area folder and adds the page's row to the README index. The area folder is `ui/`, `shell/` or the module id's folder, which the module's first page creates ([06, What every design page contains](06-web-and-ux.md#what-every-design-page-contains)). The page has a header frame first, then the states, widths, themes, long-strings frame, keyboard and focus frames and the build notes. It runs the verify loop: rendered, console clean, no failed requests, screenshots looked at.
 2. Krister reviews in the Claude Design app with pin comments and sends the ones to act on to Claude. The session reads the queued comments, edits with the file's etag, re-renders and acknowledges them.
 3. A page is ready for approval when no comment thread is open. Krister approves it.
 4. The session records the approval: the etag in the design project's README row; PNGs of each frame in light and dark at the frame's width; the build notes. A design pull request adds `docs/design/<area>/<page-slug>.md` (page name, approved etag, frames, build notes) and the PNGs as `docs/design/<area>/<page-slug>-<frame>-<theme>.png`, and closes the design task.
-5. The session adds a Design section to each UI task with `gh issue edit`: the page, the approved etag, the frames the task implements, the repository paths of the PNGs and build notes, and the two to five build notes that matter for that task.
+5. The session adds a Design section to each UI task with `gh issue edit`: the page, the approved etag, the frames the task implements, the repository paths of the PNGs and build notes, and the two to five build notes that matter for that task. The section embeds the PNGs of those frames as images, from their raw GitHub URLs on `main`, so the issue shows what the task builds. The story that owns the screen embeds its main frames the same way, and the epic does when the screen is its main one. A chosen direction from a variations round is recorded the same way: its frames go into `docs/design/<area>/` next to a short decision record, and the design task embeds them. GitHub's API cannot upload issue attachments, so the images reach `main` before an issue links them.
 6. After the implementing pull request merges, the README row says "implemented in PR #n".
 
 An approved page is frozen. A later change copies it under a new issue number, and the README marks the old page superseded.
@@ -561,7 +561,7 @@ An approved page is frozen. A later change copies it under a new issue number, a
 |---|---|---|
 | The design changed after approval | The operating session compares the approved etag with the design project's current etag; on a mismatch Krister decides whether the new version is approved | Before `move_to_ready`, before `start_run` and at the plan gate |
 | Code against design | A criterion "matches `<page>` frames in light and dark at the frame widths"; demo screenshots per criterion; Try it with the PNGs side by side | Demo and Try it |
-| Tokens in the design against `packages/ui` | The design project's `tokens.css` names its source commit; a pull request that changes tokens is not done until a design session copies the new token blocks | Every token pull request |
+| Tokens in the design against `packages/ui` | The design project's `ui/tokens.css` names its source commit; a pull request that changes tokens is not done until a design session copies the new token blocks | Every token pull request |
 
 ## Agent skills in the repository
 

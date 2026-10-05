@@ -1,6 +1,6 @@
 # D1 tokens, contrast and component states
 
-This is the approval record of design task D1, issue [northMES/northmes#189](https://github.com/northMES/northmes/issues/189), for story E04-S01 ([northMES/northmes#39](https://github.com/northMES/northmes/issues/39)). The design page is [ui-189-tokens.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=ui-189-tokens.dc.html) in the Claude Design project. Approved by Krister Johansson on 2026-10-05. The design project has no bound design system: the Broadsheet binding was removed on 2026-10-05. The approved page is frozen: a later change copies it under a new issue number.
+This is the approval record of design task D1, issue [northMES/northmes#189](https://github.com/northMES/northmes/issues/189), for story E04-S01 ([northMES/northmes#39](https://github.com/northMES/northmes/issues/39)). The design page is [ui/ui-189-tokens.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=ui/ui-189-tokens.dc.html) in the Claude Design project. Approved by Krister Johansson on 2026-10-05. The design project has no bound design system: the Broadsheet binding was removed on 2026-10-05. The approved page is frozen: a later change copies it under a new issue number.
 
 D1 draws no screen and has no route. The page assumes that this file, not the canvas, is the source of the values E04-S01 implements (Q3).
 
@@ -8,19 +8,21 @@ D1 draws no screen and has no route. The page assumes that this file, not the ca
 
 | File | Etag |
 |---|---|
-| `ui-189-tokens.dc.html` | `1791211616865426` |
-| `ui-189-tokens-header.dc.html` | `1791211382504231` |
-| `ui-189-tokens-base.dc.html` | `1791211841573279` |
-| `ui-189-tokens-contrast.dc.html` | `1791212086770672` |
-| `ui-189-tokens-palette.dc.html` | `1791211677625478` |
-| `ui-189-tokens-markers.dc.html` | `1791211571377308` |
-| `ui-189-tokens-type.dc.html` | `1791211458667973` |
-| `ui-189-tokens-components.dc.html` | `1791211947512009` |
-| `ui-189-tokens-themes.dc.html` | `1791211458667973` |
-| `ui-189-tokens-keyboard.dc.html` | `1791211571377308` |
-| `ui-189-tokens-notes.dc.html` | `1791211746856585` |
-| `ui-189-tokens-page.css` | `1791211331264292` |
-| `tokens.css` | `1791207903033572` |
+| `ui/ui-189-tokens.dc.html` | `1791221434821682` |
+| `ui/ui-189-tokens-header.dc.html` | `1791221434937191` |
+| `ui/ui-189-tokens-base.dc.html` | `1791221435049269` |
+| `ui/ui-189-tokens-contrast.dc.html` | `1791221435177831` |
+| `ui/ui-189-tokens-palette.dc.html` | `1791221435294945` |
+| `ui/ui-189-tokens-markers.dc.html` | `1791221435407617` |
+| `ui/ui-189-tokens-type.dc.html` | `1791221435534908` |
+| `ui/ui-189-tokens-components.dc.html` | `1791221435657129` |
+| `ui/ui-189-tokens-themes.dc.html` | `1791221435766855` |
+| `ui/ui-189-tokens-keyboard.dc.html` | `1791221435870445` |
+| `ui/ui-189-tokens-notes.dc.html` | `1791221435964236` |
+| `ui/ui-189-tokens-page.css` | `1791221436079789` |
+| `ui/tokens.css` | `1791221436225089` |
+
+The 13 files moved from the project root to `ui/` on 2026-10-05, when the design project was organized in area folders; their content is byte for byte unchanged, so the approval stands, and the earlier root etags are in this table as of commit [401e204](https://github.com/northMES/northmes/blob/401e204/docs/design/ui/ui-189-tokens.md#approved-files).
 
 ## Frames
 
@@ -28,20 +30,20 @@ Every frame is 1280 px wide and exists in light and dark. The build notes frame 
 
 | Frame | Content | Page file | Light | Dark |
 |---|---|---|---|---|
-| F0 | Header | `ui-189-tokens-header.dc.html` | [ui-189-tokens-f0-header-light.png](ui-189-tokens-f0-header-light.png) | [ui-189-tokens-f0-header-dark.png](ui-189-tokens-f0-header-dark.png) |
-| F1 | Token base | `ui-189-tokens-base.dc.html` | [ui-189-tokens-f1-token-base-light.png](ui-189-tokens-f1-token-base-light.png) | [ui-189-tokens-f1-token-base-dark.png](ui-189-tokens-f1-token-base-dark.png) |
-| F2 | Contrast table | `ui-189-tokens-contrast.dc.html` | [ui-189-tokens-f2-contrast-light.png](ui-189-tokens-f2-contrast-light.png) | [ui-189-tokens-f2-contrast-dark.png](ui-189-tokens-f2-contrast-dark.png) |
-| F3 | Order palette, group colors and the block text rule | `ui-189-tokens-palette.dc.html` | [ui-189-tokens-f3-palette-light.png](ui-189-tokens-f3-palette-light.png) | [ui-189-tokens-f3-palette-dark.png](ui-189-tokens-f3-palette-dark.png) |
-| F4 | State markers and the two-tone focus ring | `ui-189-tokens-markers.dc.html` | [ui-189-tokens-f4-markers-focus-light.png](ui-189-tokens-f4-markers-focus-light.png) | [ui-189-tokens-f4-markers-focus-dark.png](ui-189-tokens-f4-markers-focus-dark.png) |
-| F5 | Fonts and icons | `ui-189-tokens-type.dc.html` | [ui-189-tokens-f5-fonts-icons-light.png](ui-189-tokens-f5-fonts-icons-light.png) | [ui-189-tokens-f5-fonts-icons-dark.png](ui-189-tokens-f5-fonts-icons-dark.png) |
-| F6 | shadcn components in every state | `ui-189-tokens-components.dc.html` | [ui-189-tokens-f6-components-light.png](ui-189-tokens-f6-components-light.png) | [ui-189-tokens-f6-components-dark.png](ui-189-tokens-f6-components-dark.png) |
-| F7 | Themes | `ui-189-tokens-themes.dc.html` | [ui-189-tokens-f7-themes-light.png](ui-189-tokens-f7-themes-light.png) | [ui-189-tokens-f7-themes-dark.png](ui-189-tokens-f7-themes-dark.png) |
-| F8 | Keyboard and focus | `ui-189-tokens-keyboard.dc.html` | [ui-189-tokens-f8-keyboard-focus-light.png](ui-189-tokens-f8-keyboard-focus-light.png) | [ui-189-tokens-f8-keyboard-focus-dark.png](ui-189-tokens-f8-keyboard-focus-dark.png) |
-| B | Build notes, not part of the UI | `ui-189-tokens-notes.dc.html` | [ui-189-tokens-notes.png](ui-189-tokens-notes.png) | In ui-189-tokens-notes.png |
+| F0 | Header | `ui/ui-189-tokens-header.dc.html` | [ui-189-tokens-f0-header-light.png](ui-189-tokens-f0-header-light.png) | [ui-189-tokens-f0-header-dark.png](ui-189-tokens-f0-header-dark.png) |
+| F1 | Token base | `ui/ui-189-tokens-base.dc.html` | [ui-189-tokens-f1-token-base-light.png](ui-189-tokens-f1-token-base-light.png) | [ui-189-tokens-f1-token-base-dark.png](ui-189-tokens-f1-token-base-dark.png) |
+| F2 | Contrast table | `ui/ui-189-tokens-contrast.dc.html` | [ui-189-tokens-f2-contrast-light.png](ui-189-tokens-f2-contrast-light.png) | [ui-189-tokens-f2-contrast-dark.png](ui-189-tokens-f2-contrast-dark.png) |
+| F3 | Order palette, group colors and the block text rule | `ui/ui-189-tokens-palette.dc.html` | [ui-189-tokens-f3-palette-light.png](ui-189-tokens-f3-palette-light.png) | [ui-189-tokens-f3-palette-dark.png](ui-189-tokens-f3-palette-dark.png) |
+| F4 | State markers and the two-tone focus ring | `ui/ui-189-tokens-markers.dc.html` | [ui-189-tokens-f4-markers-focus-light.png](ui-189-tokens-f4-markers-focus-light.png) | [ui-189-tokens-f4-markers-focus-dark.png](ui-189-tokens-f4-markers-focus-dark.png) |
+| F5 | Fonts and icons | `ui/ui-189-tokens-type.dc.html` | [ui-189-tokens-f5-fonts-icons-light.png](ui-189-tokens-f5-fonts-icons-light.png) | [ui-189-tokens-f5-fonts-icons-dark.png](ui-189-tokens-f5-fonts-icons-dark.png) |
+| F6 | shadcn components in every state | `ui/ui-189-tokens-components.dc.html` | [ui-189-tokens-f6-components-light.png](ui-189-tokens-f6-components-light.png) | [ui-189-tokens-f6-components-dark.png](ui-189-tokens-f6-components-dark.png) |
+| F7 | Themes | `ui/ui-189-tokens-themes.dc.html` | [ui-189-tokens-f7-themes-light.png](ui-189-tokens-f7-themes-light.png) | [ui-189-tokens-f7-themes-dark.png](ui-189-tokens-f7-themes-dark.png) |
+| F8 | Keyboard and focus | `ui/ui-189-tokens-keyboard.dc.html` | [ui-189-tokens-f8-keyboard-focus-light.png](ui-189-tokens-f8-keyboard-focus-light.png) | [ui-189-tokens-f8-keyboard-focus-dark.png](ui-189-tokens-f8-keyboard-focus-dark.png) |
+| B | Build notes, not part of the UI | `ui/ui-189-tokens-notes.dc.html` | [ui-189-tokens-notes.png](ui-189-tokens-notes.png) | In ui-189-tokens-notes.png |
 
 ## Tokens
 
-`tokens.css` in the design project holds 84 color tokens in `:root` (light) and `.dark`, plus 6 shared values in `:root`. The oklch value is the source and the hex is its sRGB rendering; every value lies inside sRGB. A role that ends in "(= `--name`)" holds the same value as that token in both themes. The values are not in a repository commit yet.
+`ui/tokens.css` in the design project holds 84 color tokens in `:root` (light) and `.dark`, plus 6 shared values in `:root`. The oklch value is the source and the hex is its sRGB rendering; every value lies inside sRGB. A role that ends in "(= `--name`)" holds the same value as that token in both themes. The values are not in a repository commit yet.
 
 The D1 fixes to the shadcn neutral defaults (06 Design tokens):
 
@@ -638,7 +640,7 @@ The issue names 1.4.3, 1.4.11, 2.4.7, 2.4.11 and 2.5.8. The other criteria come 
 
 ## What the implementer takes
 
-The implementer of E04-S01 takes from this page the layout, region order, states and their transitions (one test per state), copy text verbatim, the keyboard model and slot placements. It does not take markup, class names, inline styles, canvas icons, demo numbers or any token value that is not in `tokens.css` as listed above. A value on the page that is not a token is a question, not a new color. The full rule is in [plan 06, Approval and what the implementer takes](../../plan/06-web-and-ux.md#approval-and-what-the-implementer-takes).
+The implementer of E04-S01 takes from this page the layout, region order, states and their transitions (one test per state), copy text verbatim, the keyboard model and slot placements. It does not take markup, class names, inline styles, canvas icons, demo numbers or any token value that is not in `ui/tokens.css` as listed above. A value on the page that is not a token is a question, not a new color. The full rule is in [plan 06, Approval and what the implementer takes](../../plan/06-web-and-ux.md#approval-and-what-the-implementer-takes).
 
 ## Open questions and proposals
 
