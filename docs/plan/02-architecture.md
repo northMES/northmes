@@ -161,7 +161,7 @@ Arrows point from a module to the modules it depends on. Dependencies point towa
 | 6. Command validators attach only to commands the owner declares validatable, and only from modules that depend on the owner. | Boot catalog check. |
 | 7. Cross-module UI goes only through slots that the rendering module owns, and a contributor must depend on the owner. | Boot catalog check and the shell's check against the module list. |
 | 8. A remote queries only fields of its own module and of its `dependsOn` closure. | GraphQL codegen per web package against a closure schema. |
-| 9. Domain logic is never shared by import between modules. | The scheduling domain is `@northmes/planning-domain`, pure TypeScript with no Nest, pg or `process.env` imports (a lint test). Planning server and planning web import it; other modules reach its results through planning's API module ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)). |
+| 9. Domain logic is never shared by import between modules. | The scheduling domain is `@northmes/planning-domain`, pure TypeScript with no Nest, Kysely, pg or `process.env` imports (a lint test). Planning server and planning web import it; other modules reach its results through planning's API module ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)). |
 
 Shared code goes into the MIT packages under `packages/` by the rules in [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md): cross-cutting rules are shared from their first use, mechanical glue has zero copies in modules, and a composite with a judgement is promoted at its third use (or the second when both users ship in release 1).
 

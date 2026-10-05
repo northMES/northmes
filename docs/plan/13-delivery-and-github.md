@@ -353,7 +353,7 @@ none, internal
 
 ## Acceptance criteria
 - [ ] runSecondsFor follows the formula in ADR 0027 for every case in Tests first
-- [ ] The domain package imports nothing from Nest, pg or process.env (lint test green)
+- [ ] The domain package imports nothing from Nest, Kysely, pg or process.env (lint test green)
 - [ ] ...
 ```
 

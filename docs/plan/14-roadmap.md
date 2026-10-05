@@ -1667,7 +1667,7 @@ Notes: from M1, `e2e/skeleton.spec.ts` and the resolve-hook test are required in
 
 ### E03 planning: Plan production in a pure scheduling package
 
-Goal: build `@northmes/planning-domain` in `modules/planning/domain` and the time functions in `@northmes/contracts` as pure TypeScript with no Nest, pg or `process.env` imports, test-first from the worked example and the synthetic cases (TC1 to TC16 in [07-production-planning.md](07-production-planning.md)). It ports the earlier attempt's placement, calendar, lock, operation and readiness rules with their six placement defects fixed. Server, board and tools all call these functions, so a duration or a lock rule is computed the same way everywhere.
+Goal: build `@northmes/planning-domain` in `modules/planning/domain` and the time functions in `@northmes/contracts` as pure TypeScript with no Nest, Kysely, pg or `process.env` imports, test-first from the worked example and the synthetic cases (TC1 to TC16 in [07-production-planning.md](07-production-planning.md)). It ports the earlier attempt's placement, calendar, lock, operation and readiness rules with their six placement defects fixed. Server, board and tools all call these functions, so a duration or a lock rule is computed the same way everywhere.
 
 Who it is for: Planner. Also: Plugin developer, who later plugs a solver in behind the `Scheduler` port.
 
@@ -1713,12 +1713,12 @@ Acceptance criteria:
 - TC1, TC2, TC3, TC4 and TC11 give the durations and ends in the worked example.
 - Cycle time entered as seconds or as pieces per hour (TC12) gives the stored seconds; display rounding never feeds back into the calculation.
 - Invalid rates (quantity below 0, cycles or pieces per cycle at or below 0, cycle seconds below 0, planning factor outside (0, 2]) give a per-row "invalid rates" result while other rows are computed.
-- A lint test fails on any Nest, pg or `process.env` import in the package, and on `localeCompare` or `Intl.Collator` in domain code.
+- A lint test fails on any Nest, Kysely, pg or `process.env` import in the package, and on `localeCompare` or `Intl.Collator` in domain code.
 
 Tests first:
 
 - `modules/planning/domain/src/duration.test.ts`: "TC1 ends Fri 2026-11-06 14:30 local"; "TC4 with 7 201 pieces ends 14:31"; "TC11 asserts 146 700 s"; "quantity 0 gives setup only and no send-ahead release".
-- `modules/planning/domain/test/domain-imports.test.ts`: "no file imports @nestjs, pg or process.env"; "no domain file calls localeCompare or Intl.Collator".
+- `modules/planning/domain/test/domain-imports.test.ts`: "no file imports @nestjs, kysely, pg or process.env"; "no domain file calls localeCompare or Intl.Collator".
 
 #### E03-S03 planning: Resolve override rates and freeze them on placement
 

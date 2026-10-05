@@ -49,7 +49,7 @@ flowchart LR
 ```
 
 - Core owns master data: plant, scope tree, equipment groups, equipment, tools, articles, routings and routing operations, operation equipment, operation tools, operation materials, calendars, warehouses and customers. Planning never reads core's tables; it calls `CoreApiModule` in process ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Decided.
-- The scheduling domain is one AGPL package, `@northmes/planning-domain`, in `modules/planning/domain`. It holds the duration and release functions, `plan()`, `validate()`, the lock rules (`judgeMove`), snapping and `projectMaterial`, as pure TypeScript with no Nest, `pg` or `process.env` imports; a lint test enforces this. Planning server and planning web both import it; other modules reach its results only through planning's API module ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)). Proposed.
+- The scheduling domain is one AGPL package, `@northmes/planning-domain`, in `modules/planning/domain`. It holds the duration and release functions, `plan()`, `validate()`, the lock rules (`judgeMove`), snapping and `projectMaterial`, as pure TypeScript with no Nest, Kysely, `pg` or `process.env` imports; a lint test enforces this. Planning server and planning web both import it; other modules reach its results only through planning's API module ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)). Proposed.
 - Generic time arithmetic that core also needs (`resolveWallClock`, half-open millisecond windows with `union`, `subtract`, `addWork`, `subtractWork`) and `textColorFor` live in the MIT `@northmes/contracts` package. Proposed.
 - Calendar expansion from calendar versions belongs to core. Planning gets availability through `CoreApiModule.availability(...)`; the board gets it through an availability query. Proposed ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)).
 - Production-start reports progress by calling planning's `reportOperationProgress` in its own command transaction. Planning never depends on production-start; it shows downstream data only through slots that the downstream module fills ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)).
@@ -1074,7 +1074,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - `judge-move.test.ts`: `PINNED`, `LOCKED`, `STARTED`, frozen window, held by another planner.
 - `validate.test.ts`: overlap, lead time, send-ahead, last-piece and frozen window conflicts over a change set plus committed rows.
 - `project-material.test.ts`: re-dated consumption and output, ERP date for unplaced orders, overdue movements due now, incoming before outgoing at the same instant, warning per job order.
-- `domain-imports.test.ts`: the package imports no Nest, `pg` or `process.env`; no `localeCompare` or `Intl.Collator`.
+- `domain-imports.test.ts`: the package imports no Nest, Kysely, `pg` or `process.env`; no `localeCompare` or `Intl.Collator`.
 
 ### Time and calendar tests
 

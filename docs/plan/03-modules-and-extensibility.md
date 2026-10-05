@@ -33,7 +33,7 @@ Each module folder holds three workspace packages, each with its own `license` f
 | `@northmes/<id>-web` | AGPL-3.0-or-later | the Vite remote, built with `@northmes/web-build` |
 | `@northmes/<id>-contracts` | MIT | Zod inputs of public and validatable commands, validator payload schemas, event payloads, the settings schema, error codes, master-data definitions, slot prop types and link helpers |
 
-The planning module adds a fourth package, `@northmes/planning-domain` (AGPL) in `modules/planning/domain`: the pure scheduling domain (duration and release functions, `plan()`, `validate()`, `judgeMove`, snapping, `projectMaterial`) with no Nest, pg or `process.env` imports ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)).
+The planning module adds a fourth package, `@northmes/planning-domain` (AGPL) in `modules/planning/domain`: the pure scheduling domain (duration and release functions, `plan()`, `validate()`, `judgeMove`, snapping, `projectMaterial`) with no Nest, Kysely, pg or `process.env` imports ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)).
 
 ```text
 modules/<id>/
