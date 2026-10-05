@@ -171,7 +171,7 @@ Rules:
 - Views are created `with (security_invoker = true)`. A view without it runs as its owner and bypasses row-level security. Materialized views have no row-level security and are not used for scoped data.
 - `SECURITY DEFINER` functions are allowed only on an allowlist, each with a pinned `search_path`. Each one is an RLS bypass and gets a review.
 
-The SDK's `/data` helpers (`@northmes/sdk/data`) wrap these rules: `get`, `getMany` through a request loader, `list` with keyset paging, search and declared filters, `update` with the version check, `archive`, `restore`, `scopeOf`, and the database error mapping (see [Commands](#commands-the-single-write-path)).
+The SDK's `/data` helpers (`@northmes/sdk/data`) wrap these rules: `get`, `getMany` through a request loader, `list` with keyset paging, search and declared filters, `update` with the version check, `archive`, `restore` and `scopeOf`. Database errors map through the SDK's `toDomainError`, which the pipeline's error step calls (see [Commands](#commands-the-single-write-path)).
 
 ### Connections
 
@@ -461,7 +461,7 @@ flowchart TD
 | 7. Signature | The stage and the `signature` manifest key are reserved so that a later re-authentication binds to one command id. Nothing is built in release 1. |
 | 8. Execute | Writes go through the `/data` helpers. |
 | 9. Events | Events carry the entity's new version and the audit command id as causation id. |
-| 10. Errors | `DomainError` codes pass through. SQLSTATE 42501 maps to `FORBIDDEN`, 23P01 and 23505 on a code to `core.code_taken`, 23514 on a span check to `core.crossScopeReference`. Unknown errors are masked as "Unexpected error." with a correlation id. The full error model is in [05-graphql-and-apis.md](05-graphql-and-apis.md). |
+| 10. Errors | `DomainError` codes pass through. `toDomainError` from the SDK maps SQLSTATE 42501 to `FORBIDDEN`, 23P01 and 23505 on a code to `core.code_taken` and 23514 on a span check to `core.crossScopeReference`; the jobs wrapper, the tool runner and the exception filter call the same function. Unknown errors are masked as "Unexpected error." with a correlation id. The full error model is in [05-graphql-and-apis.md](05-graphql-and-apis.md). |
 
 A denied command rolls back, so its command row disappears; the denial is a security event. Validation errors are not audited.
 
@@ -780,7 +780,7 @@ Required tests: two transactions that commit out of insertion order are both del
 
 Settings are Zod definitions (`defineSettings`) in module contracts packages. Their values are stored in audited database tables at company and plant scope and rendered by the shared `SettingsForm`. Adding a module setting is one field in that module's settings schema. See [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
 
-- Behaviour-affecting configuration never lives in environment variables. Environment variables hold only infrastructure settings and secrets. This is one of the regulated readiness rules ([15-regulated-readiness.md](15-regulated-readiness.md)).
+- Behaviour-affecting configuration never lives in environment variables. Environment variables hold only infrastructure settings and the paths of secret files ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed). This is one of the regulated readiness rules ([15-regulated-readiness.md](15-regulated-readiness.md)).
 - Switches that look like infrastructure but change behaviour are audited settings commands. Examples: enabling `/mcp` for the installation, and a connector's shadow or live write-back mode.
 - A settings change bumps `core.config_revision` (see [Configuration revision](#configuration-revision)), and the next command row records the new revision.
 - Settings fields without a label and a description are refused at boot.

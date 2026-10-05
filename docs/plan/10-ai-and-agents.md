@@ -204,7 +204,7 @@ Each guard has a test. These are integration or unit tests in `modules/ai` and t
 | `store: false` | A request-body test per provider kind, including the mixed case of Azure and OpenAI provider options. |
 | Telemetry off | Subscribe to `tracingChannel('ai:telemetry')` and register a capturing integration, then run a two-step mocked run through `model-call.ts`: zero channel messages and callbacks, and the markers `PROMPT-SECRET` and `CUSTOMDATA-SECRET` appear in no payload. A control call to raw `streamText` does capture messages, so the test fails if a later SDK moves the leak. |
 | No prompt text in logs | Stub providers that refuse connections and that return 400, with markers in the prompt and in a tool result: no marker in stdout, stderr or the pino destination. |
-| Tool errors stay generic | A tool that throws a Postgres unique violation: the next mocked prompt holds `internal` and the correlation id, not the DETAIL text, and so does the MCP `tools/call` result. |
+| Tool errors stay generic | A tool that throws a Postgres unique violation on a key that is not a code key: the next mocked prompt holds `internal` and the correlation id, not the DETAIL text, and so does the MCP `tools/call` result. |
 | Timeouts | A stub server that accepts the connection and never answers ends with `provider_timeout`. |
 | Entra authority | With `AZURE_AUTHORITY_HOST=https://evil.test` set, the Entra factory sends its token request to `login.microsoftonline.com`. |
 | No file downloads | `POST /api/ai/chat` with a file part returns 400. A `model-call.ts` unit test with a file part and a spy download function is rejected and the spy is never called. |

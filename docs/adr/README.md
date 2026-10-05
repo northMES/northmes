@@ -11,7 +11,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Release 1 scope | 0055 |
 | Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057 |
-| Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059 |
+| Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034 |
 | Web | 0019, 0020, 0021, 0053 |
 | Production planning | 0025, 0026, 0027, 0028, 0029, 0030 |
@@ -92,7 +92,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-05 the index holds 59 ADRs: 32 accepted and 27 proposed, 56 for release 1 and 3 for a later release. 14 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0005, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052 and 0053.
+On 2026-10-05 the index holds 60 ADRs: 32 accepted and 28 proposed, 57 for release 1 and 3 for a later release. 14 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0005, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052 and 0053.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -155,5 +155,6 @@ On 2026-10-05 the index holds 59 ADRs: 32 accepted and 27 proposed, 56 for relea
 | 0057 | [Scheduling domain as a pure package in the planning module](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | proposed | 1 | maintainer |
 | 0058 | [Developer environment: source exports, one stack script and one gate command](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | 1 | |
 | 0059 | [Time-series storage port with an open default backend](0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | later | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
+| 0060 | [Configuration with @nestjs/config, one Zod environment schema and secret files](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | proposed | 1 | |
 
-Next free number: 0060. Only Krister Johansson sets a status to accepted.
+Next free number: 0061. Only Krister Johansson sets a status to accepted.

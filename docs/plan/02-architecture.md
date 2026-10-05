@@ -376,15 +376,15 @@ Degraded entries keep readiness true: Pyramid unreachable, a backup older than 2
 
 ## Configuration and secrets
 
-Behaviour-affecting configuration lives in audited database tables as Zod-defined settings at company and plant scope. Environment variables hold only infrastructure settings and secrets. Switches that look like infrastructure but change behaviour, such as enabling `/mcp` or a connector's shadow or live mode, are audited settings commands ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)). `northmes.config.json` lists the plugins to load; the in-repo module list ships inside the image, and the NorthMES version comes from the image's `package.json`. The installed catalog (module ids, versions, manifest hashes, supergraph hash) is folded into the configuration revision, and one boot command is written only when the catalog changes ([ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)). The `app` service receives only its own secrets as Compose secrets ([ADR 0047](../adr/0047-secrets-and-the-installation-key.md)).
+Behaviour-affecting configuration lives in audited database tables as Zod-defined settings at company and plant scope. Environment variables hold only infrastructure settings and the paths of secret files. Switches that look like infrastructure but change behaviour, such as enabling `/mcp` or a connector's shadow or live mode, are audited settings commands ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md)). `northmes.config.json` lists the plugins to load; the in-repo module list ships inside the image, and the NorthMES version comes from the image's `package.json`. The installed catalog (module ids, versions, manifest hashes, supergraph hash) is folded into the configuration revision, and one boot command is written only when the catalog changes ([ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)). The `app` service receives only its own secrets as Compose secrets ([ADR 0047](../adr/0047-secrets-and-the-installation-key.md)).
 
 ## Boot sequence
 
-Role `all` boots in a fixed order. Any hard failure exits with code 1 and lists every problem it found in one message ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)).
+Role `all` boots in a fixed order. Any hard failure exits with code 1 and lists every problem it found in one message ([ADR 0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Step 1 parses the environment against the Zod configuration schema through `@nestjs/config` and reads the secret files; a bad value stops boot before any manifest is imported ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed).
 
 ```mermaid
 flowchart TD
-  s1["1 Read config"] --> s2["2 Install the resolve hook for plugin roots"]
+  s1["1 Read config: the environment<br/>and northmes.config.json"] --> s2["2 Install the resolve hook for plugin roots"]
   s2 --> s3["3 Import every manifest"]
   s3 --> s4["4 Catalog checks, topological order"]
   s4 --> s5["5 Migration check as nm_app"]
@@ -396,7 +396,8 @@ flowchart TD
   s10 --> s11["11 Mount the MCP endpoint"]
   s11 --> s12["12 Listen"]
   s12 --> s13["13 Start workers: pg-boss, sequencer, cron"]
-  s3 -.-> fail["Exit 1 with all problems in one message"]
+  s1 -.-> fail["Exit 1 with all problems in one message"]
+  s3 -.-> fail
   s4 -.-> fail
   s5 -.-> fail
   s6 -.-> fail
@@ -407,7 +408,7 @@ flowchart TD
 
 | Step | What happens | Fails hard on |
 |---|---|---|
-| 1. Config | read `northmes.config.json` | unreadable file; a version field that differs from the image |
+| 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed) | an invalid or missing environment key; a missing, empty or other-readable secret file; an unreadable config file; a version field that differs from the image |
 | 2. Resolve hook | `module.registerHooks` maps host-provided packages imported from any plugin root to the host's copy | |
 | 3. Manifests | import every manifest; manifests import only `defineModule`, so no Nest code loads | missing `exports["./manifest"]`, import error, invalid id |
 | 4. Catalog checks | duplicate ids, derived-name collisions, `dependsOn` present, no cycles, no core module depending on a plugin, `northmes` range, key prefixes, slot ownership; topological order with core first | any of these |
@@ -531,6 +532,7 @@ Each check below is a test or CI job that a task carries.
 | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) | release 1 scope and the scope rule |
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the pure scheduling package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | developer environment and the skeleton gate |
+| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | configuration, the environment schema and secret files at boot step 1 (proposed) |
 
 ## Open items
 

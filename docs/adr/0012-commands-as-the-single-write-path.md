@@ -79,12 +79,12 @@ The pipeline runs every command, from every surface, in this order:
 
 Error model:
 
-* One error type, `DomainError { code, kind, message, details? }`. `kind` is `validation`, `not_found`, `forbidden`, `conflict`, `precondition` or `unavailable`.
+* One error type, `DomainError { code, kind, message, details? }`. `kind` is `validation`, `unauthenticated`, `not_found`, `forbidden`, `conflict`, `precondition` or `unavailable`.
 * Each module declares its codes with `defineErrors` in its contracts package, each with a kind and an optional Zod schema for `details`. Codes start with the owning module's id and are never renamed after a release.
-* Codes named so far include `core.forbidden`, `core.plant_forbidden`, `core.version_conflict`, `core.not_found`, `core.archived`, `core.code_taken`, `core.crossScopeReference`, `core.command_rejected`, `core.validator_contract_mismatch`, `core.client_outdated`, `core.secret_reentry_required`, `core.list.invalid_cursor` and `planning.production_order.locked`.
+* Codes named so far include `core.forbidden`, `core.plant_forbidden`, `core.version_conflict`, `core.not_found`, `core.archived`, `core.code_taken`, `core.crossScopeReference`, `core.command_rejected`, `core.validator_contract_mismatch`, `core.client_outdated`, `core.secret_reentry_required`, `core.list.invalid_cursor`, `planning.production_order.locked`, the request codes `core.request.malformed`, `core.request.too_large`, `core.request.unsupported_media_type` and `core.request.rate_limited` (working defaults, M-51), and `core.internal` for a masked error.
 * GraphQL errors carry `extensions` with `code` (from the kind), `errorCode`, `fieldErrors`, `details` and `correlationId`. REST routes answer with RFC 9457 problem details built from the same error. Result unions are not used.
-* Database errors map in the SDK exception filter: SQLSTATE 42501 to `FORBIDDEN` (`core.forbidden`); 23P01 on a code exclusion constraint and 23505 on a code key to `core.code_taken`; 23514 on a scope span check to `core.crossScopeReference`; zero rows on a versioned update to `core.version_conflict`, or `core.not_found` when the row is gone.
-* The subgraph exception filter masks every unknown error as "Unexpected error." with the correlation id, inside the subgraph, whatever the transport. The gateway's masking is a second layer.
+* Database errors map in one SDK function, `toDomainError(error)`, which the pipeline's error step, the jobs wrapper, the tool runner and the exception filter all call: SQLSTATE 42501 to `FORBIDDEN` (`core.forbidden`); 23P01 on a code exclusion constraint and 23505 on a code key to `core.code_taken`; 23514 on a scope span check to `core.crossScopeReference`. When a versioned update touches zero rows, the `/data` update helper raises `core.version_conflict`, or `core.not_found` when the row is gone.
+* One global exception filter (`@Catch()` with no arguments, registered once as `APP_FILTER`) answers resolvers with GraphQL extensions and REST routes with problem details. Guards throw `DomainError` instead of returning false; Nest `HttpException`s and body-parser errors map by status; other 4xx statuses keep their status with a `core.request.*` code. The filter masks every unknown error as "Unexpected error." with the correlation id, inside the subgraph, whatever the transport. The gateway's masking is a second layer. The rules are in [05-graphql-and-apis.md](../plan/05-graphql-and-apis.md#the-exception-filter).
 
 ### Consequences
 
@@ -108,7 +108,9 @@ Error model:
 * Boot test: a validator on a command that is not declared validatable, or from a module without `dependsOn` on the owner, makes boot exit 1.
 * Permission test: a plant planner calling `coreUpdateArticle` on a company article gets `FORBIDDEN` with `errorCode` `core.forbidden`, never "Unexpected error.".
 * Schema test: every Mutation field accepts the shared reason input; a test profile that requires reasons returns `REASON_REQUIRED` while the committed supergraph snapshot stays unchanged.
-* Masking test: a plain `Error` thrown in a resolver reaches the client as "Unexpected error." with a correlation id, over HTTP and over graphql-ws.
+* Masking test: a plain `Error` thrown in a resolver reaches the client as "Unexpected error." with a correlation id, over HTTP and over graphql-ws; a plain `Error` on a REST route returns 500 `application/problem+json` with the correlation id and without the error text; an error thrown by the per-event check ends that subscription with "Unexpected error." and a correlation id.
+* Filter test: a guard denial on a REST route returns 403 problem details with code `core.forbidden`; malformed JSON returns 400 problem details.
+* Pipeline contract case: a 23P01 on a code inside a command run by a job gives `core.code_taken`.
 * Error catalog check: CI compares the declared error codes with the previous release's list and fails when a released code is removed or renamed.
 * Shutdown test ([ADR 0043](0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md)): a 1.5-second mutation with `app.close()` after 300 ms returns 200 and leaves one `audit.command` row.
 

@@ -230,6 +230,10 @@ These changes still need a new image: a plugin that needs another version of a h
 - A plugin removed from the config leaves its schema. System health lists leftover schemas of modules no longer installed; `northmes plugin purge <id>` comes later.
 - Release 1 has no plugin database API for writing a plugin's own tables at run time. Whether the example validator keeps a table of its own is open ([Open items](#open-items)).
 
+### Configuration for plugins
+
+A plugin reads no environment variables. `pnpm plugin:check` refuses an import of `@nestjs/config` or `@northmes/sdk/config`, and Biome's `style/noProcessEnv` covers the in-repo example plugins. A plugin's behaviour comes from its settings, which are audited ([ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed).
+
 ### Fail hard or degrade
 
 | Situation | Result |
@@ -340,7 +344,7 @@ Core is AGPL-3.0-or-later. The packages a plugin needs are MIT, so a plugin's ow
 |---|---|---|
 | `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`), the unit catalog, `resolveWallClock` and the millisecond window functions |
 | `@northmes/<id>-contracts` | MIT | one per module; listed under [Package shape](#package-shape) |
-| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data` |
+| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, and the server-only `/errors` and `/config`, which plugins may not import |
 | `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider, the Apollo client factory, data hooks, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
 | `@northmes/ui` | MIT, shared singleton | primitives on one locked base, tokens, presentational patterns, the form engine `useZodForm`; no Apollo, TanStack Router or GraphQL imports |
 | `@northmes/web-build` | MIT | `defineRemoteConfig`, the shared list, build guards, `sources.gen.css` |
@@ -422,6 +426,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md), [0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | licenses, the dependency gate, the MIT package set |
 | [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | the scheduling domain package |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | the skeleton and when the examples land |
+| [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | plugins read no environment variables (proposed) |
 
 ## Open items
 

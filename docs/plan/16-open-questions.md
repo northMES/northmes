@@ -205,6 +205,9 @@ The remaining administrator questions (installation, polling rate, response size
 | M-46 | AI provider details: which Entra token scope the pilot's Azure resource accepts; whether the Entra, Google and AWS token libraries honour proxy settings behind a plant proxy; which local model gives acceptable tool calling on hardware a plant would buy | A spike decides the scope; proxy behaviour is tested before a customer needs it; a measured test with the planning toolset picks the model | [0035][adr-0035], 10 |
 | M-47 | Name of the instant filter input | `DateTimeFilter` over `Instant` values, as in the list prototype | [0016][adr-0016], 05 |
 | M-48 | The restore drill switch skips integration crons and forces Pyramid shadow mode through an environment flag, while rule 6 of ADR 0051 keeps behaviour settings out of environment variables. May the drill switch stay an environment flag? | Not decided; the drill copy runs on an internal network with no egress either way | [0045][adr-0045], [0051][adr-0051], 12 |
+| M-51 | The codes for request errors on REST routes: malformed JSON (400) and the transport errors 413, 415 and 429 | `core.request.malformed` (400), `core.request.too_large` (413), `core.request.unsupported_media_type` (415) and `core.request.rate_limited` (429, with `Retry-After`) | [0012][adr-0012], 05 |
+| M-52 | The correlation id header, and whether an id set by Caddy is trusted | The server creates a uuidv7 per request, ignores any client or proxy value and returns it in `x-northmes-correlation-id` | [0046][adr-0046], 05 |
+| M-53 | Do `northmes admin create` and `northmes admin reset-password` need the Better Auth secret in the migrate container, which today receives only `db_owner_password`? | They run with the migrate configuration; if Better Auth needs its secret to create a user, the migrate service also receives `auth_secret` | [0060][adr-0060], [0011][adr-0011], [0047][adr-0047], 12 |
 
 ### Later modules
 
@@ -256,3 +259,5 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0055]: ../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md
 [adr-0057]: ../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md
 [adr-0059]: ../adr/0059-time-series-storage-port-with-an-open-default-backend.md
+[adr-0011]: ../adr/0011-principals-credentials-and-same-origin-rules.md
+[adr-0060]: ../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md

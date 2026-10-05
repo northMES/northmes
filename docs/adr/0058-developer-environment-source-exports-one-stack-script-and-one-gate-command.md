@@ -57,11 +57,11 @@ Chosen option: "A source exports condition, one stack script, one gate command w
 
 One script serves `pnpm dev`, the end-to-end global setup and handoff's `handoff-demo`. Its shared steps:
 
-1. Start Postgres through Testcontainers from the image pinned in `infra/pg-image.json` ([ADR 0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md)). `.withReuse()` is used only on a laptop behind an opt-in variable, never in CI, because a reused container outlives the run.
-2. Bootstrap the database roles as the container superuser.
-3. Run `northmes migrate`.
-4. Run an idempotent seed: one company, one plant, a planner and an operator. Their dev-only credentials live in the seed package.
-5. Write `.northmes/dev.env` with random secrets when it is missing. The dev secrets carry a marker, and the config loader throws a named error when it finds the marker with `NODE_ENV=production`.
+1. Write `.northmes/dev.env` (with `NODE_ENV=development`) and the dev secret files under `.northmes/secrets/` (mode 0600) with random values when they are missing; the `_FILE` keys in `dev.env` point at the files ([ADR 0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). The dev secrets carry a marker, and the config loader throws a named error when it finds the marker with `NODE_ENV=production`.
+2. Start Postgres through Testcontainers from the image pinned in `infra/pg-image.json` ([ADR 0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md)). `.withReuse()` is used only on a laptop behind an opt-in variable, never in CI, because a reused container outlives the run.
+3. Bootstrap the database roles as the container superuser, with the role passwords from those files.
+4. Run `northmes migrate`.
+5. Run an idempotent seed: one company, one plant, a planner and an operator. Their dev-only credentials live in the seed package.
 6. Take ports by binding `127.0.0.1:0` and pass them through the environment to the server, the shell proxy and the remotes. The server's default port is not 3000, and an `EADDRINUSE` error names `PORT`.
 
 | Entry point | What runs after the shared steps |
@@ -110,7 +110,7 @@ Month 1 ports the integration spike, kept as code in `docs/sources/`, test-first
 * `test/meta/exports.test.ts` (name proposed) fails when a workspace package with `exports` does not list `"@northmes/source"` first and a `default` under `dist/`.
 * CI job `fresh-worktree` runs `git worktree add`, `pnpm install --frozen-lockfile` and `pnpm test:int` with no build step, and passes.
 * The image smoke test asserts that `NODE_OPTIONS` carries no `--conditions`.
-* `dev-up.int.test.ts` runs the bootstrap twice against one container: the second run applies nothing and adds no rows, the seeded planner signs in through the Better Auth API, and `/health/ready` returns 200 ([ADR 0043](0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md)). Loading the config with `NODE_ENV=production` and the dev secret marker throws the named error. Two stack instances started together get disjoint ports and no `EADDRINUSE`.
+* `dev-up.int.test.ts` runs the bootstrap twice against one container: the second run applies nothing and adds no rows, the seeded planner signs in through the Better Auth API, and `/health/ready` returns 200 ([ADR 0043](0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md)). The dev secret files exist with mode 0600 and carry the dev marker; the refusal itself is tested in `@northmes/sdk/config` ([ADR 0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). Two stack instances started together get disjoint ports and no `EADDRINUSE`.
 * `test/meta/gates.test.ts` asserts that the Tester command in every graph under `docs/agents/handoff/graphs/` equals `pnpm check` and that the graph's coder instruction names `pnpm check`, that the root `test:handoff` script runs `pnpm check`, that every CI gate step runs a script that `check` or `check:full` contains, that commands in `AGENTS.md` and `CLAUDE.md` start with `pnpm` or `git`, and that the first non-heading line of `CLAUDE.md` is `@AGENTS.md`.
 * `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate` from M1.
 
@@ -146,7 +146,7 @@ Month 1 ports the integration spike, kept as code in `docs/sources/`, test-first
 
 ## More information
 
-* Related ADRs: [0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](0019-web-shell-with-react-module-federation-remotes.md), [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0043](0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md), [0047](0047-secrets-and-the-installation-key.md), [0049](0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md).
+* Related ADRs: [0004](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](0019-web-shell-with-react-module-federation-remotes.md), [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0043](0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md), [0047](0047-secrets-and-the-installation-key.md), [0049](0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md), [0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) configuration and the dev secret files.
 * Plan: [11-quality-and-testing.md](../plan/11-quality-and-testing.md#one-stack-script) (root scripts, the stack script, meta tests), [13-delivery-and-github.md](../plan/13-delivery-and-github.md) (handoff setup, Tester, CI jobs), [02-architecture.md](../plan/02-architecture.md#repository-layout), [06-web-and-ux.md](../plan/06-web-and-ux.md), [14-roadmap.md](../plan/14-roadmap.md), [17-risks.md](../plan/17-risks.md).
 * Node package exports and conditions: https://nodejs.org/api/packages.html#conditional-exports
 * Vitest `resolve.conditions` (Vite option): https://vite.dev/config/shared-options.html#resolve-conditions

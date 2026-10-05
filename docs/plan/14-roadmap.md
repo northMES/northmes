@@ -11,7 +11,7 @@ This roadmap turns release 1 under option B into delivery work. It holds the che
 - This file holds tasks for E00, E01 and the design tasks D1 and D2, which run beside E02 ([0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)). Each task brief sits in a fenced block with the sections Goal, Where in the code, Tests first, Design, ADRs, Out of scope and Changelog, in that order. Everything above `## Acceptance criteria` is the `brief` of `create_task`, and the checkbox lines are its `acceptance`. Changelog holds the pull request title as `type(module): outcome`, or "none, internal". D1 and D2 use the design task format of [13-delivery-and-github.md](13-delivery-and-github.md#design-task) instead. Tasks for later stories are written when their epic is shaped, as thin vertical slices, in one shaping file per epic, `docs/plan/Enn-<slug>.md` ([13-delivery-and-github.md](13-delivery-and-github.md#plan-identifiers-and-files)). Each epic starts with the task "docs: record the Enn plan and ADRs", labelled `human` and closed by the pull request that adds its shaping file. A slice delivers one small end-to-end behaviour (for example a migration, a command, a GraphQL field, a screen state and their tests) inside handoff's plan budget of 15 files and 12 steps. A story is usually two to five tasks.
 - Links: this file links ADRs relatively (`../adr/...`). Issue bodies name repository paths (`docs/adr/0029-...md`), because run agents read files and cannot follow links outside the repository.
 - Blockers name ids here. The session creates issues in dependency order and turns each id into a `blocked_by` issue number.
-- Bootstrap. Right after E00-S01-T01 pushes the workspace skeleton, an interactive session sets up the handoff instance (`.env` with a classic `GITHUB_TOKEN` that has the project scope, `CLAUDE_CODE_OAUTH_TOKEN`, `HANDOFF_WORKSPACE=worktree` and `HANDOFF_CAP_CLI=1`; `pnpm db:up`, `pnpm dev:web`, `pnpm dev:worker`). It then runs `add_project`, `list_github_projects` and `setup_plan` on the repository under its owner at that time, creates the labels `human`, `spike`, `design` and the `area:` labels with `gh label create`, and creates every E00 and E01 issue with handoff tools in dependency order. The conversion also creates the E04 epic and the stories E04-S01 and E04-S02, so D1 and D2 have an owning story. A person closes the E00-S01-T01 issue by hand with a link to the first commit. Status on 2026-10-05: SP0 is done, and handoff supports a repository and plan Project owned by an organization. The transfer to the `northMES` organization and the rename to `northmes` are done (E01-S01-T02, 2026-10-05), so `add_project` targets `northmes/northmes` directly.
+- Bootstrap. Right after E00-S01-T01 pushes the workspace skeleton, an interactive session sets up the handoff instance (`.env` with a classic `GITHUB_TOKEN` that has the project scope, `CLAUDE_CODE_OAUTH_TOKEN`, `HANDOFF_WORKSPACE=worktree` and `HANDOFF_CAP_CLI=1`; `pnpm db:up`, `pnpm dev:web`, `pnpm dev:worker`). It then runs `add_project`, `list_github_projects` and `setup_plan` on the repository under its owner at that time, creates the labels `human`, `spike`, `design` and the `area:` labels with `gh label create`, and creates every E00 and E01 issue with handoff tools in dependency order. The conversion also creates the E04 epic and the stories E04-S01 and E04-S02, so D1 and D2 have an owning story. A person closes the E00-S01-T01 issue by hand with a link to the first commit. Status on 2026-10-05: SP0 is done, and handoff supports a repository and plan Project owned by an organization. The transfer to the `northMES` organization and the rename to `northmes` are done (E01-S01-T02, 2026-10-05), so `add_project` targets `northmes/northmes` directly. On 2026-10-05 the handoff project `northmes` (Flow mode) and the plan Project https://github.com/orgs/northMES/projects/1 were created, together with the labels `human`, `spike`, `design` and the `area:` labels, and the E00 epic, E00-S01 and its two tasks became issues 1 to 4.
 - Area labels: repo, handoff and testing use `area: ci`; contracts and platform use `area: sdk`; core, audit, ai and production-start use `area: core`; planning and pyramid-connector use `area: planning`; ui and web use `area: web`; docs uses `area: docs`; ops uses `area: deploy`. Each task's Labels line names its area label.
 - Estimates: each epic carries an estimate in raw days as planning information, and the weekly ledger turns it into credit as the epic's tasks merge (see [The weekly ledger row](#the-weekly-ledger-row)). Stories and tasks carry no size. The plan runs in handoff's Flow mode, where the order and the blockers show progress: the Project's Size field stays empty and `create_task` runs without `size`, as [docs/agents/issue-tracker.md](../agents/issue-tracker.md) says.
 - Runs: handoff's scheduler is not used. The operating session reads `list_plan` and `list_backlog`, starts the next Ready task without open blockers with `start_run` and names the graph for that run, follows the run events, and brings every question, permission request, failed run and merge decision to Krister ([13-delivery-and-github.md](13-delivery-and-github.md#choosing-the-graph-per-run)). Only Krister answers questions and permission requests.
@@ -41,7 +41,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 |---|---|---|---|
 | Day 1 | Thu 2026-10-15 | The written request to the pilot's Pyramid administrator and the Pyramid reseller is sent (the questions are in [08-pyramid-connector.md](08-pyramid-connector.md#17-questions-for-the-pyramid-administrator)). The request for the data processing agreement is sent. The product owner session is booked. The private companion repository for internal research exists and is pushed, and SP0 (E01-S01) is done; both were done on 2026-10-05. Krister confirms the persona list and the epic order, which clears the needs-confirmation of ADR 0049. | |
 | Week 1 | by Fri 2026-10-23 | handoff's `setup_project` reports ready (E00). The Node 26 hook tests, the time zone suite and the benchmarks have run on the `node:26` Debian image (E01-S05). A Windows PC of the pilot's planner PC class is in hand for SP3 and the NVDA passes. The product owner session has taken place. | Node 26 or Node 24 LTS ([0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)) |
-| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
+| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
 | SP3 verdict | Fri 2026-11-06 | The board spike is measured on the planner-class PC: 60 fps while scrolling at day zoom, p95 frame time at most 33 ms while dragging at week zoom, no long task over 50 ms, and keyboard move mode steps one snap and one machine. `e2e/board-perf.spec.ts` exists. | An interactive board, or one more week that limits the rendered range |
 | Skeleton target | Fri 2026-11-13 | `e2e/skeleton.spec.ts` is green on the built `all` process. The Pyramid write method names have arrived. | If the spec is red, hardening freezes: only skeleton tasks run until it is green. |
 | M1 | Fri 2026-11-20 | `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate`. The SP3 second-fail deadline has passed. The first weekly ledger rows exist. | If SP3 failed twice: the job order table view with the shared Move dialog plus a read-only timeline carries planning (cut 8). |
@@ -118,6 +118,8 @@ Board-core tasks in E08 wait only for the SP3 verdict and design approval D3; on
 
 ### E00 repo: Make the repository ready for the first handoff run
 
+Issue: northMES/northmes#1.
+
 Goal: put on `main` everything a handoff run needs before it starts. That is the pnpm workspace with its root scripts and the one gate command, the Testcontainers harness with a green unit and a green integration test, the contributor and agent files, CI with `ci / gate` and the supply-chain checks, the ADR index and numbering script, the plan README with the ledger table, the spike sources that E02 ports, and the handoff scripts. The epic ends when handoff's `setup_project` reports ready.
 
 Who it is for: Maintainer. Also: Plugin developer, who reads the same contributor files.
@@ -129,6 +131,8 @@ Out of scope: product code; the release workflow beyond the configuration SP2 ve
 Estimate: not estimated; planned for 2026-10-16 to 2026-10-21 (internal research note 32). Depends on: nothing. SP0 (E01-S01) is done (2026-10-05); the repository moved to the `northMES` organization and was renamed `northmes` (E01-S01-T02, 2026-10-05). Milestone: Week 1.
 
 #### E00-S01 repo: Set up the pnpm workspace and the gate command
+
+Issue: northMES/northmes#2.
 
 As a maintainer, I want one workspace with root scripts and one gate command, so that every person, session and handoff run checks a change the same way.
 
@@ -153,6 +157,8 @@ Tests first:
 Notes: Node 26 is the target; E01-S05 decides whether `.node-version` stays on 26 or moves to Node 24 LTS.
 
 ##### E00-S01-T01 repo: Push the workspace skeleton
+
+Issue: northMES/northmes#3.
 
 Labels: `task`, `human`, `area: ci` (the push goes to main before the ruleset exists). Blocked by: none.
 
@@ -203,6 +209,8 @@ none, internal
 ```
 
 ##### E00-S01-T02 repo: Add pnpm check and the root scripts
+
+Issue: northMES/northmes#4.
 
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; ADRs 0004 and 0058 are proposed). Blocked by: E00-S01-T01.
 
@@ -765,7 +773,7 @@ Labels: `task`, `human`, `area: docs` (shared docs). Blocked by: E00-S05-T01.
 Plan: E00-S05-T02
 
 ## Goal
-Keep docs/plan/README.md in step with docs/plan/14-roadmap.md and add test/meta/doc-links.test.ts. The README already carries the document index, the persona list, the weekly ledger table (header row and empty rows with Friday dates up to M2), the epic order and the M0 ADR checklist, with the ADRs E02 needs (0003, 0006, 0015, 0019, 0037, 0041 and 0058) and those E03 and the rest of M0 need. Check them against the roadmap and the ADR front matter and fix any drift. The doc-links test keeps the public docs self-contained.
+Keep docs/plan/README.md in step with docs/plan/14-roadmap.md and add test/meta/doc-links.test.ts. The README already carries the document index, the persona list, the weekly ledger table (header row and empty rows with Friday dates up to M2), the epic order and the M0 ADR checklist, with the ADRs E02 needs (0003, 0006, 0015, 0019, 0037, 0041, 0058 and 0060) and those E03 and the rest of M0 need. Check them against the roadmap and the ADR front matter and fix any drift. The doc-links test keeps the public docs self-contained.
 
 ## Where in the code
 docs/plan/README.md (exists; check and extend)
@@ -1470,7 +1478,7 @@ Goal: port the integration spike test-first into the repository, so that one pro
 
 Who it is for: Maintainer. Also: Plugin developer.
 
-ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
+ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
 
 Out of scope: the frontend widget plugin, `plugin check` and packaging `@northmes/web-build` for use outside the workspace (moved to E21, inside M2); Better Auth and real permissions (E05); audit (E05); hardening of the shell (E04).
 
@@ -1486,7 +1494,7 @@ As a plugin developer, I want boot to read every manifest and stop with one mess
 
 Module: platform (`packages/sdk`, `apps/server`). Blocked by: E00-S07-T01, E01-S05-T02. Design: none.
 
-ADRs: [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+ADRs: [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
 
 Acceptance criteria:
 
@@ -1494,12 +1502,17 @@ Acceptance criteria:
 - `moduleNames('production-start')` derives `productionStart`, `production_start`, the owner role `nm_mod_production_start` and the remote name; two modules with colliding derived names stop boot.
 - A bad `northmes` range, a missing dependency, a cycle, a wrong key prefix, a core module depending on a plugin and a contribution to a slot of a module it does not depend on each exit 1 with a named message, and several problems are listed together.
 - Modules load in topological order with core first.
+- `apps/server` imports `ConfigModule.forRoot` with `ignoreEnvFile`, `cache`, `validate: loadEnv(serverEnvSchema)` and the `secrets` namespace from `@northmes/sdk/config` before every module; an invalid environment exits 1 before any manifest import and lists every bad key without its value.
+- Biome `style/noProcessEnv` is an error outside `packages/sdk/src/config`, tests, `scripts` and tool configuration files.
 - Every workspace package exports its sources under the `@northmes/source` condition before `default`, and production never sets that condition.
 
 Tests first:
 
 - `apps/server/test/catalog.test.ts`: "a missing dependency exits 1 naming both modules"; "three problems are listed as 3 problems"; "image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0".
 - `packages/sdk/test/module-names.test.ts`: "production-start derives productionStart and production_start".
+- `packages/sdk/test/config/server-env.test.ts`: "a missing public origin, PORT 70000 and role web are listed together without their values"; "NODE_ENV defaults to production and NORTHMES_ROLE to all".
+- `packages/sdk/test/config/secrets.test.ts`: "a missing, empty or world-readable secret file fails naming its key"; "one trailing newline is trimmed"; "a dev-marked secret fails with NODE_ENV production".
+- `apps/server/test/boot/config.int.test.ts`: "an invalid environment exits 1 before any manifest import and lists every bad key".
 - `test/meta/source-exports.test.ts`: "every workspace package lists @northmes/source before default".
 
 #### E02-S02 platform: Migrate each module as its own owner role
@@ -1565,6 +1578,7 @@ Acceptance criteria:
 - `example-validator`, built with `pnpm plugin:build example-validator` (Rolldown, `HOST_PROVIDED` external) and loaded from `plugins/`, rejects a release with `core.command_rejected` naming `rejectedBy`.
 - A validator slower than its limit, or one that throws, rejects the command and the handler does not run.
 - A payload that does not match the validator's MIT contract schema is rejected with `core.validator_contract_mismatch`.
+- The SDK exception filter, registered once as `APP_FILTER`, writes `code`, `errorCode` and `details` into the GraphQL error that carries `core.command_rejected`; the correlation id arrives with E05-S01.
 - With the resolve hook, a plugin outside the host tree and a plugin with its own Nest copy boot against the host's packages; a plugin that bundles host packages fails boot as designed.
 
 Tests first:
@@ -1647,12 +1661,12 @@ As a maintainer, I want one script to start Postgres, migrate, seed and run the 
 
 Module: platform (`scripts`, `e2e`). Blocked by: E02-S07. Design: none.
 
-ADRs: [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md).
+ADRs: [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
 
 Acceptance criteria:
 
-- The stack script starts Testcontainers Postgres from `infra/pg-image.json`, bootstraps the roles, runs `northmes migrate` and an idempotent seed (one company, one plant, a planner and an operator with dev-only credentials kept in the seed package).
-- It writes `.northmes/dev.env` with random secrets when missing; the config loader refuses dev secrets when `NODE_ENV` is production.
+- The stack script first writes `.northmes/dev.env` and the dev secret files under `.northmes/secrets/` (mode 0600) when missing, then starts Testcontainers Postgres from `infra/pg-image.json`, bootstraps the roles, runs `northmes migrate` and an idempotent seed (one company, one plant, a planner and an operator with dev-only credentials kept in the seed package).
+- The config loader refuses dev secrets when `NODE_ENV` is production ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 - Ports come from binding `127.0.0.1:0`; the server's default port is not 3000, and EADDRINUSE names `PORT`.
 - `.claude/launch.json` has a `handoff-demo` configuration that runs the built `all` process through the stack script.
 - `e2e/skeleton.spec.ts` runs on the built `all` process and covers boot, the remote, the validator veto and the live update; `ci / e2e` runs it.
@@ -1661,7 +1675,7 @@ Acceptance criteria:
 Tests first:
 
 - `e2e/skeleton.spec.ts`: "the board lists orders with article names"; "a vetoed release shows the validator message"; "a release in a second context appears on the board".
-- `scripts/stack/config.test.ts`: "dev secrets are refused when NODE_ENV is production".
+- `scripts/stack/config.test.ts`: "the dev secret files are written with mode 0600 and the dev marker".
 
 Notes: from M1, `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate`. `handoff-demo` must exist before the first UI task runs in handoff. `playwright.config.ts` already exists from E01-S04-T01; E02-S08 adds the skeleton and e2e projects to it.
 
@@ -2157,7 +2171,7 @@ As a plugin developer, I want every write to run through one pipeline that parse
 
 Module: core, sdk (`packages/sdk`, `apps/server`). Blocked by: E02-S04. Design: none.
 
-ADRs: [0012](../adr/0012-commands-as-the-single-write-path.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md).
+ADRs: [0012](../adr/0012-commands-as-the-single-write-path.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0046](../adr/0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md).
 
 Acceptance criteria:
 
@@ -2166,10 +2180,15 @@ Acceptance criteria:
 - Create commands take a client-generated uuidv7 id with `insert ... on conflict do nothing`, so a retry is harmless.
 - `DomainError` codes come from `defineErrors` per module; 42501 maps to FORBIDDEN, 23P01 to the code-clash error, and unknown errors are masked as "Unexpected error." with a correlation id.
 - Boot exits naming `Type.field` when a Mutation field has no registered command handler.
+- One global exception filter answers resolvers with GraphQL extensions and REST routes with `application/problem+json`; guard denials, Nest `HttpException`s and body-parser errors map by the rules in [05-graphql-and-apis.md](05-graphql-and-apis.md#the-exception-filter), and everything else is masked.
+- `toDomainError` maps database errors for the pipeline and the filter; the jobs wrapper (E05-S09) and the tool runner (E12-S01) call the same function.
+- A correlation middleware in `apps/server` creates one uuidv7 per HTTP request and per graphql-ws operation, keeps it in `AsyncLocalStorage` and returns it in `x-northmes-correlation-id`; `nestjs-pino` reads the same id when it arrives (E16-S05).
 
 Tests first:
 
 - `apps/server/test/commands/pipeline.int.test.ts`: "a stale expectedVersion fails with core.version_conflict and writes nothing"; "a retried create with the same id returns the first row".
+- `apps/server/test/errors/filter.int.test.ts`: "a plain Error on a REST route returns 500 problem+json with type, status, code and correlationId and without the error text"; "a DomainError core.forbidden on a REST route returns 403 with code core.forbidden"; "a guard denial on a REST route returns 403 problem+json with code core.forbidden"; "malformed JSON on a REST route returns 400 problem+json"; "a plain Error in a resolver returns Unexpected error. with a correlationId over HTTP and graphql-ws".
+- `apps/server/test/errors/correlation.int.test.ts`: "a mutation's x-northmes-correlation-id equals the correlationId the pipeline reads from AsyncLocalStorage".
 - `apps/server/test/gateway/guards.int.test.ts`: "a Mutation field without a command handler stops boot naming it".
 
 #### E05-S02 audit: Record every command and field change in the same transaction
@@ -2196,6 +2215,7 @@ Tests first:
 - `modules/audit/test/capture.int.test.ts`: "a write without a context fails"; "a no-op update writes no change row"; "a replayed audit id from another transaction fails".
 - `modules/audit/test/grants.int.test.ts`: "nm_app cannot truncate audit.change".
 - `apps/server/test/boot/audit-check.int.test.ts`: "a table without the trigger stops boot naming it".
+- `apps/server/test/errors/correlation.int.test.ts`: "a mutation's x-northmes-correlation-id equals its audit.command correlation_id".
 - `modules/audit/test/require-context.int.test.ts`: "a write to the stock snapshot table without a context raises".
 - `apps/server/test/migrate/classification.int.test.ts`: "an undeclared secret_ciphertext column makes migrate exit 1 naming the column".
 
@@ -2351,6 +2371,7 @@ Tests first:
 
 - `apps/server/test/jobs/schema-version.int.test.ts`: "an unknown payload version is parked, not retried".
 - `apps/server/test/events/inbox.int.test.ts`: "a redelivered event is processed once".
+- `apps/server/test/jobs/errors.int.test.ts`: "a 23P01 on a code inside a command run by a job gives core.code_taken" (with the code constraint from E06-S04).
 
 #### E05-S10 core: Authorize subscriptions by plant and event scope
 
@@ -3589,12 +3610,15 @@ Acceptance criteria:
 - The shared runner parses input, checks permission at the named plant, runs the handler in a transaction with the RLS scope (`READ ONLY` for read tools, with no audit context), validates output and returns `structuredContent` plus text.
 - Results are capped at 50 rows and 20 000 characters with `truncated`, `total` and a cursor; the manifest-driven personal-field redactor runs on every output.
 - Errors map to `{ code, safeMessage, retryable }` or `{ code: 'internal', correlationId }`.
+- `toMcpTool` returns a runner error as a `CallToolResult` with `isError: true` and the error object in `structuredContent`, and never throws to the MCP SDK.
+- The tool runner records a masked error by fingerprint like the exception filter.
 - A schema lint keeps agent-visible inputs to objects, enums, arrays of primitives or flat objects, and optional fields; a union fails.
 
 Tests first:
 
 - `packages/sdk/test/mcp/runner.int.test.ts`: "a read handler that attempts an INSERT fails in the read-only transaction"; "500 late orders return 50 rows with total 500 under 20 000 characters".
 - `apps/server/test/mcp/schema-subset.test.ts`: "a z.union input fails the lint".
+- `apps/server/test/mcp/adapter.int.test.ts`: "a tool call without the plant argument from a user at two plants returns isError true with no stack".
 
 #### E12-S02 planning: Find and read orders through tools
 
@@ -3993,10 +4017,12 @@ Acceptance criteria:
 - The page shows server and client errors by fingerprint, failed and retrying jobs, the last successful Pyramid poll, the last successful backup, database size, certificate expiry, NTP status, versions, the supergraph hash, Node and Postgres tzdata, event-loop delay p99 and heap used.
 - A "Modules and plugins" table lists id, version, range, status and reason.
 - It shows "schema ahead by N expand migrations", leftover schemas of removed plugins and stations not seen for 7 days.
+- The exception filter and the jobs wrapper record masked server errors by fingerprint.
 
 Tests first:
 
 - `modules/core/web/test/system-health.test.tsx`: "a degraded module shows its reason in the modules table".
+- `modules/core/test/server-errors.int.test.ts`: "the same plain Error thrown in a resolver twice gives one server error row with count 2 and one error-level log line per request".
 
 #### E16-S04 core: Restart a stuck process with the watchdog
 
@@ -4033,7 +4059,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `apps/server/test/logging.int.test.ts`: "a request with a session cookie logs no cookie value"; "a failed sign-in logs one security_event line".
+- `apps/server/test/logging.int.test.ts`: "a request with a session cookie logs no cookie value"; "a failed sign-in logs one security_event line"; "a request's log line carries the id in its x-northmes-correlation-id header".
 
 ### E17 ops: Install on a pilot-like VM with backups and a timed restore
 
@@ -4351,7 +4377,7 @@ As a plant admin, I want every setting and environment variable listed with its 
 
 Module: docs, core. Blocked by: E19-S01, E06-S08. Design: none.
 
-ADRs: [0048](../adr/0048-documentation-on-docs7-at-docs-northmes-dev.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
+ADRs: [0048](../adr/0048-documentation-on-docs7-at-docs-northmes-dev.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
 
 Acceptance criteria:
 
@@ -4361,7 +4387,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `apps/docs/test/config-reference.test.ts`: "a new setting appears in the generated page".
+- `apps/docs/test/config-reference.test.ts`: "a new setting appears in the generated page"; "the configuration reference lists every key of serverEnvSchema, migrateEnvSchema and bootstrapEnvSchema and every site-only key".
 
 #### E19-S03 docs: Generate the permissions, roles and personal data references
 
@@ -4589,6 +4615,7 @@ Acceptance criteria:
 
 - `plugin:check` prints the plugin's SDL and composes it against `schema/supergraph.graphql` without loading AGPL code.
 - `plugin:build` writes the manifest range from `peerDependencies['@northmes/sdk']`, and boot refuses a plugin whose two values differ.
+- `plugin:check` refuses an import of `@nestjs/config` or `@northmes/sdk/config` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 - A composition corpus of the in-repo examples and `test/plugin-corpus` SDL runs in CI.
 
 Tests first:

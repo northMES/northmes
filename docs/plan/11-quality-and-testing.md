@@ -9,6 +9,7 @@ NorthMES is built test first. Every change starts with a failing test, integrati
 | TDD, Vitest projects, Testcontainers, Playwright, contract suites, nightly tests | [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) | accepted | none |
 | AI mocked by default, opt-in live runs | [0042](../adr/0042-ai-in-tests-mocked-by-default-opt-in-live-runs.md) | accepted | none |
 | Source exports, one stack script, one gate command | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | none |
+| Configuration, `configForTest` and the end-to-end environment | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | proposed | none |
 | Node and TypeScript pins, runtime test | [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | maintainer (Node pin after the week-1 test; TypeScript 6.0.x) |
 | Pinned database image for tests | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | none |
 | Time-series contract suite and benchmark gate (later) | [0059](../adr/0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
@@ -105,7 +106,7 @@ Every CI gate step runs a script that `pnpm check` or `pnpm check:full` contains
 
 ## Testcontainers harness
 
-`@northmes/testing` (MIT) holds the harness, so modules and the example plugins use one setup. See [ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) and [04-data-and-platform.md](04-data-and-platform.md#testing-the-data-layer).
+`@northmes/testing` (MIT) holds the harness, so modules and the example plugins use one setup. Its `configForTest(overrides)` validates an explicit record with the same `loadEnv` and registers it without letting `ConfigModule.forRoot` read or write `process.env` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed). See [ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) and [04-data-and-platform.md](04-data-and-platform.md#testing-the-data-layer).
 
 ### One container per run
 
@@ -163,7 +164,7 @@ An optional adapter (`citus_columnar` or ClickHouse) is listed as supported only
 
 ### One stack script
 
-One script serves `pnpm dev`, the end-to-end global setup and handoff's `handoff-demo` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). It starts Testcontainers Postgres from the pinned image, bootstraps the roles as the container superuser, runs `northmes migrate`, runs an idempotent seed (a company, one plant, a planner and an operator whose dev-only credentials live in the seed package) and migrates again when a migration file changes. It writes `.northmes/dev.env` with random secrets when missing, and the config loader refuses those dev secrets when `NODE_ENV` is `production`. Ports come from binding `127.0.0.1:0` and reach the shell proxy and the remotes through the environment; the server's default port is not 3000 (handoff's dashboard port), and EADDRINUSE names `PORT`.
+One script serves `pnpm dev`, the end-to-end global setup and handoff's `handoff-demo` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). It starts Testcontainers Postgres from the pinned image, bootstraps the roles as the container superuser, runs `northmes migrate`, runs an idempotent seed (a company, one plant, a planner and an operator whose dev-only credentials live in the seed package) and migrates again when a migration file changes. It first writes `.northmes/dev.env` (with `NODE_ENV=development`) and the dev secret files under `.northmes/secrets/` (mode 0600) with random values when they are missing, with the `_FILE` keys in `dev.env` pointing at the files, so the role bootstrap and `northmes migrate` find their passwords; the config loader refuses those dev secrets when `NODE_ENV` is `production` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), proposed). Ports come from binding `127.0.0.1:0` and reach the shell proxy and the remotes through the environment; the server's default port is not 3000 (handoff's dashboard port), and EADDRINUSE names `PORT`.
 
 Required test, `dev-up.int.test.ts`: the bootstrap runs twice against one container and the second run applies nothing and adds no rows; the seeded planner signs in through the Better Auth API; `/health/ready` returns 200. Loading the config with `NODE_ENV=production` and the dev secret marker throws a named error. Two stack instances started together get disjoint ports.
 
@@ -232,7 +233,7 @@ Playwright starts `webServer` before `globalSetup`, and the server process does 
 ```mermaid
 flowchart LR
   gs["globalSetup<br/>stack script: container, roles,<br/>migrate, base seed into the template"]
-  w1["worker 1 fixture stack<br/>clone e2e_1, spawn the built server<br/>NORTHMES_ROLE=all, PORT=0"]
+  w1["worker 1 fixture stack<br/>clone e2e_1, spawn the built server<br/>NODE_ENV=test, NORTHMES_ROLE=all, PORT=0"]
   w2["worker 2 fixture stack<br/>clone e2e_2, spawn the built server"]
   s2["optional fixture stack2<br/>second server on the same worker database"]
   a["asPlanner, asOperator<br/>storage states per worker"]
@@ -244,7 +245,7 @@ flowchart LR
 ```
 
 - `globalSetup` runs the stack script into a template database and returns a teardown that stops the container. The shell, the remotes and the server are built before the run.
-- A worker-scoped `stack` fixture clones `e2e_<parallelIndex>` from the template, spawns `node apps/server/dist/main.js` with `NORTHMES_ROLE=all`, `PORT=0` and that database, waits for the port line on stdout and sets `baseURL`. Workers never share data. Spawning the built server avoids Playwright's TypeScript loader.
+- A worker-scoped `stack` fixture clones `e2e_<parallelIndex>` from the template, spawns `node apps/server/dist/main.js` with `NODE_ENV=test`, `NORTHMES_ROLE=all`, `PORT=0` and that database, waits for the port line on stdout and sets `baseURL`. Workers never share data. Spawning the built server avoids Playwright's TypeScript loader.
 - The optional `stack2` fixture starts a second server on the same worker database for cross-replica realtime specs.
 - Authentication: per worker, a fixture creates a planner and an operator in the worker's plant with Better Auth `testUtils`, writes `storageState` files keyed by `parallelIndex` and exposes `asPlanner` and `asOperator` contexts. `testUtils` lives in a test-only auth instance that refuses to start under `NODE_ENV=production` and is not in the production image ([ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md)).
 - External systems are stubs started by fixtures: the fake PWS server for Pyramid and a stub OpenAI-compatible server configured as the test company's AI provider.

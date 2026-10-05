@@ -162,6 +162,7 @@ E02 needs:
 - [ ] [0037][adr-0037] plugin surface and validator payload (accepted; needs-confirmation: maintainer and product owner)
 - [x] [0041][adr-0041] test layout and harness (accepted)
 - [ ] [0058][adr-0058] developer environment (proposed)
+- [ ] [0060][adr-0060] configuration and the environment schema (proposed)
 
 E03 and the rest of M0 need:
 
@@ -177,7 +178,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 
 ### ADRs to accept
 
-27 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058] and [0059][adr-0059]. The ones M0 needs are in the checklist above.
+28 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058], [0059][adr-0059] and [0060][adr-0060]. The ones M0 needs are in the checklist above.
 
 ### ADR parts to confirm
 
@@ -261,6 +262,9 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 | M-46 | AI provider details: the Entra token scope, proxy behaviour, a local model | [0035][adr-0035] |
 | M-47 | The name of the instant filter input | [0016][adr-0016] |
 | M-48 | Whether the restore drill switch may stay an environment flag under rule 6 of ADR 0051 | [0045][adr-0045], [0051][adr-0051] |
+| M-51 | The codes for request errors on REST routes | [0012][adr-0012] |
+| M-52 | The correlation id header, and whether an id set by Caddy is trusted | [0046][adr-0046] |
+| M-53 | Whether the admin commands need the Better Auth secret in the migrate container | [0060][adr-0060] |
 
 ### Later decisions from the roadmap
 
@@ -317,3 +321,4 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 [adr-0057]: ../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md
 [adr-0058]: ../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
 [adr-0059]: ../adr/0059-time-series-storage-port-with-an-open-default-backend.md
+[adr-0060]: ../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md

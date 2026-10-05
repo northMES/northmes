@@ -165,7 +165,7 @@ export class PlanningArticleResolver {
 // ProductionOrder.article returns { __typename: "Article", id: row.articleId }
 ```
 
-The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `entityRef`, `connectionOf`, `PageInfo`, `RequirePermission`, `Public`, `SubgraphContext`, `loaderFor`, `inputFromZod`, `objectFromZod` and the exception filter. The AGPL core gateway module owns composition, the NorthMES rules, the transport and the principal plugin ([0022][adr-0022]).
+The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `entityRef`, `connectionOf`, `PageInfo`, `RequirePermission`, `Public`, `SubgraphContext`, `loaderFor`, `inputFromZod` and `objectFromZod`. The exception filter is exported from the server-only subpath `@northmes/sdk/errors` ([The exception filter](#the-exception-filter)). The AGPL core gateway module owns composition, the NorthMES rules, the transport and the principal plugin ([0022][adr-0022]).
 
 ## Principal, guards and mutations
 
@@ -176,7 +176,7 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 - Station path: the resolver verifies the key in the `__Host-nm_station` cookie, loads `core.credential`, takes the plant from the credential's scope and rejects a differing `x-northmes-plant`. On HTTP it adds the operator from `x-northmes-operator-session` after checking that the operator session is open and belongs to this station. When a station cookie is present, session cookies are ignored except on sign-out and admin deregistration ([0033][adr-0033]).
 - Plant: the Apollo HTTP link sends the route plant's id in `x-northmes-plant`. The resolver validates it against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode: core.plant_forbidden`, data null and one `permission.denied` security event. No request falls back to a default plant, and the plant is never stored on the session ([0007][adr-0007]).
 - The resolved principal (user or station, roles at the plant, permission set, read and write scopes) reaches every subgraph call as an object in process. No header, no signature and no second session lookup are involved; the spike saw one session lookup for a request that touched three subgraphs.
-- Subgraph context: `{ principal, requestId, loaders, subgraph }`. Data access opens transactions that set `read_scopes` and `write_scopes` with transaction-local `set_config` from that principal ([0008][adr-0008]).
+- Subgraph context: `{ principal, correlationId, loaders, subgraph }`. Data access opens transactions that set `read_scopes` and `write_scopes` with transaction-local `set_config` from that principal ([0008][adr-0008]).
 - `/graphql` rejects personal access tokens of api-key `configId` `mcp` and any token whose `aud` ends in `/mcp` with 401, so an agent that can read its MCP token cannot call the commit mutation as the user.
 - The permission cache is invalidated locally when a role transaction commits, with a 30 s TTL as backstop. A role-assignment change invalidates all of that user's scopes; a `core.role` change invalidates every user of the organization.
 
@@ -416,7 +416,7 @@ The subgraph driver validates the time scalars with Zod, and codegen maps them t
 
 - One error type, `DomainError { code, kind, message, details? }`, lives in the SDK ([0012][adr-0012]).
 - `code` is stable and module-scoped: it starts with the owning module's id. Codes are never renamed after a release.
-- `kind` is one of `validation`, `not_found`, `forbidden`, `conflict`, `precondition`, `unavailable`.
+- `kind` is one of `validation`, `unauthenticated`, `not_found`, `forbidden`, `conflict`, `precondition`, `unavailable`.
 - Each module declares its codes with `defineErrors` in its contracts package, each with its kind and an optional Zod schema for `details`. The docs and a TypeScript union for the web are generated from the declarations.
 - Result unions (errors as data) are not used.
 
@@ -436,6 +436,25 @@ Codes named by the decisions so far:
 | `core.secret_reentry_required` | an outbound URL changed without a new secret |
 | `core.list.bad_argument`, `core.list.invalid_cursor`, `core.list.ref_search_too_broad` | list argument errors (`BAD_USER_INPUT`) |
 | `planning.board.range_too_large` | board range above its day or row limit |
+| `core.request.malformed`, `core.request.too_large`, `core.request.unsupported_media_type`, `core.request.rate_limited` | request and transport errors on REST routes; working defaults (M-51) |
+| `core.internal` | a masked error |
+
+### The exception filter
+
+One filter catches every exception (`@Catch()` with no arguments). The SDK exports it, with `toDomainError`, from the server-only subpath `@northmes/sdk/errors`, not from the root, because manifests import `defineModule` from the root before any Nest code loads ([0002][adr-0002], [0003][adr-0003]). `apps/server` registers it once as `APP_FILTER` in the root module, so it is a singleton that can inject the logger and the error recorder. Modules and plugins never register filters ([0012][adr-0012]).
+
+- The filter turns the exception into a `DomainError` or an unknown error, using `toDomainError` for database errors (below), and then answers by `host.getType()`: for `graphql` it returns a `GraphQLError` with the extensions in [GraphQL errors](#graphql-errors), for `http` it writes `application/problem+json` through the response object ([REST errors](#rest-errors)) and returns nothing, and for any other type it rethrows.
+- The filter is synchronous, because Nest 12 calls an HTTP exception filter without awaiting it. Work it starts in the background, such as counting a masked error, catches its own failure.
+
+Exceptions that are not a `DomainError`:
+
+1. `PermissionGuard` and `PrincipalGuard` throw a `DomainError` (`core.forbidden` with `details.permission`, or kind `unauthenticated`) and never return false, because a guard that returns false makes Nest throw its own `ForbiddenException`.
+2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`.
+3. Other 4xx statuses are transport errors. They keep their HTTP status and carry a core code: 413 `core.request.too_large`, 415 `core.request.unsupported_media_type` and 429 `core.request.rate_limited` with a `Retry-After` header. The code names are working defaults (M-51 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents)).
+4. A 5xx status and anything else is masked.
+5. Core's user-management handlers translate a Better Auth `APIError` from `auth.api` into `core.user.*` codes ([0011][adr-0011]). An `APIError` that escapes them is masked.
+6. A `GraphQLError` thrown by module code is masked like any unknown error, because modules throw `DomainError`.
+7. A 401 on `/mcp` also carries the `WWW-Authenticate` header with `resource_metadata` ([0034][adr-0034]).
 
 ### GraphQL errors
 
@@ -449,8 +468,8 @@ Kind to GraphQL `extensions.code` and REST status:
 | `conflict` | `CONFLICT` | 409 |
 | `precondition` | `PRECONDITION` | 412 |
 | `unavailable` | `UNAVAILABLE` | 503 |
-| no session | `UNAUTHENTICATED` | 401 |
-| unknown error | `INTERNAL_SERVER_ERROR`, message "Unexpected error." | 500 |
+| `unauthenticated` (no session) | `UNAUTHENTICATED` | 401 |
+| unknown error | `INTERNAL_SERVER_ERROR` with `errorCode` `core.internal`, message "Unexpected error." | 500 |
 
 The SDK exception filter writes these extensions. The gateway passes them through and adds `serviceName`.
 
@@ -470,19 +489,21 @@ The SDK exception filter writes these extensions. The gateway passes them throug
 
 A Zod parse failure becomes `BAD_USER_INPUT` with `fieldErrors: [{ path, message, code }]`, which `useCommandForm` maps onto form fields.
 
-Database errors map in the same filter:
+Database errors map in one SDK function, `toDomainError(error)`, which the pipeline's error step, the jobs wrapper, the tool runner and the exception filter all call, so a database error maps the same way on every path:
 
 | SQLSTATE | Mapped to |
 |---|---|
 | 42501 (row-level security or grant) | `FORBIDDEN`, `core.forbidden` |
 | 23P01 on a code exclusion constraint, 23505 on a code key | `core.code_taken` |
 | 23514 on a scope span check | `core.crossScopeReference` |
-| zero rows on a versioned update | `core.version_conflict`, or `core.not_found` when the row is gone |
+
+Zero rows on a versioned update is a return value, not an exception, so the `/data` update helper raises `core.version_conflict` itself, or `core.not_found` when the row is gone.
 
 Masking and logging:
 
-- The subgraph exception filter masks every unknown error as "Unexpected error." with the correlation id, inside the subgraph, whatever the transport. In the HTTP-mode spike a plain `Error` thrown in a resolver leaked its message through the gateway even with `NODE_ENV=production`, because Apollo had turned it into a `GraphQLError` first. The gateway's `maskedErrors` is a second layer.
+- The exception filter masks every unknown error as "Unexpected error." with the correlation id, inside the subgraph, whatever the transport. In the HTTP-mode spike a plain `Error` thrown in a resolver leaked its message through the gateway even with `NODE_ENV=production`, because Apollo had turned it into a `GraphQLError` first. The gateway's `maskedErrors` is a second layer.
 - The filter logs domain errors below error level; Nest's `ExceptionsHandler` would log every expected `FORBIDDEN` as an error. Every log line carries the correlation id ([0046](../adr/0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md)).
+- For a masked error the filter writes one log line at error level with the correlation id, the error class, the stack and, for a Postgres error, the SQLSTATE and the constraint name. It never logs Postgres DETAIL text or bound parameters, because they hold key values. It also counts the error by fingerprint (the error class plus the first stack frame outside `node_modules`), with the last correlation id, for System health ([0043][adr-0043]). The jobs wrapper and the tool runner record masked errors the same way.
 
 On the web, Apollo Client 4 reports errors as `CombinedGraphQLErrors`, and one classifier in `@northmes/web-sdk` reads `code` and `errorCode`. `useConnection` runs list queries with `errorPolicy: "all"` and turns `NOT_FOUND` and `FORBIDDEN` on a nullable relation path into a cell state instead of a page error.
 
@@ -503,11 +524,13 @@ REST routes answer errors as `application/problem+json` (RFC 9457, https://www.r
 }
 ```
 
-`status` follows the kind table above; `code` holds the module-scoped `errorCode`, `errors` the field errors, and `correlationId` the request's correlation id. The `type` base `https://docs.northmes.dev/errors/` is proposed (see [Open items](#open-items)). Transport-level errors keep their HTTP status, for example 413 for an upload above 25 MB.
+`status` follows the kind table above; `code` holds the module-scoped `errorCode` (`core.internal` for a masked error, with `type` `https://docs.northmes.dev/errors/core.internal`), `errors` the field errors, and `correlationId` the request's correlation id. The `type` base `https://docs.northmes.dev/errors/` is proposed (see [Open items](#open-items)). Transport errors keep their HTTP status and carry the codes in [The exception filter](#the-exception-filter), for example 413 with `core.request.too_large` for an upload above 25 MB.
 
 ### MCP and assistant tool errors
 
 The shared tool runner maps errors before either adapter sees them: a known domain error becomes `{ code, safeMessage, retryable }`, anything else `{ code: "internal", correlationId }` ([0035][adr-0035]).
+
+`toMcpTool` returns a runner error as a `CallToolResult` with `isError: true`, `structuredContent` holding the runner's error object and the same JSON as text, and never throws to the MCP SDK. The MCP SDK rejects arguments that fail the advertised input schema with "Input validation error" before the runner runs, and that text holds only Zod issue paths and messages ([0034][adr-0034]).
 
 ## Realtime subscriptions
 
@@ -551,6 +574,7 @@ sequenceDiagram
 - Each subscription resolves its principal and scopes from its `plantId` argument and checks plant membership and the subscription's permission at start. A user without them gets `FORBIDDEN` when subscribing.
 - Each event is filtered on `event.scope_id` being in the subscriber's read scopes (the company or the plant) plus `can()` for the subscription's permission through the permission cache. A filter on the plant alone would drop company-scope events such as article renames.
 - When a permission is removed, the open subscription stops receiving events without waiting for the TTL.
+- An error raised while a subscription streams, for example in the per-event `can()`, never reaches the exception filter, because Nest wraps only the resolver call. The SDK subscription wrapper catches it, logs it like a masked error with the subscription's correlation id, sends one payload with "Unexpected error." and the `correlationId`, and completes that subscription. The socket stays open.
 - DataLoaders are built per event, not per subscription, so a renamed article reaches the next payload.
 - Each subscription executes on its own, so one event fans out to one `_entities` call per foreign subgraph per subscriber. In process this is a function call.
 
@@ -643,6 +667,7 @@ Boot asserts that Better Auth's `enableSessionForAPIKeys` is false and that `dis
 | `x-northmes-client-build` | request | `createNorthmesClient` | build the tab booted with |
 | `x-northmes-operator-session` | request | station client | operator bearer for the station's open operator session; stored hashed |
 | `x-northmes-build` | response and `connection_ack` | gateway | `<version>+<supergraphHash>` |
+| `x-northmes-correlation-id` | response | server | the request's correlation id; a client-sent correlation header is ignored (working default, M-52) |
 
 Request logs redact `cookie`, `authorization`, `x-api-key`, the operator-session header and `set-cookie` ([0046](../adr/0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md)).
 
