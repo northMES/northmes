@@ -408,8 +408,9 @@ Plan: E00-S03-T01
 Add the files every contributor and agent reads first. AGENTS.md holds the tool-neutral rules for any contributor's agent; CLAUDE.md starts with @AGENTS.md and adds only a note on the installed skills; neither mentions handoff. Check that AGENTS.md states three tool-neutral rules, phrased as what to do: run every command as pnpm or git from the repository root; start red commits with "test:"; bring a new dependency in its own pull request, at a version older than Renovate's minimumReleaseAge window. Handoff run rules go into handoff's agent notes and node instructions (E00-S07-T01); maintainer-only instructions load from the gitignored CLAUDE.local.md. CONTRIBUTING.md describes handoff as the maintainer's own workflow: contributors open issues with the issue forms and send pull requests.
 
 ## Where in the code
-LICENSE (AGPL-3.0-or-later), NOTICE, README.md, CONTRIBUTING.md (states that outside pull requests are not merged until the contributor license agreement check exists), CODE_OF_CONDUCT.md (conduct@northmes.dev), SECURITY.md (security@northmes.dev, private vulnerability reporting, supported versions, response target), GOVERNANCE.md, AGENTS.md, CLAUDE.md, .github/CODEOWNERS (* @Krister-Johansson), .gitignore
+LICENSE (AGPL-3.0-or-later), NOTICE, README.md (with the CodeRabbit badge below), CONTRIBUTING.md (states that outside pull requests are not merged until the contributor license agreement check exists), CODE_OF_CONDUCT.md (conduct@northmes.dev), SECURITY.md (security@northmes.dev, private vulnerability reporting, supported versions, response target), GOVERNANCE.md, AGENTS.md, CLAUDE.md, .github/CODEOWNERS (* @Krister-Johansson), .gitignore
 NOTICES.md: third-party notices for vendored files, including the MIT notice of the ten agent skills in .claude/skills at the commit pinned in skills-lock.json
+README.md badge, verbatim: ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/northMES/northmes?utm_source=oss&utm_medium=github&utm_campaign=northMES%2Fnorthmes&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 SPDX headers on every .ts file already on main
 test/meta/private-paths.test.ts, test/meta/agent-files.test.ts, test/meta/spdx.test.ts (new)
 Seam: tests read files and git ls-files output.
@@ -444,6 +445,7 @@ docs(repo): add license, contributor, security and agent files
 - [ ] CODE_OF_CONDUCT.md names conduct@northmes.dev
 - [ ] CLAUDE.md begins with @AGENTS.md, and neither CLAUDE.md nor AGENTS.md mentions handoff
 - [ ] NOTICES.md names each vendored skill with its MIT notice
+- [ ] README.md shows the CodeRabbit pull request reviews badge for northMES/northmes
 - [ ] The three meta tests pass
 ```
 
