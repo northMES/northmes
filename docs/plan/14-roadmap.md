@@ -898,6 +898,7 @@ handoff's graphs call two scripts. setup.sh runs once per worktree: pnpm install
 scripts/handoff/setup.sh (new)
 scripts/handoff/tests-changed.mjs (new), scripts/handoff/tests-changed.test.ts (new)
 test/meta/graphs.test.ts (new): reads the three graph files in docs/agents/handoff/graphs
+docs/agents/handoff/graphs/*.json: remove the `[ ! -f scripts/handoff/tests-changed.mjs ] ||` guard from the tests-changed command (added 2026-10-05 so runs pass before the script exists), then re-import the three graphs in handoff
 Seam: tests-changed exports judge(changedPaths) returning { ok, reason }; the CLI wraps it.
 
 ## Tests first
@@ -907,7 +908,7 @@ Seam: tests-changed exports judge(changedPaths) returning { ok, reason }; the CL
 - tests-changed.test.ts: "only generated files changed passes"
 - tests-changed.test.ts: "a change under docs only passes"
 - graphs.test.ts: "the plan-review instructions in every graph name 15 files and 12 steps"
-- graphs.test.ts: "every graph runs node scripts/handoff/tests-changed.mjs"
+- graphs.test.ts: "every graph runs the tests-changed command as exactly node scripts/handoff/tests-changed.mjs"
 
 ## Design
 none
@@ -916,7 +917,7 @@ none
 docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md
 
 ## Out of scope
-The graphs (already in docs/agents/handoff/graphs), handoff project settings (E00-S07).
+Other graph changes (the graphs are already in docs/agents/handoff/graphs), handoff project settings (E00-S07).
 
 ## Changelog
 chore(handoff): add the setup script and the tests-changed check
@@ -925,6 +926,7 @@ chore(handoff): add the setup script and the tests-changed check
 - [ ] sh scripts/handoff/setup.sh succeeds in a fresh worktree without a database
 - [ ] tests-changed.test.ts passes
 - [ ] node scripts/handoff/tests-changed.mjs exits 1 on a branch that changes packages/testing/src without a test
+- [ ] The three graph files and handoff's imported graphs run node scripts/handoff/tests-changed.mjs without the guard
 ```
 
 ##### E00-S06-T02 repo: Run related tests from session hooks

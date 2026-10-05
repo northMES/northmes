@@ -132,7 +132,7 @@
         "x": 1200,
         "y": 0,
         "config": {
-          "command": "node scripts/handoff/tests-changed.mjs",
+          "command": "[ ! -f scripts/handoff/tests-changed.mjs ] || node scripts/handoff/tests-changed.mjs",
           "timeoutMs": 120000,
           "retries": 0
         }
