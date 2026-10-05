@@ -285,6 +285,8 @@ Notes: until the NorthMES database image exists (E17-S01), `infra/pg-image.json`
 
 ##### E00-S02-T01 testing: Start one Postgres per test run from the pinned image
 
+Issue: northMES/northmes#193.
+
 Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E00-S01-T02.
 
 ```markdown
@@ -331,6 +333,8 @@ test(testing): start one Postgres per run with a database per file
 ```
 
 ##### E00-S02-T02 testing: Key the Vitest projects on the file suffix
+
+Issue: northMES/northmes#194.
 
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; ADR 0058 is proposed). Blocked by: E00-S02-T01.
 
@@ -402,6 +406,8 @@ Tests first:
 Notes: the additions to `LICENSE` that ADR [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) proposes wait for that ADR's acceptance. The CLA files and `ci / cla` come before the first outside pull request (E19-S06).
 
 ##### E00-S03-T01 repo: Add the license, contributor, security and agent files
+
+Issue: northMES/northmes#195.
 
 Labels: `task`, `human`, `area: ci` (shared files). Blocked by: E00-S02-T02.
 
@@ -486,6 +492,8 @@ Notes: SP0 is done (2026-10-05). The transfer to the `northMES` organization is 
 
 ##### E00-S04-T01 ci: Run ci / gate on pull requests and pushes to main
 
+Issue: northMES/northmes#196.
+
 Labels: `task`, `human`, `area: ci` (first workflow). Blocked by: E00-S02-T02.
 
 ```markdown
@@ -532,6 +540,8 @@ ci: run the gate on pull requests and pushes to main
 ```
 
 ##### E00-S04-T02 ci: Gate dependencies on license, audit and release age
+
+Issue: northMES/northmes#197.
 
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; ADR 0040 is proposed and awaits confirmation). Blocked by: E00-S04-T01.
 
@@ -581,6 +591,8 @@ ci: add the license gate, dependency audit and Renovate
 
 ##### E00-S04-T03 ci: Protect main and configure the repository
 
+Issue: northMES/northmes#201.
+
 Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T02, E00-S05-T02, E01-S01-T01.
 
 ```markdown
@@ -629,6 +641,8 @@ chore(repo): add issue forms, PR template and labels
 
 ##### E00-S04-T04 ci: Add Socket, Codecov and Scorecard
 
+Issue: northMES/northmes#198.
+
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions). Blocked by: E00-S04-T01.
 
 ```markdown
@@ -671,6 +685,8 @@ ci: add Socket, Codecov and Scorecard
 ```
 
 ##### E00-S04-T05 ci: Run the Claude Code Action as a custom GitHub App
+
+Issue: northMES/northmes#203.
 
 Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T03.
 
@@ -737,6 +753,8 @@ Notes: the customer deny-list is read from a CI secret as hashes and never commi
 
 ##### E00-S05-T01 docs: Check the ADR index and add the numbering script
 
+Issue: northMES/northmes#199.
+
 Labels: `task`, `human`, `area: docs` (shared docs). Blocked by: E00-S01-T02.
 
 ```markdown
@@ -782,6 +800,8 @@ docs(adr): check the ADR index and add the numbering script
 
 ##### E00-S05-T02 docs: Check the plan README and add the doc-links test
 
+Issue: northMES/northmes#200.
+
 Labels: `task`, `human`, `area: docs` (shared docs). Blocked by: E00-S05-T01.
 
 ```markdown
@@ -820,6 +840,8 @@ docs(plan): check the plan README and add the doc-links test
 ```
 
 ##### E00-S05-T03 repo: Copy the spike sources into docs/sources
+
+Issue: northMES/northmes#202.
 
 Labels: `task`, `human`, `area: ci` (a session copies files from outside the worktree). Blocked by: E00-S01-T01.
 
@@ -886,6 +908,8 @@ Tests first:
 
 ##### E00-S06-T01 handoff: Add the setup script and the tests-changed check
 
+Issue: northMES/northmes#204.
+
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions; ADR 0049 awaits confirmation). Blocked by: E00-S02-T02.
 
 ```markdown
@@ -930,6 +954,8 @@ chore(handoff): add the setup script and the tests-changed check
 ```
 
 ##### E00-S06-T02 repo: Run related tests from session hooks
+
+Issue: northMES/northmes#205.
 
 Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions). Blocked by: E00-S06-T01.
 
@@ -993,6 +1019,8 @@ Tests first:
 - A session check, not a code test: `setup_project` output with `ready` true, pasted into the issue.
 
 ##### E00-S07-T01 handoff: Import the graphs and configure the NorthMES project
+
+Issue: northMES/northmes#206.
 
 Labels: `task`, `human`, `area: ci` (interactive session, approval cards). Blocked by: E00-S03-T01, E00-S04-T03, E00-S05-T03, E00-S06-T02, E01-S01-T01.
 
