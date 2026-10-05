@@ -259,6 +259,8 @@ chore(repo): add pnpm check and the root scripts
 
 #### E00-S02 testing: Give every integration test file its own Postgres database
 
+Issue: northMES/northmes#5.
+
 As a maintainer, I want each test run to start its own Postgres and each integration file to get its own database, so that parallel runs and worktrees never share data.
 
 Module: testing. Blocked by: E00-S01. Design: none.
@@ -375,6 +377,8 @@ test(testing): key Vitest projects on the file suffix
 
 #### E00-S03 repo: Publish the license, contributor and agent files
 
+Issue: northMES/northmes#6.
+
 As a maintainer, I want the license, contributor, security and agent rule files on `main`, so that people and agents follow the same rules from the first pull request.
 
 Module: repo. Blocked by: E00-S01. Design: none.
@@ -455,6 +459,8 @@ docs(repo): add license, contributor, security and agent files
 ```
 
 #### E00-S04 ci: Run the gate and the supply-chain checks on every pull request
+
+Issue: northMES/northmes#7.
 
 As a maintainer, I want CI, the license gate and the ruleset in place before the first run, so that nothing merges that `ci / gate` and the supply-chain checks have not passed.
 
@@ -705,6 +711,8 @@ ci: run the Claude Code Action as a custom GitHub App
 
 #### E00-S05 docs: Put the ADR index, plan README and spike sources in the repository
 
+Issue: northMES/northmes#8.
+
 As a maintainer, I want the ADR index, the numbering script, the plan README and the spike sources in the repository, so that run agents find every fact a task brief points at.
 
 Module: docs. Blocked by: E00-S01. Design: none.
@@ -857,6 +865,8 @@ chore(repo): add the spike sources the skeleton ports
 
 #### E00-S06 handoff: Add the scripts that runs and sessions call
 
+Issue: northMES/northmes#9.
+
 As a maintainer, I want the setup script, the tests-changed check and the session hooks in the repository, so that handoff's graphs and interactive sessions enforce test first.
 
 Module: handoff. Blocked by: E00-S02. Design: none.
@@ -961,6 +971,8 @@ chore(repo): run related tests from Claude Code session hooks
 
 #### E00-S07 handoff: Connect the NorthMES project to handoff
 
+Issue: northMES/northmes#10.
+
 As a maintainer, I want the NorthMES project set up in handoff with its graphs and plan, so that the first tasks can run.
 
 Module: handoff. Blocked by: E00-S01 to E00-S06, E01-S01. Design: none.
@@ -1023,6 +1035,8 @@ chore(handoff): enable library skills and Context7 in the graphs
 
 ### E01 platform: Settle the first decisions with five spikes
 
+Issue: northMES/northmes#11.
+
 Goal: answer five questions that block early work, each inside a timebox with a pass threshold, and record each answer in its ADR. SP0 asks whether handoff plans and runs on an organization-owned repository, which decides when NorthMES moves to the `northMES` organization. SP1 asks whether Temporal with `temporal-polyfill` passes the DST cases of the earlier calendar rules. SP2 asks whether release-please with one root component releases every package in lockstep through draft releases. SP3 asks whether a headless board core meets the frame budget on the pilot's planner PC class. The Node test asks whether the plugin boot tests and the `module.registerHooks` resolve hook pass on Node 26.
 
 Who it is for: Maintainer. Also: Planner (SP3), Plugin developer (the Node test).
@@ -1036,6 +1050,8 @@ Estimate: about 7 raw days (see the epic table). Depends on: E00-S05 for E01-S02
 The session creates E01-S01-T01 before E00-S04-T03 and E00-S07-T01, which it blocks. Because SP0 is done (2026-10-05), the issue is created closed with the result, so those blockers resolve at once.
 
 #### E01-S01 repo: Run handoff on an organization-owned repository (SP0)
+
+Issue: northMES/northmes#13.
 
 As a maintainer, I want to know whether handoff plans and runs on a repository owned by an organization, so that NorthMES moves to `northMES` before handoff's plan and the first image depend on the owner.
 
@@ -1132,6 +1148,8 @@ none, internal
 
 #### E01-S02 contracts: Port the DST calendar cases to Temporal (SP1)
 
+Issue: northMES/northmes#14.
+
 As a maintainer, I want the earlier attempt's DST calendar cases to pass on Temporal with `temporal-polyfill`, so that ADR 0024's choice of Temporal holds before the scheduling domain is built on it.
 
 Module: contracts. Blocked by: E00-S05. Design: none.
@@ -1191,6 +1209,8 @@ docs(adr): record the Temporal DST spike in ADR 0024
 ```
 
 #### E01-S03 repo: Release every package in lockstep with release-please (SP2)
+
+Issue: northMES/northmes#15.
 
 As a maintainer, I want one release PR to version every package, module, example and the image together, so that lockstep 0.x releases work before the first tag.
 
@@ -1292,6 +1312,8 @@ ci: add the release-please configuration and release job
 
 #### E01-S04 planning: Measure a board core on the planner PC class (SP3)
 
+Issue: northMES/northmes#16.
+
 As a planner, I want the board to scroll and drag smoothly with a full plant's job orders on my own PC, so that the in-house board is worth building.
 
 Module: planning. Blocked by: E00-S02, a Windows PC of the pilot's planner PC class. Design: none (spike).
@@ -1392,6 +1414,8 @@ docs(adr): record the board spike verdict in ADR 0030
 
 #### E01-S05 platform: Prove the plugin resolve hook on Node 26
 
+Issue: northMES/northmes#17.
+
 As a plugin developer, I want plugins to load against the host's packages on the pinned Node version, so that a plugin built outside the workspace never brings its own copy of Nest or the SDK.
 
 Module: platform. Blocked by: E00-S05, E00-S01. Design: none.
@@ -1486,6 +1510,8 @@ chore(repo): pin the Node version and test the runtime
 
 ### E02 platform: Boot a walking skeleton end to end
 
+Issue: northMES/northmes#18.
+
 Goal: port the integration spike test-first into the repository, so that one process in role `all` boots core, planning and the backend validator plugin, composes the supergraph, serves one remote in the shell, runs a validatable command and pushes a live update to the browser. The exit is `e2e/skeleton.spec.ts` green on the built `all` process with Testcontainers Postgres. Every later epic builds on these paths.
 
 Who it is for: Maintainer. Also: Plugin developer.
@@ -1501,6 +1527,8 @@ Each story that builds an extension point also writes its recipe (the files to w
 E02-S01-T01 is the foundation pull request. It lands every root configuration change the skeleton needs (`package.json`, the catalog in `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `vitest.config.ts`, `turbo.json`, `biome.json`) in one session pull request. E02 tasks run in interactive sessions, or as `human` tasks started on `northmes-guided`.
 
 #### E02-S01 platform: Load manifests and stop boot on catalog errors
+
+Issue: northMES/northmes#19.
 
 As a plugin developer, I want boot to read every manifest and stop with one message that lists every catalog error, so that a broken module or plugin never starts half a system.
 
@@ -1530,6 +1558,8 @@ Tests first:
 
 #### E02-S02 platform: Migrate each module as its own owner role
 
+Issue: northMES/northmes#20.
+
 As a plugin developer, I want `northmes migrate` to run each module's SQL files as that module's owner role, so that a module can never change another module's tables.
 
 Module: platform (`apps/server`). Blocked by: E02-S01. Design: none.
@@ -1554,6 +1584,8 @@ Tests first:
 Notes: E05-S02 adds the audit trigger to the template. The `db-test` skill comes with this story.
 
 #### E02-S03 platform: Compose module subgraphs behind one embedded gateway
+
+Issue: northMES/northmes#21.
 
 As a plugin developer, I want each module's code-first subgraph composed at boot behind one `/graphql` endpoint, so that a module adds types and fields without configuring GraphQL itself.
 
@@ -1584,6 +1616,8 @@ Notes: `pnpm gen` gets its first stage (schema). The `graphql-subgraph` skill co
 
 #### E02-S04 platform: Run a validatable command vetoed by a drop-in plugin
 
+Issue: northMES/northmes#22.
+
 As a plugin developer, I want my built plugin dropped into `plugins/` to veto a planning command through a validator, so that a customer rule runs without rebuilding core.
 
 Module: platform, planning, `examples/plugin-validator`. Blocked by: E02-S02, E02-S03. Design: none.
@@ -1610,6 +1644,8 @@ Tests first:
 Notes: the resolve-hook test is required in `ci / gate` from M1. Fact commands never become validatable in release 1.
 
 #### E02-S05 web: Load the planning remote in the runtime shell
+
+Issue: northMES/northmes#23.
 
 As a planner, I want the shell to load the planning module's screen at run time, so that modules ship their own screens without a shell rebuild.
 
@@ -1643,6 +1679,8 @@ Notes: the `web-remote` skill comes with this story.
 
 #### E02-S06 platform: Push a release to the board over a subscription
 
+Issue: northMES/northmes#24.
+
 As a planner, I want a production order released in another tab to appear on my board without a reload, so that I always look at the current plan.
 
 Module: platform, planning. Blocked by: E02-S04, E02-S05. Design: none.
@@ -1665,6 +1703,8 @@ Notes: E05-S10 adds plant authorization per subscription and per event, and the 
 
 #### E02-S07 platform: Shut down cleanly and report the supergraph hash
 
+Issue: northMES/northmes#25.
+
 As a maintainer, I want the process to finish in-flight requests and exit on SIGTERM, and to report its supergraph hash on health, so that restarts and upgrades never hang.
 
 Module: platform (`apps/server`). Blocked by: E02-S06. Design: none.
@@ -1683,6 +1723,8 @@ Tests first:
 - `apps/server/test/shutdown.int.test.ts`: "a 1.5 s mutation with app.close() after 300 ms returns 200"; "readiness returns 503 during shutdown"; "a subscriber gets 1001 and the process exits".
 
 #### E02-S08 platform: Start the stack with one script and gate on the skeleton spec
+
+Issue: northMES/northmes#26.
 
 As a maintainer, I want one script to start Postgres, migrate, seed and run the app for `pnpm dev`, the e2e setup and handoff's demo, so that a fresh worktree runs the app and the skeleton spec without manual steps.
 
@@ -1708,6 +1750,8 @@ Notes: from M1, `e2e/skeleton.spec.ts` and the resolve-hook test are required in
 
 ### E03 planning: Plan production in a pure scheduling package
 
+Issue: northMES/northmes#27.
+
 Goal: build `@northmes/planning-domain` in `modules/planning/domain` and the time functions in `@northmes/contracts` as pure TypeScript with no Nest, Kysely, pg or `process.env` imports, test-first from the worked example and the synthetic cases (TC1 to TC16 in [07-production-planning.md](07-production-planning.md)). It ports the earlier attempt's placement, calendar, lock, operation and readiness rules with their six placement defects fixed. Server, board and tools all call these functions, so a duration or a lock rule is computed the same way everywhere.
 
 Who it is for: Planner. Also: Plugin developer, who later plugs a solver in behind the `Scheduler` port.
@@ -1719,6 +1763,8 @@ Out of scope: tables, commands and GraphQL (E07); calendar expansion from stored
 Estimate: not estimated. Depends on: E00, E01-S02; ADR 0057 accepted. The first E03 runs start after E02-S01-T01 (the foundation pull request) has settled the root configuration files. Milestone: M2. These are the first handoff runs: small, without UI, started by the operating session on `northmes-guided`.
 
 #### E03-S01 contracts: Resolve plant wall-clock times and work in time windows
+
+Issue: northMES/northmes#28.
 
 As a planner, I want plant times on both daylight saving nights to resolve to the right instants, so that a job laid over a DST night ends when the plant clock says it does.
 
@@ -1742,6 +1788,8 @@ Notes: the `dst-test` skill comes with this story. Calendar rules from ADR [0025
 
 #### E03-S02 planning: Compute planned duration in whole cycles
 
+Issue: northMES/northmes#29.
+
 As a planner, I want a job order's planned time to follow the duration formula exactly, so that the board shows the same end time the product owner computes by hand.
 
 Module: planning (`modules/planning/domain`). Blocked by: E03-S01. Design: none.
@@ -1763,6 +1811,8 @@ Tests first:
 
 #### E03-S03 planning: Resolve override rates and freeze them on placement
 
+Issue: northMES/northmes#30.
+
 As a planner, I want a machine's or tool's own rates to win over the operation's where the rules say so, and placed rows to keep their rates, so that master data edits never move rows I have fixed.
 
 Module: planning (`modules/planning/domain`). Blocked by: E03-S02. Design: none.
@@ -1782,6 +1832,8 @@ Tests first:
 - `modules/planning/domain/src/duration.test.ts`: "TC5 tool override gives 56 700 s"; "operation equipment cycleSeconds wins over the operation"; "a fixed row keeps its frozen run seconds after the operation changes".
 
 #### E03-S04 planning: Place job orders backward from the deadline
+
+Issue: northMES/northmes#32.
 
 As a planner, I want autoplan to place each order backward from its deadline and fall back to forward from now, so that orders finish just in time and late orders are flagged, not dropped.
 
@@ -1807,6 +1859,8 @@ Notes: the earlier attempt's defects to fix test-first are listed with the port 
 
 #### E03-S05 planning: Report conflicts by row status instead of moving rows
 
+Issue: northMES/northmes#33.
+
 As a planner, I want autoplan to leave started, frozen, held and hard-locked rows alone and report conflicts, so that it never rewrites what is already running or decided.
 
 Module: planning (`modules/planning/domain`). Blocked by: E03-S04. Design: none.
@@ -1829,6 +1883,8 @@ Notes: whether overdue work may jump the frozen window, and whether the frozen w
 
 #### E03-S06 planning: Judge a move against locks, the frozen window and snapping
 
+Issue: northMES/northmes#34.
+
 As a planner, I want every move checked against pinned, locked and started rows and snapped to the zoom's step, so that the board, the table view and agent proposals all apply the same lock rules.
 
 Module: planning (`modules/planning/domain`). Blocked by: E03-S05. Design: none.
@@ -1849,6 +1905,8 @@ Tests first:
 
 #### E03-S07 planning: Validate a change set for overlaps and precedence breaks
 
+Issue: northMES/northmes#35.
+
 As a planner, I want Save to tell me which of my moves create overlaps or break the order of operations, so that I confirm them with a reason or fix them.
 
 Module: planning (`modules/planning/domain`). Blocked by: E03-S06. Design: none.
@@ -1866,6 +1924,8 @@ Tests first:
 - `modules/planning/domain/src/validate.test.ts`: "an overlap that existed before the change is not reported"; "moving operation 20 before operation 10's release is a precedence break"; "split rows on two machines both bound the next operation".
 
 #### E03-S08 planning: Project material dates from the current placements
+
+Issue: northMES/northmes#36.
 
 As a planner, I want material warnings computed from where job orders sit now, so that moving an order shows its shortage at once without a new stock import.
 
@@ -1887,6 +1947,8 @@ Notes: whether purchase requisitions count in the warning is open for the produc
 
 #### E03-S09 planning: Hold autoplan's invariants and its performance budget
 
+Issue: northMES/northmes#37.
+
 As a planner, I want autoplan to give the same plan for the same input and to finish within its budget at pilot scale, so that a rerun never shuffles the board and a large plant does not wait.
 
 Module: planning (`modules/planning/domain`, `packages/testing`). Blocked by: E03-S05, E03-S07. Design: none.
@@ -1907,6 +1969,8 @@ Tests first:
 
 ### E04 web: Ship the shell, design tokens and shared UI patterns
 
+Issue: northMES/northmes#38.
+
 Goal: turn the skeleton shell into the shell every module screen mounts in. It covers tokens that pass contrast in light and dark, the shell services that make every page accessible, the sidebar built from routes, the plant switch, live updates that survive restarts, stale-tab detection, browser error reports, and the page, form and formatting patterns. Module screens then add only their own content.
 
 Who it is for: Planner. Also: Operator, Plant admin, Plugin developer.
@@ -1918,6 +1982,8 @@ Out of scope: the board (E08), the station screens (E11), the chat panel (E14), 
 Estimate: shell services and token fixes 6, web hooks and UI patterns 11 to 14 raw days (internal research notes 21 and 33); shell hardening is inside the platform estimate. Depends on: E02; design approvals D1 and D2. Milestone: M2.
 
 #### E04-S01 ui: Ship design tokens that pass contrast in light and dark
+
+Issue: northMES/northmes#39.
 
 As a planner, I want every text, border and focus ring to meet the contrast rules in both themes, so that I can read and use every screen.
 
@@ -1977,6 +2043,8 @@ docs/design/ui/ui-<issue>-tokens.md and its PNGs; Design section on the UI tasks
 ```
 
 #### E04-S02 web: Load remotes with timeouts, integrity checks and placeholders
+
+Issue: northMES/northmes#40.
 
 As a planner, I want a broken or slow module to show a clear placeholder while the rest of the app works, so that one failing remote never blocks my work.
 
@@ -2045,6 +2113,8 @@ docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames Sh
 
 #### E04-S03 web: Give every page a title, a heading, landmarks and announcements
 
+Issue: northMES/northmes#41.
+
 As a planner using a keyboard or a screen reader, I want every page to have a title, a heading, landmarks and spoken status messages, so that I can find my way and hear what changed.
 
 Module: web (`apps/web`, `packages/web-sdk`, `packages/ui`). Blocked by: E04-S02. Design: D2.
@@ -2073,6 +2143,8 @@ Tests first:
 
 #### E04-S04 web: Switch plants without mixing their data
 
+Issue: northMES/northmes#42.
+
 As a planner who works in two plants, I want to switch plant from the shell and keep two plants open in two tabs, so that I never see or change one plant's data in the other.
 
 Module: web (`apps/web`, `packages/web-sdk`). Blocked by: E04-S02, E05-S03. Design: D2.
@@ -2093,6 +2165,8 @@ Tests first:
 - `e2e/plant-switch.spec.ts`: "two tabs on two plants each show only their own orders".
 
 #### E04-S05 web: Keep live updates through restarts and catch stale tabs
+
+Issue: northMES/northmes#43.
 
 As a planner, I want the screen to reconnect by itself after a server restart and to ask me to reload after an upgrade, so that I never act on an outdated page.
 
@@ -2115,6 +2189,8 @@ Tests first:
 
 #### E04-S06 web: Report browser errors to the installation
 
+Issue: northMES/northmes#44.
+
 As a plant admin, I want browser errors from every remote stored in the installation and grouped, so that I can see what broke without asking users for screenshots.
 
 Module: web, core (`apps/web`, `apps/server`). Blocked by: E04-S02. Design: none.
@@ -2135,6 +2211,8 @@ Tests first:
 Notes: System health shows the rows (E16-S03).
 
 #### E04-S07 ui: Build pages and forms from shared patterns
+
+Issue: northMES/northmes#45.
 
 As a plugin developer, I want page states, forms and the display of dates, times and numbers as shared patterns, so that every screen looks and behaves the same and I write only the content.
 
@@ -2165,6 +2243,8 @@ Notes: `formatMeasure` and `formatQuantity` need the unit catalog and arrive wit
 
 #### E04-S08 web: Run every remote with Fast Refresh in pnpm dev
 
+Issue: northMES/northmes#46.
+
 As a plugin developer, I want `pnpm dev` to run the server, the shell and every module remote with Fast Refresh, so that I see a change in seconds.
 
 Module: web (`scripts`, `apps/web`). Blocked by: E02-S08, E04-S02. Design: none.
@@ -2182,6 +2262,8 @@ Tests first:
 - `scripts/dev/ports.test.ts`: "remote dev ports come from free ports, not a fixed base".
 
 #### E04-S09 web: Show the running version, license and source on the About page
+
+Issue: northMES/northmes#47.
 
 As a plant admin, I want an About page that names the running version, the license and the source of that exact version, so that every user reached over the network can get the source.
 
@@ -2201,6 +2283,8 @@ Tests first:
 
 ### E05 core: Sign users in and make every write an audited command
 
+Issue: northMES/northmes#48.
+
 Goal: build the platform server pieces every module uses: the command pipeline with Zod contracts and the error model, the audit trail in the command transaction, the scope tree with plants, row-level security with transaction-local scopes, Better Auth sign-in, roles and permissions in core tables, same-origin and credential rules, user management, the outbox with pg-boss jobs, plant-authorized subscriptions and the time scalars.
 
 Who it is for: Plant admin. Also: Planner, Plugin developer, Maintainer.
@@ -2212,6 +2296,8 @@ Out of scope: station credentials (E11), MCP tokens (E12), integration tokens (t
 Estimate: audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated. Depends on: E02. Milestone: M2. Tasks in E05-S03 to E05-S08 touch authentication, row-level security or secrets, so they carry `human` and run on the guided graph.
 
 #### E05-S01 core: Write every change through the command pipeline
+
+Issue: northMES/northmes#49.
 
 As a plugin developer, I want every write to run through one pipeline that parses, checks permission, runs validators and writes events in one transaction, so that every surface follows the same rules.
 
@@ -2238,6 +2324,8 @@ Tests first:
 - `apps/server/test/gateway/guards.int.test.ts`: "a Mutation field without a command handler stops boot naming it".
 
 #### E05-S02 audit: Record every command and field change in the same transaction
+
+Issue: northMES/northmes#50.
 
 As a plant admin, I want every change to record who did it, through which surface and what changed, in the same transaction as the change, so that nothing changes without a trace.
 
@@ -2269,6 +2357,8 @@ Notes: where the audit module's code lives is an open item in [02-architecture.m
 
 #### E05-S03 core: Hold companies and plants in the scope tree
 
+Issue: northMES/northmes#51.
+
 As a plant admin, I want my company and its plants in one scope tree, so that every row belongs to the company or one plant and a request works in exactly one plant.
 
 Module: core. Blocked by: E05-S02. Design: none.
@@ -2292,6 +2382,8 @@ Notes: public API paths will carry the plant slug (`/api/v<major>/<module-id>/pl
 
 #### E05-S04 core: Filter every table by transaction-local read and write scopes
 
+Issue: northMES/northmes#52.
+
 As a plant admin, I want the database itself to hide other plants' rows and refuse writes outside my roles, so that a code defect cannot leak or change another plant's data.
 
 Module: core, sdk. Blocked by: E05-S03. Design: none.
@@ -2312,6 +2404,8 @@ Tests first:
 - `apps/server/test/catalog-lint.int.test.ts`: "a FOR ALL policy fails the lint naming the table".
 
 #### E05-S05 core: Sign in with Better Auth and create the first admin by CLI
+
+Issue: northMES/northmes#53.
 
 As a plant admin, I want to sign in with a username or email and a password, and to create the first admin from the command line, so that nobody on the plant network can claim admin rights before IT finishes setup.
 
@@ -2340,6 +2434,8 @@ Tests first:
 
 #### E05-S06 core: Grant roles per plant and check permissions at the row's scope
 
+Issue: northMES/northmes#54.
+
 As a plant admin, I want to assign roles per plant and build custom roles from module permissions, so that each person can do exactly their job in each plant.
 
 Module: core. Blocked by: E05-S04, E05-S05, E04-S07. Design: role and assignment screens (canonical list and form page).
@@ -2362,6 +2458,8 @@ Tests first:
 Notes: who may edit and assign roles at which scope is open for the product owner.
 
 #### E05-S07 core: Enforce same-origin rules and bind credentials to surfaces
+
+Issue: northMES/northmes#55.
 
 As a plant admin, I want cookie-authenticated requests from other origins refused and every credential accepted only where it belongs, so that a malicious page or a leaked token cannot act as a user.
 
@@ -2388,6 +2486,8 @@ Notes: `apps/server/test/rest/routes.int.test.ts` is the one route inventory tes
 
 #### E05-S08 core: Manage users and operators as commands
 
+Issue: northMES/northmes#56.
+
 As a plant admin, I want to create users and operators, reset passwords and ban accounts through NorthMES, so that every user change is permission-checked and audited.
 
 Module: core. Blocked by: E05-S06. Design: user list and form (canonical list and form page).
@@ -2409,6 +2509,8 @@ Tests first:
 Notes: the placeholder email scheme waits for Krister's confirmation before the first user migration.
 
 #### E05-S09 core: Deliver side effects through the outbox and pg-boss jobs
+
+Issue: northMES/northmes#57.
 
 As a plugin developer, I want events written in the command transaction and jobs run through one SDK jobs API, so that write-back, autoplan and partition jobs never lose or duplicate work.
 
@@ -2432,6 +2534,8 @@ Tests first:
 
 #### E05-S10 core: Authorize subscriptions by plant and event scope
 
+Issue: northMES/northmes#58.
+
 As a planner, I want my live updates to carry only my plant's events and to stop when I lose access, so that a subscription never leaks another plant's data.
 
 Module: core, sdk. Blocked by: E05-S06, E05-S09. Design: none.
@@ -2450,6 +2554,8 @@ Tests first:
 - `apps/server/test/subscriptions/board.int.test.ts`: "a subscriber at plant HEL gets HEL and company events and no STO events"; "after the read permission is removed, nothing arrives within 2 s".
 
 #### E05-S11 audit: Show an entity's history and the admin audit list
+
+Issue: northMES/northmes#59.
 
 As a plant admin, I want a History tab on records and an audit list I can filter, so that I can answer "who moved my order" without database access.
 
@@ -2471,6 +2577,8 @@ Tests first:
 
 #### E05-S12 core: Store time and numbers safely between Postgres and TypeScript
 
+Issue: northMES/northmes#60.
+
 As a plugin developer, I want time columns to arrive as strings that become Temporal values and numeric columns to stay exact, so that no `Date` or float rounding enters business logic.
 
 Module: core, sdk, contracts. Blocked by: E02-S02, E03-S01. Design: none.
@@ -2491,6 +2599,8 @@ Tests first:
 
 #### E05-S13 audit: Drop security event partitions after the retention setting
 
+Issue: northMES/northmes#61.
+
 As a plant admin, I want security event partitions dropped after a retention period I can see and change, so that the security log does not grow without limit while command and change rows stay.
 
 Module: audit. Blocked by: E05-S02, E06-S08. Design: none.
@@ -2510,6 +2620,8 @@ Notes: ADR 0013 awaits a lawyer's confirmation on retention, so the default peri
 
 ### E06 core: Hold master data, units, settings and plant calendars
 
+Issue: northMES/northmes#62.
+
 Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, and plant calendars that yield availability windows. A new register then costs one definition and a handful of files.
 
 Who it is for: Plant admin. Also: Planner, Plugin developer.
@@ -2521,6 +2633,8 @@ Out of scope: CSV and Excel import of registers, list export, the reporting sche
 Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated. Depends on: E05, E04, E03-S01. Milestone: M2, because E09 starts right after core master data.
 
 #### E06-S01 contracts: Convert units through the NorthMES unit catalog
+
+Issue: northMES/northmes#63.
 
 As a planner, I want to enter cycle time as seconds, minutes or pieces per hour and see it the way I entered it, so that I never convert by hand.
 
@@ -2542,6 +2656,8 @@ Tests first:
 - `apps/server/test/gateway/unit-enums.test.ts`: "a unit enum defined in two subgraphs fails composition unless it is the shared one".
 
 #### E06-S02 sdk: Page, filter, sort, search and group every list as a connection
+
+Issue: northMES/northmes#64.
 
 As a planner, I want every list to page, filter, sort, search and group the same way, so that I learn one list and use it everywhere.
 
@@ -2567,6 +2683,8 @@ Tests first:
 - `packages/contracts/test/pure-imports.test.ts`: "importing every @northmes/*-contracts package in a fresh process loads no @nestjs/* or react module".
 
 #### E06-S03 web: Show lists in one DataTable with URL state
+
+Issue: northMES/northmes#65.
 
 As a planner, I want list filters, sort, grouping and the open tab kept in the URL, so that I can share the view I see and come back to it.
 
@@ -2596,6 +2714,8 @@ Tests first:
 
 #### E06-S04 core: Define a register once with the master-data kit
 
+Issue: northMES/northmes#66.
+
 As a plugin developer, I want one `defineMasterData` definition to yield the table template, GraphQL types, list, form, picker and lookup of a register, so that a new code register takes a handful of files.
 
 Module: core, sdk, web-sdk. Blocked by: E06-S02, E06-S03, E05-S02. Design: the canonical list and form page.
@@ -2621,6 +2741,8 @@ Notes: if three of the first five registers need escape level 2 or 3, the kit is
 
 #### E06-S05 core: Set up plants, equipment and group colors
 
+Issue: northMES/northmes#67.
+
 As a plant admin, I want to register equipment with its group, color and plannable flags, so that the board shows the right machines in the right groups.
 
 Module: core. Blocked by: E06-S04. Design: canonical list and form page.
@@ -2641,6 +2763,8 @@ Tests first:
 - `modules/core/test/equipment.int.test.ts`: "non-plannable equipment is not in the board's equipment list".
 
 #### E06-S06 core: Hold articles, routings and operations with cycle time in units
+
+Issue: northMES/northmes#68.
 
 As a planner, I want each operation's cycle time, retool time, lead time and rates stored in canonical units with what was typed, so that durations are exact and forms and detail views show the entry unit.
 
@@ -2665,6 +2789,8 @@ Tests first:
 
 #### E06-S07 core: Hold customers and warehouses at company level
 
+Issue: northMES/northmes#69.
+
 As a plant admin, I want customers and warehouses registered once for the company, with each warehouse mapped to a plant, so that orders land in the right plant.
 
 Module: core. Blocked by: E06-S04. Design: canonical list and form page.
@@ -2682,6 +2808,8 @@ Tests first:
 - `modules/core/test/customers.int.test.ts`: "a customer has no address fields"; "a customer number is unique per company".
 
 #### E06-S08 core: Store settings in audited tables with one form
+
+Issue: northMES/northmes#70.
 
 As a plant admin, I want module settings edited in one form and every change audited, so that behaviour never hides in environment variables.
 
@@ -2706,6 +2834,8 @@ Notes: the settings cascade below company and plant is cut candidate 1.
 
 #### E06-S09 core: Define calendar versions with shift patterns and breaks
 
+Issue: northMES/northmes#71.
+
 As a plant admin, I want calendars with dated versions, N-week shift patterns, night shifts and breaks, so that planning knows when each machine works.
 
 Module: core. Blocked by: E06-S05, E03-S01. Design: calendar page (a design task under this story).
@@ -2727,6 +2857,8 @@ Tests first:
 
 #### E06-S10 core: Apply calendar deviations with scope-first precedence
 
+Issue: northMES/northmes#72.
+
 As a plant admin, I want plant-wide holidays and per-machine overtime that combine predictably, so that overtime on one machine survives a plant-wide closure when that is intended.
 
 Module: core. Blocked by: E06-S09. Design: calendar page.
@@ -2745,6 +2877,8 @@ Tests first:
 - `modules/core/src/domain/deviations.test.ts`: "equipment overtime survives a plant-wide holiday"; "TC15 autumn gives 25 200 s".
 
 #### E06-S11 core: Serve availability windows and the production day
+
+Issue: northMES/northmes#73.
 
 As a planner, I want each machine's working time as exact windows over any time range, so that autoplan and the board lay work over the same hours.
 
@@ -2767,6 +2901,8 @@ Tests first:
 
 #### E06-S12 platform: Generate modules, registers and commands with a golden test
 
+Issue: northMES/northmes#74.
+
 As a plugin developer, I want generators for a minimal module, a register and a command, so that new code starts from the shared factories instead of a copied module.
 
 Module: platform (`scripts`, `packages/sdk`). Blocked by: E06-S04, E05-S01. Design: none.
@@ -2786,6 +2922,8 @@ Tests first:
 Notes: this story is cut item 1 (with `objectFromZod` and the settings cascade). Take it only if velocity allows at M2.
 
 #### E06-S13 core: Set date, clock and number format per company and plant
+
+Issue: northMES/northmes#75.
 
 As a plant admin, I want to set how dates, clock times and numbers are shown and typed for the company, with a plant override, so that every screen writes them the way people at the plant read them.
 
@@ -2813,6 +2951,8 @@ Notes: the two-plant check reads an order deadline on the production order list,
 
 ### E07 planning: Plan orders in per-planner drafts and run autoplan
 
+Issue: northMES/northmes#76.
+
 Goal: hold production orders, their operations and job orders, customer orders and demand, and let each planner change the plan in a private draft under soft locks that Save commits through one command. Autoplan runs as a job on the pure scheduling package and applies through the same command. Write-back, the board, proposals and the station all build on this command and its events.
 
 Who it is for: Planner.
@@ -2824,6 +2964,8 @@ Out of scope: the board UI (E08), Pyramid import (E09), agent proposals (E15), s
 Estimate: drafts, Save, soft locks and row statuses 4 to 7 raw days (internal research note 32); the rest not estimated. Depends on: E06, E03; ADR 0029 accepted before the first migration. Milestone: M3.
 
 #### E07-S01 planning: Release production orders with their operations and job orders
+
+Issue: northMES/northmes#77.
 
 As a planner, I want to create a production order for an article and release it with a copy of its routing, so that I can plan its operations as job orders on machines.
 
@@ -2849,6 +2991,8 @@ Tests first:
 
 #### E07-S02 planning: Link customer order lines to production orders
 
+Issue: northMES/northmes#78.
+
 As a planner, I want production orders linked to the customer order lines they supply, so that I can see which customers wait on an order.
 
 Module: planning. Blocked by: E07-S01, E06-S07. Design: production order detail.
@@ -2870,6 +3014,8 @@ Notes: customer orders and lines are planning records ([07-production-planning.m
 
 #### E07-S03 planning: Keep each planner's draft on the server with row statuses
 
+Issue: northMES/northmes#79.
+
 As a planner, I want my moves kept in my own draft on the server and each row's status shown, so that I can stop and continue later and see when someone else changed a row.
 
 Module: planning. Blocked by: E07-S01. Design: none (statuses appear on the board in E08).
@@ -2888,6 +3034,8 @@ Tests first:
 - `modules/planning/test/my-draft.int.test.ts`: "a row another planner saved shows STALE with that planner"; "a started row shows STARTED"; "rebase takes the new base version".
 
 #### E07-S04 planning: Hold soft locks per production order with break and extend
+
+Issue: northMES/northmes#80.
 
 As a planner, I want my first move on an order to lock the whole order for my draft, and to break another planner's lock with a reason, so that two planners never overwrite each other silently.
 
@@ -2910,6 +3058,8 @@ Tests first:
 Notes: order-level locks, who may break locks and the idle expiry are open for the product owner.
 
 #### E07-S05 planning: Save a draft through one command, all or nothing
+
+Issue: northMES/northmes#81.
 
 As a planner, I want Save to commit all my draft moves at once and list the rows that conflict, so that the plan never holds half of my change.
 
@@ -2935,6 +3085,8 @@ Notes: whether Save may commit confirmed conflicts or must refuse new overlaps i
 
 #### E07-S06 planning: Report operation progress without bumping job order versions
 
+Issue: northMES/northmes#82.
+
 As a planner, I want reported quantities and status changes to reach the plan without making my draft rows stale, so that operator reports never block my Save.
 
 Module: planning. Blocked by: E07-S05. Design: none.
@@ -2952,6 +3104,8 @@ Tests first:
 - `modules/planning/test/progress.int.test.ts`: "a report leaves job_order.version unchanged and the draft row OK"; "a report on another machine sets the conflict flag".
 
 #### E07-S07 planning: Run autoplan as a job and apply its result as a commit
+
+Issue: northMES/northmes#83.
 
 As a planner, I want to start autoplan for my plant and get the result applied in one command, so that the plan is rebuilt without blocking the server or overwriting other planners' drafts.
 
@@ -2976,6 +3130,8 @@ Notes: the default is a direct apply. The product owner may choose a proposal in
 
 #### E07-S08 planning: Configure planning rules per plant with recorded defaults
 
+Issue: northMES/northmes#84.
+
 As a plant admin, I want the planning rules the product owner has not settled to be plant settings with recorded defaults, so that the pilot can change them without a release.
 
 Module: planning. Blocked by: E06-S08. Design: settings page.
@@ -2993,6 +3149,8 @@ Tests first:
 - `modules/planning/test/settings.test.ts`: "the defaults equal the ADR defaults"; "changing the deadline rule changes TC10's latest start".
 
 #### E07-S09 planning: Serve the board range and the late-order facts
+
+Issue: northMES/northmes#86.
 
 As a planner, I want the board and the table view to load one bounded range with late facts from the engine, so that I see why an order is late without the AI module.
 
@@ -3014,6 +3172,8 @@ Tests first:
 
 ### E08 planning: Move job orders on the board and in the table view
 
+Issue: northMES/northmes#87.
+
 Goal: build the planning board in house as a resource timeline, plus the job order table view as its equivalent non-visual path. Planners see machines grouped by equipment group, job orders as blocks with their states, and move them by pointer, by keyboard or through a dialog into their draft, with other planners' locks and changes shown live. Release 1 cuts resize, the compressed off-hours axis, multi-select, continuous zoom, undo beyond discarding the draft, the conflict navigator and the minimap.
 
 Who it is for: Planner.
@@ -3025,6 +3185,8 @@ Out of scope: the cuts above; proposed rows from agents (E15-S03 adds that state
 Estimate: about 35 raw days for the board (internal research note 05), 3 of them spent in SP3, plus 8 for board accessibility and the table view (internal research note 21). Depends on: the SP3 verdict (E01-S04), design approval D3, E04; only E08-S10 waits for E07. Milestone: M4. If SP3 failed twice, E08-S07 carries planning with a read-only timeline and the pointer stories wait.
 
 #### E08-S01 planning: Draw the board's axis, rows and blocks in plant time
+
+Issue: northMES/northmes#88.
 
 As a planner, I want machines grouped by equipment group on a time axis in plant time, so that I see the plan the way the plant works.
 
@@ -3050,6 +3212,8 @@ Tests first:
 
 #### E08-S02 planning: Show block fields, states and the hover card
 
+Issue: northMES/northmes#89.
+
 As a planner, I want each block to show the fields I chose and its state in text and shape, never by color alone, so that I read the plan at a glance and with a screen reader.
 
 Module: planning. Blocked by: E08-S01. Design: D3.
@@ -3073,6 +3237,8 @@ Tests first:
 
 #### E08-S03 planning: Move a block by pointer into my draft
 
+Issue: northMES/northmes#90.
+
 As a planner, I want to drag a job order in time and to another allowed machine with snapping, so that I can rearrange the plan quickly.
 
 Module: planning. Blocked by: E08-S02, E07-S04. Design: D3.
@@ -3092,6 +3258,8 @@ Tests first:
 - `e2e/board-move.spec.ts`: "dragging a block to another allowed machine creates one draft change"; "a drop on a machine outside the operation's equipment is refused".
 
 #### E08-S04 planning: Move a block without dragging
+
+Issue: northMES/northmes#91.
 
 As a planner who uses the keyboard or a screen reader, I want to move a job order from the detail panel, the block menu or keyboard move mode, so that every move works without a pointer.
 
@@ -3115,6 +3283,8 @@ Notes: click-to-place is cut candidate 2 (about 1.5 days); the panel and the dia
 
 #### E08-S05 planning: Show the selected order's links with lead time
 
+Issue: northMES/northmes#92.
+
 As a planner, I want to see how the selected order's operations follow each other, so that I can tell which moves break the sequence.
 
 Module: planning. Blocked by: E08-S02. Design: D3.
@@ -3132,6 +3302,8 @@ Tests first:
 - `modules/planning/web/test/board/links.test.tsx`: "an order split on two machines draws links from both rows".
 
 #### E08-S06 planning: See other planners' locks live and break one with a reason
+
+Issue: northMES/northmes#93.
 
 As a planner, I want to see which orders another planner is editing and to break a lock with a reason when I must, so that we never overwrite each other and I am never stuck.
 
@@ -3155,6 +3327,8 @@ Notes: ghost outlines are cut candidate 2.
 
 #### E08-S07 planning: Plan from the job order table view
 
+Issue: northMES/northmes#94.
+
 As a planner who uses a screen reader, I want a table of job orders with deadline, planned end and late-by columns and the same Move dialog, so that I can plan without the timeline.
 
 Module: planning. Blocked by: E07-S09, E06-S03. Design: D3 (table view page).
@@ -3177,6 +3351,8 @@ Notes: if SP3 failed twice, this view plus a read-only timeline carries the pilo
 
 #### E08-S08 planning: Review my draft and save it
 
+Issue: northMES/northmes#95.
+
 As a planner, I want to review my moves and their conflicts before Save, so that I commit only what I mean.
 
 Module: planning. Blocked by: E08-S03, E07-S05. Design: D3 (draft review and save).
@@ -3196,6 +3372,8 @@ Tests first:
 
 #### E08-S09 planning: Start autoplan from the board and follow its status
 
+Issue: northMES/northmes#96.
+
 As a planner, I want to start autoplan from the board and see its progress and result, so that I know when the plan changed and what moved.
 
 Module: planning. Blocked by: E07-S07, E08-S02. Design: D3.
@@ -3213,6 +3391,8 @@ Tests first:
 - `e2e/board-autoplan.spec.ts`: "autoplan applies and the status line shows the counts".
 
 #### E08-S10 planning: Wire the board to live plan data
+
+Issue: northMES/northmes#97.
 
 As a planner, I want the board to load my plant's plan and follow every change live, so that it always shows the committed plan plus my draft.
 
@@ -3233,6 +3413,8 @@ Tests first:
 - `e2e/board-live.spec.ts`: "a save in another context appears within 5 s".
 
 #### E08-S11 planning: Pause live updates on the board
+
+Issue: northMES/northmes#98.
 
 As a planner who reads the board with a screen reader, I want to pause live updates while I work, so that the content does not change under me.
 
@@ -3255,6 +3437,8 @@ Notes: whether the product owner wants pause at all is open; tasks stay `human` 
 
 ### E09 pyramid-connector: Import Pyramid orders, materials and stock
 
+Issue: northMES/northmes#99.
+
 Goal: import the pilot's production orders, operations, materials, customers and stock from Pyramid into the mapped plant, first from uploaded files and then by polling, with idempotent imports that write only what changed, an import inbox for rows that cannot be mapped, and an integration card that shows health. Everything Pyramid-specific stays in `modules/pyramid-connector`.
 
 Who it is for: Planner. Also: Plant admin.
@@ -3266,6 +3450,8 @@ Out of scope: write-back (E10); the generic CSV or Excel import; a dry-run comma
 Estimate: not estimated; the field unit map is 1 raw day (internal research note 35). Depends on: E06 (core master data). Milestone: inside M2 (2027-01-22). Fixtures are synthetic: invented order numbers, article codes and placeholder names. No customer file enters the repository.
 
 #### E09-S01 pyramid-connector: Parse Pyramid XML safely into typed records
+
+Issue: northMES/northmes#100.
 
 As a plant admin, I want Pyramid responses parsed strictly and safely, so that a malformed or hostile file never reaches the database.
 
@@ -3285,6 +3471,8 @@ Tests first:
 - `modules/pyramid-connector/test/parser.test.ts`: "5001.20 and 5001.2 stay distinct"; "a billion-laughs DOCTYPE is rejected"; "orders-customer-details.xml yields no address or phone".
 
 #### E09-S02 pyramid-connector: Map Pyramid records to canonical import commands
+
+Issue: northMES/northmes#101.
 
 As a plant admin, I want Pyramid rows mapped to NorthMES's own import commands with settings I must set, so that nothing is imported on a guessed unit or meaning.
 
@@ -3307,6 +3495,8 @@ Tests first:
 
 #### E09-S03 pyramid-connector: Import an uploaded Pyramid file
 
+Issue: northMES/northmes#102.
+
 As a plant admin, I want to upload a Pyramid XML file and import it, so that the first import runs and is reviewed before network access to Pyramid exists.
 
 Module: pyramid-connector. Blocked by: E09-S02. Design: file upload on the integration card (canonical list and form page).
@@ -3327,6 +3517,8 @@ Tests first:
 
 #### E09-S04 pyramid-connector: Import each order inside its mapped plant
 
+Issue: northMES/northmes#103.
+
 As a planner in one plant, I want each Pyramid order imported into the plant its warehouse maps to, so that my board never shows another plant's orders and codes never clash across plants.
 
 Module: pyramid-connector. Blocked by: E09-S02. Design: none.
@@ -3346,6 +3538,8 @@ Tests first:
 - `modules/pyramid-connector/test/plant-scope-import.int.test.ts`: "warehouses 1 and 2 land in STO and HEL with zero inbox items"; "deadline 2026-11-02 resolves to 2026-11-01T22:00Z in HEL and 2026-11-01T23:00Z in STO"; "a moved order creates one inbox item and no new order".
 
 #### E09-S05 pyramid-connector: Poll Pyramid and write only what changed
+
+Issue: northMES/northmes#104.
 
 As a planner, I want Pyramid polled on a schedule and only real changes written, so that the board stays current and my draft rows do not turn stale after every poll.
 
@@ -3368,6 +3562,8 @@ Tests first:
 
 #### E09-S06 pyramid-connector: Show the import log, inbox and integration card
 
+Issue: northMES/northmes#105.
+
 As a plant admin, I want to see each run, the rows that failed and why, and the connector's health in one place, so that nothing is dropped silently.
 
 Module: pyramid-connector. Blocked by: E09-S05, E06-S03. Design: import log, inbox and integration card (a design task under this story).
@@ -3388,6 +3584,8 @@ Tests first:
 
 #### E09-S07 pyramid-connector: Import stock and re-date planned movements
 
+Issue: northMES/northmes#106.
+
 As a planner, I want Pyramid's stock and planned movements dated from my current plan, so that material warnings follow my moves.
 
 Module: pyramid-connector. Blocked by: E09-S05, E03-S08. Design: none.
@@ -3407,6 +3605,8 @@ Tests first:
 
 #### E09-S08 pyramid-connector: Keep importing through Pyramid downtime
 
+Issue: northMES/northmes#107.
+
 As a planner, I want a Pyramid outage to delay imports without flagging my orders missing, so that a network problem never looks like cancelled work.
 
 Module: pyramid-connector. Blocked by: E09-S05. Design: none.
@@ -3425,6 +3625,8 @@ Tests first:
 
 ### E10 pyramid-connector: Write the committed plan back to Pyramid
 
+Issue: northMES/northmes#108.
+
 Goal: send each committed change to Pyramid as the current state per operation row (planned start and end, lock, status and priority), first in shadow mode with a daily write-back report and then live once a write method is verified. ERP changes to orders a planner has touched become pending changes the planner accepts or rejects. Draft and proposal content never reaches Pyramid.
 
 Who it is for: Planner. Also: Plant admin.
@@ -3436,6 +3638,8 @@ Out of scope: quantity and deadline write-back unless the Pyramid administrator 
 Estimate: not estimated. Depends on: E09, E07-S05. Milestone: shadow write-back inside M2; live write-back verified by 2027-01-22 as the target; if no write path exists by 2027-02-26 (M3), the product owner picks the fallback. Live mode cannot be selected until field ownership is answered and a write method is verified.
 
 #### E10-S01 pyramid-connector: Format write-back values and recognize their echoes
+
+Issue: northMES/northmes#109.
 
 As a planner, I want NorthMES to recognize its own values when Pyramid sends them back, so that my moves never return as ERP changes.
 
@@ -3457,6 +3661,8 @@ Tests first:
 
 #### E10-S02 pyramid-connector: Compute write-back in shadow mode with a daily report
 
+Issue: northMES/northmes#110.
+
 As a planner, I want every committed change computed as the Pyramid update it would send, and a daily report of them, so that I can enter them in Pyramid by hand until live write-back is verified.
 
 Module: pyramid-connector. Blocked by: E10-S01, E07-S05. Design: daily write-back report (canonical list and form page).
@@ -3476,6 +3682,8 @@ Tests first:
 - `modules/pyramid-connector/test/subscriptions.contract.test.ts`: "no draft or soft-lock subscription".
 
 #### E10-S03 pyramid-connector: Handle ERP changes on touched and untouched orders
+
+Issue: northMES/northmes#111.
 
 As a planner, I want Pyramid changes to orders I have touched held as pending changes I accept or reject, and changes to untouched orders applied, so that ERP edits never overwrite my planning silently.
 
@@ -3498,6 +3706,8 @@ Tests first:
 Notes: field ownership and the spread rule are open for the product owner; the defaults above apply until then.
 
 #### E10-S04 pyramid-connector: Send write-back live after a reconcile
+
+Issue: northMES/northmes#112.
 
 As a plant admin, I want to switch write-back from shadow to live through an audited setting that first reconciles all open orders, so that Pyramid gets exactly the current plan once.
 
@@ -3522,6 +3732,8 @@ Notes: recorded request and response pairs arrive only after the data processing
 
 #### E10-S05 pyramid-connector: Take reported progress from Pyramid
 
+Issue: northMES/northmes#113.
+
 As a planner, I want statuses and quantities reported in Pyramid to reach the plan, so that the board stays current when operators keep reporting in Pyramid.
 
 Module: pyramid-connector, planning. Blocked by: E09-S05, E07-S06. Design: none.
@@ -3542,6 +3754,8 @@ Notes: build this story only if the product owner answers that operators keep re
 
 ### E11 production-start: Report production at an online station
 
+Issue: northMES/northmes#114.
+
 Goal: give operators a minimal online station in the production-start module: sign in by badge or personal login, switch equipment, start, pause and finish a job, and report good and scrap quantities with a scrap reason. The station is online only: unsent entries stay on the screen and are never sent without the operator pressing Send.
 
 Who it is for: Operator. Also: Plant admin (registers stations), Planner (sees progress).
@@ -3553,6 +3767,8 @@ Out of scope: OEE, the outage queue, machine prefill (reserved and rejected), se
 Estimate: 5 to 7 raw days (internal research note 32) plus 3 for station accessibility (internal research note 21), partly overlapping. Depends on: E07-S06, E05, design approval D4, the product owner's answer that operators report in NorthMES. Milestone: M4. This epic is cut 5, together with the station API key configuration, the station principal and `core.badge_assignment`.
 
 #### E11-S01 production-start: Register a station as a device
+
+Issue: northMES/northmes#115.
 
 As a plant admin, I want to register a station PC with a pairing code I approve from my own PC, so that the station has its own credential and never holds a person's password.
 
@@ -3573,6 +3789,8 @@ Tests first:
 - `modules/core/test/station-credential.int.test.ts`: "a station key cannot call a planner query"; "revocation closes the socket with 4403".
 
 #### E11-S02 production-start: Sign operators in by badge at a station
+
+Issue: northMES/northmes#116.
 
 As an operator, I want to scan my badge to sign in at the station and switch operator with one button, so that every report carries my name without typing a password.
 
@@ -3595,6 +3813,8 @@ Tests first:
 
 #### E11-S03 production-start: Start, pause and finish a job at the station
 
+Issue: northMES/northmes#117.
+
 As an operator, I want to pick my machine's job and start, pause and finish it, so that planners see what runs now.
 
 Module: production-start. Blocked by: E11-S02, E07-S06. Design: D4.
@@ -3614,6 +3834,8 @@ Tests first:
 - `modules/production-start/test/start.int.test.ts`: "start moves the job to active without bumping job_order.version"; "finish on a finished job returns the current state".
 
 #### E11-S04 production-start: Report good and scrap quantities exactly once
+
+Issue: northMES/northmes#118.
 
 As an operator, I want to report good and scrap quantities with a scrap reason and know each report is counted once, so that a retry after a network error never doubles a count.
 
@@ -3636,6 +3858,8 @@ Tests first:
 
 #### E11-S05 production-start: Correct a report with a reason
 
+Issue: northMES/northmes#119.
+
 As an operator, I want to correct a wrong report with a reason, so that the totals are right and the original stays on record.
 
 Module: production-start. Blocked by: E11-S04. Design: D4.
@@ -3656,6 +3880,8 @@ Tests first:
 Notes: who may correct is open for the product owner.
 
 #### E11-S06 production-start: Keep unsent entries through a lost connection
+
+Issue: northMES/northmes#120.
 
 As an operator, I want my typed entries to stay on the screen when the network drops and to be sent only when I press Send, so that I never lose or double a report.
 
@@ -3678,6 +3904,8 @@ Tests first:
 
 #### E11-S07 production-start: Show station reports on the production order
 
+Issue: northMES/northmes#121.
+
 As a planner, I want a production order's reports and corrections in its detail page, so that I see progress without opening the station.
 
 Module: production-start, planning. Blocked by: E11-S04, E07-S01. Design: panel in the production order detail.
@@ -3696,6 +3924,8 @@ Tests first:
 
 ### E12 planning: Answer planning questions through tools and /mcp
 
+Issue: northMES/northmes#122.
+
 Goal: define the planning tools once in the MIT SDK and run them through one shared runner, so that the in-app assistant uses them in process and MCP clients reach them at one `/mcp` endpoint that acts as the user. The toolset is read-mostly: seven read tools plus the propose tool that E15 adds.
 
 Who it is for: Planner. Also: Plugin developer.
@@ -3707,6 +3937,8 @@ Out of scope: OAuth sign-in for MCP, MCP Apps views, WebMCP, an autoplan tool, a
 Estimate: the `/mcp` endpoint 8 to 13 raw days (internal research note 32); the tool definitions and runner not estimated. Depends on: E07-S09, E05. Milestone: M4. E12-S04 is cut 3; the tool definitions and runner stay because the assistant uses them.
 
 #### E12-S01 sdk: Define tools once and run them through one runner
+
+Issue: northMES/northmes#123.
 
 As a plugin developer, I want to define a tool as plain data with Zod schemas and a permission, so that the same tool serves the assistant and MCP without importing the MCP SDK.
 
@@ -3732,6 +3964,8 @@ Tests first:
 
 #### E12-S02 planning: Find and read orders through tools
 
+Issue: northMES/northmes#124.
+
 As a planner, I want an agent to find orders, open one, and list late orders with the engine's facts, so that I can ask about the plan in my own words.
 
 Module: planning, core. Blocked by: E12-S01, E07-S09. Design: none.
@@ -3751,6 +3985,8 @@ Tests first:
 
 #### E12-S03 planning: Answer schedule, capacity, material and duration questions
 
+Issue: northMES/northmes#125.
+
 As a planner, I want an agent to read a machine's schedule, capacity load, material warnings and a duration estimate in plant time, so that answers match what the board shows.
 
 Module: planning. Blocked by: E12-S02, E06-S11. Design: none.
@@ -3769,6 +4005,8 @@ Tests first:
 - `modules/planning/test/tools/machine-schedule.int.test.ts`: "a night shift across the autumn DST change queries the right UTC window and returns local times with the new offset"; the spring twin.
 
 #### E12-S04 planning: Serve the planning tools at /mcp with personal access tokens
+
+Issue: northMES/northmes#126.
 
 As a planner, I want to connect my own MCP client to NorthMES with a personal access token, so that my agent reads the plan as me and nothing more.
 
@@ -3793,6 +4031,8 @@ Notes: cut 3. Each release gets one manual smoke test with Claude Code against `
 
 ### E13 ai: Configure customer AI providers and meter usage
 
+Issue: northMES/northmes#127.
+
 Goal: every in-app AI feature calls models only through a provider the customer configures with its own credentials, so the NorthMES project never sees the data and never pays. Release 1 builds the provider port, the integration cards for OpenRouter (default, with the customer's own key), Azure OpenAI and OpenAI-compatible servers, alias bindings, Test connection, and usage metering with budgets. These stay even if the assistant is cut.
 
 Who it is for: Plant admin. Also: Plugin developer.
@@ -3804,6 +4044,8 @@ Out of scope: Vertex, Gemini API, Bedrock, Anthropic, OpenAI and Mistral provide
 Estimate: 10 raw days (internal research note 23). Depends on: E05, E06-S08. Milestone: M3.
 
 #### E13-S01 ai: Call models only through one guarded file
+
+Issue: northMES/northmes#128.
 
 As a plant admin, I want every model call to go through one place with fixed safety options, so that prompts never leak into logs, telemetry or a host I did not configure.
 
@@ -3826,6 +4068,8 @@ Tests first:
 
 #### E13-S02 ai: Configure providers per company with write-only secrets
 
+Issue: northMES/northmes#129.
+
 As a plant admin, I want to add an OpenRouter, Azure OpenAI or OpenAI-compatible provider with my own key, so that AI features run on my account and my data stays under my control.
 
 Module: ai, core. Blocked by: E13-S01, E06-S08. Design: Integrations page with provider cards (a design task under this story).
@@ -3846,6 +4090,8 @@ Tests first:
 
 #### E13-S03 ai: Bind aliases to models and test the connection
 
+Issue: northMES/northmes#130.
+
 As a plant admin, I want to bind `fast` and `reasoning` to a model and see a passing connection test before I enable a feature, so that a feature never starts on a route that cannot answer.
 
 Module: ai. Blocked by: E13-S02. Design: Integrations page.
@@ -3864,6 +4110,8 @@ Tests first:
 - `modules/ai/test/test-connection.int.test.ts`: "a stub OpenRouter answering the probe with a no-matching-endpoint 404 marks the binding unusable with reason routing, and enabling the feature fails"; "a stub that returns a tool call records the tools capability".
 
 #### E13-S04 ai: Meter every model call and stop at the budget
+
+Issue: northMES/northmes#131.
 
 As a plant admin, I want every model call recorded with tokens and cost and a hard monthly budget, so that AI spend on my account never surprises me.
 
@@ -3886,6 +4134,8 @@ Tests first:
 
 #### E13-S05 ai: Show AI usage and budget state to admins
 
+Issue: northMES/northmes#132.
+
 As a plant admin, I want a usage page and a banner when the budget runs low, so that I can act before features stop.
 
 Module: ai, web. Blocked by: E13-S04, E06-S03. Design: usage page (canonical list and form page).
@@ -3904,6 +4154,8 @@ Tests first:
 
 ### E14 ai: Answer read-only planning questions in the assistant
 
+Issue: northMES/northmes#133.
+
 Goal: a chat panel in the shell where a planner asks planning questions and the assistant answers by calling the planning tools in process, on the provider the customer configured. It reads only; agent writes are proposals (E15). The panel is accessible and always labelled as AI-written.
 
 Who it is for: Planner.
@@ -3915,6 +4167,8 @@ Out of scope: long runs as jobs, chat history on the server, embeddings, write t
 Estimate: 11 raw days (internal research note 23) plus 1 to 1.5 for chat panel accessibility (internal research note 32). Depends on: E12-S03, E13-S03, E04. Milestone: M4. This epic is cut 7, the last cut, because Krister keeps AI in scope.
 
 #### E14-S01 ai: Stream assistant answers from the chat route
+
+Issue: northMES/northmes#134.
 
 As a planner, I want to ask a question and see the answer stream in, so that I get help without leaving the plan.
 
@@ -3936,6 +4190,8 @@ Tests first:
 
 #### E14-S02 ai: Let the assistant call the planning tools in process
 
+Issue: northMES/northmes#135.
+
 As a planner, I want the assistant to answer from the same planning tools and permissions I have, so that it never sees or tells me more than I may see.
 
 Module: ai, planning. Blocked by: E14-S01, E12-S03. Design: none.
@@ -3955,6 +4211,8 @@ Tests first:
 - `modules/ai/test/plant.int.test.ts`: "a call with no plant from a chat on plant B runs at plant B"; "a user without read at plant B gets not-permitted and the provider request holds no plant B order numbers".
 
 #### E14-S03 web: Use the chat panel by keyboard and screen reader with the AI label
+
+Issue: northMES/northmes#136.
 
 As a planner, I want a chat panel I can open, read and close by keyboard and screen reader, with every answer labelled as AI-written, so that I always know what the assistant wrote.
 
@@ -3977,6 +4235,8 @@ Tests first:
 
 #### E14-S04 ai: Defend the assistant against instructions in ERP text
 
+Issue: northMES/northmes#137.
+
 As a planner, I want text from Pyramid treated as data, never as instructions, so that a note in an order cannot make the assistant act.
 
 Module: ai, planning. Blocked by: E14-S02. Design: none.
@@ -3996,6 +4256,8 @@ Tests first:
 
 ### E15 planning: Review agent proposals into the planner's draft
 
+Issue: northMES/northmes#138.
+
 Goal: the assistant and MCP clients can propose moves of existing job orders as planning records. A planner reviews them with the conflicts and consequences the engine computes, accepts items one at a time into the draft, and only a person's Save commits them. AI never commits.
 
 Who it is for: Planner.
@@ -4007,6 +4269,8 @@ Out of scope: splits, quantity changes, proposals over 50 items, `planning.commi
 Estimate: 8 to 12 raw days (internal research note 32). Depends on: E12-S01, E07-S05, E08-S02. Milestone: M4. This epic is cut 6, together with the propose tool.
 
 #### E15-S01 planning: Record agent proposals as planning records
+
+Issue: northMES/northmes#139.
 
 As a planner, I want an agent's suggested moves stored as a proposal with a status per item, so that I review them later and nothing changes until I accept.
 
@@ -4027,6 +4291,8 @@ Tests first:
 - `modules/planning/test/proposals.int.test.ts`: "a mocked run that proposes writes exactly one audit.command with principal type agent and acting_for the user"; "an item on a started row is blocked with STARTED"; "02:30 on the spring DST night echoes resolvedGap".
 
 #### E15-S02 planning: Review a proposal and accept items into my draft
+
+Issue: northMES/northmes#140.
 
 As a planner, I want to see what each proposed move would cause and accept the ones I agree with into my draft, so that I stay in charge of every change.
 
@@ -4049,6 +4315,8 @@ Tests first:
 
 #### E15-S03 planning: Show proposed rows on the board
 
+Issue: northMES/northmes#141.
+
 As a planner, I want proposed moves visible on the board with their own marker, so that I can compare them with the plan before I accept.
 
 Module: planning. Blocked by: E15-S02, E08-S02. Design: D3 (proposed state).
@@ -4067,6 +4335,8 @@ Tests first:
 
 ### E16 core: Report health, readiness and System health
 
+Issue: northMES/northmes#142.
+
 Goal: every web endpoint and service exposes `/health` with status, version and dependency state, plus liveness and readiness probes; readiness names degraded conditions; a watchdog restarts a stuck process; structured logs carry a correlation id with credentials redacted; and admins read it all on the System health page.
 
 Who it is for: Plant admin. Also: Maintainer.
@@ -4078,6 +4348,8 @@ Out of scope: an in-app notification service; error telemetry to the project (AD
 Estimate: SDK health helper 0.5 raw days (internal research note 33); the rest not estimated. Depends on: E02-S07, E05. Milestone: M3, before E17.
 
 #### E16-S01 core: Report liveness and readiness with dependency state
+
+Issue: northMES/northmes#143.
 
 As a plant admin, I want `/health`, `/health/live` and `/health/ready` on every service with dependency state, so that our monitoring knows when NorthMES is down or not ready.
 
@@ -4098,6 +4370,8 @@ Tests first:
 
 #### E16-S02 core: Name degraded conditions on readiness
 
+Issue: northMES/northmes#144.
+
 As a plant admin, I want readiness to list what is degraded, such as an old backup or a failing archive, so that problems reach a person before they cause data loss.
 
 Module: core. Blocked by: E16-S01, E05-S02. Design: none.
@@ -4115,6 +4389,8 @@ Tests first:
 - `apps/server/test/health/degraded.int.test.ts`: "two months of audit partitions ahead is degraded, zero fails readiness"; "a client clock 6 s off is reported".
 
 #### E16-S03 core: Show System health to admins
+
+Issue: northMES/northmes#145.
 
 As a plant admin, I want one page with errors, jobs, backups, versions and module status, so that I can check the installation without a shell on the server.
 
@@ -4136,6 +4412,8 @@ Tests first:
 
 #### E16-S04 core: Restart a stuck process with the watchdog
 
+Issue: northMES/northmes#146.
+
 As a plant admin, I want a process that never becomes ready to exit so the restart policy recovers it, so that a stuck start does not leave the plant without NorthMES.
 
 Module: core (`apps/server`). Blocked by: E16-S01. Design: none.
@@ -4153,6 +4431,8 @@ Tests first:
 - `apps/server/test/health/watchdog.int.test.ts`: "readiness false for 121 s after success exits 1".
 
 #### E16-S05 core: Write structured logs with credentials redacted
+
+Issue: northMES/northmes#147.
 
 As a plant admin, I want JSON logs with a correlation id and no secrets, so that I can send logs to support without leaking credentials.
 
@@ -4173,6 +4453,8 @@ Tests first:
 
 ### E17 ops: Install on a pilot-like VM with backups and a timed restore
 
+Issue: northMES/northmes#148.
+
 Goal: run NorthMES the way the pilot will: one Linux host with Docker Compose, Caddy with mandatory TLS, the NorthMES Postgres image with pgBackRest, secrets per service, continuous backups to a local and an offsite repository, restore drills that never touch production, and host facts that reach a person. The epic ends with an install on a pilot-like VM and a timed restore, on or before 2027-02-26.
 
 Who it is for: Plant admin. Also: Maintainer.
@@ -4184,6 +4466,8 @@ Out of scope: Helm, Kubernetes, PgBouncer, TimescaleDB, high availability. The h
 Estimate: not estimated. Depends on: E16, E05. Milestone: M3 (2027-02-26).
 
 #### E17-S01 ops: Build the NorthMES Postgres image with pgBackRest
+
+Issue: northMES/northmes#149.
 
 As a plant admin, I want one database image with Postgres 18 and pgBackRest, tested and pinned, so that tests, CI and the pilot run the same database.
 
@@ -4204,6 +4488,8 @@ Tests first:
 - `infra/postgres/test/image.int.test.ts`: "no timescaledb extension is available"; "the archiver has no failures after a WAL switch".
 
 #### E17-S02 ops: Run NorthMES with Docker Compose behind Caddy with TLS
+
+Issue: northMES/northmes#150.
 
 As a plant admin, I want a Compose bundle with Caddy, the app, a one-off migrate service and the database, serving HTTPS only, so that every browser on the plant network reaches NorthMES securely.
 
@@ -4226,6 +4512,8 @@ Tests first:
 
 #### E17-S03 ops: Give each service only its own secrets
 
+Issue: northMES/northmes#151.
+
 As a plant admin, I want the app container to hold only the secrets it needs, so that a compromised app cannot alter the database schema or read the superuser password.
 
 Module: ops, core. Blocked by: E17-S02. Design: none.
@@ -4245,6 +4533,8 @@ Tests first:
 - `modules/core/test/keyring.test.ts`: "a ciphertext moved to another row fails to decrypt".
 
 #### E17-S04 ops: Back up continuously with pgBackRest
+
+Issue: northMES/northmes#152.
 
 As a plant admin, I want WAL archived every minute and full and differential backups to a local and an offsite repository, so that we lose at most a minute of work.
 
@@ -4266,6 +4556,8 @@ Tests first:
 
 #### E17-S05 ops: Run restore drills that never touch production
 
+Issue: northMES/northmes#153.
+
 As a plant admin, I want to rehearse a restore on a copy that cannot write to the production archive or call Pyramid, so that a drill never damages the real system.
 
 Module: ops. Blocked by: E17-S04. Design: none.
@@ -4284,6 +4576,8 @@ Tests first:
 
 #### E17-S06 ops: Bring host facts and alerts to a person
 
+Issue: northMES/northmes#154.
+
 As a plant admin, I want disk space, backup state, time sync and certificate expiry checked every five minutes and reported, so that a full disk or an expiring certificate reaches someone in time.
 
 Module: ops, core. Blocked by: E17-S04, E16-S02. Design: none.
@@ -4301,6 +4595,8 @@ Tests first:
 - `infra/hostcheck/test/hostcheck.test.ts`: "a mount under the free-space threshold is reported"; "a stale host.json is degraded on readiness".
 
 #### E17-S07 ops: Install on a pilot-like VM and time a restore
+
+Issue: northMES/northmes#155.
 
 As a plant admin, I want the whole install and a timed restore done once on a VM like the pilot's, so that the pilot install has no first-time steps.
 
@@ -4322,6 +4618,8 @@ Notes: labelled `human`. This is the M3 evidence.
 
 ### E18 ops: Release, upgrade and roll back an installation
 
+Issue: northMES/northmes#156.
+
 Goal: every release produces signed, attested images, SBOMs and an offline amd64 image bundle that installs without internet; upgrades check first, back up, migrate and start; a rollback restores the backup taken before the upgrade. A nightly N-1 test proves both directions.
 
 Who it is for: Plant admin. Also: Maintainer.
@@ -4333,6 +4631,8 @@ Out of scope: `northmes upgrade` tooling, codemods and the app repository (after
 Estimate: not estimated. Depends on: E17, E01-S03. Milestone: the pilot install.
 
 #### E18-S01 ops: Build, attest and publish release images and the offline bundle
+
+Issue: northMES/northmes#157.
 
 As a plant admin, I want each release's images and an offline bundle I can verify on a machine without internet, so that I install only what the project built.
 
@@ -4355,6 +4655,8 @@ Tests first:
 
 #### E18-S02 ops: Install from the offline bundle with preflight checks
 
+Issue: northMES/northmes#158.
+
 As a plant admin, I want a preflight script that checks Docker and verifies the bundle before loading it, so that an install fails early and clearly.
 
 Module: ops. Blocked by: E18-S01. Design: none.
@@ -4372,6 +4674,8 @@ Tests first:
 - `infra/test/preflight.test.ts`: "a tarball with a wrong digest stops preflight"; "Compose 4 is refused".
 
 #### E18-S03 ops: Upgrade with a check, a backup and a compatibility number
+
+Issue: northMES/northmes#159.
 
 As a plant admin, I want an upgrade that refuses an unsafe release before downtime and backs up before it migrates, so that I can always go back.
 
@@ -4393,6 +4697,8 @@ Tests first:
 
 #### E18-S04 ops: Roll back to the backup taken before an upgrade
 
+Issue: northMES/northmes#160.
+
 As a plant admin, I want one script that restores the pre-upgrade backup and tells users what was lost, so that a failed upgrade costs minutes, not days.
 
 Module: ops. Blocked by: E18-S03. Design: restore banner (part of D2).
@@ -4412,6 +4718,8 @@ Tests first:
 
 #### E18-S05 ops: Test each release against the previous image nightly
 
+Issue: northMES/northmes#161.
+
 As a maintainer, I want nightly tests of install, drill, archive outage, upgrade and rollback, and of the previous image on the new schema, so that an upgrade path never breaks unnoticed.
 
 Module: ops, ci. Blocked by: E18-S04. Design: none.
@@ -4429,6 +4737,8 @@ Tests first:
 - `test/meta/nightly.test.ts`: "nightly.yml has only schedule and workflow_dispatch triggers and runs each listed job".
 
 #### E18-S06 ops: Rehearse the pilot upgrade and complete the go-live checklist
+
+Issue: northMES/northmes#162.
 
 As a plant admin, I want an upgrade from N to N+1 rehearsed and the go-live checklist done with the pilot's IT, so that the pilot install has no open items.
 
@@ -4450,6 +4760,8 @@ Notes: labelled `human`.
 
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
+Issue: northMES/northmes#163.
+
 Goal: publish the docs site from `apps/docs` on Docs7 at docs.northmes.dev, with the generated references release 1 needs (configuration, permissions and roles, the personal data register), the install, upgrade and security guides for the pilot, and module and extension point docs. Generated pages are committed and a staleness gate keeps them current.
 
 Who it is for: Plant admin. Also: Plugin developer, Maintainer.
@@ -4461,6 +4773,8 @@ Out of scope: versioned docs (until 2.0), GraphQL, SDK and MCP references before
 Estimate: the accessibility page 1 raw day (internal research note 21); the rest not estimated. Depends on: E00. Milestone: references with their surfaces; guides by the pilot install.
 
 #### E19-S01 docs: Serve the docs site from apps/docs with a staleness gate
+
+Issue: northMES/northmes#164.
 
 As a plugin developer, I want the docs at docs.northmes.dev built from the repository, so that docs and code change in the same pull request.
 
@@ -4483,6 +4797,8 @@ Notes: the docs content license, the robots signal and the certificate's CAA rec
 
 #### E19-S02 docs: Generate the configuration reference
 
+Issue: northMES/northmes#165.
+
 As a plant admin, I want every setting and environment variable listed with its type, default and scope, so that I configure an installation without reading code.
 
 Module: docs, core. Blocked by: E19-S01, E06-S08. Design: none.
@@ -4501,6 +4817,8 @@ Tests first:
 
 #### E19-S03 docs: Generate the permissions, roles and personal data references
 
+Issue: northMES/northmes#166.
+
 As a plant admin, I want the permissions, default roles and stored personal data listed per module, so that I can assign roles and answer data-protection questions.
 
 Module: docs, core. Blocked by: E19-S01, E05-S06. Design: none.
@@ -4518,6 +4836,8 @@ Tests first:
 - `apps/docs/test/permissions-reference.test.ts`: "every manifest permission appears once".
 
 #### E19-S04 docs: Write the install, upgrade, restore and security guides
+
+Issue: northMES/northmes#167.
 
 As a plant admin, I want written guides for install, upgrade, rollback, restore and vulnerability reporting, so that the customer's IT can run NorthMES without the developer.
 
@@ -4538,6 +4858,8 @@ Tests first:
 
 #### E19-S05 docs: Document modules, extension points, AI providers and accessibility
 
+Issue: northMES/northmes#168.
+
 As a plugin developer, I want each module and extension point documented with its recipe, so that I can extend NorthMES from the docs alone.
 
 Module: docs. Blocked by: E21-S03, E13-S03. Design: none.
@@ -4556,6 +4878,8 @@ Tests first:
 - `apps/docs/test/recipes.test.ts`: "every error code a recipe names exists in a defineErrors catalog".
 
 #### E19-S06 repo: Accept outside pull requests only under a signed CLA
+
+Issue: northMES/northmes#169.
 
 As a maintainer, I want an outside pull request to merge only after its author has signed the contributor license agreement, so that every contribution comes in under the CLA from the first one.
 
@@ -4578,6 +4902,8 @@ Notes: until this story is done, `CONTRIBUTING.md` states that outside pull requ
 
 ### E20 web: Hold WCAG 2.2 AA with gates and screen-reader passes
 
+Issue: northMES/northmes#170.
+
 Goal: make the accessibility target a gate: axe on every route and state, a required `ci / a11y` job over the board states, keyboard-only flows in Playwright, and two manual NVDA passes on the planner-class PC, one on the board core and one before the pilot install.
 
 Who it is for: Planner. Also: Operator.
@@ -4589,6 +4915,8 @@ Out of scope: a VPAT (until a customer or tender asks), AAA criteria, automated 
 Estimate: 7 raw days (internal research note 21), then about 2 per minor release. Depends on: E04; E08 for the board. Milestone: the pilot install.
 
 #### E20-S01 web: Check every route and state with axe in Playwright
+
+Issue: northMES/northmes#171.
 
 As a planner, I want every screen checked against WCAG 2.2 AA on every change, so that a regression is caught before it ships.
 
@@ -4608,6 +4936,8 @@ Tests first:
 
 #### E20-S02 web: Require the board's accessibility checks in CI
 
+Issue: northMES/northmes#172.
+
 As a planner, I want the board's states checked in a required job from the first board pull request, so that the hardest screen never loses accessibility.
 
 Module: web, ci. Blocked by: E20-S01, E08-S02. Design: none.
@@ -4626,6 +4956,8 @@ Tests first:
 
 #### E20-S03 web: Run the keyboard-only flows
 
+Issue: northMES/northmes#173.
+
 As a planner who does not use a mouse, I want the main flows tested by keyboard only, so that sign-in, moving, saving and reporting all work without a pointer.
 
 Module: web (`e2e`). Blocked by: E08-S04, E11-S04. Design: none.
@@ -4643,6 +4975,8 @@ Tests first:
 - `e2e/a11y/keyboard-flows.spec.ts`: one test per flow above.
 
 #### E20-S04 web: Run the first NVDA pass on the board core
+
+Issue: northMES/northmes#174.
 
 As a planner who uses a screen reader, I want the board tested with NVDA on our PC class, so that the board works with real assistive technology.
 
@@ -4664,6 +4998,8 @@ Notes: labelled `human`.
 
 #### E20-S05 web: Run the second NVDA pass before the pilot install
 
+Issue: northMES/northmes#175.
+
 As a planner who uses a screen reader, I want the whole release checked with NVDA before the pilot, so that nothing regressed since the first pass.
 
 Module: web. Blocked by: E20-S04, E11-S06, E14-S03. Design: none.
@@ -4684,6 +5020,8 @@ Notes: labelled `human`.
 
 ### E21 plugins: Build the example plugins outside the workspace
 
+Issue: northMES/northmes#176.
+
 Goal: finish the plugin path the skeleton started: the frontend widget example in the board's side slot, `plugin check` against the committed schema, a CI job that builds both examples from packed packages outside the repository and loads them into a running image, and the compatibility checks for slots, link patterns and shared versions.
 
 Who it is for: Plugin developer.
@@ -4695,6 +5033,8 @@ Out of scope: the public npm SDK, `create-northmes-plugin`, the app repository, 
 Estimate: the two examples 2 and plugin build, pack and check 2 to 3 raw days (internal research note 20); the widget remote 1 to 2 (internal research note 19); partly spent in E02. Depends on: E02. Milestone: M2.
 
 #### E21-S01 plugins: Contribute a widget to the board's side slot
+
+Issue: northMES/northmes#177.
 
 As a plugin developer, I want my widget to render in the planning board's side panel for the selected order, so that I can add customer-specific information without changing planning.
 
@@ -4717,6 +5057,8 @@ Tests first:
 
 #### E21-S02 plugins: Check a plugin against the committed schema
 
+Issue: northMES/northmes#178.
+
 As a plugin developer, I want `pnpm plugin:check <id>` to compose my plugin's schema against the committed supergraph, so that I learn about a breaking change before I install.
 
 Module: plugins, platform. Blocked by: E21-S01, E02-S03. Design: none.
@@ -4736,6 +5078,8 @@ Tests first:
 
 #### E21-S03 plugins: Build and load the examples from outside the workspace
 
+Issue: northMES/northmes#179.
+
 As a plugin developer, I want the examples built from packed packages in a folder outside the repository and loaded into the image, so that the plugin path works the way a customer uses it.
 
 Module: plugins, ci. Blocked by: E21-S02. Design: none.
@@ -4754,6 +5098,8 @@ Tests first:
 - `e2e/plugins-outside.spec.ts`: "the widget from the outside build renders in the side slot".
 
 #### E21-S04 plugins: Keep slots and shared versions compatible across releases
+
+Issue: northMES/northmes#180.
 
 As a plugin developer, I want slot, link pattern and shared-version changes caught in CI, so that my plugin and its links keep working through a 0.x upgrade or fail with a clear status.
 
@@ -4779,6 +5125,8 @@ Tests first:
 
 ### E22 core: Keep the regulated path open
 
+Issue: northMES/northmes#181.
+
 Goal: release 1 implements the no-regret rules so that a regulated customer later needs added work, not a rewrite. Most rules land inside other epics (audit in E05, append-only reports in E11, archive and routing copies in E06 and E07). This epic adds the pieces with no other home and a check that every rule has a test.
 
 Who it is for: Plant admin. Also: Maintainer.
@@ -4790,6 +5138,8 @@ Out of scope: a regulated profile, electronic signatures, seals, redaction, `nor
 Estimate: 8 to 10 raw days (internal research note 24), much of it delivered inside E05 and E11. Depends on: E05. Milestone: M4.
 
 #### E22-S01 core: Hold one installation policy object with the standard profile
+
+Issue: northMES/northmes#182.
 
 As a plant admin, I want the installation's compliance profile held in one audited policy object, so that a regulated profile can be added later without touching every module.
 
@@ -4810,6 +5160,8 @@ Tests first:
 
 #### E22-S02 audit: Export audit records in a documented, versioned format
 
+Issue: northMES/northmes#183.
+
 As a plant admin, I want to export audit records in a documented format with times in UTC and the plant zone, so that an auditor can read them outside NorthMES.
 
 Module: audit. Blocked by: E05-S11. Design: export action on the audit list.
@@ -4829,6 +5181,8 @@ Tests first:
 
 #### E22-S03 repo: Carry requirement ids in tests and validation impact on each PR
 
+Issue: northMES/northmes#184.
+
 As a maintainer, I want tests to name the requirement they prove and every pull request to state its validation impact, so that a regulated customer's validation can trace changes later.
 
 Module: repo, ci. Blocked by: E00-S04-T03. Design: none.
@@ -4846,6 +5200,8 @@ Tests first:
 - `test/meta/regulated-rules.test.ts`: "every release 1 rule maps to an existing test file".
 
 #### E22-S04 core: Let support work only as named users with a reason
+
+Issue: northMES/northmes#185.
 
 As a plant admin, I want support engineers to act only as named NorthMES users with a support role and a reason, so that every support action is in the audit trail.
 
