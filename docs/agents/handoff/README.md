@@ -126,8 +126,6 @@ The graphs assume these exist on `main`:
 
 handoff project settings: the setup command, agent notes, UI paths (`apps/web/**`, `modules/*/web/**`, `packages/ui/**`, `packages/web-sdk/**`) and the demo seed command, with the values in the Project settings table of [13 delivery and GitHub](../../plan/13-delivery-and-github.md#project-settings). `setup_project` reports what is missing.
 
-Every handoff worker commits with a git `user.email` that is linked to Krister's GitHub account. Without one, handoff commits as `handoff@localhost`, GitHub cannot attribute the commit, and the `main` ruleset asks for one more approval than CodeRabbit can give ([ADR 0065](../../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)).
-
 handoff's support for repositories and Projects owned by a GitHub organization is built and checked (spike SP0). The repository moved to the `northMES` organization on 2026-10-05 and is named `northmes`. `add_project` adds `northmes/northmes` directly, `setup_plan` creates or adopts the plan's Project under the organization, and `pnpm dev:webhooks northmes/northmes` relays the repository's events. If handoff ever holds the project under an old owner or name, move it with `pnpm handoff project move northmes --repo northmes/northmes` instead. The move unlinks the old plan Project, so run `setup_plan` again with `copy_from` set to the old Project's owner and number (see "Moving a repository to an organization" in handoff's README).
 
 The pull request step sets `noChecksAfterMinutes` to 30: handoff treats CI as passed when no check has started within that time. 30 minutes leaves room for a queued runner. The ruleset's required checks still stop a merge that GitHub has not seen pass.

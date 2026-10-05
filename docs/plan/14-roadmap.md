@@ -599,7 +599,7 @@ Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T02, 
 Plan: E00-S04-T03
 
 ## Goal
-Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / gate, license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed changes kept on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
+Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / gate, license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed Copilot pull requests left at GitHub's default, on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
 
 ## Where in the code
 scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility, area: core, area: planning, area: sdk, area: web, area: docs, area: deploy, area: ci
@@ -609,7 +609,6 @@ scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility,
 .coderabbit.yaml (already on main and valid; keep reviews.auto_review.auto_incremental_review, reviews.request_changes_workflow, reviews.allow_author_approval and reviews.review_progress true, and reviews.commit_status and reviews.fail_commit_status false)
 test/meta/github-files.test.ts (new)
 scripts/repo/check-ruleset.mjs (new) and scripts/repo/check-ruleset.test.ts (new): reads the main ruleset through the GitHub API; a weekly CI job named repo settings runs check-ruleset.mjs against the live main ruleset (ADR 0065)
-scripts/repo/commit-authors.mjs (new) and scripts/repo/commit-authors.test.ts (new): the pull request check ci / commit authors (ADR 0065)
 Seam: the test parses the YAML and Markdown files.
 
 ## Tests first
@@ -619,7 +618,6 @@ Seam: the test parses the YAML and Markdown files.
 - github-files.test.ts: "scripts/labels.sh creates epic, story, task, human, design and spike"
 - github-files.test.ts: ".bestpractices.json names the project id"
 - check-ruleset.test.ts: "a ruleset with 0 required approvals fails naming required_approving_review_count"
-- commit-authors.test.ts: "a commit whose author has no GitHub login fails naming its sha"
 
 ## Design
 none
