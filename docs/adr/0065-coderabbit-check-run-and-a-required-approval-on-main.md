@@ -26,7 +26,7 @@ CodeRabbit's configuration reference and changelog say:
 
 handoff's PR node behaves as follows:
 
-* Its CI status is the state of the head commit's check rollup, so a pending check keeps the node waiting. `reviewTimeoutMinutes` limits the wait for a review, not the wait for a pending check.
+* Its CI status is the state of the head commit's check rollup, except for checks named after a reviewer in `waitForReviewers`. Since Krister-Johansson/handoff#657, such a check, CodeRabbit's included, counts as that reviewer's progress: it does not count toward CI or `requireChecks`, a pending one does not hold the node as CI pending, a failed one does not go to the coder, and `reviewTimeoutMinutes` bounds the wait.
 * It counts a reviewer as started on the head commit when the reviewer reviewed that commit or when a check named after the reviewer is in progress there. The node's `reviewRequest` setting uses this to ask only a reviewer that has not started. None of the three NorthMES graphs sets `reviewRequest` yet; [pull request #209](https://github.com/northMES/northmes/pull/209), which is open, adds it to all three.
 * Its review decision is GitHub's review decision for the pull request. Its `ready` port needs a decision other than changes requested, and changes requested sends the run back to the coder.
 
@@ -79,7 +79,7 @@ The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `
 * Good, because handoff counts the check in progress as a started review. Once pull request #209 merges, the pull request step asks CodeRabbit only when it has not started, and the check run lets handoff see a review in progress.
 * Good, because GitHub refuses to merge a pull request whose head commit has no approval. A run that went on after `reviewTimeoutMinutes` with no CodeRabbit review at all stops at the merge step with `merge_failed` instead of merging.
 * Good, because the CodeRabbit check is not required and a review error does not fail it, so the pull requests that CodeRabbit skips are not held by its check.
-* Bad, because a CodeRabbit check that stays in progress keeps the head commit's check rollup pending. With `review_progress` on, handoff's PR node counts CodeRabbit's pending check as CI pending with no time limit (`checksPending` in handoff's `packages/engine/src/executors/github.ts`), and `reviewTimeoutMinutes` limits only the wait for a review, so a hung CodeRabbit review holds the run until the check completes or Krister repairs or cancels the run. A handoff change that limits a reviewer's own check by `reviewTimeoutMinutes` is requested.
+* Bad, because a CodeRabbit check that stays in progress shows as a pending check on the pull request, and handoff's dashboard list of pull requests shows it as CI pending. handoff's PR node does not wait on it as CI (Krister-Johansson/handoff#657); `reviewTimeoutMinutes` bounds the wait for CodeRabbit.
 * Bad, because with a required review GitHub reports CodeRabbit's request for changes as the pull request's review decision until CodeRabbit approves a later commit (stale dismissal removes approvals only). handoff's PR node then leaves through `fix`, not `ready`, so a fix round that CodeRabbit does not review before the timeout, or a finding the coder rejected, goes back to the coder and uses one of the loop's 3 rounds until CodeRabbit approves or Krister posts `@coderabbitai approve`.
 * Bad, because every push dismisses the approval (`dismiss_stale_reviews_on_push`). Each fix round and each catch-up merge from `main` needs a new CodeRabbit review and approval. While the repository has fewer than 10 stars, each of those also needs an `@coderabbitai review` comment, and each uses one review from the hourly allowance.
 * Bad, because Renovate's pull requests no longer merge without a person: Krister approves each one, and again after Renovate pushes to it.
@@ -100,11 +100,11 @@ The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `
 * Good, because CodeRabbit is visible in the merge box, and once pull request #209 merges, handoff sees a review in progress.
 * Good, because GitHub enforces the gate, and stale approval dismissal ties the approval to the head commit.
 * Good, because Krister can approve the pull requests that CodeRabbit skips, so none of them needs a bypass actor.
-* Bad, because a check that stays in progress holds a handoff run, and every push needs a new approval.
+* Bad, because every push needs a new approval, and a check that stays in progress shows as pending on the pull request (handoff's PR node bounds it by `reviewTimeoutMinutes` since Krister-Johansson/handoff#657).
 
 ### Status quo: no check run, 0 required approvals
 
-* Good, because no CodeRabbit check enters the rollup, so a CodeRabbit review that never finishes holds a run only until `reviewTimeoutMinutes`.
+* Good, because no CodeRabbit check enters the rollup.
 * Good, because Renovate's pull requests need no approval.
 * Bad, because the merge box shows nothing from CodeRabbit until it posts a review.
 * Bad, because GitHub lets a pull request merge that CodeRabbit never reviewed, for example after handoff's review timeout.
@@ -126,4 +126,4 @@ The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `
 * Related ADRs: [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md) (the ruleset this ADR changes), [0049](0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) (delivery with handoff).
 * Plan: [13 delivery and GitHub, rulesets](../plan/13-delivery-and-github.md#rulesets). Agent docs: [docs/agents/coderabbit.md](../agents/coderabbit.md) and [docs/agents/handoff/README.md](../agents/handoff/README.md).
 * CodeRabbit configuration reference: https://docs.coderabbit.ai/reference/configuration. CodeRabbit changelog, review progress reports: https://docs.coderabbit.ai/changelog.
-* Revisit when a CodeRabbit check stays in progress on a handoff run, when handoff limits a reviewer's own check by `reviewTimeoutMinutes`, and when a second maintainer joins who can approve Krister's pull requests.
+* Revisit when a CodeRabbit check stays in progress on a handoff run longer than `reviewTimeoutMinutes`, and when a second maintainer joins who can approve Krister's pull requests.

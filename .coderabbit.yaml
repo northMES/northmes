@@ -40,9 +40,9 @@ reviews:
   # in progress as a started review. A review error does not fail the check,
   # so a CodeRabbit error does not fail the head commit. The check is not a
   # required status check: the gate is the ruleset's required approval, which
-  # CodeRabbit gives through request_changes_workflow (docs/adr/0065). The PR
-  # node reads the whole check rollup, so a CodeRabbit check that stays in
-  # progress holds a handoff run; ADR 0065 accepts that. commit_status mirrors
+  # CodeRabbit gives through request_changes_workflow (docs/adr/0065).
+  # handoff's PR node counts this check as CodeRabbit's review progress, not
+  # as CI, and bounds it by reviewTimeoutMinutes. commit_status mirrors
   # progress only while review_progress is off.
   review_progress: true
   commit_status: false
