@@ -1,6 +1,16 @@
 import { createHash } from 'node:crypto';
+import { matchesGlob } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { scan } from '../../scripts/lint/no-customer-data.mjs';
+import vitestConfig from '../../vitest.config.ts';
+
+interface VitestConfig {
+  test?: { projects?: unknown[] };
+}
+
+interface InlineProject {
+  test?: { name?: string; exclude?: string[] };
+}
 
 // Built at run time, so this file never holds the pattern it tests. The check digit is wrong, so
 // the number belongs to no organisation.
@@ -71,5 +81,26 @@ describe('no-customer-data', () => {
       ]);
     }
     expect(scan(files, [customerNameHash]).notice).toBeUndefined();
+  });
+
+  it('docs/sources is excluded from every Vitest project', () => {
+    const projects = (vitestConfig as VitestConfig).test?.projects ?? [];
+    expect(projects).not.toHaveLength(0);
+
+    for (const project of projects) {
+      expect(typeof project, 'projects are inline, so this test can read their excludes').toBe(
+        'object',
+      );
+      const { name, exclude = [] } = (project as InlineProject).test ?? {};
+      for (const path of [
+        'docs/sources/spike-integration/apps/server/test/boot.test.ts',
+        'docs/sources/earlier-attempt/placement.spec.ts',
+      ]) {
+        expect(
+          exclude.some((pattern) => matchesGlob(path, pattern)),
+          `${name}: ${path}`,
+        ).toBe(true);
+      }
+    }
   });
 });
