@@ -115,6 +115,15 @@ describe('check-node', () => {
     expect(result.stderr.trim().split('\n')).toHaveLength(1);
   });
 
+  it('the entry point treats an empty path argument as absent', () => {
+    const withoutArgument = run();
+
+    const result = run('');
+
+    expect(result.status).toBe(withoutArgument.status);
+    expect(result.stderr).toBe(withoutArgument.stderr);
+  });
+
   it('the entry point fails a mismatch when it is run through a symlink', () => {
     const link = join(dir, 'linked-check-node.mjs');
     symlinkSync(script, link);
