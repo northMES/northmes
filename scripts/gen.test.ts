@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { run, stages } from './gen.mjs';
@@ -33,5 +36,28 @@ describe('gen', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('stages: none');
+  });
+
+  // The comparison with the repository root arrives with the first real stage, so this test
+  // covers where --check generates, its cleanup and the exit code, not the comparison.
+  it('--check generates into a temporary directory and exits 0 when nothing differs', async () => {
+    const root = '/repo';
+    const seen: { outDir: string; existed: boolean }[] = [];
+    const stage = {
+      name: 'fixture',
+      generate: async (outDir: string) => {
+        seen.push({ outDir, existed: existsSync(outDir) });
+      },
+    };
+
+    const exitCode = await run([stage], { check: true }, { log: () => {}, root });
+
+    expect(exitCode).toBe(0);
+    expect(seen).toHaveLength(1);
+    const { outDir, existed } = seen[0];
+    expect(outDir).not.toBe(root);
+    expect(dirname(outDir)).toBe(tmpdir());
+    expect(existed).toBe(true);
+    expect(existsSync(outDir)).toBe(false);
   });
 });
