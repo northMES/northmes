@@ -139,11 +139,20 @@ describe('no-customer-data', () => {
       writeFileSync(join(repository, path), content);
     }
 
-    function lint(cwd: string, env: Record<string, string> = {}) {
-      return spawnSync(process.execPath, [script], {
+    function lint(cwd: string, env: Record<string, string> = {}, ...args: string[]) {
+      return spawnSync(process.execPath, [script, ...args], {
         cwd,
         encoding: 'utf8',
         env: environment(env),
+      });
+    }
+
+    function hash(input: string) {
+      return spawnSync(process.execPath, [script, '--hash'], {
+        cwd: repository,
+        encoding: 'utf8',
+        env: environment(),
+        input,
       });
     }
 
@@ -206,6 +215,26 @@ describe('no-customer-data', () => {
 
       expect(result.stderr).toBe('');
       expect(result.status).toBe(0);
+    });
+
+    it('with --hash prints the deny hash of each name read from stdin, once', () => {
+      const result = hash(`${customerName}\n\n  acme-verkstad, AB \nOther Name\n`);
+
+      expect(result.stderr).toBe('');
+      expect(result.status).toBe(0);
+      expect(result.stdout.trim().split('\n')).toEqual([
+        customerNameHash,
+        createHash('sha256').update('other name').digest('hex'),
+      ]);
+    });
+
+    it('with --hash rejects a name longer than the name check compares', () => {
+      const result = hash(`${customerName}\nOne two three four five six seven eight nine\n`);
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain('Line 2');
+      expect(result.stderr).not.toMatch(/nine|acme/i);
+      expect(result.stdout).toBe('');
     });
   });
 });
