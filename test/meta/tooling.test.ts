@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import vitestConfig from '../../vitest.config.ts';
 
 interface TurboTask {
   cache?: boolean;
@@ -32,6 +33,12 @@ interface TsConfig {
     moduleResolution?: string;
     customConditions?: string[];
   };
+}
+
+interface VitestConfig {
+  resolve?: { conditions?: string[] };
+  ssr?: { resolve?: { conditions?: string[] } };
+  test?: { projects?: { extends?: boolean; test?: { name?: string } }[] };
 }
 
 interface WorkspaceConfig {
@@ -90,6 +97,17 @@ describe('tooling', () => {
     expect(options?.customConditions).toEqual(['@northmes/source']);
     // TypeScript ignores customConditions unless the resolution mode is node16, nodenext or bundler.
     expect(options?.moduleResolution).toBe('nodenext');
+  });
+
+  it('vitest.config.ts resolves the @northmes/source condition for client and server code', () => {
+    const config = vitestConfig as VitestConfig;
+    const unit = config.test?.projects?.find((project) => project.test?.name === 'unit');
+
+    expect(config.resolve?.conditions).toEqual(expect.arrayContaining(['@northmes/source']));
+    expect(config.ssr?.resolve?.conditions).toEqual(expect.arrayContaining(['@northmes/source']));
+    // Vitest 5 lets an inline project inherit the root options by default; saying so keeps the
+    // conditions in the unit project if that default changes.
+    expect(unit?.extends).toBe(true);
   });
 
   it('turbo is in the strict catalog and the root devDependencies take it from the catalog', () => {
