@@ -139,8 +139,8 @@ describe('no-customer-data', () => {
       writeFileSync(join(repository, path), content);
     }
 
-    function lint(cwd: string, env: Record<string, string> = {}, ...args: string[]) {
-      return spawnSync(process.execPath, [script, ...args], {
+    function lint(cwd: string, env: Record<string, string> = {}) {
+      return spawnSync(process.execPath, [script], {
         cwd,
         encoding: 'utf8',
         env: environment(env),

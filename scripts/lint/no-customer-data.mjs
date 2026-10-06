@@ -21,7 +21,12 @@
 // 2 when the variable holds something other than SHA-256 hex digests. Binary files (a NUL byte in
 // the first 8000 bytes, git's own test), symbolic links and untracked files are not scanned.
 //
-// Findings name the file and line only, never the matched text, because CI logs are public.
+// `node scripts/lint/no-customer-data.mjs --hash` reads one name per line on stdin and prints each
+// distinct name's deny hash, the value to put in NORTHMES_DENY_HASHES. It exits 2 on a name longer
+// than 8 words, which the scan could never match.
+//
+// Findings and errors name the file and line only, never the matched text, because CI logs are
+// public.
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -199,6 +204,27 @@ const kindLabels = {
   'customer-name': 'deny-listed customer name',
 };
 
+function printHashes() {
+  const hashes = new Set();
+  const lines = readFileSync(0, 'utf8').split('\n');
+  for (const [index, name] of lines.entries()) {
+    const nameWords = words(name).map(({ word }) => word);
+    if (nameWords.length > maxNameWords) {
+      console.error(
+        `Line ${index + 1} has more than ${maxNameWords} words, and the name check compares at most ${maxNameWords}.`,
+      );
+      process.exitCode = 2;
+      return;
+    }
+    if (nameWords.length > 0) {
+      hashes.add(sha256(nameWords.join(' ')));
+    }
+  }
+  for (const hash of hashes) {
+    console.log(hash);
+  }
+}
+
 function main() {
   const parsed = parseDenyHashes(process.env[denyHashesVariable]);
   if ('error' in parsed) {
@@ -239,5 +265,9 @@ function isEntryPoint() {
 }
 
 if (isEntryPoint()) {
-  main();
+  if (process.argv.includes('--hash')) {
+    printHashes();
+  } else {
+    main();
+  }
 }
