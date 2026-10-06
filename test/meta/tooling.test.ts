@@ -19,8 +19,8 @@ interface BiomeConfig {
   linter?: {
     enabled?: boolean;
     rules?: {
-      recommended?: boolean;
-      a11y?: { recommended?: boolean };
+      preset?: string;
+      a11y?: { preset?: string };
       suspicious?: { noFocusedTests?: string; noSkippedTests?: string };
     };
   };
@@ -65,8 +65,9 @@ describe('tooling', () => {
 
     expect(biome.root).toBe(true);
     expect(biome.linter?.enabled).toBe(true);
-    expect(rules?.recommended).not.toBe(false);
-    expect(rules?.a11y?.recommended).toBe(true);
+    // Biome 2.5 deprecates the boolean `recommended` field in favour of `preset`.
+    expect(rules?.preset).toBe('recommended');
+    expect(rules?.a11y?.preset).toBe('recommended');
     expect(rules?.suspicious?.noFocusedTests).toBe('error');
     expect(rules?.suspicious?.noSkippedTests).toBe('error');
     expect(biome.files?.includes).toEqual(
