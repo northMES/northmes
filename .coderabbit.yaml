@@ -35,11 +35,16 @@ reviews:
   # Skip messages ("review needs a manual trigger", "rate limited") stay on, in
   # the walkthrough comment, so the maintainer sees why no review came.
   review_status: true
-  # No CodeRabbit check run or commit status on the head commit. handoff's PR
-  # node reads the whole check rollup; a CodeRabbit check that stays pending
-  # would hold the run with no time limit. The PR node waits for CodeRabbit
-  # through waitForReviewers instead, which has a timeout.
-  review_progress: false
+  # CodeRabbit's check run on the head commit shows the review in the merge
+  # box, and handoff's PR node counts a check named after a reviewer that is
+  # in progress as a started review. A review error does not fail the check,
+  # so a CodeRabbit error does not fail the head commit. The check is not a
+  # required status check: the gate is the ruleset's required approval, which
+  # CodeRabbit gives through request_changes_workflow (docs/adr/0065).
+  # handoff's PR node counts this check as CodeRabbit's review progress, not
+  # as CI, and bounds it by reviewTimeoutMinutes. commit_status mirrors
+  # progress only while review_progress is off.
+  review_progress: true
   commit_status: false
   fail_commit_status: false
 
