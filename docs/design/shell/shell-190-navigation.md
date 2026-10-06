@@ -8,16 +8,15 @@ Every planner and station screen mounts one of two shared frames, `shell/Shell.d
 
 Krister Johansson approved the page on 2026-10-06.
 
-After the approval he decided, the same day, that the plant wizard is named onboarding, not setup, because [GLOSSARY.md](../../../GLOSSARY.md) uses setup for the first part of a job order. The page was then renamed to match, and the etags below are those of the renamed files. The rename made these changes:
+On the same day he decided that the wizard is named onboarding, not setup, because [GLOSSARY.md](../../../GLOSSARY.md) uses setup for the first part of a job order. The page was renamed to match after the approval, and the etags below are those of the renamed files. The renamed page reads as follows:
 
-- `Shell.dc.html`: the prop `setup` is now `onboarding`, with the same values. The badge reads Onboarding, and a visually hidden comma makes the link read "Plant D, Onboarding". The German long-strings variant also reads Onboarding. Comments and the placeholder of the admin Plants page say "onboarding state" and `core.onboarding:manage`.
-- `shell-190-navigation.css`: the class `.sh-setup` is now `.sh-onboarding`.
-- Chips: PL32 and PL33 read "Company admin, plant in onboarding", NA23 "In onboarding", ST36 and ST37 "Plant in onboarding", ST40 and ST41 "Plant not open yet", ST42 and ST43 "Company not open yet".
-- Copy: the ST36 banner links "Continue onboarding" to `/$plant/core/onboarding`. ST40 to ST43 use the headings, text and document titles in the copy list below. ST42 and ST43 dropped a second, muted line about the company admin running the setup, because the new text already says that an admin completes onboarding.
+- `Shell.dc.html` takes the prop `onboarding`, which names the plants in onboarding. The badge reads Onboarding, and a visually hidden comma makes the link read "Plant D, Onboarding". The German long-strings variant also reads Onboarding. Its comments and the placeholder of the admin Plants page say "onboarding state" and `core.onboarding:manage`.
+- `shell-190-navigation.css` draws the badge with the class `.sh-onboarding`.
+- Chips: PL32 and PL33 read "Company admin, plant in onboarding", NA23 "In onboarding", and ST36 and ST37 "Plant in onboarding".
+- Copy: the ST36 banner reads "Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it." and links "Continue onboarding" to `/$plant/core/onboarding`. ST40 to ST43 use the headings, text and document titles in the copy list below.
 - Build notes: the header, ST33 and KE23 use onboarding, `onboardingState` and `core.onboarding:manage` throughout, the copy lists and the WCAG 1.4.1 row included.
-- Layout: the longer words made the PL32 chip run into PL33 and wrapped the NA23 chip to two lines; both now fit. The spec page's hint sizes follow the parts: the header is 1440 by 6728 and the states part 3120 by 24524.
 
-The help entry "Set up a plant" (German "Ein Werk einrichten") in core's help group stays, because it uses "set up" as an ordinary verb and existed before the wizard. Frame ids did not change. After the rename the full page rendered all 189 frames over the uploaded files with no console errors, failed requests, empty icons, duplicate ids, dangling ARIA references, overlapping frames or em and en dashes, and `Shell.dc.html` passed the same checks in 59 prop states, with the top bar and the sidebar head at 56 px in each.
+The help entry "Set up a plant" (German "Ein Werk einrichten") in core's help group stays. It uses "set up" as an ordinary verb, and the D2 spec `shell/shell-190-spec.md` already lists it among the invented help entries.
 
 The header frame still reads "spec page, in review", and its acceptance list has no checked boxes. This record holds the approval.
 
@@ -37,7 +36,7 @@ The header frame still reads "spec page, in review", and its acceptance list has
 | `shell/Shell.dc.html` | `1791305527647556` |
 | `shell/StationFrame.dc.html` | `1791231752474671` |
 
-The design project returned these etags for `shell/` on 2026-10-06. The rename changed `Shell.dc.html`, the CSS file, the entry page and the header, planner, narrow, states and keyboard parts. The sign-in part, the station part and `StationFrame.dc.html` keep the etags they had before the rename.
+The design project returned these etags for `shell/` on 2026-10-06, after the rename. The sign-in part, the station part and `StationFrame.dc.html` hold no onboarding copy, so the rename left them as they were.
 
 The page also loads files outside this set: the folder's `shell/support.js` (etag `1791221619746846`), and D1's `ui/tokens.css` and `ui/ui-189-tokens-page.css`, whose etags still equal the ones in the D1 record. Rule numbers such as 1.1.9 and question numbers such as Q11 point into the D2 spec `shell/shell-190-spec.md` (etag `1791221615601582`), which lists every rule with its source.
 
@@ -133,7 +132,7 @@ Where each frame of the issue's Frames list is drawn, as the header gives it:
 
 ## Frames
 
-Each chip gives the frame id, the state, the theme and the size. The PNGs were captured from the uploaded page at device scale 1 in a 2400 by 1600 viewport. They show each frame with its chip, except in row 1: the planner chip sits outside the frame element, so the PL PNGs show the screen alone. The header and the KE23 build notes are split into parts to keep each file under 1.5 MB. A frame marked "Not exported" has no PNG in this folder; [Frames without a PNG](#frames-without-a-png) gives the reasons.
+Each chip gives the frame id, the state, the theme and the size. The PNGs were captured from the design page at device scale 1. They show each frame with its chip, except in row 1: the planner chip sits outside the frame element, so the PL PNGs show the screen alone. The header and the KE23 build notes are split into parts to keep each file under 1.5 MB. A frame marked "Not exported" has no PNG in this folder; [Frames without a PNG](#frames-without-a-png) gives the reasons.
 
 ### Header
 
