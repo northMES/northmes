@@ -73,9 +73,14 @@ describe('tooling', () => {
     expect(Object.keys(tasks).filter((name) => name.startsWith('test'))).toEqual([]);
   });
 
-  it('turbo.json opts out of the AGENTS.md block that turbo 2.11 maintains', () => {
-    // AGENTS.md is written by hand; turbo 2.11 appends its own block to it when an agent runs turbo.
-    expect(readJson<TurboConfig>('turbo.json').agentGuidance).toBe(false);
+  it('turbo.json sets only keys that the installed turbo schema knows', () => {
+    // turbo exits with "unknown key" on any other top-level key, so a pin and its config must agree.
+    const schema = readJson<{ properties: Record<string, unknown> }>('node_modules/turbo/schema.json');
+    const known = Object.keys(schema.properties);
+
+    for (const key of Object.keys(readJson<TurboConfig>('turbo.json'))) {
+      expect(known, key).toContain(key);
+    }
   });
 
   it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {
