@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,8 +21,12 @@ describe('check-node', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  function runScript(path: string, ...args: string[]) {
+    return spawnSync(process.execPath, [path, ...args], { cwd: dir, encoding: 'utf8' });
+  }
+
   function run(...args: string[]) {
-    return spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
+    return runScript(script, ...args);
   }
 
   function fixture(name: string, pin: number): string {
@@ -52,6 +56,16 @@ describe('check-node', () => {
     expect(mismatch.stderr).toContain(process.version);
     expect(mismatch.stderr).toContain(String(runningMajor + 1));
     expect(match.status).toBe(0);
+  });
+
+  it('the entry point fails a mismatch when it is run through a symlink', () => {
+    const link = join(dir, 'linked-check-node.mjs');
+    symlinkSync(script, link);
+
+    const result = runScript(link, fixture('symlink.node-version', runningMajor + 1));
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(process.version);
   });
 
   it('the entry point defaults to the repository .node-version', () => {
