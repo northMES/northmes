@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson; internal research note 32
 informed: module and plugin authors, contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the command.rejected security event at the first regulated sale; acceptance before the skeleton's validator story)"
+needs-confirmation: "maintainer (the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the command.rejected security event and the validator record at the first regulated sale; acceptance before the skeleton's validator story)"
 ---
 
 # Extension points declared by their owners, contributions as manifest data with code by id, and a plugin inventory
@@ -52,7 +52,7 @@ Plugins therefore extend both the frontend and the backend, through the same man
 
 ### The next chain
 
-Krister Johansson chose on 2026-10-06 a model without a `next` chain for now. No plugin rewrites another module's command input or wraps another module's drawing, and contributions to one point run side by side, never nested. The owner-marked chain stays a considered option that a later ADR can add as an owner-declared point kind. The trigger is a need that validators, consumers, contributed fields and answer points cannot meet.
+Krister Johansson decided on 2026-10-06: no `next` chain for now, and a chain can be added later. In this model no plugin rewrites another module's command input or wraps another module's drawing, and contributions to one point run side by side, never nested. The owner-marked chain stays a considered option that a later ADR can add as an owner-declared point kind. The planning session proposes the trigger: a need that validators, consumers, contributed fields and answer points cannot meet.
 
 ### Rules
 
@@ -91,7 +91,7 @@ Krister Johansson chose on 2026-10-06 a model without a `next` chain for now. No
    * role and assignment administration
    * the plant switcher and the plant check
    * the signature stage
-   * fact commands at the station, which are not validatable ([ADR 0033][adr-0033])
+   * fact commands at the station as veto points: they are not validatable in release 1, and later extension points on them are advisory only ([ADR 0033][adr-0033])
    * audit and History views
    * the permission check itself
 10. In-repo modules use the points first where one exists. A point is built in the task of its first contributor ([ADR 0055][adr-0055]). Production-start, the Pyramid connector, core's remote and, later, the notifications module therefore exercise the release 1 web points on every pull request. The validator point has no in-repo contributor in release 1, so `example-validator` exercises it through the `plugin-outside` job.
@@ -155,7 +155,7 @@ Names follow the derived names of [ADR 0003][adr-0003]: permission and command i
 
 | Point | The owner declares | The contributor declares and writes | When it runs | On failure | Release 1 |
 |---|---|---|---|---|---|
-| Validator | `validatable: true` on the command, a versioned payload schema in its contracts package, and the longest time limit it accepts | a `validates` entry and `defineValidator({ id, payload, timeoutMs, check })` returning `pass()` or `veto(error)`; `timeoutMs` stays within the owner's limit | inside the transaction at pipeline step 6 ([ADR 0012][adr-0012]), after permission, audit context and version, in dependency order and then by validator id | a throw, a timeout or a malformed verdict rejects the command | yes: `example-validator` on `planning.releaseProductionOrder` |
+| Validator | `validatable: true` on the command, a versioned payload schema in its contracts package, and the longest time limit it accepts | a `validates` entry and `defineValidator({ id, payload, timeoutMs, check })` returning `pass()` or `veto(error)`; `timeoutMs` stays within the owner's limit | inside the transaction at pipeline step 6 ([ADR 0012][adr-0012]), after permission, audit context and version, in dependency order and then by name, which is the validator's id | a throw, a timeout or a malformed verdict rejects the command | yes: `example-validator` on `planning.releaseProductionOrder` |
 | Consumer | the event and its version in `events`, the payload schema in contracts | a `consumes` entry and `defineConsumer({ id, event, handle })`; a consumer that runs commands runs as a system principal that the module registers and a migration seeds ([ADR 0013][adr-0013]) | after commit, at least once, one pg-boss job per consumer and event, deduplicated through `core.inbox` ([ADR 0014][adr-0014]) | retried, then dead-lettered; the command that raised the event stands | in-repo modules (Pyramid write-back); plugins later |
 | Contributed field | nothing beyond a keyed entity type in its subgraph | `@ResolveField` on `entityRef("ProductionOrder")`, or `@requires` with `@external` fields; nullable and prefixed | per request, batched through `loaderFor` and the request's `SubgraphContext` ([05 GraphQL and APIs](../plan/05-graphql-and-apis.md)) | the field is null and the response carries an error | yes: `example-validator`, through `@requires` |
 | Own commands, lists, subscriptions, settings | nothing | `defineCommand`, `defineList`, prefixed subscription fields, `defineSettings` | the full pipeline, one audit row per command | owned by the module | in-repo modules; plugin table writes wait for the plugin database API |
@@ -325,7 +325,7 @@ export default defineWebModule({
 | A banner hook throws | no banner from that contribution; reported with stage `slot` |
 | A remote fails to load | each of its contributions shows the fallback named by its manifest label; the module keeps its sidebar place with "(unavailable)" ([ADR 0019][adr-0019]) |
 | A web-only plugin names a slot that no longer exists | status `incompatible`, and boot continues ([ADR 0037][adr-0037], M-13) |
-| A server plugin names a command, payload version or event that no longer exists | boot stops and names the plugin and the point |
+| A server plugin names a command, payload version or event that no longer exists | boot stops and names the plugin and the point, as [ADR 0037][adr-0037] decides for validators |
 | A validator throws or times out | the command is rejected, and a throw is masked as "Unexpected error." ([ADR 0037][adr-0037]) |
 | A consumer fails | retried, then dead-lettered ([ADR 0014][adr-0014]) |
 | A contributed field resolver throws | the field is null and the response carries an error |
@@ -359,7 +359,7 @@ export default defineWebModule({
 * Modules ship default roles. Company admins build custom roles, such as Operator, Planner, Admin or IT, from module permissions. Editing roles needs `core.role:manage` at company scope, and adding a permission to a role needs the editor to hold it where the role is assigned ([ADR 0010][adr-0010]).
 * An assignment is `(user, scope node, role)`. An assignment at the company node applies to every plant below it, because `can()` walks from the plant up to the root. An assignment at a plant node applies to that plant only, so Planner at plant A and Operator at plant B are two assignments, and a user who is Planner company-wide and IT at one plant holds both roles at that plant.
 * A user gets permissions only through roles, as [ADR 0066][adr-0066] proposes; nothing is prepared for direct grants of one permission to a user. A one-off grant becomes a custom role with one permission, so every grant appears in the role list and its audit, and the rule that an assigner holds every permission of the role keeps working (M-65).
-* Core's company admin role receives every installed permission, plugins' included, at each `northmes migrate` ([ADR 0066][adr-0066], M-61). Installing a plugin therefore gives its permissions to every company admin at once.
+* [ADR 0066][adr-0066] proposes that core's company admin role receives every installed permission, plugins' included, at each `northmes migrate`. That waits for Krister Johansson's answer to M-61, whose working default is yes. Under that default, installing a plugin gives its permissions to every company admin at once.
 * At a station, the operator's permissions at that plant are intersected with the station's ceiling ([ADR 0033][adr-0033]).
 * Each contribution carries a permission, and the shell filters on the current plant's permissions. A validator may call `ctx.can()` for an extra key, for example to decide what its veto may show, or the permission that a later `ask` requires for confirming. Later, a plugin may name the default roles that receive its permissions, and a company admin accepts or changes that through an audited command.
 * Who may edit and assign roles at which scope stays open for the product owner ([ADR 0010][adr-0010]).
@@ -404,7 +404,7 @@ Release 1 builds nine pieces. A release 1 feature reads each piece in the task t
 | 8 | The slot id snapshot records each slot's kind | the slot snapshot check in CI |
 | 9 | One recipe per point, held in the `northmes-plugin` skill, grown recipe by recipe | each task that builds a point ([ADR 0022][adr-0022]) |
 
-Pieces 2, 4, 5 and 6 close the four gaps listed in the context. Pieces 4 and 6 land with the validator plugin, which is part of the walking skeleton's exit (target 2026-11-13, [03 modules and extensibility](../plan/03-modules-and-extensibility.md#the-two-example-plugins)). The tasks that build pieces 1 to 6 link this ADR, and a task moves to Ready only when every ADR it links is accepted ([ADR 0055][adr-0055]), so this ADR sits on the skeleton's path while M-68 is open with the working default yes. If Krister Johansson confirms M-68, this ADR joins the E02 list of the M0 checklist in [the plan README](../plan/README.md#adrs-needed-by-m0) and the ADR lines of E02-S04 and of E21's widget story in [14 roadmap](../plan/14-roadmap.md). Each piece needs a row in the ledger of [ADR 0055][adr-0055], listed under [Changes to ADR 0055](#changes-to-adr-0055) and open as M-62.
+Pieces 2, 4, 5 and 6 close the four gaps listed in the context. Pieces 4 and 6 land with the validator plugin, which is part of the walking skeleton's exit (target 2026-11-13, [03 modules and extensibility](../plan/03-modules-and-extensibility.md#the-two-example-plugins)). The tasks that build pieces 1 to 6 link this ADR, and a task moves to Ready only when every ADR it links is accepted ([ADR 0055][adr-0055]), so this ADR sits on the skeleton's path. M-68 asks Krister Johansson to confirm that. Under its working default, yes, the plan lists this ADR in the E02 list of the M0 checklist in [the plan README](../plan/README.md#adrs-needed-by-m0) and of the M0 row in [14 roadmap](../plan/14-roadmap.md#milestones-under-option-b), and in the ADR lines of E02, E02-S04 and E21-S01. If the answer is no, pieces 4 and 6 move after the skeleton, E02-S04 keeps the veto shape of [ADR 0037][adr-0037], and this ADR leaves those lists. Each piece needs a row in the ledger of [ADR 0055][adr-0055], listed under [Changes to ADR 0055](#changes-to-adr-0055) and open as M-62.
 
 D2 needs no built slot beyond these pieces; [D2 coverage](#d2-coverage) lists what it draws.
 
@@ -415,7 +415,7 @@ D2 needs no built slot beyond these pieces; [D2 coverage](#d2-coverage) lists wh
 | `ValidatorContext` (`ctx`) for validators | the first validator that reads anything beyond its payload |
 | `validatorHarness`, `mountContribution`, `consumerHarness` and `renderSlot` in `@northmes/testing` | the first validator or contribution outside the examples, or the public SDK |
 | `plugin:check --json` | its first machine reader (`upgrade.sh` or `config export`) |
-| `item` kind and `core/top-bar/items/v1` | the notifications module ([ADR 0067][adr-0067]) |
+| `item` kind and `core/top-bar/items/v1` | the notifications module ([ADR 0067][adr-0067]); on `/admin` its props carry no plant, so the bell's count there needs plant-free fields (M-66) |
 | `banner` kind and `core/shell/banners/v1` | the first module banner; the candidate is the AI budget banner if M-31 gives the `ai` module a remote (M-63) |
 | `tab` kind and `planning/order/tabs/v1` | the first contributor that needs more room than a panel |
 | `planning/orders/columns/v1` | the first contributor with data in the orders list |
@@ -444,7 +444,7 @@ D2 needs no built slot beyond these pieces; [D2 coverage](#d2-coverage) lists wh
 
 ### D2 coverage
 
-Krister Johansson approved the D2 spec page (issue northMES/northmes#190). The variations round had already chosen a strip under the top bar for banners ([shell-190-variations.md](../design/shell/shell-190-variations.md#decision)). The page draws part of what this ADR needs; the task named in the last column draws the rest when it builds its piece, so no task waits on D2.
+Krister Johansson approved the D2 spec page `shell/shell-190-navigation.dc.html` (issue northMES/northmes#190). The variations round had already chosen a strip under the top bar for banners ([shell-190-variations.md](../design/shell/shell-190-variations.md#decision)). The page draws part of what this ADR needs; the task named in the last column draws the rest when it builds its piece, so no task waits on D2.
 
 | Item | Frames on the approved D2 page | Not drawn there, or drawn differently | Drawn by |
 |---|---|---|---|
@@ -467,9 +467,12 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 | Command validators | "Each has a time limit." | Each has a time limit, no longer than the limit the owner declares for the validatable command |
 | Command validators | "A veto returns `core.command_rejected` with `rejectedBy`." | A veto returns `core.command_rejected` whose `details` carry `rejectedBy`, the validator's error code, its details and the message the server renders from the validator module's `defineErrors` |
 | Command validators | "`CommandValidator` takes the schema from the contracts copy the plugin bundled" | `defineValidator({ id, payload, timeoutMs, check })` takes the schema from the contracts copy the plugin bundled; once a validator reads more than its payload, `check` also receives a `ValidatorContext` from `@northmes/sdk` |
-| UI slots | "A contribution carries an id, the slot id, a component, a required `label`, a numeric `order` and a permission." | The id, slot, label, order and permission are static data in the manifest's `web.contributes`, and the remote supplies the implementation under the same id |
+| UI slots | "A contribution carries an id, the slot id, a component, a required `label`, a numeric `order` and a permission. `validateWebModule` rejects a missing label." | The id, slot, label, order and permission are static data in the manifest's `web.contributes`, and the remote supplies the implementation under the same id. The catalog check and `pnpm plugin:check` reject a missing label; `validateWebModule` rejects an implementation without a manifest entry, a manifest entry without an implementation and an implementation whose kind differs from its slot's kind |
+| UI slots | "`<Slot>` renders each contribution in `WidgetFrame` as a section with `aria-labelledby`, inside its own error boundary." | `<Slot>` renders by the slot's kind: a `region` or `tab` contribution in `WidgetFrame` as a section with `aria-labelledby`, while in the `field`, `item`, `banner` and `action` kinds the host draws the contribution's data without `WidgetFrame`. Every contribution renders inside its own error boundary |
+| UI slots | "Changing a slot's props means adding `v2` and keeping `v1` for one deprecation window." | Unchanged, except that an owner may add optional props within a version; a contribution built against older props ignores them |
 | UI slots | "No slot renders a widget (`WidgetFrame` and error boundary) per board block or per row. The one exception is `planning/board/block-fields/v1`" | Every slot declares a kind. A `region` renders in `WidgetFrame` for the selected item only; a `field` returns a value per item that the owner draws, loaded once per slot instance, with an optional hover renderer that may fetch; block fields and the board header are `field` slots |
 | UI slots | "A CI check fails when a slot id from the previous release's snapshot disappears." | Unchanged, and the snapshot also records each slot's kind |
+| UI slots, release 1 slots | "filled by core, the Pyramid connector and plugins through `BoardFieldSlot`" | filled by core, the Pyramid connector and plugins through `field` contributions; the `field` kind takes the place of `BoardFieldSlot` |
 | UI slots, release 1 slots | "one shell aside slot for the AI chat panel" | `core/shell/aside/v1`, kind `region`, at most one docked |
 | The example plugins | "`pnpm plugin:check <id>` composes the plugin's SDL against the committed snapshot" | It also prints the plugin's inventory |
 | Confirmation (slot tests) | "a contribution without a label fails `validateWebModule`" | A `web.contributes` entry without a label fails the catalog check and `pnpm plugin:check`; `validateWebModule` fails on an implementation without a manifest entry and on one whose kind differs from its slot's kind |
@@ -610,7 +613,7 @@ The planning session scored the three designs from 1 (poor) to 5 (strong). It di
 * Related ADRs: [0003][adr-0003] the manifest, [0010][adr-0010] roles and `can()`, [0012][adr-0012] the pipeline and the error model, [0013][adr-0013] system principals and lifecycle classes, [0014][adr-0014] consumers, [0019][adr-0019] remotes, [0021][adr-0021] accessibility, [0022][adr-0022] recipes and the scope rule, [0030][adr-0030] block fields, [0037][adr-0037] plugins, validators and slots, [0038][adr-0038] ranges, [0051][adr-0051] rules 6, 7, 10 and 15, [0055][adr-0055] release 1 scope, [0062][adr-0062] link builders and the `tab` key, [0066][adr-0066] plant-free fields, onboarding steps and the company admin role, [0067][adr-0067] icon names and the top bar slot.
 * Proposed ADRs edited in place with this ADR: [0003][adr-0003] (`web.slots` with kinds, `web.contributes` as objects, `validates`, `consumes`, the owner's validator time limit), [0012][adr-0012] (the `details` of `core.command_rejected` and the reserved `ask` verdict), [0014][adr-0014] (`consumes`), [0030][adr-0030] (the `field` kind) and [0067][adr-0067] (the `item` kind for the top bar slot). The changes that [ADR 0066][adr-0066] and [ADR 0067][adr-0067] list for ADR 0003 (the `onboarding` key, core's company admin role and `web.icon`) still apply.
 * Open questions in [16 open questions](../plan/16-open-questions.md#design-points-from-the-plan-documents), each with its working default: M-62 the nine ledger rows (yes), M-63 the AI budget banner as the `ai` module's contribution (yes if M-31 gives the module a remote, otherwise the shell draws it from `BannerSpec` data and the slot waits), M-64 top bar items drawn from data (yes), M-65 roles only (yes), M-66 plant-free fields for the notifications module (decided when that module is shaped; until then only core declares them), M-67 the `command.rejected` security event and the validator record at the first regulated sale (yes, they wait), M-68 this ADR before the skeleton's validator story moves to Ready (yes). M-31, M-32, M-39 and M-61 stay open as before.
-* Plan: [03 modules and extensibility](../plan/03-modules-and-extensibility.md) (manifest, validators, slots, the examples), [06 web and UX](../plan/06-web-and-ux.md#remotes-in-release-1) (the slot table, the contract, the banner strip), [14 roadmap](../plan/14-roadmap.md) (E02-S04, E04, E06-S14, E13-S05, E14-S03, E16-S02, E18-S04, E21).
+* Plan: [03 modules and extensibility](../plan/03-modules-and-extensibility.md) (manifest, validators, slots, the examples), [06 web and UX](../plan/06-web-and-ux.md#remotes-in-release-1) (the slot table, the contract, the banner strip), [14 roadmap](../plan/14-roadmap.md) (the M0 row, E02, E02-S04, E04, E06-S14, E08-S02, E13-S05, E14-S03, E16-S02, E18-S04, E21 and E21-S01).
 * Revisit when a need arises that validators, consumers, contributed fields and answer points cannot meet, when the first plugin is built outside the repository for a customer, when the public SDK is prepared, and at 1.0.
 
 [adr-0003]: 0003-module-package-shape-and-the-definemodule-manifest.md

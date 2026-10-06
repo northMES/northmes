@@ -165,6 +165,7 @@ E02 needs:
 - [x] [0060][adr-0060] configuration and the environment schema (accepted)
 - [x] [0062][adr-0062] web form contracts, URL view state and module link manifests (accepted)
 - [x] [0064][adr-0064] REST routes under /api/v1, reserved ids and slugs, the boot route check (accepted)
+- [ ] [0068][adr-0068] extension points, `validates` and the veto details for the validator plugin (proposed; on this list under the working default of M-68)
 
 E03 and the rest of M0 need:
 
@@ -204,7 +205,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 | [0059][adr-0059] | no TimescaleDB backend from the project | M-50 |
 | [0066][adr-0066] | the company admin role holding every installed permission | M-61 |
 | [0067][adr-0067] | the top bar slot id; top bar items drawn from data | none; M-64 |
-| [0068][adr-0068] | the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the `command.rejected` security event at the first regulated sale; acceptance before the skeleton's validator story | M-62 to M-68 |
+| [0068][adr-0068] | the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the `command.rejected` security event and the validator record at the first regulated sale; acceptance before the skeleton's validator story | M-62 to M-68 |
 
 ### Questions before M0
 

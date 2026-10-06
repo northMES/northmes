@@ -438,7 +438,7 @@ Codes named by the decisions so far:
 | `planning.production_order.locked` | another planner's soft lock holds the order |
 | `core.code_taken` | code clash within a scope; the message hides the other plant's key |
 | `core.crossScopeReference` | a reference points outside the same scope or its ancestors |
-| `core.command_rejected` | a command validator vetoed; `details` names `rejectedBy` |
+| `core.command_rejected` | a command validator vetoed; `details` carry `rejectedBy`, the validator's `code`, that code's `details` and the `message` the server renders from the validating module's `defineErrors` ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | `core.validator_contract_mismatch` | a validator payload failed the owner's contract |
 | `core.client_outdated` | mutation from a tab running an older build |
 | `core.secret_reentry_required` | an outbound URL changed without a new secret |
