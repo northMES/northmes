@@ -8,6 +8,8 @@
     "check": "vitest run --project unit"
   },
   "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "yaml": "catalog:"
