@@ -26,6 +26,14 @@ interface BiomeConfig {
   };
 }
 
+interface TsConfig {
+  compilerOptions?: {
+    strict?: boolean;
+    moduleResolution?: string;
+    customConditions?: string[];
+  };
+}
+
 interface WorkspaceConfig {
   catalog?: Record<string, string>;
 }
@@ -73,6 +81,15 @@ describe('tooling', () => {
     expect(biome.files?.includes).toEqual(
       expect.arrayContaining(['!docs/sources', '!**/node_modules', '!**/dist']),
     );
+  });
+
+  it('tsconfig.base.json uses strict TypeScript 6.0 settings and the @northmes/source custom condition', () => {
+    const options = readJson<TsConfig>('tsconfig.base.json').compilerOptions;
+
+    expect(options?.strict).toBe(true);
+    expect(options?.customConditions).toEqual(['@northmes/source']);
+    // TypeScript ignores customConditions unless the resolution mode is node16, nodenext or bundler.
+    expect(options?.moduleResolution).toBe('nodenext');
   });
 
   it('turbo is in the strict catalog and the root devDependencies take it from the catalog', () => {
