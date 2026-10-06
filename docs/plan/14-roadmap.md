@@ -31,7 +31,7 @@ Stories use the persona list in [README.md](README.md). Issues, issue forms and 
 | Plant admin | Sets up a company and its plants: users, roles, master data, calendars, settings, the Pyramid connector, AI providers and stations. Also installs and upgrades NorthMES on the customer's server together with the customer's IT. |
 | Plugin developer | Builds a module or plugin on the `defineModule` contract: validators, slot widgets, subgraphs and remotes. Integration work such as an ERP connector counts here. |
 | Maintainer | Builds and releases NorthMES itself: the repository, CI, the delivery workflow and the platform packages. |
-| Hosting partner | A consultant or provider who installs and runs NorthMES for customers, one installation per customer. In release 1 it creates a customer's companies and their first company admins with scriptable CLI commands on the host, recovers company admins, and may run the setup wizard for the customer. |
+| Hosting partner | A consultant or provider who installs and runs NorthMES for customers, one installation per customer. In release 1 it creates a customer's companies and their first company admins with scriptable CLI commands on the host, recovers company admins, and may run the onboarding wizard for the customer. |
 
 ## Milestones under option B
 
@@ -2126,8 +2126,8 @@ Page: shell/shell-<issue>-navigation.dc.html (variations page first: yes, the sh
 ## Frames
 - Sidebar with core, module and plugin sections in a stable order, one group per module and nav entries nested one level; the collapsed rail; the 320 px sheet
 - Top bar with the sidebar trigger, breadcrumb, page actions slot and help menu with entries grouped by module; user menu at the foot of the sidebar
-- Plant switcher at the top of the sidebar as a menu of links grouped by company, with a plant in setup marked "Setup"; the company and plant crumbs
-- The admin frame at `/admin` without a plant; the plant list at `/`; the pages "the company is being set up" and "Plant <name> is being set up"
+- Plant switcher at the top of the sidebar as a menu of links grouped by company, with a plant in onboarding marked "Onboarding"; the company and plant crumbs
+- The admin frame at `/admin` without a plant; the plant list at `/`; the pages "Your company is not open yet" and "Plant <name> is not open yet"
 - Skip link, landmarks and the title pattern ("Planning board · Plant A · NorthMES")
 - The module unavailable placeholder with its "(unavailable)" menu entry, the module not-found page, the error panel and the minimal status route
 - The blocking reload dialog and the "Live updates paused, reconnecting" banner
@@ -2141,7 +2141,7 @@ Page: shell/shell-<issue>-navigation.dc.html (variations page first: yes, the sh
 shadcn components by name, tokens from D1, keyboard and focus order, landmarks, ARIA roles, names and announcements, final English copy, WCAG 2.2 criteria by number
 
 ## References
-docs/adr/0019-web-shell-with-react-module-federation-remotes.md, docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md, docs/adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md, docs/plan/06-web-and-ux.md (shell layout, failure handling, order of design work); the approved D1 page
+docs/adr/0019-web-shell-with-react-module-federation-remotes.md, docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md, docs/adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md, docs/plan/06-web-and-ux.md (shell layout, failure handling, order of design work); the approved D1 page
 
 ## Output
 docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames shell/Shell.dc.html and shell/StationFrame.dc.html that later pages mount; Design section on the waiting UI tasks
@@ -2192,7 +2192,7 @@ As a planner who works in two plants, I want to switch plant from the shell and 
 
 Module: web (`apps/web`, `packages/web-sdk`, `apps/server`). Blocked by: E04-S02, E05-S03. Design: D2.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md), [0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md).
 
 Acceptance criteria:
 
@@ -2201,7 +2201,7 @@ Acceptance criteria:
 - When the new plant's module set or versions differ, the shell does one full navigation; otherwise it swaps the permission set and the client.
 - Each plant link keeps the current route and its search when the route's only path param is `$plant`. On a route with entity params it goes to the nearest ancestor route without them and drops the search, and the full navigation uses the same target.
 - Nav entries and widgets follow the current plant's permissions.
-- `/api/v1/web/modules` returns `companies`: every plant the user can open, grouped under its company and sorted by name; a station principal gets an empty list ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- `/api/v1/web/modules` returns `companies`: every plant the user can open, grouped under its company and sorted by name; a station principal gets an empty list ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - The plant switcher is the first item of the sidebar in the expanded sidebar, the rail and the 320 px sheet. It lists the plants grouped by company, with group labels only when they span more than one company, and the shell hides it when the user can open fewer than two plants. A plant of another company follows the same switch rules ([ADR 0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
 - The first crumb is the plant, a link to `/$plant`; when the user's plants span more than one company, a company crumb without a link comes before it.
 
@@ -2338,7 +2338,7 @@ Goal: build the platform server pieces every module uses: the command pipeline w
 
 Who it is for: Plant admin. Also: Planner, Plugin developer, Maintainer, Hosting partner.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Out of scope: station credentials (E11), MCP tokens (E12), integration tokens (the public API epic after release 1), the reporting schema, single sign-on, company mode across plants, the pseudonymization command.
 
@@ -2412,13 +2412,13 @@ As a plant admin, I want my company and its plants in one scope tree, so that ev
 
 Module: core. Blocked by: E05-S02. Design: none.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - A Better Auth organization is a company; `core.plant.id` equals the plant's node id in `core.scope` (company root, plant children).
-- Each plant has a slug unique per installation (`unique (slug)` on `core.plant`), an IANA zone and a production day start, so a user with plants in several companies keeps `/$plant` URLs; an unknown slug is NOT_FOUND and never falls back to a default plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
-- The plant slug schema in core's contracts refuses `api`, `graphql`, `mcp`, `health`, `modules`, `assets`, `station` and `admin`, because a plant slug is the first segment of an SPA path and these are server paths, the station mount or the admin mount ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Each plant has a slug unique per installation (`unique (slug)` on `core.plant`), an IANA zone and a production day start, so a user with plants in several companies keeps `/$plant` URLs; an unknown slug is NOT_FOUND and never falls back to a default plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+- The plant slug schema in core's contracts refuses `api`, `graphql`, `mcp`, `health`, `modules`, `assets`, `station` and `admin`, because a plant slug is the first segment of an SPA path and these are server paths, the station mount or the admin mount ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - The principal plugin validates `x-northmes-plant` against role assignments with the ancestor walk and never reads Better Auth's active organization; an unauthorized plant fails with FORBIDDEN, `core.plant_forbidden` and one `permission.denied` security event.
 - One principal resolution serves a request that touches three subgraphs.
 
@@ -2460,15 +2460,15 @@ As a plant admin, I want to sign in with a username or email and a password, and
 
 Module: core (`modules/core`, `apps/server`, `apps/web`). Blocked by: E05-S03. Design: sign-in page (part of design task D2).
 
-ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - `better-auth` 1.7.x is pinned exactly; it runs on its Kysely adapter with its own pool as `nm_auth` in schema `auth`, and its SQL is generated into core migrations with a drift test.
 - Better Auth runs with `basePath: "/api/v1/auth"`, and `toNodeHandler(auth)` is mounted at `/api/v1/auth/*` before body parsing; the sign-in page calls the same path, so a Better Auth client in the browser takes the same `basePath`. This is the library family under `/api/v1` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 - Sign-up is disabled, `immutableUsername` is on, the session cookie is `SameSite=Strict`, the cookie cache is at most 60 s, and rate-limit storage is in the database.
-- Every `/admin/*` and `/organization/*` path under `/api/v1/auth` is disabled, so no signed-in user creates an organization over HTTP ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)); boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
-- `northmes admin reset-password --username <username> --reason <text> [--json]` runs in the one-off migrate container, writes one command row with principal type `system`, the system principal `core.cli` that a core migration seeds, and surface `cli`, writes one security event and prints a temporary password once. It never prompts and takes no password as a flag. There is no `northmes admin create`: companies and their first company admins come from `northmes company create` (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Every `/admin/*` and `/organization/*` path under `/api/v1/auth` is disabled, so no signed-in user creates an organization over HTTP ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)); boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
+- `northmes admin reset-password --username <username> --reason <text> [--json]` runs in the one-off migrate container, writes one command row with principal type `system`, the system principal `core.cli` that a core migration seeds, and surface `cli`, writes one security event and prints a temporary password once. It never prompts and takes no password as a flag. There is no `northmes admin create`: companies and their first company admins come from `northmes company create` (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - Sign-in, failed sign-in and sign-out write security events.
 - `nm_app` reads user names only through the `security_invoker` view `core.user_directory(id, name, username, banned)` and has no grant on `auth.account` or `auth.session`; only `nm_auth` reaches the `auth` schema.
 
@@ -2656,7 +2656,7 @@ As a plant admin, I want security event partitions dropped after a retention per
 
 Module: audit. Blocked by: E05-S02, E05-S14. Design: none.
 
-ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
@@ -2675,13 +2675,13 @@ As a hosting partner, I want to create a customer's companies and their first co
 
 Module: core (`modules/core`, `apps/server`). Blocked by: E05-S05, E05-S06, E05-S08. Design: none.
 
-ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
 
 Acceptance criteria:
 
-- `northmes company create --name <text> --admin-username <username> [--id <uuidv7>] [--admin-name <text>] [--admin-email <address>] --reason <text> [--json]` runs in the one-off migrate container. In one command it creates the Better Auth organization on the server (slug: the company id; owner member: the first admin), the company node, the company's `core.setup` row and the assignment of core's company admin role at the company node. A new user gets a temporary password, printed once, and a `.invalid` placeholder email when `--admin-email` is missing; an existing user gets the role and no password.
+- `northmes company create --name <text> --admin-username <username> [--id <uuidv7>] [--admin-name <text>] [--admin-email <address>] --reason <text> [--json]` runs in the one-off migrate container. In one command it creates the Better Auth organization on the server (slug: the company id; owner member: the first admin), the company node, the company's `core.onboarding` row and the assignment of core's company admin role at the company node. A new user gets a temporary password, printed once, and a `.invalid` placeholder email when `--admin-email` is missing; an existing user gets the role and no password.
 - `northmes company add-admin --company <id> --username <username> [--name <text>] [--email <address>] --reason <text> [--json]` assigns core's company admin role at an existing company and adds the user to the company's organization as a member when the user is not one. A user who already holds the role makes it a no-op with exit 0; a banned user exits 3. This is the recovery path when a company has lost every company admin (M-58).
-- `northmes company list [--json]` prints each company's id, name, setup state, plant count and admin usernames, and writes no command row.
+- `northmes company list [--json]` prints each company's id, name, onboarding state, plant count and admin usernames, and writes no command row.
 - Core's manifest ships the company admin role, and the permission sync in `northmes migrate` gives it every installed permission, plugins' included (M-61).
 - `--id` makes a run idempotent: the same id and input exits 0 with `replayed: true` and prints no password; the same id with other input exits 3; a run that failed after Better Auth's write completes when it runs again.
 - Every write is a command with principal type `system`, the system principal `core.cli`, surface `cli`, the company node as scope and the required `--reason`, plus one security event (`cli.company_created` or `cli.company_admin_added`). Exit codes: 0 done, 1 unexpected error, 2 usage error, 3 refused, 4 company not found. No command prompts or takes a password as a flag. A temporary password appears only on standard output, never in a command row, a security event or a log line.
@@ -2695,7 +2695,7 @@ Tests first:
 - `modules/core/test/company-admin-role.int.test.ts`: "after the permission sync the company admin role holds every installed permission, a plugin's included"; "a company admin assigns planning's planner role at a plant".
 - `apps/server/test/cli/installation-settings.int.test.ts`: "an unknown key exits 2".
 
-Notes: ADR 0066 waits for Krister's confirmation of M-60 and M-61. The commands receive `auth_secret` in the migrate container when Better Auth needs it to create a user (M-53). The ledger row for this story, E05-S15, E06-S14 and the module steps is in ADR 0066 under Changes to ADR 0055, with an estimate Krister sets.
+Notes: Krister answered M-60 on 2026-10-06 (`northmes installation set` on the host), and ADR 0066 waits for his confirmation of M-61. The commands receive `auth_secret` in the migrate container when Better Auth needs it to create a user (M-53). The ledger row for this story, E05-S15, E06-S14 and the module steps is in ADR 0066 under Changes to ADR 0055. Krister left its figure open, so it carries the planning session's estimate of 2026-10-06: 13 to 21.5 raw days (E05-S14 2.5 to 3.5, E05-S15 3 to 5, E06-S14 5 to 8, the five module steps 2.5 to 5), without the onboarding wizard's design task and gate time. Per epic that is E05 5.5 to 8.5 (E05-S14 and E05-S15), E06 5.5 to 9 (E06-S14 and the formats step) and 0.5 to 1 each for E07, E09, E11 and E13. Velocity checkpoint 1 (M2) checks the estimate, and M-04 stays open.
 
 #### E05-S15 core: Create plants on admin pages at /admin
 
@@ -2703,14 +2703,14 @@ As a plant admin who holds core's company admin role, I want to create my compan
 
 Module: core, web (`modules/core`, `modules/core/contracts`, `modules/core/web`, `apps/server`, `apps/web`, `packages/web-sdk`, `packages/contracts`). Blocked by: E05-S14, E04-S04, E04-S07, E06-S05. Design: D2 for the admin frame and the plant list at `/`; the canonical list and form page for the plant page.
 
-ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
 
 Acceptance criteria:
 
 - `/admin` is a shell mount outside `/$plant` that sends the user to `/admin/core`. A remote returns its admin pages from `adminRoutes(adminRoute)` under `/admin/<id>`, and only core does in release 1. Core's link manifest has an `admin` section whose builders take no plant. The per-remote route harness also walks `adminRoutes`, so every admin leaf route has a title, and titles under `/admin` leave the plant segment out ("Plants · Admin · NorthMES").
-- `GET /api/v1/web/modules` without `plant` answers a user session with `plant: null`, `companies`, `admin` and the permissions the user holds at each company node, keyed by company id, and lists the core module when `admin` is true. `admin` is true for a user who holds `core.plant:create` or `core.setup:manage` at a company.
+- `GET /api/v1/web/modules` without `plant` answers a user session with `plant: null`, `companies`, `admin` and the permissions the user holds at each company node, keyed by company id, and lists the core module when `admin` is true. `admin` is true for a user who holds `core.plant:create` or `core.onboarding:manage` at a company.
 - Requests from `/admin` carry no `x-northmes-plant`. The gateway serves such an operation only when every root field in it is one of core's plant-free admin fields (`coreAdminCompanies`, `coreUpdateCompany`, `coreAdminPlants`, `coreCreatePlant`, names proposed), each checked with `can()` at its company node; any other field without a plant fails with FORBIDDEN `core.plant_forbidden`.
-- `/admin/core` lists the companies where the user holds an admin permission and renames one with `core.updateCompany`. `/admin/core/plants` lists the plants of those companies and creates one with `core.createPlant` (name, slug, IANA zone, production day start) at a company where the user holds `core.plant:create`. The command writes the plant's `core.setup` row. A slug that another plant of the installation uses returns `fieldErrors` on `slug` with `core.plant_slug_taken`, and the message names no company.
+- `/admin/core` lists the companies where the user holds an admin permission and renames one with `core.updateCompany`. `/admin/core/plants` lists the plants of those companies and creates one with `core.createPlant` (name, slug, IANA zone, production day start) at a company where the user holds `core.plant:create`. The command writes the plant's `core.onboarding` row. A slug that another plant of the installation uses returns `fieldErrors` on `slug` with `core.plant_slug_taken`, and the message names no company.
 - `/` sends a user with one plant and `admin` false to that plant, and a user with no plant and `admin` true to `/admin`; every other user sees their plants grouped by company there, with a link to `/admin` when `admin` is true. No default plant is ever picked.
 
 Tests first:
@@ -2722,21 +2722,21 @@ Tests first:
 - `apps/web/test/landing.test.tsx`: "one plant and admin false redirects / to /hel"; "no plant and admin true redirects / to /admin".
 - `packages/contracts/test/define-module-links.test.ts`: "an admin section builder builds /admin/core/plants without a plant".
 
-Notes: the plant form reuses the zone picker and the production day start rule of E06-S05. The setup wizard, the plant gate and the routing of a company in setup at `/` arrive with E06-S14; until then a new plant is usable at once. M-59 confirms the `/admin` path.
+Notes: the plant form reuses the zone picker and the production day start rule of E06-S05. The onboarding wizard, the plant gate and the routing of a company in onboarding at `/` arrive with E06-S14; until then a new plant is usable at once. Krister confirmed the `/admin` path on 2026-10-06 (M-59).
 
 ### E06 core: Hold master data, units, settings and plant calendars
 
 Issue: northMES/northmes#62.
 
-Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, plant calendars that yield availability windows, and the setup wizard that keeps each new plant closed until it has what planners need. A new register then costs one definition and a handful of files.
+Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, plant calendars that yield availability windows, and the onboarding wizard that keeps each new plant closed until it has what planners need. A new register then costs one definition and a handful of files.
 
 Who it is for: Plant admin. Also: Planner, Plugin developer.
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Out of scope: CSV and Excel import of registers, list export, the reporting schema, the screen and plugin generators.
 
-Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated; the setup wizard (E06-S14) shares the ledger row of ADR 0066 with E05-S14 and E05-S15, with an estimate Krister sets. Depends on: E05, E04, E03-S01. Milestone: M2, because E09 starts right after core master data.
+Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated; the onboarding wizard (E06-S14) and its formats step (E06-S13) share the ledger row of ADR 0066 with E05-S14, E05-S15 and the other module steps, and their part of the planning session's estimate of 2026-10-06 is 5.5 to 9, which velocity checkpoint 1 (M2) checks (see the notes of E05-S14). Depends on: E05, E04, E03-S01. Milestone: M2, because E09 starts right after core master data.
 
 #### E06-S01 contracts: Convert units through the NorthMES unit catalog
 
@@ -2929,7 +2929,7 @@ Acceptance criteria:
 - `SettingsForm` renders the definition and saves through a command. It reads labels through schema metadata, so a schema built with a remote's own Zod copy renders.
 - The SDK settings reader returns each field's effective value with its source (`default`, `company`, `plant`). At plant scope, `SettingsForm` shows the inherited company or default value for each field without a plant value, and offers to clear a plant value.
 - Statement triggers bump `core.config_revision` on changes to settings, roles, assignments, retention and installed modules, and every audit command row carries the revision.
-- Behaviour switches that look like infrastructure, such as a connector's shadow or live mode, are settings commands. Installation-wide switches such as `/mcp` are not company settings: `northmes installation set` changes them on the host (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Behaviour switches that look like infrastructure, such as a connector's shadow or live mode, are settings commands. Installation-wide switches such as `/mcp` are not company settings: `northmes installation set` changes them on the host (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -3033,7 +3033,7 @@ Issue: northMES/northmes#75.
 
 As a plant admin, I want to set how dates, clock times and numbers are shown and typed for the company, with a plant override, so that every screen writes them the way people at the plant read them.
 
-Module: core, web (`modules/core`, `modules/core/contracts`, `apps/server`, `apps/web`, `packages/web-sdk`). Blocked by: E06-S08, E04-S07, E04-S04, E07-S01, E06-S14. Design: settings page (canonical list and form page); the setup wizard design for the formats steps.
+Module: core, web (`modules/core`, `modules/core/contracts`, `apps/server`, `apps/web`, `packages/web-sdk`). Blocked by: E06-S08, E04-S07, E04-S04, E07-S01, E06-S14. Design: settings page (canonical list and form page); the onboarding wizard design for the formats steps.
 
 ADRs: [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
 
@@ -3044,7 +3044,7 @@ Acceptance criteria:
 - `GET /api/v1/web/modules?plant=<slug>` returns `plant { id, slug, name, timeZone, presentation }` with the resolved values. `ShellProvider` fills `PresentationProvider` from it, so boot needs no extra query, and `usePlantTime()` returns bound formatters.
 - The plant switch swaps the presentation context together with the permission set. A settings change shows on the next load, plant switch or reconnect.
 - GraphQL, REST, MCP tools, events, the audit export and the rollback CSV never use the settings: instants stay ISO 8601 with offset, and numbers keep a point decimal without grouping.
-- Core adds the optional formats steps to the setup wizard: the company step at `/admin/core/setup/$companyId` with a live sample of a date, a clock time and a number in the values being edited, and the plant step that inherits or overrides each field ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Core adds the optional formats steps to the onboarding wizard: the company step at `/admin/core/onboarding/$companyId` with a live sample of a date, a clock time and a number in the values being edited, and the plant step that inherits or overrides each field ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -3056,39 +3056,39 @@ Tests first:
 
 Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one.
 
-#### E06-S14 core: Guide a new company and each new plant through setup
+#### E06-S14 core: Guide a new company and each new plant through onboarding
 
-As a plant admin, I want a setup wizard on my first sign-in to a new company and for each new plant, which keeps the plant closed until its calendar and a plannable machine exist, so that nobody plans on a guessed time zone, production day start or shift times.
+As a plant admin, I want an onboarding wizard on my first sign-in to a new company and for each new plant, which keeps the plant closed until its calendar and a plannable machine exist, so that nobody plans on a guessed time zone, production day start or shift times.
 
-Module: core, web (`modules/core`, `modules/core/contracts`, `modules/core/web`, `apps/server`, `apps/web`, `packages/sdk`, `packages/web-sdk`). Blocked by: E05-S15, E06-S05, E06-S11. Design: setup wizard (a design task under this story, with a variations round, because the wizard is a new kind of screen).
+Module: core, web (`modules/core`, `modules/core/contracts`, `modules/core/web`, `apps/server`, `apps/web`, `packages/sdk`, `packages/web-sdk`). Blocked by: E05-S15, E06-S05, E06-S11. Design: onboarding wizard (a design task under this story, with a variations round, because the wizard is a new kind of screen).
 
-ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
-- A module declares its wizard steps in the manifest's `setup` key, `[{ key, level, order, required, permission, link }]` (name proposed), and registers `isComplete(scopeId)` through its API module; the catalog check refuses the key in a plugin's manifest.
-- `core.setup_step` records confirmed and skipped steps with who, when and an optional reason. `core.recordSetupStep` and `core.completeSetup` need `core.setup:manage` at the node. `core.completeSetup` re-runs every required check in its transaction, fails with `core.setup_incomplete` whose `details.steps` lists the open required steps, opens the plant, completes the company's row for its first plant, and emits `core.setup.completed`. The setup tables bump `core.config_revision`.
-- The plant check in `PrincipalResolver` admits only holders of `core.setup:manage` at a plant that is not open; any other principal with a role there gets FORBIDDEN `core.plant_not_ready` and no security event, and every station request at that plant other than the module list fails the same way. Completing the setup drops the cached state, and an open plant never closes.
-- `/api/v1/web/modules` adds `setupState` to companies, plants and `plant`. A plant in setup is listed only for holders of `core.setup:manage`, and the switcher marks it "Setup"; for anyone else with a role there, the endpoint returns the `plant` object and no modules, and the shell shows "Plant <name> is being set up". Holders of `core.setup:manage` see a banner that links to the wizard.
-- The company wizard at `/admin/core/setup/$companyId` holds the company step (rename) and the first plant step (`core.createPlant`), then moves to the plant wizard at `/$plant/core/setup`. Core's plant steps: plant (required: confirmed by the admin; the zone and the production day start can change until the first calendar version exists), calendar (required: a version with at least one shift; the week preview and plant holidays come from E06-S10 and E06-S11), machines (required: one plannable machine), people (users and company and plant roles) and review and open. Company steps of other modules appear in the first plant's wizard; later plants show them as done with an edit link.
+- A module declares its wizard steps in the manifest's `onboarding` key, `[{ key, level, order, required, permission, link }]` (name proposed), and registers `isComplete(scopeId)` through its API module; the catalog check refuses the key in a plugin's manifest.
+- `core.onboarding_step` records confirmed and skipped steps with who, when and an optional reason. `core.recordOnboardingStep` and `core.completeOnboarding` need `core.onboarding:manage` at the node. `core.completeOnboarding` re-runs every required check in its transaction, fails with `core.onboarding_incomplete` whose `details.steps` lists the open required steps, opens the plant, completes the company's row for its first plant, and emits `core.onboarding.completed`. The onboarding tables bump `core.config_revision`.
+- The plant check in `PrincipalResolver` admits only holders of `core.onboarding:manage` at a plant that is not open; any other principal with a role there gets FORBIDDEN `core.plant_not_ready` and no security event, and every station request at that plant other than the module list fails the same way. Completing onboarding drops the cached state, and an open plant never closes.
+- `/api/v1/web/modules` adds `onboardingState` to companies, plants and `plant`. A plant in onboarding is listed only for holders of `core.onboarding:manage`, and the switcher marks it "Onboarding"; for anyone else with a role there, the endpoint returns the `plant` object and no modules, and the shell shows the page "Plant <name> is not open yet" ("Its onboarding is not complete. You can open it once an admin completes onboarding."). Holders of `core.onboarding:manage` see the banner "Plant <name> is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it." with the link "Continue onboarding" to the wizard.
+- The company wizard at `/admin/core/onboarding/$companyId` holds the company step (rename) and the first plant step (`core.createPlant`), then moves to the plant wizard at `/$plant/core/onboarding`. Core's plant steps: plant (required: confirmed by the admin; the zone and the production day start can change until the first calendar version exists), calendar (required: a version with at least one shift; the week preview and plant holidays come from E06-S10 and E06-S11), machines (required: one plannable machine), people (users and company and plant roles) and review and open. Company steps of other modules appear in the first plant's wizard; later plants show them as done with an edit link.
 - The wizard reads one query that returns each step as todo, done, skipped or blocked and opens the first todo; another browser or admin resumes at the same step, and `version` refuses a stale write.
-- `/` sends a holder of `core.setup:manage` at a company in setup to its company wizard, or to `/admin` when there are several; a user whose plants are all in setup reads that the company is being set up.
+- `/` sends a holder of `core.onboarding:manage` at a company in onboarding to its company wizard, or to `/admin` when there are several; a user whose plants are all in onboarding sees the page "Your company is not open yet" ("Its onboarding is not complete. You can open its plants once an admin completes onboarding.").
 - The wizard meets WCAG 2.2 AA ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)): each step is a `screenRoute` with its own title and `h1`, and focus moves to it on a step change; the step list is a list of links in a fixed order whose current step carries `aria-current="step"`; each step's state is text, never only a color or an icon; each step saves through `useCommandForm`, so server `fieldErrors` keep the typed values; values entered earlier in the flow are shown again instead of asked for again (3.3.7); the review step lists every step's state and the plant's zone and production day start before "Open plant" (3.3.4).
-- The plant fixtures in `@northmes/testing`, the end-to-end worker plants and the demo seed create plants whose setup is complete, unless a test asks for a plant in setup, so the gate breaks no earlier test.
+- The plant fixtures in `@northmes/testing`, the end-to-end worker plants and the demo seed create plants whose onboarding is complete, unless a test asks for a plant in onboarding, so the gate breaks no earlier test.
 
 Tests first:
 
-- `modules/core/test/setup.int.test.ts`: "completeSetup without a shift fails with core.setup_incomplete naming the calendar step"; "completeSetup without a plannable machine fails naming the machines step"; "a skipped step records who skipped it and the reason"; "opening the first plant completes the company setup"; "two admins recording one step with the same version give core.version_conflict".
-- `apps/server/test/gateway/plant-gate.int.test.ts`: "a planner at a plant in setup gets FORBIDDEN core.plant_not_ready and no security event"; "a holder of core.setup:manage reads the plant in setup"; "after completeSetup the planner reads the plant on the next request"; "a station request at a plant in setup fails with core.plant_not_ready".
+- `modules/core/test/onboarding.int.test.ts`: "completeOnboarding without a shift fails with core.onboarding_incomplete naming the calendar step"; "completeOnboarding without a plannable machine fails naming the machines step"; "a skipped step records who skipped it and the reason"; "opening the first plant completes the company's onboarding"; "two admins recording one step with the same version give core.version_conflict".
+- `apps/server/test/gateway/plant-gate.int.test.ts`: "a planner at a plant in onboarding gets FORBIDDEN core.plant_not_ready and no security event"; "a holder of core.onboarding:manage reads the plant in onboarding"; "after completeOnboarding the planner reads the plant on the next request"; "a station request at a plant in onboarding fails with core.plant_not_ready".
 - `modules/core/test/plants.int.test.ts`: "the zone of a plant with a calendar version cannot change".
-- `apps/web/test/setup-wizard.test.tsx`: "the step list marks the current step with aria-current step and writes each state as text"; "moving to the next step focuses its h1"; "a server fieldError on the slug keeps the typed values"; "the review step lists the zone and the production day start before Open plant".
-- `e2e/a11y/setup-wizard.spec.ts`: "every core step of the company and plant wizards passes axe".
-- `packages/testing/test/plant-fixture.int.test.ts`: "a plant from the fixture is open unless the test asks for one in setup".
-- `apps/server/test/catalog.test.ts`: "a plugin manifest with a setup key exits 1 naming the plugin".
-- `apps/server/test/rest/web-modules.int.test.ts`: "a plant in setup is listed for a setup holder with setupState inProgress and left out for a planner"; "a planner asking for a plant in setup gets 200 with setupState inProgress and no modules".
-- `apps/web/test/landing.test.tsx`: "a company admin of a company in setup goes from / to its company wizard"; "a company admin of two companies in setup goes from / to /admin"; "a planner whose plants are all in setup reads that the company is being set up".
-- `apps/web/test/plant-switcher.test.tsx`: "a plant in setup carries Setup in its link text".
-- `e2e/company-setup.spec.ts`: "after company create, the first admin signs in, changes the password, lands in the company wizard, creates plant hel, adds a calendar and one machine, opens the plant, and a planner then opens /hel".
+- `apps/web/test/onboarding-wizard.test.tsx`: "the step list marks the current step with aria-current step and writes each state as text"; "moving to the next step focuses its h1"; "a server fieldError on the slug keeps the typed values"; "the review step lists the zone and the production day start before Open plant".
+- `e2e/a11y/onboarding-wizard.spec.ts`: "every core step of the company and plant wizards passes axe".
+- `packages/testing/test/plant-fixture.int.test.ts`: "a plant from the fixture is open unless the test asks for one in onboarding".
+- `apps/server/test/catalog.test.ts`: "a plugin manifest with an onboarding key exits 1 naming the plugin".
+- `apps/server/test/rest/web-modules.int.test.ts`: "a plant in onboarding is listed for a holder of core.onboarding:manage with onboardingState inProgress and left out for a planner"; "a planner asking for a plant in onboarding gets 200 with onboardingState inProgress and no modules".
+- `apps/web/test/landing.test.tsx`: "a company admin of a company in onboarding goes from / to its company wizard"; "a company admin of two companies in onboarding goes from / to /admin"; "a planner whose plants are all in onboarding sees Your company is not open yet".
+- `apps/web/test/plant-switcher.test.tsx`: "a plant in onboarding carries Onboarding in its link text".
+- `e2e/company-onboarding.spec.ts`: "after company create, the first admin signs in, changes the password, lands in the company wizard, creates plant hel, adds a calendar and one machine, opens the plant, and a planner then opens /hel".
 
 Notes: the plant gate changes the plant check in `PrincipalResolver`, so the tasks that build it touch authorization, carry `human` and run on the guided graph, as the E05 tasks do. Module steps arrive as acceptance criteria of E06-S13 (formats), E07-S08 (planning rules), E09-S06 (ERP connection), E13-S03 (AI assistant) and E11-S01 (stations). The scrap reason register joins the stations step once M-33 names its owner, and operators and badges join the people step once a story builds badge enrolment.
 
@@ -3277,21 +3277,21 @@ Issue: northMES/northmes#84.
 
 As a plant admin, I want the planning rules the product owner has not settled to be plant settings with recorded defaults, so that the pilot can change them without a release.
 
-Module: planning. Blocked by: E06-S08, E06-S14. Design: settings page; the setup wizard design for the planning rules step.
+Module: planning. Blocked by: E06-S08, E06-S14. Design: settings page; the onboarding wizard design for the planning rules step.
 
-ADRs: [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - Planning settings hold the frozen hours, the deadline rule (start of day or end of shift), the lead time basis (calendar or working time), the duration divisor, whether retool may overlap lead time, and whether a tool may override cycle time.
 - Each default equals the one its ADR records.
 - `plan()` reads the settings from the snapshot, never from the environment.
-- Planning declares the planning rules step of the setup wizard: company values in the first plant's wizard, a plant override later, each default shown with the ADR that records it. The step is required while a planning setting has no recorded default ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Planning declares the planning rules step of the onboarding wizard: company values in the first plant's wizard, a plant override later, each default shown with the ADR that records it. The step is required while a planning setting has no recorded default ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
 - `modules/planning/test/settings.test.ts`: "the defaults equal the ADR defaults"; "changing the deadline rule changes TC10's latest start".
-- `modules/planning/test/setup-step.int.test.ts`: "a plant cannot open while frozenHours has no value".
+- `modules/planning/test/onboarding-step.int.test.ts`: "a plant cannot open while frozenHours has no value".
 
 #### E07-S09 planning: Serve the board range and the late-order facts
 
@@ -3713,7 +3713,7 @@ As a plant admin, I want to see each run, the rows that failed and why, and the 
 
 Module: pyramid-connector. Blocked by: E09-S05, E06-S03, E06-S14. Design: import log, inbox and integration card (a design task under this story).
 
-ADRs: [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
@@ -3721,7 +3721,7 @@ Acceptance criteria:
 - Inbox items are keyed by external reference and error code with first seen, last seen and a count; an order whose last import failed shows `sourceStale`.
 - An unknown equipment code creates equipment with the configured plannable default and an inbox review item.
 - The integration card shows last success, last error and the mapping settings; the board header shows "Pyramid data as of <time>".
-- The connector declares the ERP connection step of the setup wizard (company level, not required to open a plant): polling, file mode or not used; the endpoint and credentials; `cycleTimeBasis`, `fieldTimeUnits` and `operatorReportingSystem`; the warehouse rules and the default plant; write-back stays in shadow mode. The step offers a first import, and the machines it creates count for the machines step ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- The connector declares the ERP connection step of the onboarding wizard (company level, not required to open a plant): polling, file mode or not used; the endpoint and credentials; `cycleTimeBasis`, `fieldTimeUnits` and `operatorReportingSystem`; the warehouse rules and the default plant; write-back stays in shadow mode. The step offers a first import, and the machines it creates count for the machines step ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -3920,7 +3920,7 @@ As a plant admin, I want to register a station PC with a pairing code I approve 
 
 Module: core, production-start. Blocked by: E05-S07, E06-S14. Design: D4 operator station (a design task under this story).
 
-ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
@@ -3929,7 +3929,7 @@ Acceptance criteria:
 - `core.credential.revoked` closes that credential's sockets with 4403.
 - Presence is written at most every 30 to 60 s without an audit row; System health lists stations not seen for 7 days.
 - A security event is written when a station key is used from a new source IP.
-- Production-start declares the stations step of the setup wizard (plant level, optional, shown only when `operatorReportingSystem` is `northmes`): station records, with pairing later at each station PC. An admin can create and pair a station while the plant is in setup ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- Production-start declares the stations step of the onboarding wizard (plant level, optional, shown only when `operatorReportingSystem` is `northmes`): station records, with pairing later at each station PC. An admin can create and pair a station while the plant is in onboarding ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -3952,11 +3952,11 @@ Acceptance criteria:
 - One open operator session per station; a new sign-in ends the previous one with reason `replaced`.
 - Badge input is read only in the focused badge field and on the Switch operator screen; no global key listener. A PIN, when enabled, is one field that accepts paste.
 - Five unknown badges within 60 s lock badge sign-in on that station for 5 minutes and write a security event.
-- At a plant whose setup is not complete, sign-in fails with `core.plant_not_ready` ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- At a plant whose onboarding is not complete, sign-in fails with `core.plant_not_ready` ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
-- `modules/core/test/station-sign-in.int.test.ts`: "a second sign-in ends the first session with reason replaced"; "five unknown badges lock sign-in for 5 minutes"; "sign-in at a station of a plant in setup fails with core.plant_not_ready".
+- `modules/core/test/station-sign-in.int.test.ts`: "a second sign-in ends the first session with reason replaced"; "five unknown badges lock sign-in for 5 minutes"; "sign-in at a station of a plant in onboarding fails with core.plant_not_ready".
 - `e2e/station-sign-in.spec.ts`: "a badge scan into the badge field signs the operator in".
 
 #### E11-S03 production-start: Start, pause and finish a job at the station
@@ -4160,12 +4160,12 @@ As a planner, I want to connect my own MCP client to NorthMES with a personal ac
 
 Module: planning, core, platform. Blocked by: E12-S03, E05-S07, E05-S14. Design: personal access token page (canonical list and form page).
 
-ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - `/mcp` runs inside the Nest app in the `api` role on `@modelcontextprotocol/server` v2 with `legacy: "stateless"` and validates `Origin` and `Host`.
-- `/mcp` is off per installation by default; `northmes installation set mcp.enabled true --reason <text>` on the host turns it on with a command row and a security event; `POST /mcp` returns 404 while it is off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- `/mcp` is off per installation by default; `northmes installation set mcp.enabled true --reason <text>` on the host turns it on with a command row and a security event; `POST /mcp` returns 404 while it is off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - Sign-in is a personal access token (api-key `configId` `mcp`, prefix `nms_mcp_`, expiry at most 90 days); each call's rights are the token's scopes intersected with a live `can()`; `/graphql` rejects these tokens.
 - `tools/list` is filtered by the union of the user's plant permissions with `cacheScope: "private"`, a short `ttlMs` and `listChanged: false`; every call re-checks permission at the named plant.
 - Calls work in both protocol eras.
@@ -4173,7 +4173,7 @@ Acceptance criteria:
 Tests first:
 
 - `apps/server/test/mcp.disabled.int.test.ts`: "POST /mcp returns 404 while the setting is off".
-- `apps/server/test/mcp/tools.int.test.ts`: "every tool declares both annotations and an outputSchema"; "a session cookie without a bearer gets 401"; "a plant A user never gets plant B rows"; "a tool call naming a plant in setup fails with core.plant_not_ready".
+- `apps/server/test/mcp/tools.int.test.ts`: "every tool declares both annotations and an outputSchema"; "a session cookie without a bearer gets 401"; "a plant A user never gets plant B rows"; "a tool call naming a plant in onboarding fails with core.plant_not_ready".
 
 Notes: cut 3. Each release gets one manual smoke test with Claude Code against `/mcp`.
 
@@ -4222,14 +4222,14 @@ As a plant admin, I want to add an OpenRouter, Azure OpenAI or OpenAI-compatible
 
 Module: ai, core. Blocked by: E13-S01, E06-S08, E05-S14. Design: Integrations page with provider cards (a design task under this story).
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0047](../adr/0047-secrets-and-the-installation-key.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0047](../adr/0047-secrets-and-the-installation-key.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - Provider configs are integration cards: a Zod config schema rendered as a form, write-only secrets, a fixed privacy checklist per kind; the table carries `scope_id`, and release 1 shows company level only.
 - OpenRouter defaults to `provider: { data_collection: 'deny', zdr: true }`; Azure accepts an API key or an Entra client secret or certificate with an allowlisted `authorityHost`; OpenAI-compatible servers declare their capabilities.
 - Secrets use AES-256-GCM with associated data over table, row, column and endpoint host; changing a base URL without a new secret fails with `core.secret_reentry_required`.
-- Private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)); 169.254.0.0/16 and the database host are always blocked.
+- Private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)); 169.254.0.0/16 and the database host are always blocked.
 - Editing a key writes one change row with a redacted diff; `ai.provider:manage` guards the cards.
 
 Tests first:
@@ -4242,9 +4242,9 @@ Issue: northMES/northmes#130.
 
 As a plant admin, I want to bind `fast` and `reasoning` to a model and see a passing connection test before I enable a feature, so that a feature never starts on a route that cannot answer.
 
-Module: ai. Blocked by: E13-S02, E06-S14. Design: Integrations page; the setup wizard design for the AI assistant step.
+Module: ai. Blocked by: E13-S02, E06-S14. Design: Integrations page; the onboarding wizard design for the AI assistant step.
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
@@ -4252,7 +4252,7 @@ Acceptance criteria:
 - Test connection runs one minimal chat call with the exact options the feature sends plus a fixed tool-call probe, sends no plant data, and stores capabilities and failure codes on `ai.provider_health`.
 - A feature declared in a manifest (`ai.features`) is off by default; a company admin enables it only after its alias's probe passed and the privacy checklist was acknowledged (audited).
 - With no provider configured, features stay off and the panel is hidden.
-- The ai module declares the AI assistant step of the setup wizard (company level, optional): a provider, alias bindings, Test connection, the privacy acknowledgement and the features; skipping leaves AI off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md)).
+- The ai module declares the AI assistant step of the onboarding wizard (company level, optional): a provider, alias bindings, Test connection, the privacy acknowledgement and the features; skipping leaves AI off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 

@@ -162,7 +162,7 @@ On 2026-10-05 the index holds 67 ADRs: 37 accepted and 30 proposed, 64 for relea
 | 0063 | [Agent skills from library authors, pinned in the repository](0063-agent-skills-from-library-authors-pinned-in-the-repository.md) | accepted | 1 | |
 | 0064 | [REST routes under /api/v1 and OpenAPI from Zod contracts](0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | 1 | |
 | 0065 | [CodeRabbit check run and a required approval on main](0065-coderabbit-check-run-and-a-required-approval-on-main.md) | proposed | 1 | |
-| 0066 | [Companies created by the CLI, plant slugs unique per installation, admin pages at /admin and a setup wizard before a plant opens](0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-a-setup-wizard-before-a-plant-opens.md) | proposed | 1 | maintainer (the /admin path; the ledger estimate; installation settings by CLI; the company admin role holding every installed permission) |
+| 0066 | [Companies created by the CLI, plant slugs unique per installation, admin pages at /admin and an onboarding wizard before a plant opens](0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | 1 | maintainer (the company admin role holding every installed permission) |
 | 0067 | [Plant switcher across companies, nav icons by lucide name and a top bar slot](0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md) | proposed | 1 | maintainer (the top bar slot id) |
 
 Next free number: 0068. Only Krister Johansson sets a status to accepted.
