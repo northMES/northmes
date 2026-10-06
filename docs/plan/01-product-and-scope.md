@@ -154,7 +154,7 @@ Each item waits for its trigger. Where no trigger is named, the item waits for a
 | Helm values and partner hosting docs | A hosting partner | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) |
 | Direct permission grants to a user; users get permissions only through roles in release 1 | A need appears | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) |
 | Creating companies in the UI, with installation roles and a companies page | A partner must create companies without shell access to the host | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) |
-| `northmes plant create` and a declarative setup file | A hosting partner sets up plants for several customers | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) |
+| `northmes plant create` and a declarative onboarding file | A hosting partner sets up plants for several customers | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) |
 | Public demo installation | Outreach | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) |
 | Public npm SDK, `create-northmes-plugin`, the builder image | After the pilot | [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) |
 | App repository, `northmes upgrade`, codemods, override tracking | After 1.0 | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) |

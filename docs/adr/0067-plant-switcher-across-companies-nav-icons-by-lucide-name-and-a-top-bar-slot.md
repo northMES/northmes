@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-05
+date: 2026-10-06
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson
 informed: contributors, coding agents, module and plugin authors

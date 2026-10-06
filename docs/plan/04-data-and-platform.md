@@ -954,7 +954,7 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Are operation tools company-level or plant-level? | product owner | Not set; the span check covers both |
 | Customer order line scope and supply between plants | product owner | Lines at the delivering plant or company; no cross-plant supply |
 | Who may edit and assign roles at which scope? | product owner | `core.role:manage` at company scope |
-| How does a company get a company admin back when its last one is removed? (M-58) | maintainer | Answered: `northmes company add-admin` on the host |
+| How does a company get a company admin back when its last one is removed? (M-58) | maintainer | Answered: the CLI on the host; ADR 0066 names the command `northmes company add-admin` |
 | Who sets installation-wide settings now that no role sits above a company? (M-60) | maintainer | Answered: `northmes installation set` on the host |
 | Does core's company admin role hold every installed permission? (M-61) | maintainer | Yes |
 | Pieces per hour: pieces or cycles? | product owner | Not set |
