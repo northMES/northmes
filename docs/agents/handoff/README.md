@@ -10,7 +10,7 @@ The maintainer builds planned NorthMES tasks with handoff: each run takes one ta
 | `northmes-standard` | the plan | automatic | optional middle rung |
 | `northmes-lean` | nothing by default | automatic | routine tasks once the switch criteria below hold |
 
-In every graph a person also steps in when an agent asks a question, when a step fails or a loop runs out of rounds, and when a step asks permission for a tool call. The operating session brings each of these to Krister, and only Krister answers questions and permission requests.
+In every graph a person also steps in when an agent asks a question, when the pull request step asks about review comments it cannot settle, when a step fails or a loop runs out of rounds, and when a step asks permission for a tool call. The operating session brings each of these to Krister, and only Krister answers questions and permission requests.
 
 ## The plan
 
@@ -74,10 +74,10 @@ The node instructions follow the Claude Opus 5 prompting guide:
 | Answer the coder | `human_gate`, question | Krister answers the coder's question. |
 | Test | `tester` | `pnpm check`, the one gate command ([ADR 0058](../../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)), 20 minute timeout, one retry for a flaky run. A failure goes back to the coder with the output tail, up to 3 times. |
 | Code review | `code_review`, level `high` | Claude Code's code-review skill with the NorthMES blocking rules (acceptance criteria and scope, tests, RLS with split policies and no `FORCE ROW LEVEL SECURITY`, audit, command pipeline, module boundaries, GraphQL nullability and prefixes, shared singletons, accessibility, tokens, ADRs). Reports every finding with its severity; blocking findings go back up to 3 times. |
-| Approve the code | `human_gate`, approval | Krister reads the diff with the review's findings. "Approve after fixes" sends the chosen findings back and lets the fixed work through without asking again. Every fix round from the pull request step comes back through this gate (and Try it for a UI change); an approval holds without a new question only while the run's own change is the same (a merge from `main` alone keeps it). |
+| Approve the code | `human_gate`, approval | Krister reads the diff with the review's findings. "Approve after fixes" sends the chosen findings back and lets the fixed work through without asking again. Every fix round from the pull request step comes back through this gate (and Try it for a UI change), except a round in which the coder only answered review comments (see "Review comments"); an approval holds without a new question only while the run's own change is the same (a merge from `main` alone keeps it). |
 | Demo | `demo`, only for UI changes | Starts the app from `.claude/launch.json` (`handoff-demo`) and takes a screenshot per acceptance criterion. A browser console error fails it. A change outside the UI paths skips it and goes straight to the pull request. |
 | Try it | `human_gate`, try | Krister marks each criterion as working or not in the running app, with a keyboard pass and both themes. |
-| Pull request | `pr` | Pushes, opens the pull request with `Closes #N`, waits for CI and for a review from `coderabbitai[bot]` on the head commit (up to 30 minutes), then sends failed job logs, unresolved threads and non-approval review summaries back to the coder, up to 3 times. |
+| Pull request | `pr` | Pushes, opens the pull request with `Closes #N`, waits for CI and for a review from `coderabbitai[bot]` on the head commit (up to 30 minutes), then sends failed job logs, unresolved threads, non-approval review summaries and the findings in CodeRabbit's summary comment back to the coder, up to 3 times. Posts the coder's answer to each review comment on GitHub and resolves the thread after CodeRabbit's next review (see "Review comments"). |
 | Merge | `merge`, manual, squash | Waits in handoff's merge queue until Krister requests the merge (dashboard or `request_merge`). A branch that is behind or conflicts with `main` goes back to the pull request step, up to 3 times. Closes the task and sets Done. |
 
 ### northmes-standard
@@ -101,18 +101,41 @@ A person is involved in a lean run only when:
 
 - the planner or the coder asks a question (question gates);
 - the coder touched files outside the plan without declaring them (paths question);
+- the pull request step asks about disputed review comments (see "Review comments");
 - a step asks permission for a tool call outside its allowed tools;
 - a step fails, or a loop runs out after its automatic rounds; the operating session brings the run to Krister, who repairs, resolves or cancels it;
 - the task carries `human`, so the operating session runs it on the guided graph or leaves it to a person.
 
 ### What handoff cannot express, and the shape used instead
 
-- Merge only after CodeRabbit approves. The pull request step waits for a review from `coderabbitai[bot]` on the head commit for `reviewTimeoutMinutes` (30) and then continues without it. Its `ready` port needs CI success and no requested changes. `requireApproval` stays off: it would wait for an approval with no time limit, and the `main` ruleset already refuses a merge without one ([ADR 0065](../../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)). The weekly log counts `github.reviewers_timeout` events so a merge without a CodeRabbit review is visible. The other direction is stricter: handoff takes the review decision from GitHub, and while GitHub reports CodeRabbit's request for changes (`request_changes_workflow`) as the decision, the `ready` port stays closed until CodeRabbit approves a later commit or someone posts `@coderabbitai approve`. Each round in between goes back to the coder and uses one of the `fix` loop's 3 rounds; when they run out, the run stops.
+- Merge only after CodeRabbit approves. The pull request step waits for a review from `coderabbitai[bot]` on the head commit for `reviewTimeoutMinutes` (30) and then continues without it. Its `ready` port needs CI success and no requested changes. `requireApproval` stays off: it would wait for an approval with no time limit, and the `main` ruleset already refuses a merge without one ([ADR 0065](../../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)). The weekly log counts `github.reviewers_timeout` events so a merge without a CodeRabbit review is visible. The other direction is stricter: handoff takes the review decision from GitHub, and while GitHub reports CodeRabbit's request for changes (`request_changes_workflow`) as the decision, the `ready` port stays closed while an item CodeRabbit raised has no answer. Each round in between goes back to the coder and uses one of the `fix` loop's 3 rounds; when they run out, the run stops. Once handoff has answered everything CodeRabbit raised, the standing request no longer sends the run back to the coder (`github.changes_requested_answered`), and the merge still needs CodeRabbit's approval of the head commit or `@coderabbitai approve`.
 - "A person only after a run fails twice." handoff has no run-level retry counter. Rate limits and timeouts retry by themselves, and a coder that ran out of turns with work committed continues once; other failed steps stop the run at once. The closest shape is a limit on each loop: the lean graph gives the coder 2 automatic rounds per check (3 for the pull request, which mixes CI and CodeRabbit), and the next failure stops the run.
 - Retrying the coder after a failed contract check. The graph editor never connects a node to itself, so the lean graph moves the tests-changed check into its own tester node, whose `fail` port is a normal bounded loop.
 - Two edges from the demo to the pull request (one for `done`, one for `skipped`). A graph holds at most one edge between two nodes; `compileGraph` throws on a second. The lean and standard graphs use one edge without a port and with the condition `{"always": true}`. The editor keeps such an edge as a custom route.
 - Reading the `human` label inside a graph. Conditions cannot test whether a list contains a value, so the operating session reads the label before it starts a run and passes the guided graph.
 - Library skills and MCP servers. The planner and coder nodes name the skills `tdd` and `codebase-design` and the MCP server `context7` under `library`; the coder also names `vitest`, `pnpm`, `turborepo`, `apollo-client` and `playwright-cli`; the plan reviewer names `context7`; the code review node names `wrdn-authz` and `secret-serialization`. Runs pass `--strict-mcp-config`, so a node gets no other MCP server. A node that names something the library does not have fails, so a new skill is imported first (Settings, Library, or `pnpm handoff library import-repo northMES/northmes --group northmes` from the handoff checkout) and the graphs are imported again afterwards, with `northmes-guided` last so it stays the default.
+
+## Review comments
+
+The pull request step in all three graphs answers review comments on GitHub and resolves their threads, with handoff's review comment loop (see "Review comments" in handoff's README). The PR node sets:
+
+```json
+"reviewThreads": { "reply": true, "summary": "coderabbitai" }
+```
+
+The other settings keep handoff's defaults: `resolveAfterReview` on, `maxPerRound` 20, `returnOnAnswerOnly` on and `personWaitHours` 24. `reply` works only on a node that sends review comments back, which `sendReviewComments: true` does.
+
+1. Each unresolved review thread, each review summary that is not an approval, and each walkthrough note and failed or warning pre-merge check in CodeRabbit's summary comment is a review item. It has a handle (`R1`, `R2`) that stays the same for the run. The step sends the open items to the coder, at most 20 per round.
+2. The coder answers every item by its handle: `fixed` with the commit, `declined` or `unclear` with the evidence, `duplicate` of another item, or `settled` when the reviewer's reply accepts an earlier answer. handoff's packet tells it to check each comment like a test before it acts, and the node instructions add the check against the issue and the linked ADRs. The coder does not post on GitHub.
+3. After the push, the step replies in each item's thread. The reply starts with `Valid. Fixed in <commit>.`, `Not changed: the comment does not hold.`, `Unclear:` and the coder's question, or `Same point as <item>.`, and goes on with the coder's evidence. Items without a thread share one pull request comment per round. Each comment ends with a hidden `<!-- handoff:` marker, so an answer never comes back to the coder as a review comment and a restarted worker does not post it twice. handoff posts with the token it runs with, so the replies show under Krister's account.
+4. A round in which the coder only declined, asked, pointed to a duplicate or settled, with no new commit, goes straight back to the pull request step. The Tester, the code review, the gates and the demo do not run, and the step posts no `@coderabbitai review`, because the head commit has not changed.
+5. The step resolves a thread after the reviewer's next review, unless that review opens a new thread on the same lines. It never resolves a thread in the step that answered it. While it waits, the run reports `waiting_on: re_review`, for up to 30 minutes after the answer for CodeRabbit (`reviewTimeoutMinutes`) and up to 24 hours for a person (`personWaitHours`). CodeRabbit also resolves its own threads after a fix, and handoff records those items as resolved.
+6. CodeRabbit's automatic chat replies are off (`chat.auto_reply: false` in `.coderabbit.yaml`), so CodeRabbit does not answer the replies in its threads. A declined item is resolved when CodeRabbit submits a review after the answer, as it does for a new commit, for example a fix to another item in the same round. When no review comes within 30 minutes of the answer, the item is disputed.
+7. An item is also disputed when the coder declines it again, or still finds it unclear, after the reviewer's reply, and when CodeRabbit's summary still lists a note or pre-merge check that the coder fixed twice. Once nothing else waits on a review, the step asks one question about its disputed items, and the operating session brings it to Krister like any other question. For each item he chooses Resolve (handoff posts `Resolved by <person> in handoff.` with his note and resolves the thread), Send back (the item goes to the coder with his note, which binds later steps) or Leave (he handles the thread on GitHub, and handoff does not touch it again).
+8. Once handoff has answered everything CodeRabbit raised, CodeRabbit's standing request for changes no longer sends the run back to the coder (`github.changes_requested_answered`). GitHub still needs CodeRabbit's approval of the head commit, or `@coderabbitai approve`, before the merge ([ADR 0065](../../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)).
+9. When the token may not resolve a thread, or GitHub refuses, the thread stays open (`github.thread_resolve_failed`), and the merge step lists it for Krister to resolve on GitHub.
+
+CodeRabbit Autopilot stays off. CodeRabbit's summary comment offers it (autofix, CI fix and merge conflict resolution), and it commits to the pull request's branch. `.coderabbit.yaml` turns these finishing touches off; leave the Autopilot box in the summary comment unticked. handoff pushes a run's branch with `--force-with-lease --force-if-includes`, so a commit that someone else pushed to it fails the pull request step with `foreign_commits` instead of being overwritten.
 
 ## Before the first run
 
@@ -143,6 +166,8 @@ pnpm handoff graph import --project northmes --name northmes-lean <northmes-chec
 ```
 
 The import runs handoff's `compileGraph` and refuses a graph that does not compile. Importing the same name again stores a new version; a run keeps the version it started with, and so does its repair. These files are the source: change a graph here and import it again. A change made only in the dashboard's editor has no copy in the repository.
+
+A change to a graph file reaches runs only after it is on `main` and imported as a new version with the commands above. Runs that started earlier keep their version, so the review comment loop applies to runs started after that import. A failed run moves to the new version only when it is repaired on the latest graph version (`pnpm handoff run repair --latest-graph`, or `latest_graph: true` in `repair_run`).
 
 ## Switching graphs
 
