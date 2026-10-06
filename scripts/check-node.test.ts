@@ -59,6 +59,17 @@ describe('check-node', () => {
     }
   });
 
+  it('a .node-version with text after the version fails naming the file and its content', () => {
+    for (const pinned of ['26invalid', '26.x', '26 # lts']) {
+      const result = compare('v26.0.0', pinned);
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain('.node-version');
+      expect(result.message).toContain(JSON.stringify(pinned));
+      expect(result.message).not.toContain('Switch to Node');
+    }
+  });
+
   it('the entry point reads a .node-version fixture', () => {
     const mismatch = run(fixture('other.node-version', `${runningMajor + 1}\n`));
     const match = run(fixture('same.node-version', `${runningMajor}\n`));
