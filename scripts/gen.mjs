@@ -38,7 +38,8 @@ function isEntryPoint() {
 }
 
 async function main() {
-  process.exitCode = await run(stages, {}, { log: console.log, root: repositoryRoot });
+  const options = { check: process.argv.includes('--check') };
+  process.exitCode = await run(stages, options, { log: console.log, root: repositoryRoot });
 }
 
 if (isEntryPoint()) {
