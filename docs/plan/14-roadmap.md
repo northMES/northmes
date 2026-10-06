@@ -1370,7 +1370,9 @@ Notes: on a fail, one more week limits the rendered range (day zoom up to 2 week
 
 ##### E01-S04-T01 planning: Build the board spike harness and the perf spec
 
-Labels: `task`, `human`, `spike`, `area: planning`. Blocked by: E00-S02-T02.
+Labels: `task`, `human`, `spike`, `area: planning`. Blocked by: E00-S02-T02, E02-S01-T01.
+
+E02-S01-T01 lands the root configuration of the walking skeleton first, and this task rebases its `package.json` and lockfile change on it.
 
 ```markdown
 Plan: E01-S04-T01
@@ -1555,9 +1557,9 @@ Out of scope: the frontend widget plugin, `plugin check` and packaging `@northme
 
 Estimate: timeboxed to about 20 working days, part of the platform estimate of 35 to 51 raw days (internal research notes 18, 19 and 20). Depends on: E00, E01-S05. Milestone: green by 2026-11-13; required in `ci / gate` from M1 (2026-11-20). If the spec is red on 2026-11-13, hardening freezes; if still red on 2026-11-27, the remotes take the tested Rsbuild path.
 
-Each story that builds an extension point also writes its recipe (the files to write, the commands, each boot or composition error with its meaning) as a skill under `.claude/skills/` or in the module docs: `db-test`, `vertical-slice`, `graphql-subgraph`, `web-remote` and `dst-test`.
+Each story that builds an extension point also writes its recipe (the files to write, the commands, each boot or composition error with its meaning) as a project skill at `.claude/skills/<name>/SKILL.md`: `db-test`, `vertical-slice`, `graphql-subgraph`, `web-remote` and `dst-test`. A project skill gets no `skills-lock.json` entry, because that file pins the third-party skills of [ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md), and joins handoff's `northmes` library group when it lands ([13 delivery and GitHub](13-delivery-and-github.md#agent-skills-in-the-repository)).
 
-E02-S01-T01 is the foundation pull request. It lands every root configuration change the skeleton needs (`package.json`, the catalog in `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `vitest.config.ts`, `turbo.json`, `biome.json`) in one session pull request. E02 tasks run in interactive sessions, or as `human` tasks started on `northmes-guided`.
+E02-S01-T01 is the foundation pull request. It lands every root configuration change the skeleton needs (`package.json`, the catalog in `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `vitest.config.ts`, `turbo.json`, `biome.json`) in one session pull request. It lands before E01-S04-T01, which rebases its `package.json` and lockfile change on it. E02 tasks run in interactive sessions, or as `human` tasks started on `northmes-guided`. The tasks are in [the E02 shaping file](E02-walking-skeleton.md): E02-S08-T01 (the stack script) and E02-S08-T05 (`pnpm dev`) run before E02-S07, and E02-S05 (#23) closes after E02-S08-T02 and E02-S08-T03, which hold its spec `e2e/shell-degraded.spec.ts` and the browser check for zero CSP violations.
 
 #### E02-S01 platform: Load manifests and stop boot on catalog errors
 
@@ -1767,7 +1769,7 @@ ADRs: [0058](../adr/0058-developer-environment-source-exports-one-stack-script-a
 
 Acceptance criteria:
 
-- The stack script first writes `.northmes/dev.env` and the dev secret files under `.northmes/secrets/` (mode 0600) when missing, then starts Testcontainers Postgres from `infra/pg-image.json`, bootstraps the roles, runs `northmes migrate` and an idempotent seed (one company, one plant, a planner and an operator with dev-only credentials kept in the seed package).
+- The stack script first writes `.northmes/dev.env` and the dev secret files under `.northmes/secrets/` (mode 0600) when missing, then starts Testcontainers Postgres from `infra/pg-image.json`, bootstraps the roles, runs `northmes migrate` and an idempotent tracer seed: fictional articles and production orders at one company and plant scope id, with no planner and no operator. The E05-S05 task "Seed a planner and an operator with dev-only credentials" adds those two, with their dev-only credentials kept in the seed package.
 - The config loader refuses dev secrets when `NODE_ENV` is production ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 - Ports come from binding `127.0.0.1:0`; the server's default port is not 3000, and EADDRINUSE names `PORT`.
 - `.claude/launch.json` has a `handoff-demo` configuration that runs the built `all` process through the stack script.
@@ -2468,6 +2470,8 @@ Tests first:
 - `modules/core/test/auth/base-path.int.test.ts`: "GET /api/v1/auth/get-session without a cookie returns 200 with a null body"; "GET /api/auth/get-session returns 404".
 - `apps/web/test/auth-client.test.ts`: "the auth client requests its session from /api/v1/auth/get-session".
 - `e2e/sign-in.spec.ts`: "a wrong password shows the error and keeps the username".
+
+Notes: the task "Seed a planner and an operator with dev-only credentials" adds the planner and the operator to the stack script's tracer seed (E02-S08-T01), with their dev-only credentials kept in the seed package, so the seed holds the planner and the operator that step 5 of [ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) names.
 
 #### E05-S06 core: Grant roles per plant and check permissions at the row's scope
 

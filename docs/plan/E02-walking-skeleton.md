@@ -2,13 +2,17 @@
 
 This file holds the tasks of epic E02 (northMES/northmes#18), shaped as thin vertical slices by the rules in [13-delivery-and-github.md](13-delivery-and-github.md#shaping-the-plan-into-issues). The epic, its stories, their criteria and their named tests are in [14-roadmap.md](14-roadmap.md#e02-platform-boot-a-walking-skeleton-end-to-end); each story section below links its roadmap section and adds only what the tasks need. A "Covers" line names the story criteria a task delivers, numbered by their order in the roadmap. After the issues exist, each task heading gets its issue number next to its identifier (`E02-S03-T01, #42`), the issue becomes the source of truth for scope, and this file is not edited again. Every task carries `human` and runs in an interactive session or as a run on `northmes-guided` (Krister Johansson's choice of 2026-10-06), because ADRs [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0020](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md), [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) and [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) are proposed and ADRs [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) and [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) have open needs-confirmation.
 
-E02-S01-T01 is the foundation session pull request: it lands every root configuration change the skeleton needs, including the `package.json` of every E02 workspace package, the root scripts and the root devDependencies that `scripts/`, `e2e/` and `playwright.config.ts` import, so later E02 tasks and the E03 runs change no lockfile. After it, a root file changes only in the task that owns it: `scripts/gen.mjs` (E02-S03-T09), `northmes.config.json` (E02-S04-T09), `playwright.config.ts` (E02-S08-T02, which extends the file E01-S04-T01 creates), `.github/workflows/ci.yml` (E02-S08-T03 and E02-S08-T04) and `.claude/launch.json` (E02-S08-T05). Every other task comes after E02-S01-T01, and E02-S01-T01 comes after E00-S05-T03 (#202), so the `docs/sources/` paths the tasks port from exist.
+E02-S01-T01 is the foundation session pull request: it lands every root configuration change the skeleton needs, including the `package.json` of every E02 workspace package, the root scripts and the root devDependencies that `scripts/`, `e2e/` and `playwright.config.ts` import, so later E02 tasks and the E03 runs change no lockfile. After it, a root file changes only in the task that owns it: `scripts/gen.mjs` (E02-S03-T09), `northmes.config.json` (E02-S04-T09), `playwright.config.ts` (E02-S08-T02, which extends the file E01-S04-T01 creates), `.github/workflows/ci.yml` (E02-S08-T03 and E02-S08-T04) and `.claude/launch.json` (E02-S08-T05). Every other task comes after E02-S01-T01, and E02-S01-T01 comes after E00-S05-T03 (#202), so the `docs/sources/` paths the tasks port from exist. E02-S01-T01 also lands before E01-S04-T01, which rebases its `package.json` and lockfile change on it.
 
 The shell first shows module data from two subgraphs after E02-S05-T08 (the board stub lists production orders with their article names) and first saves through a command after E02-S05-T09 (its Release button runs `planningReleaseProductionOrder`). The stack script (E02-S08-T01) needs only E02-S04-T03, and `pnpm dev` (E02-S08-T05) follows E02-S05-T09, so after E02-S08-T05 a person can start the app with `pnpm dev`, open the board URL it prints, see the seeded orders and release one. That is the stop point for a hand test and a review of the setup; the [project order](#project-order) reaches it as its 32nd task. Earlier, E02-S04-T02 is the first task that serves module data from Postgres through the gateway, E02-S04-T03 the first that joins two subgraphs, and E02-S04-T07 the first that saves through a command. The roadmap's story order puts E02-S08 after E02-S07; this file starts E02-S08-T01 and E02-S08-T05 early and keeps the rest of E02-S08 last.
 
-Until E05, every task follows these tracer rules. There is no sign-in; a tracer principal holds every permission (E05-S05, E05-S06). An HTTP request names its plant by the plant's scope id in `x-northmes-plant`, and the SPA's `$plant` segment carries that id until plant slugs arrive (E05-S03). A subscription takes its plant from its `plantId` argument, and nothing goes in `connectionParams` ([ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)). One transaction step sets `northmes.read_scopes` and `northmes.write_scopes` to that one id (E05-S03, E05-S04). `given.company()` and `given.plant()` return fresh scope ids without rows, and `db.command` opens a scoped transaction without an audit context (E05-S02). The seed writes fictional articles and production orders at one company and plant scope id, with no planner and no operator (E05-S05). Every package version is 0.0.0 until the first release-please release (E01-S03-T02). Test names start with the story id ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md)).
+Until E05, every task follows these tracer rules. There is no sign-in; a tracer principal holds every permission (E05-S05, E05-S06). An HTTP request names its plant by the plant's scope id in `x-northmes-plant`, and the SPA's `$plant` segment carries that id until plant slugs arrive (E05-S03). A subscription takes its plant from its `plantId` argument, and nothing goes in `connectionParams` ([ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)). One transaction step sets `northmes.read_scopes` and `northmes.write_scopes` to that one id (E05-S03, E05-S04). `given.company()` and `given.plant()` return fresh scope ids without rows, and `db.command` opens a scoped transaction without an audit context (E05-S02). The seed writes fictional articles and production orders at one company and plant scope id, with no planner and no operator; the E05-S05 task "Seed a planner and an operator with dev-only credentials" adds them. Every package version is 0.0.0 until the first release-please release (E01-S03-T02). Test names start with the story id ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md)).
 
-The root of `@northmes/sdk` exports only what a manifest may load (`defineModule`, `moduleNames`, `HOST_PROVIDED` and types), because a manifest loads without Nest ([ADR 0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md)). Nest code goes to the subpaths `/config`, `/graphql`, `/rest`, `/data`, `/commands` and `/errors` ([03-modules-and-extensibility.md](03-modules-and-extensibility.md#shared-packages-and-the-license-boundary)), which E02-S01-T01 declares. Recipes go to `docs/recipes/<name>.md`, because [ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md) lets `.claude/skills` hold only the skills that `skills-lock.json` pins; a run agent reads a recipe when its task names the path. The roadmap's E02 recipe line, plan 13's project skills paragraph and ADR 0063's list of project skills still call them skills, and the E02-S01-T00 pull request either aligns those three texts or moves the recipes to `.claude/skills`. The `dst-test` recipe comes with E03-S01.
+The root of `@northmes/sdk` exports only what a manifest may load (`defineModule`, `moduleNames`, `HOST_PROVIDED` and types), because a manifest loads without Nest ([ADR 0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md)). Nest code goes to the subpaths `/config`, `/graphql`, `/rest`, `/data`, `/commands` and `/errors` ([03-modules-and-extensibility.md](03-modules-and-extensibility.md#shared-packages-and-the-license-boundary)), which E02-S01-T01 declares.
+
+Each recipe is a project skill at `.claude/skills/<name>/SKILL.md`. [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) allows a recipe as a skill, and the accepted ADRs [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) and [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md) call these five recipes project skills, so a `docs/recipes` folder would need the text of both ADRs changed. A project skill is NorthMES's own file: it gets no `skills-lock.json` entry and no section in `.claude/skills/THIRD_PARTY_LICENSE.md`, because ADR 0063 pins and licenses the third-party skills only. E02-S02-T07, which writes the first one, makes the skills check in `test/meta/agent-files.test.ts` (E00-S03-T01) accept the five project skills that [13-delivery-and-github.md](13-delivery-and-github.md#agent-skills-in-the-repository) names. Each project skill joins handoff's `northmes` library group when it lands. The `dst-test` skill comes with E03-S01.
+
+The operating session settled the open points of the shaping review on 2026-10-06, under Krister Johansson's delegation of that day: the recipes are project skills, as above; criterion 1 of E02-S08 in the roadmap names the tracer seed, and an E05-S05 task adds the planner and the operator; `@northmes/ui` stays out of `shared.mjs` until E04-S01; E02-S08-T01 and E02-S08-T05 run before E02-S07; the eight tasks with a `feat` changelog line keep it; E02-S01-T01 stays one session pull request; E02-S01-T01 lands before E01-S04-T01; and the names `buildPayload` and the contract's `payload` schema stand.
 
 #### E02-S01 platform: Load manifests and stop boot on catalog errors
 
@@ -16,7 +20,7 @@ Issue: northMES/northmes#19. Statement, criteria and tests: [14-roadmap.md](14-r
 
 Notes: criterion 2 is split over E02-S01-T02 and E02-S01-T05, criterion 4 over E02-S01-T04, T05 and T06, and criterion 6 over E02-S01-T07, T08 and T09. Criterion 2 of E02-S08 (the dev secret refusal) lands in E02-S01-T08, because [ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) tests the refusal itself in `@northmes/sdk/config`. The story test "image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0" keeps its name, and E02-S01-T05 adds the refusal of a range that excludes the image as a second test.
 
-##### E02-S01-T00 docs: Record the E02 plan and ADRs
+##### E02-S01-T00, #219 docs: Record the E02 plan and ADRs
 
 Labels: `task`, `human`, `area: docs` (the epic's plan docs task, worked in a session). Blocked by: none.
 
@@ -69,10 +73,10 @@ Covers: criterion 7; criterion 8; test `source-exports.test.ts`.
 Plan: E02-S01-T01
 
 ## Goal
-One session pull request lands every root configuration change the skeleton needs, so no later E02 task or E03 run changes the lockfile: every E02 workspace package.json with the dependencies the ADRs name, pinned in the catalog older than Renovate's minimumReleaseAge window, and the root scripts, whose targets later tasks add.
+One session pull request, although it touches about 22 configuration and package files, lands every root configuration change the skeleton needs, so no later E02 task or E03 run changes the lockfile: every E02 workspace package.json with the dependencies the ADRs name, pinned in the catalog older than Renovate's minimumReleaseAge window, and the root scripts, whose targets later tasks add.
 
 ## Where in the code
-package.json (exists): version 0.0.0; scripts northmes (builds apps/server, runs its dist/main.js), gen:migration, plugin:build, dev, demo, e2e, and e2e in check:full; devDependencies of scripts/ and e2e/: @testcontainers/postgresql, pg, rolldown, @playwright/test, workspace @northmes/contracts, @northmes/planning-contracts, @northmes/testing
+package.json (exists): version 0.0.0; scripts northmes (builds apps/server, runs dist/main.js), gen:migration, plugin:build, dev, demo, e2e, and e2e in check:full; devDependencies of scripts/ and e2e/: @testcontainers/postgresql, pg, rolldown, @playwright/test, workspace @northmes/contracts, @northmes/planning-contracts, @northmes/testing
 pnpm-workspace.yaml (exists): catalog, overrides pointing the web singletons at it; pnpm-lock.yaml (regenerated)
 vitest.config.ts (exists): one graphql copy; integration globalSetup adds apps/server/test/global-setup.ts (new, empty)
 turbo.json (exists): build outputs of apps/*, modules/planning/web, examples/plugin-validator
@@ -596,7 +600,7 @@ northmes migrate checks every module's files before it applies any. An applied f
 apps/server/src/migrate/files.ts, apps/server/src/migrate/runner.ts (exist)
 apps/server/test/migrate.int.test.ts (exists)
 apps/server/test/fixtures/migrations/ (exists): a module with a duplicate prefix and one with an unmarked file
-docs/recipes/db-test.md (exists)
+.claude/skills/db-test/SKILL.md (exists)
 Seam: migrate({ ownerUrl, catalog }), as in E02-S02-T02.
 
 ## Tests first
@@ -620,7 +624,7 @@ none, internal
 - [ ] An edited applied file stops the run with exit 1 naming the file
 - [ ] Two files with one timestamp prefix in a module are refused naming both
 - [ ] A file without its expand or contract marker is refused naming it
-- [ ] docs/recipes/db-test.md lists the three errors with their meaning
+- [ ] .claude/skills/db-test/SKILL.md lists the three errors with their meaning
 ```
 
 ##### E02-S02-T04 platform: Confine plugin migrations and stop boot while one is pending
@@ -640,7 +644,7 @@ apps/server/src/migrate/runner.ts (exists): name the plugin and file on refusal
 apps/server/src/migrate/pending.ts (new), apps/server/src/boot/boot.ts (exists; step 5)
 apps/server/test/migrate.int.test.ts (exists), apps/server/test/boot/pending.int.test.ts (new)
 apps/server/test/fixtures/migrations/ (exists): plugin fixtures alter-core, core-schema and reads-planning
-docs/recipes/db-test.md (exists)
+.claude/skills/db-test/SKILL.md (exists)
 Port the fixtures sneaky-schema and reads-other from docs/sources/spike-integration/apps/server/test/fixtures/.
 Seam: migrate({ ownerUrl, catalog }) and checkPending(appUrl, catalog, { mode }).
 
@@ -773,18 +777,20 @@ Covers: the story's note on the `db-test` recipe; the app factory that E00-S02-T
 Plan: E02-S02-T07
 
 ## Goal
-@northmes/testing adds configForTest(overrides), which validates an explicit record with loadEnv and never touches process.env, and createTestApp({ modules, hostFactory }), which builds the host app in the test process with in-repo modules only. The host factory comes from the ./testing export of apps/server, and the caller passes it in, so the MIT package imports no AGPL code. The db-test recipe records the files, the pnpm commands and each migrate and row-level security error known so far with its meaning.
+@northmes/testing adds configForTest(overrides), which validates an explicit record with loadEnv and never touches process.env, and createTestApp({ modules, hostFactory }), which builds the host app in the test process with in-repo modules only. The host factory comes from the ./testing export of apps/server, and the caller passes it in, so the MIT package imports no AGPL code. The db-test recipe records the files, the pnpm commands and each migrate and row-level security error known so far with its meaning. It is the first project skill: it gets no skills-lock.json entry, and the skills check in test/meta/agent-files.test.ts accepts the five project skills plan 13 names (db-test, vertical-slice, graphql-subgraph, web-remote, dst-test) next to the pinned skills.
 
 ## Where in the code
 packages/testing/src/config-for-test.ts, packages/testing/src/create-test-app.ts (new)
 apps/server/src/testing.ts (new): the host factory, exported at ./testing
 packages/testing/test/config-for-test.test.ts, apps/server/test/testing/create-test-app.int.test.ts (new)
-docs/recipes/db-test.md (new)
-Seam: configForTest is pure; create-test-app.int.test.ts calls createTestApp with the host factory from apps/server.
+.claude/skills/db-test/SKILL.md (new): a project skill
+test/meta/agent-files.test.ts (exists): the skills check; CLAUDE.md (exists): names the project skills next to the pinned ones
+Seam: configForTest is pure; create-test-app.int.test.ts calls createTestApp with the host factory from apps/server; the skills check takes the folder list and the lock file as input.
 
 ## Tests first
 - config-for-test.test.ts: "E02-S02 building two apps with configForTest leaves process.env unchanged"
 - create-test-app.int.test.ts: "E02-S02 createTestApp boots the in-repo modules in the test process"
+- agent-files.test.ts: "E02-S02 a .claude/skills folder that skills-lock.json does not list fails unless it is a project skill"
 
 ## Design
 none
@@ -794,6 +800,7 @@ docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md
 docs/adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md
 docs/adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md
 docs/adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md
+docs/adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md
 
 ## Out of scope
 gqlClient (E02-S03-T03), tests of the built server (bootBuilt, E02-S01-T09), the migrate errors of E02-S02-T03 and E02-S02-T04, which those tasks add to the recipe.
@@ -805,7 +812,8 @@ none, internal
 - [ ] Two apps built with configForTest leave process.env unchanged
 - [ ] createTestApp boots core and planning in the test process
 - [ ] packages/testing imports nothing from apps/server
-- [ ] docs/recipes/db-test.md lists the files, the pnpm commands and each migrate and row-level security error with its meaning
+- [ ] .claude/skills/db-test/SKILL.md lists the files, the pnpm commands and each migrate and row-level security error with its meaning
+- [ ] skills-lock.json is unchanged, and the skills check passes with db-test and fails on a folder that is neither pinned nor a project skill
 ```
 
 #### E02-S03 platform: Compose module subgraphs behind one embedded gateway
@@ -1195,7 +1203,7 @@ apps/server/src/schema/print.ts (new), apps/server/src/cli.ts (exists; schema pr
 scripts/gen.mjs (exists): the schema stage and the drift report
 schema/api.graphql, schema/supergraph.graphql, modules/core/schema.graphql, modules/planning/schema.graphql (new, generated)
 apps/server/test/schema/print.int.test.ts (new), scripts/gen.test.ts (exists)
-docs/recipes/graphql-subgraph.md (new)
+.claude/skills/graphql-subgraph/SKILL.md (new)
 Port from docs/sources/spike-federation/export-supergraph.mjs; the spike's full boot on a listening port is not ported.
 Seam: printSchema({ modules, outDir }) with the pool factory spied; gen.test.ts runs scripts/gen.mjs --check in a child process on a temporary copy.
 
@@ -1221,7 +1229,7 @@ none, internal
 - [ ] pnpm northmes schema print with DATABASE_URL unset writes the four files and constructs no pool
 - [ ] The committed snapshots equal a fresh print
 - [ ] pnpm gen --check exits 1 naming schema/api.graphql when a resolver changes without a new snapshot
-- [ ] docs/recipes/graphql-subgraph.md names the files, the commands and each NorthMES rule id with its meaning
+- [ ] .claude/skills/graphql-subgraph/SKILL.md names the files, the commands and each NorthMES rule id with its meaning
 ```
 
 #### E02-S04 platform: Run a validatable command vetoed by a drop-in plugin
@@ -1526,7 +1534,7 @@ modules/planning/contracts/src/release-production-order.ts, modules/planning/con
 modules/planning/contracts/tsconfig.json, modules/planning/contracts/LICENSE (new, MIT); modules/planning/contracts/package.json (exists; scripts)
 modules/planning/server/commands/release-production-order.ts (new), modules/planning/server/planning.module.ts (exists)
 modules/planning/test/release.int.test.ts, modules/planning/contracts/test/payload.test.ts, packages/contracts/test/pure-imports.test.ts (new)
-docs/recipes/vertical-slice.md (new)
+.claude/skills/vertical-slice/SKILL.md (new)
 Seam: createTestApp with core and planning; gqlClient sends the mutation; fixtures through db.command.
 
 ## Tests first
@@ -1553,7 +1561,7 @@ none, internal
 - [ ] planningReleaseProductionOrder(input: { id }) releases a planned order and returns it with its new version
 - [ ] Releasing an order twice fails with a DomainError and leaves the row unchanged
 - [ ] The payload for an order parses with the schema in @northmes/planning-contracts, and no contracts package loads Nest or React
-- [ ] docs/recipes/vertical-slice.md lists the files, commands and errors of the slice
+- [ ] .claude/skills/vertical-slice/SKILL.md lists the files, commands and errors of the slice
 ```
 
 ##### E02-S04-T08 platform: Build a drop-in plugin with pnpm plugin:build
@@ -2067,7 +2075,7 @@ modules/planning/web/vite.config.ts (new)
 modules/planning/web/src/module.tsx, routes.tsx, board-screen.tsx, board.graphql.ts (new)
 modules/planning/web/tsconfig.json (new), modules/planning/web/package.json (exists; scripts)
 modules/planning/web/test/routes.links.test.tsx, modules/planning/web/test/board-screen.test.tsx (new)
-docs/recipes/web-remote.md (new)
+.claude/skills/web-remote/SKILL.md (new)
 Port from docs/sources/spike-integration/modules/planning/web/ and docs/sources/spike-mf/modules/planning/web/src/module.test.tsx.
 Seam: the remote's module tested as a plain React package with MockedProvider; routes compared with planningLinks.
 
@@ -2093,7 +2101,7 @@ feat(planning): list production orders with their article names on the board
 - [ ] The planning remote builds through defineRemoteConfig and exposes ./module
 - [ ] Every planning route path comes from planningLinks, and every planningLinks entry matches a route
 - [ ] The board stub lists number, quantity, status and article name for each order of the plant
-- [ ] docs/recipes/web-remote.md lists the files, the commands and each load error with its meaning
+- [ ] .claude/skills/web-remote/SKILL.md lists the files, the commands and each load error with its meaning
 ```
 
 ##### E02-S05-T09 planning: Release a production order from the board stub
@@ -2418,13 +2426,13 @@ feat(platform): finish in-flight requests and exit cleanly on SIGTERM
 
 Issue: northMES/northmes#26. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s08-platform-start-the-stack-with-one-script-and-gate-on-the-skeleton-spec). Blocked by: E02-S07 for E02-S08-T02 to T04 and T06. E02-S08-T01 waits only for E02-S04-T03, and E02-S08-T05 for E02-S08-T01 and E02-S05-T09, so a person can try the app by hand at the stop point; the roadmap blocks the whole story on E02-S07.
 
-Notes: criterion 2 lands in E02-S01-T08. The seed of E02-S08-T01 writes fictional articles and production orders at one company and plant scope id. The planner and the operator of criterion 1, with dev-only credentials in the seed package, need Better Auth (E05-S05), whose tests sign in "the seeded planner"; until a task adds them to the seed, criterion 1 holds only in part. `playwright.config.ts` comes from E01-S04-T01, and E02-S08-T02 adds the e2e and skeleton projects to it. From M1, `e2e/skeleton.spec.ts` and the resolve-hook test become required in `ci / gate`, which is a ruleset change outside these tasks. E02-S08-T06 is the epic's end docs task.
+Notes: criterion 2 lands in E02-S01-T08. Criterion 1 in the roadmap names the tracer seed of E02-S08-T01: fictional articles and production orders at one company and plant scope id, with no planner and no operator. The planner and the operator, with dev-only credentials in the seed package, need Better Auth (E05-S05), whose tests sign in "the seeded planner"; the E05-S05 task "Seed a planner and an operator with dev-only credentials" adds them to the seed. `playwright.config.ts` comes from E01-S04-T01, and E02-S08-T02 adds the e2e and skeleton projects to it. From M1, `e2e/skeleton.spec.ts` and the resolve-hook test become required in `ci / gate`, which is a ruleset change outside these tasks. E02-S08-T06 is the epic's end docs task.
 
 ##### E02-S08-T01 platform: Start Postgres, migrate and seed with one stack script
 
 Labels: `task`, `human`, `area: sdk` (touches secrets handling). Blocked by: E02-S04-T03.
 
-Covers: criterion 1 (without the planner and the operator); criterion 3; test `scripts/stack/config.test.ts`.
+Covers: criterion 1; criterion 3; test `scripts/stack/config.test.ts`.
 
 ```markdown
 Plan: E02-S08-T01
@@ -2454,7 +2462,7 @@ docs/adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-se
 docs/adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md
 
 ## Out of scope
-pnpm dev and handoff-demo (E02-S08-T05), /health/ready on the stack (E02-S07-T01), the seeded planner and operator and their sign-in (E05-S05), the Compose stack (E17-S02), the server's missing default port (E02-S01-T07).
+pnpm dev and handoff-demo (E02-S08-T05), /health/ready on the stack (E02-S07-T01), the planner and the operator in the seed and their sign-in (E05-S05), the Compose stack (E17-S02), the server's missing default port (E02-S01-T07).
 
 ## Changelog
 none, internal
