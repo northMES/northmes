@@ -18,7 +18,8 @@ export function compare(running, pinned) {
 }
 
 function isEntryPoint() {
-  return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
+  const entry = process.argv[1];
+  return Boolean(entry) && import.meta.url === pathToFileURL(realpathSync(entry)).href;
 }
 
 function main(path = repositoryNodeVersion) {
