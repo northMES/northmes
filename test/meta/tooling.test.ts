@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 import vitestConfig from '../../vitest.config.ts';
 
 interface TurboConfig {
+  agentGuidance?: boolean;
   tasks?: Record<string, { cache?: boolean }>;
 }
 
@@ -70,6 +71,11 @@ describe('tooling', () => {
       expect(tasks[name]?.cache, name).not.toBe(false);
     }
     expect(Object.keys(tasks).filter((name) => name.startsWith('test'))).toEqual([]);
+  });
+
+  it('turbo.json opts out of the AGENTS.md block that turbo 2.11 maintains', () => {
+    // AGENTS.md is written by hand; turbo 2.11 appends its own block to it when an agent runs turbo.
+    expect(readJson<TurboConfig>('turbo.json').agentGuidance).toBe(false);
   });
 
   it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {
