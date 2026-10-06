@@ -7,7 +7,9 @@ Every part of NorthMES that owns data or screens is a module built on one contra
 - Module: a unit with one id, one Postgres schema, one GraphQL subgraph and at most one web remote, declared by a `defineModule` manifest.
 - In-repo module: a module that lives under `modules/` and ships inside the NorthMES image. In-repo modules may import other modules' AGPL API modules.
 - Plugin: a module built outside the core image and dropped into an installation. A plugin imports only MIT packages. Release 1 plugins are the two examples under `examples/`.
-- Slot: a named place in a screen that the owning module renders and other modules fill with contributions.
+- Extension point: a place that its owning module declares and versions, where another module or a plugin can extend NorthMES: a validatable command, an event or a keyed entity type on the server, a slot on the web. Anything else is internal ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
+- Slot: a named place in a screen that the owning module renders and other modules fill with contributions. Its owner declares its kind: route, region, tab, field, item, banner or action.
+- Contribution: one module's entry at an extension point, as manifest data (id, slot or point, label, order, permission) plus code that the server part or the remote supplies under the same id.
 - Command validator: a veto-only check that a dependent module attaches to a command the owner declares validatable. Earlier drafts called these "command interceptors"; the name changed so it does not clash with Nest's interceptors.
 
 [GLOSSARY.md](../../GLOSSARY.md) holds the domain terms.
@@ -94,7 +96,11 @@ export default defineModule({
     label: "Planning",
     permission: "planning.productionOrder:read",
     order: 20,
-    slots: ["planning/board/side/v1", "planning/order/panels/v1"],
+    slots: {
+      "planning/board/side/v1": { kind: "region" },
+      "planning/order/panels/v1": { kind: "region" },
+      "planning/board/block-fields/v1": { kind: "field" },
+    },
   },
   ai: { features: { "planning.assistant": { aliases: ["fast"], toolsets: ["planning"], defaultEnabled: false } } },
   server: () => import("./server/planning.module.js"),
@@ -112,10 +118,12 @@ export default defineModule({
 | `roles` | default roles as lists of permission ids | synced by `northmes migrate`; company admins build custom roles from module permissions ([ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md)) |
 | `settings` | a Zod schema from `defineSettings` in the contracts package | rendered by `SettingsForm`; values live in audited tables at company and plant scope |
 | `events` | the events the module publishes, each with a version | key prefix check; event JSON Schemas are diffed in CI |
-| `commands` | the commands the module owns, each with a `validatable` flag | a validator on an undeclared command is a boot error |
+| `consumes` | the events the module consumes, as `{ event, version }`; the sequencer enqueues one job per consumer from it ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) | catalog: the event and version exist; boot: each entry has a registered consumer and each registered consumer has an entry |
+| `commands` | the commands the module owns, each with a `validatable` flag; a validatable command also declares the longest time limit it accepts from a validator | a validator on an undeclared command is a boot error |
+| `validates` | the module's validators, as `{ id, command, payload }`, where `payload` is the owner's payload version ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) | catalog: the command is validatable and its owner serves the payload version; boot: each entry has a registered validator, each registered validator has an entry, and no validator's `timeoutMs` exceeds the owner's limit |
 | `personalData` | fields that hold personal data | feeds the personal-data register in the docs and the tool output redactor |
 | table lifecycle classes and audit field declarations | per table one class (`record`, `working`, `operational`, `reference`); fields declared secret, personal or free text, which set the capture trigger's skip and redact arguments | `northmes migrate` and boot compare every trigger's arguments with the manifest ([ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)) |
-| `web` | static data: `label`, `permission`, `order` (required), owned `slots`, `contributes` (slot ids this module fills) | catalog: slot ownership; a contributor must depend on the slot's owner |
+| `web` | static data: `label`, `permission`, `order` (required), owned `slots` as a record of slot id to `{ kind }`, and `contributes` as a list of `{ id, slot, label, order, permission }` ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) | catalog: slot ownership; a contributor must depend on the slot's owner; a contribution has a label, a permission the module declares and an id with the module's prefix; the remote build check and `validateWebModule` match `contributes` with the remote's `contributions` |
 | `subscriptions` | the module's subscription declaration; its shape is fixed in ADR 0003 | |
 | `ai.features` | AI features with their aliases and toolsets, off by default, enabled by a company admin ([ADR 0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md)) | |
 | `signature` | reserved for electronic signatures; not built in release 1 ([ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md)) | |
@@ -136,7 +144,7 @@ defineWebModule({
   id, version, northmesRange, permissions,
   routes(plantRoute),          // code-based route subtree under /$plant/<id>
   stationRoutes(stationRoute), // optional; production-start's operator screen under /station/$stationId
-  widgets,                     // slot contributions
+  contributions,               // implementations keyed by the ids in the manifest's web.contributes, built with the kind helpers
   help,                        // optional; entries in the shell's help menu, grouped by module
   typePolicies,                // optional; merged into each per-plant Apollo client
 });
@@ -156,10 +164,11 @@ Boot step 4 reads every manifest and runs these checks before any Nest code load
 - every `northmes` range accepts the image version, and a plugin's range equals the one derived from its SDK peer dependency;
 - every permission, command and event key carries the module's prefix;
 - every owned slot belongs to one module, and every contribution targets a slot whose owner is in the contributor's `dependsOn` closure;
-- every validator targets a command its owner declares validatable, from a module that depends on that owner;
+- every `validates` entry targets a command its owner declares validatable and a payload version the owner serves, from a module that depends on that owner;
+- every `consumes` entry names an event and version that an installed module publishes;
 - the topological order puts core first.
 
-Later boot steps add the migration check, the isolation check, the Mutation-to-command check, composition and the route check; [02 architecture](02-architecture.md#boot-sequence) lists them all.
+Later boot steps add the migration check, the isolation check, the Mutation-to-command check, composition and the route check; [02 architecture](02-architecture.md#boot-sequence) lists them all. When the server parts load, boot also stops on a registered validator or consumer without its manifest entry, an entry without a registration, and a validator whose `timeoutMs` exceeds the owner's limit ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 
 ## REST controllers
 
@@ -273,9 +282,10 @@ A command validator lets a module that depends on the owner veto a command insid
 
 - Validators are veto-only. They cannot change the input.
 - A validator attaches only to a command that its owner declares `validatable: true`, and only from a module that depends on the owner. Both are boot errors otherwise.
-- The owner builds a validator payload for each validatable command and declares its Zod schema in its MIT contracts package (for example `productionOrderId`, `plantId`, `articleId`, `quantity` and the demand's customer references). `CommandValidator` takes the schema from the contracts copy the plugin bundled, and the bus parses the payload against it before calling the validator.
+- The owner builds a validator payload for each validatable command and declares its Zod schema, with a payload version, in its MIT contracts package (for example `productionOrderId`, `plantId`, `articleId`, `quantity` and the demand's customer references). The module lists each validator in its manifest's `validates`, and `defineValidator({ id, payload, timeoutMs, check })` takes the schema from the contracts copy the plugin bundled; the bus parses the payload against it before calling the validator. Within a payload version the owner adds a field only as a required field in a minor release; any other change adds a payload version ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 - Validators run in a deterministic order: dependency order, then name.
-- Each validator has a time limit. A throw or a timeout rejects the command (fail closed), and the thrown message reaches the client as "Unexpected error.".
+- Each validator has a time limit, no longer than the limit the owner declares for the command. A throw, a timeout or a malformed verdict rejects the command (fail closed), and the thrown message reaches the client as "Unexpected error.".
+- A veto returns `core.command_rejected` whose `details` carry `rejectedBy`, the validator's error code, its details and the message the server renders from the validator module's `defineErrors`, so the screen that ran the command shows it without importing the validator module's contracts. The verdict `ask` is reserved for later.
 - In the pipeline, validators run after the permission check, the audit context and the `expectedVersion` check, and before the reserved signature stage and the handler ([02 architecture](02-architecture.md#the-write-path-commands)).
 
 ```mermaid
@@ -284,7 +294,7 @@ flowchart TD
   parse -- no --> mismatch["Reject: core.validator_contract_mismatch"]
   parse -- yes --> run["Call the next validator<br/>(dependency order, then name)"]
   run --> outcome{"Outcome"}
-  outcome -- veto --> rejected["Reject: core.command_rejected<br/>with rejectedBy"]
+  outcome -- veto --> rejected["Reject: core.command_rejected<br/>with rejectedBy, code and message"]
   outcome -- throw or timeout --> failed["Reject, message masked<br/>as Unexpected error."]
   outcome -- pass --> more{"More validators?"}
   more -- yes --> parse
@@ -298,15 +308,16 @@ Validatable commands in release 1 are planner commands: `planning.releaseProduct
 Cross-module UI goes only through slots the rendering module owns ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)).
 
 - Slot ids are typed and versioned, for example `planning/board/side/v1`: the owning module's id first and a version suffix last.
-- A contribution carries an id, the slot id, a component, a required `label`, a numeric `order` and a permission. `validateWebModule` checks the label.
+- Every slot declares a kind in its owner's `web.slots`: route, region, tab, field, item, banner or action. The kind fixes what a contribution provides and what the host draws; in the dense kinds (field, item, banner, action) the contribution returns data and the host draws it ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
+- A contribution's id, slot, required `label`, numeric `order` and permission are static data in the manifest's `web.contributes`, and the remote supplies the implementation under the same id in `contributions`. The catalog checks the label, and the remote build check and `validateWebModule` check that both sides match and that each implementation's kind equals its slot's kind.
 - A contributor must depend on the slot's owner. The boot catalog checks this, and the shell accepts a contribution only when the module list says the owner is in the contributor's `dependsOn` closure.
-- `<Slot>` renders each contribution in `WidgetFrame` as a section with `aria-labelledby`, inside its own error boundary keyed by contribution id, with reset keys from the selected entity. When focus was inside a failing widget, it moves to the fallback.
-- No slot renders a widget (`WidgetFrame` and error boundary) per board block or per row. The one exception is `planning/board/block-fields/v1`, whose contributions are synchronous text and icon renderers with `accessibleText`; hover renderers may fetch. Other per-item slots render only for the selected item.
-- Changing a slot's props means adding `v2` and keeping `v1` for one deprecation window. A CI check fails when a slot id from the previous release's snapshot disappears.
-- Slot prop types live in `@northmes/web-sdk` in release 1, under one contract key name.
+- `<Slot>` renders by kind. A `region` contribution renders in `WidgetFrame` as a section with `aria-labelledby`, inside its own error boundary keyed by contribution id, with reset keys from the selected entity, and only for the selected item, never per row or block. When focus was inside a failing contribution, it moves to the fallback.
+- A `field` contribution returns a value per item that the owner draws: `useValues` loads the values once per slot instance, a synchronous `render` returns text, an optional icon and `accessibleText`, and an optional hover renderer may fetch. `planning/board/block-fields/v1` and `planning/board/header/v1` are `field` slots.
+- Changing a slot's props means adding `v2` and keeping `v1` for one deprecation window; an owner may add optional props within a version. A CI check fails when a slot id from the previous release's snapshot disappears, and the snapshot records each slot's kind.
+- Slot prop types live in `@northmes/web-sdk` in release 1, in one `SlotProps` map that also holds each slot's kind, so a wrong slot id or kind fails to compile.
 - The accessibility route suite runs with the example plugins enabled.
 
-Release 1 slots: `planning/board/side/v1` (filled by the example widget), `planning/order/panels/v1` (filled by production-start), `planning/board/block-fields/v1` (fields on every board block, filled by core, the Pyramid connector and plugins through `BoardFieldSlot`), `planning/board/header/v1` (the board header, where the Pyramid connector shows "Pyramid data as of <time>"), and one shell aside slot that holds the AI chat panel so it survives route changes ([ADR 0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md)). The ids of the two board slots are proposed; the maintainer confirms them ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)).
+Release 1 slots: `planning/board/side/v1` (region, filled by the example widget), `planning/order/panels/v1` (region, filled by production-start), `planning/board/block-fields/v1` (field, on every board block, filled by core, the Pyramid connector and plugins), `planning/board/header/v1` (field, the board header, where the Pyramid connector shows "Pyramid data as of <time>"), and `core/shell/aside/v1` (region, at most one docked), the shell aside that holds the AI chat panel so it survives route changes ([ADR 0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md)). The later slots and kinds, each with the trigger that brings it in, are in [ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md). The ids of the two board slots are proposed; the maintainer confirms them ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)).
 
 Styling: in-repo remotes ship no CSS and use classes the shell's Tailwind sheet already scans. A remote built through the plugin path either ships no CSS and uses only `@northmes/ui` components, or ships a stylesheet whose utility selectors all carry the plugin's prefix, without preflight; a build check enforces the prefix ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
 
@@ -319,10 +330,10 @@ Both examples are built through the plugin path, never imported as workspace sou
 | Folder | `examples/plugin-validator` | `examples/plugin-widget` |
 | Parts | manifest and server part | manifest and web remote only (no server part, no migrations) |
 | `dependsOn` | `planning` | `planning` |
-| Shows that a plugin can | veto `planning.releaseProductionOrder` with a typed error (`core.command_rejected`, `rejectedBy: "example-validator"`); add a nullable field to planning's `ProductionOrder` through `@requires` (the spike's field was `exampleValidatorBlockReason`, computed from `quantity`); be checked offline against the committed schema snapshot | fill `planning/board/side/v1`; run its own query against planning fields; style itself with a prefixed stylesheet without touching the shell's sheet |
+| Shows that a plugin can | veto `planning.releaseProductionOrder`, listed in its manifest's `validates`, with a typed error (`core.command_rejected`, `rejectedBy: "example-validator"`, its code and the rendered message); add a nullable field to planning's `ProductionOrder` through `@requires` (the spike's field was `exampleValidatorBlockReason`, computed from `quantity`); be checked offline against the committed schema snapshot | fill `planning/board/side/v1` with a `region` contribution listed in its manifest's `web.contributes`; run its own query against planning fields; style itself with a prefixed stylesheet without touching the shell's sheet |
 | Does not show | the public npm SDK, the app repo, upgrades across versions, per-organization enablement | the same |
 
-- The examples are workspace members with the host packages as `peerDependencies` plus catalog `devDependencies`, like `modules/*`. `pnpm plugin:build <id>` builds them; `pnpm plugin:check <id>` prints the plugin's SDL without loading AGPL code and composes it against the committed snapshot.
+- The examples are workspace members with the host packages as `peerDependencies` plus catalog `devDependencies`, like `modules/*`. `pnpm plugin:build <id>` builds them; `pnpm plugin:check <id>` prints the plugin's SDL without loading AGPL code, composes it against the committed snapshot and prints the plugin's inventory: the slots it fills, the commands it vetoes, the events it consumes, the fields it adds, and its permissions, roles, settings and tables ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 - The examples stay out of the committed schema snapshot, which holds in-repo modules only.
 - One CI job, `plugin-outside`, packs the MIT packages, installs an example from those tarballs in a temporary directory outside the repository, builds it, drops it into a plugins directory, boots and runs the example e2e spec. It asserts the validator veto and the widget inside its slot.
 - Tests that load built plugins boot the built server in a child process. `createTestApp` from `@northmes/testing` takes in-repo modules only, because Vitest's module runner does not apply the resolve hook.
@@ -361,8 +372,8 @@ Core is AGPL-3.0-or-later. The packages a plugin needs are MIT, so a plugin's ow
 |---|---|---|
 | `@northmes/contracts` | MIT | shared value types (`code`, `quantity`, `money`, `externalRef`, `plantLocalDateTime`, `instant`, `localizedText`, `paletteColor` and `textColorFor`, `scopeLevel`, `version`), wire shapes, the definition functions (`defineCommandContract`, `defineMasterData`, `defineErrors`, `defineEvent`, `defineSettings`, `defineList`, `listSearch`, `defineSearch` and the `searchKey` helpers, `urlSearch`, `defineModuleLinks`, `measured`), the unit catalog, `resolveWallClock` and the millisecond window functions, the value enums of `dateFormat`, `hourCycle` and `numberFormat`, the `Presentation` type, `DEFAULT_PRESENTATION`, the pure formatters and parsers on the subpath `format` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)), and the API major and `apiPath` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)) |
 | `@northmes/<id>-contracts` | MIT | one per module; listed under [Package shape](#package-shape) |
-| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `CommandValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, `/rest` (`ApiController`), and the server-only `/errors` and `/config`, which plugins may not import |
-| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider (which fills the presentation context from `/api/v1/web/modules`), the Apollo client factory, data hooks, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `movedRoutes`, `usePlantTime()`, `useCommandForm`, `<Slot>` and slot prop types, `announce()` |
+| `@northmes/sdk` | MIT | `defineModule`, `moduleNames`, `HOST_PROVIDED`, `defineSubgraph`, `graphqlKit`, `entityRef`, guards and decorators, `defineValidator`, `defineTool`, the AI port types; subpaths `/commands`, `/data`, `/graphql`, `/jobs`, `/mcp`, `/ai`, `/health`, `/settings`, `/master-data`, `/units`, `/rest` (`ApiController`), and the server-only `/errors` and `/config`, which plugins may not import |
+| `@northmes/web-sdk` | MIT, shared singleton | the web module contract, the shell provider (which fills the presentation context from `/api/v1/web/modules`), the Apollo client factory, data hooks, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `movedRoutes`, `usePlantTime()`, `useCommandForm`, `<Slot>`, the slot kind helpers, `useHost` and the `SlotProps` map, `announce()` |
 | `@northmes/ui` | MIT, shared singleton | primitives on one locked base, tokens, presentational patterns, `LinkProvider`, `PresentationProvider` and `usePresentation()`, `DateTimeText` and `MeasureText`, the form engine `useZodForm` and the named react-hook-form exports; no Apollo, TanStack Router or GraphQL imports |
 | `@northmes/web-build` | MIT | `defineRemoteConfig`, the shared list, build guards, `sources.gen.css` |
 | `@northmes/testing` | MIT | the Testcontainers harness, the app factory, `given` factories, clients, contract suites, the AI mock, accessibility helpers, the catalog lint |
@@ -406,6 +417,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | public API routes from plugins, under `/api/v<major>/<plugin-id>/` | the first public route, which arrives with the first outside system or Data collection's ingestion endpoint ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)) |
 | MIT service interfaces so plugins can call core services in process | later; release 1 plugins use GraphQL references, validators, slots and events |
 | slot prop types in each module's contracts package through declaration merging | later |
+| the later slot kinds and slots, `ValidatorContext`, plugin consumers, answer points and the `ask` verdict | each with its trigger in [ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) |
 | enabling a remote without a page reload | later |
 | a separate gateway role and HTTP subgraphs | later |
 | `northmes plugin purge <id>` | later |
@@ -420,6 +432,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 - Command bus unit test: input `{ quantity: { value: 1500, unit: "pcs" } }` against a payload schema `z.object({ quantity: z.number() })` is rejected with `core.validator_contract_mismatch`, and the handler spy is not called. A contract test validates planning's built payload against its MIT schema.
 - Validator limit tests: a validator slower than its limit rejects the command; a throwing validator is masked and the command does not run.
 - Slot tests: a web-only widget on a removed slot gets status `incompatible` and boot succeeds; a plugin with a server part on an unknown slot still fails boot.
+- Extension point tests: the confirmation items of [ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md), among them a `validates` entry without a registered validator, an implementation whose kind differs from its slot's kind, and a veto whose `details` carry the rendered message.
 - Shared-version test: a remote built with a newer react major than the shell's is marked incompatible; the frozen N-1 widget renders with no console error and no CSP violation.
 - Lockfile test: `pnpm-lock.yaml` holds one `@nestjs/core` and one `@nestjs/graphql` resolution, each with a single peer suffix, examples included.
 - Plugin migration tests on Testcontainers Postgres: a plugin's `ALTER TABLE core.<table>`, a `CREATE TABLE ... AS SELECT` from planning and a `CREATE TABLE` in the core schema are refused and change nothing; checksum drift is caught; two concurrent `northmes migrate` runs apply each file once.
@@ -450,6 +463,7 @@ Code repeated between modules becomes shared packages, patterns and generators (
 | [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | the formatters in `@northmes/contracts`, the presentation context in `@northmes/ui` |
 | [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | link manifests, nav entries from routes, the search helpers in `@northmes/contracts`, the link pattern check |
 | [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | reserved module ids, REST controllers and `ApiController`, the route check, no REST controllers in plugins until the public API exists |
+| [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) (proposed) | extension points, slot kinds, `validates` and `consumes`, contributions as manifest data with code by id, the veto details, the plugin inventory |
 
 ## Open items
 

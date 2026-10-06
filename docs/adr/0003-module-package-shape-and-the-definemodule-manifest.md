@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-05
+date: 2026-10-06
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: internal research notes 08, 13, 19, 20, 22, 23, 32 and 33
 informed: contributors and coding agents
@@ -14,7 +14,7 @@ needs-confirmation: ""
 
 Krister Johansson decided that release 1 ships the internal `defineModule` contract plus two example plugins, a backend command validator and a frontend widget. The public npm SDK, the app repository and the upgrade tooling come after the pilot. Every module and plugin exposes its own Federation subgraph ([ADR 0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md)), and every module with screens ships its own Module Federation remote ([ADR 0019](0019-web-shell-with-react-module-federation-remotes.md)).
 
-The host must know each module's id, dependencies, permissions, commands, slots and menu data before it loads any Nest code or any browser code, because the catalog checks run at boot step 4 ([ADR 0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Plugins must type the command inputs they validate and the slot props they render without importing AGPL code ([ADR 0039](0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md)).
+The host must know each module's id, dependencies, permissions, commands, validators, consumed events, slots, contributions and menu data before it loads any Nest code or any browser code, because the catalog checks run at boot step 4 ([ADR 0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md)). Plugins must type the command inputs they validate and the slot props they render without importing AGPL code ([ADR 0039](0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md)).
 
 The `defineModule` contract itself is accepted. This ADR proposes the module id and its derived names, the three packages of a module folder, the split of the server part, the manifest fields and the two visibility tiers. It covers `modules/*`, `examples/*`, drop-in plugins and `@northmes/sdk`.
 
@@ -95,10 +95,12 @@ The manifest is a small ES module that imports only `defineModule` from the MIT 
 | `roles` | default roles with their permissions |
 | `settings` | the Zod settings definition from the contracts package |
 | `events` | owned event types with versions |
-| `commands` | owned commands, each with a `validatable` flag |
+| `consumes` | the events the module consumes, as `{ event, version }` per event; the sequencer enqueues a job per consumer from it ([ADR 0014](0014-outbox-event-log-and-pg-boss-jobs.md), [ADR 0068](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
+| `commands` | owned commands, each with a `validatable` flag; a validatable command also declares the longest time limit it accepts from a validator |
+| `validates` | the module's validators, as `{ id, command, payload }` per validator, where `payload` is the owner's payload version; boot step 4 checks each entry, and boot stops on an entry without a registered validator or a registered validator without an entry ([ADR 0068](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | `personalData` | personal data declarations |
 | tables | a lifecycle class per table (`record`, `working`, `operational`, `reference`) and the audit field declarations (skip, redact) ([ADR 0013](0013-audit-trail-written-in-the-command-transaction.md)) |
-| `web` | static data: `label`, `permission`, `order` (required), owned `slots`, `contributes` |
+| `web` | static data: `label`, `permission`, `order` (required); owned `slots` as a record of slot id to `{ kind }`; `contributes` as a list of `{ id, slot, label, order, permission }`, whose implementations the remote supplies under the same ids ([ADR 0068](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | `subscriptions` | whether the module serves GraphQL subscriptions |
 | `ai.features` | the AI features the module offers ([ADR 0035](0035-ai-provider-port-with-customer-configured-providers.md)) |
 | `server`, `mcp` | lazy imports of the Nest module and the MCP tool definitions |
@@ -110,14 +112,17 @@ export default defineModule({
   version,
   northmes: ">=0.1.0-0 <0.2.0-0",
   dependsOn: ["core"],
-  commands: { "planning.releaseProductionOrder": { validatable: true } },
-  web: { label: "Planning", permission: "planning.productionOrder:read", order: 20, slots: ["planning/board/side/v1"] },
+  commands: { "planning.releaseProductionOrder": { validatable: true } },   // plus the longest validator time limit it accepts
+  web: {
+    label: "Planning", permission: "planning.productionOrder:read", order: 20,
+    slots: { "planning/board/side/v1": { kind: "region" }, "planning/board/block-fields/v1": { kind: "field" } },
+  },
   server: () => import("./server/planning.module.js"),
   mcp: () => import("./server/mcp/planning.tools.js"),
 });
 ```
 
-The `web` data is static because the remote is a separate build that the browser loads by URL, while the server needs the label, permission, order and slots before any browser code runs. The remote's `defineWebModule` repeats `id`, `version` and the range, and a build check compares them with the manifest. Because `order` is required, a module whose remote fails keeps its usual sidebar position, marked "(unavailable)".
+The `web` data is static because the remote is a separate build that the browser loads by URL, while the server needs the label, permission, order, slots and contributions before any browser code runs, so that the shell can name a contribution whose remote failed. The remote's `defineWebModule` repeats `id`, `version` and the range and supplies each contribution's implementation under its manifest id, and a build check compares them with the manifest. Because `order` is required, a module whose remote fails keeps its usual sidebar position, marked "(unavailable)".
 
 ### Consequences
 
@@ -165,6 +170,6 @@ The `web` data is static because the remote is a separate build that the browser
 
 ## More information
 
-* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) boot sequence, [0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) migrations and owner roles, [0013](0013-audit-trail-written-in-the-command-transaction.md) lifecycle classes, [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) subgraphs, [0019](0019-web-shell-with-react-module-federation-remotes.md) remotes, [0022](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) shared packages, [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) plugins, [0038](0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) versions and ranges, [0040](0040-dependency-license-policy-ci-gate-and-sbom.md) license gate, [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) scheduling package, [0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) the link manifest in the contracts package.
+* Related ADRs: [0002](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) boot sequence, [0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) migrations and owner roles, [0013](0013-audit-trail-written-in-the-command-transaction.md) lifecycle classes, [0015](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) subgraphs, [0019](0019-web-shell-with-react-module-federation-remotes.md) remotes, [0022](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) shared packages, [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md) plugins, [0038](0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) versions and ranges, [0040](0040-dependency-license-policy-ci-gate-and-sbom.md) license gate, [0057](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) scheduling package, [0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) the link manifest in the contracts package, [0068](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) extension points, slot kinds, `validates` and `consumes`.
 * Plan: [03 modules and extensibility](../plan/03-modules-and-extensibility.md), [02 architecture](../plan/02-architecture.md).
 * Revisit when the public SDK is published after the pilot (the `@internal` and `@beta` tags then move to `@public` for the stable parts), or when plugins need in-process access to core services beyond GraphQL references, validators, events and slots.

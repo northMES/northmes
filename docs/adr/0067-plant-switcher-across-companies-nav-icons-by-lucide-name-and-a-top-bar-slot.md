@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson
 informed: contributors, coding agents, module and plugin authors
 release: "1"
-needs-confirmation: "maintainer (the top bar slot id)"
+needs-confirmation: "maintainer (the top bar slot id; top bar items drawn from data)"
 ---
 
 # Plant switcher across companies, nav icons by lucide name and a top bar slot
@@ -76,10 +76,10 @@ Chosen option: "A lucide-react component name from a list in `@northmes/contract
 ### A top bar slot for the bell
 
 * The bell is a contribution of the notifications module to a top bar slot. With no contribution the slot renders nothing and takes no space, so an installation without the notifications module shows no bell. This ADR does not design the notifications module.
-* The slot id is `core/top-bar/items/v1` (proposed). The shell renders it. The id carries `core` because the shell is not a module and every module depends on core, so the catalog rule that a contributor depends on the slot's owner holds without a special case ([ADR 0037][adr-0037]). Its props are `{ plantId: string | null }`, with `null` on `/admin`.
-* The shell renders the slot at the end of the top bar, after the help menu, where the user menu sat before it moved to the foot of the sidebar. Contributions sort by `order` and filter on their permission, as in every slot. The help menu keeps its place with or without items (WCAG 3.2.6).
-* A contribution renders one compact control, such as an `IconButton` that opens a popover, and its required `label` is the control's accessible name. The shell does not wrap it in `WidgetFrame`, because a top bar item is not a page section. Each contribution still renders in its own error boundary and reports stage `slot` when it fails; D2 draws the fallback.
-* Release 1 builds neither the slot nor the bell: the slot is built with its first contributor, the notifications module. D2 draws the top bar with and without the bell, so the layout holds the bell's place from the start.
+* The slot id is `core/top-bar/items/v1` (proposed), and its slot kind is `item` ([ADR 0068][adr-0068]). The shell renders it. The id carries `core` because the shell is not a module and every module depends on core, so the catalog rule that a contributor depends on the slot's owner holds without a special case ([ADR 0037][adr-0037]). Its props are `{ plantId: string | null }`, with `null` on `/admin`.
+* The shell renders the slot at the end of the top bar, after the help menu, where the user menu sat before it moved to the foot of the sidebar. Contributions sort by `order` and filter on their permission, as in every slot. The help menu keeps its place with or without items (WCAG 3.2.6). Below about 640 px the shell draws a More menu in the top bar with one row per item, and a row opens the item's content in a sheet.
+* A contribution supplies an icon name, a badge hook and a content component, and the shell draws one compact control from that data: an icon button named "<label>, <badge text>", or by its required `label` alone when the badge hook returns nothing, which opens a popover with the content. The shell does not wrap it in `WidgetFrame`, because a top bar item is not a page section. Each contribution still renders in its own error boundary and reports stage `slot` when it fails; D2 draws the fallback.
+* Release 1 builds neither the slot nor the bell: the slot is built with its first contributor, the notifications module. D2 draws the top bar with and without the bell, so the layout holds the bell's place from the start. D2 does not draw the More menu; the task that builds the slot draws it ([ADR 0068][adr-0068]).
 
 ### Parts of accepted ADRs this decision changes
 
@@ -111,7 +111,7 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 | Section | Before | After |
 |---|---|---|
 | UI slots | "Cross-module UI goes only through slots that the rendering module owns." and "Slot ids are typed and versioned: owner id first" | Unchanged for module slots. A slot that the shell renders carries the owner id `core`, which the dependency rule then checks; the first is `core/top-bar/items/v1` |
-| UI slots | "`<Slot>` renders each contribution in `WidgetFrame` as a section with `aria-labelledby`, inside its own error boundary." | Unchanged, except in `core/top-bar/items/v1`, whose contributions render as compact controls without `WidgetFrame`, each inside its own error boundary |
+| UI slots | "`<Slot>` renders each contribution in `WidgetFrame` as a section with `aria-labelledby`, inside its own error boundary." | Unchanged, except in `core/top-bar/items/v1`, a slot of the kind `item` ([ADR 0068][adr-0068]), whose contributions the shell draws from data as compact controls without `WidgetFrame`, each inside its own error boundary |
 
 ### Consequences
 
@@ -138,7 +138,7 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 * `apps/web/test/plant-switcher.test.tsx`: "plants of two companies render under two group labels"; "plants of one company render without group labels"; "with one plant the switcher is not rendered"; "the link to the current plant carries aria-current"; "a plant in onboarding carries Onboarding in its link text".
 * `packages/web-sdk/test/use-breadcrumbs.test.tsx`: "a detail route yields plant, module, list and entity crumbs, and the plant crumb links to /plant-a"; "with plants in two companies a company crumb without a link comes first".
 * `e2e/a11y/shell.spec.ts` gains: "in the collapsed rail every link has an accessible name and its tooltip shows on focus".
-* With the top bar slot, which arrives with the notifications module, `apps/web/test/top-bar-slot.test.tsx`: "with no contribution the top bar holds no slot item"; "a contribution renders after the help menu, named by its label"; "a throwing contribution leaves the top bar working and reports stage slot".
+* With the top bar slot, which arrives with the notifications module, `apps/web/test/top-bar-slot.test.tsx`: "with no contribution the top bar holds no slot item"; "a contribution renders after the help menu, named by its label"; "a throwing contribution leaves the top bar working and reports stage slot"; "the button's name carries the label and the badge text"; "below 640 px the item is a row in the More menu that opens a sheet".
 
 ## Pros and cons of the options
 
@@ -180,7 +180,7 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 
 ## More information
 
-* Related ADRs: [0003][adr-0003] the manifest's `web` block, [0019][adr-0019] shell, remotes and the forbidden-bundle list, [0020][adr-0020] icons from `lucide-react` through `@northmes/ui`, [0021][adr-0021] accessibility, [0037][adr-0037] slots, [0055][adr-0055] notifications deferred and the scope rule, [0062][adr-0062] nav entries from routes and breadcrumbs, [0066][adr-0066] the `companies` and `admin` fields and the `/admin` mount.
+* Related ADRs: [0068][adr-0068] the `item` slot kind that the top bar slot uses (M-64), [0003][adr-0003] the manifest's `web` block, [0019][adr-0019] shell, remotes and the forbidden-bundle list, [0020][adr-0020] icons from `lucide-react` through `@northmes/ui`, [0021][adr-0021] accessibility, [0037][adr-0037] slots, [0055][adr-0055] notifications deferred and the scope rule, [0062][adr-0062] nav entries from routes and breadcrumbs, [0066][adr-0066] the `companies` and `admin` fields and the `/admin` mount.
 * Proposed ADRs to update before they are accepted: [0003][adr-0003] (`web.icon`, required next to `order`).
 * Design: D2 (issue northMES/northmes#190) draws the switcher at the top of the sidebar grouped by company, the company and plant crumbs, the rail with icons, the admin frame, the plant list at `/`, and the top bar with and without the bell. The icon set is in [ui-189-tokens.md](../design/ui/ui-189-tokens.md#fonts-and-icons).
 * Plan: [06 web and UX](../plan/06-web-and-ux.md#shell-layout) (shell layout, plant switch, routes and typed links, the module list, design tokens), [14 roadmap](../plan/14-roadmap.md) (E04-S02 and E04-S04).
@@ -195,3 +195,4 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 [adr-0055]: 0055-release-1-scope-under-option-b-and-the-scope-rule.md
 [adr-0062]: 0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0066]: 0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
+[adr-0068]: 0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md

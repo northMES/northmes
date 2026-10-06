@@ -31,6 +31,7 @@ The NorthMES web app is one browser shell (`apps/web`) that loads one React remo
 | [0064 REST routes under /api/v1 and OpenAPI from Zod contracts](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | The shell's endpoints as first-party routes under `/api/v1/web`, Better Auth under `/api/v1/auth`, the reserved plant slugs |
 | [0066 Companies created by the CLI, plant slugs unique per installation, admin pages at /admin and an onboarding wizard before a plant opens](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | The `/admin` mount and `adminRoutes`, where `/` sends a user, the onboarding wizard and the gate that keeps a plant closed until its onboarding is complete, `companies`, `admin` and `onboardingState` in `/api/v1/web/modules`, plant slugs unique per installation, `admin` as a reserved slug |
 | [0067 Plant switcher across companies, nav icons by lucide name and a top bar slot](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md) | proposed | The plant switcher at the top of the sidebar, the company and plant crumbs, `icon` on nav entries and manifests, the collapsed rail, the top bar slot for the later notifications bell |
+| [0068 Extension points declared by their owners, contributions as manifest data with code by id, and a plugin inventory](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) | proposed | Slot kinds and what the host draws for each, contributions as manifest data with implementations by id, `useHost`, the aside id `core/shell/aside/v1`, the banner strip from `BannerSpec` data, the slot table with props and narrow placement, the later slots and their triggers |
 
 A task that implements part of this document moves to Ready only when every ADR it links is accepted with no open confirmation (see [13-delivery-and-github.md](13-delivery-and-github.md)).
 
@@ -39,7 +40,8 @@ A task that implements part of this document moves to Ready only when every ADR 
 - Shell: the host app in `apps/web` (AGPL-3.0-or-later). It owns the page frame, a handful of its own routes and the shell services. It holds no module screens.
 - Remote: one module's web package, `@northmes/<id>-web`, built with Vite and `@module-federation/vite` and loaded by the shell at run time. It exposes one entry, `./module`.
 - Module id: the kebab-case id from the module's `defineModule` manifest (for example `production-start`). The remote's name, its URL segment and its route path derive from it. See [03-modules-and-extensibility.md](03-modules-and-extensibility.md).
-- Slot: a typed, versioned place in a screen that its owning module renders and other modules fill (`planning/board/side/v1`). A contribution is one module's entry in a slot.
+- Slot: a typed, versioned place in a screen that its owning module renders and other modules fill (`planning/board/side/v1`). Its owner declares its kind: route, region, tab, field, item, banner or action ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
+- Contribution: one module's entry in a slot. Its id, slot, label, order and permission are data in the manifest's `web.contributes`; the remote supplies the implementation under the same id.
 - Closure schema: the GraphQL schema composed from a web package's own module and its `dependsOn` closure. A remote's typed documents are generated against it, so a screen cannot select a field from a module it does not depend on.
 - Plant route: the route `/$plant`, where `$plant` is the plant slug, unique per installation. Every planner screen sits under it.
 - Admin route: the route `/admin`, outside the plant route, where company admins work without a plant, for example in a new company that has no plant yet. Each module owns `/admin/<id>/*` ([0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
@@ -199,10 +201,11 @@ Nav items and slot contributions filter on the current plant's permissions ([001
 ### Shell layout
 
 - Top bar: the control that collapses the sidebar, the breadcrumb, a page actions slot that remotes fill through the `TopBarActions` portal from `@northmes/ui`, the live-updates status and one help menu at a fixed place (WCAG 3.2.6). Modules add entries to the help menu through `help` in `defineWebModule`, where they appear grouped by module, and never add their own top-level help. The breadcrumb's first crumb is the plant, a link to `/$plant`; when the user's plants span more than one company, a company crumb without a link comes before it, so the plant stays visible in every sidebar state ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
-- Top bar slot `core/top-bar/items/v1` (proposed id): a module adds one compact control there, such as the bell of the later notifications module. The shell renders the slot at the end of the top bar, after the help menu, without `WidgetFrame`, each contribution inside its own error boundary, and renders nothing when no module contributes. Release 1 has no contributor, and the slot is built with the first one ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
+- Top bar slot `core/top-bar/items/v1` (proposed id), of the kind `item`: a module adds one item there, such as the bell of the later notifications module, by supplying an icon name, a badge hook and a content component. The shell draws the control from that data at the end of the top bar, after the help menu: an icon button named "<label>, <badge text>" that opens a popover, without `WidgetFrame`, each contribution inside its own error boundary. Below about 640 px it draws a More menu in the top bar with one row per item, and a row opens the content in a sheet. It renders nothing when no module contributes. Release 1 has no contributor, and the slot is built with the first one ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
+- Banner strip: the shell draws banners from `BannerSpec` data (`id`, `severity`, `text`, an optional `link` from a link builder, `dismiss`) in a strip in the page flow under the top bar, so the strip scrolls with the page and never covers the focused element (2.4.11). It shows at most two banners in severity order (error, warning, info), then "Show n more"; each holds plain text and at most one link, and only a `session` banner has a dismiss button. A warning or info banner is announced once through the polite region when it appears or changes, and an error banner is an alert. The shell's own banners use this data: the restore notice, the AI budget states, a plant in onboarding and degraded health for admins. Module banners arrive later through `core/shell/banners/v1` ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 - Sidebar: the plant switcher first, then core items, then module items, then plugins in their own section, in the stable order the manifests declare (`order` is required, WCAG 3.2.3). Order never follows usage. Each module is one sidebar group, headed by its manifest `web.label`, at its manifest order. Its items are its nav entries, ordered by `nav.order` and then by declaration order. `nav.parent` nests an entry one level under another entry of the same module. `/api/v1/web/modules` adds `modules[].kind` (`core`, `module` or `plugin`), which puts core first and plugins in their own section. A module that failed to load shows its header with "(unavailable)" and no items. The user menu sits at the foot of the sidebar ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
 - Collapsed rail: the switcher, then one icon per top-level nav entry in the sidebar's order. Each rail link is named by its label, which a tooltip shows on hover and focus; the icon is decorative. A module that failed to load shows its manifest icon at its usual position, with "(unavailable)" in its accessible name ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
-- One shell aside slot, where the AI chat panel mounts so it survives route changes. At most one panel docks beside `main`; below about 640 px the chat panel opens as a modal sheet ([0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [10-ai-and-agents.md](10-ai-and-agents.md)).
+- The shell aside slot `core/shell/aside/v1`, of the kind `region`, where the AI chat panel mounts so it survives route changes. At most one panel docks beside `main`; below about 640 px the chat panel opens as a modal sheet ([0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [10-ai-and-agents.md](10-ai-and-agents.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 - One `Toaster`, one dialog stack, and `aria-busy` on `main` while a route loads.
 
 ## The remote contract
@@ -221,22 +224,27 @@ export interface WebModule {
   routes?(parent: PlantRoute): AnyRoute;            // subtree under /$plant/<id>; absent for a contribution-only plugin
   stationRoutes?(parent: StationRoute): AnyRoute;   // production-start only in release 1
   adminRoutes?(parent: AdminRoute): AnyRoute;       // subtree under /admin/<id>; core only in release 1 (ADR 0066)
-  readonly widgets: readonly SlotContribution[];    // contributions to slots other modules own
+  readonly contributions?: Readonly<Record<string, ContributionImpl>>;   // keyed by the ids in the manifest's web.contributes
   readonly help?: readonly HelpEntry[];             // { id, label, href }; shown in the help menu, grouped by module
   readonly typePolicies?: TypePolicies;             // merged into each per-plant Apollo client
 }
 
-export interface SlotContribution<S extends SlotId = SlotId> {
+// The manifest entry, static data in web.contributes, which /api/v1/web/modules sends with each module
+export interface WebContribution<S extends SlotId = SlotId> {
   readonly id: string;               // "example-widget.large-orders"
   readonly slot: S;                  // "planning/board/side/v1"
-  readonly label: string;            // required; names the section the shell renders
+  readonly label: string;            // required; names the section or control the shell renders
   readonly order: number;
   readonly permission: string;
-  readonly component: ComponentType<SlotProps[S]>;
 }
+
+// The implementation, built with the kind helper that matches the slot's kind (ADR 0068):
+// region(slot, Component), tab(slot, lazy(...)), field(slot, { useValues, render, Hover? }),
+// item(slot, { icon, useBadge, Content }), banner(slot, { layouts, useBanners })
+export type ContributionImpl = RegionImpl | TabImpl | FieldImpl | ItemImpl | BannerImpl;
 ```
 
-`validateWebModule(value, expectedId)` returns a list of errors and fails on: a missing default export, an id other than the expected one, non-string `version` or `northmesRange`, `routes` that is not a function, non-array `widgets` or `permissions`, and a contribution without `label`.
+`validateWebModule(value, expectedId, manifestContributions)` returns a list of errors and fails on: a missing default export, an id other than the expected one, non-string `version` or `northmesRange`, `routes` that is not a function, a non-array `permissions`, an implementation without a manifest entry, a manifest entry without an implementation, and an implementation whose kind differs from its slot's kind. A contribution without a label fails the catalog check and `pnpm plugin:check`, because the label is manifest data.
 
 ### Rules the shell and CI enforce
 
@@ -252,6 +260,7 @@ export interface SlotContribution<S extends SlotId = SlotId> {
 | No app path is written as a string literal in `to=`, `href=`, `navigate({ to })`, `redirect({ to })` or `page.goto()` in `modules/*/web`, `examples/*/web`, `apps/web` and `e2e`; paths come from link builders | A pattern check script next to the styling check, with an allowlist entry that needs a reason |
 | Labels are plain strings, never React nodes | Contract types; a later command palette and translation read them |
 | A contribution's slot belongs to a module in the contributor's `dependsOn` closure | Boot catalog check and the shell's acceptance check against the module list ([0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)) |
+| Every slot declares a kind, and each contribution's implementation matches its slot's kind and its manifest entry | The remote build check in `@northmes/web-build`, `validateWebModule`, the `SlotProps` map in `@northmes/web-sdk` at compile time, and the slot id snapshot, which records each kind ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | A remote queries only fields of its own module and its `dependsOn` closure | Codegen per web package against its closure schema |
 | Changing a slot's props adds `v2` and keeps `v1` for one deprecation window | CI check that fails when a slot id from the previous release's snapshot disappears |
 
@@ -284,18 +293,24 @@ export interface SlotContribution<S extends SlotId = SlotId> {
 
 One remote per module that has screens: `core` (master data, settings, System health), `planning` (board, job order table view, orders, proposal review), `production-start` (station routes and a panel in planning's order slot), and one for the `example-widget` plugin, which contributes to `planning/board/side/v1`. The backend validator example plugin has no remote. See [Open points](#open-points) for the UI of the Pyramid connector and the AI provider settings.
 
-Slot ids follow `<module>/<area>/<name>/v<N>`. Known release 1 slots:
+Slot ids follow `<module>/<area>/<name>/v<N>`. Slots that the shell renders carry the owner id `core`. The slots and their kinds ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)):
 
-| Slot id | Owner | Contributors in release 1 |
-|---|---|---|
-| `planning/board/side/v1` | planning | `example-widget`; props carry `plantId` and `paused` |
-| `planning/order/panels/v1` | planning | production-start |
-| `planning/board/block-fields/v1` (proposed id) | planning | core fields, the Pyramid connector and plugins through `BoardFieldSlot`; pure text and icon fields with `accessibleText`, rendered on every block, see [07-production-planning.md](07-production-planning.md) |
-| `planning/board/header/v1` (proposed id) | planning | the Pyramid connector ("Pyramid data as of <time>") |
-| Shell aside slot | shell | AI chat panel |
-| `core/top-bar/items/v1` (proposed id) | shell, under the owner id `core` | none in release 1; the bell of the later notifications module ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)) |
+| Slot id | Kind | Owner | Props (frozen, ids only) | Wide | Narrow (below about 640 px) | When |
+|---|---|---|---|---|---|---|
+| `core/shell/aside/v1` | region, one docked | shell, under the owner id `core` | `{ plantId }` | docked beside `main` | modal sheet | release 1, the AI chat panel; M-39 decides whether the shell or core's remote supplies it |
+| `planning/board/side/v1` | region | planning | `{ plantId, paused }` | docked beside the board | D3 decides | release 1, `example-widget` |
+| `planning/board/header/v1` (proposed id) | field | planning | `{ plantId }`; one item, the plant | one line in the header | wraps; the full text stays in the accessible name | release 1, the Pyramid connector ("Pyramid data as of <time>"), if M-31 gives it a remote |
+| `planning/board/block-fields/v1` (proposed id) | field | planning | `{ plantId }`; items are the blocks of the board's loaded range | on every block, text and icon with `accessibleText`, see [07-production-planning.md](07-production-planning.md) | fewer fields by priority, all of them in the block detail (D3) | release 1, core and the Pyramid connector (M-31) |
+| `planning/order/panels/v1` | region | planning | `{ plantId, productionOrderId }` | a column beside the details | stacked below | release 1, production-start |
+| `core/top-bar/items/v1` (proposed id) | item | shell, under the owner id `core` | `{ plantId: string \| null }` | a button after the help menu | a row in the top bar's More menu; content in a sheet | later, the bell of the notifications module ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)) |
+| `core/shell/banners/v1` | banner | shell, under the owner id `core` | `{ plantId: string \| null, layout }` | the strip under the top bar; two shown, then "Show n more" | the same, text wraps | later, the first module banner |
+| `planning/order/tabs/v1` | tab | planning | `{ plantId, productionOrderId }` | a tab after General and History | the tab list scrolls | later |
+| `planning/orders/columns/v1` | field | planning | `{ plantId }`; items are the rows of the page | a column, not sortable or filterable | the table container scrolls horizontally | later |
+| `planning/order/actions/v1` | action | planning | `{ plantId, productionOrderId, version }` | a page action | the page's overflow menu | later |
+| `production-start/station/panels/v1` | region | production-start | `{ plantId, stationId, jobOrderId: string \| null }` | the station layout, 44 px targets | stacked | later |
+| `core/dashboard/widgets/v1` | region | core | open (M-32) | open | open | undecided |
 
-Slot prop types stay in `@northmes/web-sdk` in release 1, so a plugin types its contribution without importing AGPL code.
+Slot prop types stay in `@northmes/web-sdk` in release 1, in one `SlotProps` map that also holds each slot's kind, so a plugin types its contribution without importing AGPL code and a wrong slot id or kind fails to compile. A contribution reaches the slot's props and the host's services through `useHost(slot)`; release 1 builds it with `props` only, and each other member (`plant`, `layout`, `size`, `time`, `can`, `live`, `announce`) arrives with its first reader ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 
 ## Shared singletons
 
@@ -383,6 +398,7 @@ The shell takes remote URLs only from this endpoint, never from query parameters
 | `modules[].label`, `order` | From the backend manifest, so a failed module keeps its menu entry and position |
 | `modules[].icon` | From the manifest's required `web.icon`; the collapsed rail shows it for a module that failed to load ([0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)) |
 | `modules[].kind` | `core`, `module` or `plugin`; the sidebar puts core first and plugins in their own section |
+| `modules[].contributions` | The module's `web.contributes` entries with id, slot, label, order and permission, so the shell names and places a contribution whose remote failed ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | `plant` | `{ id, slug, name, timeZone, presentation }`, where `presentation` holds the resolved `dateFormat`, `hourCycle` and `numberFormat`; the shell fills `PresentationProvider` from it ([0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). `plant.onboardingState` is `inProgress` or `open`. `null` without `plant`, and the shell then uses `DEFAULT_PRESENTATION` |
 | `companies` | `[{ id, name, onboardingState, plants: [{ id, slug, name, onboardingState }] }]`: every plant the user can open, grouped by company and sorted by name; a plant in onboarding only for holders of `core.onboarding:manage` there; a company where the user holds a company role but which has no plant yet has an empty list. Empty for a station principal ([0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)) |
 | `admin` | `true` when the admin pages hold a page for the user: an admin permission at a company node, in release 1 `core.plant:create` or `core.onboarding:manage` |
@@ -451,6 +467,8 @@ stateDiagram-v2
 | Lazy chunk missing (tab older than the installed version) | Reload dialog | stage `chunk` | `stale-tab.spec.ts` |
 | Core remote broken | Shell status route still renders | stage `entry` | Core remote deleted |
 | Slot contribution throws | Fallback inside that contribution's frame, with a role and accessible name; focus moves to it when focus was inside the widget; selecting another entity resets it | stage `slot` | Fixture widget that throws for one order and rejects a promise for another |
+| A `field` contribution's `useValues` or `render` throws | The owner draws its items without that field; the error is reported once, not once per item | stage `slot` | A board whose block-field contribution throws in `useValues` draws every block without that field and reports one error |
+| A contribution's remote fails to load | Each of its contributions shows the fallback named by its manifest label | stage `manifest` or `entry` | A contribution whose remote failed shows a fallback named by its manifest label |
 | Socket lost | "Live updates paused, reconnecting"; moves disabled | none | `reconnect-after-outage.spec.ts` |
 | Server restarting (502 or 503 from `/graphql` or `/api`) | The top bar shows that the server is restarting through the polite live region, moves and mutations stay disabled, and the shell retries; a full page load gets Caddy's maintenance page. Final English copy comes from design task D2 | none | Nightly Compose: stop `app` with the board open; the shell shows the restarting state, not the route error component, and recovers without a reload after `app` starts |
 | Server upgraded while the tab is open | Reload dialog; mutations refused | `core.client_outdated` from the gateway | `stale-tab.spec.ts` |
@@ -475,7 +493,7 @@ All three are MIT, import nothing AGPL, and carry an API Extractor report from t
 
 | Package | Owns | Refuses | Shared at run time |
 |---|---|---|---|
-| `@northmes/web-sdk` | `defineWebModule`, `validateWebModule`, contract and slot prop types, `createShellRoutes` and route types, `screenRoute`, `movedRoutes`, `ShellProvider` (rendered only by the shell; it fills `PresentationProvider` from `/api/v1/web/modules`) and `useShell`, `createNorthmesClient`, `useConnection`, `useListState`, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `useCommandForm`, `usePermission` and `<Can>`, `announce()`, `<Slot>` and the slot registry, `usePlantTime()` (formatters bound to the plant's zone and presentation values), `masterDataRoutes` and `MasterDataLookup` | Module domain logic | singleton |
+| `@northmes/web-sdk` | `defineWebModule`, `validateWebModule`, contract and slot prop types, the slot kind helpers and `useHost`, `createShellRoutes` and route types, `screenRoute`, `movedRoutes`, `ShellProvider` (rendered only by the shell; it fills `PresentationProvider` from `/api/v1/web/modules`) and `useShell`, `createNorthmesClient`, `useConnection`, `useListState`, `useViewState`, `useBreadcrumbs`, `ModuleLink`, `useCommandForm`, `usePermission` and `<Can>`, `announce()`, `<Slot>` and the slot registry, `usePlantTime()` (formatters bound to the plant's zone and presentation values), `masterDataRoutes` and `MasterDataLookup` | Module domain logic | singleton |
 | `@northmes/ui` | shadcn 4 components on Base UI, tokens and the two-tone focus ring, presentational patterns (see [UI patterns](#ui-patterns)), `NavIcon`, `LinkProvider`, `PresentationProvider` and `usePresentation()` (which returns `DEFAULT_PRESENTATION` outside a provider), the form engine `useZodForm` and, exported by name, the react-hook-form pieces module forms need: `useFieldArray`, `useWatch`, `useController`, `useFormContext`, `FormProvider` and the types `FieldPath`, `FieldValues`, `UseFormReturn` and `SubmitHandler`; block and swatch text color through `textColorFor` from `@northmes/contracts` | Apollo, TanStack Router and GraphQL imports, so later MCP Apps views can use it | singleton |
 | `@northmes/web-build` | `defineRemoteConfig({ id, version })`, the shared list `shared.mjs`, the browser floor and explicit `build.target`, the `no-bundled-singletons`, no-CSS and restart guards, the `sources.gen.css` generator, plugin build helpers | Run-time code | build time only |
 
@@ -815,7 +833,7 @@ Each line is a candidate story; the delivery session splits it into thin vertica
 | Work | Package | Depends on | Key tests |
 |---|---|---|---|
 | Shared list, `defineRemoteConfig`, guards, browser floor | `@northmes/web-build` | none | Guard fixture remote that bundles an Apollo subpath fails; fixture remote importing sonner fails naming the package; empty-CSS check |
-| Contract, `validateWebModule`, route types, `screenRoute`, `ShellProvider`, `defineModuleLinks` | `@northmes/web-sdk`, `@northmes/contracts` | web-build | `validateWebModule` error cases; contribution without `label` fails; `order({ plant: "plant-a", orderId: "a/b" }).href` is `/plant-a/planning/orders/a%2Fb`; an empty `orderId` throws; `define-module-links.test-d.ts` rejects a missing `orderId`, an extra argument, an unknown entry, an undeclared search key and a status value outside the enum |
+| Contract, `validateWebModule`, route types, `screenRoute`, `ShellProvider`, `defineModuleLinks`, the slot kinds `region` and `field` with `useHost` | `@northmes/web-sdk`, `@northmes/contracts` | web-build | `validateWebModule` error cases; an implementation whose kind differs from its slot's kind fails; a manifest entry without an implementation fails; `order({ plant: "plant-a", orderId: "a/b" }).href` is `/plant-a/planning/orders/a%2Fb`; an empty `orderId` throws; `define-module-links.test-d.ts` rejects a missing `orderId`, an extra argument, an unknown entry, an undeclared search key and a status value outside the enum |
 | Tokens with fixes, focus ring, primitives, token contrast test | `@northmes/ui` | design D1 | Token contrast test; component a11y tests |
 | Shell boot, federation instance, placeholders, error component, status route | `apps/web` | web-sdk, ui, design D2 | Playwright contract test: every module validated, every nav entry renders; degraded-path specs; CSP fixture |
 | Static mounts, cache headers, `/api/v1/web/modules`, boot file check | `apps/server` | catalog | Disabled module never appears in any browser request; missing file marks the module degraded |
