@@ -8,6 +8,12 @@ function major(version) {
 }
 
 export function compare(running, pinned) {
+  if (Number.isNaN(major(pinned))) {
+    return {
+      ok: false,
+      message: `.node-version holds ${JSON.stringify(pinned)}, which does not start with a Node major such as 26.`,
+    };
+  }
   if (major(running) === major(pinned)) {
     return { ok: true, message: '' };
   }
