@@ -96,8 +96,8 @@ Estimates are raw ledger days from the internal research notes named in the tabl
 | E03 | planning: Plan production in a pure scheduling package | Not estimated | E00, E01-S02 | M2 |
 | E04 | web: Ship the shell, design tokens and shared UI patterns | Shell services and token fixes 6 (internal research note 21); web hooks and UI patterns 11 to 14 (internal research note 33); shell hardening inside the 35 to 51 platform days | E02, D1, D2 | M2 |
 | E05 | core: Sign users in and make every write an audited command | Audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated | E02 | M2 |
-| E06 | core: Hold master data, units, settings and plant calendars | Units 9 (internal research note 35); list kit 17.5 to 24 gross, overlapping internal research note 33 (internal research note 34); master-data kit 6 to 8, settings 3, generators 3 to 4 (internal research note 33); calendars not estimated | E05, E04, E03-S01 | M2 |
-| E07 | planning: Plan orders in per-planner drafts and run autoplan | Drafts, Save, soft locks and row statuses 4 to 7 (internal research note 32); production orders and the autoplan job not estimated | E06, E03 | M3 |
+| E06 | core: Hold master data, units, settings and plant calendars | Units 9 (internal research note 35); list kit 17.5 to 24 gross, overlapping internal research note 33 (internal research note 34); master-data kit 6 to 8, settings 3, generators 3 to 4 (internal research note 33); calendars not estimated | E05, E04, E03-S01; E06-S14 also on E07-S08 and E08-S10 (production planning) and on E06-S13, E09-S06, E11-S01 and E13-S03 (its module steps) | M2; E06-S14 at M4, after E08-S10 |
+| E07 | planning: Plan orders in per-planner drafts and run autoplan | Drafts, Save, soft locks and row statuses 4 to 7 (internal research note 32); production orders and the autoplan job not estimated | E06 (not E06-S14), E03 | M3 |
 | E08 | planning: Move job orders on the board and in the table view | About 35 for the board (internal research note 05), 3 of them spent in E01; 8 for board accessibility and the table view (internal research note 21); click-to-place 1.5 of that is cut candidate 2 | E01-S04 verdict, D3, E04; E07 for data wiring | M4 |
 | E09 | pyramid-connector: Import Pyramid orders, materials and stock | Not estimated; the field unit map is 1 (internal research note 35) | E06 | M2 |
 | E10 | pyramid-connector: Write the committed plan back to Pyramid | Not estimated | E09, E07 | M2 target, M3 decision |
@@ -114,7 +114,7 @@ Estimates are raw ledger days from the internal research notes named in the tabl
 | E21 | plugins: Build the example plugins outside the workspace | Two examples 2 and plugin build, pack and check 2 to 3 (internal research note 20); widget remote 1 to 2 (internal research note 19); partly spent in E02 | E02 | M2 |
 | E22 | core: Keep the regulated path open | 8 to 10 (internal research note 24), much of it delivered inside E05 and E11 | E05 | M4 |
 
-Board-core tasks in E08 wait only for the SP3 verdict and design approval D3; only the board's data-wiring story waits for E07. E09 starts right after core master data (E06), inside M2. The first E03 runs start once E02-S01-T01 (the foundation pull request) has settled the root configuration files, or once all root configuration changes have landed in one session pull request.
+Board-core tasks in E08 wait only for the SP3 verdict and design approval D3; only the board's data-wiring story waits for E07. E09 starts right after core master data (E06), inside M2. E06-S14, the onboarding wizard, waits until production planning is built (E07-S08 and E08-S10, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)), so E06 closes at M4 while the rest of E06 lands in M2. No epic or story that depends on E06 waits for E06-S14. The first E03 runs start once E02-S01-T01 (the foundation pull request) has settled the root configuration files, or once all root configuration changes have landed in one session pull request.
 
 ### E00 repo: Make the repository ready for the first handoff run
 
@@ -2695,7 +2695,7 @@ Tests first:
 - `modules/core/test/company-admin-role.int.test.ts`: "after the permission sync the company admin role holds every installed permission, a plugin's included"; "a company admin assigns planning's planner role at a plant".
 - `apps/server/test/cli/installation-settings.int.test.ts`: "an unknown key exits 2".
 
-Notes: Krister answered M-60 on 2026-10-06 (`northmes installation set` on the host), and ADR 0066 waits for his confirmation of M-61. The commands receive `auth_secret` in the migrate container when Better Auth needs it to create a user (M-53). The ledger row for this story, E05-S15, E06-S14 and the module steps is in ADR 0066 under Changes to ADR 0055. Krister left its figure open, so it carries the planning session's estimate of 2026-10-06: 13 to 21.5 raw days (E05-S14 2.5 to 3.5, E05-S15 3 to 5, E06-S14 5 to 8, the five module steps 2.5 to 5), without the onboarding wizard's design task and gate time. Per epic that is E05 5.5 to 8.5 (E05-S14 and E05-S15), E06 5.5 to 9 (E06-S14 and the formats step) and 0.5 to 1 each for E07, E09, E11 and E13. Velocity checkpoint 1 (M2) checks the estimate, and M-04 stays open.
+Notes: Krister answered M-60 on 2026-10-06 (`northmes installation set` on the host), and ADR 0066 waits for his confirmation of M-61. The commands receive `auth_secret` in the migrate container when Better Auth needs it to create a user (M-53). The ledger row for this story, E05-S15, E06-S14 and the module steps is in ADR 0066 under Changes to ADR 0055. Krister left its figure open, so it carries the planning session's estimate of 2026-10-06: 13 to 21.5 raw days (E05-S14 2.5 to 3.5, E05-S15 3 to 5, E06-S14 5 to 8, the five module steps 2.5 to 5), without the onboarding wizard's design task and gate time. Per epic that is E05 5.5 to 8.5 (E05-S14 and E05-S15) and E06 7.5 to 13 (E06-S14 with the five module steps, which arrive with it). Velocity checkpoint 1 (M2) checks the estimate, and M-04 stays open.
 
 #### E05-S15 core: Create plants on admin pages at /admin
 
@@ -2722,7 +2722,7 @@ Tests first:
 - `apps/web/test/landing.test.tsx`: "one plant and admin false redirects / to /hel"; "no plant and admin true redirects / to /admin".
 - `packages/contracts/test/define-module-links.test.ts`: "an admin section builder builds /admin/core/plants without a plant".
 
-Notes: the plant form reuses the zone picker and the production day start rule of E06-S05. The onboarding wizard, the plant gate and the routing of a company in onboarding at `/` arrive with E06-S14; until then a new plant is usable at once. Krister confirmed the `/admin` path on 2026-10-06 (M-59).
+Notes: the plant form reuses the zone picker and the production day start rule of E06-S05. The onboarding wizard, the plant gate and the routing of a company in onboarding at `/` arrive with E06-S14, after production planning is built; until then a new plant is usable at once. Krister confirmed the `/admin` path on 2026-10-06 (M-59).
 
 ### E06 core: Hold master data, units, settings and plant calendars
 
@@ -2736,7 +2736,7 @@ ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-set
 
 Out of scope: CSV and Excel import of registers, list export, the reporting schema, the screen and plugin generators.
 
-Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated; the onboarding wizard (E06-S14) and its formats step (E06-S13) share the ledger row of ADR 0066 with E05-S14, E05-S15 and the other module steps, and their part of the planning session's estimate of 2026-10-06 is 5.5 to 9, which velocity checkpoint 1 (M2) checks (see the notes of E05-S14). Depends on: E05, E04, E03-S01. Milestone: M2, because E09 starts right after core master data.
+Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated; the onboarding wizard with its five module steps (E06-S14) shares the ledger row of ADR 0066 with E05-S14 and E05-S15, and its part of the planning session's estimate of 2026-10-06 is 7.5 to 13, which velocity checkpoint 1 (M2) checks (see the notes of E05-S14). Depends on: E05, E04, E03-S01; E06-S14 also waits for E07-S08 and E08-S10 and for E06-S13, E09-S06, E11-S01 and E13-S03. Milestone: M2, because E09 starts right after core master data; E06-S14 lands at M4, after production planning is built (ADR 0066).
 
 #### E06-S01 contracts: Convert units through the NorthMES unit catalog
 
@@ -3033,7 +3033,7 @@ Issue: northMES/northmes#75.
 
 As a plant admin, I want to set how dates, clock times and numbers are shown and typed for the company, with a plant override, so that every screen writes them the way people at the plant read them.
 
-Module: core, web (`modules/core`, `modules/core/contracts`, `apps/server`, `apps/web`, `packages/web-sdk`). Blocked by: E06-S08, E04-S07, E04-S04, E07-S01, E06-S14. Design: settings page (canonical list and form page); the onboarding wizard design for the formats steps.
+Module: core, web (`modules/core`, `modules/core/contracts`, `apps/server`, `apps/web`, `packages/web-sdk`). Blocked by: E06-S08, E04-S07, E04-S04, E07-S01. Design: settings page (canonical list and form page).
 
 ADRs: [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
 
@@ -3044,7 +3044,6 @@ Acceptance criteria:
 - `GET /api/v1/web/modules?plant=<slug>` returns `plant { id, slug, name, timeZone, presentation }` with the resolved values. `ShellProvider` fills `PresentationProvider` from it, so boot needs no extra query, and `usePlantTime()` returns bound formatters.
 - The plant switch swaps the presentation context together with the permission set. A settings change shows on the next load, plant switch or reconnect.
 - GraphQL, REST, MCP tools, events, the audit export and the rollback CSV never use the settings: instants stay ISO 8601 with offset, and numbers keep a point decimal without grouping.
-- Core adds the optional formats steps to the onboarding wizard: the company step at `/admin/core/onboarding/$companyId` with a live sample of a date, a clock time and a number in the values being edited, and the plant step that inherits or overrides each field ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -3054,15 +3053,15 @@ Tests first:
 
 - `e2e/presentation.spec.ts`: the company uses `dmyDot` and plant P2 overrides it with `iso`; an order deadline shows `25.10.2026` at P1 and `2026-10-25` after switching to P2; the switch causes no document navigation when the module set is unchanged. The spec also runs in a Playwright project with locale `en-US` and shows the same strings.
 
-Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one.
+Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one. The formats steps of the onboarding wizard arrive with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E06-S14 core: Guide a new company and each new plant through onboarding
 
 As a plant admin, I want an onboarding wizard on my first sign-in to a new company and for each new plant, which keeps the plant closed until its calendar and a plannable machine exist, so that nobody plans on a guessed time zone, production day start or shift times.
 
-Module: core, web (`modules/core`, `modules/core/contracts`, `modules/core/web`, `apps/server`, `apps/web`, `packages/sdk`, `packages/web-sdk`). Blocked by: E05-S15, E06-S05, E06-S11. Design: onboarding wizard (a design task under this story, with a variations round, because the wizard is a new kind of screen).
+Module: core, web, planning, pyramid-connector, ai, production-start (`modules/core`, `modules/core/contracts`, `modules/core/web`, `modules/planning`, `modules/pyramid-connector`, `modules/ai`, `modules/production-start`, `apps/server`, `apps/web`, `packages/sdk`, `packages/web-sdk`). Blocked by: E05-S15, E06-S05, E06-S11, E06-S13, E07-S08, E08-S10, E09-S06, E11-S01, E13-S03. Design: onboarding wizard with every step, the module steps included (a design task under this story, with a variations round, because the wizard is a new kind of screen).
 
-ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md).
 
 Acceptance criteria:
 
@@ -3071,6 +3070,11 @@ Acceptance criteria:
 - The plant check in `PrincipalResolver` admits only holders of `core.onboarding:manage` at a plant that is not open; any other principal with a role there gets FORBIDDEN `core.plant_not_ready` and no security event, and every station request at that plant other than the module list fails the same way. Completing onboarding drops the cached state, and an open plant never closes.
 - `/api/v1/web/modules` adds `onboardingState` to companies, plants and `plant`. A plant in onboarding is listed only for holders of `core.onboarding:manage`, and the switcher marks it "Onboarding"; for anyone else with a role there, the endpoint returns the `plant` object and no modules, and the shell shows the page with the plant's name, for example "Plant D is not open yet" ("Its onboarding is not complete. You can open it once an admin completes onboarding."). Holders of `core.onboarding:manage` see the banner with the plant's name, for example "Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it.", with the link "Continue onboarding" to the wizard.
 - The company wizard at `/admin/core/onboarding/$companyId` holds the company step (rename) and the first plant step (`core.createPlant`), then moves to the plant wizard at `/$plant/core/onboarding`. Core's plant steps: plant (required: confirmed by the admin; the zone and the production day start can change until the first calendar version exists), calendar (required: a version with at least one shift; the week preview and plant holidays come from E06-S10 and E06-S11), machines (required: one plannable machine), people (users and company and plant roles) and review and open. Company steps of other modules appear in the first plant's wizard; later plants show them as done with an edit link.
+- Core's formats steps, both optional: the company step at `/admin/core/onboarding/$companyId` with a live sample of a date, a clock time and a number in the values being edited, and the plant step that inherits or overrides each field of `core.presentation` (E06-S13).
+- Planning declares the planning rules step over the settings of E07-S08: company values in the first plant's wizard, a plant override later, each default shown with the ADR that records it. The step is required while a planning setting has no recorded default.
+- The connector declares the ERP connection step (company level, not required to open a plant): polling, file mode or not used; the endpoint and credentials; `cycleTimeBasis`, `fieldTimeUnits` and `operatorReportingSystem`; the warehouse rules and the default plant; write-back stays in shadow mode. The step offers a first import, and the machines it creates count for the machines step.
+- The ai module declares the AI assistant step (company level, optional): a provider, alias bindings, Test connection, the privacy acknowledgement and the features; skipping leaves AI off.
+- Production-start declares the stations step (plant level, optional, shown only when `operatorReportingSystem` is `northmes`): station records, with pairing later at each station PC. An admin can create and pair a station while the plant is in onboarding.
 - The wizard reads one query that returns each step as todo, done, skipped or blocked and opens the first todo; another browser or admin resumes at the same step, and `version` refuses a stale write.
 - `/` sends a holder of `core.onboarding:manage` at a company in onboarding to its company wizard, or to `/admin` when there are several; a user whose plants are all in onboarding sees the page "Your company is not open yet" ("Its onboarding is not complete. You can open its plants once an admin completes onboarding.").
 - The wizard meets WCAG 2.2 AA ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)): each step is a `screenRoute` with its own title and `h1`, and focus moves to it on a step change; the step list is a list of links in a fixed order whose current step carries `aria-current="step"`; each step's state is text, never only a color or an icon; each step saves through `useCommandForm`, so server `fieldErrors` keep the typed values; values entered earlier in the flow are shown again instead of asked for again (3.3.7); the review step lists every step's state and the plant's zone and production day start before "Open plant" (3.3.4).
@@ -3085,12 +3089,13 @@ Tests first:
 - `e2e/a11y/onboarding-wizard.spec.ts`: "every core step of the company and plant wizards passes axe".
 - `packages/testing/test/plant-fixture.int.test.ts`: "a plant from the fixture is open unless the test asks for one in onboarding".
 - `apps/server/test/catalog.test.ts`: "a plugin manifest with an onboarding key exits 1 naming the plugin".
+- `modules/planning/test/onboarding-step.int.test.ts`: "a plant cannot open while frozenHours has no value".
 - `apps/server/test/rest/web-modules.int.test.ts`: "a plant in onboarding is listed for a holder of core.onboarding:manage with onboardingState inProgress and left out for a planner"; "a planner asking for a plant in onboarding gets 200 with onboardingState inProgress and no modules".
 - `apps/web/test/landing.test.tsx`: "a company admin of a company in onboarding goes from / to its company wizard"; "a company admin of two companies in onboarding goes from / to /admin"; "a planner whose plants are all in onboarding sees Your company is not open yet".
 - `apps/web/test/plant-switcher.test.tsx`: "a plant in onboarding carries Onboarding in its link text".
 - `e2e/company-onboarding.spec.ts`: "after company create, the first admin signs in, changes the password, lands in the company wizard, creates plant hel, adds a calendar and one machine, opens the plant, and a planner then opens /hel".
 
-Notes: the plant gate changes the plant check in `PrincipalResolver`, so the tasks that build it touch authorization, carry `human` and run on the guided graph, as the E05 tasks do. Module steps arrive as acceptance criteria of E06-S13 (formats), E07-S08 (planning rules), E09-S06 (ERP connection), E13-S03 (AI assistant) and E11-S01 (stations). The scrap reason register joins the stations step once M-33 names its owner, and operators and badges join the people step once a story builds badge enrolment.
+Notes: Krister decided on 2026-10-06 to build this story, its design task and the five module steps after production planning is built, so that the steps follow what planning needs; the story stays in release 1 ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)). E07-S08 holds the planning settings that the planning rules step shows. E08-S10 is the last planning story that reads what the plant, calendar and machines steps collect, through E08-S01 (the board in plant time, machines grouped by equipment group, non-working time from availability windows) and E07-S09 (the board range after the autoplan of E07-S07). The module steps arrive here instead of in E06-S13, E07-S08, E09-S06, E11-S01 and E13-S03, because the manifest's `onboarding` key ships with the code that reads it; if cut 5 removes E11, the stations step and the E11-S01 blocker go with it. Until this story is built, a new plant is usable at once (E05-S15). E11-S02 and E12-S04 each get their `core.plant_not_ready` test from whichever of that story and this one is built second. The plant gate changes the plant check in `PrincipalResolver`, so the tasks that build it touch authorization, carry `human` and run on the guided graph, as the E05 tasks do. The scrap reason register joins the stations step once M-33 names its owner, and operators and badges join the people step once a story builds badge enrolment.
 
 ### E07 planning: Plan orders in per-planner drafts and run autoplan
 
@@ -3104,7 +3109,7 @@ ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](.
 
 Out of scope: the board UI (E08), Pyramid import (E09), agent proposals (E15), solver plugins, BOM explosion into child orders.
 
-Estimate: drafts, Save, soft locks and row statuses 4 to 7 raw days (internal research note 32); the rest not estimated. Depends on: E06, E03; ADR 0029 accepted before the first migration. Milestone: M3.
+Estimate: drafts, Save, soft locks and row statuses 4 to 7 raw days (internal research note 32); the rest not estimated. Depends on: E06 (not E06-S14, which waits for E07-S08 and E08-S10), E03; ADR 0029 accepted before the first migration. Milestone: M3.
 
 #### E07-S01 planning: Release production orders with their operations and job orders
 
@@ -3277,21 +3282,21 @@ Issue: northMES/northmes#84.
 
 As a plant admin, I want the planning rules the product owner has not settled to be plant settings with recorded defaults, so that the pilot can change them without a release.
 
-Module: planning. Blocked by: E06-S08, E06-S14. Design: settings page; the onboarding wizard design for the planning rules step.
+Module: planning. Blocked by: E06-S08. Design: settings page.
 
-ADRs: [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
+ADRs: [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md).
 
 Acceptance criteria:
 
 - Planning settings hold the frozen hours, the deadline rule (start of day or end of shift), the lead time basis (calendar or working time), the duration divisor, whether retool may overlap lead time, and whether a tool may override cycle time.
 - Each default equals the one its ADR records.
 - `plan()` reads the settings from the snapshot, never from the environment.
-- Planning declares the planning rules step of the onboarding wizard: company values in the first plant's wizard, a plant override later, each default shown with the ADR that records it. The step is required while a planning setting has no recorded default ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
 - `modules/planning/test/settings.test.ts`: "the defaults equal the ADR defaults"; "changing the deadline rule changes TC10's latest start".
-- `modules/planning/test/onboarding-step.int.test.ts`: "a plant cannot open while frozenHours has no value".
+
+Notes: the planning rules step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E07-S09 planning: Serve the board range and the late-order facts
 
@@ -3711,9 +3716,9 @@ Issue: northMES/northmes#105.
 
 As a plant admin, I want to see each run, the rows that failed and why, and the connector's health in one place, so that nothing is dropped silently.
 
-Module: pyramid-connector. Blocked by: E09-S05, E06-S03, E06-S14. Design: import log, inbox and integration card (a design task under this story).
+Module: pyramid-connector. Blocked by: E09-S05, E06-S03. Design: import log, inbox and integration card (a design task under this story).
 
-ADRs: [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
+ADRs: [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md).
 
 Acceptance criteria:
 
@@ -3721,12 +3726,13 @@ Acceptance criteria:
 - Inbox items are keyed by external reference and error code with first seen, last seen and a count; an order whose last import failed shows `sourceStale`.
 - An unknown equipment code creates equipment with the configured plannable default and an inbox review item.
 - The integration card shows last success, last error and the mapping settings; the board header shows "Pyramid data as of <time>".
-- The connector declares the ERP connection step of the onboarding wizard (company level, not required to open a plant): polling, file mode or not used; the endpoint and credentials; `cycleTimeBasis`, `fieldTimeUnits` and `operatorReportingSystem`; the warehouse rules and the default plant; write-back stays in shadow mode. The step offers a first import, and the machines it creates count for the machines step ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
 - `modules/pyramid-connector/test/inbox.int.test.ts`: "three polls with the same broken order give one item with count 3".
 - `modules/pyramid-connector/test/auto-create-equipment.int.test.ts`: "a job order on non-plannable equipment comes back under notPlannable".
+
+Notes: the ERP connection step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E09-S07 pyramid-connector: Import stock and re-date planned movements
 
@@ -3918,9 +3924,9 @@ Issue: northMES/northmes#115.
 
 As a plant admin, I want to register a station PC with a pairing code I approve from my own PC, so that the station has its own credential and never holds a person's password.
 
-Module: core, production-start. Blocked by: E05-S07, E06-S14. Design: D4 operator station (a design task under this story).
+Module: core, production-start. Blocked by: E05-S07. Design: D4 operator station (a design task under this story).
 
-ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
+ADRs: [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md).
 
 Acceptance criteria:
 
@@ -3929,11 +3935,12 @@ Acceptance criteria:
 - `core.credential.revoked` closes that credential's sockets with 4403.
 - Presence is written at most every 30 to 60 s without an audit row; System health lists stations not seen for 7 days.
 - A security event is written when a station key is used from a new source IP.
-- Production-start declares the stations step of the onboarding wizard (plant level, optional, shown only when `operatorReportingSystem` is `northmes`): station records, with pairing later at each station PC. An admin can create and pair a station while the plant is in onboarding ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
 - `modules/core/test/station-credential.int.test.ts`: "a station key cannot call a planner query"; "revocation closes the socket with 4403".
+
+Notes: the stations step of the onboarding wizard, and creating and pairing a station while its plant is in onboarding, arrive with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E11-S02 production-start: Sign operators in by badge at a station
 
@@ -3952,12 +3959,13 @@ Acceptance criteria:
 - One open operator session per station; a new sign-in ends the previous one with reason `replaced`.
 - Badge input is read only in the focused badge field and on the Switch operator screen; no global key listener. A PIN, when enabled, is one field that accepts paste.
 - Five unknown badges within 60 s lock badge sign-in on that station for 5 minutes and write a security event.
-- At a plant whose onboarding is not complete, sign-in fails with `core.plant_not_ready` ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
-- `modules/core/test/station-sign-in.int.test.ts`: "a second sign-in ends the first session with reason replaced"; "five unknown badges lock sign-in for 5 minutes"; "sign-in at a station of a plant in onboarding fails with core.plant_not_ready".
+- `modules/core/test/station-sign-in.int.test.ts`: "a second sign-in ends the first session with reason replaced"; "five unknown badges lock sign-in for 5 minutes".
 - `e2e/station-sign-in.spec.ts`: "a badge scan into the badge field signs the operator in".
+
+Notes: the plant gate of E06-S14 also stops sign-in at a plant whose onboarding is not complete, with `core.plant_not_ready`. Whichever of this story and E06-S14 is built second adds "sign-in at a station of a plant in onboarding fails with core.plant_not_ready" to `modules/core/test/station-sign-in.int.test.ts` ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E11-S03 production-start: Start, pause and finish a job at the station
 
@@ -4173,9 +4181,9 @@ Acceptance criteria:
 Tests first:
 
 - `apps/server/test/mcp.disabled.int.test.ts`: "POST /mcp returns 404 while the setting is off".
-- `apps/server/test/mcp/tools.int.test.ts`: "every tool declares both annotations and an outputSchema"; "a session cookie without a bearer gets 401"; "a plant A user never gets plant B rows"; "a tool call naming a plant in onboarding fails with core.plant_not_ready".
+- `apps/server/test/mcp/tools.int.test.ts`: "every tool declares both annotations and an outputSchema"; "a session cookie without a bearer gets 401"; "a plant A user never gets plant B rows".
 
-Notes: cut 3. Each release gets one manual smoke test with Claude Code against `/mcp`.
+Notes: cut 3. Each release gets one manual smoke test with Claude Code against `/mcp`. Whichever of this story and E06-S14 is built second adds "a tool call naming a plant in onboarding fails with core.plant_not_ready" to `apps/server/test/mcp/tools.int.test.ts` (ADR 0066).
 
 ### E13 ai: Configure customer AI providers and meter usage
 
@@ -4242,9 +4250,9 @@ Issue: northMES/northmes#130.
 
 As a plant admin, I want to bind `fast` and `reasoning` to a model and see a passing connection test before I enable a feature, so that a feature never starts on a route that cannot answer.
 
-Module: ai. Blocked by: E13-S02, E06-S14. Design: Integrations page; the onboarding wizard design for the AI assistant step.
+Module: ai. Blocked by: E13-S02. Design: Integrations page.
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md).
 
 Acceptance criteria:
 
@@ -4252,11 +4260,12 @@ Acceptance criteria:
 - Test connection runs one minimal chat call with the exact options the feature sends plus a fixed tool-call probe, sends no plant data, and stores capabilities and failure codes on `ai.provider_health`.
 - A feature declared in a manifest (`ai.features`) is off by default; a company admin enables it only after its alias's probe passed and the privacy checklist was acknowledged (audited).
 - With no provider configured, features stay off and the panel is hidden.
-- The ai module declares the AI assistant step of the onboarding wizard (company level, optional): a provider, alias bindings, Test connection, the privacy acknowledgement and the features; skipping leaves AI off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
 - `modules/ai/test/test-connection.int.test.ts`: "a stub OpenRouter answering the probe with a no-matching-endpoint 404 marks the binding unusable with reason routing, and enabling the feature fails"; "a stub that returns a tool call records the tools capability".
+
+Notes: the AI assistant step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E13-S04 ai: Meter every model call and stop at the budget
 
@@ -5389,7 +5398,7 @@ The pilot is not asked whether it wants the assistant. AI stays in scope by Kris
 
 The path runs through dates outside the developer's control as much as through build days.
 
-1. Decisions by M0 (2026-10-30): ADR [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) accepted, then E07's migrations (E07-S01 to E07-S05), then the board's data wiring (E08-S10). The product owner's answers or their recorded defaults gate E03-S04, E03-S05, E07-S05 and E07-S07.
+1. Decisions by M0 (2026-10-30): ADR [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) accepted, then E07's migrations (E07-S01 to E07-S05), then the board's data wiring (E08-S10), then the onboarding wizard (E06-S14), which waits for E08-S10 and E07-S08. The product owner's answers or their recorded defaults gate E03-S04, E03-S05, E07-S05 and E07-S07.
 2. The board: SP3 on 2026-10-26 to 2026-11-06 (E01-S04) with its verdict on 2026-11-06, a second-fail deadline on 2026-11-20, then design approval D3, then about 35 raw days of board work (E08), then the board accessibility gate (E20-S02) and the first NVDA pass (E20-S04). The second NVDA pass (E20-S05) comes before the pilot install.
 3. The skeleton: E00 ready by 2026-10-21, E02 green by 2026-11-13, required in `ci / gate` at M1 (2026-11-20), the Rsbuild exit on 2026-11-27 if still red. E04, E05 and E06 all start from it.
 4. Pyramid: write method names by 2026-11-13, a test endpoint or recorded pairs by 2026-12-18, E09 done and live write-back verified by 2027-01-22 as the target, and the product owner's fallback decision on 2027-02-26 if Pyramid has no write path (E10-S04).
@@ -5406,6 +5415,7 @@ flowchart LR
   E06 --> E09["E09 Pyramid import<br/>by 2027-01-22"]
   E07 --> E08wire["E08-S10 board data wiring"]
   E08core --> E08wire --> E20["E20 NVDA passes"]
+  E08wire --> E06S14["E06-S14 onboarding wizard"] --> Install
   E09 --> E10["E10 write-back<br/>verified 2027-01-22 or fallback 2027-02-26"]
   E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade rehearsal"]
   E20 --> Install["Pilot install<br/>set at M4"]

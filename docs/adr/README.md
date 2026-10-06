@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-05 the index holds 67 ADRs: 37 accepted and 30 proposed, 64 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
+On 2026-10-06 the index holds 67 ADRs: 37 accepted and 30 proposed, 64 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
