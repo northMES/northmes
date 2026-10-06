@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { compare } from './check-node.mjs';
 
@@ -66,6 +66,22 @@ describe('check-node', () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(process.version);
+  });
+
+  it('importing the module without a script path does nothing', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import { compare } from ${JSON.stringify(pathToFileURL(script).href)}; console.log(compare('v26.0.0', '26').ok);`,
+      ],
+      { cwd: dir, encoding: 'utf8' },
+    );
+
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('true');
   });
 
   it('the entry point defaults to the repository .node-version', () => {
