@@ -15,15 +15,31 @@
 // file, so a name of up to 8 words matches even when it wraps across lines, and a longer word
 // such as "abc" never matches the entry "ab".
 //
+// `node scripts/lint/no-customer-data.mjs` (root script `pnpm lint:customer-data`) scans every
+// text file git tracks in the current repository and reads the deny hashes from
+// NORTHMES_DENY_HASHES, separated by commas (whitespace also works). It exits 1 on any finding and
+// 2 when the variable holds something other than SHA-256 hex digests. Binary files (a NUL byte in
+// the first 8000 bytes, git's own test), symbolic links and untracked files are not scanned.
+//
 // Findings name the file and line only, never the matched text, because CI logs are public.
 
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const organisationNumberPattern = /\d{6}-\d{4}/;
 const wordPattern = /[\p{L}\p{M}\p{N}]+/gu;
 
 /** The longest name, in words, that the name check compares. */
 const maxNameWords = 8;
+
+const denyHashesVariable = 'NORTHMES_DENY_HASHES';
+const hashPattern = /^[0-9a-f]{64}$/i;
+
+/** Git's own test for a binary file: a NUL byte in the first 8000 bytes. */
+const binaryProbeLength = 8000;
 
 const skippedNameCheckNotice =
   'No deny hashes were given, so the customer name check was skipped. The organisation number check ran.';
@@ -120,4 +136,108 @@ export function scan(files, denyHashes) {
   }
 
   return nameCheck ? { findings } : { findings, notice: skippedNameCheckNotice };
+}
+
+function git(cwd, ...args) {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
+  }
+  return result.stdout;
+}
+
+/**
+ * Reads every tracked regular text file of the git repository that holds `cwd`.
+ * @param {string} cwd
+ * @returns {RepositoryFile[]}
+ */
+function readTrackedFiles(cwd) {
+  const top = git(cwd, 'rev-parse', '--show-toplevel').trim();
+  const files = [];
+  for (const path of git(top, 'ls-files', '-z').split('\0').filter(Boolean)) {
+    const absolute = join(top, path);
+    let stats;
+    try {
+      stats = lstatSync(absolute);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        continue;
+      }
+      throw error;
+    }
+    if (!stats.isFile()) {
+      continue;
+    }
+    const buffer = readFileSync(absolute);
+    if (!buffer.subarray(0, binaryProbeLength).includes(0)) {
+      files.push({ path, content: buffer.toString('utf8') });
+    }
+  }
+  return files;
+}
+
+/**
+ * @param {string | undefined} value
+ * @returns {{ hashes: string[] } | { error: string }}
+ */
+function parseDenyHashes(value) {
+  const hashes = (value ?? '').split(/[\s,]+/).filter(Boolean);
+  const invalid = hashes.findIndex((hash) => !hashPattern.test(hash));
+  if (invalid !== -1) {
+    return {
+      error: `Entry ${invalid + 1} of ${denyHashesVariable} is not a SHA-256 hex digest. The variable holds hashes of the deny-listed names, never the names.`,
+    };
+  }
+  return { hashes };
+}
+
+const kindLabels = {
+  'organisation-number': 'organisation number pattern',
+  'customer-name': 'deny-listed customer name',
+};
+
+function main() {
+  const parsed = parseDenyHashes(process.env[denyHashesVariable]);
+  if ('error' in parsed) {
+    console.error(parsed.error);
+    process.exitCode = 2;
+    return;
+  }
+
+  const files = readTrackedFiles(process.cwd());
+  const { findings, notice } = scan(files, parsed.hashes);
+  if (notice) {
+    console.log(`Notice: ${notice} Set ${denyHashesVariable} to run the name check.`);
+  }
+  for (const { path, line, kind } of findings) {
+    console.error(`${path}:${line}: ${kindLabels[kind]}`);
+  }
+  if (findings.length > 0) {
+    console.error(
+      `${findings.length} finding(s) in ${files.length} tracked files. Replace them with synthetic values (docs/plan/11-quality-and-testing.md, "Test data and fixtures").`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`No customer data found in ${files.length} tracked files.`);
+}
+
+function isEntryPoint() {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    // Under --eval, argv[1] is a positional argument, not a script path.
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
+  main();
 }

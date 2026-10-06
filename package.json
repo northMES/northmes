@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
-    "check": "vitest run --project unit"
+    "check": "vitest run --project unit",
+    "lint:customer-data": "node scripts/lint/no-customer-data.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
