@@ -16,16 +16,21 @@ On the same day he decided that the wizard is named onboarding, not setup, becau
 - Copy: the ST36 banner reads "Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it." and links "Continue onboarding" to `/$plant/core/onboarding`. ST40 to ST43 use the headings, text and document titles in the copy list below.
 - Build notes: the header, ST33 and KE23 use onboarding, `onboardingState` and `core.onboarding:manage` throughout, the copy lists and the WCAG 1.4.1 row included.
 
-The help entry "Set up a plant" (German "Ein Werk einrichten") in core's help group stays. It uses "set up" as an ordinary verb, and the D2 spec `shell/shell-190-spec.md` already lists it among the invented help entries.
+The help entry "Set up a plant" (German "Ein Werk einrichten") in core's help group is unchanged. It uses "set up" as an ordinary verb, and the D2 spec `shell/shell-190-spec.md` already lists it among the invented help entries. Its wording is open for Krister Johansson.
 
-The header frame still reads "spec page, in review", and its acceptance list has no checked boxes. This record holds the approval.
+After the approval, on Krister Johansson's delegation of 2026-10-06, the header frame got a text fix and a new status line. None of the frames in rows 1 to 6 changed.
+
+- The line of the issue's Frames list for the pages that are not open yet reads "{plant} is not open yet", as the copy list writes it. It read `Plant <name> is not open yet`, which renders as "Plant Plant D".
+- The status line reads "approved by Krister Johansson on 2026-10-06". It read "spec page, in review". The acceptance line "Krister approved the page and the design project's README row holds the etag" is ticked, and the other four acceptance lines stay unticked.
+
+Part 1 of the header PNG was captured again after the fix. Part 2 is unchanged.
 
 ## Approved files
 
 | File | Etag |
 |---|---|
 | `shell/shell-190-navigation.dc.html` | `1791306240917384` |
-| `shell/shell-190-navigation-header.dc.html` | `1791306205473278` |
+| `shell/shell-190-navigation-header.dc.html` | `1791310290478199` |
 | `shell/shell-190-navigation-planner.dc.html` | `1791305793431939` |
 | `shell/shell-190-navigation-narrow.dc.html` | `1791306066857549` |
 | `shell/shell-190-navigation-states.dc.html` | `1791306623760539` |
@@ -36,7 +41,7 @@ The header frame still reads "spec page, in review", and its acceptance list has
 | `shell/Shell.dc.html` | `1791305527647556` |
 | `shell/StationFrame.dc.html` | `1791231752474671` |
 
-The design project returned these etags for `shell/` on 2026-10-06, after the rename. The sign-in part, the station part and `StationFrame.dc.html` hold no onboarding copy, so the rename left them as they were.
+The design project returned these etags for `shell/` on 2026-10-06, after the rename, and the header's etag after the header fix. The sign-in part, the station part and `StationFrame.dc.html` hold no onboarding copy, so the rename left them as they were.
 
 The page also loads files outside this set: the folder's `shell/support.js` (etag `1791221619746846`), and D1's `ui/tokens.css` and `ui/ui-189-tokens-page.css`, whose etags still equal the ones in the D1 record. Rule numbers such as 1.1.9 and question numbers such as Q11 point into the D2 spec `shell/shell-190-spec.md` (etag `1791221615601582`), which lists every rule with its source.
 
