@@ -8,6 +8,10 @@ import { run, stages } from './gen.mjs';
 
 const script = fileURLToPath(new URL('./gen.mjs', import.meta.url));
 
+function runScript(...args: string[]) {
+  return spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
+}
+
 describe('gen', () => {
   it('gen prints its stages in order', async () => {
     const lines: string[] = [];
@@ -18,8 +22,9 @@ describe('gen', () => {
         calls.push(`${name}:${outDir}`);
       },
     });
+    const io = { log: (line: string) => lines.push(line), root: '/repo' };
 
-    const exitCode = await run([stage('a'), stage('b')], {}, { log: (line: string) => lines.push(line), root: '/repo' });
+    const exitCode = await run([stage('a'), stage('b')], {}, io);
 
     expect(lines).toEqual(['stages: a, b']);
     expect(calls).toEqual(['a:/repo', 'b:/repo']);
@@ -32,7 +37,7 @@ describe('gen', () => {
   });
 
   it('the entry point prints its stage order', () => {
-    const result = spawnSync(process.execPath, [script], { encoding: 'utf8' });
+    const result = runScript();
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('stages: none');
@@ -42,7 +47,7 @@ describe('gen', () => {
   // flag has no observable effect, so this passes before main reads argv; it guards the entry
   // point against a crash on the flag.
   it('the entry point exits 0 and prints its stage order under --check', () => {
-    const result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+    const result = runScript('--check');
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('stages: none');
