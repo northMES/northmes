@@ -29,9 +29,9 @@ describe('check-node', () => {
     return runScript(script, ...args);
   }
 
-  function fixture(name: string, pin: number): string {
+  function fixture(name: string, contents: string): string {
     const path = join(dir, name);
-    writeFileSync(path, `${pin}\n`);
+    writeFileSync(path, contents);
     return path;
   }
 
@@ -60,14 +60,27 @@ describe('check-node', () => {
   });
 
   it('the entry point reads a .node-version fixture', () => {
-    const mismatch = run(fixture('other.node-version', runningMajor + 1));
-    const match = run(fixture('same.node-version', runningMajor));
+    const mismatch = run(fixture('other.node-version', `${runningMajor + 1}\n`));
+    const match = run(fixture('same.node-version', `${runningMajor}\n`));
 
     expect(mismatch.status).toBe(1);
     expect(mismatch.stderr).toContain(process.version);
     expect(mismatch.stderr).toContain(String(runningMajor + 1));
     expect(match.status).toBe(0);
     expect(match.stderr).toBe('');
+  });
+
+  it('the entry point reads a full-version pin with a CRLF line ending', () => {
+    const otherPin = `${runningMajor + 1}.0.0`;
+
+    const match = run(fixture('full-same.node-version', `${runningMajor}.0.0\r\n`));
+    const mismatch = run(fixture('full-other.node-version', `${otherPin}\r\n`));
+
+    expect(match.status).toBe(0);
+    expect(match.stderr).toBe('');
+    expect(mismatch.status).toBe(1);
+    expect(mismatch.stderr).toContain(otherPin);
+    expect(mismatch.stderr).not.toContain('\r');
   });
 
   it('the entry point names a missing .node-version in one line and exits 1', () => {
@@ -84,7 +97,7 @@ describe('check-node', () => {
     const link = join(dir, 'linked-check-node.mjs');
     symlinkSync(script, link);
 
-    const result = runScript(link, fixture('symlink.node-version', runningMajor + 1));
+    const result = runScript(link, fixture('symlink.node-version', `${runningMajor + 1}\n`));
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(process.version);
