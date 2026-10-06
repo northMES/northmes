@@ -271,7 +271,7 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 ### Later decisions from the roadmap
 
 - A ledger estimate for each epic that [14-roadmap.md](14-roadmap.md#epics-in-dependency-order) lists as not estimated (E00, E03, E09, E10, E17 and E18, and the unestimated parts of other epics), set when the epic's stories are created.
-- Whether the planning session's estimate of 2026-10-06 holds for the ledger row that [ADR 0066][adr-0066] adds for company and plant administration and onboarding (E05-S14, E05-S15, E06-S14 and the module steps): 13 to 21.5 raw days. Krister left the figure open, velocity checkpoint 1 (M2) checks it, and M-04 stays open.
+- Whether the planning session's estimate of 2026-10-06 holds for the ledger row that [ADR 0066][adr-0066] adds for company and plant administration and onboarding (E05-S14, E05-S15, E06-S14 and the module steps): 13 to 21.5 raw days. Krister left the figure open, and M-04 stays open. Velocity checkpoint 1 (M2) checks the part of E05-S14 and E05-S15, and velocity checkpoint 3 (M4) the part of E06-S14 and the module steps, which lands at M4.
 - The pilot install date and the pilot test start, fixed at M4 (Fri 2027-04-30, proposed) from the three velocity forecasts, with cuts from the cut order in [01-product-and-scope.md](01-product-and-scope.md#the-cut-order-when-velocity-is-low) if the forecast misses the date.
 
 [adr-0001]: ../adr/0001-record-architecture-decisions-in-madr.md
