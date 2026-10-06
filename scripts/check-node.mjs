@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+const repositoryNodeVersion = fileURLToPath(new URL('../.node-version', import.meta.url));
+
 function major(version) {
   return Number.parseInt(version.trim().replace(/^v/, ''), 10);
 }
@@ -15,12 +17,18 @@ export function compare(running, pinned) {
   };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const path = process.argv[2] ?? fileURLToPath(new URL('../.node-version', import.meta.url));
-  const pinned = readFileSync(path, 'utf8').trim();
-  const { ok, message } = compare(process.version, pinned);
+function isEntryPoint() {
+  return import.meta.url === pathToFileURL(process.argv[1]).href;
+}
+
+function main(path = repositoryNodeVersion) {
+  const { ok, message } = compare(process.version, readFileSync(path, 'utf8').trim());
   if (!ok) {
     console.error(message);
     process.exitCode = 1;
   }
+}
+
+if (isEntryPoint()) {
+  main(process.argv[2]);
 }

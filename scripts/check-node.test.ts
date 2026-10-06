@@ -8,7 +8,7 @@ import { compare } from './check-node.mjs';
 
 const script = fileURLToPath(new URL('./check-node.mjs', import.meta.url));
 const rootNodeVersion = fileURLToPath(new URL('../.node-version', import.meta.url));
-const runningMajor =Number.parseInt(process.version.slice(1), 10);
+const runningMajor = Number.parseInt(process.version.slice(1), 10);
 
 describe('check-node', () => {
   let dir: string;
@@ -20,6 +20,16 @@ describe('check-node', () => {
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
   });
+
+  function run(...args: string[]) {
+    return spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
+  }
+
+  function fixture(name: string, pin: number): string {
+    const path = join(dir, name);
+    writeFileSync(path, `${pin}\n`);
+    return path;
+  }
 
   it('a Node major other than .node-version fails naming both versions', () => {
     const result = compare('v24.1.0', '26');
@@ -35,13 +45,8 @@ describe('check-node', () => {
   });
 
   it('the entry point reads a .node-version fixture', () => {
-    const other = join(dir, 'other.node-version');
-    const same = join(dir, 'same.node-version');
-    writeFileSync(other, `${runningMajor + 1}\n`);
-    writeFileSync(same, `${runningMajor}\n`);
-
-    const mismatch = spawnSync(process.execPath, [script, other], { encoding: 'utf8' });
-    const match = spawnSync(process.execPath, [script, same], { encoding: 'utf8' });
+    const mismatch = run(fixture('other.node-version', runningMajor + 1));
+    const match = run(fixture('same.node-version', runningMajor));
 
     expect(mismatch.status).toBe(1);
     expect(mismatch.stderr).toContain(process.version);
@@ -53,7 +58,7 @@ describe('check-node', () => {
     const pinned = readFileSync(rootNodeVersion, 'utf8').trim();
     const expected = compare(process.version, pinned);
 
-    const result = spawnSync(process.execPath, [script], { cwd: dir, encoding: 'utf8' });
+    const result = run();
 
     expect(result.status).toBe(expected.ok ? 0 : 1);
     expect(result.stderr).toContain(expected.message);
