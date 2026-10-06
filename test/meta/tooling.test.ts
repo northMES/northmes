@@ -13,6 +13,19 @@ interface TurboConfig {
   tasks?: Record<string, TurboTask>;
 }
 
+interface BiomeConfig {
+  root?: boolean;
+  files?: { includes?: string[] };
+  linter?: {
+    enabled?: boolean;
+    rules?: {
+      recommended?: boolean;
+      a11y?: { recommended?: boolean };
+      suspicious?: { noFocusedTests?: string; noSkippedTests?: string };
+    };
+  };
+}
+
 interface WorkspaceConfig {
   catalog?: Record<string, string>;
 }
@@ -44,6 +57,21 @@ describe('tooling', () => {
       expect(tasks[name]?.cache, name).not.toBe(false);
     }
     expect(Object.keys(tasks).filter((name) => name.startsWith('test'))).toEqual([]);
+  });
+
+  it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {
+    const biome = readJson<BiomeConfig>('biome.json');
+    const rules = biome.linter?.rules;
+
+    expect(biome.root).toBe(true);
+    expect(biome.linter?.enabled).toBe(true);
+    expect(rules?.recommended).not.toBe(false);
+    expect(rules?.a11y?.recommended).toBe(true);
+    expect(rules?.suspicious?.noFocusedTests).toBe('error');
+    expect(rules?.suspicious?.noSkippedTests).toBe('error');
+    expect(biome.files?.includes).toEqual(
+      expect.arrayContaining(['!docs/sources', '!**/node_modules', '!**/dist']),
+    );
   });
 
   it('turbo is in the strict catalog and the root devDependencies take it from the catalog', () => {
