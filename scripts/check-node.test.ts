@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { compare } from './check-node.mjs';
 
 const script = fileURLToPath(new URL('./check-node.mjs', import.meta.url));
-const runningMajor = Number.parseInt(process.version.slice(1), 10);
+const rootNodeVersion = fileURLToPath(new URL('../.node-version', import.meta.url));
+const runningMajor =Number.parseInt(process.version.slice(1), 10);
 
 describe('check-node', () => {
   let dir: string;
@@ -46,5 +47,15 @@ describe('check-node', () => {
     expect(mismatch.stderr).toContain(process.version);
     expect(mismatch.stderr).toContain(String(runningMajor + 1));
     expect(match.status).toBe(0);
+  });
+
+  it('the entry point defaults to the repository .node-version', () => {
+    const pinned = readFileSync(rootNodeVersion, 'utf8').trim();
+    const expected = compare(process.version, pinned);
+
+    const result = spawnSync(process.execPath, [script], { cwd: dir, encoding: 'utf8' });
+
+    expect(result.status).toBe(expected.ok ? 0 : 1);
+    expect(result.stderr).toContain(expected.message);
   });
 });
