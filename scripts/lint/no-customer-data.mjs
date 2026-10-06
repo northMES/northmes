@@ -3,7 +3,9 @@
 //
 // - The organisation number pattern (six digits, a hyphen, four digits) fails in any file.
 // - A deny-listed customer name fails in files under docs/sources/ and under any folder named
-//   fixtures. The deny list is never committed; the check receives it as SHA-256 hashes.
+//   fixtures. The deny list is never committed; the check receives it as SHA-256 hashes. Without
+//   hashes (local runs, handoff's Tester, fork pull requests) the name check is skipped with a
+//   notice and the number check still runs.
 //
 // Names are compared as hashes of word sequences. Text is folded with Unicode NFKC and lowercased,
 // and a word is a run of letters, combining marks and digits, so punctuation, line breaks and runs
@@ -22,6 +24,9 @@ const wordPattern = /[\p{L}\p{M}\p{N}]+/gu;
 
 /** The longest name, in words, that the name check compares. */
 const maxNameWords = 8;
+
+const skippedNameCheckNotice =
+  'No deny hashes were given, so the customer name check was skipped. The organisation number check ran.';
 
 /**
  * @typedef {{ path: string, content: string }} RepositoryFile
@@ -93,10 +98,11 @@ function customerNameLines(content, denyHashes) {
  * Scans in-memory files for organisation numbers and deny-listed customer names.
  * @param {readonly RepositoryFile[]} files
  * @param {Iterable<string> | undefined} denyHashes SHA-256 hex digests of the deny-listed names.
- * @returns {{ findings: Finding[] }}
+ * @returns {{ findings: Finding[], notice?: string }}
  */
 export function scan(files, denyHashes) {
   const hashes = new Set([...(denyHashes ?? [])].map((hash) => hash.trim().toLowerCase()));
+  const nameCheck = hashes.size > 0;
   const findings = [];
 
   for (const { path, content } of files) {
@@ -105,7 +111,7 @@ export function scan(files, denyHashes) {
     for (const line of organisationNumberLines(content)) {
       inFile.push({ path, line, kind: 'organisation-number' });
     }
-    if (hashes.size > 0 && isNameChecked(path)) {
+    if (nameCheck && isNameChecked(path)) {
       for (const line of customerNameLines(content, hashes)) {
         inFile.push({ path, line, kind: 'customer-name' });
       }
@@ -113,5 +119,5 @@ export function scan(files, denyHashes) {
     findings.push(...inFile.sort((a, b) => a.line - b.line));
   }
 
-  return { findings };
+  return nameCheck ? { findings } : { findings, notice: skippedNameCheckNotice };
 }
