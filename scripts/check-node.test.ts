@@ -130,6 +130,24 @@ describe('check-node', () => {
     expect(result.stdout.trim()).toBe('true');
   });
 
+  it('importing the module with a positional argument that is not a file does nothing', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '--eval',
+        `import { compare } from ${JSON.stringify(pathToFileURL(script).href)}; console.log(compare('v26.0.0', '26').ok);`,
+        '--',
+        'not-a-file',
+      ],
+      { cwd: dir, encoding: 'utf8' },
+    );
+
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(result.stdout.trim()).toBe('true');
+  });
+
   it('the entry point defaults to the repository .node-version', () => {
     const pinned = readFileSync(rootNodeVersion, 'utf8').trim();
 
