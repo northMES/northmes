@@ -28,7 +28,15 @@ export function compare(running, pinned) {
 
 function isEntryPoint() {
   const entry = process.argv[1];
-  return Boolean(entry) && import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  if (!entry) {
+    return false;
+  }
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    // Under --eval, argv[1] is a positional argument, not a script path.
+    return false;
+  }
 }
 
 function fail(message) {
