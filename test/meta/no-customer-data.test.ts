@@ -55,4 +55,21 @@ describe('no-customer-data', () => {
       { path: 'docs/sources/spike/README.md', line: 2, kind: 'customer-name' },
     ]);
   });
+
+  it('without deny hashes the name check is skipped and the number check runs', () => {
+    const files = [
+      { path: 'docs/sources/spike/orders.ts', content: `const customer = '${customerName}';\n` },
+      { path: 'fixtures/orders.json', content: `{ "org": "${organisationNumber}" }\n` },
+    ];
+
+    for (const denyHashes of [undefined, []]) {
+      const result = scan(files, denyHashes);
+
+      expect(result.notice).toContain('customer name check was skipped');
+      expect(result.findings).toEqual([
+        { path: 'fixtures/orders.json', line: 1, kind: 'organisation-number' },
+      ]);
+    }
+    expect(scan(files, [customerNameHash]).notice).toBeUndefined();
+  });
 });
