@@ -67,6 +67,7 @@ describe('check-node', () => {
     expect(mismatch.stderr).toContain(process.version);
     expect(mismatch.stderr).toContain(String(runningMajor + 1));
     expect(match.status).toBe(0);
+    expect(match.stderr).toBe('');
   });
 
   it('the entry point names a missing .node-version in one line and exits 1', () => {
@@ -107,11 +108,16 @@ describe('check-node', () => {
 
   it('the entry point defaults to the repository .node-version', () => {
     const pinned = readFileSync(rootNodeVersion, 'utf8').trim();
-    const expected = compare(process.version, pinned);
 
     const result = run();
 
-    expect(result.status).toBe(expected.ok ? 0 : 1);
-    expect(result.stderr).toContain(expected.message);
+    if (Number.parseInt(pinned, 10) === runningMajor) {
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+    } else {
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(process.version);
+      expect(result.stderr).toContain(pinned);
+    }
   });
 });
