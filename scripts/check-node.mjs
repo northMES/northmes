@@ -28,11 +28,22 @@ function isEntryPoint() {
   return Boolean(entry) && import.meta.url === pathToFileURL(realpathSync(entry)).href;
 }
 
+function fail(message) {
+  console.error(message);
+  process.exitCode = 1;
+}
+
 function main(path = repositoryNodeVersion) {
-  const { ok, message } = compare(process.version, readFileSync(path, 'utf8').trim());
+  let pinned;
+  try {
+    pinned = readFileSync(path, 'utf8').trim();
+  } catch (error) {
+    fail(`Cannot read .node-version at ${path}: ${error.code ?? error.message}`);
+    return;
+  }
+  const { ok, message } = compare(process.version, pinned);
   if (!ok) {
-    console.error(message);
-    process.exitCode = 1;
+    fail(message);
   }
 }
 
