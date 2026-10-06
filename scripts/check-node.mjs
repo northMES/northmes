@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repositoryNodeVersion = fileURLToPath(new URL('../.node-version', import.meta.url));
@@ -18,7 +18,7 @@ export function compare(running, pinned) {
 }
 
 function isEntryPoint() {
-  return import.meta.url === pathToFileURL(process.argv[1]).href;
+  return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href;
 }
 
 function main(path = repositoryNodeVersion) {
