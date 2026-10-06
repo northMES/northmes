@@ -4,14 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import vitestConfig from '../../vitest.config.ts';
 
-interface TurboTask {
-  cache?: boolean;
-  dependsOn?: string[];
-  outputs?: string[];
-}
-
 interface TurboConfig {
-  tasks?: Record<string, TurboTask>;
+  tasks?: Record<string, { cache?: boolean }>;
 }
 
 interface BiomeConfig {
@@ -63,6 +57,10 @@ function readWorkspace(): WorkspaceConfig {
   return parse(readText('pnpm-workspace.yaml')) as WorkspaceConfig;
 }
 
+function readDevDependencies(): Record<string, string> {
+  return readJson<PackageJson>('package.json').devDependencies ?? {};
+}
+
 describe('tooling', () => {
   it('turbo.json caches build, typecheck and lint and defines no test task', () => {
     const tasks = readJson<TurboConfig>('turbo.json').tasks ?? {};
@@ -112,13 +110,11 @@ describe('tooling', () => {
 
   it('turbo is in the strict catalog and the root devDependencies take it from the catalog', () => {
     expect(readWorkspace().catalog?.turbo).toMatch(/^2\.\d+\.\d+$/);
-    expect(readJson<PackageJson>('package.json').devDependencies?.turbo).toBe('catalog:');
+    expect(readDevDependencies().turbo).toBe('catalog:');
   });
 
   it('@biomejs/biome is a Biome 2.5 catalog entry that the root devDependencies take from the catalog', () => {
     expect(readWorkspace().catalog?.['@biomejs/biome']).toMatch(/^2\.5\.\d+$/);
-    expect(readJson<PackageJson>('package.json').devDependencies?.['@biomejs/biome']).toBe(
-      'catalog:',
-    );
+    expect(readDevDependencies()['@biomejs/biome']).toBe('catalog:');
   });
 });
