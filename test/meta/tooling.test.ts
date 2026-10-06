@@ -5,7 +5,6 @@ import { parse } from 'yaml';
 import vitestConfig from '../../vitest.config.ts';
 
 interface TurboConfig {
-  agentGuidance?: boolean;
   tasks?: Record<string, { cache?: boolean }>;
 }
 
@@ -75,7 +74,9 @@ describe('tooling', () => {
 
   it('turbo.json sets only keys that the installed turbo schema knows', () => {
     // turbo exits with "unknown key" on any other top-level key, so a pin and its config must agree.
-    const schema = readJson<{ properties: Record<string, unknown> }>('node_modules/turbo/schema.json');
+    const schema = readJson<{ properties: Record<string, unknown> }>(
+      'node_modules/turbo/schema.json',
+    );
     const known = Object.keys(schema.properties);
 
     for (const key of Object.keys(readJson<TurboConfig>('turbo.json'))) {
