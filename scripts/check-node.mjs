@@ -6,11 +6,13 @@ const repositoryNodeVersion = fileURLToPath(new URL('../.node-version', import.m
 const versionPattern = /^v?(\d+)(?:\.\d+){0,2}$/;
 
 function major(version) {
-  const match = versionPattern.exec(version.trim());
+  const match = versionPattern.exec(version);
   return match ? Number(match[1]) : Number.NaN;
 }
 
-export function compare(running, pinned) {
+export function compare(runningVersion, pinnedVersion) {
+  const running = runningVersion.trim();
+  const pinned = pinnedVersion.trim();
   if (Number.isNaN(major(pinned))) {
     return {
       ok: false,
@@ -47,7 +49,7 @@ function fail(message) {
 function main(path = repositoryNodeVersion) {
   let pinned;
   try {
-    pinned = readFileSync(path, 'utf8').trim();
+    pinned = readFileSync(path, 'utf8');
   } catch (error) {
     fail(`Cannot read .node-version at ${path}: ${error.code ?? error.message}`);
     return;
