@@ -17,6 +17,8 @@ allowBuilds:
 catalogMode: strict
 
 catalog:
+  '@biomejs/biome': 2.5.14
+  turbo: 2.11.2
   typescript: 6.0.3
   vitest: 5.0.1
   yaml: 2.9.1
