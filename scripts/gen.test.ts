@@ -38,6 +38,16 @@ describe('gen', () => {
     expect(result.stdout).toContain('stages: none');
   });
 
+  // Stands for `pnpm gen --check` until the root script is wired. With an empty stage list the
+  // flag has no observable effect, so this passes before main reads argv; it guards the entry
+  // point against a crash on the flag.
+  it('the entry point exits 0 and prints its stage order under --check', () => {
+    const result = spawnSync(process.execPath, [script, '--check'], { encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('stages: none');
+  });
+
   // The comparison with the repository root arrives with the first real stage, so this test
   // covers where --check generates, its cleanup and the exit code, not the comparison.
   it('--check generates into a temporary directory and exits 0 when nothing differs', async () => {
