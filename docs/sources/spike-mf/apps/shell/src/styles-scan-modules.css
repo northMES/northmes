@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@northmes/ui/tokens.css";
+@import "@northmes/ui/theme.css";
+@source "../../../packages/ui/src";
+/* Release 1: every in-repo module is known at shell build time, so one stylesheet covers all. */
+@source "../../../modules/planning/web/src";

@@ -1,0 +1,1 @@
+import dayjs from 'dayjs'; import utc from 'dayjs/plugin/utc.js'; import tz from 'dayjs/plugin/timezone.js'; dayjs.extend(utc); dayjs.extend(tz); console.log(dayjs.tz('2026-01-01 10:00','Europe/Stockholm').format())

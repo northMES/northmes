@@ -1,0 +1,17 @@
+{
+  "name": "@northmes/server",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": { "build": "tsc -p tsconfig.json", "start": "node dist/main.js" },
+  "dependencies": {
+    "@nestjs/common": "12.1.2",
+    "@nestjs/core": "12.1.2",
+    "@nestjs/platform-express": "12.1.2",
+    "graphql": "catalog:",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "catalog:"
+  },
+  "devDependencies": { "typescript": "catalog:", "@types/node": "24.19.1", "@types/express": "5.0.6" }
+}

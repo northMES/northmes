@@ -1,0 +1,20 @@
+import "reflect-metadata";
+import { execute, parse } from "graphql";
+process.env.SPIKE_ORDERS = process.env.SPIKE_ORDERS ?? "5000"; process.env.SPIKE_NO_UNKNOWN = "1";
+const base = new URL("./dist/src/", import.meta.url);
+const { bootstrap } = await import(new URL("main.js", base));
+const { SubgraphRegistry } = await import(new URL("sdk/subgraph.js", base));
+const { resolvePrincipal } = await import(new URL("gateway/sessions.js", base));
+const perm = await import(new URL("sdk/permission.js", base));
+const app = await bootstrap(4000 + Math.floor(Math.random() * 900));
+const principal = resolvePrincipal("northmes_session=sid-alice");
+const schema = app.get(SubgraphRegistry).get("planning").schema;
+const doc = parse("{ planningProductionOrders(first: 100) { edges { node { number article { id } } } } }");
+const run = () => execute({ schema, document: doc, contextValue: { principal, requestId: "b", loaders: new Map(), subgraph: "planning" } });
+for (let i = 0; i < 5; i++) await run();
+const t = [];
+for (let i = 0; i < 200; i++) { perm.guardLog.length = 0; const s = performance.now(); const r = await run(); if (r.errors) throw new Error(JSON.stringify(r.errors[0])); t.push(performance.now() - s); }
+t.sort((a, b) => a - b);
+const r = await run();
+console.log(JSON.stringify({ enhancers: process.env.SPIKE_NO_ENHANCERS === "1" ? "none" : "guards,interceptors,filters", rows: r.data.planningProductionOrders.edges.length, p50ms: t[100].toFixed(1), p95ms: t[190].toFixed(1) }));
+await app.close(); process.exit(0);

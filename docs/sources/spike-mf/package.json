@@ -1,0 +1,6 @@
+{
+  "name": "spike-mf",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0"
+}

@@ -1,0 +1,10 @@
+import 'reflect-metadata';
+import { print } from 'graphql';
+process.env.SPIKE_UNMASK='1';
+const tc = await import('@graphql-mesh/transport-common');
+const { bootstrap } = await import('./dist/src/main.js');
+const app = await bootstrap(4104);
+const gw = app.get((await import('./dist/src/gateway/gateway.module.js')).GatewayService);
+const res = await gw.runtime.fetch('http://x/graphql', { method: 'POST', headers: { 'content-type': 'application/json', cookie: 'northmes_session=sid-alice' }, body: JSON.stringify({ query: '{ planningProductionOrders { edges { node { number article { id name } } } } }' }) });
+console.log(await res.text());
+await app.close();

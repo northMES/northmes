@@ -1,0 +1,6 @@
+/* The remote's own compiled CSS: tokens come from the shell, no preflight, utilities from this module only. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "@northmes/ui/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "./";

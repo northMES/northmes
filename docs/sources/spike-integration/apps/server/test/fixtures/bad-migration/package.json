@@ -1,0 +1,1 @@
+{ "name": "fixture-bad-migration", "version": "0.1.0", "type": "module", "exports": { "./manifest": "./dist/manifest.js" } }

@@ -1,0 +1,31 @@
+{
+  "name": "@acme/northmes-example-widget",
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "exports": { "./manifest": "./dist/manifest.js" },
+  "files": ["dist", "web/dist"],
+  "scripts": { "build": "node build.mjs && vite build web" },
+  "devDependencies": {
+    "@northmes/sdk": "link:../../packages/sdk",
+    "@northmes/web-sdk": "link:../../packages/web-sdk",
+    "@northmes/ui": "link:../../packages/ui",
+    "@northmes/web-build": "link:../../packages/web-build",
+    "@apollo/client": "4.3.1",
+    "@module-federation/vite": "1.23.2",
+    "@tailwindcss/vite": "4.3.3",
+    "@tanstack/react-router": "1.170.41",
+    "@types/react": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "graphql": "16.14.2",
+    "graphql-ws": "6.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rxjs": "7.8.2",
+    "rolldown": "1.2.12",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.2"
+  }
+}
