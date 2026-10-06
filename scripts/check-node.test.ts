@@ -69,6 +69,16 @@ describe('check-node', () => {
     expect(match.status).toBe(0);
   });
 
+  it('the entry point names a missing .node-version in one line and exits 1', () => {
+    const missing = join(dir, 'missing.node-version');
+
+    const result = run(missing);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(missing);
+    expect(result.stderr.trim().split('\n')).toHaveLength(1);
+  });
+
   it('the entry point fails a mismatch when it is run through a symlink', () => {
     const link = join(dir, 'linked-check-node.mjs');
     symlinkSync(script, link);
