@@ -170,15 +170,16 @@ describe('check-node', () => {
 
   it('the entry point defaults to the repository .node-version', () => {
     const pinned = readFileSync(rootNodeVersion, 'utf8').trim();
+    const expected = compare(process.version, pinned);
 
     const result = run();
 
-    if (Number.parseInt(pinned, 10) === runningMajor) {
+    if (expected.ok) {
       expect(result.status).toBe(0);
       expect(result.stderr).toBe('');
     } else {
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain(process.version);
+      expect(result.stderr).toContain(expected.message);
       expect(result.stderr).toContain(pinned);
     }
   });
