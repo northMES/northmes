@@ -48,6 +48,17 @@ describe('check-node', () => {
     expect(compare('v26.3.1', '26.0.0\n').ok).toBe(true);
   });
 
+  it('the message names both versions without surrounding whitespace', () => {
+    const mismatch = compare('v24.1.0\n', ' 26.0.0\r\n');
+    const unparseable = compare('v26.0.0', 'lts/*\n');
+
+    expect(mismatch.ok).toBe(false);
+    expect(mismatch.message).toContain('Node v24.1.0 is running');
+    expect(mismatch.message).toContain('pins 26.0.0.');
+    expect(mismatch.message).not.toMatch(/[\r\n]/);
+    expect(unparseable.message).toContain(JSON.stringify('lts/*'));
+  });
+
   it('a .node-version without a major fails naming the file and its content', () => {
     for (const pinned of ['lts/*', '']) {
       const result = compare('v26.0.0', pinned);
