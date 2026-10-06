@@ -18,9 +18,9 @@ On the same day he decided that the wizard is named onboarding, not setup, becau
 
 The help entry "Set up a plant" (German "Ein Werk einrichten") in core's help group is unchanged. It uses "set up" as an ordinary verb, and the D2 spec `shell/shell-190-spec.md` already lists it among the invented help entries. Its wording is open for Krister Johansson.
 
-After the approval, on Krister Johansson's delegation of 2026-10-06, the header frame got a text fix and a new status line. None of the frames in rows 1 to 6 changed.
+After the approval, on 2026-10-06, the header frame got a text fix and a new status line. None of the frames in rows 1 to 6 changed.
 
-- The line of the issue's Frames list for the pages that are not open yet reads "{plant} is not open yet", as the copy list writes it. It read `Plant <name> is not open yet`, which renders as "Plant Plant D".
+- The line of the issue's Frames list for the pages that are not open yet reads "{plant} is not open yet", as the copy list writes it. It read `Plant <name> is not open yet`, which with the name Plant D reads "Plant Plant D is not open yet".
 - The status line reads "approved by Krister Johansson on 2026-10-06". It read "spec page, in review". The acceptance line "Krister approved the page and the design project's README row holds the etag" is ticked, and the other four acceptance lines stay unticked.
 
 Part 1 of the header PNG was captured again after the fix. Part 2 is unchanged.
@@ -1036,7 +1036,7 @@ M-61 in the proposed ADR 0066, whether core's company admin role holds every ins
 
 ## What D2 does not draw
 
-- The onboarding wizard at `/$plant/core/onboarding`: it is its own design task, E06-S14. D2 draws only the link Continue onboarding (ST36) and the pages for a plant or a company in onboarding (ST40 to ST43).
+- The onboarding wizard at `/$plant/core/onboarding`: it is its own design task, E06-S14. D2 draws only the link Continue onboarding (ST36) and the pages for a plant or a company in onboarding (ST40 to ST43). On 2026-10-06 Krister Johansson decided to wait with the wizard until production planning is built, so that its steps follow what planning needs. The wizard stays in release 1.
 - The content of the admin pages under `/admin`: they come from the canonical list and form page (E05-S15). D2 draws the admin frame around them (PL44 to PL47).
 - The board grid (D3), the chat panel (E14-S03, [northMES/northmes#136](https://github.com/northMES/northmes/issues/136)) and the station screens (D4) are placeholders that name their owner. The board toolbar comes from option A and is context, not a D3 decision.
 - The boot state (Loading NorthMES, spec 2.7), the unsupported browser page (3.10), the HTTPS required page (3.11), the 4401 and 4403 states (3.9), Caddy's maintenance page (3.15) and the All pages index (1.6.3) (Q23, Q22, S4).
