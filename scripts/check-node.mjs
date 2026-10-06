@@ -46,7 +46,7 @@ function fail(message) {
   process.exitCode = 1;
 }
 
-function main(path = repositoryNodeVersion) {
+function main(path) {
   let pinned;
   try {
     pinned = readFileSync(path, 'utf8');
@@ -61,5 +61,5 @@ function main(path = repositoryNodeVersion) {
 }
 
 if (isEntryPoint()) {
-  main(process.argv[2]);
+  main(process.argv[2] || repositoryNodeVersion);
 }
