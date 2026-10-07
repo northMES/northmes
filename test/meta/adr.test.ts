@@ -269,7 +269,9 @@ describe('adr front matter', () => {
     const bare = { name: '0002-bare.md', text: '# Bare\n\nNo front matter here.\n' };
     expect
       .soft(frontMatterProblems([adrSource(), bare]))
-      .toEqual(Object.keys(completeFrontMatter).map((field) => `0002-bare.md: ${field} is missing`));
+      .toEqual(
+        Object.keys(completeFrontMatter).map((field) => `0002-bare.md: ${field} is missing`),
+      );
 
     const sources = readAdrSources();
     expect(sources, 'docs/adr files').not.toHaveLength(0);
@@ -283,6 +285,56 @@ describe('adr front matter', () => {
     expect
       .soft(frontMatterProblems([adrSource({ status: '' })]))
       .toEqual(['0001-decision.md: status is missing']);
+  });
+
+  it('every ADR front matter value is in the allowed set', () => {
+    // Raw YAML values that the template allows. A bare word, a quoted string and a plain scalar
+    // with spaces all parse to strings.
+    const allowed: [string, string][] = [
+      ['status', 'proposed'],
+      ['status', '"accepted"'],
+      ['status', '"rejected"'],
+      ['status', '"deprecated"'],
+      ['status', '"superseded by ADR-0042"'],
+      ['date', '2024-02-29'],
+      ['release', '"later"'],
+      ['release', '"vision"'],
+      ['needs-confirmation', 'maintainer (the split)'],
+      ['consulted', 'internal research notes 16, 25, 28 and 30'],
+    ];
+    for (const [field, yaml] of allowed) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
+        .toEqual([]);
+    }
+
+    // Raw YAML values outside the allowed set. Each one is reported once, with the file and field.
+    const names = ['decision-makers', 'consulted', 'informed'];
+    const notAllowed: [string, string][] = [
+      ['status', '"done"'],
+      ['status', '"Accepted"'],
+      ['status', '"superseded by ADR-12"'],
+      ['date', '2026-02-30'],
+      ['date', '05/10/2026'],
+      ['date', '20261005'],
+      // Unquoted, YAML reads the release as the number 1.
+      ['release', '1'],
+      ['release', '"2"'],
+      ['needs-confirmation', '[maintainer]'],
+      ['needs-confirmation', '7'],
+      ...names.flatMap((field): [string, string][] =>
+        ['""', '"   "', '[Krister Johansson]', '3'].map((yaml) => [field, yaml]),
+      ),
+    ];
+    for (const [field, yaml] of notAllowed) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
+        .toEqual([
+          expect.stringMatching(new RegExp(`^0001-decision\\.md: ${field} is .+, expected `)),
+        ]);
+    }
+
+    expect(frontMatterProblems(readAdrSources())).toEqual([]);
   });
 });
 
