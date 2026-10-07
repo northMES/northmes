@@ -45,6 +45,38 @@ describe('the test database', () => {
     expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ?.trim() || 'UTC' }]);
   });
 
+  it('the data directory is a tmpfs mount', async () => {
+    const dataDirectories = await query<{ data_directory: string }>(
+      connectionString,
+      'show data_directory',
+    );
+    // pg_read_file needs the superuser that the container creates.
+    const mountTables = await query<{ mounts: string }>(
+      connectionString,
+      "select pg_read_file('/proc/mounts') as mounts",
+    );
+    const dataDirectory = dataDirectories[0]?.data_directory ?? '';
+
+    // Each line of /proc/mounts reads: device, mount point, file system type, options.
+    const mounts = (mountTables[0]?.mounts ?? '')
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => {
+        const [, mountPoint = '', type = ''] = line.split(' ');
+        return { mountPoint, type };
+      });
+    // The mount that holds the data directory is the one with the longest mount point above it.
+    const holding = mounts
+      .filter(
+        ({ mountPoint }) =>
+          dataDirectory === mountPoint ||
+          dataDirectory.startsWith(mountPoint.endsWith('/') ? mountPoint : `${mountPoint}/`),
+      )
+      .sort((a, b) => b.mountPoint.length - a.mountPoint.length)[0];
+
+    expect(holding?.type).toBe('tmpfs');
+  });
+
   it('the container image equals the digest in infra/pg-image.json', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 
