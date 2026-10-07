@@ -100,6 +100,12 @@ function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
   return [...fileProblems, ...rowProblems];
 }
 
+// A table row that starts with a four-digit number is meant as an index row. If it does not parse,
+// parseIndexRows drops it, so it needs its own problem.
+function malformedRowProblems(_markdown: string): string[] {
+  return [];
+}
+
 function rowOf(file: AdrFile): IndexRow {
   const { name, ...cells } = file;
   return { ...cells, target: name };
@@ -201,5 +207,23 @@ describe('adr index', () => {
 
     const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
     expect(indexProblems(readAdrFiles(), index)).toEqual([]);
+  });
+
+  it('the index has no row that starts with a number and does not parse', () => {
+    const markdown = [
+      '| Number | Title | Status | Release | Needs confirmation |',
+      '|---|---|---|---|---|',
+      '| 0001 | [Record decisions](0001-record-decisions.md) | accepted | 1 | |',
+      // The row for an existing file lost its last cell.
+      '| 0002 | [Split modules](0002-split-modules.md) | proposed | later |',
+      // The title has no link, and no file stands behind the row.
+      '| 0003 | Invented decision | proposed | 1 | |',
+    ].join('\n');
+
+    expect
+      .soft(malformedRowProblems(markdown))
+      .toEqual([expect.stringContaining('0002'), expect.stringContaining('0003')]);
+
+    expect(malformedRowProblems(readFileSync(`${adrFolder}README.md`, 'utf8'))).toEqual([]);
   });
 });
