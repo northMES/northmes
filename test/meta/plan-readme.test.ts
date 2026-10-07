@@ -150,10 +150,19 @@ function ledgerHeaderDrift(readme: string, roadmap: string): string[] {
 }
 
 function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
-  const items = checklistItems(readme);
+  const all = checklistItems(readme);
+  // An ADR listed twice could carry two states. It is reported once, and its first item stands for
+  // it in the checks below.
+  const numbers = all.map(({ number }) => number);
+  const items = all.filter(({ number }, index) => numbers.indexOf(number) === index);
   const listed = items.map(({ number }) => number);
   const required = milestoneNumbers(roadmap);
   return [
+    ...listed
+      .filter((number) => numbers.lastIndexOf(number) !== numbers.indexOf(number))
+      .map(
+        (number) => `M0 checklist: ADR ${number} is listed more than once in README.md's checklist`,
+      ),
     ...required
       .filter((number) => !listed.includes(number))
       .map(
