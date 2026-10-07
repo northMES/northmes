@@ -38,6 +38,12 @@ describe('the test database', () => {
     expect(rows).toEqual([{ datistemplate: true }]);
   });
 
+  it('the server time zone follows NM_TEST_PG_TZ', async () => {
+    const rows = await query<{ TimeZone: string }>(connectionString, 'show timezone');
+
+    expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ ?? 'UTC' }]);
+  });
+
   it('the container image equals the digest in infra/pg-image.json', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 
