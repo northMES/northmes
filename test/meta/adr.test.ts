@@ -114,8 +114,15 @@ function malformedRowProblems(markdown: string): string[] {
   });
 }
 
-function numberProblems(_files: AdrFile[]): string[] {
-  return [];
+// The ADR numbers run 0001, 0002, ... with no gap. A missing 0001 is a gap too.
+function numberProblems(files: AdrFile[]): string[] {
+  const highest = Math.max(0, ...files.map((file) => file.number));
+  return Array.from({ length: highest }, (_, index) => index + 1)
+    .filter((number) => !files.some((file) => file.number === number))
+    .map(
+      (number) =>
+        `${String(number).padStart(4, '0')}: no ADR file has this number (numbers run contiguously from 0001)`,
+    );
 }
 
 function rowOf(file: AdrFile): IndexRow {
