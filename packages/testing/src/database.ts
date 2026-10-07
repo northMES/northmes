@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { afterAll, beforeAll, inject } from 'vitest';
 
@@ -52,7 +53,7 @@ export async function withClient(
  */
 export function useTestDatabase(): TestDatabase {
   const pg = inject('pg');
-  const databaseName = 'nm_test';
+  const databaseName = `t_${process.env.VITEST_POOL_ID ?? 0}_${randomBytes(6).toString('hex')}`;
 
   beforeAll(async () => {
     await withClient(pg, async (client) => {
