@@ -1,2 +1,2 @@
 // SPDX-License-Identifier: MIT
-export {};
+export { type TestDatabase, useTestDatabase } from './database.ts';
