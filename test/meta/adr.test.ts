@@ -79,10 +79,13 @@ const copiedCells = [
 
 function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
   const fileProblems = files.flatMap((file) => {
-    const unindexed = rows.some((row) => row.target === file.name)
-      ? []
-      : [`${file.name}: no row in the index links to this file`];
     const row = rows.find((candidate) => candidate.number === file.number);
+    const unindexed =
+      row?.target === file.name
+        ? []
+        : [
+            `${file.name}: no row numbered ${file.name.slice(0, 4)} in the index links to this file`,
+          ];
     const drifted = row
       ? copiedCells
           .filter(([, key]) => row[key] !== file[key])
