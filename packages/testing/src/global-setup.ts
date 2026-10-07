@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { TestProject } from 'vitest/node';
+import { newRunCredentials } from './credentials.ts';
 import { type PgConnection, templateDatabase, withClient } from './database.ts';
 import { serverArgs } from './server-settings.ts';
 
@@ -29,11 +30,15 @@ async function createTemplate(connection: PgConnection): Promise<void> {
  * prepares the template database that every test file clones. The data directory is a tmpfs mount:
  * the image keeps it in /var/lib/postgresql/<major>/docker, under the image's volume at
  * /var/lib/postgresql, so the mount covers it and the data lives in memory and goes with the
- * container.
+ * container. The server runs without durability (see serverArgs). The superuser password and the
+ * database name are random for each run, so no run shares a credential with another.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
+  const { password, database } = newRunCredentials();
   const container = await new PostgreSqlContainer(image)
+    .withPassword(password)
+    .withDatabase(database)
     .withCommand(serverArgs(process.env))
     .withTmpFs({ '/var/lib/postgresql': 'rw' })
     .start();

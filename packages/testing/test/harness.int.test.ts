@@ -186,6 +186,14 @@ describe('the global setup', () => {
           return this;
         }
 
+        withPassword() {
+          return this;
+        }
+
+        withDatabase() {
+          return this;
+        }
+
         async start() {
           // Nothing listens on port 1, so the connection that creates the template is refused.
           return {
