@@ -112,6 +112,19 @@ function linkProblems(files: MarkdownFile[], tracked: Set<string>): string[] {
   );
 }
 
+// docs/research is gitignored: internal notes live in a private companion repository and are cited
+// by number, so a link to the folder would be dead for every other reader and run agent.
+function researchLinkProblems(files: MarkdownFile[]): string[] {
+  return files.flatMap((file) =>
+    linkTargets(file.content).flatMap((target) => {
+      const path = linkedPath(file.path, target);
+      return path === 'docs/research' || path?.startsWith('docs/research/')
+        ? [`${file.path}: "${target}" links into docs/research`]
+        : [];
+    }),
+  );
+}
+
 function doc(path: string, ...lines: string[]): MarkdownFile {
   return { path, content: `${lines.join('\n')}\n` };
 }
