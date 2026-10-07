@@ -61,24 +61,22 @@ function parseFrontMatter(text: string): FrontMatter {
 
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
-function readAdrFiles(): AdrFile[] {
-  return readdirSync(adrFolder)
-    .sort()
-    .flatMap((name) => {
-      const number = adrFileNumber(name);
-      if (number === undefined) {
-        return [];
-      }
-      const { fields, body } = splitFrontMatter(readFileSync(`${adrFolder}${name}`, 'utf8'));
-      return {
-        name,
-        number,
-        title: /^# (.+)$/m.exec(body)?.[1] ?? '',
-        status: String(fields.status ?? ''),
-        release: String(fields.release ?? ''),
-        needsConfirmation: String(fields['needs-confirmation'] ?? ''),
-      };
-    });
+function readAdrFiles(sources: AdrSource[] = readAdrSources()): AdrFile[] {
+  return sources.flatMap(({ name, text }) => {
+    const number = adrFileNumber(name);
+    if (number === undefined) {
+      return [];
+    }
+    const { fields, body } = splitFrontMatter(text);
+    return {
+      name,
+      number,
+      title: /^# (.+)$/m.exec(body)?.[1] ?? '',
+      status: String(fields.status ?? ''),
+      release: String(fields.release ?? ''),
+      needsConfirmation: String(fields['needs-confirmation'] ?? ''),
+    };
+  });
 }
 
 // The raw text of each ADR file, for the checks that read the front matter themselves.
