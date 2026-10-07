@@ -98,6 +98,14 @@ describe('the test database', () => {
     expect(rows).toEqual([{ max_connections: '300' }]);
   });
 
+  it('the container uses the run credentials', () => {
+    const { password, database } = inject('pg');
+
+    expect(password).not.toBe('test');
+    expect(password.length).toBeGreaterThanOrEqual(32);
+    expect(database).toMatch(/^nm_run_[0-9a-f]+$/);
+  });
+
   it('the container image equals the digest in infra/pg-image.json', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 
