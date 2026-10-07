@@ -305,10 +305,12 @@ function ledgerHeader(lines: string[]): string[] | undefined {
     .find((header) => header[0] === 'Week ending' && header.length > 2);
 }
 
-function checklistNumbers(markdown: string): string[] {
+// Each item reads `- [ ] [0004][adr-0004] title`: the label shows the number, and the reference
+// picks the link definition that the rendered link follows.
+function checklistItems(markdown: string): { number: string; reference: string }[] {
   return sectionLines(markdown, 'ADRs needed by M0').flatMap((line) => {
-    const number = /^- \[[ x]\] \[(\d{4})\]\[adr-\d{4}\]/.exec(line)?.[1];
-    return number ? [number] : [];
+    const match = /^- \[[ x]\] \[(\d{4})\]\[adr-(\d{4})\]/.exec(line);
+    return match ? [{ number: match[1] ?? '', reference: match[2] ?? '' }] : [];
   });
 }
 
@@ -372,7 +374,8 @@ function ledgerHeaderDrift(readme: string, roadmap: string): string[] {
 }
 
 function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
-  const listed = checklistNumbers(readme);
+  const items = checklistItems(readme);
+  const listed = items.map(({ number }) => number);
   const required = milestoneNumbers(roadmap);
   return [
     ...required
@@ -386,6 +389,12 @@ function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): 
       .map(
         (number) =>
           `M0 checklist: ADR ${number} is in README.md's checklist and not in the M0 row of 14-roadmap.md`,
+      ),
+    ...items
+      .filter(({ number, reference }) => number !== reference)
+      .map(
+        ({ number, reference }) =>
+          `M0 checklist: item [${number}] references [adr-${reference}] and not [adr-${number}]`,
       ),
     ...checklistLinkProblems(readme, listed, tracked),
   ];
