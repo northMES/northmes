@@ -213,8 +213,17 @@ function plannedPathProblems(planned: PlannedPath[], planFiles: MarkdownFile[]):
     if (!taskId.test(task)) {
       return [`${path}: task "${task}" is not of the form E00-S01 or E00-S01-T02`];
     }
-    const defined = planFiles.some((file) => new RegExp(`\\b${task}\\b`).test(file.content));
-    return defined ? [] : [`${path}: task "${task}" appears in no docs/plan file`];
+    // A task id ends where a `-` follows: E04-S01 is not the heading of E04-S01-T01.
+    const heading = new RegExp(`^#{4,5} ${task}\\b(?!-)`, 'm');
+    if (planFiles.some((file) => heading.test(file.content))) {
+      return [];
+    }
+    const mentioned = planFiles.some((file) => new RegExp(`\\b${task}\\b`).test(file.content));
+    return [
+      mentioned
+        ? `${path}: task "${task}" appears in docs/plan but has no heading there`
+        : `${path}: task "${task}" appears in no docs/plan file`,
+    ];
   });
 }
 
