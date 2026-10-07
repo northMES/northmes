@@ -321,6 +321,15 @@ describe('adr index', () => {
     expect(numberProblems(readAdrFiles())).toEqual([]);
   });
 
+  it('no ADR file is numbered below 0001', () => {
+    // Numbers 0, 1, 2 have no gap above 0001, so only the file numbered 0000 shows.
+    expect
+      .soft(numberProblems([0, 1, 2].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0000-decision.md')]);
+
+    expect(numberProblems(readAdrFiles())).toEqual([]);
+  });
+
   it('the index has no two rows with one number', () => {
     expect(rowNumberProblems(rows)).toEqual([]);
 
