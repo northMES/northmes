@@ -106,7 +106,7 @@ describe('collection', () => {
       'x.ai.test.ts',
       'x.ops.test.ts',
       'x.test-d.ts',
-      'orphan.spec.ts',
+      'orphan.test.tsx',
       'e2e/x.spec.ts',
       'docs/sources/spike/x.test.ts',
       'docs/sources/spike/x.int.test.ts',
@@ -180,9 +180,10 @@ describe('collection', () => {
       );
     });
 
+    // No web project collects .test.tsx files until #301 adds it. That change swaps this fixture.
     it('a test file that matches no project is reported', () => {
-      expect(misfiled(['x.test.ts', 'orphan.spec.ts'], listed)).toEqual([
-        { path: 'orphan.spec.ts', projects: [] },
+      expect(misfiled(written.filter(isCollectable), listed)).toEqual([
+        { path: 'orphan.test.tsx', projects: [] },
       ]);
     });
   });
