@@ -133,8 +133,16 @@ function numberProblems(files: AdrFile[]): string[] {
   return [...gaps, ...shared];
 }
 
-function rowNumberProblems(_rows: IndexRow[]): string[] {
-  return [];
+// Each number has one row in the index.
+function rowNumberProblems(rows: IndexRow[]): string[] {
+  return [...new Set(rows.map((row) => row.number))].flatMap((number) => {
+    const targets = rows.filter((row) => row.number === number).map((row) => row.target);
+    return targets.length > 1
+      ? [
+          `${String(number).padStart(4, '0')}: the index has two rows with this number (${targets.join(', ')})`,
+        ]
+      : [];
+  });
 }
 
 function rowOf(file: AdrFile): IndexRow {
