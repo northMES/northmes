@@ -133,6 +133,10 @@ function numberProblems(files: AdrFile[]): string[] {
   return [...gaps, ...shared];
 }
 
+function rowNumberProblems(_rows: IndexRow[]): string[] {
+  return [];
+}
+
 function rowOf(file: AdrFile): IndexRow {
   const { name, ...cells } = file;
   return { ...cells, target: name };
@@ -292,6 +296,21 @@ describe('adr index', () => {
     expect.soft(problems.join('\n')).toContain('0002-other-split.md');
 
     expect(numberProblems(readAdrFiles())).toEqual([]);
+  });
+
+  it('the index has no two rows with one number', () => {
+    expect(rowNumberProblems(rows)).toEqual([]);
+
+    // A second row numbered 0002 that links to another file with the 0002 prefix.
+    const doubled = [...rows, { ...rowOf(fileNumbered(2)), target: '0002-other-split.md' }];
+
+    expect
+      .soft(rowNumberProblems(doubled))
+      .toEqual([expect.stringContaining('0002: the index has two rows with this number')]);
+
+    const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
+    expect(index, 'docs/adr/README.md rows').not.toHaveLength(0);
+    expect(rowNumberProblems(index)).toEqual([]);
   });
 
   it('the index has no row that starts with a number and does not parse', () => {
