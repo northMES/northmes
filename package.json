@@ -7,6 +7,11 @@
   "scripts": {
     "check": "vitest run --project unit",
     "test:handoff": "pnpm check",
+    "gen": "node scripts/gen.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:int": "vitest run --project integration",
+    "test:tz": "vitest run --project tz",
     "lint:customer-data": "node scripts/lint/no-customer-data.mjs"
   },
   "devDependencies": {
