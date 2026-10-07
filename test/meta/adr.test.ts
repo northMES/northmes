@@ -385,6 +385,32 @@ describe('adr front matter', () => {
 
     expect(frontMatterProblems(readAdrSources())).toEqual([]);
   });
+
+  it('an accepted ADR names Krister Johansson as the decision-maker', () => {
+    const planned = 'proposed by the planning session, to be confirmed by Krister Johansson';
+
+    // The complete ADR names Krister Johansson, plain or quoted.
+    expect.soft(frontMatterProblems([adrSource({ status: '"accepted"' })])).toEqual([]);
+    expect
+      .soft(
+        frontMatterProblems([
+          adrSource({ status: '"accepted"', 'decision-makers': '"Krister Johansson"' }),
+        ]),
+      )
+      .toEqual([]);
+
+    // The planning session's wording is not a decision-maker once the ADR is accepted.
+    expect
+      .soft(frontMatterProblems([adrSource({ status: '"accepted"', 'decision-makers': planned })]))
+      .toEqual([expect.stringMatching(/^0001-decision\.md: decision-makers is ".+", .*Krister/)]);
+
+    // A proposed ADR may still carry that wording, so the rule applies to accepted ADRs only.
+    expect.soft(frontMatterProblems([adrSource({ 'decision-makers': planned })])).toEqual([]);
+
+    const accepted = readAdrSources().filter(({ text }) => /^status: "?accepted"?$/m.test(text));
+    expect(accepted, 'accepted docs/adr files').not.toHaveLength(0);
+    expect(frontMatterProblems(accepted)).toEqual([]);
+  });
 });
 
 describe('adr index', () => {
