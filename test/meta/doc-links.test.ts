@@ -125,6 +125,26 @@ function researchLinkProblems(files: MarkdownFile[]): string[] {
   );
 }
 
+// A backticked token names a repository path when it has no glob or placeholder character and
+// either ends in a file extension the repository uses or starts in one of its top-level folders.
+// That keeps names such as `northmes/northmes`, `sql.raw` and `pnpm check` out.
+const knownExtension = /\.(?:md|json|mjs|ts|yaml|yml|sh|graphql)$/;
+const topLevelFolder =
+  /^(?:apps|packages|modules|scripts|infra|test|e2e|examples|docs|\.github|\.claude|schema)\//;
+
+function backtickedRepoPaths(markdown: string): string[] {
+  const paths = [...withoutFences(markdown).matchAll(codeSpan)]
+    .map(([, , body = '']) => body.trim())
+    .filter(
+      (token) =>
+        !/[\s*?[\]{}<>]/.test(token) &&
+        !token.startsWith('node_modules/') &&
+        (knownExtension.test(token) || topLevelFolder.test(token)),
+    )
+    .map((token) => token.replace(/\/+$/, ''));
+  return [...new Set(paths)];
+}
+
 function doc(path: string, ...lines: string[]): MarkdownFile {
   return { path, content: `${lines.join('\n')}\n` };
 }
