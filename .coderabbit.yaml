@@ -119,6 +119,7 @@ reviews:
     - path: '**/migrations/**/*.sql'
       instructions: |
         Forward-only SQL migration, named <UTC yyyymmddHHMMss>_<slug>.sql, run as the module's owner role (nm_mod_<sql name>, for example nm_mod_production_start) in one transaction per file.
+        These rules apply to migrations outside docs/sources/. The .sql files under docs/sources/ are copied spike code that nothing runs, and a port writes new migrations (docs/sources/README.md), so check those files for customer data only.
         - The file carries an expand or contract marker. cascade, drop table, dropping a constraint on a referenced table and key type changes need the contract marker. Prefer expand/contract over one breaking change, so the previous release's image still runs on the new schema.
         - Every new table enables row level security and has policies, or the PR names an allowlist entry with a reason. Policies are split: FOR SELECT on read_scopes, and separate FOR INSERT (WITH CHECK), FOR UPDATE (USING and WITH CHECK) and FOR DELETE (USING) on write_scopes. Write scopes are a subset of read scopes, so no write policy may allow a scope that the select policy hides. Flag any FOR ALL policy. Do not ask for FORCE ROW LEVEL SECURITY: release 1 does not use it.
         - Tables live in the module's own schema and are owned by its nm_mod_<sql name> role. nm_app gets SELECT, INSERT, UPDATE and DELETE only; flag any TRUNCATE grant.
@@ -222,12 +223,14 @@ reviews:
       - name: Row-level security on new tables
         mode: warning
         instructions: >-
-          Scope: added or changed .sql files under any migrations directory.
-          Fail if a CREATE TABLE statement in the diff has no ALTER TABLE ...
-          ENABLE ROW LEVEL SECURITY for that table in the same PR, unless the
-          PR description names the table in an allowlist entry with a reason.
-          Fail if any CREATE POLICY in the diff uses FOR ALL or omits the FOR
-          clause. Pass otherwise, including when no migration changed.
+          Scope: added or changed .sql files under any migrations directory,
+          excluding docs/sources/, which holds copied spike code that nothing
+          runs. Fail if a CREATE TABLE statement in the diff has no ALTER
+          TABLE ... ENABLE ROW LEVEL SECURITY for that table in the same PR,
+          unless the PR description names the table in an allowlist entry
+          with a reason. Fail if any CREATE POLICY in the diff uses FOR ALL or
+          omits the FOR clause. Pass otherwise, including when no migration
+          changed.
       - name: Behaviour change has a test
         mode: warning
         instructions: >-
