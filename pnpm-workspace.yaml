@@ -18,6 +18,10 @@ catalogMode: strict
 
 catalog:
   '@biomejs/biome': 2.5.14
+  '@testcontainers/postgresql': 12.1.0
+  '@types/node': 26.6.2
+  '@types/pg': 8.23.1
+  pg: 8.23.0
   turbo: 2.11.2
   typescript: 6.0.3
   vitest: 5.0.1
