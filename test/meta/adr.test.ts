@@ -619,6 +619,17 @@ describe('adr numbering script', () => {
       expect.soft(existsSync(`${root}${path}`), `${path} exists`).toBe(true);
     }
   });
+
+  it('step 1 of Adding an ADR names pnpm adr:next without the Once wording', () => {
+    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
+    const step = /^## Adding an ADR$[\s\S]*?^1\. (.*)$/m.exec(index)?.[1];
+    expect(step, 'step 1 under "Adding an ADR" in docs/adr/README.md').toBeDefined();
+
+    expect.soft(step).toContain('`pnpm adr:next`');
+    // The script exists, so the step no longer waits for it.
+    expect.soft(step).not.toContain('Once');
+    expect.soft(step).not.toContain('exists, take the number from it instead');
+  });
 });
 
 describe('adr front matter', () => {
