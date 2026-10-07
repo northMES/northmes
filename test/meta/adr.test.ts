@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -608,6 +608,16 @@ describe('adr numbering script', () => {
     ) as { scripts?: Record<string, string> };
 
     expect(rootPackage.scripts?.['adr:next']).toBe('node scripts/adr/next-number.mjs');
+  });
+
+  it('the links from docs/agents/domain.md to GLOSSARY.md, docs/adr/README.md and the numbering script resolve', () => {
+    const root = fileURLToPath(new URL('../../', import.meta.url));
+    const domain = readFileSync(`${root}docs/agents/domain.md`, 'utf8');
+
+    for (const path of ['GLOSSARY.md', 'docs/adr/README.md', 'scripts/adr/next-number.mjs']) {
+      expect.soft(domain, `docs/agents/domain.md names ${path}`).toContain(path);
+      expect.soft(existsSync(`${root}${path}`), `${path} exists`).toBe(true);
+    }
   });
 });
 
