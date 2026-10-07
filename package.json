@@ -6,6 +6,7 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "check": "vitest run --project unit",
+    "test:handoff": "pnpm check",
     "lint:customer-data": "node scripts/lint/no-customer-data.mjs"
   },
   "devDependencies": {
