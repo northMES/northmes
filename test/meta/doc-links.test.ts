@@ -260,6 +260,21 @@ describe('doc links', () => {
     ]);
   });
 
+  it('a footnote definition is not a link definition', () => {
+    const footnotes = doc(
+      'docs/plan/README.md',
+      'A claim.[^1] And another.[^note]',
+      '',
+      '[^1]: Some words about the claim, which are not a path.',
+      '[^note]: https://example.com/page',
+      '[a link definition]: missing.md',
+    );
+
+    expect(linkProblems([footnotes], tracked)).toEqual([
+      'docs/plan/README.md: "missing.md" does not resolve to a tracked file',
+    ]);
+  });
+
   it('no file in docs/plan, docs/adr, docs/agents or GLOSSARY.md links into the gitignored docs/research folder', () => {
     const linking = [
       doc(
