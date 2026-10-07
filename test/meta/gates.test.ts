@@ -26,4 +26,10 @@ describe('gates', () => {
     expect(rootScripts['test:int']).toBe('vitest run --project integration');
     expect(rootScripts['test:tz']).toBe('vitest run --project tz');
   });
+
+  it('lint, typecheck and build go through turbo', () => {
+    expect(rootScripts.lint).toBe('turbo run lint');
+    expect(rootScripts.typecheck).toBe('turbo run typecheck');
+    expect(rootScripts.build).toBe('turbo run build');
+  });
 });
