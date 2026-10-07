@@ -95,7 +95,7 @@ This table is the persona list. Stories, issues, issue forms and design header f
 | Plant admin | Sets up a company and its plants: users, roles, master data, calendars, settings, the Pyramid connector, AI providers and stations. Also installs and upgrades NorthMES on the customer's server together with the customer's IT. |
 | Plugin developer | Builds a module or plugin on the `defineModule` contract: validators, slot widgets, subgraphs and remotes. Integration work such as an ERP connector counts here. |
 | Maintainer | Builds and releases NorthMES itself: the repository, CI, the delivery workflow and the platform packages. |
-| Hosting partner | Runs NorthMES for customers. No release 1 story is written for this persona. |
+| Hosting partner | A consultant or provider who installs and runs NorthMES for customers, one installation per customer. In release 1 it creates a customer's companies and their first company admins with scriptable CLI commands on the host, recovers company admins, and may run the onboarding wizard for the customer. |
 
 ## Weekly ledger
 
@@ -180,7 +180,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 
 ### ADRs to accept
 
-27 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058] and [0059][adr-0059]. The ones M0 needs are in the checklist above.
+30 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058], [0059][adr-0059], [0065][adr-0065], [0066][adr-0066] and [0067][adr-0067]. The ones M0 needs are in the checklist above.
 
 ### ADR parts to confirm
 
@@ -202,6 +202,8 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 | [0055][adr-0055] | ledger additions | M-04 |
 | [0057][adr-0057] | the whole decision | M-02 |
 | [0059][adr-0059] | no TimescaleDB backend from the project | M-50 |
+| [0066][adr-0066] | the company admin role holding every installed permission | M-61 |
+| [0067][adr-0067] | the top bar slot id | none |
 
 ### Questions before M0
 
@@ -264,10 +266,12 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 | M-46 | AI provider details: the Entra token scope, proxy behaviour, a local model | [0035][adr-0035] |
 | M-47 | The name of the instant filter input | [0016][adr-0016] |
 | M-48 | Whether the restore drill switch may stay an environment flag under rule 6 of ADR 0051 | [0045][adr-0045], [0051][adr-0051] |
+| M-61 | Whether core's company admin role holds every installed permission | [0066][adr-0066] |
 
 ### Later decisions from the roadmap
 
 - A ledger estimate for each epic that [14-roadmap.md](14-roadmap.md#epics-in-dependency-order) lists as not estimated (E00, E03, E09, E10, E17 and E18, and the unestimated parts of other epics), set when the epic's stories are created.
+- Whether the planning session's estimate of 2026-10-06 holds for the ledger row that [ADR 0066][adr-0066] adds for company and plant administration and onboarding (E05-S14, E05-S15, E06-S14 and the module steps): 13 to 21.5 raw days. Krister left the figure open, and M-04 stays open. Velocity checkpoint 1 (M2) checks the part of E05-S14 and E05-S15, and velocity checkpoint 3 (M4) the part of E06-S14 and the module steps, which lands at M4.
 - The pilot install date and the pilot test start, fixed at M4 (Fri 2027-04-30, proposed) from the three velocity forecasts, with cuts from the cut order in [01-product-and-scope.md](01-product-and-scope.md#the-cut-order-when-velocity-is-low) if the forecast misses the date.
 
 [adr-0001]: ../adr/0001-record-architecture-decisions-in-madr.md
@@ -323,3 +327,6 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 [adr-0060]: ../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md
 [adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md
+[adr-0065]: ../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md
+[adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
+[adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md

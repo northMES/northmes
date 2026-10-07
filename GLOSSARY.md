@@ -9,6 +9,8 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | `company` (Company) | The business that uses NorthMES and owns its plants, master data and customers. Better Auth calls it an organization; ISA-95 calls it the enterprise. | tenant; organization outside the auth module |
 | `plant` (Plant) | One production site of a company, with its own time zone, machines, calendars and production orders. ISA-95 calls it a site; ERPs often tell plants apart by warehouse or department. | site, factory, location |
 | `scope` | A node in the scope tree (company, plant, and later area and line) that a row, a code and a role assignment belong to. | level, tenant |
+| installation | One NorthMES deployment: one database and one image version, serving one customer that may hold several companies. It is not a scope, and no role is held at it; the people who run the host create its companies with the CLI. | instance, tenant, site |
+| `onboarding` (Onboarding) | The steps of the onboarding wizard that a new company and each new plant go through, such as the plant's calendar and its first machine, before planners, operators and stations can use the plant. The company wizard and the plant wizard are its two parts. A plant whose onboarding is complete is open, and an open plant never closes again. It is not a job order's setup (see setup under Rates and durations). | setup, plant setup, provisioning |
 | plant time | The wall-clock time in the plant's time zone, which every screen shows with a zone label when the browser zone differs from the plant zone. | local time (ambiguous), server time |
 | presentation settings | The company and plant settings that decide how dates, clock times and numbers are shown and typed: the date format, the hour cycle and the number format in `core.presentation`. Stored and transmitted values never change with them, and the plant's time zone is not one of them. | locale (NorthMES pins one base locale), regional settings, display preferences |
 
@@ -58,7 +60,7 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | cycles per piece | How many cycles one piece needs. | strokes |
 | retool time | The time to set a machine up for an operation before the first piece. Pyramid sends `RetoolTime`, and some sites send setup as a separate row named "Ställtid". | changeover, toolchange |
 | fixed time | A duration added to an operation whatever the quantity. Pyramid sends it as `ExtendedTime`. | extra time |
-| setup | The first part of a job order: retool time plus fixed time. | preparation |
+| setup | The first part of a job order: retool time plus fixed time. It is not onboarding, the steps a new company and each new plant go through (see onboarding under Company and plants). | preparation |
 | run | The part of a job order after setup, when pieces are made. | production time |
 | planning factor | The divisor that stretches run time from the ideal machine speed to the expected real speed; by default the operation's OEE target. | efficiency, speed factor |
 | OEE target | The target overall equipment effectiveness of an operation, as a fraction. Pyramid sends `Oee` as a percentage. | expected OEE |
