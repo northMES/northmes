@@ -171,4 +171,30 @@ describe('adr index', () => {
       .soft(indexProblems(added, rows))
       .toEqual(expect.arrayContaining([expect.stringContaining('0003-new-decision.md')]));
   });
+
+  it('the index lists no file that does not exist', () => {
+    // A row for a file nobody wrote, and a row left behind after a file was deleted.
+    const invented: IndexRow[] = [
+      ...rows,
+      {
+        number: 3,
+        title: 'Invented decision',
+        target: '0003-invented-decision.md',
+        status: 'proposed',
+        release: '1',
+        needsConfirmation: '',
+      },
+    ];
+    const deleted = files.filter((file) => file.number !== 2);
+
+    expect
+      .soft(indexProblems(files, invented))
+      .toEqual([expect.stringContaining('0003-invented-decision.md')]);
+    expect
+      .soft(indexProblems(deleted, rows))
+      .toEqual([expect.stringContaining('0002-split-modules.md')]);
+
+    const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
+    expect(indexProblems(readAdrFiles(), index)).toEqual([]);
+  });
 });
