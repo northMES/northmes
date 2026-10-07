@@ -321,6 +321,21 @@ describe('adr index', () => {
     expect(rowNumberProblems(index)).toEqual([]);
   });
 
+  it("each index row's number equals the number in the file name it links to", () => {
+    expect(rowNumberProblems(rows)).toEqual([]);
+
+    // The fixture has no row 0003, so this row is unique by number and only the file name is wrong.
+    const mismatched = [...rows, { ...rowOf(fileNumbered(3)), target: '0001-record-decisions.md' }];
+    const problems = rowNumberProblems(mismatched);
+
+    expect.soft(problems).toEqual([expect.stringContaining('0003')]);
+    expect.soft(problems.join('\n')).toContain('0001-record-decisions.md');
+
+    const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
+    expect(index, 'docs/adr/README.md rows').not.toHaveLength(0);
+    expect(rowNumberProblems(index)).toEqual([]);
+  });
+
   it('the index has no row that starts with a number and does not parse', () => {
     const markdown = [
       '| Number | Title | Status | Release | Needs confirmation |',
