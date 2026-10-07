@@ -78,7 +78,7 @@ const copiedCells = [
 ] as const;
 
 function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
-  return files.flatMap((file) => {
+  const fileProblems = files.flatMap((file) => {
     const unindexed = rows.some((row) => row.target === file.name)
       ? []
       : [`${file.name}: no row in the index links to this file`];
@@ -93,6 +93,11 @@ function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
       : [];
     return [...unindexed, ...drifted];
   });
+  const rowProblems = rows
+    .filter((row) => !files.some((file) => file.name === row.target))
+    .map((row) => `${row.target}: the index links to a file that does not exist`);
+
+  return [...fileProblems, ...rowProblems];
 }
 
 function rowOf(file: AdrFile): IndexRow {
