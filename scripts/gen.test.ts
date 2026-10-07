@@ -53,9 +53,7 @@ describe('gen', () => {
     expect(result.stdout).toContain('stages: none');
   });
 
-  // The comparison with the repository root arrives with the first real stage, so this test
-  // covers where --check generates, its cleanup and the exit code, not the comparison.
-  it('--check generates into a temporary directory and exits 0 when nothing differs', async () => {
+  it('--check generates into a temporary directory and removes it afterwards', async () => {
     const root = '/repo';
     const seen: { outDir: string; existed: boolean }[] = [];
     const stage = {
@@ -65,14 +63,28 @@ describe('gen', () => {
       },
     };
 
-    const exitCode = await run([stage], { check: true }, { log: () => {}, root });
+    await run([stage], { check: true }, { log: () => {}, error: () => {}, root });
 
-    expect(exitCode).toBe(0);
     expect(seen).toHaveLength(1);
     const { outDir, existed } = seen[0];
     expect(outDir).not.toBe(root);
     expect(dirname(outDir)).toBe(tmpdir());
     expect(existed).toBe(true);
     expect(existsSync(outDir)).toBe(false);
+  });
+
+  // The comparison with the repository root arrives with the first real stage. Until then
+  // check mode fails whenever a stage runs, so stale generated files cannot pass the check.
+  it('--check fails while the comparison with the repository root is not built', async () => {
+    const errors: string[] = [];
+    const stage = { name: 'fixture', generate: async () => {} };
+    const io = { log: () => {}, error: (line: string) => errors.push(line), root: '/repo' };
+
+    const exitCode = await run([stage], { check: true }, io);
+
+    expect(exitCode).toBe(1);
+    expect(errors).toEqual([
+      'gen --check: the comparison with the repository root is not built yet, so check mode fails when a stage runs',
+    ]);
   });
 });
