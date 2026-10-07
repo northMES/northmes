@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { scan } from '../../scripts/lint/pg-image.mjs';
 
@@ -17,5 +19,40 @@ describe('pg-image', () => {
     ]);
 
     expect(findings).toEqual([{ path: 'db/Dockerfile.dev', line: 3, reference: 'postgres:17' }]);
+  });
+
+  // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
+  // fails here.
+  describe('characterisation', () => {
+    it('scan does not report the image in infra/pg-image.json', () => {
+      const { image } = JSON.parse(
+        readFileSync(fileURLToPath(new URL('../../infra/pg-image.json', import.meta.url)), 'utf8'),
+      );
+
+      expect(scan([{ path: 'Dockerfile', text: `FROM ${image}\n` }])).toEqual([]);
+    });
+
+    it('scan reports postgres:18 without the digest', () => {
+      const findings = scan([{ path: 'Dockerfile', text: 'FROM postgres:18\n' }]);
+
+      expect(findings).toEqual([{ path: 'Dockerfile', line: 1, reference: 'postgres:18' }]);
+    });
+
+    it('scan does not report a FROM line for another image or for a build stage', () => {
+      const findings = scan([
+        { path: 'Dockerfile', text: 'FROM node:26 AS build\nRUN true\nFROM build\n' },
+      ]);
+
+      expect(findings).toEqual([]);
+    });
+
+    it('scan ignores files that are not Dockerfiles', () => {
+      const findings = scan([
+        { path: 'compose.yaml', text: 'services:\n  db:\n    image: postgres:17\n' },
+        { path: 'README.md', text: '```\nFROM postgres:17\n```\n' },
+      ]);
+
+      expect(findings).toEqual([]);
+    });
   });
 });
