@@ -14,7 +14,7 @@ Path instructions tell it what to flag per area:
 |---|---|
 | `modules/*/server/**` | Writes outside a registered command handler, a write path without `can()` at the target's scope, writes outside the command's audit context, queries outside the scoped transaction helper, SQL on another module's schema, `sql.raw` and friends, `Date` query parameters, AI SDK calls outside `modules/ai/server/model-call.ts` |
 | `modules/*/domain/**`, `modules/*/server/domain/**` | Imports of Nest, Kysely or `pg`, and use of `process.env` |
-| `**/migrations/**/*.sql` | Missing expand or contract marker, a new table without row-level security and split policies, `FOR ALL` policies, write policies wider than the read policy, `TRUNCATE` grants, missing audit trigger or uuid `id`, secret-like columns, `CREATE INDEX CONCURRENTLY` advice |
+| `**/migrations/**/*.sql` outside `docs/sources` | Missing expand or contract marker, a new table without row-level security and split policies, `FOR ALL` policies, write policies wider than the read policy, `TRUNCATE` grants, missing audit trigger or uuid `id`, secret-like columns, `CREATE INDEX CONCURRENTLY` advice |
 | `modules/*/web/**`, `packages/ui/**` | WCAG 2.2 AA gaps (keyboard, single-pointer alternative to drag, 24 px targets, state by color alone, missing names and labels, focus hidden), live regions outside `announce()`, direct `@base-ui/*` or Radix imports, values that are not tokens |
 | MIT packages (`packages/contracts`, `sdk`, `web-sdk`, `ui`, `web-build`, `testing`, `modules/*/contracts`) | Imports of AGPL code, a license field that is not MIT, breaking changes without `!` in the PR title |
 | `**/*.test.{ts,tsx}`, `**/e2e/**` | A behaviour change without a test, a shared database instead of `@testcontainers/postgresql`, real AI calls outside `*.ai.test.ts` files and `pnpm test:e2e:ai` runs |
@@ -23,7 +23,7 @@ Path instructions tell it what to flag per area:
 | `.github/workflows/**` | Actions not pinned by SHA, broad permissions, `pull_request_target`, checkout without `persist-credentials: false`, event values interpolated into scripts |
 | `.coderabbit.yaml` | Changes that drop a path instruction, exclude source, test or migration files, or turn off the request-changes workflow or incremental reviews |
 
-Pre-merge checks only warn; they never block a merge. The title check asks for a Conventional Commit written for users, because the PR title becomes the changelog line. The linked issue check looks for out-of-scope changes. Three custom checks look for AGPL imports in MIT packages, new tables without row-level security, and source changes without a test change.
+Pre-merge checks only warn; they never block a merge. The title check asks for a Conventional Commit written for users, because the PR title becomes the changelog line. The linked issue check looks for out-of-scope changes. Three custom checks look for AGPL imports in MIT packages, new tables without row-level security outside `docs/sources`, and source changes without a test change.
 
 Tools that stay on include Biome, Squawk (Postgres migrations), actionlint, zizmor and the secret scanners. ESLint and Oxlint are off because the repository lints with Biome. SQLFluff and LanguageTool are off because the repository has no SQL layout rules and uses its own prose rules.
 

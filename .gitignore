@@ -9,6 +9,8 @@ node_modules/
 
 # Build output and local state.
 dist/
+# The integration spike's test plugins are hand-written files in dist folders.
+!/docs/sources/spike-integration/apps/server/test/fixtures/*/dist/
 .turbo/
 coverage/
 *.tsbuildinfo

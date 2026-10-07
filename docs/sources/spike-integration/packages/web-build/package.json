@@ -1,0 +1,23 @@
+{
+  "name": "@northmes/web-build",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./shared.mjs",
+    "./remote": "./remote.mjs"
+  },
+  "dependencies": {
+    "@module-federation/vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@tailwindcss/vite": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "vite": "catalog:",
+    "tailwindcss": "catalog:"
+  }
+}

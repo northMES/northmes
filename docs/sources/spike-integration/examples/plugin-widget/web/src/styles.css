@@ -1,0 +1,6 @@
+/* Built outside the repo, so the shell cannot scan it: prefixed utilities, no preflight, shell tokens. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(xw);
+@import "@northmes/ui/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) prefix(xw) source(none);
+@source "./";

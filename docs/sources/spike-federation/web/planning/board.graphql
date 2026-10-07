@@ -1,0 +1,9 @@
+query PlanningBoard($first: Int!) {
+  planningProductionOrders(first: $first) {
+    edges { node { id number version article { id name openOrderCount } } }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+subscription PlanningBoardChanged($plantId: ID!) {
+  planningBoardChanged(plantId: $plantId) { kind productionOrder { id version article { id name } } }
+}

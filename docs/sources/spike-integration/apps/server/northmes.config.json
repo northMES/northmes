@@ -1,0 +1,5 @@
+{
+  "northmes": "0.1.0",
+  "modules": ["@northmes/module-core", "@northmes/module-planning"],
+  "plugins": ["./plugins/example-validator", "./plugins/example-widget"]
+}

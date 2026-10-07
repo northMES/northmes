@@ -1,0 +1,6 @@
+/* A plugin-style remote: every class carries the module prefix, so it cannot collide with the shell. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(qa);
+@import "@northmes/ui/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) prefix(qa) source(none);
+@source "./";

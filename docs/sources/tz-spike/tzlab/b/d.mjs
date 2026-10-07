@@ -1,0 +1,1 @@
+import { TZDate } from '@date-fns/tz'; import { addDays, startOfDay, differenceInMinutes, format } from 'date-fns'; const d=new TZDate(2026,0,1,'Europe/Stockholm'); console.log(format(addDays(startOfDay(d),1),'yyyy'), differenceInMinutes(d,d))

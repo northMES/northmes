@@ -1,0 +1,52 @@
+type Article {
+  id: ID!
+  code: String!
+  name: String!
+}
+
+type Query {
+  coreArticle(id: ID!): Article
+  planningProductionOrders(first: Int! = 25): ProductionOrderConnection!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type ProductionOrder {
+  id: ID!
+  number: String!
+  plantId: ID!
+  quantity: Int!
+  status: String!
+  version: Int!
+  article: Article
+}
+
+type ProductionOrderEdge {
+  cursor: String!
+  node: ProductionOrder!
+}
+
+type ProductionOrderConnection {
+  edges: [ProductionOrderEdge!]!
+  pageInfo: PageInfo!
+}
+
+type PlanningBoardChange {
+  plantId: ID!
+  kind: String!
+  productionOrder: ProductionOrder!
+}
+
+type Mutation {
+  planningCreateProductionOrder(articleId: ID!, quantity: Int!): ProductionOrder!
+  planningReleaseProductionOrder(id: ID!): ProductionOrder!
+}
+
+type Subscription {
+  planningBoardChanged(plantId: ID!): PlanningBoardChange!
+}

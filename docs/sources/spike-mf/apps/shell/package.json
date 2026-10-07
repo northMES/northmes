@@ -1,0 +1,28 @@
+{
+  "name": "@northmes/shell",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build", "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@apollo/client": "catalog:",
+    "@module-federation/runtime": "catalog:",
+    "@northmes/ui": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
+    "@tanstack/react-router": "catalog:",
+    "graphql": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rxjs": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

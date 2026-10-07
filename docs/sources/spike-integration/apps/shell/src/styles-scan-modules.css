@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "@northmes/ui/tokens.css";
+@import "@northmes/ui/theme.css";
+@source "../../../packages/ui/src";
+/* Generated in NorthMES (sources.gen.css): one explicit directory per in-repo module with a remote. */
+@source "../../../modules/planning/web/src";

@@ -1,0 +1,9 @@
+{
+  "name": "spike-integration",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "build:server": "pnpm --filter @northmes/sdk build && pnpm --filter './modules/*' --filter '!./modules/*/web' build && pnpm --filter @northmes/server build"
+  }
+}

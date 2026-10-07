@@ -1,0 +1,1 @@
+{ "northmes": "0.1.0", "modules": ["@northmes/module-core", "@northmes/module-planning"], "plugins": ["./plugins/ownmods-validator"] }

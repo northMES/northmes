@@ -1,0 +1,14 @@
+import 'reflect-metadata';
+import { execute, parse } from 'graphql';
+const { bootstrap } = await import('./dist/src/main.js');
+const { SubgraphRegistry } = await import('./dist/src/sdk/subgraph.js');
+const { resolvePrincipal } = await import('./dist/src/gateway/sessions.js');
+const app = await bootstrap(4103);
+const reg = app.get(SubgraphRegistry);
+const principal = resolvePrincipal('northmes_session=sid-alice');
+const ctx = () => ({ principal, requestId: 'x', loaders: new Map(), subgraph: 'core' });
+const r = await execute({ schema: reg.get('core').schema, document: parse(`query($r:[_Any!]!){ _entities(representations:$r){ ... on Article { id name } } }`), variableValues: { r: [{__typename:'Article', id:'a1'},{__typename:'Article', id:'a404'}] }, contextValue: ctx() });
+console.log(JSON.stringify(r, null, 0));
+const r2 = await execute({ schema: reg.get('core').schema, document: parse(`query($r:[_Any!]!){ _entities(representations:$r){ ... on Article { id name } } }`), variableValues: { r: [{__typename:'Article', id:'a1'}] }, contextValue: { ...ctx(), principal: null } });
+console.log(JSON.stringify(r2, null, 0));
+await app.close();

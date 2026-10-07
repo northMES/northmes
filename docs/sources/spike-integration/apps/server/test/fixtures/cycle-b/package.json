@@ -1,0 +1,1 @@
+{ "name": "fixture-cycle-b", "version": "0.1.0", "type": "module", "exports": { "./manifest": "./dist/manifest.js" } }

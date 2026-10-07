@@ -1,0 +1,25 @@
+{
+  "name": "@northmes/module-planning",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./manifest": "./dist/northmes.module.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": { "@northmes/sdk": "workspace:*", "@northmes/module-core": "workspace:*" },
+  "devDependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/graphql": "catalog:",
+    "@apollo/subgraph": "catalog:",
+    "graphql": "catalog:",
+    "graphql-subscriptions": "3.0.0",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "typescript": "5.9.3",
+    "@types/node": "24.19.1"
+  }
+}

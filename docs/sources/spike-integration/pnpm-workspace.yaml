@@ -1,0 +1,39 @@
+packages:
+  - packages/*
+  - apps/*
+  - modules/*
+  - modules/*/web
+
+allowBuilds:
+  '@apollo/protobufjs': set this to true or false
+  cpu-features: set this to true or false
+  protobufjs: set this to true or false
+  ssh2: set this to true or false
+
+catalog:
+  react: 19.3.0
+  react-dom: 19.3.0
+  "@tanstack/react-router": 1.170.41
+  "@apollo/client": 4.3.1
+  graphql: 16.14.2
+  graphql-ws: 6.3.0
+  rxjs: 7.8.2
+  vite: 8.3.2
+  "@vitejs/plugin-react": 6.1.1
+  "@module-federation/vite": 1.23.2
+  "@module-federation/runtime": 2.9.2
+  tailwindcss: 4.3.3
+  "@tailwindcss/vite": 4.3.3
+  typescript: 6.0.3
+  "@types/react": 19.3.0
+  "@types/react-dom": 19.3.0
+  "@nestjs/common": 12.1.2
+  "@nestjs/core": 12.1.2
+  "@nestjs/graphql": 14.0.3
+  "@nestjs/platform-express": 12.1.2
+  "@apollo/subgraph": 2.15.1
+  reflect-metadata: 0.2.2
+  zod: 4.6.5
+
+minimumReleaseAgeExclude:
+  - '@module-federation/vite@1.23.2'

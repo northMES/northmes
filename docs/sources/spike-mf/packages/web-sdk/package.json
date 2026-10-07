@@ -1,0 +1,24 @@
+{
+  "name": "@northmes/web-sdk",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./routes": "./src/routes.ts"
+  },
+  "peerDependencies": {
+    "@apollo/client": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@apollo/client": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "graphql": "catalog:",
+    "react": "catalog:",
+    "rxjs": "catalog:",
+    "@types/react": "catalog:"
+  }
+}
