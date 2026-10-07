@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -79,5 +79,22 @@ describe('the harness needs no .env file', () => {
         return name === '.env' || name.startsWith('.env.');
       }),
     ).toEqual([]);
+  });
+
+  it('the harness source mentions no .env, dotenv or loadEnvFile', () => {
+    const sourceDir = resolve(root, 'packages/testing/src');
+    const files = readdirSync(sourceDir, { recursive: true, withFileTypes: true }).filter((entry) =>
+      entry.isFile(),
+    );
+    // process.env is not a file name: a .env counts only when no word character or dot precedes it.
+    const envFileMention = /(^|[^\w.])\.env\b|dotenv|loadEnvFile/i;
+
+    const names = files.map((entry) => entry.name);
+
+    expect(names, 'harness source files').toContain('global-setup.ts');
+    for (const entry of files) {
+      const path = resolve(entry.parentPath, entry.name);
+      expect(readFileSync(path, 'utf8'), path).not.toMatch(envFileMention);
+    }
   });
 });
