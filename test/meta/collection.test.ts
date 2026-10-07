@@ -173,11 +173,9 @@ describe('collection', () => {
       expect(paths.filter((path) => path.startsWith('docs/sources/'))).toEqual([]);
     });
 
-    it('a Playwright spec under e2e lands in no project and is not reported as unmatched', () => {
+    it('a Playwright spec under e2e lands in no project and is not a test file one must collect', () => {
       expect(listed.has('e2e/x.spec.ts')).toBe(false);
-      expect(misfiled(written.filter(isCollectable), listed).map(({ path }) => path)).not.toContain(
-        'e2e/x.spec.ts',
-      );
+      expect(isCollectable('e2e/x.spec.ts')).toBe(false);
     });
 
     // No web project collects .test.tsx files until #301 adds it. That change swaps this fixture.
