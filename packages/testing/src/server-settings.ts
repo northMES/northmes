@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * The command that starts the test Postgres server. The server time zone is set here so the time
- * zone legs can run the same suite against another zone.
+ * The command that starts the test Postgres server. NM_TEST_PG_TZ sets the server time zone, so the
+ * time zone legs can run the same suite against another zone; without it the zone is UTC.
  */
-export function serverArgs(_env: NodeJS.ProcessEnv): string[] {
-  return ['postgres', '-c', 'timezone=UTC'];
+export function serverArgs(env: NodeJS.ProcessEnv): string[] {
+  return ['postgres', '-c', `timezone=${env.NM_TEST_PG_TZ ?? 'UTC'}`];
 }
