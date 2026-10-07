@@ -100,19 +100,19 @@ describe('collection', () => {
   });
 
   describe('in a synthetic tree', () => {
+    const suffixed = ['x.test.ts', 'x.int.test.ts', 'x.ai.test.ts', 'x.ops.test.ts', 'x.test-d.ts'];
+    const ignoredFolderFixtures = [
+      'dist',
+      'packages/a/dist',
+      'node_modules/pkg',
+      'a/node_modules/pkg',
+    ];
     const written = [
-      'x.test.ts',
-      'x.int.test.ts',
-      'x.ai.test.ts',
-      'x.ops.test.ts',
-      'x.test-d.ts',
+      ...suffixed,
       'orphan.test.tsx',
       'e2e/x.spec.ts',
-      'docs/sources/spike/x.test.ts',
-      'docs/sources/spike/x.int.test.ts',
-      'docs/sources/spike/x.ai.test.ts',
-      'docs/sources/spike/x.ops.test.ts',
-      'docs/sources/spike/x.test-d.ts',
+      ...suffixed.map((file) => `docs/sources/spike/${file}`),
+      ...ignoredFolderFixtures.flatMap((folder) => suffixed.map((file) => `${folder}/${file}`)),
     ];
     let directory: string;
     let listed: Map<string, string[]>;
@@ -171,6 +171,16 @@ describe('collection', () => {
 
       expect(paths, 'the tree has collected files').toContain('x.test.ts');
       expect(paths.filter((path) => path.startsWith('docs/sources/'))).toEqual([]);
+    });
+
+    it('files under dist and node_modules are never collected', () => {
+      const paths = [...listed.keys()];
+      const inIgnoredFolder = paths.filter((path) =>
+        path.split('/').some((folder) => ignoredFolders.includes(folder)),
+      );
+
+      expect(paths, 'the tree has collected files').toContain('x.test.ts');
+      expect(inIgnoredFolder).toEqual([]);
     });
 
     it('a Playwright spec under e2e lands in no project and is not a test file one must collect', () => {
