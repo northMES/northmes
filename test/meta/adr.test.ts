@@ -114,6 +114,17 @@ function malformedRowProblems(markdown: string): string[] {
   });
 }
 
+function padNumber(number: number): string {
+  return String(number).padStart(4, '0');
+}
+
+// The items that share their number with another item, grouped by that number.
+function sharedNumbers<T extends { number: number }>(items: T[]): [number, T[]][] {
+  return [...new Set(items.map((item) => item.number))]
+    .map((number): [number, T[]] => [number, items.filter((item) => item.number === number)])
+    .filter(([, group]) => group.length > 1);
+}
+
 // The ADR numbers run 0001, 0002, ... with no gap and no number twice. A missing 0001 is a gap too.
 function numberProblems(files: AdrFile[]): string[] {
   const highest = Math.max(0, ...files.map((file) => file.number));
@@ -121,34 +132,29 @@ function numberProblems(files: AdrFile[]): string[] {
     .filter((number) => !files.some((file) => file.number === number))
     .map(
       (number) =>
-        `${String(number).padStart(4, '0')}: no ADR file has this number (numbers run contiguously from 0001)`,
+        `${padNumber(number)}: no ADR file has this number (numbers run contiguously from 0001)`,
     );
-  const shared = [...new Set(files.map((file) => file.number))].flatMap((number) => {
-    const names = files.filter((file) => file.number === number).map((file) => file.name);
-    return names.length > 1
-      ? [`${String(number).padStart(4, '0')}: ${names.join(', ')} share this number`]
-      : [];
-  });
+  const shared = sharedNumbers(files).map(
+    ([number, group]) =>
+      `${padNumber(number)}: ${group.map((file) => file.name).join(', ')} share this number`,
+  );
 
   return [...gaps, ...shared];
 }
 
 // Each number has one row in the index, and a row links to the file with its own number.
 function rowNumberProblems(rows: IndexRow[]): string[] {
-  const shared = [...new Set(rows.map((row) => row.number))].flatMap((number) => {
-    const targets = rows.filter((row) => row.number === number).map((row) => row.target);
-    return targets.length > 1
-      ? [
-          `${String(number).padStart(4, '0')}: the index has two rows with this number (${targets.join(', ')})`,
-        ]
-      : [];
-  });
+  const shared = sharedNumbers(rows).map(
+    ([number, group]) =>
+      `${padNumber(number)}: the index has two rows with this number (${group.map((row) => row.target).join(', ')})`,
+  );
   const mismatched = rows.flatMap((row) => {
-    const rowNumber = String(row.number).padStart(4, '0');
     const fileNumber = /^(\d{4})-/.exec(row.target)?.[1];
-    return fileNumber === rowNumber
+    return fileNumber === padNumber(row.number)
       ? []
-      : [`${rowNumber}: the row links to ${row.target}, whose number is ${fileNumber ?? 'missing'}`];
+      : [
+          `${padNumber(row.number)}: the row links to ${row.target}, whose number is ${fileNumber ?? 'missing'}`,
+        ];
   });
 
   return [...shared, ...mismatched];
