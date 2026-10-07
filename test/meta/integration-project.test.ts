@@ -50,4 +50,17 @@ describe('vitest projects', () => {
     expect(effective).toEqual([globalSetupPath]);
     expect(existsSync(globalSetupPath), globalSetupPath).toBe(true);
   });
+
+  it('only the integration project runs a global setup', () => {
+    const projects = config.test?.projects ?? [];
+    const others = projects.filter((project) => project.test?.name !== 'integration');
+
+    // A root-level globalSetup is inherited by every project that extends the root.
+    expect(config.test?.globalSetup, 'root test.globalSetup').toBeUndefined();
+    expect(others.map((project) => project.test?.name)).toContain('unit');
+    for (const project of others) {
+      expect(project.test?.globalSetup, `project ${project.test?.name}`).toBeUndefined();
+    }
+    expect(resolved(findProject('integration')?.test?.globalSetup)).toEqual([globalSetupPath]);
+  });
 });
