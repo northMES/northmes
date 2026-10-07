@@ -23,8 +23,25 @@ interface PlannedPath {
   task: string;
 }
 
-// Paths that the agent files name before they exist. When a task adds one, the entry goes.
-const plannedPaths: PlannedPath[] = [];
+// Paths that the agent files name before they exist, each with the task in docs/plan that creates
+// it. An entry stays until someone removes it, also after its task merges.
+const plannedPaths: PlannedPath[] = [
+  { path: 'packages', task: 'E00-S02-T01' },
+  { path: 'packages/testing', task: 'E00-S02-T01' },
+  { path: 'scripts/handoff/tests-changed.mjs', task: 'E00-S06-T01' },
+  // release-please writes the file in its first release pull request.
+  { path: 'CHANGELOG.md', task: 'E01-S03-T02' },
+  { path: 'modules', task: 'E02-S01-T01' },
+  { path: 'examples', task: 'E02-S01-T01' },
+  { path: 'packages/sdk', task: 'E02-S01-T01' },
+  { path: 'packages/contracts', task: 'E02-S01-T01' },
+  { path: 'packages/web-sdk', task: 'E02-S01-T01' },
+  { path: 'packages/web-build', task: 'E02-S01-T01' },
+  { path: '.claude/launch.json', task: 'E02-S08-T05' },
+  { path: 'packages/ui', task: 'E04-S01' },
+  { path: 'modules/ai/server/model-call.ts', task: 'E13-S01' },
+  { path: 'apps/docs/reference', task: 'E19-S02' },
+];
 
 // `git ls-files`, not the file system: a link to a file that is not committed resolves here and
 // breaks for everyone else.
@@ -36,9 +53,9 @@ function trackedFiles(): Set<string> {
   return new Set(result.stdout.split('\0').filter(Boolean));
 }
 
-function readDocFiles(tracked: Set<string>): MarkdownFile[] {
+function readDocFiles(tracked: Set<string>, globs = documentGlobs): MarkdownFile[] {
   return [...tracked]
-    .filter((path) => documentGlobs.some((glob) => matchesGlob(path, glob)))
+    .filter((path) => globs.some((glob) => matchesGlob(path, glob)))
     .sort()
     .map((path) => ({ path, content: readFileSync(join(root, path), 'utf8') }));
 }
@@ -155,6 +172,23 @@ function backtickedRepoPaths(markdown: string): string[] {
     )
     .map((token) => token.replace(/\/+$/, ''));
   return [...new Set(paths)];
+}
+
+// A planned entry names one path. If it covered what lies below it, `packages` would excuse every
+// path under packages/ and the list would check nothing.
+function pathProblems(
+  files: MarkdownFile[],
+  tracked: Set<string>,
+  planned: PlannedPath[],
+): string[] {
+  return files.flatMap((file) =>
+    backtickedRepoPaths(file.content)
+      .filter((path) => !exists(path, tracked) && !planned.some((entry) => entry.path === path))
+      .map(
+        (path) =>
+          `${file.path}: \`${path}\` is not in the repository and not on the planned-paths list`,
+      ),
+  );
 }
 
 function doc(path: string, ...lines: string[]): MarkdownFile {
@@ -288,11 +322,12 @@ describe('doc links', () => {
     const named = doc(
       'docs/agents/domain.md',
       'Tracked: `GLOSSARY.md` and `docs/plan/README.md`. A folder with tracked files: `docs/adr`.',
-      'Planned: `apps/docs/reference` and `apps/docs/reference/index.md`, which the same task creates.',
+      'Planned: `apps/docs/reference`.',
     );
     const typo = doc(
       'AGENTS.md',
       'Wrong: `docs/plan/READNE.md`, a `scripts/missing.mjs` and a `packages/sdk` that nobody planned.',
+      'An entry names one path, so what lies below a planned folder needs its own: `apps/docs/reference/index.md`.',
       'Not paths: `pnpm check` and `schema/*.graphql`.',
       '',
       '```sh',
@@ -305,11 +340,11 @@ describe('doc links', () => {
       'AGENTS.md: `docs/plan/READNE.md` is not in the repository and not on the planned-paths list',
       'AGENTS.md: `scripts/missing.mjs` is not in the repository and not on the planned-paths list',
       'AGENTS.md: `packages/sdk` is not in the repository and not on the planned-paths list',
+      'AGENTS.md: `apps/docs/reference/index.md` is not in the repository and not on the planned-paths list',
     ]);
     // A path stops being planned when the list drops it: the same file now reports it.
     expect(pathProblems([named], tracked, [])).toEqual([
       'docs/agents/domain.md: `apps/docs/reference` is not in the repository and not on the planned-paths list',
-      'docs/agents/domain.md: `apps/docs/reference/index.md` is not in the repository and not on the planned-paths list',
     ]);
 
     const agentFiles = readDocFiles(trackedFiles(), agentFileGlobs);
