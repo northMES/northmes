@@ -21,6 +21,13 @@ export async function run(stages, options, io) {
       await rm(outDir, { recursive: true, force: true });
     }
   }
+  if (options.check && stages.length > 0) {
+    // Fails closed until the comparison with the repository root is built with the first stage.
+    io.error(
+      'gen --check: the comparison with the repository root is not built yet, so check mode fails when a stage runs',
+    );
+    return 1;
+  }
   return 0;
 }
 
@@ -39,7 +46,11 @@ function isEntryPoint() {
 
 async function main() {
   const options = { check: process.argv.includes('--check') };
-  process.exitCode = await run(stages, options, { log: console.log, root: repositoryRoot });
+  process.exitCode = await run(stages, options, {
+    log: console.log,
+    error: console.error,
+    root: repositoryRoot,
+  });
 }
 
 if (isEntryPoint()) {
