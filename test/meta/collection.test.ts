@@ -102,6 +102,8 @@ describe('collection', () => {
       for (const path of [
         'x.test.ts',
         'x.int.test.ts',
+        'x.ai.test.ts',
+        'x.ops.test.ts',
         'orphan.spec.ts',
         'docs/sources/spike/x.test.ts',
         'docs/sources/spike/x.int.test.ts',
@@ -123,6 +125,13 @@ describe('collection', () => {
 
     it('a file named x.test.ts lands in unit only', () => {
       expect(listed.get('x.test.ts')).toEqual(['unit']);
+    });
+
+    it.each([
+      { file: 'x.ai.test.ts', project: 'ai' },
+      { file: 'x.ops.test.ts', project: 'ops' },
+    ])('a file named $file lands in $project only', ({ file, project }) => {
+      expect(listed.get(file)).toEqual([project]);
     });
 
     it('files under docs/sources are never collected', () => {
