@@ -125,8 +125,14 @@ function sharedNumbers<T extends { number: number }>(items: T[]): [number, T[]][
     .filter(([, group]) => group.length > 1);
 }
 
-// The ADR numbers run 0001, 0002, ... with no gap and no number twice. A missing 0001 is a gap too.
+// The ADR numbers run 0001, 0002, ... with no gap, no number twice and none below 0001. A missing
+// 0001 is a gap too.
 function numberProblems(files: AdrFile[]): string[] {
+  const belowFirst = files
+    .filter((file) => file.number < 1)
+    .map(
+      (file) => `${file.name}: the number is below 0001 (numbers run contiguously from 0001)`,
+    );
   const highest = Math.max(0, ...files.map((file) => file.number));
   const gaps = Array.from({ length: highest }, (_, index) => index + 1)
     .filter((number) => !files.some((file) => file.number === number))
@@ -139,7 +145,7 @@ function numberProblems(files: AdrFile[]): string[] {
       `${padNumber(number)}: ${group.map((file) => file.name).join(', ')} share this number`,
   );
 
-  return [...gaps, ...shared];
+  return [...belowFirst, ...gaps, ...shared];
 }
 
 // Each number has one row in the index, and a row links to the file with its own number.
