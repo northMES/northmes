@@ -171,7 +171,7 @@ E03 and the rest of M0 need:
 - [ ] [0029][adr-0029] per-planner drafts, soft locks and the plan revision (accepted; needs-confirmation: product owner)
 - [ ] [0055][adr-0055] release 1 scope and the scope rule (accepted; needs-confirmation: maintainer, ledger additions)
 - [ ] [0005][adr-0005] Postgres 18 official image with pgBackRest (accepted; needs-confirmation: maintainer, the pgBackRest source fallback)
-- [ ] [0004][adr-0004] monorepo tooling and the Node pin after the week 1 test (proposed)
+- [ ] [0004][adr-0004] monorepo tooling and the TypeScript 6.0.x pin (proposed)
 - [ ] [0057][adr-0057] scheduling domain as a pure package (proposed)
 
 ## Decisions waiting for the maintainer
