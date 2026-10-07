@@ -659,4 +659,19 @@ describe('adr front matter', () => {
     };
     expect.soft(frontMatterProblems([crlfBody])).toEqual([]);
   });
+
+  it('an ADR whose front matter is not valid YAML is reported by file name', () => {
+    const good = adrSource({}, '0002-good.md');
+    const unclosed = adrSource({ status: '[accepted' });
+
+    // The file is reported once, with the parser's own message and not only the check's prefix.
+    // The unclosed list swallows the lines below it, so no field is reported missing as well.
+    expect
+      .soft(frontMatterProblems([unclosed, good]))
+      .toEqual([
+        expect.stringMatching(
+          /^0001-decision\.md: .*not valid YAML.*Flow sequence in block collection must be sufficiently indented and end with a \]/s,
+        ),
+      ]);
+  });
 });
