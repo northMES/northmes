@@ -51,7 +51,12 @@ function parseFrontMatter(text: string): FrontMatter {
   if (block.includes('\r')) {
     return { problem: 'the front matter has CRLF line endings, expected LF' };
   }
-  return splitFrontMatter(text);
+  try {
+    return splitFrontMatter(text);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { problem: `the front matter is not valid YAML: ${message}` };
+  }
 }
 
 // The test helpers read the same facts a person copies into the index: the first heading and the
