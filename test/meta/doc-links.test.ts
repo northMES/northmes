@@ -224,4 +224,30 @@ describe('doc links', () => {
     expect(researchLinkProblems(clean)).toEqual([]);
     expect(researchLinkProblems(readDocFiles(trackedFiles()))).toEqual([]);
   });
+
+  it('backticked repository paths are told apart from globs, commands and names', () => {
+    const markdown = [
+      'Paths: `docs/adr/template.md`, `.coderabbit.yaml`, `AGENTS.md`, `packages/testing`,',
+      '`apps/docs/reference`, `modules/` and `docs/plan/` (a trailing slash is dropped).',
+      'Twice: `packages/testing` again, and ``scripts/gen.mjs`` in a longer span.',
+      'Not paths: `schema/*.graphql`, `modules/*/contracts`, `docs/adr/<name>.md`, `node_modules/x/y.md`,',
+      '`northmes/northmes`, `sql.raw`, `github.reviewers_timeout`, `@northmes/source`, `pnpm check`',
+      'and `test:`.',
+      '',
+      '```sh',
+      'cat `docs/plan/in-a-fence.md`',
+      '```',
+    ].join('\n');
+
+    expect(backtickedRepoPaths(markdown)).toEqual([
+      'docs/adr/template.md',
+      '.coderabbit.yaml',
+      'AGENTS.md',
+      'packages/testing',
+      'apps/docs/reference',
+      'modules',
+      'docs/plan',
+      'scripts/gen.mjs',
+    ]);
+  });
 });
