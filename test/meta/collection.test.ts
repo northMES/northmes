@@ -19,8 +19,10 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 const config = join(root, 'vitest.config.ts');
 const vitestBin = join(root, 'node_modules/vitest/vitest.mjs');
 
-// The suffixes of a test file, and the folders no project collects.
-const testFilePattern = /\.(test|spec)\.tsx?$|\.test-d\.ts$/;
+// The suffixes of a test file, and the folders no project collects. A `.spec.ts` file is a
+// Playwright spec under e2e/ (docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-
+// playwright.md), run by Playwright and never by Vitest.
+const testFilePattern = /\.test\.tsx?$|\.test-d\.ts$/;
 const ignoredFolders = ['node_modules', 'dist'];
 
 // Vitest and git in these tests see neither the caller's Vitest worker nor a GIT_DIR from a hook.
