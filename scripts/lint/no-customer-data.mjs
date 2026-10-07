@@ -1,7 +1,9 @@
 // Keeps customer data out of the repository (docs/plan/11-quality-and-testing.md, "Test data and
 // fixtures"). Two checks run:
 //
-// - The organisation number pattern (six digits, a hyphen, four digits) fails in any file.
+// - The organisation number pattern (six digits, a hyphen, four digits, optionally after a
+//   two-digit prefix such as 16 or a century) fails in any file. A match inside a longer hex or
+//   hyphenated token, such as a UUID, does not count.
 // - A deny-listed customer name fails in files under docs/sources/ and under any folder named
 //   fixtures. The deny list is never committed; the check receives it as SHA-256 hashes. Without
 //   hashes (local runs, handoff's Tester, fork pull requests) the name check is skipped with a
@@ -34,7 +36,7 @@ import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const organisationNumberPattern = /\d{6}-\d{4}/;
+const organisationNumberPattern = /(?<![0-9A-Fa-f-])(?:\d{2})?\d{6}-\d{4}(?![0-9A-Fa-f-])/;
 const wordPattern = /[\p{L}\p{M}\p{N}]+/gu;
 
 /** The longest name, in words, that the name check compares. */
