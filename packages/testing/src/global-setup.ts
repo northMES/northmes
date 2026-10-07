@@ -15,6 +15,8 @@ async function createTemplate(connection: PgConnection): Promise<void> {
   await withClient({ ...connection, database: templateDatabase }, async (client) => {
     await client.query('create table nm_marker (id integer primary key)');
   });
+  // A flagged template can be cloned by any role that may create databases. Postgres refuses to
+  // drop a flagged database, so a cleanup that drops the template must first set is_template to false.
   await withClient(connection, async (client) => {
     await client.query(
       `alter database ${client.escapeIdentifier(templateDatabase)} is_template true`,
