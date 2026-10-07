@@ -100,7 +100,7 @@ On 2026-10-06 the index holds 67 ADRs: 37 accepted and 30 proposed, 64 for relea
 | 0001 | [Record architecture decisions in MADR](0001-record-architecture-decisions-in-madr.md) | accepted | 1 | |
 | 0002 | [Modular monolith with module-owned schemas and process roles](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) | accepted | 1 | |
 | 0003 | [Module package shape and the defineModule manifest](0003-module-package-shape-and-the-definemodule-manifest.md) | proposed | 1 | |
-| 0004 | [Monorepo tooling: pnpm, Turborepo, Node and TypeScript versions](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | 1 | maintainer (Node pin after the week-1 test; TypeScript 6.0.x) |
+| 0004 | [Monorepo tooling: pnpm, Turborepo, Node and TypeScript versions](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | 1 | maintainer (TypeScript 6.0.x) |
 | 0005 | [Postgres 18 official image with pgBackRest, TimescaleDB deferred](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | 1 | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
 | 0006 | [Kysely, SQL-first migrations and the NorthMES migration runner](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | proposed | 1 | |
 | 0007 | [Tenancy: company, plants and the scope tree](0007-tenancy-company-plants-and-the-scope-tree.md) | accepted | 1 | product owner (customer order line scope); maintainer (one plant at a time) |
