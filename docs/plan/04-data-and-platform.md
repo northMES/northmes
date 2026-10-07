@@ -292,7 +292,7 @@ In release 1 every request from a plant route carries exactly one plant: the rou
 
 Company mode (`x-northmes-plant: *`, `/_company/<id>/*`) and `core.code_holders` wait for a customer with several plants in use.
 
-The gateway validates `x-northmes-plant` against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode` `core.plant_forbidden`, and writes one `permission.denied` security event. A plant whose onboarding is not complete admits only holders of `core.onboarding:manage`; any other principal with a role there gets `FORBIDDEN` with `core.plant_not_ready` and no security event (see [Companies, plants and onboarding](#companies-plants-and-onboarding)).
+The gateway validates `x-northmes-plant` against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode` `core.plant_forbidden`, and writes one `permission.denied` security event. A plant whose onboarding is not complete admits only holders of `core.onboarding:manage`; any other principal with a role there gets `FORBIDDEN` with `core.plant_not_ready` and no security event. The one exception is the module list, `GET /api/v1/web/modules?plant=...`, which answers such a principal with 200, the plant and no modules (see [Companies, plants and onboarding](#companies-plants-and-onboarding)).
 
 ### Companies, plants and onboarding
 

@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-06
+date: 2026-10-07
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson
 informed: contributors, coding agents, module and plugin authors
@@ -52,7 +52,7 @@ Chosen option: "A lucide-react component name from a list in `@northmes/contract
 
 * The plant switcher is the first item of the sidebar, above the module groups, in the expanded sidebar, the rail and the 320 px sheet. It stays a menu of links (WCAG 3.2.2) that the shell owns.
 * It lists the plants of `companies` from `/api/v1/web/modules` in the server's order ([ADR 0066][adr-0066]). When the plants span more than one company, each company is a labelled group of its plants; with one company the menu has no group labels. The link to the current plant carries `aria-current="page"`. A plant in onboarding, which the list holds only for a holder of `core.onboarding:manage`, carries "Onboarding" in its link text, so its accessible name reads, for example, "Plant D, Onboarding".
-* The shell hides the switcher when the user can open fewer than two plants. A user whose `admin` is true reaches `/admin` from the switcher menu, or from the user menu when the switcher is hidden, and the admin frame links back to the user's plants. D2 places both links.
+* The shell hides the switcher when `companies` lists fewer than two plants. This is how this ADR applies decision 1: it counts the plants the user can open, so a plant in onboarding that [ADR 0066][adr-0066] leaves out of `companies` does not count, and a role at a company counts each plant of that company. A user whose `admin` is true reaches `/admin` from the switcher menu, or from the user menu when the switcher is hidden, and the admin frame links back to the user's plants. D2 places both links.
 * A plant link follows the rules [ADR 0062][adr-0062] set: it keeps the current route and its search when `$plant` is the route's only path param, it goes to the nearest ancestor route without entity params otherwise, and a different module set means one full navigation. A plant of another company follows the same rules. From `/admin`, a plant link is a full navigation to the plant route.
 * The breadcrumb starts with the plant crumb: the plant name as a link to `/$plant`. When the user's plants span more than one company, a company crumb, the company name without a link, comes before it. `useBreadcrumbs()` returns these crumbs ahead of the route crumbs, and `PageFrame` renders them, so the plant stays visible in every sidebar state. On `/admin` neither crumb is shown.
 * The document title keeps its pattern, "Planning board · Plant A · NorthMES" ([ADR 0021][adr-0021]).
@@ -170,7 +170,7 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 
 | Question | Chosen | Left out | Reason |
 |---|---|---|---|
-| The switcher for a user with fewer than two plants | hidden | shown with one entry; the plant name as plain text | Krister Johansson's decision covers one plant; with no plant the menu has nothing to list |
+| The switcher for a user with fewer than two plants in `companies` | hidden | shown with one entry; the plant name as plain text | Krister Johansson's decision covers one plant; a plant the user cannot open is not in `companies`, and with no plant the menu has nothing to list |
 | Company group labels in the switcher | only when the plants span more than one company | always | with one company a label adds nothing |
 | The company in the breadcrumb | its own crumb without a link | part of the plant crumb's label | no company page exists under a plant route, and the plant crumb's name stays the plant's name |
 | Where an icon is required | on nav entries without `parent`, and on every manifest `web` block | on every nav entry; nowhere | the rail shows top-level entries, and a failed module needs its own icon |
