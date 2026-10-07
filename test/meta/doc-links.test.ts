@@ -864,6 +864,21 @@ describe('doc links', () => {
       expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
     }
 
+    // An ADR that the M0 row links twice is reported once.
+    expect(
+      readmeDrift(
+        change(readme, '- [ ] [0003][adr-0003] module package (proposed)\n', ''),
+        change(
+          roadmap,
+          'and [0003](../adr/0003-module.md).',
+          'and [0003](../adr/0003-module.md), again [0003](../adr/0003-module.md).',
+        ),
+        adrs,
+      ),
+    ).toEqual([
+      "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+    ]);
+
     // A README that lost its sections reports each one, instead of passing for lack of rows.
     expect(readmeDrift('# NorthMES plan\n', roadmap, adrs)).toEqual([
       'personas: README.md has no table',
