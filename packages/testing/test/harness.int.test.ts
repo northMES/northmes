@@ -32,8 +32,11 @@ describe('the test database', () => {
 
     expect(inject('pgImage')).toBe(image);
     expect(image).toContain('@sha256:');
+    // The server must report the major version that the image names, so a wrong image fails here.
+    const major = /^postgres:(\d+)[@-]/.exec(image)?.[1];
+    expect(major).toBeDefined();
     const rows = await query<{ version: string }>(connectionString, 'select version()');
-    expect(rows[0]?.version).toMatch(/^PostgreSQL 18\./);
+    expect(rows[0]?.version).toMatch(new RegExp(`^PostgreSQL ${major}\\.`));
   });
 
   // harness-sibling.int.test.ts runs the same test with a table of its own, in parallel.
@@ -75,7 +78,9 @@ describe('withClient', () => {
     const failure = withClient(pg, async (client) => {
       const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
       const dropped = new Promise((resolve) => client.once('error', resolve));
-      await withClient(pg, (admin) => admin.query('select pg_terminate_backend($1)', [rows[0]?.pid]));
+      await withClient(pg, (admin) =>
+        admin.query('select pg_terminate_backend($1)', [rows[0]?.pid]),
+      );
       await dropped;
       await client.query('select 1');
     });
