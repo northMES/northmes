@@ -77,6 +77,21 @@ describe('the test database', () => {
     expect(holding?.type).toBe('tmpfs');
   });
 
+  it('durability is off', async () => {
+    const settings = await Promise.all(
+      ['fsync', 'synchronous_commit', 'full_page_writes'].map(async (setting) => {
+        const rows = await query<Record<string, string>>(connectionString, `show ${setting}`);
+        return [setting, rows[0]?.[setting]];
+      }),
+    );
+
+    expect(Object.fromEntries(settings)).toEqual({
+      fsync: 'off',
+      synchronous_commit: 'off',
+      full_page_writes: 'off',
+    });
+  });
+
   it('the container image equals the digest in infra/pg-image.json', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 
