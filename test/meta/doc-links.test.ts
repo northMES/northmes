@@ -353,4 +353,43 @@ describe('doc links', () => {
     );
     expect(pathProblems(agentFiles, trackedFiles(), plannedPaths)).toEqual([]);
   });
+
+  it('every planned path names a task that docs/plan defines', () => {
+    const plan = [
+      doc(
+        'docs/plan/14-roadmap.md',
+        '##### E00-S01-T02 repo: Add pnpm check and the root scripts',
+        '#### E19-S02 docs: Generate the configuration reference',
+      ),
+      doc('docs/plan/E02-walking-skeleton.md', '##### E02-S08-T05, #257 repo: Run the app'),
+    ];
+    const defined: PlannedPath[] = [
+      { path: 'a-task.md', task: 'E00-S01-T02' },
+      { path: 'a-story.md', task: 'E19-S02' },
+      { path: 'a-numbered-task.md', task: 'E02-S08-T05' },
+    ];
+    const undefinedTasks: PlannedPath[] = [
+      { path: 'no-task.md', task: '' },
+      { path: 'an-epic.md', task: 'E19' },
+      { path: 'prose.md', task: 'the docs epic' },
+      { path: 'unknown-story.md', task: 'E99-S01' },
+      // The plan has E00-S01-T02, and a longer number is another task.
+      { path: 'unknown-task.md', task: 'E00-S01-T020' },
+    ];
+
+    expect(plannedPathProblems(defined, plan)).toEqual([]);
+    expect(plannedPathProblems(undefinedTasks, plan)).toEqual([
+      'no-task.md: names no task',
+      'an-epic.md: task "E19" is not of the form E00-S01 or E00-S01-T02',
+      'prose.md: task "the docs epic" is not of the form E00-S01 or E00-S01-T02',
+      'unknown-story.md: task "E99-S01" appears in no docs/plan file',
+      'unknown-task.md: task "E00-S01-T020" appears in no docs/plan file',
+    ]);
+
+    const planFiles = readDocFiles(trackedFiles(), ['docs/plan/*.md']);
+    expect(planFiles.map((file) => file.path)).toEqual(
+      expect.arrayContaining(['docs/plan/14-roadmap.md', 'docs/plan/E02-walking-skeleton.md']),
+    );
+    expect(plannedPathProblems(plannedPaths, planFiles)).toEqual([]);
+  });
 });
