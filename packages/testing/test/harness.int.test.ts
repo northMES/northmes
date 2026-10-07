@@ -26,4 +26,13 @@ describe('the test database', () => {
 
     expect(rows).toEqual([{ current_database: databaseName }]);
   });
+
+  it('the database is cloned from the template', async () => {
+    const rows = await query<{ marker: string | null }>(
+      connectionString,
+      "select to_regclass('public.nm_marker')::text as marker",
+    );
+
+    expect(rows).toEqual([{ marker: 'nm_marker' }]);
+  });
 });
