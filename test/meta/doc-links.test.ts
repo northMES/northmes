@@ -75,8 +75,11 @@ function markdownLines(markdown: string): Line[] {
     const char = marker?.[1]?.charAt(0) ?? '';
     const length = marker?.[1]?.length ?? 0;
     if (!open) {
-      open = marker ? { char, length } : undefined;
-      return { text, fenced: Boolean(marker) };
+      // The info string of a backtick fence has no backtick: ```code``` is inline code and opens
+      // nothing. Without this rule the rest of the file would count as fenced.
+      const opens = marker && !(char === '`' && marker[2]?.includes('`'));
+      open = opens ? { char, length } : undefined;
+      return { text, fenced: Boolean(opens) };
     }
     if (char === open.char && length >= open.length && marker?.[2]?.trim() === '') {
       open = undefined;
