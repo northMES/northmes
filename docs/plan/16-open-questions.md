@@ -153,7 +153,7 @@ The remaining administrator questions (installation, polling rate, response size
 
 | Id | Question | Working default until answered | Affects | Needed by |
 |---|---|---|---|---|
-| M-01 | Node 26 or Node 24 after the week-1 tests, and the TypeScript 6.0.x pin | Node 26 LTS on a Debian-based image; Node 24 LTS (24.13.1 or later) is the recorded fallback; TypeScript 6.0.x | [0004][adr-0004], 02 | week 1, by 2026-10-23 |
+| M-01 | The TypeScript 6.0.x pin. The Node pin is settled: the Node 26 test of 2026-10-07 passed every gated test, so ADR 0004 pins Node 26 | TypeScript 6.0.x | [0004][adr-0004], 02 | week 1, by 2026-10-23 |
 | M-02 | Does the scheduling domain live as `@northmes/planning-domain` in `modules/planning/domain`? | Yes | [0057][adr-0057], 07 | before E03 is shaped |
 | M-03 | Base UI as the primitive library; shadcn neutral tokens with the contrast fixes as the token base | Yes to both | [0020][adr-0020], 06 | before design task D1 |
 | M-04 | The ledger additions, the epic order and first weeks, and gate batching | As in [14-roadmap.md](14-roadmap.md) and [13-delivery-and-github.md](13-delivery-and-github.md); gates answered twice a day | [0055][adr-0055], [0049][adr-0049] | 2026-10-30 |

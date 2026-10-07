@@ -186,7 +186,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 
 | ADR | Part Krister confirms | Question |
 |---|---|---|
-| [0004][adr-0004] | Node pin after the week-1 test; TypeScript 6.0.x | M-01 |
+| [0004][adr-0004] | TypeScript 6.0.x | M-01 |
 | [0005][adr-0005] | the pgBackRest source fallback until PGDG publishes 2.59.3 | none |
 | [0007][adr-0007] | one plant at a time | M-12 |
 | [0010][adr-0010] | operator placeholder email | M-08 |
@@ -211,7 +211,7 @@ From [16-open-questions.md](16-open-questions.md#before-m0-2026-10-30):
 
 | Id | Decision | ADR | Needed by |
 |---|---|---|---|
-| M-01 | Node 26 or Node 24 after the week-1 tests, and the TypeScript 6.0.x pin | [0004][adr-0004] | week 1, by 2026-10-23 |
+| M-01 | The TypeScript 6.0.x pin (the Node 26 pin is settled by the test of 2026-10-07) | [0004][adr-0004] | week 1, by 2026-10-23 |
 | M-02 | The scheduling domain as `@northmes/planning-domain` in `modules/planning/domain` | [0057][adr-0057] | before E03 is shaped |
 | M-03 | Base UI as the primitive library; shadcn neutral tokens with the contrast fixes as the token base | [0020][adr-0020] | before design task D1 |
 | M-04 | The ledger additions, the epic order and first weeks, and gate batching | [0055][adr-0055], [0049][adr-0049] | 2026-10-30 |
