@@ -114,6 +114,10 @@ function malformedRowProblems(markdown: string): string[] {
   });
 }
 
+function numberProblems(_files: AdrFile[]): string[] {
+  return [];
+}
+
 function rowOf(file: AdrFile): IndexRow {
   const { name, ...cells } = file;
   return { ...cells, target: name };
@@ -139,6 +143,19 @@ describe('adr index', () => {
     },
   ];
   const rows = files.map(rowOf);
+
+  // An ADR file with the given number and a slug that is unique to it.
+  function fileNumbered(number: number): AdrFile {
+    const prefix = String(number).padStart(4, '0');
+    return {
+      name: `${prefix}-decision.md`,
+      number,
+      title: `Decision ${prefix}`,
+      status: 'proposed',
+      release: '1',
+      needsConfirmation: '',
+    };
+  }
 
   it('every docs/adr/NNNN-*.md file is in the index with the same title and status', () => {
     expect(indexProblems(files, rows)).toEqual([]);
@@ -232,6 +249,23 @@ describe('adr index', () => {
 
     const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
     expect(indexProblems(readAdrFiles(), index)).toEqual([]);
+  });
+
+  it('numbers run contiguously from 0001', () => {
+    expect(numberProblems(files)).toEqual([]);
+
+    // 0003 is missing between 0002 and 0004.
+    expect
+      .soft(numberProblems([1, 2, 4].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0003')]);
+    // The numbers start at 0002, so 0001 is missing.
+    expect
+      .soft(numberProblems([2, 3].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0001')]);
+
+    const adrFiles = readAdrFiles();
+    expect(adrFiles, 'docs/adr files').not.toHaveLength(0);
+    expect(numberProblems(adrFiles)).toEqual([]);
   });
 
   it('the index has no row that starts with a number and does not parse', () => {
