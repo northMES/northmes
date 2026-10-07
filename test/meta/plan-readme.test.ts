@@ -340,6 +340,26 @@ describe('plan README', () => {
         problems: ['epic order: README.md lists them in another order than 14-roadmap.md'],
       },
       {
+        // Without its separator row Markdown renders the lines as text, not as a table.
+        name: 'a persona table without its separator row',
+        readme: change(readme, '| Persona | Who |\n|---|---|\n', '| Persona | Who |\n'),
+        problems: ['personas: README.md has no table'],
+      },
+      {
+        name: 'an epic table whose separator row is not the second row',
+        readme: change(readme, '| Epic | Title |\n|---|---|\n', '| Epic | Title |\n\n|---|---|\n'),
+        problems: ['epic order: README.md has no table'],
+      },
+      {
+        name: 'a ledger table without its separator row',
+        readme: change(
+          readme,
+          '| Week ending | Working days | Merged tasks | Notes |\n|---|---|---|---|\n',
+          '| Week ending | Working days | Merged tasks | Notes |\n',
+        ),
+        problems: ['ledger header: README.md has no ledger table'],
+      },
+      {
         name: 'a ledger header with a column less',
         readme: change(readme, '| Working days | Merged tasks |', '| Working days |'),
         problems: [
@@ -421,6 +441,15 @@ describe('plan README', () => {
     for (const { name, readme: drifted, problems } of cases) {
       expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
     }
+
+    // The roadmap's tables need their separator rows too.
+    expect(
+      readmeDrift(
+        readme,
+        change(roadmap, '| Persona | Who |\n|---|---|\n', '| Persona | Who |\n'),
+        adrs,
+      ),
+    ).toEqual(['personas: 14-roadmap.md has no table']);
 
     // An ADR listed twice in the checklist is reported once, however the two items differ, and its
     // link problems are not repeated.
