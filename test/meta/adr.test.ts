@@ -1,4 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -28,6 +31,9 @@ interface IndexRow {
 }
 
 const adrFolder = fileURLToPath(new URL('../../docs/adr/', import.meta.url));
+const numberingScript = fileURLToPath(
+  new URL('../../scripts/adr/next-number.mjs', import.meta.url),
+);
 
 // The number in an ADR file name, such as 2 in 0002-split-modules.md. A name that is not an ADR file
 // name, such as a path or a file with another extension, has none.
@@ -573,6 +579,27 @@ describe('adr numbering script', () => {
         ),
       )
       .toBe(3);
+  });
+
+  it('node scripts/adr/next-number.mjs prints the next free number', () => {
+    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
+    const nextFree = /^Next free number: (\d{4})\./m.exec(index)?.[1];
+    expect(nextFree, 'the Next free number line in docs/adr/README.md').toBeDefined();
+
+    // The script finds the index from its own location, so the working directory does not matter.
+    const elsewhere = mkdtempSync(join(tmpdir(), 'adr-next-number-'));
+    try {
+      const result = spawnSync(process.execPath, [numberingScript], {
+        cwd: elsewhere,
+        encoding: 'utf8',
+      });
+
+      expect.soft(result.stderr).toBe('');
+      expect.soft(result.status).toBe(0);
+      expect(result.stdout).toBe(`${nextFree}\n`);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
   });
 });
 
