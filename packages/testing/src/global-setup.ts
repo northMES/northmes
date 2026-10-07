@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { TestProject } from 'vitest/node';
 import { type PgConnection, templateDatabase, withClient } from './database.ts';
+import { serverArgs } from './server-settings.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
@@ -23,7 +24,9 @@ async function createTemplate(connection: PgConnection): Promise<void> {
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
-  const container = await new PostgreSqlContainer(image).start();
+  const container = await new PostgreSqlContainer(image)
+    .withCommand(serverArgs(process.env))
+    .start();
   const stop = async () => {
     await container.stop();
   };

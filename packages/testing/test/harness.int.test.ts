@@ -116,6 +116,10 @@ describe('the global setup', () => {
     const stop = vi.fn(async () => {});
     vi.doMock('@testcontainers/postgresql', () => ({
       PostgreSqlContainer: class {
+        withCommand() {
+          return this;
+        }
+
         async start() {
           // Nothing listens on port 1, so the connection that creates the template is refused.
           return {
