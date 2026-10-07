@@ -53,7 +53,7 @@ function trackedFiles(): Set<string> {
   return new Set(result.stdout.split('\0').filter(Boolean));
 }
 
-function readDocFiles(tracked: Set<string>, globs = documentGlobs): MarkdownFile[] {
+function readMarkdown(tracked: Set<string>, globs = documentGlobs): MarkdownFile[] {
   return [...tracked]
     .filter((path) => globs.some((glob) => matchesGlob(path, glob)))
     .sort()
@@ -140,14 +140,19 @@ function exists(path: string, tracked: Set<string>): boolean {
   );
 }
 
+// The links of a file that point into the repository, as written and as a repository path.
+function repoLinks(file: MarkdownFile): { target: string; path: string }[] {
+  return linkTargets(file.content).flatMap((target) => {
+    const path = linkedPath(file.path, target);
+    return path === undefined ? [] : [{ target, path }];
+  });
+}
+
 function linkProblems(files: MarkdownFile[], tracked: Set<string>): string[] {
   return files.flatMap((file) =>
-    linkTargets(file.content).flatMap((target) => {
-      const path = linkedPath(file.path, target);
-      return path === undefined || exists(path, tracked)
-        ? []
-        : [`${file.path}: "${target}" does not resolve to a tracked file`];
-    }),
+    repoLinks(file)
+      .filter(({ path }) => !exists(path, tracked))
+      .map(({ target }) => `${file.path}: "${target}" does not resolve to a tracked file`),
   );
 }
 
@@ -155,12 +160,9 @@ function linkProblems(files: MarkdownFile[], tracked: Set<string>): string[] {
 // by number, so a link to the folder would be dead for every other reader and run agent.
 function researchLinkProblems(files: MarkdownFile[]): string[] {
   return files.flatMap((file) =>
-    linkTargets(file.content).flatMap((target) => {
-      const path = linkedPath(file.path, target);
-      return path === 'docs/research' || path?.startsWith('docs/research/')
-        ? [`${file.path}: "${target}" links into docs/research`]
-        : [];
-    }),
+    repoLinks(file)
+      .filter(({ path }) => path === 'docs/research' || path.startsWith('docs/research/'))
+      .map(({ target }) => `${file.path}: "${target}" links into docs/research`),
   );
 }
 
@@ -199,6 +201,21 @@ function pathProblems(
           `${file.path}: \`${path}\` is not in the repository and not on the planned-paths list`,
       ),
   );
+}
+
+const taskId = /^E\d{2}-S\d{2}(?:-T\d{2})?$/;
+
+function plannedPathProblems(planned: PlannedPath[], planFiles: MarkdownFile[]): string[] {
+  return planned.flatMap(({ path, task }) => {
+    if (task === '') {
+      return [`${path}: names no task`];
+    }
+    if (!taskId.test(task)) {
+      return [`${path}: task "${task}" is not of the form E00-S01 or E00-S01-T02`];
+    }
+    const defined = planFiles.some((file) => new RegExp(`\\b${task}\\b`).test(file.content));
+    return defined ? [] : [`${path}: task "${task}" appears in no docs/plan file`];
+  });
 }
 
 // The lines under a `## ` heading, up to the next one outside a code fence. Fenced lines stay in,
@@ -307,13 +324,12 @@ function checklistLinkProblems(readme: string, numbers: string[], tracked: Set<s
   });
 }
 
-// The README is the source for the persona list, the epic order, the ledger header and the M0
-// checklist, and the roadmap repeats them for the session that shapes issues. Both must agree.
-function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
-  // The README keeps the first two columns of the roadmap's epic table: the epic and its title.
+// The persona list and the epic order. The README keeps the first two columns of the roadmap's
+// epic table: the epic and its title.
+function personaAndEpicDrift(readme: string, roadmap: string): string[] {
   const firstTable = (markdown: string, heading: string) =>
     tablesIn(sectionLines(markdown, heading))[0]?.map((row) => row.slice(0, 2));
-  const tableChecks = [
+  const checks = [
     { label: 'personas', readmeHeading: 'Personas', roadmapHeading: 'Personas' },
     {
       label: 'epic order',
@@ -321,28 +337,32 @@ function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): str
       roadmapHeading: 'Epics in dependency order',
     },
   ];
-  const tableProblems = tableChecks.flatMap(({ label, readmeHeading, roadmapHeading }) => {
+  return checks.flatMap(({ label, readmeHeading, roadmapHeading }) => {
     const own = firstTable(readme, readmeHeading);
     const theirs = firstTable(roadmap, roadmapHeading);
     return own && theirs
       ? tableDrift(label, own, theirs)
       : [`${label}: ${own ? '14-roadmap.md' : 'README.md'} has no table`];
   });
+}
 
-  const ownHeader = ledgerHeader(sectionLines(readme, 'Weekly ledger'));
-  const theirHeader = ledgerHeader(sectionLines(roadmap, 'The weekly ledger row'));
-  const headerProblems =
-    ownHeader && theirHeader
-      ? ownHeader.join(' | ') === theirHeader.join(' | ')
-        ? []
-        : [
-            `ledger header: README.md has "${ownHeader.join(' | ')}" and 14-roadmap.md has "${theirHeader.join(' | ')}"`,
-          ]
-      : [`ledger header: ${ownHeader ? '14-roadmap.md' : 'README.md'} has no ledger table`];
+function ledgerHeaderDrift(readme: string, roadmap: string): string[] {
+  const own = ledgerHeader(sectionLines(readme, 'Weekly ledger'));
+  const theirs = ledgerHeader(sectionLines(roadmap, 'The weekly ledger row'));
+  if (!own || !theirs) {
+    return [`ledger header: ${own ? '14-roadmap.md' : 'README.md'} has no ledger table`];
+  }
+  return own.join(' | ') === theirs.join(' | ')
+    ? []
+    : [
+        `ledger header: README.md has "${own.join(' | ')}" and 14-roadmap.md has "${theirs.join(' | ')}"`,
+      ];
+}
 
+function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
   const listed = checklistNumbers(readme);
   const required = milestoneNumbers(roadmap);
-  const checklistProblems = [
+  return [
     ...required
       .filter((number) => !listed.includes(number))
       .map(
@@ -357,23 +377,16 @@ function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): str
       ),
     ...checklistLinkProblems(readme, listed, tracked),
   ];
-
-  return [...tableProblems, ...headerProblems, ...checklistProblems];
 }
 
-const taskId = /^E\d{2}-S\d{2}(?:-T\d{2})?$/;
-
-function plannedPathProblems(planned: PlannedPath[], planFiles: MarkdownFile[]): string[] {
-  return planned.flatMap(({ path, task }) => {
-    if (task === '') {
-      return [`${path}: names no task`];
-    }
-    if (!taskId.test(task)) {
-      return [`${path}: task "${task}" is not of the form E00-S01 or E00-S01-T02`];
-    }
-    const defined = planFiles.some((file) => new RegExp(`\\b${task}\\b`).test(file.content));
-    return defined ? [] : [`${path}: task "${task}" appears in no docs/plan file`];
-  });
+// The README is the source for the persona list, the epic order, the ledger header and the M0
+// checklist, and the roadmap repeats them for the session that shapes issues. Both must agree.
+function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
+  return [
+    ...personaAndEpicDrift(readme, roadmap),
+    ...ledgerHeaderDrift(readme, roadmap),
+    ...checklistDrift(readme, roadmap, tracked),
+  ];
 }
 
 function doc(path: string, ...lines: string[]): MarkdownFile {
@@ -443,7 +456,7 @@ describe('doc links', () => {
       'docs/adr/0001-record-decisions.md: "docs/plan/README.md" does not resolve to a tracked file',
     ]);
 
-    const files = readDocFiles(trackedFiles());
+    const files = readMarkdown(trackedFiles());
     expect(files.map((file) => file.path)).toEqual(
       expect.arrayContaining(['GLOSSARY.md', 'docs/plan/README.md', 'docs/agents/domain.md']),
     );
@@ -482,7 +495,7 @@ describe('doc links', () => {
     ];
 
     expect(researchLinkProblems(clean)).toEqual([]);
-    expect(researchLinkProblems(readDocFiles(trackedFiles()))).toEqual([]);
+    expect(researchLinkProblems(readMarkdown(trackedFiles()))).toEqual([]);
   });
 
   it('backticked repository paths are told apart from globs, commands and names', () => {
@@ -541,7 +554,7 @@ describe('doc links', () => {
       'docs/agents/domain.md: `apps/docs/reference` is not in the repository and not on the planned-paths list',
     ]);
 
-    const agentFiles = readDocFiles(trackedFiles(), agentFileGlobs);
+    const agentFiles = readMarkdown(trackedFiles(), agentFileGlobs);
     expect(agentFiles.map((file) => file.path)).toEqual(
       expect.arrayContaining(['AGENTS.md', 'CLAUDE.md', 'docs/agents/domain.md']),
     );
@@ -580,7 +593,7 @@ describe('doc links', () => {
       'unknown-task.md: task "E00-S01-T09" appears in no docs/plan file',
     ]);
 
-    const planFiles = readDocFiles(trackedFiles(), ['docs/plan/*.md']);
+    const planFiles = readMarkdown(trackedFiles(), ['docs/plan/*.md']);
     expect(planFiles.map((file) => file.path)).toEqual(
       expect.arrayContaining(['docs/plan/14-roadmap.md', 'docs/plan/E02-walking-skeleton.md']),
     );
