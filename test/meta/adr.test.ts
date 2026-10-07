@@ -626,4 +626,21 @@ describe('adr front matter', () => {
     expect(accepted, 'accepted docs/adr files').not.toHaveLength(0);
     expect(frontMatterProblems(accepted)).toEqual([]);
   });
+
+  it('an ADR with CRLF line endings is reported by file name', () => {
+    const good = adrSource({}, '0002-good.md');
+    const crlf = { ...adrSource(), text: adrSource().text.replaceAll('\n', '\r\n') };
+
+    // The CRLF file is reported once, as a whole, and not as seven missing fields.
+    expect
+      .soft(frontMatterProblems([crlf, good]))
+      .toEqual([expect.stringMatching(/^0001-decision\.md: .*CRLF line endings/)]);
+
+    // Only the front matter has to be LF. A CRLF body behind an LF front matter is not reported.
+    const crlfBody = {
+      name: '0003-crlf-body.md',
+      text: `${adrSource().text}One line.\r\nAnother line.\r\n`,
+    };
+    expect.soft(frontMatterProblems([crlfBody])).toEqual([]);
+  });
 });
