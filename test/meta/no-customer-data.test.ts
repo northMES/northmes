@@ -46,6 +46,32 @@ describe('no-customer-data', () => {
     ]);
   });
 
+  it('an in-memory file with an organisation number written with a two-digit prefix fails', () => {
+    const result = scan(
+      [{ path: 'fixtures/suppliers.json', content: `{ "org": "16${organisationNumber}" }\n` }],
+      [],
+    );
+
+    expect(result.findings).toEqual([
+      { path: 'fixtures/suppliers.json', line: 1, kind: 'organisation-number' },
+    ]);
+  });
+
+  it('a UUID in an in-memory file is not an organisation number', () => {
+    const result = scan(
+      [
+        {
+          path: 'fixtures/ids.json',
+          content:
+            '{ "id": "00000000-0000-0000-0000-000000000001" }\n{ "id": "A1234567-8901-4ABC-8DEF-0123456789AB" }\n',
+        },
+      ],
+      [],
+    );
+
+    expect(result.findings).toEqual([]);
+  });
+
   it('an in-memory file holding a deny-listed name fails', () => {
     const result = scan(
       [
