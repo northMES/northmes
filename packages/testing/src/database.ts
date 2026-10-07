@@ -68,7 +68,12 @@ export function query<Row = Record<string, unknown>>(
  * started. The database exists from `beforeAll` to `afterAll`.
  */
 export function useTestDatabase(): TestDatabase {
-  const pg = inject('pg');
+  const pg: PgConnection | undefined = inject('pg');
+  if (!pg) {
+    throw new Error(
+      'useTestDatabase() needs the global setup of @northmes/testing, which only the integration project runs. Name the file *.int.test.ts.',
+    );
+  }
   const databaseName = `t_${process.env.VITEST_POOL_ID ?? 0}_${randomBytes(6).toString('hex')}`;
 
   beforeAll(async () => {
