@@ -35,6 +35,13 @@ function adrFileNumber(name: string): number | undefined {
   return digits === undefined ? undefined : Number.parseInt(digits, 10);
 }
 
+// The parsed front matter fields of an ADR file and the text after them. A file with no front matter
+// block has no fields.
+function splitFrontMatter(text: string): { fields: Record<string, unknown>; body: string } {
+  const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
+  return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
+}
+
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
 function readAdrFiles(): AdrFile[] {
@@ -45,9 +52,7 @@ function readAdrFiles(): AdrFile[] {
       if (number === undefined) {
         return [];
       }
-      const text = readFileSync(`${adrFolder}${name}`, 'utf8');
-      const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
-      const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
+      const { fields, body } = splitFrontMatter(readFileSync(`${adrFolder}${name}`, 'utf8'));
       return {
         name,
         number,
@@ -252,8 +257,7 @@ const maintainer = 'Krister Johansson';
 // names the maintainer as its decision-maker.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
-    const frontMatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
-    const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
+    const { fields } = splitFrontMatter(text);
     return frontMatterFields.flatMap((field) => {
       const value = fields[field];
       if (isMissing(field, value)) {
@@ -302,123 +306,15 @@ const completeFrontMatter: Record<string, string> = {
 
 // An ADR source whose front matter is the complete one, with the given raw YAML values in place of
 // the complete ones. A field set to undefined has no line.
-function adrSource(changes: Record<string, string | undefined> = {}, name = '0001-decision.md') {
+function adrSource(
+  changes: Record<string, string | undefined> = {},
+  name = '0001-decision.md',
+): AdrSource {
   const lines = Object.entries({ ...completeFrontMatter, ...changes }).flatMap(([field, yaml]) =>
     yaml === undefined ? [] : [`${field}: ${yaml}`],
   );
   return { name, text: `---\n${lines.join('\n')}\n---\n\n# Decision\n` };
 }
-
-describe('adr front matter', () => {
-  it('every ADR has the front matter fields', () => {
-    expect(frontMatterProblems([adrSource()])).toEqual([]);
-
-    // Each field dropped in turn is reported with the file and the field.
-    for (const field of Object.keys(completeFrontMatter)) {
-      expect
-        .soft(frontMatterProblems([adrSource({ [field]: undefined })]), field)
-        .toEqual([`0001-decision.md: ${field} is missing`]);
-    }
-
-    // A file with no front matter block lacks every field, and the problems name the file they
-    // belong to.
-    const bare = { name: '0002-bare.md', text: '# Bare\n\nNo front matter here.\n' };
-    expect
-      .soft(frontMatterProblems([adrSource(), bare]))
-      .toEqual(
-        Object.keys(completeFrontMatter).map((field) => `0002-bare.md: ${field} is missing`),
-      );
-
-    const sources = readAdrSources();
-    expect(sources, 'docs/adr files').not.toHaveLength(0);
-    expect(frontMatterProblems(sources)).toEqual([]);
-  });
-
-  it('a bare needs-confirmation is empty, and a bare status is missing', () => {
-    // YAML parses a key with no value to null. For needs-confirmation that is the empty value the
-    // template allows, and for every other field it is no value at all.
-    expect.soft(frontMatterProblems([adrSource({ 'needs-confirmation': '' })])).toEqual([]);
-    expect
-      .soft(frontMatterProblems([adrSource({ status: '' })]))
-      .toEqual(['0001-decision.md: status is missing']);
-  });
-
-  it('every ADR front matter value is in the allowed set', () => {
-    // Raw YAML values that the template allows. A bare word, a quoted string and a plain scalar
-    // with spaces all parse to strings.
-    const allowed: [string, string][] = [
-      ['status', 'proposed'],
-      ['status', '"accepted"'],
-      ['status', '"rejected"'],
-      ['status', '"deprecated"'],
-      ['status', '"superseded by ADR-0042"'],
-      ['date', '2024-02-29'],
-      ['release', '"later"'],
-      ['release', '"vision"'],
-      ['needs-confirmation', 'maintainer (the split)'],
-      ['consulted', 'internal research notes 16, 25, 28 and 30'],
-    ];
-    for (const [field, yaml] of allowed) {
-      expect
-        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
-        .toEqual([]);
-    }
-
-    // Raw YAML values outside the allowed set. Each one is reported once, with the file and field.
-    const names = ['decision-makers', 'consulted', 'informed'];
-    const notAllowed: [string, string][] = [
-      ['status', '"done"'],
-      ['status', '"Accepted"'],
-      ['status', '"superseded by ADR-12"'],
-      ['date', '2026-02-30'],
-      ['date', '05/10/2026'],
-      ['date', '20261005'],
-      // Unquoted, YAML reads the release as the number 1.
-      ['release', '1'],
-      ['release', '"2"'],
-      ['needs-confirmation', '[maintainer]'],
-      ['needs-confirmation', '7'],
-      ...names.flatMap((field): [string, string][] =>
-        ['""', '"   "', '[Krister Johansson]', '3'].map((yaml) => [field, yaml]),
-      ),
-    ];
-    for (const [field, yaml] of notAllowed) {
-      expect
-        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
-        .toEqual([
-          expect.stringMatching(new RegExp(`^0001-decision\\.md: ${field} is .+, expected `)),
-        ]);
-    }
-
-    expect(frontMatterProblems(readAdrSources())).toEqual([]);
-  });
-
-  it('an accepted ADR names Krister Johansson as the decision-maker', () => {
-    const planned = 'proposed by the planning session, to be confirmed by Krister Johansson';
-
-    // The complete ADR names Krister Johansson, plain or quoted.
-    expect.soft(frontMatterProblems([adrSource({ status: '"accepted"' })])).toEqual([]);
-    expect
-      .soft(
-        frontMatterProblems([
-          adrSource({ status: '"accepted"', 'decision-makers': '"Krister Johansson"' }),
-        ]),
-      )
-      .toEqual([]);
-
-    // The planning session's wording is not a decision-maker once the ADR is accepted.
-    expect
-      .soft(frontMatterProblems([adrSource({ status: '"accepted"', 'decision-makers': planned })]))
-      .toEqual([expect.stringMatching(/^0001-decision\.md: decision-makers is ".+", .*Krister/)]);
-
-    // A proposed ADR may still carry that wording, so the rule applies to accepted ADRs only.
-    expect.soft(frontMatterProblems([adrSource({ 'decision-makers': planned })])).toEqual([]);
-
-    const accepted = readAdrSources().filter(({ text }) => /^status: "?accepted"?$/m.test(text));
-    expect(accepted, 'accepted docs/adr files').not.toHaveLength(0);
-    expect(frontMatterProblems(accepted)).toEqual([]);
-  });
-});
 
 describe('adr index', () => {
   const files: AdrFile[] = [
@@ -618,5 +514,116 @@ describe('adr index', () => {
       .toEqual([expect.stringContaining('0002'), expect.stringContaining('0003')]);
 
     expect(malformedRowProblems(readFileSync(`${adrFolder}README.md`, 'utf8'))).toEqual([]);
+  });
+});
+
+describe('adr front matter', () => {
+  it('every ADR has the front matter fields', () => {
+    expect(frontMatterProblems([adrSource()])).toEqual([]);
+
+    // Each field dropped in turn is reported with the file and the field.
+    for (const field of Object.keys(completeFrontMatter)) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: undefined })]), field)
+        .toEqual([`0001-decision.md: ${field} is missing`]);
+    }
+
+    // A file with no front matter block lacks every field, and the problems name the file they
+    // belong to.
+    const bare = { name: '0002-bare.md', text: '# Bare\n\nNo front matter here.\n' };
+    expect
+      .soft(frontMatterProblems([adrSource(), bare]))
+      .toEqual(
+        Object.keys(completeFrontMatter).map((field) => `0002-bare.md: ${field} is missing`),
+      );
+
+    const sources = readAdrSources();
+    expect(sources, 'docs/adr files').not.toHaveLength(0);
+    expect(frontMatterProblems(sources)).toEqual([]);
+  });
+
+  it('a bare needs-confirmation is empty, and a bare status is missing', () => {
+    // YAML parses a key with no value to null. For needs-confirmation that is the empty value the
+    // template allows, and for every other field it is no value at all.
+    expect.soft(frontMatterProblems([adrSource({ 'needs-confirmation': '' })])).toEqual([]);
+    expect
+      .soft(frontMatterProblems([adrSource({ status: '' })]))
+      .toEqual(['0001-decision.md: status is missing']);
+  });
+
+  it('every ADR front matter value is in the allowed set', () => {
+    // Raw YAML values that the template allows. A bare word, a quoted string and a plain scalar
+    // with spaces all parse to strings.
+    const allowed: [string, string][] = [
+      ['status', 'proposed'],
+      ['status', '"accepted"'],
+      ['status', '"rejected"'],
+      ['status', '"deprecated"'],
+      ['status', '"superseded by ADR-0042"'],
+      ['date', '2024-02-29'],
+      ['release', '"later"'],
+      ['release', '"vision"'],
+      ['needs-confirmation', 'maintainer (the split)'],
+      ['consulted', 'internal research notes 16, 25, 28 and 30'],
+    ];
+    for (const [field, yaml] of allowed) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
+        .toEqual([]);
+    }
+
+    // Raw YAML values outside the allowed set. Each one is reported once, with the file and field.
+    const names = ['decision-makers', 'consulted', 'informed'];
+    const notAllowed: [string, string][] = [
+      ['status', '"done"'],
+      ['status', '"Accepted"'],
+      ['status', '"superseded by ADR-12"'],
+      ['date', '2026-02-30'],
+      ['date', '05/10/2026'],
+      ['date', '20261005'],
+      // Unquoted, YAML reads the release as the number 1.
+      ['release', '1'],
+      ['release', '"2"'],
+      ['needs-confirmation', '[maintainer]'],
+      ['needs-confirmation', '7'],
+      ...names.flatMap((field): [string, string][] =>
+        ['""', '"   "', '[Krister Johansson]', '3'].map((yaml) => [field, yaml]),
+      ),
+    ];
+    for (const [field, yaml] of notAllowed) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: yaml })]), `${field}: ${yaml}`)
+        .toEqual([
+          expect.stringMatching(new RegExp(`^0001-decision\\.md: ${field} is .+, expected `)),
+        ]);
+    }
+
+    expect(frontMatterProblems(readAdrSources())).toEqual([]);
+  });
+
+  it('an accepted ADR names Krister Johansson as the decision-maker', () => {
+    const planned = 'proposed by the planning session, to be confirmed by Krister Johansson';
+
+    // The complete ADR names Krister Johansson, plain or quoted.
+    expect.soft(frontMatterProblems([adrSource({ status: '"accepted"' })])).toEqual([]);
+    expect
+      .soft(
+        frontMatterProblems([
+          adrSource({ status: '"accepted"', 'decision-makers': '"Krister Johansson"' }),
+        ]),
+      )
+      .toEqual([]);
+
+    // The planning session's wording is not a decision-maker once the ADR is accepted.
+    expect
+      .soft(frontMatterProblems([adrSource({ status: '"accepted"', 'decision-makers': planned })]))
+      .toEqual([expect.stringMatching(/^0001-decision\.md: decision-makers is ".+", .*Krister/)]);
+
+    // A proposed ADR may still carry that wording, so the rule applies to accepted ADRs only.
+    expect.soft(frontMatterProblems([adrSource({ 'decision-makers': planned })])).toEqual([]);
+
+    const accepted = readAdrSources().filter(({ text }) => /^status: "?accepted"?$/m.test(text));
+    expect(accepted, 'accepted docs/adr files').not.toHaveLength(0);
+    expect(frontMatterProblems(accepted)).toEqual([]);
   });
 });
