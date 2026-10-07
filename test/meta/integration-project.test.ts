@@ -1,5 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import vitestConfig from '../../vitest.config.ts';
@@ -62,5 +63,21 @@ describe('vitest projects', () => {
       expect(project.test?.globalSetup, `project ${project.test?.name}`).toBeUndefined();
     }
     expect(resolved(findProject('integration')?.test?.globalSetup)).toEqual([globalSetupPath]);
+  });
+});
+
+describe('the harness needs no .env file', () => {
+  it('git ls-files lists no .env file', () => {
+    const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8' })
+      .split('\0')
+      .filter(Boolean);
+
+    expect(tracked, 'tracked files').toContain('package.json');
+    expect(
+      tracked.filter((path) => {
+        const name = posix.basename(path);
+        return name === '.env' || name.startsWith('.env.');
+      }),
+    ).toEqual([]);
   });
 });
