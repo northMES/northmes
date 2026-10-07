@@ -108,6 +108,7 @@ describe('collection', () => {
         'docs/sources/spike/x.test.ts',
         'docs/sources/spike/x.int.test.ts',
         'docs/sources/spike/x.ai.test.ts',
+        'docs/sources/spike/x.ops.test.ts',
         'docs/sources/spike/x.test-d.ts',
       ]) {
         write(path);
