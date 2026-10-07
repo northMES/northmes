@@ -69,8 +69,27 @@ function parseIndexRows(markdown: string): IndexRow[] {
   });
 }
 
-function indexProblems(_files: AdrFile[], _rows: IndexRow[]): string[] {
-  return [];
+// The cells that the index copies from a file, with the name each one has in a problem message.
+const copiedCells = [
+  ['title', 'title'],
+  ['status', 'status'],
+  ['release', 'release'],
+  ['needs-confirmation', 'needsConfirmation'],
+] as const;
+
+function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
+  return files.flatMap((file) => {
+    const row = rows.find((candidate) => candidate.number === file.number);
+    if (!row) {
+      return [];
+    }
+    return copiedCells
+      .filter(([, key]) => row[key] !== file[key])
+      .map(
+        ([cell, key]) =>
+          `${file.name.slice(0, 4)}: ${cell} is "${row[key]}" in the index and "${file[key]}" in the file`,
+      );
+  });
 }
 
 function rowOf(file: AdrFile): IndexRow {
