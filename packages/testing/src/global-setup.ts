@@ -29,6 +29,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   };
   await createTemplate(connection);
   project.provide('pg', connection);
+  project.provide('pgImage', image);
 
   return async () => {
     await container.stop();

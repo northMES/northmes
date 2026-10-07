@@ -14,6 +14,8 @@ export interface PgConnection {
 declare module 'vitest' {
   export interface ProvidedContext {
     pg: PgConnection;
+    /** The image the container started from, as read from infra/pg-image.json. */
+    pgImage: string;
   }
 }
 
