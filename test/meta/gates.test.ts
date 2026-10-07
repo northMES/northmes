@@ -41,4 +41,8 @@ describe('gates', () => {
       'vitest run',
     ]);
   });
+
+  it('check:full runs check and test:tz', () => {
+    expect(rootScripts['check:full']).toBe('pnpm check && pnpm test:tz');
+  });
 });
