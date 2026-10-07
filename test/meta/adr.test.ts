@@ -31,9 +31,7 @@ interface IndexRow {
 }
 
 const adrFolder = fileURLToPath(new URL('../../docs/adr/', import.meta.url));
-const numberingScript = fileURLToPath(
-  new URL('../../scripts/adr/next-number.mjs', import.meta.url),
-);
+const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // The number in an ADR file name, such as 2 in 0002-split-modules.md. A name that is not an ADR file
 // name, such as a path or a file with another extension, has none.
@@ -561,7 +559,18 @@ function indexMarkdown(numbers: number[], after: string[] = []): string {
   return [...header, ...rows, '', ...after].join('\n');
 }
 
+function readIndex(): string {
+  return readFileSync(`${adrFolder}README.md`, 'utf8');
+}
+
+// The number on the "Next free number: 0069." line that closes the index, as written.
+function nextFreeNumberLine(index: string): string | undefined {
+  return /^Next free number: (\d{4})\./m.exec(index)?.[1];
+}
+
 describe('adr numbering script', () => {
+  const numberingScript = `${repositoryRoot}scripts/adr/next-number.mjs`;
+
   it('nextNumber returns one more than the highest indexed number', () => {
     expect.soft(nextNumber(indexMarkdown([1, 2, 7]))).toBe(8);
     // The highest number is not the last row.
@@ -582,8 +591,7 @@ describe('adr numbering script', () => {
   });
 
   it('node scripts/adr/next-number.mjs prints the next free number', () => {
-    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
-    const nextFree = /^Next free number: (\d{4})\./m.exec(index)?.[1];
+    const nextFree = nextFreeNumberLine(readIndex());
     expect(nextFree, 'the Next free number line in docs/adr/README.md').toBeDefined();
 
     // The script finds the index from its own location, so the working directory does not matter.
@@ -605,35 +613,32 @@ describe('adr numbering script', () => {
   // Passes on arrival: the line and the rows agree today. It guards later drift, such as an ADR row
   // added without raising the line.
   it('the Next free number line in the index equals nextNumber', () => {
-    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
-    const nextFree = /^Next free number: (\d{4})\./m.exec(index)?.[1];
+    const index = readIndex();
 
-    expect(nextFree, 'the Next free number line in docs/adr/README.md').toBe(
+    expect(nextFreeNumberLine(index), 'the Next free number line in docs/adr/README.md').toBe(
       padNumber(nextNumber(index)),
     );
   });
 
   it('the root script adr:next runs the numbering script', () => {
-    const rootPackage = JSON.parse(
-      readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
-    ) as { scripts?: Record<string, string> };
+    const rootPackage = JSON.parse(readFileSync(`${repositoryRoot}package.json`, 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
 
     expect(rootPackage.scripts?.['adr:next']).toBe('node scripts/adr/next-number.mjs');
   });
 
   it('the links from docs/agents/domain.md to GLOSSARY.md, docs/adr/README.md and the numbering script resolve', () => {
-    const root = fileURLToPath(new URL('../../', import.meta.url));
-    const domain = readFileSync(`${root}docs/agents/domain.md`, 'utf8');
+    const domain = readFileSync(`${repositoryRoot}docs/agents/domain.md`, 'utf8');
 
     for (const path of ['GLOSSARY.md', 'docs/adr/README.md', 'scripts/adr/next-number.mjs']) {
       expect.soft(domain, `docs/agents/domain.md names ${path}`).toContain(path);
-      expect.soft(existsSync(`${root}${path}`), `${path} exists`).toBe(true);
+      expect.soft(existsSync(`${repositoryRoot}${path}`), `${path} exists`).toBe(true);
     }
   });
 
   it('step 1 of Adding an ADR names pnpm adr:next without the Once wording', () => {
-    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
-    const step = /^## Adding an ADR$[\s\S]*?^1\. (.*)$/m.exec(index)?.[1];
+    const step = /^## Adding an ADR$[\s\S]*?^1\. (.*)$/m.exec(readIndex())?.[1];
     expect(step, 'step 1 under "Adding an ADR" in docs/adr/README.md').toBeDefined();
 
     expect.soft(step).toContain('`pnpm adr:next`');
