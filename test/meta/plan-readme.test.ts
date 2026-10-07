@@ -108,6 +108,11 @@ function checklistLinkProblems(readme: string, numbers: string[], tracked: Set<s
     if (!tracked.has(path)) {
       return [`M0 checklist: ADR ${number} links to ${path}, which is not tracked`];
     }
+    if (!/^docs\/adr\/\d{4}-[^/]+\.md$/.test(path)) {
+      return [
+        `M0 checklist: ADR ${number} links to ${path}, which is not a Markdown ADR under docs/adr`,
+      ];
+    }
     return posix.basename(path).startsWith(`${number}-`)
       ? []
       : [`M0 checklist: ADR ${number} links to ${path}, a file with another number`];
