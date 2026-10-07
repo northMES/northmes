@@ -80,7 +80,8 @@ export function useTestDatabase(): TestDatabase {
 
   afterAll(async () => {
     await withClient(pg, async (client) => {
-      await client.query(`drop database ${client.escapeIdentifier(databaseName)} with (force)`);
+      const name = client.escapeIdentifier(databaseName);
+      await client.query(`drop database if exists ${name} with (force)`);
     });
   });
 
