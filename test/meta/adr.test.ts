@@ -188,6 +188,23 @@ describe('adr index', () => {
       .toEqual(expect.arrayContaining([expect.stringContaining('0003-new-decision.md')]));
   });
 
+  it('each index row links to the file with its own number', () => {
+    // Each row keeps its number and cells, but the two rows trade link targets. Every file is
+    // linked by some row and every link has a file, so only the pairing by number shows the mix-up.
+    const [first, second] = rows;
+    const swapped = [
+      { ...first, target: second?.target },
+      { ...second, target: first?.target },
+    ] as IndexRow[];
+
+    expect
+      .soft(indexProblems(files, swapped))
+      .toEqual([
+        expect.stringContaining('0001-record-decisions.md'),
+        expect.stringContaining('0002-split-modules.md'),
+      ]);
+  });
+
   it('the index lists no file that does not exist', () => {
     // A row for a file nobody wrote, and a row left behind after a file was deleted.
     const invented: IndexRow[] = [
