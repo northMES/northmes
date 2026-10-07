@@ -180,6 +180,7 @@ export interface HostContext {
   readonly log: Logger;                              // carries the correlation id, redacts declared fields
 }
 
+// later, with the first validator that reads anything beyond its payload
 export interface ValidatorContext extends HostContext {
   readonly command: { readonly name: string; readonly id: string; readonly reason: string | null };
 }
@@ -195,7 +196,9 @@ export function defineValidator<P extends ValidatorPayload>(v: {
   id: string;                                        // equals the manifest's validates entry
   payload: P;                                        // the owner's schema and version, from its contracts package
   timeoutMs: number;                                 // at most the owner's limit for the command
-  check(payload: DeepReadonly<PayloadOf<P>>, ctx: ValidatorContext): Promise<Verdict>;
+  check(payload: DeepReadonly<PayloadOf<P>>): Promise<Verdict>;   // release 1
+  // later, with ValidatorContext:
+  // check(payload: DeepReadonly<PayloadOf<P>>, ctx: ValidatorContext): Promise<Verdict>;
 }): Validator<P>;
 
 export function defineConsumer<E extends EventContract>(c: {
@@ -214,7 +217,7 @@ export function defineConsumer<E extends EventContract>(c: {
 * For plugins, `ctx.data` and `ctx.run` wait for the plugin database API and the jobs API with a system principal ([ADR 0037][adr-0037]).
 * `clock.now()` is fixed for one transaction. A validator's verdict therefore follows from its payload, its data and that time, so a rejection can be reproduced.
 * A command that a consumer runs carries the event as its causation. Once a consumer can trigger itself, the bus refuses a causation depth above a limit.
-* Release 1 ships no `ValidatorContext`. `example-validator` computes its verdict from `quantity` in the payload ([03 modules and extensibility](../plan/03-modules-and-extensibility.md#the-two-example-plugins)), so it reads no context. `ctx` arrives with the first validator that reads anything beyond its payload, and each later member arrives with its first reader ([ADR 0022][adr-0022], [ADR 0055][adr-0055]).
+* Release 1 ships no `ValidatorContext`, so its `check` receives the payload only. `example-validator` computes its verdict from `quantity` in the payload ([03 modules and extensibility](../plan/03-modules-and-extensibility.md#the-two-example-plugins)), so it reads no context. `ctx` arrives with the first validator that reads anything beyond its payload, and each later member arrives with its first reader ([ADR 0022][adr-0022], [ADR 0055][adr-0055]).
 * The later MIT service interfaces for in-process reads of core become `ctx.<noun>` members, declared in the owner's contracts package.
 
 ### Web slots
@@ -257,7 +260,8 @@ export function region<S extends SlotOfKind<"region">>(slot: S, component: Compo
 export function tab<S extends SlotOfKind<"tab">>(slot: S, component: LazyExoticComponent<ComponentType>): TabImpl<S>;
 export function field<S extends SlotOfKind<"field">, V>(slot: S, impl: {
   useValues(props: SlotProps[S], ids: readonly string[]): ReadonlyMap<string, V> | undefined;
-  render(value: V, host: { time: PlantTime }): { text: string; icon?: IconName; accessibleText: string };
+  render(value: V): { text: string; icon?: IconName; accessibleText: string };
+  // with its first reader of plant time (piece 1): render(value: V, host: { time: PlantTime })
   Hover?: ComponentType<{ id: string }>;             // hover card content; may fetch (ADR 0030)
 }): FieldImpl<S>;
 export function item<S extends SlotOfKind<"item">>(slot: S, impl: {
@@ -269,6 +273,11 @@ export function banner<S extends SlotOfKind<"banner">>(slot: S, impl: {
   layouts: readonly ("plant" | "admin" | "station")[];
   useBanners(props: SlotProps[S]): readonly BannerSpec[];
 }): BannerImpl<S>;
+// later, with the action kind and planning/order/actions/v1
+export function action<S extends SlotOfKind<"action">, C extends CommandContract>(slot: S, impl:
+  | { command: C; input(props: SlotProps[S]): InputOf<C> }   // the host confirms, runs and shows the command's errors
+  | { href(props: SlotProps[S]): string }                    // from a link builder
+): ActionImpl<S>;
 
 export interface BannerSpec {
   readonly id: string;
