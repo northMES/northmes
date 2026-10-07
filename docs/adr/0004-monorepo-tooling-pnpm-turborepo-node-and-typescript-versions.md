@@ -65,9 +65,9 @@ The gate ran on 2026-10-07. Every gated test passed on the `node:26` image, so t
 
 ### Node 26 test (2026-10-07)
 
-Task E01-S05-T01 ran the gated tests on 2026-10-07. The spike folders were copied out of the repository and installed inside containers of the official Docker Hub images, as `docs/sources/README.md` describes. The copied `pnpm-workspace.yaml` of the integration spike holds placeholders under `allowBuilds`, and the test set all four entries to `false`. The same install and build then ran on Node 24 for comparison. The machine was an Apple M4 with Docker 28.5.1 on Docker Desktop (linux/arm64, a VM with 10 CPUs and 8.2 GB of memory), so the tests ran the linux/arm64 image of the `node:26` index (`sha256:7ca987b3557ad96124ee9d44e9530cddd4dd15043abc226185d6f4088b93eefb`).
+Task E01-S05-T01 ran the gated tests on 2026-10-07. The spike folders were copied out of the repository and installed inside containers of the official Docker Hub images, as `docs/sources/README.md` describes. The copied `pnpm-workspace.yaml` of the integration spike holds placeholders under `allowBuilds`, and the test set all four entries to `false`. The same install and build then ran on Node 24 for comparison. The machine was an Apple M4 with Docker 28.5.1 on Docker Desktop (linux/arm64, a VM with 10 CPUs and 8.2 GB of memory), so the tests ran the linux/arm64 platform image of the `node:26` index. The table below gives the index digest (`node@sha256:9965105b7a4e201d7f07268402bb4971670592b46c9b9058cc643961199a1ab6`); the linux/arm64 platform manifest inside that index has the digest `sha256:7ca987b3557ad96124ee9d44e9530cddd4dd15043abc226185d6f4088b93eefb`.
 
-A second run on the same day checked the first. It installed a fresh copy of the sources in the same `node:26` image and ran `boot.test.mjs` again (11 of 11 passed). It also ran a separate resolve-hook probe with ESM and CommonJS packages on `node:26` and `node:24`, ran `tzlab/tc.mjs`, which the first run had left out, and measured `temporal-cost2.mjs` on the polyfill on Node 26 (see the notes under the benchmark table).
+A second run on the same day checked the first. It installed a fresh copy of the sources in the same `node:26` image (the same index digest and the same linux/arm64 platform digest) and ran `boot.test.mjs` again (11 of 11 passed). It also ran a separate resolve-hook probe with ESM and CommonJS packages on `node:26` and `node:24`, ran `tzlab/tc.mjs`, which the first run had left out, and measured `temporal-cost2.mjs` on the polyfill on Node 26 (see the notes under the benchmark table).
 
 | Image | Index digest | Node | Debian | V8 | ICU | tz data |
 |---|---|---|---|---|---|---|
@@ -133,7 +133,7 @@ Each benchmark figure is the median of three runs on the machine above. The Node
 * On Node 26, `Intl.DateTimeFormat.format` of a native `Temporal.Instant` takes 67.9 ms per 10 000 calls, about 17 times the 4.0 ms for the same instants as epoch milliseconds.
 * `temporal-cost2.mjs` labels its native row "node24 --harmony-temporal" on every Node version. On Node 26 that row is native Temporal without a flag.
 
-Result: every gated test passed on `node:26` (`node@sha256:9965105b7a4e201d7f07268402bb4971670592b46c9b9058cc643961199a1ab6`, Node 26.10.0), and the benchmarks ran. By the rule above, the pin is Node 26. The one failing check, `require()` through the resolve hook, is outside the gated tests and fails the same way on Node 24.18.0.
+Result: every gated test passed on `node:26` (`node@sha256:9965105b7a4e201d7f07268402bb4971670592b46c9b9058cc643961199a1ab6`, Node 26.10.0), and the benchmarks ran. By the rule above, the pin is Node 26. The one failing check, `require()` through the resolve hook, is outside the gated tests and fails the same way on Node 24.18.0. This result settles the Node pin that the ADR needed before it moves to `accepted`.
 
 ### Consequences
 
@@ -154,7 +154,6 @@ Result: every gated test passed on `node:26` (`node@sha256:9965105b7a4e201d7f072
 * `test/meta/lockfile.test.ts` asserts that `pnpm-lock.yaml` is one YAML document.
 * The license gate fails on a workspace package without a `license` field.
 * `ci / lint` runs `biome ci` from the root config.
-* The planning session records the Node 26 test result (pass, or the named failures) in this ADR before it moves to `accepted`. The result of 2026-10-07 is in [Node 26 test (2026-10-07)](#node-26-test-2026-10-07).
 
 ## Pros and cons of the options
 
