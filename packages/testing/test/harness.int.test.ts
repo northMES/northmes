@@ -68,6 +68,22 @@ describe('a project without the global setup', () => {
   });
 });
 
+describe('withClient', () => {
+  it('rethrows why the connection dropped, not that the client is not queryable', async () => {
+    const pg = inject('pg');
+
+    const failure = withClient(pg, async (client) => {
+      const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
+      const dropped = new Promise((resolve) => client.once('error', resolve));
+      await withClient(pg, (admin) => admin.query('select pg_terminate_backend($1)', [rows[0]?.pid]));
+      await dropped;
+      await client.query('select 1');
+    });
+
+    await expect(failure).rejects.toThrow(/terminating connection due to administrator command/);
+  });
+});
+
 describe('the global setup', () => {
   afterEach(() => {
     vi.doUnmock('@testcontainers/postgresql');
