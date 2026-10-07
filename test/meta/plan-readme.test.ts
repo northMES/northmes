@@ -473,10 +473,34 @@ describe('plan README', () => {
         readme: change(readme, '[0004][adr-0004]', '[0004][adr-0099]'),
         problems: ['M0 checklist: item [0004] references [adr-0099] and not [adr-0004]'],
       },
+      {
+        name: 'a ticked box for an ADR that is still proposed',
+        readme: change(readme, '- [ ] [0003][adr-0003]', '- [x] [0003][adr-0003]'),
+        problems: [
+          'M0 checklist: ADR 0003 is ticked in README.md, but its front matter is not accepted with an empty needs-confirmation',
+        ],
+      },
+      {
+        name: 'a ticked box for an accepted ADR with something to confirm',
+        readme: change(readme, '- [ ] [0029][adr-0029]', '- [x] [0029][adr-0029]'),
+        problems: [
+          'M0 checklist: ADR 0029 is ticked in README.md, but its front matter is not accepted with an empty needs-confirmation',
+        ],
+      },
+      {
+        name: 'an unticked box for an accepted ADR with nothing to confirm',
+        readme: change(readme, '- [x] [0004][adr-0004]', '- [ ] [0004][adr-0004]'),
+        problems: [
+          'M0 checklist: ADR 0004 is not ticked in README.md, but its front matter is accepted with an empty needs-confirmation',
+        ],
+      },
     ];
     for (const { name, readme: drifted, problems } of cases) {
       expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
     }
+
+    // GitHub ticks a box written `[X]` too.
+    expect(readmeDrift(change(readme, '- [x] [0004]', '- [X] [0004]'), roadmap, adrs)).toEqual([]);
 
     // The roadmap's tables need their separator rows too.
     expect(
