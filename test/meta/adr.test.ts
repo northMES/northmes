@@ -114,15 +114,23 @@ function malformedRowProblems(markdown: string): string[] {
   });
 }
 
-// The ADR numbers run 0001, 0002, ... with no gap. A missing 0001 is a gap too.
+// The ADR numbers run 0001, 0002, ... with no gap and no number twice. A missing 0001 is a gap too.
 function numberProblems(files: AdrFile[]): string[] {
   const highest = Math.max(0, ...files.map((file) => file.number));
-  return Array.from({ length: highest }, (_, index) => index + 1)
+  const gaps = Array.from({ length: highest }, (_, index) => index + 1)
     .filter((number) => !files.some((file) => file.number === number))
     .map(
       (number) =>
         `${String(number).padStart(4, '0')}: no ADR file has this number (numbers run contiguously from 0001)`,
     );
+  const shared = [...new Set(files.map((file) => file.number))].flatMap((number) => {
+    const names = files.filter((file) => file.number === number).map((file) => file.name);
+    return names.length > 1
+      ? [`${String(number).padStart(4, '0')}: ${names.join(', ')} share this number`]
+      : [];
+  });
+
+  return [...gaps, ...shared];
 }
 
 function rowOf(file: AdrFile): IndexRow {
