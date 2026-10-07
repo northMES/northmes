@@ -82,12 +82,21 @@ function ledgerHeader(lines: string[]): string[] | undefined {
     .find((header) => header[0] === 'Week ending' && header.length > 2);
 }
 
-// Each item reads `- [ ] [0004][adr-0004] title`: the label shows the number, and the reference
-// picks the link definition that the rendered link follows.
-function checklistItems(markdown: string): { number: string; reference: string }[] {
+interface ChecklistItem {
+  number: string;
+  reference: string;
+  ticked: boolean;
+}
+
+// Each item reads `- [ ] [0004][adr-0004] title`: the box shows whether the ADR is settled, the
+// label shows the number, and the reference picks the link definition that the rendered link
+// follows.
+function checklistItems(markdown: string): ChecklistItem[] {
   return sectionLines(markdown, 'ADRs needed by M0').flatMap((line) => {
-    const match = /^- \[[ x]\] \[(\d{4})\]\[adr-(\d{4})\]/.exec(line);
-    return match ? [{ number: match[1] ?? '', reference: match[2] ?? '' }] : [];
+    const match = /^- \[([ xX])\] \[(\d{4})\]\[adr-(\d{4})\]/.exec(line);
+    return match
+      ? [{ number: match[2] ?? '', reference: match[3] ?? '', ticked: match[1] !== ' ' }]
+      : [];
   });
 }
 
@@ -129,6 +138,27 @@ function trackedAdrs(tracked: Set<string>): Map<string, AdrState> {
         ];
       }),
   );
+}
+
+// A box is ticked when the ADR is accepted and has nothing left to confirm, which is the rule for a
+// task to move to Ready. The front matter decides; the status in an item's parentheses is a dated
+// note.
+function checklistStateProblems(items: ChecklistItem[], adrs: Map<string, AdrState>): string[] {
+  return items.flatMap(({ number, ticked }) => {
+    const state = [...adrs].find(([path]) => posix.basename(path).startsWith(`${number}-`))?.[1];
+    if (!state) {
+      return [];
+    }
+    const settled = state.status === 'accepted' && state.needsConfirmation.trim() === '';
+    if (settled === ticked) {
+      return [];
+    }
+    return [
+      settled
+        ? `M0 checklist: ADR ${number} is not ticked in README.md, but its front matter is accepted with an empty needs-confirmation`
+        : `M0 checklist: ADR ${number} is ticked in README.md, but its front matter is not accepted with an empty needs-confirmation`,
+    ];
+  });
 }
 
 function checklistLinkProblems(
@@ -223,6 +253,7 @@ function checklistDrift(readme: string, roadmap: string, adrs: Map<string, AdrSt
         ({ number, reference }) =>
           `M0 checklist: item [${number}] references [adr-${reference}] and not [adr-${number}]`,
       ),
+    ...checklistStateProblems(items, adrs),
     ...checklistLinkProblems(readme, listed, adrs),
   ];
 }
