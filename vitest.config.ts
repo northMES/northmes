@@ -27,6 +27,19 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'types',
+          exclude: ignored,
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['**/*.test-d.ts'],
+            exclude: ignored,
+          },
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'ai',
           include: ['**/*.ai.test.ts'],
           exclude: ignored,
