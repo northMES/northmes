@@ -60,25 +60,35 @@ function readDocFiles(tracked: Set<string>, globs = documentGlobs): MarkdownFile
     .map((path) => ({ path, content: readFileSync(join(root, path), 'utf8') }));
 }
 
-// Lines inside a fenced code block are dropped. A fence closes on a line of the same character
-// that is at least as long as the line that opened it.
-function withoutFences(markdown: string): string {
+interface Line {
+  text: string;
+  // True for the lines of a fenced code block, fence lines included.
+  fenced: boolean;
+}
+
+// A fence closes on a line of the same character that is at least as long as the line that
+// opened it.
+function markdownLines(markdown: string): Line[] {
   let open: { char: string; length: number } | undefined;
-  return markdown
-    .split('\n')
-    .filter((line) => {
-      const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
-      const char = marker?.[1]?.charAt(0) ?? '';
-      const length = marker?.[1]?.length ?? 0;
-      if (!open) {
-        open = marker ? { char, length } : undefined;
-        return !marker;
-      }
-      if (char === open.char && length >= open.length && marker?.[2]?.trim() === '') {
-        open = undefined;
-      }
-      return false;
-    })
+  return markdown.split('\n').map((text) => {
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(text);
+    const char = marker?.[1]?.charAt(0) ?? '';
+    const length = marker?.[1]?.length ?? 0;
+    if (!open) {
+      open = marker ? { char, length } : undefined;
+      return { text, fenced: Boolean(marker) };
+    }
+    if (char === open.char && length >= open.length && marker?.[2]?.trim() === '') {
+      open = undefined;
+    }
+    return { text, fenced: true };
+  });
+}
+
+function withoutFences(markdown: string): string {
+  return markdownLines(markdown)
+    .filter((line) => !line.fenced)
+    .map((line) => line.text)
     .join('\n');
 }
 
@@ -189,6 +199,166 @@ function pathProblems(
           `${file.path}: \`${path}\` is not in the repository and not on the planned-paths list`,
       ),
   );
+}
+
+// The lines under a `## ` heading, up to the next one outside a code fence. Fenced lines stay in,
+// because the roadmap keeps the ledger header in a fence.
+function sectionLines(markdown: string, heading: string): string[] {
+  const lines = markdownLines(markdown);
+  const start = lines.findIndex((line) => !line.fenced && line.text === `## ${heading}`);
+  if (start === -1) {
+    return [];
+  }
+  const next = lines.findIndex(
+    (line, index) => index > start && !line.fenced && line.text.startsWith('## '),
+  );
+  return lines.slice(start + 1, next === -1 ? undefined : next).map((line) => line.text);
+}
+
+// Each run of table lines is a table of rows of trimmed cells. The separator row is left out.
+function tablesIn(lines: string[]): string[][][] {
+  const tables: string[][][] = [];
+  let current: string[][] | undefined;
+  for (const line of lines) {
+    if (!line.startsWith('|')) {
+      current = undefined;
+      continue;
+    }
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.every((cell) => /^:?-+:?$/.test(cell))) {
+      continue;
+    }
+    if (!current) {
+      current = [];
+      tables.push(current);
+    }
+    current.push(cells);
+  }
+  return tables;
+}
+
+// Compares two tables row by row, keyed on the first cell.
+function tableDrift(label: string, readme: string[][], roadmap: string[][]): string[] {
+  const first = (row: string[]) => row[0] ?? '';
+  const readmeKeys = readme.map(first);
+  const roadmapKeys = roadmap.map(first);
+  const problems = [
+    ...roadmap
+      .filter((row) => !readmeKeys.includes(first(row)))
+      .map((row) => `${label}: "${first(row)}" is in 14-roadmap.md and missing from README.md`),
+    ...readme
+      .filter((row) => !roadmapKeys.includes(first(row)))
+      .map((row) => `${label}: "${first(row)}" is in README.md and not in 14-roadmap.md`),
+    ...readme
+      .filter((row) => {
+        const other = roadmap.find((candidate) => first(candidate) === first(row));
+        return other && JSON.stringify(other) !== JSON.stringify(row);
+      })
+      .map((row) => `${label}: "${first(row)}" differs between README.md and 14-roadmap.md`),
+  ];
+  const shared = (keys: string[], other: string[]) => keys.filter((key) => other.includes(key));
+  const sameOrder =
+    JSON.stringify(shared(readmeKeys, roadmapKeys)) ===
+    JSON.stringify(shared(roadmapKeys, readmeKeys));
+  return problems.length > 0 || sameOrder
+    ? problems
+    : [`${label}: README.md lists them in another order than 14-roadmap.md`];
+}
+
+// The ledger header is the table that starts with Week ending and has more than the two columns of
+// the column legend.
+function ledgerHeader(lines: string[]): string[] | undefined {
+  return tablesIn(lines)
+    .map((table) => table[0] ?? [])
+    .find((header) => header[0] === 'Week ending' && header.length > 2);
+}
+
+function checklistNumbers(markdown: string): string[] {
+  return sectionLines(markdown, 'ADRs needed by M0').flatMap((line) => {
+    const number = /^- \[[ x]\] \[(\d{4})\]\[adr-\d{4}\]/.exec(line)?.[1];
+    return number ? [number] : [];
+  });
+}
+
+// The ADRs that the M0 row of the milestones table links.
+function milestoneNumbers(markdown: string): string[] {
+  const row = sectionLines(markdown, 'Milestones under option B').find((line) =>
+    line.startsWith('| M0 |'),
+  );
+  return [...(row ?? '').matchAll(/\]\(\.\.\/adr\/(\d{4})-/g)].map(([, number = '']) => number);
+}
+
+function checklistLinkProblems(readme: string, numbers: string[], tracked: Set<string>): string[] {
+  return numbers.flatMap((number) => {
+    const target = new RegExp(`^\\[adr-${number}\\]:[ \\t]*(\\S+)`, 'm').exec(readme)?.[1];
+    if (target === undefined) {
+      return [`M0 checklist: ADR ${number} has no [adr-${number}] link definition in README.md`];
+    }
+    const path = linkedPath('docs/plan/README.md', target) ?? target;
+    if (!tracked.has(path)) {
+      return [`M0 checklist: ADR ${number} links to ${path}, which is not tracked`];
+    }
+    return posix.basename(path).startsWith(`${number}-`)
+      ? []
+      : [`M0 checklist: ADR ${number} links to ${path}, a file with another number`];
+  });
+}
+
+// The README is the source for the persona list, the epic order, the ledger header and the M0
+// checklist, and the roadmap repeats them for the session that shapes issues. Both must agree.
+function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
+  // The README keeps the first two columns of the roadmap's epic table: the epic and its title.
+  const firstTable = (markdown: string, heading: string) =>
+    tablesIn(sectionLines(markdown, heading))[0]?.map((row) => row.slice(0, 2));
+  const tableChecks = [
+    { label: 'personas', readmeHeading: 'Personas', roadmapHeading: 'Personas' },
+    {
+      label: 'epic order',
+      readmeHeading: 'Epic order',
+      roadmapHeading: 'Epics in dependency order',
+    },
+  ];
+  const tableProblems = tableChecks.flatMap(({ label, readmeHeading, roadmapHeading }) => {
+    const own = firstTable(readme, readmeHeading);
+    const theirs = firstTable(roadmap, roadmapHeading);
+    return own && theirs
+      ? tableDrift(label, own, theirs)
+      : [`${label}: ${own ? '14-roadmap.md' : 'README.md'} has no table`];
+  });
+
+  const ownHeader = ledgerHeader(sectionLines(readme, 'Weekly ledger'));
+  const theirHeader = ledgerHeader(sectionLines(roadmap, 'The weekly ledger row'));
+  const headerProblems =
+    ownHeader && theirHeader
+      ? ownHeader.join(' | ') === theirHeader.join(' | ')
+        ? []
+        : [
+            `ledger header: README.md has "${ownHeader.join(' | ')}" and 14-roadmap.md has "${theirHeader.join(' | ')}"`,
+          ]
+      : [`ledger header: ${ownHeader ? '14-roadmap.md' : 'README.md'} has no ledger table`];
+
+  const listed = checklistNumbers(readme);
+  const required = milestoneNumbers(roadmap);
+  const checklistProblems = [
+    ...required
+      .filter((number) => !listed.includes(number))
+      .map(
+        (number) =>
+          `M0 checklist: ADR ${number} is in the M0 row of 14-roadmap.md and missing from README.md's checklist`,
+      ),
+    ...listed
+      .filter((number) => !required.includes(number))
+      .map(
+        (number) =>
+          `M0 checklist: ADR ${number} is in README.md's checklist and not in the M0 row of 14-roadmap.md`,
+      ),
+    ...checklistLinkProblems(readme, listed, tracked),
+  ];
+
+  return [...tableProblems, ...headerProblems, ...checklistProblems];
 }
 
 const taskId = /^E\d{2}-S\d{2}(?:-T\d{2})?$/;
