@@ -295,7 +295,7 @@ One remote per module that has screens: `core` (master data, settings, System he
 
 Slot ids follow `<module>/<area>/<name>/v<N>`. Slots that the shell renders carry the owner id `core`. The slots and their kinds ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)):
 
-| Slot id | Kind | Owner | Props (frozen, ids only) | Wide | Narrow (below about 640 px) | When |
+| Slot id | Kind | Owner | Props (frozen: ids and declared scalars) | Wide | Narrow (below about 640 px) | When |
 |---|---|---|---|---|---|---|
 | `core/shell/aside/v1` | region, one docked | shell, under the owner id `core` | `{ plantId }` | docked beside `main` | modal sheet | release 1, the AI chat panel; M-39 decides whether the shell or core's remote supplies it |
 | `planning/board/side/v1` | region | planning | `{ plantId, paused }` | docked beside the board | D3 decides | release 1, `example-widget` |

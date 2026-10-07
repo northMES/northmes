@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-06
+date: 2026-10-07
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson; internal research note 32
 informed: module and plugin authors, contributors and coding agents
@@ -81,7 +81,7 @@ Krister Johansson decided on 2026-10-06: no `next` chain for now. In this model 
    * veto: a validator
    * answer: a later answer point, where the owner asks a named question and records the answer it used
    * rewrite, or an answer that replaces the owner's behaviour: no counterpart
-7. Context goes in as frozen data. Slot props hold only ids, and a validator payload holds the fields its owner declares. Capabilities come from one typed host object per side. MIT packages declare the host objects, and the AGPL host implements them.
+7. Context goes in as frozen data. Slot props hold ids and the scalar values that the slot's owner declares, such as the board's `paused` ([ADR 0021][adr-0021]), and never an entity record. A validator payload holds the fields its owner declares. Capabilities come from one typed host object per side. MIT packages declare the host objects, and the AGPL host implements them.
 8. The server fails closed and the page fails soft.
    * A validator that throws or times out rejects the command.
    * A server plugin that fails to load stops boot ([ADR 0037][adr-0037]).
@@ -279,7 +279,7 @@ export interface BannerSpec {
 }
 
 export function useHost<S extends SlotId>(slot: S): {
-  readonly props: Readonly<SlotProps[S]>;            // ids only
+  readonly props: Readonly<SlotProps[S]>;            // ids and declared scalars
   readonly plant: { readonly id: string; readonly slug: string } | null;
   readonly layout: "plant" | "admin" | "station";
   readonly size: "compact" | "regular";              // measured from the contribution's container
