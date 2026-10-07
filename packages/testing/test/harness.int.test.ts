@@ -92,6 +92,12 @@ describe('the test database', () => {
     });
   });
 
+  it('the server allows 300 connections', async () => {
+    const rows = await query<{ max_connections: string }>(connectionString, 'show max_connections');
+
+    expect(rows).toEqual([{ max_connections: '300' }]);
+  });
+
   it('the container image equals the digest in infra/pg-image.json', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 

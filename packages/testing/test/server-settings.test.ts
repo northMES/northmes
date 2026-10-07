@@ -18,6 +18,10 @@ describe('serverArgs', () => {
     );
   });
 
+  it('serverArgs sets max_connections to 300', () => {
+    expect(serverArgs({})).toEqual(expect.arrayContaining(['max_connections=300']));
+  });
+
   it('serverArgs sets timezone from NM_TEST_PG_TZ', () => {
     expect(serverArgs({ NM_TEST_PG_TZ: 'Europe/Stockholm' })).toContain(
       'timezone=Europe/Stockholm',
