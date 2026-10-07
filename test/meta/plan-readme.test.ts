@@ -17,29 +17,32 @@ function sectionLines(markdown: string, heading: string): string[] {
   return lines.slice(start + 1, next === -1 ? undefined : next).map((line) => line.text);
 }
 
-// Each run of table lines is a table of rows of trimmed cells. The separator row is left out.
+// A run of lines that start with a pipe is a table of rows of trimmed cells when its second row is
+// the separator row, which is left out. Without it Markdown renders the lines as text.
 function tablesIn(lines: string[]): string[][][] {
-  const tables: string[][][] = [];
+  const runs: string[][][] = [];
   let current: string[][] | undefined;
   for (const line of lines) {
     if (!line.startsWith('|')) {
       current = undefined;
       continue;
     }
-    const cells = line
-      .split('|')
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    if (cells.every((cell) => /^:?-+:?$/.test(cell))) {
-      continue;
-    }
     if (!current) {
       current = [];
-      tables.push(current);
+      runs.push(current);
     }
-    current.push(cells);
+    current.push(
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
   }
-  return tables;
+  const isSeparator = (row: string[] = []) =>
+    row.length > 0 && row.every((cell) => /^:?-+:?$/.test(cell));
+  return runs
+    .filter((rows) => isSeparator(rows[1]))
+    .map(([header = [], , ...rows]) => [header, ...rows]);
 }
 
 // Compares two tables row by row, keyed on the first cell.
