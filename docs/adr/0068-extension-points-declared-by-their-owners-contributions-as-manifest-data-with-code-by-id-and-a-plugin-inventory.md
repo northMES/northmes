@@ -300,6 +300,7 @@ export default defineWebModule({
 ```
 
 * `useHost` adds the slot's props, layout, size and `live`. Its `time`, `can` and `announce` delegate to the existing `usePlantTime()`, `usePermission()` and `announce()` ([06 web and UX](../plan/06-web-and-ux.md#shared-web-packages)), so a module page and a contribution share one implementation. Release 1 builds `useHost` with `props` only; each other member arrives with its first reader.
+* A field's `render` is synchronous and the owner calls it once per item, so it cannot call a hook, `useHost` included. The owner calls `usePlantTime()` once in the contribution's loader component and passes the result as `render(value, { time })`. That argument follows the same rule as the members of `useHost`: piece 1 builds it for its first reader, the Pyramid connector's header line "Pyramid data as of {time}", if M-31 gives the connector a remote. Until then, `render` takes the value only.
 * Data comes from the per-plant Apollo client that the shell provides. Documents are typed against the module's `dependsOn` closure ([06 web and UX](../plan/06-web-and-ux.md#rules-the-shell-and-ci-enforce)). A contribution queries its own prefixed root fields, so the owner's queries and codegen do not change when a plugin is added.
 * `live` runs a query, subscribes to a change field that carries ids ([ADR 0018][adr-0018]) and refetches on each event. The host closes the subscription on a plant switch, while the board is paused, and while the contribution is hidden in an overflow menu. Each live contribution costs one subscription per open page.
 * Writes go through `useCommand(contract)` or `useCommandForm`, with the module's own commands.
@@ -394,7 +395,7 @@ Release 1 builds nine pieces. A release 1 feature reads each piece in the task t
 
 | # | Piece | Read by |
 |---|---|---|
-| 1 | Slot kinds `region` and `field` in the owner's `web.slots`; `<Slot>` renders by kind; the block-fields rule becomes the `field` kind, with its hover renderers, which the board header uses too | planning's board and order page tasks; the Pyramid connector's header line and block fields, if M-31 gives the connector a remote |
+| 1 | Slot kinds `region` and `field` in the owner's `web.slots`; `<Slot>` renders by kind; the block-fields rule becomes the `field` kind, with its hover renderers, which the board header uses too; `render`'s `{ time }` argument with its first reader | planning's board and order page tasks; the Pyramid connector's header line and block fields, if M-31 gives the connector a remote |
 | 2 | The id `core/shell/aside/v1` for the shell aside, kind `region`, one docked | the AI chat panel; if M-39 leaves the panel in the shell, the shell mounts it there directly; it waits with the panel if item 7 of the cut order is cut ([ADR 0055][adr-0055]) |
 | 3 | Contribution data in `web.contributes`, implementations keyed by id in `defineWebModule`'s `contributions` in place of `widgets`, `useHost(slot)` with `props` only, and the checks that both sides match (the remote build check and `validateWebModule`) | production-start's order panel, `example-widget`, the Pyramid connector's fields (M-31) |
 | 4 | `validates` in the manifest, read by boot step 4, with the owner's time limit per validatable command | `example-validator` |
@@ -548,7 +549,7 @@ Test file names follow the existing layout and are proposed.
 * `apps/server/test/rest/web-modules.int.test.ts` gains: "each module entry carries its contributions with id, slot, label, order and permission".
 * `apps/web/test/slot.test.tsx`: "a contribution whose remote failed shows a fallback named by its manifest label".
 * `apps/server/test/command-bus.test.ts` gains: "a veto's details carry rejectedBy, the code, the validator's details and the rendered message".
-* `modules/planning/web/test/board-fields.test.tsx`: "a board whose block-field contribution throws in useValues draws every block without that field and reports one error".
+* `modules/planning/web/test/board-fields.test.tsx`: "a board whose block-field contribution throws in useValues draws every block without that field and reports one error"; and, in the task that builds `render`'s `time` argument, "a header field's render receives the board's usePlantTime() and prints an instant in the plant's zone".
 * In CI, `pnpm plugin:check example-validator` prints the inventory line `validates planning.releaseProductionOrder (payload 1)`.
 * The slot snapshot check in CI fails when a slot's kind changes without a new version.
 
