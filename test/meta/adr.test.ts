@@ -677,4 +677,27 @@ describe('adr front matter', () => {
         ),
       ]);
   });
+
+  it('readAdrFiles does not throw on CRLF or invalid YAML front matter', () => {
+    const crlf = { ...adrSource({}, '0001-crlf.md'), text: adrSource().text.replaceAll('\n', '\r\n') };
+    const unclosed = adrSource({ status: '[accepted' }, '0002-unclosed.md');
+    const good = adrSource({ status: '"accepted"', release: '"later"' }, '0003-good.md');
+
+    // The index tests read through readAdrFiles. A bad file must not stop them, so each one is a row
+    // with no status, release or needs-confirmation. frontMatterProblems reports it.
+    const files = readAdrFiles([crlf, unclosed, good]);
+
+    expect.soft(files.map((file) => file.name)).toEqual([crlf.name, unclosed.name, good.name]);
+    expect.soft(files[0]).toMatchObject({ status: '', release: '', needsConfirmation: '' });
+    expect.soft(files[1]).toMatchObject({ status: '', release: '', needsConfirmation: '' });
+    // The good file next to them reads as before.
+    expect.soft(files[2]).toEqual({
+      name: good.name,
+      number: 3,
+      title: 'Decision',
+      status: 'accepted',
+      release: 'later',
+      needsConfirmation: '',
+    });
+  });
 });
