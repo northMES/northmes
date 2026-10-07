@@ -22,12 +22,18 @@ export interface TestDatabase {
   databaseName: string;
 }
 
+/** The database that every test database is cloned from. */
+export const templateDatabase = 'nm_template';
+
 function connectionStringFor(pg: PgConnection, databaseName: string): string {
   const credentials = `${encodeURIComponent(pg.user)}:${encodeURIComponent(pg.password)}`;
   return `postgres://${credentials}@${pg.host}:${pg.port}/${encodeURIComponent(databaseName)}`;
 }
 
-async function asAdmin(pg: PgConnection, run: (client: Client) => Promise<void>): Promise<void> {
+export async function withClient(
+  pg: PgConnection,
+  run: (client: Client) => Promise<void>,
+): Promise<void> {
   const client = new Client(pg);
   client.on('error', () => {});
   await client.connect();
@@ -47,13 +53,14 @@ export function useTestDatabase(): TestDatabase {
   const databaseName = 'nm_test';
 
   beforeAll(async () => {
-    await asAdmin(pg, async (client) => {
-      await client.query(`create database ${client.escapeIdentifier(databaseName)}`);
+    await withClient(pg, async (client) => {
+      const name = client.escapeIdentifier(databaseName);
+      await client.query(`create database ${name} template ${templateDatabase}`);
     });
   });
 
   afterAll(async () => {
-    await asAdmin(pg, async (client) => {
+    await withClient(pg, async (client) => {
       await client.query(`drop database ${client.escapeIdentifier(databaseName)} with (force)`);
     });
   });
