@@ -383,6 +383,34 @@ describe('plan README', () => {
       expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
     }
 
+    // An ADR listed twice in the checklist is reported once, however the two items differ, and its
+    // link problems are not repeated.
+    expect(
+      readmeDrift(
+        change(
+          readme,
+          '- [x] [0004][adr-0004] tooling (accepted)',
+          '- [x] [0004][adr-0004] tooling (accepted)\n- [ ] [0004][adr-0004] tooling again',
+        ),
+        roadmap,
+        adrs,
+      ),
+    ).toEqual(["M0 checklist: ADR 0004 is listed more than once in README.md's checklist"]);
+    expect(
+      readmeDrift(
+        change(
+          change(readme, '0004-tooling.md', '0004-gone.md'),
+          '- [x] [0004][adr-0004] tooling (accepted)',
+          '- [x] [0004][adr-0004] tooling (accepted)\n- [x] [0004][adr-0004] tooling again',
+        ),
+        roadmap,
+        adrs,
+      ),
+    ).toEqual([
+      "M0 checklist: ADR 0004 is listed more than once in README.md's checklist",
+      'M0 checklist: ADR 0004 links to docs/adr/0004-gone.md, which is not tracked',
+    ]);
+
     // An ADR that the M0 row links twice is reported once.
     expect(
       readmeDrift(
