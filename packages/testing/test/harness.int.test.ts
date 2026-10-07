@@ -47,4 +47,17 @@ describe('the test database', () => {
     const rows = await query<{ version: string }>(connectionString, 'select version()');
     expect(rows[0]?.version).toMatch(/^PostgreSQL 18\./);
   });
+
+  // harness-sibling.int.test.ts runs the same test with a table of its own, in parallel.
+  it('each test file gets its own database', async () => {
+    expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
+    await query(connectionString, 'create table harness_only (id integer)');
+
+    const rows = await query<{ tablename: string }>(
+      connectionString,
+      "select tablename from pg_tables where schemaname = 'public' order by tablename",
+    );
+
+    expect(rows.map((row) => row.tablename)).toEqual(['harness_only', 'nm_marker']);
+  });
 });
