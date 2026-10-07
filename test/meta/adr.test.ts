@@ -45,28 +45,28 @@ function readAdrFiles(): AdrFile[] {
 }
 
 // An index row is `| 0001 | [Title](0001-file.md) | status | release | needs confirmation |`.
+function parseIndexRow(line: string): IndexRow | undefined {
+  const cells = line
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+  const [number = '', link = '', status = '', release = '', needsConfirmation = ''] = cells;
+  const match = /^\[(.+)\]\((.+)\)$/.exec(link);
+  if (cells.length !== 5 || !/^\d{4}$/.test(number) || !match) {
+    return undefined;
+  }
+  return {
+    number: Number.parseInt(number, 10),
+    title: match[1] ?? '',
+    target: match[2] ?? '',
+    status,
+    release,
+    needsConfirmation,
+  };
+}
+
 function parseIndexRows(markdown: string): IndexRow[] {
-  return markdown.split('\n').flatMap((line) => {
-    const cells = line
-      .split('|')
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    const [number = '', link = '', status = '', release = '', needsConfirmation = ''] = cells;
-    const match = /^\[(.+)\]\((.+)\)$/.exec(link);
-    if (cells.length !== 5 || !/^\d{4}$/.test(number) || !match) {
-      return [];
-    }
-    return [
-      {
-        number: Number.parseInt(number, 10),
-        title: match[1] ?? '',
-        target: match[2] ?? '',
-        status,
-        release,
-        needsConfirmation,
-      },
-    ];
-  });
+  return markdown.split('\n').flatMap((line) => parseIndexRow(line) ?? []);
 }
 
 // The cells that the index copies from a file, with the name each one has in a problem message.
@@ -102,8 +102,13 @@ function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
 
 // A table row that starts with a four-digit number is meant as an index row. If it does not parse,
 // parseIndexRows drops it, so it needs its own problem.
-function malformedRowProblems(_markdown: string): string[] {
-  return [];
+function malformedRowProblems(markdown: string): string[] {
+  return markdown.split('\n').flatMap((line) => {
+    const number = /^\|\s*(\d{4})\b/.exec(line)?.[1];
+    return number && !parseIndexRow(line)
+      ? [`${number}: the index has a row that is not five cells with a linked title`]
+      : [];
+  });
 }
 
 function rowOf(file: AdrFile): IndexRow {
