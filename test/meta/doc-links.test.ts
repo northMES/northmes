@@ -314,12 +314,15 @@ function checklistItems(markdown: string): { number: string; reference: string }
   });
 }
 
-// The ADRs that the M0 row of the milestones table links.
+// The ADRs that the M0 row of the milestones table links, each once.
 function milestoneNumbers(markdown: string): string[] {
   const row = sectionLines(markdown, 'Milestones under option B').find((line) =>
     line.startsWith('| M0 |'),
   );
-  return [...(row ?? '').matchAll(/\]\(\.\.\/adr\/(\d{4})-/g)].map(([, number = '']) => number);
+  const numbers = [...(row ?? '').matchAll(/\]\(\.\.\/adr\/(\d{4})-/g)].map(
+    ([, number = '']) => number,
+  );
+  return [...new Set(numbers)];
 }
 
 function checklistLinkProblems(readme: string, numbers: string[], tracked: Set<string>): string[] {
