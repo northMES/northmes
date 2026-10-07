@@ -42,7 +42,7 @@ handoff's scheduler is not used. An operating Claude Code session with handoff's
 
 ## The graphs
 
-All three graphs share the planner and coder instructions, the Tester and the pull request settings. Each loop that sends work back has a limit; when a loop runs out, the run stops with "ran out of rounds" and waits for `resolve_loop` (retry, continue or stop). None of the graphs sets an exhausted gate.
+All three graphs share the planner and coder instructions, the Tester and the pull request settings. Each loop that sends work back has a limit. When a loop runs out, a question gate asks Krister to retry or abort instead of failing the run. The loops back to the planner (`plan-review->planner`, and `plan-gate->planner` in guided and standard) go to `plan-ask`; every other loop goes to `ask`, which is also each graph's `exhaustedGate`. Retry starts the loop's count again and sends the answer along the gate's `answered` edge to the planner or the coder, so a `merge->pr` retry goes through the coder; abort fails the run. The approval gates `plan-gate` and `code-gate` cannot take this question, because neither answer matches their `approve` or `changes` port. Runs started on a graph version imported before these gates still stop with "ran out of rounds" and wait for `resolve_loop` (retry, continue or stop).
 
 Each Claude step sets its own `effort` (Claude Code's `--effort`); no node sets `model`, so the worker's default model runs every step:
 
