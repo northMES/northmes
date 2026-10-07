@@ -315,6 +315,7 @@ describe('doc links', () => {
     const markdown = [
       'Paths: `docs/adr/template.md`, `.coderabbit.yaml`, `AGENTS.md`, `packages/testing`,',
       '`apps/docs/reference`, `modules/` and `docs/plan/` (a trailing slash is dropped).',
+      'Relative to the root: `./test/meta/docs.ts` and `./CHANGELOG.md` (a leading `./` is dropped).',
       'Twice: `packages/testing` again, and ``scripts/gen.mjs`` in a longer span.',
       'Not paths: `schema/*.graphql`, `modules/*/contracts`, `docs/adr/<name>.md`, `node_modules/x/y.md`,',
       '`northmes/northmes`, `sql.raw`, `github.reviewers_timeout`, `@northmes/source`, `pnpm check`',
@@ -333,6 +334,8 @@ describe('doc links', () => {
       'apps/docs/reference',
       'modules',
       'docs/plan',
+      'test/meta/docs.ts',
+      'CHANGELOG.md',
       'scripts/gen.mjs',
     ]);
   });
