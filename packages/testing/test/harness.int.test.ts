@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, inject, it, vi } from 'vitest';
-import { withClient } from '../src/database.ts';
+import { templateDatabase, withClient } from '../src/database.ts';
 import { query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
@@ -25,6 +25,17 @@ describe('the test database', () => {
     );
 
     expect(rows).toEqual([{ marker: 'nm_marker' }]);
+  });
+
+  it('the template database is flagged as a template', async () => {
+    const name = templateDatabase.replaceAll("'", "''");
+
+    const rows = await query<{ datistemplate: boolean }>(
+      connectionString,
+      `select datistemplate from pg_database where datname = '${name}'`,
+    );
+
+    expect(rows).toEqual([{ datistemplate: true }]);
   });
 
   it('the container image equals the digest in infra/pg-image.json', async () => {
