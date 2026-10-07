@@ -192,6 +192,50 @@ function fileNumbered(number: number): AdrFile {
   };
 }
 
+// The raw YAML of each front matter field in a complete ADR. A test replaces or drops single lines.
+const completeFrontMatter: Record<string, string> = {
+  status: '"proposed"',
+  date: '2026-10-05',
+  'decision-makers': 'Krister Johansson',
+  consulted: 'internal research notes',
+  informed: 'contributors and coding agents',
+  release: '"1"',
+  'needs-confirmation': '""',
+};
+
+// An ADR source whose front matter is the complete one, with the given raw YAML values in place of
+// the complete ones. A field set to undefined has no line.
+function adrSource(changes: Record<string, string | undefined> = {}, name = '0001-decision.md') {
+  const lines = Object.entries({ ...completeFrontMatter, ...changes }).flatMap(([field, yaml]) =>
+    yaml === undefined ? [] : [`${field}: ${yaml}`],
+  );
+  return { name, text: `---\n${lines.join('\n')}\n---\n\n# Decision\n` };
+}
+
+describe('adr front matter', () => {
+  it('every ADR has the front matter fields', () => {
+    expect(frontMatterProblems([adrSource()])).toEqual([]);
+
+    // Each field dropped in turn is reported with the file and the field.
+    for (const field of Object.keys(completeFrontMatter)) {
+      expect
+        .soft(frontMatterProblems([adrSource({ [field]: undefined })]), field)
+        .toEqual([`0001-decision.md: ${field} is missing`]);
+    }
+
+    // A file with no front matter block lacks every field, and the problems name the file they
+    // belong to.
+    const bare = { name: '0002-bare.md', text: '# Bare\n\nNo front matter here.\n' };
+    expect
+      .soft(frontMatterProblems([adrSource(), bare]))
+      .toEqual(Object.keys(completeFrontMatter).map((field) => `0002-bare.md: ${field} is missing`));
+
+    const sources = readAdrSources();
+    expect(sources, 'docs/adr files').not.toHaveLength(0);
+    expect(frontMatterProblems(sources)).toEqual([]);
+  });
+});
+
 describe('adr index', () => {
   const files: AdrFile[] = [
     {
