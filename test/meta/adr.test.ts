@@ -171,6 +171,19 @@ function rowOf(file: AdrFile): IndexRow {
   return { ...cells, target: name };
 }
 
+// An ADR file with the given number and a slug that is unique to it.
+function fileNumbered(number: number): AdrFile {
+  const prefix = padNumber(number);
+  return {
+    name: `${prefix}-decision.md`,
+    number,
+    title: `Decision ${prefix}`,
+    status: 'proposed',
+    release: '1',
+    needsConfirmation: '',
+  };
+}
+
 describe('adr index', () => {
   const files: AdrFile[] = [
     {
@@ -191,19 +204,6 @@ describe('adr index', () => {
     },
   ];
   const rows = files.map(rowOf);
-
-  // An ADR file with the given number and a slug that is unique to it.
-  function fileNumbered(number: number): AdrFile {
-    const prefix = String(number).padStart(4, '0');
-    return {
-      name: `${prefix}-decision.md`,
-      number,
-      title: `Decision ${prefix}`,
-      status: 'proposed',
-      release: '1',
-      needsConfirmation: '',
-    };
-  }
 
   it('every docs/adr/NNNN-*.md file is in the index with the same title and status', () => {
     expect(indexProblems(files, rows)).toEqual([]);
