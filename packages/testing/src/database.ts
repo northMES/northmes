@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { randomBytes } from 'node:crypto';
-import { Client } from 'pg';
+import { Client, type ClientConfig } from 'pg';
 import { afterAll, beforeAll, inject } from 'vitest';
 
 /** Where the container started by the global setup listens, as the superuser. */
@@ -33,18 +33,34 @@ function connectionStringFor(pg: PgConnection, databaseName: string): string {
   return `postgres://${credentials}@${pg.host}:${pg.port}/${encodeURIComponent(databaseName)}`;
 }
 
-export async function withClient(
-  pg: PgConnection,
-  run: (client: Client) => Promise<void>,
-): Promise<void> {
-  const client = new Client(pg);
+/**
+ * Runs `run` on a client connected with `config` and closes the client afterwards. This is the one
+ * place that builds a pg client. The error listener keeps a connection that the server terminates
+ * from surfacing as an unhandled error in the worker.
+ */
+export async function withClient<Result = void>(
+  config: ClientConfig,
+  run: (client: Client) => Promise<Result>,
+): Promise<Result> {
+  const client = new Client(config);
   client.on('error', () => {});
   await client.connect();
   try {
-    await run(client);
+    return await run(client);
   } finally {
     await client.end();
   }
+}
+
+/** Runs one statement on the database that `connectionString` points at and returns its rows. */
+export function query<Row = Record<string, unknown>>(
+  connectionString: string,
+  sql: string,
+): Promise<Row[]> {
+  return withClient(
+    { connectionString },
+    async (client) => (await client.query(sql)).rows as Row[],
+  );
 }
 
 /**
@@ -68,5 +84,8 @@ export function useTestDatabase(): TestDatabase {
     });
   });
 
+  // The connection string is for the container's superuser. Database roles arrive with the
+  // migration runner (E02-S02), which switches this to the app role; until then a test database
+  // is reachable as a superuser.
   return { connectionString: connectionStringFor(pg, databaseName), databaseName };
 }

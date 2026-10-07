@@ -1,19 +1,6 @@
 // SPDX-License-Identifier: MIT
-import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
-import { useTestDatabase } from '../src/index.ts';
-
-async function query<Row>(connectionString: string, sql: string): Promise<Row[]> {
-  const client = new Client({ connectionString });
-  client.on('error', () => {});
-  await client.connect();
-  try {
-    const result = await client.query(sql);
-    return result.rows as Row[];
-  } finally {
-    await client.end();
-  }
-}
+import { query, useTestDatabase } from '../src/index.ts';
 
 // harness.int.test.ts runs the same test with a table of its own, in parallel.
 describe('the test database of the sibling file', () => {

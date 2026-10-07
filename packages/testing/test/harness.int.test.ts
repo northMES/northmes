@@ -1,22 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { readFileSync } from 'node:fs';
-import { Client } from 'pg';
 import { describe, expect, inject, it } from 'vitest';
-import { useTestDatabase } from '../src/index.ts';
+import { query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
-
-async function query<Row>(connectionString: string, sql: string): Promise<Row[]> {
-  const client = new Client({ connectionString });
-  client.on('error', () => {});
-  await client.connect();
-  try {
-    const result = await client.query(sql);
-    return result.rows as Row[];
-  } finally {
-    await client.end();
-  }
-}
 
 describe('the test database', () => {
   const { connectionString, databaseName } = useTestDatabase();
