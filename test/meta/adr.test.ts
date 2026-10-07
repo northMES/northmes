@@ -142,4 +142,30 @@ describe('adr index', () => {
     expect(index, 'docs/adr/README.md rows').not.toHaveLength(0);
     expect(indexProblems(adrFiles, index)).toEqual([]);
   });
+
+  it('adr.test.ts fails when an ADR file is renamed without updating the index', () => {
+    // Same number, same cells, new slug: the row still links to the old name.
+    const renamed = files.map((file) =>
+      file.number === 2 ? { ...file, name: '0002-split-the-modules.md' } : file,
+    );
+    // A new file whose row nobody added.
+    const added: AdrFile[] = [
+      ...files,
+      {
+        name: '0003-new-decision.md',
+        number: 3,
+        title: 'New decision',
+        status: 'proposed',
+        release: '1',
+        needsConfirmation: '',
+      },
+    ];
+
+    expect
+      .soft(indexProblems(renamed, rows))
+      .toEqual(expect.arrayContaining([expect.stringContaining('0002-split-the-modules.md')]));
+    expect
+      .soft(indexProblems(added, rows))
+      .toEqual(expect.arrayContaining([expect.stringContaining('0003-new-decision.md')]));
+  });
 });
