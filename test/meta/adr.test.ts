@@ -275,6 +275,17 @@ describe('adr index', () => {
     expect(numberProblems(adrFiles)).toEqual([]);
   });
 
+  it('no two ADR files share a number', () => {
+    // Numbers 1, 2, 2 have no gap, so only the shared number shows.
+    const shared: AdrFile[] = [...files, { ...fileNumbered(2), name: '0002-other-split.md' }];
+
+    const problems = numberProblems(shared);
+    expect.soft(problems).toEqual([expect.stringContaining('0002-split-modules.md')]);
+    expect.soft(problems.join('\n')).toContain('0002-other-split.md');
+
+    expect(numberProblems(readAdrFiles())).toEqual([]);
+  });
+
   it('the index has no row that starts with a number and does not parse', () => {
     const markdown = [
       '| Number | Title | Status | Release | Needs confirmation |',
