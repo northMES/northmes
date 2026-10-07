@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, posix } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 import { linkedPath, markdownLines, root, trackedFiles } from './docs.ts';
 
 // The lines under a `## ` heading, up to the next one outside a code fence. Fenced lines stay in,
@@ -101,20 +102,53 @@ function milestoneNumbers(markdown: string): string[] {
   return [...new Set(numbers)];
 }
 
-function checklistLinkProblems(readme: string, numbers: string[], tracked: Set<string>): string[] {
+// What the checklist follows in the front matter of an ADR.
+interface AdrState {
+  status: string;
+  needsConfirmation: string;
+}
+
+const adrPath = /^docs\/adr\/\d{4}-[^/]+\.md$/;
+
+// The tracked ADR files with their front matter.
+function trackedAdrs(tracked: Set<string>): Map<string, AdrState> {
+  return new Map(
+    [...tracked]
+      .filter((path) => adrPath.test(path))
+      .sort()
+      .map((path) => {
+        const text = readFileSync(join(root, path), 'utf8');
+        const [, frontMatter = ''] = /^---\n([\s\S]*?)\n---\n/.exec(text) ?? [];
+        const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
+        return [
+          path,
+          {
+            status: String(fields.status ?? ''),
+            needsConfirmation: String(fields['needs-confirmation'] ?? ''),
+          },
+        ];
+      }),
+  );
+}
+
+function checklistLinkProblems(
+  readme: string,
+  numbers: string[],
+  adrs: Map<string, AdrState>,
+): string[] {
   return numbers.flatMap((number) => {
     const target = new RegExp(`^\\[adr-${number}\\]:[ \\t]*(\\S+)`, 'm').exec(readme)?.[1];
     if (target === undefined) {
       return [`M0 checklist: ADR ${number} has no [adr-${number}] link definition in README.md`];
     }
     const path = linkedPath('docs/plan/README.md', target) ?? target;
-    if (!tracked.has(path)) {
-      return [`M0 checklist: ADR ${number} links to ${path}, which is not tracked`];
-    }
-    if (!/^docs\/adr\/\d{4}-[^/]+\.md$/.test(path)) {
+    if (!adrPath.test(path)) {
       return [
         `M0 checklist: ADR ${number} links to ${path}, which is not a Markdown ADR under docs/adr`,
       ];
+    }
+    if (!adrs.has(path)) {
+      return [`M0 checklist: ADR ${number} links to ${path}, which is not tracked`];
     }
     return posix.basename(path).startsWith(`${number}-`)
       ? []
@@ -157,7 +191,7 @@ function ledgerHeaderDrift(readme: string, roadmap: string): string[] {
       ];
 }
 
-function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
+function checklistDrift(readme: string, roadmap: string, adrs: Map<string, AdrState>): string[] {
   const all = checklistItems(readme);
   // An ADR listed twice could carry two states. It is reported once, and its first item stands for
   // it in the checks below.
@@ -189,17 +223,17 @@ function checklistDrift(readme: string, roadmap: string, tracked: Set<string>): 
         ({ number, reference }) =>
           `M0 checklist: item [${number}] references [adr-${reference}] and not [adr-${number}]`,
       ),
-    ...checklistLinkProblems(readme, listed, tracked),
+    ...checklistLinkProblems(readme, listed, adrs),
   ];
 }
 
 // The README is the source for the persona list, the epic order, the ledger header and the M0
 // checklist, and the roadmap repeats them for the session that shapes issues. Both must agree.
-function readmeDrift(readme: string, roadmap: string, tracked: Set<string>): string[] {
+function readmeDrift(readme: string, roadmap: string, adrs: Map<string, AdrState>): string[] {
   return [
     ...personaAndEpicDrift(readme, roadmap),
     ...ledgerHeaderDrift(readme, roadmap),
-    ...checklistDrift(readme, roadmap, tracked),
+    ...checklistDrift(readme, roadmap, adrs),
   ];
 }
 
@@ -294,14 +328,13 @@ describe('plan README', () => {
       '[adr-0004]: ../adr/0004-tooling.md',
       '[adr-0029]: ../adr/0029-drafts.md',
     ].join('\n');
-    const adrs = new Set([
-      'docs/adr/0003-module.md',
-      'docs/adr/0004-tooling.md',
-      'docs/adr/0029-drafts.md',
-      'docs/adr/0099-invented.md',
-      // Tracked files that are not Markdown ADRs under docs/adr, and carry an ADR's number.
-      'docs/plan/0004-not-an-adr.md',
-      'docs/adr/0004-notes.txt',
+    // The tracked ADR files with their front matter. The checklist is ticked for 0004 only, which
+    // is accepted and has nothing to confirm.
+    const adrs = new Map<string, AdrState>([
+      ['docs/adr/0003-module.md', { status: 'proposed', needsConfirmation: '' }],
+      ['docs/adr/0004-tooling.md', { status: 'accepted', needsConfirmation: '' }],
+      ['docs/adr/0029-drafts.md', { status: 'accepted', needsConfirmation: 'product owner' }],
+      ['docs/adr/0099-invented.md', { status: 'proposed', needsConfirmation: '' }],
     ]);
 
     expect(readmeDrift(readme, roadmap, adrs)).toEqual([]);
@@ -409,7 +442,7 @@ describe('plan README', () => {
         ],
       },
       {
-        name: 'a checklist link to a tracked file outside docs/adr',
+        name: 'a checklist link to a file outside docs/adr',
         readme: change(
           readme,
           '[adr-0004]: ../adr/0004-tooling.md',
@@ -420,7 +453,7 @@ describe('plan README', () => {
         ],
       },
       {
-        name: 'a checklist link to a tracked file in docs/adr that is not Markdown',
+        name: 'a checklist link to a file in docs/adr that is not Markdown',
         readme: change(
           readme,
           '[adr-0004]: ../adr/0004-tooling.md',
@@ -511,7 +544,7 @@ describe('plan README', () => {
       readmeDrift(
         readFileSync(join(root, 'docs/plan/README.md'), 'utf8'),
         readFileSync(join(root, 'docs/plan/14-roadmap.md'), 'utf8'),
-        trackedFiles(),
+        trackedAdrs(trackedFiles()),
       ),
     ).toEqual([]);
   });
