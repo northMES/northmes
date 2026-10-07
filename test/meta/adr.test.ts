@@ -269,6 +269,15 @@ describe('adr front matter', () => {
     expect(sources, 'docs/adr files').not.toHaveLength(0);
     expect(frontMatterProblems(sources)).toEqual([]);
   });
+
+  it('a bare needs-confirmation is empty, and a bare status is missing', () => {
+    // YAML parses a key with no value to null. For needs-confirmation that is the empty value the
+    // template allows, and for every other field it is no value at all.
+    expect.soft(frontMatterProblems([adrSource({ 'needs-confirmation': '' })])).toEqual([]);
+    expect
+      .soft(frontMatterProblems([adrSource({ status: '' })]))
+      .toEqual(['0001-decision.md: status is missing']);
+  });
 });
 
 describe('adr index', () => {
