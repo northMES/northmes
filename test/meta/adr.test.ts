@@ -1,7 +1,11 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { nextNumber } from '../../scripts/adr/next-number.mjs';
 
 interface AdrFile {
   name: string;
@@ -27,6 +31,7 @@ interface IndexRow {
 }
 
 const adrFolder = fileURLToPath(new URL('../../docs/adr/', import.meta.url));
+const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // The number in an ADR file name, such as 2 in 0002-split-modules.md. A name that is not an ADR file
 // name, such as a path or a file with another extension, has none.
@@ -537,6 +542,109 @@ describe('adr index', () => {
       .toEqual([expect.stringContaining('0002'), expect.stringContaining('0003')]);
 
     expect(malformedRowProblems(readFileSync(`${adrFolder}README.md`, 'utf8'))).toEqual([]);
+  });
+});
+
+// A markdown index with the table header, one row per number in the given order, and the given
+// lines after the table.
+function indexMarkdown(numbers: number[], after: string[] = []): string {
+  const header = [
+    '| Number | Title | Status | Release | Needs confirmation |',
+    '|---|---|---|---|---|',
+  ];
+  const rows = numbers.map((number) => {
+    const row = rowOf(fileNumbered(number));
+    return `| ${padNumber(row.number)} | [${row.title}](${row.target}) | ${row.status} | ${row.release} | |`;
+  });
+  return [...header, ...rows, '', ...after].join('\n');
+}
+
+function readIndex(): string {
+  return readFileSync(`${adrFolder}README.md`, 'utf8');
+}
+
+// The number on the "Next free number: 0069." line that closes the index, as written.
+function nextFreeNumberLine(index: string): string | undefined {
+  return /^Next free number: (\d{4})\./m.exec(index)?.[1];
+}
+
+describe('adr numbering script', () => {
+  const numberingScript = `${repositoryRoot}scripts/adr/next-number.mjs`;
+
+  it('nextNumber returns one more than the highest indexed number', () => {
+    expect.soft(nextNumber(indexMarkdown([1, 2, 7]))).toBe(8);
+    // The highest number is not the last row.
+    expect.soft(nextNumber(indexMarkdown([7, 1, 2]))).toBe(8);
+    // An index with no rows starts at 0001.
+    expect.soft(nextNumber(indexMarkdown([]))).toBe(1);
+    // The Next free number line and other prose name numbers, but they are not rows.
+    expect
+      .soft(
+        nextNumber(
+          indexMarkdown(
+            [1, 2],
+            ['Next free number: 0099.', 'Numbers such as 0050 and 0060 are examples.'],
+          ),
+        ),
+      )
+      .toBe(3);
+  });
+
+  it('node scripts/adr/next-number.mjs prints the next free number', () => {
+    const nextFree = nextFreeNumberLine(readIndex());
+    expect(nextFree, 'the Next free number line in docs/adr/README.md').toBeDefined();
+
+    // The script finds the index from its own location, so the working directory does not matter.
+    const elsewhere = mkdtempSync(join(tmpdir(), 'adr-next-number-'));
+    try {
+      const result = spawnSync(process.execPath, [numberingScript], {
+        cwd: elsewhere,
+        encoding: 'utf8',
+      });
+
+      expect.soft(result.stderr).toBe('');
+      expect.soft(result.status).toBe(0);
+      expect(result.stdout).toBe(`${nextFree}\n`);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  // Passes on arrival: the line and the rows agree today. It guards later drift, such as an ADR row
+  // added without raising the line.
+  it('the Next free number line in the index equals nextNumber', () => {
+    const index = readIndex();
+
+    expect(nextFreeNumberLine(index), 'the Next free number line in docs/adr/README.md').toBe(
+      padNumber(nextNumber(index)),
+    );
+  });
+
+  it('the root script adr:next runs the numbering script', () => {
+    const rootPackage = JSON.parse(readFileSync(`${repositoryRoot}package.json`, 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(rootPackage.scripts?.['adr:next']).toBe('node scripts/adr/next-number.mjs');
+  });
+
+  it('the links from docs/agents/domain.md to GLOSSARY.md, docs/adr/README.md and the numbering script resolve', () => {
+    const domain = readFileSync(`${repositoryRoot}docs/agents/domain.md`, 'utf8');
+
+    for (const path of ['GLOSSARY.md', 'docs/adr/README.md', 'scripts/adr/next-number.mjs']) {
+      expect.soft(domain, `docs/agents/domain.md names ${path}`).toContain(path);
+      expect.soft(existsSync(`${repositoryRoot}${path}`), `${path} exists`).toBe(true);
+    }
+  });
+
+  it('step 1 of Adding an ADR names pnpm adr:next without the Once wording', () => {
+    const step = /^## Adding an ADR$[\s\S]*?^1\. (.*)$/m.exec(readIndex())?.[1];
+    expect(step, 'step 1 under "Adding an ADR" in docs/adr/README.md').toBeDefined();
+
+    expect.soft(step).toContain('`pnpm adr:next`');
+    // The script exists, so the step no longer waits for it.
+    expect.soft(step).not.toContain('Once');
+    expect.soft(step).not.toContain('exists, take the number from it instead');
   });
 });
 

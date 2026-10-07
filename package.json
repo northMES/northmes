@@ -17,7 +17,8 @@
     "test:int": "vitest run --project integration",
     "test:ai": "vitest run --project ai",
     "test:tz": "vitest run --project tz",
-    "lint:customer-data": "node scripts/lint/no-customer-data.mjs"
+    "lint:customer-data": "node scripts/lint/no-customer-data.mjs",
+    "adr:next": "node scripts/adr/next-number.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

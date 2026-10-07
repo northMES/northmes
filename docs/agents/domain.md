@@ -8,7 +8,7 @@ This section replaces the ADR format in the domain-modeling skill.
 
 - Start from `docs/adr/template.md` (MADR) and fill its front matter: status, date, decision-makers, consulted, informed, release and needs-confirmation.
 - A new ADR has status `proposed`. Only Krister sets `accepted`.
-- Take the number from the ADR numbering script rather than from a scan of `docs/adr/`. Until that script exists, the planning session numbers ADRs by hand from the index in `docs/adr/README.md`.
+- Take the number from `pnpm adr:next` (`scripts/adr/next-number.mjs`) rather than from a scan of `docs/adr/`. The script reads the index in `docs/adr/README.md`.
 - Offer an ADR when a decision is hard to reverse, surprising without context and a real trade-off. A decision the plan in `docs/plan` lists gets an ADR either way.
 - Each Confirmation item names a test, lint rule or CI check that a task can carry.
 
