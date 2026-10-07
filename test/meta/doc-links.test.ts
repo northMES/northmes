@@ -472,6 +472,34 @@ describe('doc links', () => {
     expect(linkProblems(files, trackedFiles())).toEqual([]);
   });
 
+  it('a line that opens with three backticks and has a backtick later opens no code fence', () => {
+    // CommonMark: the info string of a backtick fence has no backtick, so this is inline code.
+    const inline = doc(
+      'docs/plan/README.md',
+      '```not a fence``` is inline code, and so is ````also not````.',
+      '[a dead link after it](missing.md) and `docs/agents/missing.md` in a span.',
+    );
+    // A tilde fence may carry a backtick in its info string, and a backtick fence still opens.
+    const fences = doc(
+      'docs/plan/README.md',
+      '~~~ sh `x`',
+      '[in a tilde fence](hidden.md)',
+      '~~~',
+      '```sh',
+      '[in a backtick fence](hidden.md)',
+      '```',
+      '[a dead link after the fences](missing.md)',
+    );
+
+    expect(linkProblems([inline], tracked)).toEqual([
+      'docs/plan/README.md: "missing.md" does not resolve to a tracked file',
+    ]);
+    expect(backtickedRepoPaths(inline.content)).toEqual(['docs/agents/missing.md']);
+    expect(linkProblems([fences], tracked)).toEqual([
+      'docs/plan/README.md: "missing.md" does not resolve to a tracked file',
+    ]);
+  });
+
   it('no file in docs/plan, docs/adr, docs/agents or GLOSSARY.md links into the gitignored docs/research folder', () => {
     const linking = [
       doc(
