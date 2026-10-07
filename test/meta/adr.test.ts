@@ -67,7 +67,11 @@ function readAdrFiles(sources: AdrSource[] = readAdrSources()): AdrFile[] {
     if (number === undefined) {
       return [];
     }
-    const { fields, body } = splitFrontMatter(text);
+    // A file with unreadable front matter has no fields, so the index tests still run and
+    // frontMatterProblems reports the file.
+    const parsed = parseFrontMatter(text);
+    const { fields, body } =
+      'problem' in parsed ? { fields: {} as Record<string, unknown>, body: text } : parsed;
     return {
       name,
       number,
