@@ -41,6 +41,7 @@ describe('gates', () => {
     expect(rootScripts.test).toBe('vitest run');
     expect(rootScripts['test:unit']).toBe('vitest run --project unit');
     expect(rootScripts['test:int']).toBe('vitest run --project integration');
+    expect(rootScripts['test:ai']).toBe('vitest run --project ai');
     expect(rootScripts['test:tz']).toBe('vitest run --project tz');
   });
 
