@@ -32,4 +32,13 @@ describe('gates', () => {
     expect(rootScripts.typecheck).toBe('turbo run typecheck');
     expect(rootScripts.build).toBe('turbo run build');
   });
+
+  it('pnpm check runs the Node check first, then lint, typecheck, gen --check and vitest in that order', () => {
+    expect(rootScripts.check?.split(' && ')).toEqual([
+      'node scripts/check-node.mjs',
+      'turbo run lint typecheck',
+      'pnpm gen --check',
+      'vitest run',
+    ]);
+  });
 });
