@@ -1,5 +1,12 @@
 // Prints the next free ADR number (docs/adr/README.md, "Adding an ADR"). Two sessions that scan
 // docs/adr/ can take the same number, so the number comes from the index.
+//
+// `node scripts/adr/next-number.mjs` (root script `pnpm adr:next`) reads docs/adr/README.md, found
+// from this file's location so the working directory does not matter, and prints the number with
+// four digits, such as 0069.
+
+import { readFileSync, realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 /**
  * The number that follows the highest one in the index table. A row is a table line that starts
@@ -16,4 +23,22 @@ export function nextNumber(indexMarkdown) {
     }
   }
   return highest + 1;
+}
+
+function isEntryPoint() {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    // Under --eval, argv[1] is a positional argument, not a script path.
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
+  const index = readFileSync(new URL('../../docs/adr/README.md', import.meta.url), 'utf8');
+  console.log(String(nextNumber(index)).padStart(4, '0'));
 }
