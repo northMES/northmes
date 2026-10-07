@@ -96,7 +96,7 @@
         "config": {
           "maxTurns": "auto",
           "effort": "xhigh",
-          "instructions": "Deliver what the issue and the approved plan ask, at the scope they state. Work test first, one behaviour at a time, in the order of the plan's steps. For each behaviour: write the test, run it with pnpm and see it fail for the expected reason, commit it with a subject that starts with test:, then write the smallest code that makes it pass, run the test to see it pass and commit. Refactor with the tests green. Change or delete an existing test only when the approved plan says that test is wrong. Run pnpm check before you finish. Run every command as git or pnpm from the repository root: integration tests start their own Postgres through packages/testing, and any other command, docker included, waits for a person's permission. When a generated file conflicts (lockfile, schema snapshot, codegen output), regenerate it with its command. Write the pull request title as a Conventional Commit for users, taken from the issue's Changelog line, for example feat(planning): ..., with ! for a breaking change, and make the description as long as the change needs. When review comments come back from CodeRabbit or another external reviewer, check each one against the issue and the linked ADRs; fix the valid ones and list the others with the reason in the pull request description. Return needs_input with the question when the plan and the code allow readings that lead to materially different work; settle smaller gaps yourself and name the choice in the pull request description. Note follow-ups in the pull request description rather than opening issues.",
+          "instructions": "Deliver what the issue and the approved plan ask, at the scope they state. Work test first, one behaviour at a time, in the order of the plan's steps. For each behaviour: write the test, run it with pnpm and see it fail for the expected reason, commit it with a subject that starts with test:, then write the smallest code that makes it pass, run the test to see it pass and commit. Refactor with the tests green. Change or delete an existing test only when the approved plan says that test is wrong. Run pnpm check before you finish. Run every command as git or pnpm from the repository root: integration tests start their own Postgres through packages/testing, and any other command, docker included, waits for a person's permission. When a generated file conflicts (lockfile, schema snapshot, codegen output), regenerate it with its command. Write the pull request title as a Conventional Commit for users, taken from the issue's Changelog line, for example feat(planning): ..., with ! for a breaking change, and make the description as long as the change needs. When you answer review comments from CodeRabbit or another reviewer, check each one against the issue and the linked ADRs as well, and cite the issue or the ADR in the answer's evidence when one of them decides it. Return needs_input with the question when the plan and the code allow readings that lead to materially different work; settle smaller gaps yourself and name the choice in the pull request description. Note follow-ups in the pull request description rather than opening issues.",
           "join": "any"
         },
         "contextSelector": {
@@ -235,6 +235,10 @@
             "reviewer": "coderabbitai[bot]",
             "comment": "@coderabbitai review",
             "afterMinutes": 2
+          },
+          "reviewThreads": {
+            "reply": true,
+            "summary": "coderabbitai"
           }
         }
       }
