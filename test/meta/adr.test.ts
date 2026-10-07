@@ -678,7 +678,9 @@ describe('adr front matter', () => {
     // An empty block with LF line endings is a block that names no field.
     expect
       .soft(frontMatterProblems([empty]))
-      .toEqual(Object.keys(completeFrontMatter).map((field) => `0001-empty.md: ${field} is missing`));
+      .toEqual(
+        Object.keys(completeFrontMatter).map((field) => `0001-empty.md: ${field} is missing`),
+      );
   });
 
   it('an ADR whose front matter is not valid YAML is reported by file name', () => {
