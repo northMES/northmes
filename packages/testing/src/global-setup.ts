@@ -19,6 +19,9 @@ async function createTemplate(connection: PgConnection): Promise<void> {
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
   const container = await new PostgreSqlContainer(image).start();
+  const stop = async () => {
+    await container.stop();
+  };
 
   const connection: PgConnection = {
     host: container.getHost(),
@@ -27,11 +30,16 @@ export default async function setup(project: TestProject): Promise<() => Promise
     password: container.getPassword(),
     database: container.getDatabase(),
   };
-  await createTemplate(connection);
+  try {
+    await createTemplate(connection);
+  } catch (error) {
+    // Vitest runs only the teardown that setup returns, so stop the container here. A failing stop
+    // must not hide the error that made setup fail.
+    await stop().catch(() => {});
+    throw error;
+  }
   project.provide('pg', connection);
   project.provide('pgImage', image);
 
-  return async () => {
-    await container.stop();
-  };
+  return stop;
 }
