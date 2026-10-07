@@ -840,6 +840,16 @@ describe('doc links', () => {
           'M0 checklist: ADR 0004 links to docs/adr/0003-module.md, a file with another number',
         ],
       },
+      {
+        name: 'a checklist item whose reference carries the number of another ADR',
+        readme: change(readme, '[0004][adr-0004]', '[0004][adr-0003]'),
+        problems: ['M0 checklist: item [0004] references [adr-0003] and not [adr-0004]'],
+      },
+      {
+        name: 'a checklist item whose reference has no definition',
+        readme: change(readme, '[0004][adr-0004]', '[0004][adr-0099]'),
+        problems: ['M0 checklist: item [0004] references [adr-0099] and not [adr-0004]'],
+      },
     ];
     for (const { name, readme: drifted, problems } of cases) {
       expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
