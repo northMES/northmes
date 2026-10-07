@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { TestProject } from 'vitest/node';
 import { type PgConnection, templateDatabase, withClient } from './database.ts';
+import { serverArgs } from './server-settings.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
@@ -14,11 +15,20 @@ async function createTemplate(connection: PgConnection): Promise<void> {
   await withClient({ ...connection, database: templateDatabase }, async (client) => {
     await client.query('create table nm_marker (id integer primary key)');
   });
+  // A flagged template can be cloned by any role that may create databases. Postgres refuses to
+  // drop a flagged database, so a cleanup that drops the template must first set is_template to false.
+  await withClient(connection, async (client) => {
+    await client.query(
+      `alter database ${client.escapeIdentifier(templateDatabase)} is_template true`,
+    );
+  });
 }
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
-  const container = await new PostgreSqlContainer(image).start();
+  const container = await new PostgreSqlContainer(image)
+    .withCommand(serverArgs(process.env))
+    .start();
   const stop = async () => {
     await container.stop();
   };
