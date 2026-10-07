@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { run, stages } from './gen.mjs';
+import { main, run, stages } from './gen.mjs';
 
 const script = fileURLToPath(new URL('./gen.mjs', import.meta.url));
 
@@ -44,13 +44,34 @@ describe('gen', () => {
   });
 
   // Stands for `pnpm gen --check` until the root script is wired. With an empty stage list the
-  // flag has no observable effect, so this passes before main reads argv; it guards the entry
-  // point against a crash on the flag.
+  // flag has no observable effect here, so this guards the entry point against a crash on the
+  // flag; the next test covers that main passes the flag to run.
   it('the entry point exits 0 and prints its stage order under --check', () => {
     const result = runScript('--check');
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('stages: none');
+  });
+
+  it('main reads --check from its arguments and passes it to run', async () => {
+    const root = '/repo';
+    const outDirs: string[] = [];
+    const stage = {
+      name: 'fixture',
+      generate: async (outDir: string) => {
+        outDirs.push(outDir);
+      },
+    };
+    const io = { log: () => {}, error: () => {}, root };
+
+    const writeExitCode = await main([], io, [stage]);
+    const checkExitCode = await main(['--check'], io, [stage]);
+
+    expect(writeExitCode).toBe(0);
+    expect(checkExitCode).toBe(1);
+    expect(outDirs).toHaveLength(2);
+    expect(outDirs[0]).toBe(root);
+    expect(dirname(outDirs[1])).toBe(tmpdir());
   });
 
   it('--check generates into a temporary directory and removes it afterwards', async () => {
