@@ -6,7 +6,6 @@ export default defineConfig({
   resolve: { conditions: ['@northmes/source'] },
   ssr: { resolve: { conditions: ['@northmes/source'] } },
   test: {
-    globalSetup: ['./packages/testing/src/global-setup.ts'],
     projects: [
       {
         extends: true,
@@ -22,6 +21,7 @@ export default defineConfig({
           name: 'integration',
           include: ['**/*.int.test.ts'],
           exclude: ignored,
+          globalSetup: ['./packages/testing/src/global-setup.ts'],
         },
       },
     ],
