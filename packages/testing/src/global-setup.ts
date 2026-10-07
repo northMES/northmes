@@ -14,6 +14,11 @@ async function createTemplate(connection: PgConnection): Promise<void> {
   await withClient({ ...connection, database: templateDatabase }, async (client) => {
     await client.query('create table nm_marker (id integer primary key)');
   });
+  await withClient(connection, async (client) => {
+    await client.query(
+      `alter database ${client.escapeIdentifier(templateDatabase)} is_template true`,
+    );
+  });
 }
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
