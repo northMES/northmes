@@ -39,10 +39,10 @@ type FrontMatter = { fields: Record<string, unknown>; body: string } | { problem
 
 // The fields of an ADR file and the text after them, or the problem that makes the front matter
 // unreadable. A file with no front matter block has no fields. Only the front matter block has to be
-// LF: a CRLF body is fine.
+// LF: a CRLF body is fine. The block may be empty, so its closing line can follow the opening one.
 function parseFrontMatter(text: string): FrontMatter {
   const [, block = '', frontMatter = '', body = ''] =
-    /^(---\r?\n([\s\S]*?)\r?\n---\r?\n)([\s\S]*)$/.exec(text) ?? [];
+    /^(---\r?\n(?:---\r?\n|([\s\S]*?)\r?\n---\r?\n))([\s\S]*)$/.exec(text) ?? [];
   if (block.includes('\r')) {
     return { problem: 'the front matter has CRLF line endings, expected LF' };
   }
