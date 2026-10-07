@@ -7,6 +7,9 @@
   "scripts": {
     "check": "vitest run --project unit",
     "test:handoff": "pnpm check",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
     "gen": "node scripts/gen.mjs",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
