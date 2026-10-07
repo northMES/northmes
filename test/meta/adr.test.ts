@@ -601,6 +601,14 @@ describe('adr numbering script', () => {
       rmSync(elsewhere, { recursive: true, force: true });
     }
   });
+
+  it('the root script adr:next runs the numbering script', () => {
+    const rootPackage = JSON.parse(
+      readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
+    ) as { scripts?: Record<string, string> };
+
+    expect(rootPackage.scripts?.['adr:next']).toBe('node scripts/adr/next-number.mjs');
+  });
 });
 
 describe('adr front matter', () => {
