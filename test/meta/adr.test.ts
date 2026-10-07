@@ -602,6 +602,17 @@ describe('adr numbering script', () => {
     }
   });
 
+  // Passes on arrival: the line and the rows agree today. It guards later drift, such as an ADR row
+  // added without raising the line.
+  it('the Next free number line in the index equals nextNumber', () => {
+    const index = readFileSync(`${adrFolder}README.md`, 'utf8');
+    const nextFree = /^Next free number: (\d{4})\./m.exec(index)?.[1];
+
+    expect(nextFree, 'the Next free number line in docs/adr/README.md').toBe(
+      padNumber(nextNumber(index)),
+    );
+  });
+
   it('the root script adr:next runs the numbering script', () => {
     const rootPackage = JSON.parse(
       readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
