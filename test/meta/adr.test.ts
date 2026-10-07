@@ -133,9 +133,9 @@ function numberProblems(files: AdrFile[]): string[] {
   return [...gaps, ...shared];
 }
 
-// Each number has one row in the index.
+// Each number has one row in the index, and a row links to the file with its own number.
 function rowNumberProblems(rows: IndexRow[]): string[] {
-  return [...new Set(rows.map((row) => row.number))].flatMap((number) => {
+  const shared = [...new Set(rows.map((row) => row.number))].flatMap((number) => {
     const targets = rows.filter((row) => row.number === number).map((row) => row.target);
     return targets.length > 1
       ? [
@@ -143,6 +143,15 @@ function rowNumberProblems(rows: IndexRow[]): string[] {
         ]
       : [];
   });
+  const mismatched = rows.flatMap((row) => {
+    const rowNumber = String(row.number).padStart(4, '0');
+    const fileNumber = /^(\d{4})-/.exec(row.target)?.[1];
+    return fileNumber === rowNumber
+      ? []
+      : [`${rowNumber}: the row links to ${row.target}, whose number is ${fileNumber ?? 'missing'}`];
+  });
+
+  return [...shared, ...mismatched];
 }
 
 function rowOf(file: AdrFile): IndexRow {
