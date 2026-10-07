@@ -165,6 +165,7 @@ E02 needs:
 - [x] [0060][adr-0060] configuration and the environment schema (accepted)
 - [x] [0062][adr-0062] web form contracts, URL view state and module link manifests (accepted)
 - [x] [0064][adr-0064] REST routes under /api/v1, reserved ids and slugs, the boot route check (accepted)
+- [ ] [0068][adr-0068] extension points, `validates` and the veto details for the validator plugin (proposed; on this list under the working default of M-68)
 
 E03 and the rest of M0 need:
 
@@ -180,7 +181,7 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 
 ### ADRs to accept
 
-30 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058], [0059][adr-0059], [0065][adr-0065], [0066][adr-0066] and [0067][adr-0067]. The ones M0 needs are in the checklist above.
+31 ADRs are proposed: [0003][adr-0003], [0004][adr-0004], [0006][adr-0006], [0008][adr-0008], [0009][adr-0009], [0011][adr-0011], [0012][adr-0012], [0014][adr-0014], [0017][adr-0017], [0020][adr-0020], [0024][adr-0024], [0025][adr-0025], [0026][adr-0026], [0027][adr-0027], [0028][adr-0028], [0030][adr-0030], [0031][adr-0031], [0032][adr-0032], [0040][adr-0040], [0045][adr-0045], [0046][adr-0046], [0047][adr-0047], [0054][adr-0054], [0056][adr-0056], [0057][adr-0057], [0058][adr-0058], [0059][adr-0059], [0065][adr-0065], [0066][adr-0066], [0067][adr-0067] and [0068][adr-0068]. The ones M0 needs are in the checklist above.
 
 ### ADR parts to confirm
 
@@ -203,7 +204,8 @@ These decisions wait for Krister Johansson on 2026-10-05. Each question id point
 | [0057][adr-0057] | the whole decision | M-02 |
 | [0059][adr-0059] | no TimescaleDB backend from the project | M-50 |
 | [0066][adr-0066] | the company admin role holding every installed permission | M-61 |
-| [0067][adr-0067] | the top bar slot id | none |
+| [0067][adr-0067] | the top bar slot id; top bar items drawn from data | none; M-64 |
+| [0068][adr-0068] | the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the `command.rejected` security event and the validator record at the first regulated sale; acceptance before the skeleton's validator story | M-62 to M-68 |
 
 ### Questions before M0
 
@@ -267,6 +269,13 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 | M-47 | The name of the instant filter input | [0016][adr-0016] |
 | M-48 | Whether the restore drill switch may stay an environment flag under rule 6 of ADR 0051 | [0045][adr-0045], [0051][adr-0051] |
 | M-61 | Whether core's company admin role holds every installed permission | [0066][adr-0066] |
+| M-62 | Whether the nine release 1 pieces of ADR 0068 enter the ADR 0055 ledger | [0068][adr-0068], [0055][adr-0055] |
+| M-63 | Whether the AI budget banner is the `ai` module's contribution to `core/shell/banners/v1` | [0068][adr-0068] |
+| M-64 | Whether the shell draws top bar items from data | [0068][adr-0068], [0067][adr-0067] |
+| M-65 | Whether plugin permissions reach users through roles only | [0068][adr-0068], [0066][adr-0066] |
+| M-66 | Whether the notifications module may declare plant-free fields | [0068][adr-0068], [0066][adr-0066] |
+| M-67 | Whether the `command.rejected` security event and the validator record wait for the first regulated sale | [0068][adr-0068] |
+| M-68 | Whether ADR 0068 is accepted before the walking skeleton's validator story moves to Ready | [0068][adr-0068] |
 
 ### Later decisions from the roadmap
 
@@ -330,3 +339,4 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 [adr-0065]: ../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md
 [adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
 [adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md
+[adr-0068]: ../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md
