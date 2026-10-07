@@ -23,19 +23,29 @@ interface IndexRow {
 
 const adrFolder = fileURLToPath(new URL('../../docs/adr/', import.meta.url));
 
+// The number in an ADR file name, such as 2 in 0002-split-modules.md. A name that is not an ADR file
+// name, such as a path or a file with another extension, has none.
+function adrFileNumber(name: string): number | undefined {
+  const digits = /^(\d{4})-.+\.md$/.exec(name)?.[1];
+  return digits === undefined ? undefined : Number.parseInt(digits, 10);
+}
+
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
 function readAdrFiles(): AdrFile[] {
   return readdirSync(adrFolder)
-    .filter((name) => /^\d{4}-.+\.md$/.test(name))
     .sort()
-    .map((name) => {
+    .flatMap((name) => {
+      const number = adrFileNumber(name);
+      if (number === undefined) {
+        return [];
+      }
       const text = readFileSync(`${adrFolder}${name}`, 'utf8');
       const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
       const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
       return {
         name,
-        number: Number.parseInt(name.slice(0, 4), 10),
+        number,
         title: /^# (.+)$/m.exec(body)?.[1] ?? '',
         status: String(fields.status ?? ''),
         release: String(fields.release ?? ''),
@@ -114,9 +124,72 @@ function malformedRowProblems(markdown: string): string[] {
   });
 }
 
+function padNumber(number: number): string {
+  return String(number).padStart(4, '0');
+}
+
+// The items that share their number with another item, grouped by that number.
+function sharedNumbers<T extends { number: number }>(items: T[]): [number, T[]][] {
+  return [...new Set(items.map((item) => item.number))]
+    .map((number): [number, T[]] => [number, items.filter((item) => item.number === number)])
+    .filter(([, group]) => group.length > 1);
+}
+
+// The ADR numbers run 0001, 0002, ... with no gap, no number twice and none below 0001. A missing
+// 0001 is a gap too.
+function numberProblems(files: AdrFile[]): string[] {
+  const belowFirst = files
+    .filter((file) => file.number < 1)
+    .map((file) => `${file.name}: the number is below 0001 (numbers run contiguously from 0001)`);
+  const highest = Math.max(0, ...files.map((file) => file.number));
+  const gaps = Array.from({ length: highest }, (_, index) => index + 1)
+    .filter((number) => !files.some((file) => file.number === number))
+    .map(
+      (number) =>
+        `${padNumber(number)}: no ADR file has this number (numbers run contiguously from 0001)`,
+    );
+  const shared = sharedNumbers(files).map(
+    ([number, group]) =>
+      `${padNumber(number)}: ${group.map((file) => file.name).join(', ')} share this number`,
+  );
+
+  return [...belowFirst, ...gaps, ...shared];
+}
+
+// Each number has one row in the index, and a row links to the file with its own number.
+function rowNumberProblems(rows: IndexRow[]): string[] {
+  const shared = sharedNumbers(rows).map(
+    ([number, group]) =>
+      `${padNumber(number)}: the index has two rows with this number (${group.map((row) => row.target).join(', ')})`,
+  );
+  const mismatched = rows.flatMap((row) => {
+    const linked = adrFileNumber(row.target);
+    return linked === row.number
+      ? []
+      : [
+          `${padNumber(row.number)}: the row links to ${row.target}, whose number is ${linked === undefined ? 'missing' : padNumber(linked)}`,
+        ];
+  });
+
+  return [...shared, ...mismatched];
+}
+
 function rowOf(file: AdrFile): IndexRow {
   const { name, ...cells } = file;
   return { ...cells, target: name };
+}
+
+// An ADR file with the given number and a slug that is unique to it.
+function fileNumbered(number: number): AdrFile {
+  const prefix = padNumber(number);
+  return {
+    name: `${prefix}-decision.md`,
+    number,
+    title: `Decision ${prefix}`,
+    status: 'proposed',
+    release: '1',
+    needsConfirmation: '',
+  };
 }
 
 describe('adr index', () => {
@@ -232,6 +305,73 @@ describe('adr index', () => {
 
     const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
     expect(indexProblems(readAdrFiles(), index)).toEqual([]);
+  });
+
+  it('numbers run contiguously from 0001', () => {
+    expect(numberProblems(files)).toEqual([]);
+
+    // 0003 is missing between 0002 and 0004.
+    expect
+      .soft(numberProblems([1, 2, 4].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0003')]);
+    // The numbers start at 0002, so 0001 is missing.
+    expect
+      .soft(numberProblems([2, 3].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0001')]);
+
+    const adrFiles = readAdrFiles();
+    expect(adrFiles, 'docs/adr files').not.toHaveLength(0);
+    expect(numberProblems(adrFiles)).toEqual([]);
+  });
+
+  it('no two ADR files share a number', () => {
+    // Numbers 1, 2, 2 have no gap, so only the shared number shows.
+    const shared: AdrFile[] = [...files, { ...fileNumbered(2), name: '0002-other-split.md' }];
+
+    const problems = numberProblems(shared);
+    expect.soft(problems).toEqual([expect.stringContaining('0002-split-modules.md')]);
+    expect.soft(problems.join('\n')).toContain('0002-other-split.md');
+
+    expect(numberProblems(readAdrFiles())).toEqual([]);
+  });
+
+  it('no ADR file is numbered below 0001', () => {
+    // Numbers 0, 1, 2 have no gap above 0001, so only the file numbered 0000 shows.
+    expect
+      .soft(numberProblems([0, 1, 2].map(fileNumbered)))
+      .toEqual([expect.stringContaining('0000-decision.md')]);
+
+    expect(numberProblems(readAdrFiles())).toEqual([]);
+  });
+
+  it('the index has no two rows with one number', () => {
+    expect(rowNumberProblems(rows)).toEqual([]);
+
+    // A second row numbered 0002 that links to another file with the 0002 prefix.
+    const doubled = [...rows, { ...rowOf(fileNumbered(2)), target: '0002-other-split.md' }];
+
+    expect
+      .soft(rowNumberProblems(doubled))
+      .toEqual([expect.stringContaining('0002: the index has two rows with this number')]);
+
+    const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
+    expect(index, 'docs/adr/README.md rows').not.toHaveLength(0);
+    expect(rowNumberProblems(index)).toEqual([]);
+  });
+
+  it("each index row's number equals the number in the file name it links to", () => {
+    expect(rowNumberProblems(rows)).toEqual([]);
+
+    // The fixture has no row 0003, so this row is unique by number and only the file name is wrong.
+    const mismatched = [...rows, { ...rowOf(fileNumbered(3)), target: '0001-record-decisions.md' }];
+    const problems = rowNumberProblems(mismatched);
+
+    expect.soft(problems).toEqual([expect.stringContaining('0003')]);
+    expect.soft(problems.join('\n')).toContain('0001-record-decisions.md');
+
+    const index = parseIndexRows(readFileSync(`${adrFolder}README.md`, 'utf8'));
+    expect(index, 'docs/adr/README.md rows').not.toHaveLength(0);
+    expect(rowNumberProblems(index)).toEqual([]);
   });
 
   it('the index has no row that starts with a number and does not parse', () => {
