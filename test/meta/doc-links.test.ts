@@ -176,4 +176,39 @@ describe('doc links', () => {
     );
     expect(linkProblems(files, trackedFiles())).toEqual([]);
   });
+
+  it('no file in docs/plan, docs/adr, docs/agents or GLOSSARY.md links into the gitignored docs/research folder', () => {
+    const linking = [
+      doc(
+        'docs/plan/07-production-planning.md',
+        'See [the note](../research/note.md) and [the estimate][r].',
+        '',
+        '[r]: ../research/05-board.md#estimate',
+      ),
+      doc('docs/adr/0001-record-decisions.md', 'See [the folder](../research/).'),
+      doc('docs/agents/handoff/README.md', 'See [a note](../../research/handoff.md).'),
+      doc('GLOSSARY.md', 'See [a note](docs/research/glossary-note.md).'),
+    ];
+
+    expect(researchLinkProblems(linking)).toEqual([
+      'docs/plan/07-production-planning.md: "../research/note.md" links into docs/research',
+      'docs/plan/07-production-planning.md: "../research/05-board.md#estimate" links into docs/research',
+      'docs/adr/0001-record-decisions.md: "../research/" links into docs/research',
+      'docs/agents/handoff/README.md: "../../research/handoff.md" links into docs/research',
+      'GLOSSARY.md: "docs/research/glossary-note.md" links into docs/research',
+    ]);
+
+    const clean = [
+      doc(
+        'docs/plan/README.md',
+        'Internal research is cited as "internal research note 05", and `docs/research` is ignored.',
+        'The folder docs/research is named in plain text. A [roadmap](14-roadmap.md), a',
+        '[file that only sounds alike](../adr/research.md) and an',
+        '[external page](https://example.com/docs/research/x.md) are fine.',
+      ),
+    ];
+
+    expect(researchLinkProblems(clean)).toEqual([]);
+    expect(researchLinkProblems(readDocFiles(trackedFiles()))).toEqual([]);
+  });
 });
