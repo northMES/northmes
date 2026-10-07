@@ -116,7 +116,7 @@ const topLevelFolder =
 
 function backtickedRepoPaths(markdown: string): string[] {
   const paths = [...withoutFences(markdown).matchAll(codeSpan)]
-    .map(([, , body = '']) => body.trim())
+    .map(([, , body = '']) => body.trim().replace(/^(?:\.\/)+/, ''))
     .filter(
       (token) =>
         !/[\s*?[\]{}<>]/.test(token) &&
