@@ -23,19 +23,29 @@ interface IndexRow {
 
 const adrFolder = fileURLToPath(new URL('../../docs/adr/', import.meta.url));
 
+// The number in an ADR file name, such as 2 in 0002-split-modules.md. A name that is not an ADR file
+// name, such as a path or a file with another extension, has none.
+function adrFileNumber(name: string): number | undefined {
+  const digits = /^(\d{4})-.+\.md$/.exec(name)?.[1];
+  return digits === undefined ? undefined : Number.parseInt(digits, 10);
+}
+
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
 function readAdrFiles(): AdrFile[] {
   return readdirSync(adrFolder)
-    .filter((name) => /^\d{4}-.+\.md$/.test(name))
     .sort()
-    .map((name) => {
+    .flatMap((name) => {
+      const number = adrFileNumber(name);
+      if (number === undefined) {
+        return [];
+      }
       const text = readFileSync(`${adrFolder}${name}`, 'utf8');
       const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
       const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
       return {
         name,
-        number: Number.parseInt(name.slice(0, 4), 10),
+        number,
         title: /^# (.+)$/m.exec(body)?.[1] ?? '',
         status: String(fields.status ?? ''),
         release: String(fields.release ?? ''),
@@ -155,11 +165,11 @@ function rowNumberProblems(rows: IndexRow[]): string[] {
       `${padNumber(number)}: the index has two rows with this number (${group.map((row) => row.target).join(', ')})`,
   );
   const mismatched = rows.flatMap((row) => {
-    const fileNumber = /^(\d{4})-/.exec(row.target)?.[1];
-    return fileNumber === padNumber(row.number)
+    const linked = adrFileNumber(row.target);
+    return linked === row.number
       ? []
       : [
-          `${padNumber(row.number)}: the row links to ${row.target}, whose number is ${fileNumber ?? 'missing'}`,
+          `${padNumber(row.number)}: the row links to ${row.target}, whose number is ${linked === undefined ? 'missing' : padNumber(linked)}`,
         ];
   });
 
