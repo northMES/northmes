@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { readFileSync } from 'node:fs';
 import { describe, expect, inject, it } from 'vitest';
+import { withClient } from '../src/database.ts';
 import { query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
@@ -46,5 +47,17 @@ describe('the test database', () => {
     );
 
     expect(rows.map((row) => row.tablename)).toEqual(['harness_only', 'nm_marker']);
+  });
+});
+
+describe('a test database that is dropped before the file ends', () => {
+  const { databaseName } = useTestDatabase();
+
+  // When the clone in beforeAll fails, the database never exists and afterAll runs the same drop.
+  // That drop must not fail with its own error and hide the cause.
+  it('afterAll does not fail when the database is already gone', async () => {
+    await withClient(inject('pg'), async (client) => {
+      await client.query(`drop database ${client.escapeIdentifier(databaseName)} with (force)`);
+    });
   });
 });
