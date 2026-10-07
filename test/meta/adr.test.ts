@@ -140,9 +140,7 @@ function sharedNumbers<T extends { number: number }>(items: T[]): [number, T[]][
 function numberProblems(files: AdrFile[]): string[] {
   const belowFirst = files
     .filter((file) => file.number < 1)
-    .map(
-      (file) => `${file.name}: the number is below 0001 (numbers run contiguously from 0001)`,
-    );
+    .map((file) => `${file.name}: the number is below 0001 (numbers run contiguously from 0001)`);
   const highest = Math.max(0, ...files.map((file) => file.number));
   const gaps = Array.from({ length: highest }, (_, index) => index + 1)
     .filter((number) => !files.some((file) => file.number === number))
