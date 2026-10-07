@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * The command that starts the test Postgres server. NM_TEST_PG_TZ sets the server time zone, so the
- * time zone legs can run the same suite against another zone; unset, empty or blank, the zone is UTC
- * (Postgres refuses to boot with an empty one).
+ * The command that starts the test Postgres server. The test server trades durability for speed:
+ * fsync, synchronous_commit and full_page_writes are off, which is safe because the data lives on
+ * tmpfs and goes with the container. NM_TEST_PG_TZ sets the server time zone, so the time zone legs
+ * can run the same suite against another zone; unset, empty or blank, the zone is UTC (Postgres
+ * refuses to boot with an empty one).
  */
 export function serverArgs(env: NodeJS.ProcessEnv): string[] {
-  return ['postgres', '-c', `timezone=${env.NM_TEST_PG_TZ?.trim() || 'UTC'}`];
+  return [
+    'postgres',
+    '-c',
+    `timezone=${env.NM_TEST_PG_TZ?.trim() || 'UTC'}`,
+    '-c',
+    'fsync=off',
+    '-c',
+    'synchronous_commit=off',
+    '-c',
+    'full_page_writes=off',
+  ];
 }
