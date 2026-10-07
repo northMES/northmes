@@ -667,6 +667,20 @@ describe('adr front matter', () => {
     expect.soft(frontMatterProblems([crlfBody])).toEqual([]);
   });
 
+  it('an ADR with an empty front matter block is reported by file name', () => {
+    const empty: AdrSource = { name: '0001-empty.md', text: '---\n---\n\n# Empty\n' };
+
+    // An empty block with CRLF line endings is reported as CRLF, like any other block.
+    expect
+      .soft(frontMatterProblems([withCrlf(empty)]))
+      .toEqual([expect.stringMatching(/^0001-empty\.md: .*CRLF line endings/)]);
+
+    // An empty block with LF line endings is a block that names no field.
+    expect
+      .soft(frontMatterProblems([empty]))
+      .toEqual(Object.keys(completeFrontMatter).map((field) => `0001-empty.md: ${field} is missing`));
+  });
+
   it('an ADR whose front matter is not valid YAML is reported by file name', () => {
     const good = adrSource({}, '0002-good.md');
     const unclosed = adrSource({ status: '[accepted' });
