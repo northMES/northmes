@@ -36,17 +36,23 @@ function connectionStringFor(pg: PgConnection, databaseName: string): string {
 /**
  * Runs `run` on a client connected with `config` and closes the client afterwards. This is the one
  * place that builds a pg client. The error listener keeps a connection that the server terminates
- * from surfacing as an unhandled error in the worker.
+ * from surfacing as an unhandled error in the worker. It records the error, and when `run` fails
+ * afterwards, the recorded error is thrown, because pg only reports that the client is not queryable.
  */
 export async function withClient<Result = void>(
   config: ClientConfig,
   run: (client: Client) => Promise<Result>,
 ): Promise<Result> {
   const client = new Client(config);
-  client.on('error', () => {});
+  let connectionError: Error | undefined;
+  client.on('error', (error) => {
+    connectionError ??= error;
+  });
   await client.connect();
   try {
     return await run(client);
+  } catch (error) {
+    throw connectionError ?? error;
   } finally {
     await client.end();
   }
