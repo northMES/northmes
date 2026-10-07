@@ -291,6 +291,9 @@ describe('plan README', () => {
       'docs/adr/0004-tooling.md',
       'docs/adr/0029-drafts.md',
       'docs/adr/0099-invented.md',
+      // Tracked files that are not Markdown ADRs under docs/adr, and carry an ADR's number.
+      'docs/plan/0004-not-an-adr.md',
+      'docs/adr/0004-notes.txt',
     ]);
 
     expect(readmeDrift(readme, roadmap, adrs)).toEqual([]);
@@ -375,6 +378,28 @@ describe('plan README', () => {
         ),
         problems: [
           'M0 checklist: ADR 0004 links to docs/adr/0003-module.md, a file with another number',
+        ],
+      },
+      {
+        name: 'a checklist link to a tracked file outside docs/adr',
+        readme: change(
+          readme,
+          '[adr-0004]: ../adr/0004-tooling.md',
+          '[adr-0004]: 0004-not-an-adr.md',
+        ),
+        problems: [
+          'M0 checklist: ADR 0004 links to docs/plan/0004-not-an-adr.md, which is not a Markdown ADR under docs/adr',
+        ],
+      },
+      {
+        name: 'a checklist link to a tracked file in docs/adr that is not Markdown',
+        readme: change(
+          readme,
+          '[adr-0004]: ../adr/0004-tooling.md',
+          '[adr-0004]: ../adr/0004-notes.txt',
+        ),
+        problems: [
+          'M0 checklist: ADR 0004 links to docs/adr/0004-notes.txt, which is not a Markdown ADR under docs/adr',
         ],
       },
       {
