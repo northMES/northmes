@@ -104,6 +104,7 @@ describe('collection', () => {
         'x.int.test.ts',
         'x.ai.test.ts',
         'x.ops.test.ts',
+        'x.test-d.ts',
         'orphan.spec.ts',
         'docs/sources/spike/x.test.ts',
         'docs/sources/spike/x.int.test.ts',
@@ -133,6 +134,10 @@ describe('collection', () => {
       { file: 'x.ops.test.ts', project: 'ops' },
     ])('a file named $file lands in $project only', ({ file, project }) => {
       expect(listed.get(file)).toEqual([project]);
+    });
+
+    it('a file named x.test-d.ts lands in types only', () => {
+      expect(listed.get('x.test-d.ts')).toEqual(['types']);
     });
 
     it('files under docs/sources are never collected', () => {
