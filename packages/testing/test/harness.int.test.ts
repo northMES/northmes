@@ -153,6 +153,10 @@ describe('the global setup', () => {
           return this;
         }
 
+        withTmpFs() {
+          return this;
+        }
+
         async start() {
           // Nothing listens on port 1, so the connection that creates the template is refused.
           return {

@@ -24,10 +24,18 @@ async function createTemplate(connection: PgConnection): Promise<void> {
   });
 }
 
+/**
+ * Starts the one Postgres container of a test run from the image in infra/pg-image.json and
+ * prepares the template database that every test file clones. The data directory is a tmpfs mount:
+ * the image keeps it in /var/lib/postgresql/<major>/docker, under the image's volume at
+ * /var/lib/postgresql, so the mount covers it and the data lives in memory and goes with the
+ * container.
+ */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
   const container = await new PostgreSqlContainer(image)
     .withCommand(serverArgs(process.env))
+    .withTmpFs({ '/var/lib/postgresql': 'rw' })
     .start();
   const stop = async () => {
     await container.stop();
