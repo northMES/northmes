@@ -63,7 +63,7 @@ docs(plan): record the E02 plan and ADRs
 - [ ] No body names a private research path, a customer or a product owner value
 ```
 
-##### E02-S01-T01 repo: Land the root configuration the walking skeleton needs
+##### E02-S01-T01, #227 repo: Land the root configuration the walking skeleton needs
 
 Labels: `task`, `human`, `area: ci` (session pull request). Blocked by: E00-S07-T01 (#206), E01-S05-T02 (#214), E00-S01-T02 (#4, with its part #215), E00-S02-T02 (#194), E00-S05-T03 (#202).
 
@@ -115,9 +115,9 @@ build(repo): add the skeleton's root configuration and dependencies
 - [ ] The lockfile holds one @nestjs/core and one @nestjs/graphql resolution
 ```
 
-##### E02-S01-T02 platform: Define module manifests and derive module names in the SDK
+##### E02-S01-T02, #228 platform: Define module manifests and derive module names in the SDK
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T01.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T01 (#227).
 
 Covers: criterion 1; criterion 2 (the derived names); test `module-names.test.ts`.
 
@@ -166,9 +166,9 @@ none, internal
 - [ ] Each manifest's northmes range accepts version 0.0.0, and packages/sdk carries its MIT LICENSE
 ```
 
-##### E02-S01-T03 repo: Fail the check when an MIT package imports AGPL code
+##### E02-S01-T03, #258 repo: Fail the check when an MIT package imports AGPL code
 
-Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S01-T02.
+Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S01-T02 (#228).
 
 Covers: no story criterion; the import rule of ADRs 0003 and 0056, needed before the MIT packages grow.
 
@@ -211,9 +211,9 @@ none, internal
 - [ ] pnpm check runs the test and it passes on main
 ```
 
-##### E02-S01-T04 platform: Order the module catalog and stop on missing dependencies
+##### E02-S01-T04, #229 platform: Order the module catalog and stop on missing dependencies
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T02.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T02 (#228).
 
 Covers: criterion 4 (missing dependency, cycle, core module depending on a plugin, several problems listed together); criterion 5; tests "a missing dependency exits 1 naming both modules" and "three problems are listed as 3 problems".
 
@@ -258,9 +258,9 @@ none, internal
 - [ ] The ordered catalog starts with core and puts plugins after the in-repo modules
 ```
 
-##### E02-S01-T05 platform: Refuse reserved ids, name clashes and unmet version ranges
+##### E02-S01-T05, #259 platform: Refuse reserved ids, name clashes and unmet version ranges
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T04.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T04 (#229).
 
 Covers: criterion 2 (colliding derived names); criterion 3; criterion 4 (bad range); tests "image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0" and "module ids web, station and auth are each refused as reserved, and the message names the id".
 
@@ -303,9 +303,9 @@ none, internal
 - [ ] A range that excludes the image adds a problem naming both versions to the one BootError
 ```
 
-##### E02-S01-T06 platform: Refuse bad key prefixes and contributions to unrelated slots
+##### E02-S01-T06, #260 platform: Refuse bad key prefixes and contributions to unrelated slots
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T05.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S01-T05 (#259).
 
 Covers: criterion 4 (wrong key prefix, contribution to a slot of a module the contributor does not depend on).
 
@@ -345,9 +345,9 @@ none, internal
 - [ ] A slot contribution outside the dependsOn closure adds a problem naming the contributor and the slot
 ```
 
-##### E02-S01-T07 platform: Parse the environment with Zod schemas in the SDK config
+##### E02-S01-T07, #230 platform: Parse the environment with Zod schemas in the SDK config
 
-Labels: `task`, `human`, `area: sdk` (touches configuration). Blocked by: E02-S01-T02.
+Labels: `task`, `human`, `area: sdk` (touches configuration). Blocked by: E02-S01-T02 (#228).
 
 Covers: criterion 6 (loadEnv and serverEnvSchema); test `server-env.test.ts`.
 
@@ -386,9 +386,9 @@ none, internal
 - [ ] migrateEnvSchema and bootstrapEnvSchema import from @northmes/sdk/config and need no PORT
 ```
 
-##### E02-S01-T08 platform: Read secret files into the config secrets namespace
+##### E02-S01-T08, #231 platform: Read secret files into the config secrets namespace
 
-Labels: `task`, `human`, `area: sdk` (touches secrets handling). Blocked by: E02-S01-T07.
+Labels: `task`, `human`, `area: sdk` (touches secrets handling). Blocked by: E02-S01-T07 (#230).
 
 Covers: criterion 6 (the secrets namespace); E02-S08 criterion 2; test `secrets.test.ts`.
 
@@ -429,9 +429,9 @@ none, internal
 - [ ] No secret value reaches process.env
 ```
 
-##### E02-S01-T09 platform: Load configuration before any manifest when the server boots
+##### E02-S01-T09, #232 platform: Load configuration before any manifest when the server boots
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S01-T04, E02-S01-T08.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S01-T04 (#229), E02-S01-T08 (#231).
 
 Covers: criterion 6 (ConfigModule before every module, exit 1 before any manifest import); test `config.int.test.ts`.
 
@@ -483,13 +483,13 @@ none, internal
 
 #### E02-S02 platform: Migrate each module as its own owner role
 
-Issue: northMES/northmes#20. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s02-platform-migrate-each-module-as-its-own-owner-role). Blocked by: E02-S01.
+Issue: northMES/northmes#20. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s02-platform-migrate-each-module-as-its-own-owner-role). Blocked by: E02-S01 (#19).
 
 Notes: tasks that touch row-level security policies carry `human` anyway. The migrate tests run on fixture modules, so the story does not wait for the tracer tables of E02-S04. `northmes migrate` runs the boot sequence without listening before its first file ([ADR 0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) step 1, [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)), so each boot step a later task adds also runs before migrate applies anything; E02-S03-T05 adds the test for composition. Criterion 2 is split over E02-S02-T02 and E02-S02-T03, and criterion 3 over E02-S02-T01 and E02-S02-T05. The integration template is prepared in `apps/server/test/global-setup.ts`, which E02-S01-T01 wires into `vitest.config.ts`, so `@northmes/testing` imports no AGPL code. The `db-test` recipe comes with E02-S02-T07, and E02-S02-T03 and E02-S02-T04 add their errors to it.
 
-##### E02-S02-T01 platform: Bootstrap the database roles with UTC and DML rights only
+##### E02-S02-T01, #233 platform: Bootstrap the database roles with UTC and DML rights only
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S01-T09.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S01-T09 (#232).
 
 Covers: criterion 3 (the four roles, no TRUNCATE, timezone UTC); test `no-truncate.test.ts`.
 
@@ -538,9 +538,9 @@ none, internal
 - [ ] A fixture migration that grants TRUNCATE to nm_app fails the lint naming the file
 ```
 
-##### E02-S02-T02 platform: Apply each module's migrations as its own owner role
+##### E02-S02-T02, #234 platform: Apply each module's migrations as its own owner role
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T01.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T01 (#233).
 
 Covers: criterion 1; criterion 2 (a second run is a no-op); test "two concurrent runs apply each file once".
 
@@ -584,9 +584,9 @@ none, internal
 - [ ] A second run applies nothing, and two concurrent runs apply each file once
 ```
 
-##### E02-S02-T03 platform: Refuse changed, duplicate and unmarked migration files
+##### E02-S02-T03, #261 platform: Refuse changed, duplicate and unmarked migration files
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T07.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T07 (#237).
 
 Covers: criterion 2 (the checksum error and the duplicate timestamp prefix); test "checksum drift stops the run naming the file".
 
@@ -627,9 +627,9 @@ none, internal
 - [ ] .claude/skills/db-test/SKILL.md lists the three errors with their meaning
 ```
 
-##### E02-S02-T04 platform: Confine plugin migrations and stop boot while one is pending
+##### E02-S02-T04, #262 platform: Confine plugin migrations and stop boot while one is pending
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T03.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0006). Blocked by: E02-S02-T03 (#261).
 
 Covers: criterion 4; criterion 5; test "a plugin ALTER on core.article is refused".
 
@@ -676,9 +676,9 @@ none, internal
 - [ ] northmes migrate runs with pending files and applies them
 ```
 
-##### E02-S02-T05 platform: Generate a migration file from the table template
+##### E02-S02-T05, #235 platform: Generate a migration file from the table template
 
-Labels: `task`, `human`, `area: sdk` (touches row-level security policies). Blocked by: E02-S02-T02.
+Labels: `task`, `human`, `area: sdk` (touches row-level security policies). Blocked by: E02-S02-T02 (#234).
 
 Covers: criterion 3 (nm_app holds SELECT, INSERT, UPDATE and DELETE only); criterion 6; test `gen-migration.test.ts`.
 
@@ -723,9 +723,9 @@ none, internal
 - [ ] information_schema.role_table_grants shows nm_app with SELECT, INSERT, UPDATE and DELETE only
 ```
 
-##### E02-S02-T06 testing: Migrate the test template and write fixtures with db.command
+##### E02-S02-T06, #236 testing: Migrate the test template and write fixtures with db.command
 
-Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S02-T05.
+Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S02-T05 (#235).
 
 Covers: no story criterion alone; the migrated template, `given` factories and `db.command` that E00-S02-T01 hands to E02.
 
@@ -767,9 +767,9 @@ none, internal
 - [ ] @northmes/testing imports nothing from apps/server or the modules
 ```
 
-##### E02-S02-T07 testing: Build test apps with configForTest and createTestApp
+##### E02-S02-T07, #237 testing: Build test apps with configForTest and createTestApp
 
-Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S02-T06.
+Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S02-T06 (#236).
 
 Covers: the story's note on the `db-test` recipe; the app factory that E00-S02-T01 hands to E02.
 
@@ -818,13 +818,13 @@ none, internal
 
 #### E02-S03 platform: Compose module subgraphs behind one embedded gateway
 
-Issue: northMES/northmes#21. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s03-platform-compose-module-subgraphs-behind-one-embedded-gateway). Blocked by: E02-S01.
+Issue: northMES/northmes#21. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s03-platform-compose-module-subgraphs-behind-one-embedded-gateway). Blocked by: E02-S01 (#19).
 
 Notes: tasks E02-S03-T01 to E02-S03-T08 test with fixture modules. E02-S03-T09 prints the snapshots of the in-repo modules, so it waits for the release command (E02-S04-T07), and the story closes after that task; E02-S04 starts after E02-S03-T03. Criterion 1 is split over E02-S03-T02, T03 and T04, and criterion 3 over E02-S03-T06 and T07. The `graphql-subgraph` recipe and the first `pnpm gen` stage come with E02-S03-T09. The plugin rule of the route check arrives in E02-S04-T10.
 
-##### E02-S03-T01 platform: Declare REST controllers with ApiController and apiPath
+##### E02-S03-T01, #247 platform: Declare REST controllers with ApiController and apiPath
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S01-T09.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S01-T09 (#232).
 
 Covers: criterion 4; criterion 5; tests `api-controller.test.ts` and `api-path.test.ts`.
 
@@ -868,9 +868,9 @@ none, internal
 - [ ] A fixture call to app.setGlobalPrefix under apps fails no-global-prefix.test.ts
 ```
 
-##### E02-S03-T02 platform: Build one subgraph per module with the in-process driver
+##### E02-S03-T02, #238 platform: Build one subgraph per module with the in-process driver
 
-Labels: `task`, `human`, `area: sdk` (new shared package code). Blocked by: E02-S01-T09.
+Labels: `task`, `human`, `area: sdk` (new shared package code). Blocked by: E02-S01-T09 (#232).
 
 Covers: criterion 1 (defineSubgraph with the in-process driver).
 
@@ -915,9 +915,9 @@ none, internal
 - [ ] loaderFor makes one batched call for three keys in one request
 ```
 
-##### E02-S03-T03 platform: Serve the module subgraphs at /graphql over HTTP
+##### E02-S03-T03, #239 platform: Serve the module subgraphs at /graphql over HTTP
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T02.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T02 (#238).
 
 Covers: criterion 1 (the gateway over HTTP); criterion 8.
 
@@ -960,9 +960,9 @@ none, internal
 - [ ] The boot log carries supergraph= followed by 12 hex characters
 ```
 
-##### E02-S03-T04 platform: Serve subscriptions over graphql-ws and SSE at /graphql
+##### E02-S03-T04, #263 platform: Serve subscriptions over graphql-ws and SSE at /graphql
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T03.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T03 (#239).
 
 Covers: criterion 1 (graphql-ws and SSE through the in-process transport).
 
@@ -1004,9 +1004,9 @@ none, internal
 - [ ] A subscription sent before any HTTP request works
 ```
 
-##### E02-S03-T05 platform: Stop boot when composition breaks a NorthMES rule
+##### E02-S03-T05, #264 platform: Stop boot when composition breaks a NorthMES rule
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T03, E02-S02-T02.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T03 (#239), E02-S02-T02 (#234).
 
 Covers: criterion 2; tests `composition.test.ts` and `boot.int.test.ts`.
 
@@ -1052,9 +1052,9 @@ none, internal
 - [ ] northmes migrate with a composition error exits 1 and applies no file
 ```
 
-##### E02-S03-T06 platform: Fail boot when two subgraph roots reach one resolver module
+##### E02-S03-T06, #265 platform: Fail boot when two subgraph roots reach one resolver module
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S03-T05, E02-S02-T04.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S03-T05 (#264), E02-S02-T04 (#262).
 
 Covers: criterion 3 (two roots reaching one resolver module, and the controller owners).
 
@@ -1096,9 +1096,9 @@ none, internal
 - [ ] Every controller is assigned to exactly one module root or to the host
 ```
 
-##### E02-S03-T07 platform: Fail boot on resolvers reached through globals or sub-modules
+##### E02-S03-T07, #266 platform: Fail boot on resolvers reached through globals or sub-modules
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S03-T06.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0003). Blocked by: E02-S03-T06 (#265).
 
 Covers: criterion 3 (the other ways a resolver-bearing module becomes reachable from two roots).
 
@@ -1140,9 +1140,9 @@ none, internal
 - [ ] An API module that imports its own resolver module stops boot with its import path
 ```
 
-##### E02-S03-T08 platform: Refuse REST controllers outside the route families at boot
+##### E02-S03-T08, #267 platform: Refuse REST controllers outside the route families at boot
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T06, E02-S03-T01.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S03-T06 (#265), E02-S03-T01 (#247).
 
 Covers: criterion 6; tests `routes.int.test.ts`.
 
@@ -1186,9 +1186,9 @@ none, internal
 - [ ] A health controller at /health passes as a root route
 ```
 
-##### E02-S03-T09 platform: Print the schema snapshots without a database
+##### E02-S03-T09, #268 platform: Print the schema snapshots without a database
 
-Labels: `task`, `human`, `area: sdk` (first generated snapshot). Blocked by: E02-S03-T08, E02-S04-T07.
+Labels: `task`, `human`, `area: sdk` (first generated snapshot). Blocked by: E02-S03-T08 (#267), E02-S04-T07 (#246).
 
 Covers: criterion 7; test `print.int.test.ts`; the story's notes on the first `pnpm gen` stage and the `graphql-subgraph` recipe.
 
@@ -1234,13 +1234,13 @@ none, internal
 
 #### E02-S04 platform: Run a validatable command vetoed by a drop-in plugin
 
-Issue: northMES/northmes#22. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s04-platform-run-a-validatable-command-vetoed-by-a-drop-in-plugin). Blocked by: E02-S02-T07, E02-S03-T03. The roadmap names the stories E02-S02 and E02-S03; this story starts before E02-S03 closes, because E02-S03-T09 waits for E02-S04-T07.
+Issue: northMES/northmes#22. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s04-platform-run-a-validatable-command-vetoed-by-a-drop-in-plugin). Blocked by: E02-S02-T07 (#237), E02-S03-T03 (#239). The roadmap names the stories E02-S02 and E02-S03; this story starts before E02-S03 closes, because E02-S03-T09 waits for E02-S04-T07.
 
 Notes: criterion 1 is split over E02-S04-T02, T03, T04 and T07, criterion 2 over E02-S04-T08, T09 and T11, and criterion 6 over E02-S04-T09 and T10. E02-S04-T01 carries the tracer data path that criterion 1 needs. Commands follow [ADR 0012](../adr/0012-commands-as-the-single-write-path.md): the bus opens the scoped transaction, builds and parses the validator payload, runs the validators and then the handler, and the handler's events go into the same transaction. Tests that load a built plugin boot the built server through `bootBuilt` (E02-S01-T09), because `createTestApp` takes in-repo modules only ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). The `vertical-slice` recipe comes with E02-S04-T07. The example validator keeps no table of its own in E02, because that is open item M-41 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents).
 
-##### E02-S04-T01 platform: Run module queries in a transaction scoped to the plant
+##### E02-S04-T01, #240 platform: Run module queries in a transaction scoped to the plant
 
-Labels: `task`, `human`, `area: sdk` (touches row-level security scopes). Blocked by: E02-S02-T07, E02-S03-T03.
+Labels: `task`, `human`, `area: sdk` (touches row-level security scopes). Blocked by: E02-S02-T07 (#237), E02-S03-T03 (#239).
 
 Covers: no criterion alone; the scoped data path of criterion 1.
 
@@ -1288,9 +1288,9 @@ none, internal
 - [ ] The tracer principal takes the plant from x-northmes-plant and grants every permission
 ```
 
-##### E02-S04-T02 core: Serve articles from Postgres through the core subgraph
+##### E02-S04-T02, #241 core: Serve articles from Postgres through the core subgraph
 
-Labels: `task`, `human`, `area: core` (first module table; builds on proposed ADR 0006). Blocked by: E02-S04-T01.
+Labels: `task`, `human`, `area: core` (first module table; builds on proposed ADR 0006). Blocked by: E02-S04-T01 (#240).
 
 Covers: criterion 1 (Article at tracer depth).
 
@@ -1333,9 +1333,9 @@ none, internal
 - [ ] The core manifest's server entry is a lazy import, so the manifest still loads without Nest
 ```
 
-##### E02-S04-T03 planning: List production orders with their article names
+##### E02-S04-T03, #242 planning: List production orders with their article names
 
-Labels: `task`, `human`, `area: planning` (first planning table; builds on proposed ADR 0006). Blocked by: E02-S04-T02.
+Labels: `task`, `human`, `area: planning` (first planning table; builds on proposed ADR 0006). Blocked by: E02-S04-T02 (#241).
 
 Covers: criterion 1 (ProductionOrder at tracer depth).
 
@@ -1381,9 +1381,9 @@ none, internal
 - [ ] quantity is numeric(18,6), and status is text with a check, not a Postgres enum
 ```
 
-##### E02-S04-T04 platform: Generate a command's mutation field from its contract
+##### E02-S04-T04, #244 platform: Generate a command's mutation field from its contract
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T01.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T01 (#240).
 
 Covers: criterion 1 (a mutation that maps to a registered handler).
 
@@ -1426,9 +1426,9 @@ none, internal
 - [ ] An invalid input returns a validation error, and the fake bus is not called
 ```
 
-##### E02-S04-T05 platform: Run validators and the handler in one scoped transaction
+##### E02-S04-T05, #245 platform: Run validators and the handler in one scoped transaction
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T04.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T04 (#244).
 
 Covers: criterion 4; criterion 5; test `command-bus.test.ts`.
 
@@ -1473,9 +1473,9 @@ none, internal
 - [ ] The filter is registered once as APP_FILTER
 ```
 
-##### E02-S04-T06 platform: Fail closed on slow, throwing and misplaced validators
+##### E02-S04-T06, #269 platform: Fail closed on slow, throwing and misplaced validators
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T05.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0012). Blocked by: E02-S04-T05 (#245).
 
 Covers: criterion 3.
 
@@ -1517,9 +1517,9 @@ none, internal
 - [ ] A validator on a command not declared validatable, or from a module without dependsOn on the owner, stops boot with a named message
 ```
 
-##### E02-S04-T07 planning: Release a production order through the command bus
+##### E02-S04-T07, #246 planning: Release a production order through the command bus
 
-Labels: `task`, `human`, `area: planning` (first command of a new pattern). Blocked by: E02-S04-T03, E02-S04-T05.
+Labels: `task`, `human`, `area: planning` (first command of a new pattern). Blocked by: E02-S04-T03 (#242), E02-S04-T05 (#245).
 
 Covers: criterion 1 (planningReleaseProductionOrder maps to a registered, validatable handler); the story's note on the `vertical-slice` recipe.
 
@@ -1564,9 +1564,9 @@ none, internal
 - [ ] .claude/skills/vertical-slice/SKILL.md lists the files, commands and errors of the slice
 ```
 
-##### E02-S04-T08 platform: Build a drop-in plugin with pnpm plugin:build
+##### E02-S04-T08, #270 platform: Build a drop-in plugin with pnpm plugin:build
 
-Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T05.
+Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T05 (#245).
 
 Covers: criterion 2 (the build with Rolldown, `HOST_PROVIDED` external).
 
@@ -1606,9 +1606,9 @@ feat(platform): build drop-in plugins with pnpm plugin:build
 - [ ] plugins/example-validator/ holds the package, its dist files and its migrations
 ```
 
-##### E02-S04-T09 platform: Load plugins from plugins/ through the resolve hook
+##### E02-S04-T09, #271 platform: Load plugins from plugins/ through the resolve hook
 
-Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T08.
+Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T08 (#270).
 
 Covers: criterion 2 (the load from `plugins/`); criterion 6 (the resolve hook for a plugin in the host tree).
 
@@ -1652,9 +1652,9 @@ feat(platform): load drop-in plugins listed in northmes.config.json
 - [ ] A config version that differs from the image, and a plugin whose server part throws on import, each stop boot with a named message
 ```
 
-##### E02-S04-T10 platform: Boot plugins outside the tree and refuse plugin controllers
+##### E02-S04-T10, #272 platform: Boot plugins outside the tree and refuse plugin controllers
 
-Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T09, E02-S03-T08.
+Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T09 (#271), E02-S03-T08 (#267).
 
 Covers: criterion 6; criterion 7; tests `resolve-hook.int.test.ts` and `plugin-controller.int.test.ts`.
 
@@ -1697,9 +1697,9 @@ none, internal
 - [ ] A plugin whose Nest module reaches a controller stops boot naming the plugin id
 ```
 
-##### E02-S04-T11 platform: Veto a release with the example validator plugin
+##### E02-S04-T11, #273 platform: Veto a release with the example validator plugin
 
-Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T10, E02-S04-T07, E02-S04-T06.
+Labels: `task`, `human`, `area: sdk` (ADR 0037 has open needs-confirmation). Blocked by: E02-S04-T10 (#272), E02-S04-T07 (#246), E02-S04-T06 (#269).
 
 Covers: criterion 2 (the veto with `core.command_rejected` naming `rejectedBy`); test `validator.int.test.ts`.
 
@@ -1741,13 +1741,13 @@ none, internal
 
 #### E02-S05 web: Load the planning remote in the runtime shell
 
-Issue: northMES/northmes#23. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s05-web-load-the-planning-remote-in-the-runtime-shell). Blocked by: E02-S03-T01; E02-S05-T03 also waits for E02-S04-T07 and E02-S05-T06 for E02-S02-T07. The roadmap names the story E02-S03. The story closes after E02-S08-T02 and E02-S08-T03, which hold its spec `e2e/shell-degraded.spec.ts` and the browser check for zero CSP violations.
+Issue: northMES/northmes#23. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s05-web-load-the-planning-remote-in-the-runtime-shell). Blocked by: E02-S03-T01 (#247); E02-S05-T03 also waits for E02-S04-T07 (#246) and E02-S05-T06 for E02-S02-T07 (#237). The roadmap names the story E02-S03. The story closes after E02-S08-T02 and E02-S08-T03, which hold its spec `e2e/shell-degraded.spec.ts` and the browser check for zero CSP violations.
 
 Notes: every task runs in a session, because `handoff-demo` arrives with E02-S08-T05. Design: none (tracer screen). In E02 a disabled module is one the catalog did not load, such as a plugin that `northmes.config.json` does not list, because release 1 knows only "installed" ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). The menu is a plain list in module order; E04-S02 builds the sidebar. The placeholder itself is tested in E02-S05-T07. Criterion 4 names `@northmes/ui`, which arrives with E04-S01: `shared.mjs` leaves it out until E04-S01 adds the package and its share key together, so no remote can bundle it before then. E02-S05-T09 adds the Release button, which no S05 criterion names; E02-S06 criterion 3 and the skeleton spec need it, and it makes the shell save through a command as early as possible. Criterion 2 is split over E02-S05-T06 and T07, criterion 3 over E02-S05-T04 and T08, criterion 7 over E02-S05-T06 and E02-S08-T03, and criterion 8 over E02-S05-T01 and T08. The `web-remote` recipe comes with E02-S05-T08.
 
-##### E02-S05-T01 contracts: Declare module links with defineModuleLinks
+##### E02-S05-T01, #248 contracts: Declare module links with defineModuleLinks
 
-Labels: `task`, `human`, `area: sdk` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S03-T01.
+Labels: `task`, `human`, `area: sdk` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S03-T01 (#247).
 
 Covers: criterion 8 (defineModuleLinks); tests `define-module-links.test.ts` and `define-module-links.test-d.ts`.
 
@@ -1787,9 +1787,9 @@ none, internal
 - [ ] packages/contracts imports no router package
 ```
 
-##### E02-S05-T02 repo: Fail the check on app paths written as string literals
+##### E02-S05-T02, #249 repo: Fail the check on app paths written as string literals
 
-Labels: `task`, `human`, `area: ci` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T01.
+Labels: `task`, `human`, `area: ci` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T01 (#248).
 
 Covers: criterion 9; test `path-literals.test.ts`.
 
@@ -1827,9 +1827,9 @@ none, internal
 - [ ] An allowlist entry without a reason fails, and pnpm check runs the test
 ```
 
-##### E02-S05-T03 web: Keep shared singletons out of remote bundles
+##### E02-S05-T03, #250 web: Keep shared singletons out of remote bundles
 
-Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S04-T07.
+Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S04-T07 (#246).
 
 Covers: criterion 4 (without `@northmes/ui`, which arrives with E04-S01); tests `guards.test.ts`.
 
@@ -1875,9 +1875,9 @@ none, internal
 - [ ] shared.mjs lists the singletons of ADR 0019 except @northmes/ui, each subpath as its own key, and defineRemoteConfig gives each import false
 ```
 
-##### E02-S05-T04 web: Define web modules and the shell routes in @northmes/web-sdk
+##### E02-S05-T04, #251 web: Define web modules and the shell routes in @northmes/web-sdk
 
-Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S03-T01.
+Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S03-T01 (#247).
 
 Covers: criterion 3 (defineWebModule).
 
@@ -1919,9 +1919,9 @@ none, internal
 - [ ] Every file in packages/web-sdk carries the MIT SPDX line, and the package has its LICENSE
 ```
 
-##### E02-S05-T05 web: Create the shell's Apollo client and context in @northmes/web-sdk
+##### E02-S05-T05, #252 web: Create the shell's Apollo client and context in @northmes/web-sdk
 
-Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T04.
+Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T04 (#251).
 
 Covers: no criterion alone; the client and context that the shell (criterion 1) and the remote (criterion 3) use.
 
@@ -1962,9 +1962,9 @@ none, internal
 - [ ] useShell throws on a second context copy
 ```
 
-##### E02-S05-T06 platform: Serve the web module list and the remotes under a strict CSP
+##### E02-S05-T06, #253 platform: Serve the web module list and the remotes under a strict CSP
 
-Labels: `task`, `human`, `area: sdk` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S02-T07, E02-S03-T01.
+Labels: `task`, `human`, `area: sdk` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S02-T07 (#237), E02-S03-T01 (#247).
 
 Covers: criterion 2 (the controller); criterion 5; criterion 7 (the header; the browser check for zero violations is in E02-S08-T03); test `web-modules.int.test.ts`.
 
@@ -2010,9 +2010,9 @@ none, internal
 - [ ] Every SPA response carries the strict 'self' Content-Security-Policy header
 ```
 
-##### E02-S05-T07 web: Load remotes in the shell from the module list
+##### E02-S05-T07, #254 web: Load remotes in the shell from the module list
 
-Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T03, E02-S05-T05, E02-S05-T06.
+Labels: `task`, `human`, `area: web` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T03 (#250), E02-S05-T05 (#252), E02-S05-T06 (#253).
 
 Covers: criterion 1; criterion 2 (the shell builds the URL with `apiPath`); criterion 6.
 
@@ -2057,9 +2057,9 @@ none, internal
 - [ ] pnpm build builds apps/web with no federation build plugin
 ```
 
-##### E02-S05-T08 planning: Show production orders with article names on the board stub
+##### E02-S05-T08, #255 planning: Show production orders with article names on the board stub
 
-Labels: `task`, `human`, `area: planning` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T07, E02-S05-T02, E02-S04-T07.
+Labels: `task`, `human`, `area: planning` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T07 (#254), E02-S05-T02 (#249), E02-S04-T07 (#246).
 
 Covers: criterion 3 (the remote and its board stub); criterion 8 (planningLinks); test `routes.links.test.tsx`; the story's note on the `web-remote` recipe.
 
@@ -2104,9 +2104,9 @@ feat(planning): list production orders with their article names on the board
 - [ ] .claude/skills/web-remote/SKILL.md lists the files, the commands and each load error with its meaning
 ```
 
-##### E02-S05-T09 planning: Release a production order from the board stub
+##### E02-S05-T09, #256 planning: Release a production order from the board stub
 
-Labels: `task`, `human`, `area: planning` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T08.
+Labels: `task`, `human`, `area: planning` (runs in a session: handoff-demo arrives with E02-S08-T05). Blocked by: E02-S05-T08 (#255).
 
 Covers: no S05 criterion; the release in the browser that E02-S06 criterion 3 and the skeleton spec need. After this task the shell shows module data and saves it through a command.
 
@@ -2146,13 +2146,13 @@ feat(planning): release a production order from the board
 
 #### E02-S06 platform: Push a release to the board over a subscription
 
-Issue: northMES/northmes#24. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s06-platform-push-a-release-to-the-board-over-a-subscription). Blocked by: E02-S04, E02-S05 (its first task waits for E02-S04-T11 and E02-S05-T09).
+Issue: northMES/northmes#24. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s06-platform-push-a-release-to-the-board-over-a-subscription). Blocked by: E02-S04 (#22), E02-S05 (#23); its first task waits for E02-S04-T11 (#273) and E02-S05-T09 (#256).
 
 Notes: the release publishes `planning.production_order.released`, which is not in the release 1 event list of [04-data-and-platform.md](04-data-and-platform.md#release-1-events). `core.event`, `core.event_sequencer` and `core.inbox` carry no policies, by the working default of [ADR 0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md); their allowlist entries arrive with the catalog lint (E05-S04). pg-boss jobs wait for E05-S09. Criterion 1 is split over E02-S06-T01 and E02-S06-T02, and criterion 4 over E02-S06-T03 and T04. Criterion 3 is proved in the browser by `e2e/skeleton.spec.ts` (E02-S08-T03); in E02-S06-T04 a person checks it with `pnpm dev`.
 
-##### E02-S06-T01 platform: Write command events in the command's transaction
+##### E02-S06-T01, #274 platform: Write command events in the command's transaction
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S04-T11, E02-S05-T09.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S04-T11 (#273), E02-S05-T09 (#256).
 
 Covers: criterion 1 (the release writes its event in its transaction).
 
@@ -2194,9 +2194,9 @@ none, internal
 - [ ] A new event's position is null until a sequencer assigns it
 ```
 
-##### E02-S06-T02 platform: Sequence events in commit order and notify once per batch
+##### E02-S06-T02, #275 platform: Sequence events in commit order and notify once per batch
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S06-T01.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S06-T01 (#274).
 
 Covers: criterion 1 (the sequencer); test `sequencer.int.test.ts`.
 
@@ -2238,9 +2238,9 @@ none, internal
 - [ ] Role api runs no sequencer
 ```
 
-##### E02-S06-T03 platform: Tail core.event and feed planningBoardChanged
+##### E02-S06-T03, #276 platform: Tail core.event and feed planningBoardChanged
 
-Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S06-T02, E02-S03-T04, E02-S03-T09.
+Labels: `task`, `human`, `area: sdk` (builds on proposed ADR 0014). Blocked by: E02-S06-T02 (#275), E02-S03-T04 (#263), E02-S03-T09 (#268).
 
 Covers: criterion 2; criterion 4 (the message carries ids only); test `board-changed.int.test.ts`.
 
@@ -2285,9 +2285,9 @@ none, internal
 - [ ] A process started after an event does not replay it
 ```
 
-##### E02-S06-T04 planning: Update the board stub live when an order is released
+##### E02-S06-T04, #277 planning: Update the board stub live when an order is released
 
-Labels: `task`, `human`, `area: planning` (builds on proposed ADR 0020). Blocked by: E02-S06-T03.
+Labels: `task`, `human`, `area: planning` (builds on proposed ADR 0020). Blocked by: E02-S06-T03 (#276).
 
 Covers: criterion 3; criterion 4 (the client refetches).
 
@@ -2327,13 +2327,13 @@ feat(planning): update the board live when an order is released
 
 #### E02-S07 platform: Shut down cleanly and report the supergraph hash
 
-Issue: northMES/northmes#25. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s07-platform-shut-down-cleanly-and-report-the-supergraph-hash). Blocked by: E02-S06.
+Issue: northMES/northmes#25. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s07-platform-shut-down-cleanly-and-report-the-supergraph-hash). Blocked by: E02-S06 (#24).
 
 Notes: pg-boss `stop()` (E05-S09), the schema compatibility number (E18-S03) and the audit row of the 1.5 s mutation (E05-S02) are not part of E02. The `/health/ready` check that [ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) puts in `dev-up.int.test.ts` lands in E02-S07-T01, because E02-S08-T01 runs before this story.
 
-##### E02-S07-T01 platform: Report liveness and readiness with the supergraph hash
+##### E02-S07-T01, #278 platform: Report liveness and readiness with the supergraph hash
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S06-T04, E02-S08-T01.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S06-T04 (#277), E02-S08-T01 (#243).
 
 Covers: criterion 4.
 
@@ -2376,9 +2376,9 @@ feat(platform): report liveness and readiness with the supergraph hash
 - [ ] On a stack started by the stack script, /health/ready returns 200
 ```
 
-##### E02-S07-T02 platform: Shut down cleanly on SIGTERM and finish in-flight requests
+##### E02-S07-T02, #279 platform: Shut down cleanly on SIGTERM and finish in-flight requests
 
-Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S07-T01.
+Labels: `task`, `human`, `area: sdk` (first task of a new pattern). Blocked by: E02-S07-T01 (#278).
 
 Covers: criteria 1, 2 and 3; tests `shutdown.int.test.ts`.
 
@@ -2424,13 +2424,13 @@ feat(platform): finish in-flight requests and exit cleanly on SIGTERM
 
 #### E02-S08 platform: Start the stack with one script and gate on the skeleton spec
 
-Issue: northMES/northmes#26. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s08-platform-start-the-stack-with-one-script-and-gate-on-the-skeleton-spec). Blocked by: E02-S07 for E02-S08-T02 to T04 and T06. E02-S08-T01 waits only for E02-S04-T03, and E02-S08-T05 for E02-S08-T01 and E02-S05-T09, so a person can try the app by hand at the stop point; the roadmap blocks the whole story on E02-S07.
+Issue: northMES/northmes#26. Statement, criteria and tests: [14-roadmap.md](14-roadmap.md#e02-s08-platform-start-the-stack-with-one-script-and-gate-on-the-skeleton-spec). Blocked by: E02-S07 (#25) for E02-S08-T02 to T04 and T06. E02-S08-T01 waits only for E02-S04-T03, and E02-S08-T05 for E02-S08-T01 and E02-S05-T09, so a person can try the app by hand at the stop point; the roadmap blocks the whole story on E02-S07.
 
 Notes: criterion 2 lands in E02-S01-T08. Criterion 1 in the roadmap names the tracer seed of E02-S08-T01: fictional articles and production orders at one company and plant scope id, with no planner and no operator. The planner and the operator, with dev-only credentials in the seed package, need Better Auth (E05-S05), whose tests sign in "the seeded planner"; the E05-S05 task "Seed a planner and an operator with dev-only credentials" adds them to the seed. `playwright.config.ts` comes from E01-S04-T01, and E02-S08-T02 adds the e2e and skeleton projects to it. From M1, `e2e/skeleton.spec.ts` and the resolve-hook test become required in `ci / gate`, which is a ruleset change outside these tasks. E02-S08-T06 is the epic's end docs task.
 
-##### E02-S08-T01 platform: Start Postgres, migrate and seed with one stack script
+##### E02-S08-T01, #243 platform: Start Postgres, migrate and seed with one stack script
 
-Labels: `task`, `human`, `area: sdk` (touches secrets handling). Blocked by: E02-S04-T03.
+Labels: `task`, `human`, `area: sdk` (touches secrets handling). Blocked by: E02-S04-T03 (#242).
 
 Covers: criterion 1; criterion 3; test `scripts/stack/config.test.ts`.
 
@@ -2474,9 +2474,9 @@ none, internal
 - [ ] A port in use stops boot with a message naming PORT
 ```
 
-##### E02-S08-T02 testing: Run Playwright specs on the built all process
+##### E02-S08-T02, #280 testing: Run Playwright specs on the built all process
 
-Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S08-T01, E02-S07-T02, E01-S04-T01.
+Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S08-T01 (#243), E02-S07-T02 (#279), E01-S04-T01.
 
 Covers: E02-S05 test `e2e/shell-degraded.spec.ts`; the Playwright harness and the skeleton project criterion 5 runs on.
 
@@ -2517,9 +2517,9 @@ none, internal
 - [ ] With the planning remote's files removed, the shell shows the placeholder route and "(unavailable)" in the menu
 ```
 
-##### E02-S08-T03 repo: Gate on the skeleton spec in ci / e2e
+##### E02-S08-T03, #281 repo: Gate on the skeleton spec in ci / e2e
 
-Labels: `task`, `human`, `area: ci` (changes CI workflows). Blocked by: E02-S08-T02, E00-S04-T01 (#196).
+Labels: `task`, `human`, `area: ci` (changes CI workflows). Blocked by: E02-S08-T02 (#280), E00-S04-T01 (#196).
 
 Covers: criterion 5; E02-S05 criterion 7 (zero violations in the browser); tests `e2e/skeleton.spec.ts`.
 
@@ -2562,9 +2562,9 @@ ci(repo): run the walking skeleton spec in ci / e2e
 - [ ] ci / e2e runs the spec on every pull request
 ```
 
-##### E02-S08-T04 repo: Run integration tests in a fresh worktree in CI
+##### E02-S08-T04, #282 repo: Run integration tests in a fresh worktree in CI
 
-Labels: `task`, `human`, `area: ci` (changes CI workflows). Blocked by: E02-S08-T03.
+Labels: `task`, `human`, `area: ci` (changes CI workflows). Blocked by: E02-S08-T03 (#281).
 
 Covers: criterion 6.
 
@@ -2601,9 +2601,9 @@ ci(repo): run the integration tests in a fresh worktree
 - [ ] workflows.test.ts fails when a build step is added to the job
 ```
 
-##### E02-S08-T05 repo: Run the app with pnpm dev and the handoff-demo launch entry
+##### E02-S08-T05, #257 repo: Run the app with pnpm dev and the handoff-demo launch entry
 
-Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S08-T01, E02-S05-T09.
+Labels: `task`, `human`, `area: ci` (first task of a new pattern). Blocked by: E02-S08-T01 (#243), E02-S05-T09 (#256).
 
 Covers: criterion 4. After this task a person can try the app by hand: this is the stop point.
 
@@ -2644,9 +2644,9 @@ feat(repo): start the app with pnpm dev
 - [ ] Through handoff-demo the board lists the seeded orders and a release changes a row
 ```
 
-##### E02-S08-T06 docs: Update the guides and ADR statuses after the walking skeleton
+##### E02-S08-T06, #283 docs: Update the guides and ADR statuses after the walking skeleton
 
-Labels: `task`, `human`, `area: docs` (the epic's end docs task, run alone). Blocked by: E02-S08-T03, E02-S08-T04, E02-S08-T05, E02-S01-T03, E02-S01-T06, E02-S03-T07.
+Labels: `task`, `human`, `area: docs` (the epic's end docs task, run alone). Blocked by: E02-S08-T03 (#281), E02-S08-T04 (#282), E02-S08-T05 (#257), E02-S01-T03 (#258), E02-S01-T06 (#260), E02-S03-T07 (#266).
 
 Covers: the epic's definition of done (shared docs, ADR statuses, issue numbers in this file).
 
