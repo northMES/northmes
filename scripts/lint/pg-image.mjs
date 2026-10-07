@@ -12,7 +12,8 @@ const configuredImage = JSON.parse(
   readFileSync(new URL('../../infra/pg-image.json', import.meta.url), 'utf8'),
 ).image;
 
-const fromPattern = /^FROM\s+(\S+)\s*$/;
+// FROM [--flag=value ...] image [AS name], with the instruction and AS in any case.
+const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*$/i;
 
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
@@ -44,7 +45,7 @@ export function scan(files) {
       continue;
     }
     text.split('\n').forEach((content, index) => {
-      const reference = fromPattern.exec(content)?.[1];
+      const reference = fromPattern.exec(content)?.groups?.image;
       if (reference && isPostgres(reference) && reference !== configuredImage) {
         findings.push({ path, line: index + 1, reference });
       }
