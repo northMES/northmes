@@ -98,30 +98,28 @@ describe('collection', () => {
   });
 
   describe('in a synthetic tree', () => {
+    const written = [
+      'x.test.ts',
+      'x.int.test.ts',
+      'x.ai.test.ts',
+      'x.ops.test.ts',
+      'x.test-d.ts',
+      'orphan.spec.ts',
+      'e2e/x.spec.ts',
+      'docs/sources/spike/x.test.ts',
+      'docs/sources/spike/x.int.test.ts',
+      'docs/sources/spike/x.ai.test.ts',
+      'docs/sources/spike/x.ops.test.ts',
+      'docs/sources/spike/x.test-d.ts',
+    ];
     let directory: string;
     let listed: Map<string, string[]>;
 
-    function write(path: string) {
-      mkdirSync(dirname(join(directory, path)), { recursive: true });
-      writeFileSync(join(directory, path), 'export {};\n');
-    }
-
     beforeAll(() => {
       directory = realpathSync(mkdtempSync(join(tmpdir(), 'collection-')));
-      for (const path of [
-        'x.test.ts',
-        'x.int.test.ts',
-        'x.ai.test.ts',
-        'x.ops.test.ts',
-        'x.test-d.ts',
-        'orphan.spec.ts',
-        'docs/sources/spike/x.test.ts',
-        'docs/sources/spike/x.int.test.ts',
-        'docs/sources/spike/x.ai.test.ts',
-        'docs/sources/spike/x.ops.test.ts',
-        'docs/sources/spike/x.test-d.ts',
-      ]) {
-        write(path);
+      for (const path of written) {
+        mkdirSync(dirname(join(directory, path)), { recursive: true });
+        writeFileSync(join(directory, path), 'export {};\n');
       }
       listed = collected(directory);
     }, 60_000);
@@ -171,6 +169,13 @@ describe('collection', () => {
 
       expect(paths, 'the tree has collected files').toContain('x.test.ts');
       expect(paths.filter((path) => path.startsWith('docs/sources/'))).toEqual([]);
+    });
+
+    it('a Playwright spec under e2e lands in no project and is not reported as unmatched', () => {
+      expect(listed.has('e2e/x.spec.ts')).toBe(false);
+      expect(misfiled(written.filter(isCollectable), listed).map(({ path }) => path)).not.toContain(
+        'e2e/x.spec.ts',
+      );
     });
 
     it('a test file that matches no project is reported', () => {
