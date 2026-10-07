@@ -79,16 +79,19 @@ const copiedCells = [
 
 function indexProblems(files: AdrFile[], rows: IndexRow[]): string[] {
   return files.flatMap((file) => {
+    const unindexed = rows.some((row) => row.target === file.name)
+      ? []
+      : [`${file.name}: no row in the index links to this file`];
     const row = rows.find((candidate) => candidate.number === file.number);
-    if (!row) {
-      return [];
-    }
-    return copiedCells
-      .filter(([, key]) => row[key] !== file[key])
-      .map(
-        ([cell, key]) =>
-          `${file.name.slice(0, 4)}: ${cell} is "${row[key]}" in the index and "${file[key]}" in the file`,
-      );
+    const drifted = row
+      ? copiedCells
+          .filter(([, key]) => row[key] !== file[key])
+          .map(
+            ([cell, key]) =>
+              `${file.name.slice(0, 4)}: ${cell} is "${row[key]}" in the index and "${file[key]}" in the file`,
+          )
+      : [];
+    return [...unindexed, ...drifted];
   });
 }
 
