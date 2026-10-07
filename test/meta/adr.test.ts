@@ -12,6 +12,11 @@ interface AdrFile {
   needsConfirmation: string;
 }
 
+interface AdrSource {
+  name: string;
+  text: string;
+}
+
 interface IndexRow {
   number: number;
   title: string;
@@ -52,6 +57,14 @@ function readAdrFiles(): AdrFile[] {
         needsConfirmation: String(fields['needs-confirmation'] ?? ''),
       };
     });
+}
+
+// The raw text of each ADR file, for the checks that read the front matter themselves.
+function readAdrSources(): AdrSource[] {
+  return readdirSync(adrFolder)
+    .sort()
+    .filter((name) => adrFileNumber(name) !== undefined)
+    .map((name) => ({ name, text: readFileSync(`${adrFolder}${name}`, 'utf8') }));
 }
 
 // An index row is `| 0001 | [Title](0001-file.md) | status | release | needs confirmation |`.
@@ -172,6 +185,28 @@ function rowNumberProblems(rows: IndexRow[]): string[] {
   });
 
   return [...shared, ...mismatched];
+}
+
+// The fields that every ADR names in its front matter.
+const frontMatterFields = [
+  'status',
+  'date',
+  'decision-makers',
+  'consulted',
+  'informed',
+  'release',
+  'needs-confirmation',
+] as const;
+
+// Each ADR names every front matter field.
+function frontMatterProblems(sources: AdrSource[]): string[] {
+  return sources.flatMap(({ name, text }) => {
+    const frontMatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
+    const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
+    return frontMatterFields
+      .filter((field) => fields[field] === undefined || fields[field] === null)
+      .map((field) => `${name}: ${field} is missing`);
+  });
 }
 
 function rowOf(file: AdrFile): IndexRow {
