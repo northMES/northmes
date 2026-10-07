@@ -20,6 +20,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "happy-dom": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
