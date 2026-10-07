@@ -191,6 +191,21 @@ function pathProblems(
   );
 }
 
+const taskId = /^E\d{2}-S\d{2}(?:-T\d{2})?$/;
+
+function plannedPathProblems(planned: PlannedPath[], planFiles: MarkdownFile[]): string[] {
+  return planned.flatMap(({ path, task }) => {
+    if (task === '') {
+      return [`${path}: names no task`];
+    }
+    if (!taskId.test(task)) {
+      return [`${path}: task "${task}" is not of the form E00-S01 or E00-S01-T02`];
+    }
+    const defined = planFiles.some((file) => new RegExp(`\\b${task}\\b`).test(file.content));
+    return defined ? [] : [`${path}: task "${task}" appears in no docs/plan file`];
+  });
+}
+
 function doc(path: string, ...lines: string[]): MarkdownFile {
   return { path, content: `${lines.join('\n')}\n` };
 }
@@ -373,8 +388,8 @@ describe('doc links', () => {
       { path: 'an-epic.md', task: 'E19' },
       { path: 'prose.md', task: 'the docs epic' },
       { path: 'unknown-story.md', task: 'E99-S01' },
-      // The plan has E00-S01-T02, and a longer number is another task.
-      { path: 'unknown-task.md', task: 'E00-S01-T020' },
+      // The plan has E00-S01-T02 but not this task.
+      { path: 'unknown-task.md', task: 'E00-S01-T09' },
     ];
 
     expect(plannedPathProblems(defined, plan)).toEqual([]);
@@ -383,7 +398,7 @@ describe('doc links', () => {
       'an-epic.md: task "E19" is not of the form E00-S01 or E00-S01-T02',
       'prose.md: task "the docs epic" is not of the form E00-S01 or E00-S01-T02',
       'unknown-story.md: task "E99-S01" appears in no docs/plan file',
-      'unknown-task.md: task "E00-S01-T020" appears in no docs/plan file',
+      'unknown-task.md: task "E00-S01-T09" appears in no docs/plan file',
     ]);
 
     const planFiles = readDocFiles(trackedFiles(), ['docs/plan/*.md']);
