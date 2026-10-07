@@ -14,6 +14,18 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 // The documents that must stay self-contained, because run agents read only tracked files.
 const documentGlobs = ['docs/plan/*.md', 'docs/adr/*.md', 'docs/agents/**/*.md', 'GLOSSARY.md'];
 
+// The files that tell an agent where things are. They may name a path that a later task creates.
+const agentFileGlobs = ['AGENTS.md', 'CLAUDE.md', 'docs/agents/**/*.md'];
+
+interface PlannedPath {
+  path: string;
+  // The plan id of the task that creates the path, such as E02-S08 or E00-S01-T02.
+  task: string;
+}
+
+// Paths that the agent files name before they exist. When a task adds one, the entry goes.
+const plannedPaths: PlannedPath[] = [];
+
 // `git ls-files`, not the file system: a link to a file that is not committed resolves here and
 // breaks for everyone else.
 function trackedFiles(): Set<string> {
@@ -269,5 +281,41 @@ describe('doc links', () => {
       'docs/plan',
       'scripts/gen.mjs',
     ]);
+  });
+
+  it('every backticked repository path in AGENTS.md, CLAUDE.md and docs/agents exists or is on the planned-paths list', () => {
+    const planned: PlannedPath[] = [{ path: 'apps/docs/reference', task: 'E19-S02' }];
+    const named = doc(
+      'docs/agents/domain.md',
+      'Tracked: `GLOSSARY.md` and `docs/plan/README.md`. A folder with tracked files: `docs/adr`.',
+      'Planned: `apps/docs/reference` and `apps/docs/reference/index.md`, which the same task creates.',
+    );
+    const typo = doc(
+      'AGENTS.md',
+      'Wrong: `docs/plan/READNE.md`, a `scripts/missing.mjs` and a `packages/sdk` that nobody planned.',
+      'Not paths: `pnpm check` and `schema/*.graphql`.',
+      '',
+      '```sh',
+      'cat `docs/plan/in-a-fence.md`',
+      '```',
+    );
+
+    expect(pathProblems([named], tracked, planned)).toEqual([]);
+    expect(pathProblems([typo], tracked, planned)).toEqual([
+      'AGENTS.md: `docs/plan/READNE.md` is not in the repository and not on the planned-paths list',
+      'AGENTS.md: `scripts/missing.mjs` is not in the repository and not on the planned-paths list',
+      'AGENTS.md: `packages/sdk` is not in the repository and not on the planned-paths list',
+    ]);
+    // A path stops being planned when the list drops it: the same file now reports it.
+    expect(pathProblems([named], tracked, [])).toEqual([
+      'docs/agents/domain.md: `apps/docs/reference` is not in the repository and not on the planned-paths list',
+      'docs/agents/domain.md: `apps/docs/reference/index.md` is not in the repository and not on the planned-paths list',
+    ]);
+
+    const agentFiles = readDocFiles(trackedFiles(), agentFileGlobs);
+    expect(agentFiles.map((file) => file.path)).toEqual(
+      expect.arrayContaining(['AGENTS.md', 'CLAUDE.md', 'docs/agents/domain.md']),
+    );
+    expect(pathProblems(agentFiles, trackedFiles(), plannedPaths)).toEqual([]);
   });
 });
