@@ -18,4 +18,12 @@ describe('gates', () => {
   it('test:handoff runs pnpm check', () => {
     expect(rootScripts['test:handoff']).toBe('pnpm check');
   });
+
+  it('the other root scripts exist', () => {
+    expect(rootScripts.gen).toBe('node scripts/gen.mjs');
+    expect(rootScripts.test).toBe('vitest run');
+    expect(rootScripts['test:unit']).toBe('vitest run --project unit');
+    expect(rootScripts['test:int']).toBe('vitest run --project integration');
+    expect(rootScripts['test:tz']).toBe('vitest run --project tz');
+  });
 });
