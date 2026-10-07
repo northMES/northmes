@@ -63,7 +63,8 @@ function withoutCode(markdown: string): string {
 
 const inlineLink =
   /\[(?:[^\]\\]|\\.)*\]\(\s*(<[^>\n]*>|(?:[^\s()]|\([^\s()]*\))*)(?:\s+(?:"[^"]*"|'[^']*'))?\s*\)/g;
-const linkDefinition = /^ {0,3}\[[^\]\n]+\]:[ \t]*(<[^>\n]*>|\S+)/gm;
+// A label that starts with `^` defines a footnote, whose text is not a target.
+const linkDefinition = /^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*(<[^>\n]*>|\S+)/gm;
 
 // The targets of inline links, images and reference definitions, in that order.
 function linkTargets(markdown: string): string[] {
