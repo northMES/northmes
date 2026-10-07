@@ -26,7 +26,7 @@ Option B, side sheet, was not chosen:
 - Long forms such as production orders and routings drop to one column in the 560 px sheet.
 - The reason sits behind "Add a reason" beside Save.
 - The docked assistant cannot be used while the modal sheet is open.
-- Row buttons that appear on hover must also appear on focus and on touch (WCAG 1.4.13), and three buttons per row add Tab stops.
+- Row buttons that appear on hover must also appear on focus (WCAG 2.1.1, keyboard) and be reachable on touch screens, which have no hover (a design requirement of its own), and three buttons per row add Tab stops.
 
 B was the strongest option on the steps to a saved one-field edit and on filter counts in view.
 
