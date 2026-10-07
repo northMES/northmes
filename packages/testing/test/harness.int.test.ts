@@ -68,6 +68,38 @@ describe('a project without the global setup', () => {
   });
 });
 
+describe('the global setup', () => {
+  afterEach(() => {
+    vi.doUnmock('@testcontainers/postgresql');
+  });
+
+  // Vitest only runs the teardown that setup returns, so a setup that rejects must stop the container itself.
+  it('stops the container when preparing the template fails', async () => {
+    const stop = vi.fn(async () => {});
+    vi.doMock('@testcontainers/postgresql', () => ({
+      PostgreSqlContainer: class {
+        async start() {
+          // Nothing listens on port 1, so the connection that creates the template is refused.
+          return {
+            getHost: () => '127.0.0.1',
+            getPort: () => 1,
+            getUsername: () => 'postgres',
+            getPassword: () => 'postgres',
+            getDatabase: () => 'postgres',
+            stop,
+          };
+        }
+      },
+    }));
+    const { default: setup } = await import('../src/global-setup.ts');
+    const project = { provide: vi.fn() } as unknown as Parameters<typeof setup>[0];
+
+    await expect(setup(project)).rejects.toThrow();
+
+    expect(stop).toHaveBeenCalledOnce();
+  });
+});
+
 describe('a test database that is dropped before the file ends', () => {
   const { databaseName } = useTestDatabase();
 
