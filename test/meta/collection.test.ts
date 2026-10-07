@@ -1,5 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,11 +40,11 @@ function environment(): Record<string, string> {
 }
 
 // The files `vitest list` collects under `directory` with the repository's config, by path relative
-// to `directory`, each with the projects that collect it.
-function collected(directory: string): Map<string, string[]> {
+// to `directory`, each with the projects that collect it. `flags` narrow the run, as `--project` does.
+function collected(directory: string, flags: string[] = []): Map<string, string[]> {
   const result = spawnSync(
     process.execPath,
-    [vitestBin, 'list', '--filesOnly', '--json', '--config', config, '--root', directory],
+    [vitestBin, 'list', '--filesOnly', '--json', '--config', config, '--root', directory, ...flags],
     { cwd: root, encoding: 'utf8', env: environment(), maxBuffer: 64 * 1024 * 1024 },
   );
   expect(result.status, result.stderr).toBe(0);
@@ -59,6 +66,15 @@ function tracked(): string[] {
   });
   expect(result.status, result.stderr).toBe(0);
   return result.stdout.split('\0').filter(Boolean);
+}
+
+// The projects that the vitest command in the root `check` script names with `--project`.
+function checkProjects(): string[] {
+  const { scripts } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  const vitest = scripts.check?.split(' && ').find((command) => command.startsWith('vitest run'));
+  return [...(vitest ?? '').matchAll(/--project[= ](\S+)/g)].map((match) => match[1] ?? '');
 }
 
 // A test file that some project is meant to collect: not under node_modules, dist or docs/sources.
@@ -139,6 +155,23 @@ describe('collection', () => {
     it('a file named x.test-d.ts lands in types only', () => {
       expect(listed.get('x.test-d.ts')).toEqual(['types']);
     });
+
+    it('pnpm check does not run a file named x.ai.test.ts or x.ops.test.ts', () => {
+      const projects = checkProjects();
+      const run = collected(
+        directory,
+        projects.flatMap((project) => ['--project', project]),
+      );
+
+      expect(projects).toEqual(expect.arrayContaining(['unit', 'integration', 'types']));
+      expect(projects).not.toContain('ai');
+      expect(projects).not.toContain('ops');
+      expect(run.get('x.test.ts')).toEqual(['unit']);
+      expect(run.get('x.int.test.ts')).toEqual(['integration']);
+      expect(run.get('x.test-d.ts')).toEqual(['types']);
+      expect(run.has('x.ai.test.ts')).toBe(false);
+      expect(run.has('x.ops.test.ts')).toBe(false);
+    }, 60_000);
 
     it('files under docs/sources are never collected', () => {
       const paths = [...listed.keys()];
