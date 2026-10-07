@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { nextNumber } from '../../scripts/adr/next-number.mjs';
 
 interface AdrFile {
   name: string;
@@ -537,6 +538,41 @@ describe('adr index', () => {
       .toEqual([expect.stringContaining('0002'), expect.stringContaining('0003')]);
 
     expect(malformedRowProblems(readFileSync(`${adrFolder}README.md`, 'utf8'))).toEqual([]);
+  });
+});
+
+// A markdown index with the table header, one row per number in the given order, and the given
+// lines after the table.
+function indexMarkdown(numbers: number[], after: string[] = []): string {
+  const header = [
+    '| Number | Title | Status | Release | Needs confirmation |',
+    '|---|---|---|---|---|',
+  ];
+  const rows = numbers.map((number) => {
+    const row = rowOf(fileNumbered(number));
+    return `| ${padNumber(row.number)} | [${row.title}](${row.target}) | ${row.status} | ${row.release} | |`;
+  });
+  return [...header, ...rows, '', ...after].join('\n');
+}
+
+describe('adr numbering script', () => {
+  it('nextNumber returns one more than the highest indexed number', () => {
+    expect.soft(nextNumber(indexMarkdown([1, 2, 7]))).toBe(8);
+    // The highest number is not the last row.
+    expect.soft(nextNumber(indexMarkdown([7, 1, 2]))).toBe(8);
+    // An index with no rows starts at 0001.
+    expect.soft(nextNumber(indexMarkdown([]))).toBe(1);
+    // The Next free number line and other prose name numbers, but they are not rows.
+    expect
+      .soft(
+        nextNumber(
+          indexMarkdown(
+            [1, 2],
+            ['Next free number: 0099.', 'Numbers such as 0050 and 0060 are examples.'],
+          ),
+        ),
+      )
+      .toBe(3);
   });
 });
 
