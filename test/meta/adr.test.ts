@@ -42,6 +42,18 @@ function splitFrontMatter(text: string): { fields: Record<string, unknown>; body
   return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
 }
 
+type FrontMatter = { fields: Record<string, unknown>; body: string } | { problem: string };
+
+// The fields of an ADR file and the text after them, or the problem that makes the front matter
+// unreadable. Only the front matter block has to be LF: a CRLF body is fine.
+function parseFrontMatter(text: string): FrontMatter {
+  const block = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(text)?.[0] ?? '';
+  if (block.includes('\r')) {
+    return { problem: 'the front matter has CRLF line endings, expected LF' };
+  }
+  return splitFrontMatter(text);
+}
+
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
 function readAdrFiles(): AdrFile[] {
@@ -257,7 +269,11 @@ const maintainer = 'Krister Johansson';
 // names the maintainer as its decision-maker.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
-    const { fields } = splitFrontMatter(text);
+    const parsed = parseFrontMatter(text);
+    if ('problem' in parsed) {
+      return [`${name}: ${parsed.problem}`];
+    }
+    const { fields } = parsed;
     return frontMatterFields.flatMap((field) => {
       const value = fields[field];
       if (isMissing(field, value)) {
