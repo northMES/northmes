@@ -35,33 +35,47 @@ function adrFileNumber(name: string): number | undefined {
   return digits === undefined ? undefined : Number.parseInt(digits, 10);
 }
 
-// The parsed front matter fields of an ADR file and the text after them. A file with no front matter
-// block has no fields.
-function splitFrontMatter(text: string): { fields: Record<string, unknown>; body: string } {
-  const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
-  return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
+type FrontMatter = { fields: Record<string, unknown>; body: string } | { problem: string };
+
+// The fields of an ADR file and the text after them, or the problem that makes the front matter
+// unreadable. A file with no front matter block has no fields. Only the front matter block has to be
+// LF: a CRLF body is fine. The block may be empty, so its closing line can follow the opening one.
+function parseFrontMatter(text: string): FrontMatter {
+  const [, block = '', frontMatter = '', body = ''] =
+    /^(---\r?\n(?:---\r?\n|([\s\S]*?)\r?\n---\r?\n))([\s\S]*)$/.exec(text) ?? [];
+  if (block.includes('\r')) {
+    return { problem: 'the front matter has CRLF line endings, expected LF' };
+  }
+  try {
+    return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { problem: `the front matter is not valid YAML: ${message}` };
+  }
 }
 
 // The test helpers read the same facts a person copies into the index: the first heading and the
 // front matter of each ADR file.
-function readAdrFiles(): AdrFile[] {
-  return readdirSync(adrFolder)
-    .sort()
-    .flatMap((name) => {
-      const number = adrFileNumber(name);
-      if (number === undefined) {
-        return [];
-      }
-      const { fields, body } = splitFrontMatter(readFileSync(`${adrFolder}${name}`, 'utf8'));
-      return {
-        name,
-        number,
-        title: /^# (.+)$/m.exec(body)?.[1] ?? '',
-        status: String(fields.status ?? ''),
-        release: String(fields.release ?? ''),
-        needsConfirmation: String(fields['needs-confirmation'] ?? ''),
-      };
-    });
+function readAdrFiles(sources: AdrSource[] = readAdrSources()): AdrFile[] {
+  return sources.flatMap(({ name, text }) => {
+    const number = adrFileNumber(name);
+    if (number === undefined) {
+      return [];
+    }
+    // A file with unreadable front matter has no fields, so the index tests still run and
+    // frontMatterProblems reports the file.
+    const parsed = parseFrontMatter(text);
+    const { fields, body } =
+      'problem' in parsed ? { fields: {} as Record<string, unknown>, body: text } : parsed;
+    return {
+      name,
+      number,
+      title: /^# (.+)$/m.exec(body)?.[1] ?? '',
+      status: String(fields.status ?? ''),
+      release: String(fields.release ?? ''),
+      needsConfirmation: String(fields['needs-confirmation'] ?? ''),
+    };
+  });
 }
 
 // The raw text of each ADR file, for the checks that read the front matter themselves.
@@ -257,7 +271,11 @@ const maintainer = 'Krister Johansson';
 // names the maintainer as its decision-maker.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
-    const { fields } = splitFrontMatter(text);
+    const parsed = parseFrontMatter(text);
+    if ('problem' in parsed) {
+      return [`${name}: ${parsed.problem}`];
+    }
+    const { fields } = parsed;
     return frontMatterFields.flatMap((field) => {
       const value = fields[field];
       if (isMissing(field, value)) {
@@ -314,6 +332,11 @@ function adrSource(
     yaml === undefined ? [] : [`${field}: ${yaml}`],
   );
   return { name, text: `---\n${lines.join('\n')}\n---\n\n# Decision\n` };
+}
+
+// The same source with CRLF line endings, as a file saved on Windows would have.
+function withCrlf(source: AdrSource): AdrSource {
+  return { ...source, text: source.text.replaceAll('\n', '\r\n') };
 }
 
 describe('adr index', () => {
@@ -625,5 +648,76 @@ describe('adr front matter', () => {
     const accepted = readAdrSources().filter(({ text }) => /^status: "?accepted"?$/m.test(text));
     expect(accepted, 'accepted docs/adr files').not.toHaveLength(0);
     expect(frontMatterProblems(accepted)).toEqual([]);
+  });
+
+  it('an ADR with CRLF line endings is reported by file name', () => {
+    const good = adrSource({}, '0002-good.md');
+    const crlf = withCrlf(adrSource());
+
+    // The CRLF file is reported once, as a whole, and not as seven missing fields.
+    expect
+      .soft(frontMatterProblems([crlf, good]))
+      .toEqual([expect.stringMatching(/^0001-decision\.md: .*CRLF line endings/)]);
+
+    // Only the front matter has to be LF. A CRLF body behind an LF front matter is not reported.
+    const crlfBody = {
+      name: '0003-crlf-body.md',
+      text: `${adrSource().text}One line.\r\nAnother line.\r\n`,
+    };
+    expect.soft(frontMatterProblems([crlfBody])).toEqual([]);
+  });
+
+  it('an ADR with an empty front matter block is reported by file name', () => {
+    const empty: AdrSource = { name: '0001-empty.md', text: '---\n---\n\n# Empty\n' };
+
+    // An empty block with CRLF line endings is reported as CRLF, like any other block.
+    expect
+      .soft(frontMatterProblems([withCrlf(empty)]))
+      .toEqual([expect.stringMatching(/^0001-empty\.md: .*CRLF line endings/)]);
+
+    // An empty block with LF line endings is a block that names no field.
+    expect
+      .soft(frontMatterProblems([empty]))
+      .toEqual(
+        Object.keys(completeFrontMatter).map((field) => `0001-empty.md: ${field} is missing`),
+      );
+  });
+
+  it('an ADR whose front matter is not valid YAML is reported by file name', () => {
+    const good = adrSource({}, '0002-good.md');
+    const unclosed = adrSource({ status: '[accepted' });
+
+    // The file is reported once, with the parser's own message and not only the check's prefix.
+    // The unclosed list swallows the lines below it, so no field is reported missing as well.
+    expect
+      .soft(frontMatterProblems([unclosed, good]))
+      .toEqual([
+        expect.stringMatching(
+          /^0001-decision\.md: .*not valid YAML.*Flow sequence in block collection must be sufficiently indented and end with a \]/s,
+        ),
+      ]);
+  });
+
+  it('readAdrFiles does not throw on CRLF or invalid YAML front matter', () => {
+    const crlf = withCrlf(adrSource({}, '0001-crlf.md'));
+    const unclosed = adrSource({ status: '[accepted' }, '0002-unclosed.md');
+    const good = adrSource({ status: '"accepted"', release: '"later"' }, '0003-good.md');
+
+    // The index tests read through readAdrFiles. A bad file must not stop them, so each one is a row
+    // with no status, release or needs-confirmation. frontMatterProblems reports it.
+    const files = readAdrFiles([crlf, unclosed, good]);
+
+    expect.soft(files.map((file) => file.name)).toEqual([crlf.name, unclosed.name, good.name]);
+    expect.soft(files[0]).toMatchObject({ status: '', release: '', needsConfirmation: '' });
+    expect.soft(files[1]).toMatchObject({ status: '', release: '', needsConfirmation: '' });
+    // The good file next to them reads as before.
+    expect.soft(files[2]).toEqual({
+      name: good.name,
+      number: 3,
+      title: 'Decision',
+      status: 'accepted',
+      release: 'later',
+      needsConfirmation: '',
+    });
   });
 });
