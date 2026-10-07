@@ -210,6 +210,15 @@ function doc(path: string, ...lines: string[]): MarkdownFile {
   return { path, content: `${lines.join('\n')}\n` };
 }
 
+// Replaces text in a fixture, and fails when the text is not there, so that a case cannot pass by
+// changing nothing.
+function change(text: string, from: string, to: string): string {
+  if (!text.includes(from)) {
+    throw new Error(`the fixture does not contain ${JSON.stringify(from)}`);
+  }
+  return text.replace(from, to);
+}
+
 describe('doc links', () => {
   // The tracked files that the invented documents below may link to.
   const tracked = new Set([
@@ -406,5 +415,201 @@ describe('doc links', () => {
       expect.arrayContaining(['docs/plan/14-roadmap.md', 'docs/plan/E02-walking-skeleton.md']),
     );
     expect(plannedPathProblems(plannedPaths, planFiles)).toEqual([]);
+  });
+
+  it('docs/plan/README.md holds the ledger header, persona table, epic order and M0 ADR checklist that 14-roadmap.md states', () => {
+    const roadmap = [
+      '# Roadmap',
+      '',
+      '## Personas',
+      '',
+      '| Persona | Who |',
+      '|---|---|',
+      '| Planner | Plans orders. |',
+      '| Operator | Reports at a station. |',
+      '',
+      '## Milestones under option B',
+      '',
+      '| Checkpoint | Date | What must hold | What it decides |',
+      '|---|---|---|---|',
+      '| Day 1 | Thu 2026-10-15 | Sent. | |',
+      '| M0 | Fri 2026-10-30 | Accepted: [0029](../adr/0029-drafts.md), [0004](../adr/0004-tooling.md) and [0003](../adr/0003-module.md). | Decisions. |',
+      '',
+      '## The weekly ledger row',
+      '',
+      '| Column | Meaning |',
+      '|---|---|',
+      "| Week ending | The Friday's date. |",
+      '',
+      '```markdown',
+      '| Week ending | Working days | Merged tasks | Notes |',
+      '|---|---|---|---|',
+      '```',
+      '',
+      '## Epics in dependency order',
+      '',
+      '| Epic | Title | Estimate | Depends on |',
+      '|---|---|---|---|',
+      '| E00 | repo: Make the repository ready | Not estimated | none |',
+      '| E01 | platform: Settle the first decisions | About 7 | E00-S05 |',
+      '',
+      '### E00 repo: Make the repository ready',
+      '',
+      '```markdown',
+      '## Goal',
+      '| Week ending | A brief holds this table, which is not the ledger |',
+      '```',
+    ].join('\n');
+    const readme = [
+      '# NorthMES plan',
+      '',
+      '## Personas',
+      '',
+      '| Persona | Who |',
+      '|---|---|',
+      '| Planner | Plans orders. |',
+      '| Operator | Reports at a station. |',
+      '',
+      '## Weekly ledger',
+      '',
+      '| Week ending | Working days | Merged tasks | Notes |',
+      '|---|---|---|---|',
+      '| 2026-10-16 | | | |',
+      '',
+      '## Epic order',
+      '',
+      '| Epic | Title |',
+      '|---|---|',
+      '| E00 | repo: Make the repository ready |',
+      '| E01 | platform: Settle the first decisions |',
+      '',
+      '## ADRs needed by M0',
+      '',
+      'E02 needs:',
+      '',
+      '- [ ] [0003][adr-0003] module package (proposed)',
+      '- [x] [0004][adr-0004] tooling (accepted)',
+      '',
+      'E03 needs:',
+      '',
+      '- [ ] [0029][adr-0029] drafts (accepted; needs-confirmation: product owner)',
+      '',
+      '[adr-0003]: ../adr/0003-module.md',
+      '[adr-0004]: ../adr/0004-tooling.md',
+      '[adr-0029]: ../adr/0029-drafts.md',
+    ].join('\n');
+    const adrs = new Set([
+      'docs/adr/0003-module.md',
+      'docs/adr/0004-tooling.md',
+      'docs/adr/0029-drafts.md',
+      'docs/adr/0099-invented.md',
+    ]);
+
+    expect(readmeDrift(readme, roadmap, adrs)).toEqual([]);
+
+    // Each case changes the README in one place and must report exactly that drift.
+    const cases: { name: string; readme: string; problems: string[] }[] = [
+      {
+        name: 'a persona row that differs',
+        readme: change(readme, 'Reports at a station.', 'Reports elsewhere.'),
+        problems: ['personas: "Operator" differs between README.md and 14-roadmap.md'],
+      },
+      {
+        name: 'a persona that is missing',
+        readme: change(readme, '| Operator | Reports at a station. |\n', ''),
+        problems: ['personas: "Operator" is in 14-roadmap.md and missing from README.md'],
+      },
+      {
+        name: 'a persona that the roadmap does not have',
+        readme: change(readme, '| Planner |', '| Visitor | Looks around. |\n| Planner |'),
+        problems: ['personas: "Visitor" is in README.md and not in 14-roadmap.md'],
+      },
+      {
+        name: 'an epic that is missing',
+        readme: change(readme, '| E01 | platform: Settle the first decisions |\n', ''),
+        problems: ['epic order: "E01" is in 14-roadmap.md and missing from README.md'],
+      },
+      {
+        name: 'an epic with another title',
+        readme: change(readme, 'Settle the first decisions', 'Settle decisions'),
+        problems: ['epic order: "E01" differs between README.md and 14-roadmap.md'],
+      },
+      {
+        name: 'epics in another order',
+        readme: change(
+          readme,
+          '| E00 | repo: Make the repository ready |\n| E01 | platform: Settle the first decisions |',
+          '| E01 | platform: Settle the first decisions |\n| E00 | repo: Make the repository ready |',
+        ),
+        problems: ['epic order: README.md lists them in another order than 14-roadmap.md'],
+      },
+      {
+        name: 'a ledger header with a column less',
+        readme: change(readme, '| Working days | Merged tasks |', '| Working days |'),
+        problems: [
+          'ledger header: README.md has "Week ending | Working days | Notes" and 14-roadmap.md has "Week ending | Working days | Merged tasks | Notes"',
+        ],
+      },
+      {
+        name: 'a checklist that lacks an ADR from the M0 row',
+        readme: change(readme, '- [x] [0004][adr-0004] tooling (accepted)\n', ''),
+        problems: [
+          "M0 checklist: ADR 0004 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+        ],
+      },
+      {
+        name: 'a checklist with an ADR that the M0 row does not have',
+        readme: change(
+          readme,
+          '\n[adr-0003]',
+          '- [ ] [0099][adr-0099] invented\n\n[adr-0099]: ../adr/0099-invented.md\n[adr-0003]',
+        ),
+        problems: [
+          "M0 checklist: ADR 0099 is in README.md's checklist and not in the M0 row of 14-roadmap.md",
+        ],
+      },
+      {
+        name: 'a checklist item without a link definition',
+        readme: change(readme, '[adr-0004]: ../adr/0004-tooling.md\n', ''),
+        problems: ['M0 checklist: ADR 0004 has no [adr-0004] link definition in README.md'],
+      },
+      {
+        name: 'a checklist link to a file that is not tracked',
+        readme: change(readme, '0004-tooling.md', '0004-gone.md'),
+        problems: ['M0 checklist: ADR 0004 links to docs/adr/0004-gone.md, which is not tracked'],
+      },
+      {
+        name: 'a checklist link to the file of another ADR',
+        readme: change(
+          readme,
+          '[adr-0004]: ../adr/0004-tooling.md',
+          '[adr-0004]: ../adr/0003-module.md',
+        ),
+        problems: [
+          'M0 checklist: ADR 0004 links to docs/adr/0003-module.md, a file with another number',
+        ],
+      },
+    ];
+    for (const { name, readme: drifted, problems } of cases) {
+      expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
+    }
+
+    // A README that lost its sections reports each one, instead of passing for lack of rows.
+    expect(readmeDrift('# NorthMES plan\n', roadmap, adrs)).toEqual([
+      'personas: README.md has no table',
+      'epic order: README.md has no table',
+      'ledger header: README.md has no ledger table',
+      "M0 checklist: ADR 0029 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+      "M0 checklist: ADR 0004 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+      "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+    ]);
+
+    expect(
+      readmeDrift(
+        readFileSync(join(root, 'docs/plan/README.md'), 'utf8'),
+        readFileSync(join(root, 'docs/plan/14-roadmap.md'), 'utf8'),
+        trackedFiles(),
+      ),
+    ).toEqual([]);
   });
 });
