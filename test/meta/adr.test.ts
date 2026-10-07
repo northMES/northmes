@@ -198,13 +198,19 @@ const frontMatterFields = [
   'needs-confirmation',
 ] as const;
 
+// A key with no value parses to null. For needs-confirmation that is the empty value the template
+// allows, and for every other field it is no value at all.
+function isMissing(field: string, value: unknown): boolean {
+  return value === undefined || (value === null && field !== 'needs-confirmation');
+}
+
 // Each ADR names every front matter field.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
     const frontMatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
     const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
     return frontMatterFields
-      .filter((field) => fields[field] === undefined || fields[field] === null)
+      .filter((field) => isMissing(field, fields[field]))
       .map((field) => `${name}: ${field} is missing`);
   });
 }
