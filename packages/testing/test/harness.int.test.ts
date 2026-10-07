@@ -41,7 +41,8 @@ describe('the test database', () => {
   it('the server time zone follows NM_TEST_PG_TZ', async () => {
     const rows = await query<{ TimeZone: string }>(connectionString, 'show timezone');
 
-    expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ ?? 'UTC' }]);
+    // An unset, empty or blank NM_TEST_PG_TZ means UTC.
+    expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ?.trim() || 'UTC' }]);
   });
 
   it('the container image equals the digest in infra/pg-image.json', async () => {
