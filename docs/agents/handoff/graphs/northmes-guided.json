@@ -1,7 +1,8 @@
 {
   "attributes": {
     "name": "northmes-guided",
-    "startNode": "start"
+    "startNode": "start",
+    "exhaustedGate": "ask"
   },
   "options": {
     "type": "directed",
@@ -306,7 +307,8 @@
       "target": "planner",
       "attributes": {
         "port": "changes",
-        "maxAttempts": 2
+        "maxAttempts": 2,
+        "onExhausted": "plan-ask"
       }
     },
     {
@@ -323,7 +325,8 @@
       "target": "planner",
       "attributes": {
         "port": "changes",
-        "maxAttempts": 5
+        "maxAttempts": 5,
+        "onExhausted": "plan-ask"
       }
     },
     {
@@ -364,7 +367,8 @@
       "target": "coder",
       "attributes": {
         "port": "fail",
-        "maxAttempts": 3
+        "maxAttempts": 3,
+        "onExhausted": "ask"
       }
     },
     {
@@ -381,7 +385,8 @@
       "target": "coder",
       "attributes": {
         "port": "changes",
-        "maxAttempts": 3
+        "maxAttempts": 3,
+        "onExhausted": "ask"
       }
     },
     {
@@ -398,7 +403,8 @@
       "target": "coder",
       "attributes": {
         "port": "changes",
-        "maxAttempts": 5
+        "maxAttempts": 5,
+        "onExhausted": "ask"
       }
     },
     {
@@ -439,7 +445,8 @@
       "target": "coder",
       "attributes": {
         "port": "changes",
-        "maxAttempts": 5
+        "maxAttempts": 5,
+        "onExhausted": "ask"
       }
     },
     {
@@ -448,7 +455,8 @@
       "target": "coder",
       "attributes": {
         "port": "fix",
-        "maxAttempts": 3
+        "maxAttempts": 3,
+        "onExhausted": "ask"
       }
     },
     {
@@ -466,7 +474,8 @@
       "attributes": {
         "port": "update",
         "loop": true,
-        "maxAttempts": 3
+        "maxAttempts": 3,
+        "onExhausted": "ask"
       }
     },
     {
