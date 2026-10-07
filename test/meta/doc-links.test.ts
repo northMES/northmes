@@ -600,6 +600,34 @@ describe('doc links', () => {
     expect(plannedPathProblems(plannedPaths, planFiles)).toEqual([]);
   });
 
+  it('a planned path names a task by its heading in docs/plan, not by a longer id or a mention', () => {
+    const plan = [
+      doc(
+        'docs/plan/14-roadmap.md',
+        '#### E19-S02 docs: Generate the configuration reference',
+        '##### E04-S01-T01 ui: Design the tokens, contrast and component states (D1)',
+        '##### E02-S08-T05, #257 repo: Run the app',
+        'Blocked by E04-S01 and E13-S01, see the story E04-S01 above.',
+      ),
+    ];
+    const headings: PlannedPath[] = [
+      { path: 'a-story.md', task: 'E19-S02' },
+      { path: 'a-task.md', task: 'E04-S01-T01' },
+      { path: 'a-numbered-task.md', task: 'E02-S08-T05' },
+    ];
+    const noHeading: PlannedPath[] = [
+      // Only the task E04-S01-T01 has a heading, and `\bE04-S01\b` matches inside its id.
+      { path: 'the-story-of-a-task.md', task: 'E04-S01' },
+      { path: 'a-mention.md', task: 'E13-S01' },
+    ];
+
+    expect(plannedPathProblems(headings, plan)).toEqual([]);
+    expect(plannedPathProblems(noHeading, plan)).toEqual([
+      'the-story-of-a-task.md: task "E04-S01" appears in docs/plan but has no heading there',
+      'a-mention.md: task "E13-S01" appears in docs/plan but has no heading there',
+    ]);
+  });
+
   it('docs/plan/README.md holds the ledger header, persona table, epic order and M0 ADR checklist that 14-roadmap.md states', () => {
     const roadmap = [
       '# Roadmap',
