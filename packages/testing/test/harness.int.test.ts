@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { readFileSync } from 'node:fs';
-import { describe, expect, inject, it } from 'vitest';
+import { afterEach, describe, expect, inject, it, vi } from 'vitest';
 import { withClient } from '../src/database.ts';
 import { query, useTestDatabase } from '../src/index.ts';
 
@@ -47,6 +47,24 @@ describe('the test database', () => {
     );
 
     expect(rows.map((row) => row.tablename)).toEqual(['harness_only', 'nm_marker']);
+  });
+});
+
+describe('a project without the global setup', () => {
+  afterEach(() => {
+    vi.doUnmock('vitest');
+    vi.resetModules();
+  });
+
+  it('useTestDatabase names the missing global setup', async () => {
+    vi.resetModules();
+    vi.doMock('vitest', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('vitest')>()),
+      inject: () => undefined,
+    }));
+    const { useTestDatabase: withoutSetup } = await import('../src/database.ts');
+
+    expect(() => withoutSetup()).toThrow(/global setup/);
   });
 });
 
