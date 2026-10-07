@@ -35,24 +35,19 @@ function adrFileNumber(name: string): number | undefined {
   return digits === undefined ? undefined : Number.parseInt(digits, 10);
 }
 
-// The parsed front matter fields of an ADR file and the text after them. A file with no front matter
-// block has no fields.
-function splitFrontMatter(text: string): { fields: Record<string, unknown>; body: string } {
-  const [, frontMatter = '', body = ''] = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text) ?? [];
-  return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
-}
-
 type FrontMatter = { fields: Record<string, unknown>; body: string } | { problem: string };
 
 // The fields of an ADR file and the text after them, or the problem that makes the front matter
-// unreadable. Only the front matter block has to be LF: a CRLF body is fine.
+// unreadable. A file with no front matter block has no fields. Only the front matter block has to be
+// LF: a CRLF body is fine.
 function parseFrontMatter(text: string): FrontMatter {
-  const block = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(text)?.[0] ?? '';
+  const [, block = '', frontMatter = '', body = ''] =
+    /^(---\r?\n([\s\S]*?)\r?\n---\r?\n)([\s\S]*)$/.exec(text) ?? [];
   if (block.includes('\r')) {
     return { problem: 'the front matter has CRLF line endings, expected LF' };
   }
   try {
-    return splitFrontMatter(text);
+    return { fields: (parse(frontMatter) ?? {}) as Record<string, unknown>, body };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return { problem: `the front matter is not valid YAML: ${message}` };
@@ -337,6 +332,11 @@ function adrSource(
     yaml === undefined ? [] : [`${field}: ${yaml}`],
   );
   return { name, text: `---\n${lines.join('\n')}\n---\n\n# Decision\n` };
+}
+
+// The same source with CRLF line endings, as a file saved on Windows would have.
+function withCrlf(source: AdrSource): AdrSource {
+  return { ...source, text: source.text.replaceAll('\n', '\r\n') };
 }
 
 describe('adr index', () => {
@@ -652,7 +652,7 @@ describe('adr front matter', () => {
 
   it('an ADR with CRLF line endings is reported by file name', () => {
     const good = adrSource({}, '0002-good.md');
-    const crlf = { ...adrSource(), text: adrSource().text.replaceAll('\n', '\r\n') };
+    const crlf = withCrlf(adrSource());
 
     // The CRLF file is reported once, as a whole, and not as seven missing fields.
     expect
@@ -683,7 +683,7 @@ describe('adr front matter', () => {
   });
 
   it('readAdrFiles does not throw on CRLF or invalid YAML front matter', () => {
-    const crlf = { ...adrSource({}, '0001-crlf.md'), text: adrSource().text.replaceAll('\n', '\r\n') };
+    const crlf = withCrlf(adrSource({}, '0001-crlf.md'));
     const unclosed = adrSource({ status: '[accepted' }, '0002-unclosed.md');
     const good = adrSource({ status: '"accepted"', release: '"later"' }, '0003-good.md');
 
