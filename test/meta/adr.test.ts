@@ -204,14 +204,63 @@ function isMissing(field: string, value: unknown): boolean {
   return value === undefined || (value === null && field !== 'needs-confirmation');
 }
 
-// Each ADR names every front matter field.
+// A YYYY-MM-DD string that names a day on the calendar. 2026-02-30 does not, and Date.UTC rolls it
+// over to 2026-03-02.
+function isRealDay(value: unknown): boolean {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const [year = 0, month = 0, day = 0] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toISOString().slice(0, 10) === value;
+}
+
+interface FieldRule {
+  expected: string;
+  allows: (value: unknown) => boolean;
+}
+
+const nameRule: FieldRule = {
+  expected: 'a non-empty string',
+  allows: (value) => typeof value === 'string' && value.trim() !== '',
+};
+
+const frontMatterRules: Record<(typeof frontMatterFields)[number], FieldRule> = {
+  status: {
+    expected: 'proposed, accepted, rejected, deprecated or superseded by ADR-NNNN',
+    allows: (value) =>
+      typeof value === 'string' &&
+      /^(proposed|accepted|rejected|deprecated|superseded by ADR-\d{4})$/.test(value),
+  },
+  date: { expected: 'a real day as YYYY-MM-DD', allows: isRealDay },
+  'decision-makers': nameRule,
+  consulted: nameRule,
+  informed: nameRule,
+  // Unquoted, YAML reads 1 as a number, so the release must be a string.
+  release: {
+    expected: 'the string "1", "later" or "vision"',
+    allows: (value) => value === '1' || value === 'later' || value === 'vision',
+  },
+  'needs-confirmation': {
+    expected: 'a string, possibly empty',
+    allows: (value) => value === null || typeof value === 'string',
+  },
+};
+
+// Each ADR names every front matter field, with a value that the template allows.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
     const frontMatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
     const fields = (parse(frontMatter) ?? {}) as Record<string, unknown>;
-    return frontMatterFields
-      .filter((field) => isMissing(field, fields[field]))
-      .map((field) => `${name}: ${field} is missing`);
+    return frontMatterFields.flatMap((field) => {
+      const value = fields[field];
+      if (isMissing(field, value)) {
+        return [`${name}: ${field} is missing`];
+      }
+      const rule = frontMatterRules[field];
+      return rule.allows(value)
+        ? []
+        : [`${name}: ${field} is ${JSON.stringify(value)}, expected ${rule.expected}`];
+    });
   });
 }
 
