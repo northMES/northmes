@@ -246,7 +246,10 @@ const frontMatterRules: Record<(typeof frontMatterFields)[number], FieldRule> = 
   },
 };
 
-// Each ADR names every front matter field, with a value that the template allows.
+const maintainer = 'Krister Johansson';
+
+// Each ADR names every front matter field, with a value that the template allows. An accepted ADR
+// names the maintainer as its decision-maker.
 function frontMatterProblems(sources: AdrSource[]): string[] {
   return sources.flatMap(({ name, text }) => {
     const frontMatter = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
@@ -257,9 +260,13 @@ function frontMatterProblems(sources: AdrSource[]): string[] {
         return [`${name}: ${field} is missing`];
       }
       const rule = frontMatterRules[field];
-      return rule.allows(value)
-        ? []
-        : [`${name}: ${field} is ${JSON.stringify(value)}, expected ${rule.expected}`];
+      if (!rule.allows(value)) {
+        return [`${name}: ${field} is ${JSON.stringify(value)}, expected ${rule.expected}`];
+      }
+      // The value passed its own rule, so it is a string here.
+      return field === 'decision-makers' && fields.status === 'accepted' && value !== maintainer
+        ? [`${name}: ${field} is ${JSON.stringify(value)}, an accepted ADR names ${maintainer}`]
+        : [];
     });
   });
 }
