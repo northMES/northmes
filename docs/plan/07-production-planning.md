@@ -157,7 +157,7 @@ Core builds the code registers (equipment groups, tools, warehouses, customers, 
 
 | Table | Planning-relevant columns | Notes |
 |---|---|---|
-| `core.plant` | `slug`, `name`, `time_zone` (IANA id), `production_day_start` (`time`) | The slug is unique per company and appears in the URL. |
+| `core.plant` | `slug`, `name`, `time_zone` (IANA id), `production_day_start` (`time`) | The slug is unique per installation and appears in the URL ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)). |
 | `core.equipment_group` | `code`, `name`, `color` | Color rule on import: an existing color wins, else the import color, else one of the 20 palette colors. Decided as a product owner rule ([ADR 0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md)). |
 | `core.equipment` | `code`, `name`, `equipment_group_id`, `is_plannable`, `is_oee`, `external_code`, `color`, `calendar_id` | Equipment with `is_plannable` or `is_oee` appears on the board. Equipment can be a machine or another resource (building, lift, truck). |
 | `core.tool` | `code`, `name` | Unknown tools from an import are created automatically. |
@@ -821,7 +821,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Realtime updates and "Pause live updates".
 - Keyboard navigation, keyboard move mode and the detail panel, shipped in the same increment as dragging.
 - Dark mode.
-- The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). `BoardFieldSlot` carries `accessibleText`; block field renderers are synchronous and cheap, hover renderers may fetch.
+- The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). Both are slots of the `field` kind ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)), which takes the place of `BoardFieldSlot`: a contribution's synchronous, cheap `render` returns text, an optional icon and `accessibleText`, and its hover renderer may fetch.
 - `BoardBlock` carries explicit fields for draft (`none`, `mine`, `proposal`), late, conflict, material shortage and progress.
 - The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids.
 
@@ -1048,6 +1048,8 @@ Planning settings are Zod definitions in `@northmes/planning-contracts`, stored 
 The production day start is not a planning setting. It is the `core.plant` column `production_day_start`, a local time validated against the zone, next to the plant's `time_zone` ([The production day](#the-production-day)). Its value for the pilot is still open with the product owner.
 
 A product owner answer still missing on 2026-10-30 becomes a setting whose default is recorded in the ADR that owns the rule ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [ADR 0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md)). Until a default is recorded, tests set these settings explicitly.
+
+The planning rules step of the onboarding wizard shows these settings, each default with the ADR that records it. A plant cannot open while a setting without a recorded default has no value at the company or the plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 ## Tests
 

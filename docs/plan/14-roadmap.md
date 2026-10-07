@@ -31,7 +31,7 @@ Stories use the persona list in [README.md](README.md). Issues, issue forms and 
 | Plant admin | Sets up a company and its plants: users, roles, master data, calendars, settings, the Pyramid connector, AI providers and stations. Also installs and upgrades NorthMES on the customer's server together with the customer's IT. |
 | Plugin developer | Builds a module or plugin on the `defineModule` contract: validators, slot widgets, subgraphs and remotes. Integration work such as an ERP connector counts here. |
 | Maintainer | Builds and releases NorthMES itself: the repository, CI, the delivery workflow and the platform packages. |
-| Hosting partner | Runs NorthMES for customers. No release 1 story is written for this persona. |
+| Hosting partner | A consultant or provider who installs and runs NorthMES for customers, one installation per customer. In release 1 it creates a customer's companies and their first company admins with scriptable CLI commands on the host, recovers company admins, and may run the onboarding wizard for the customer. |
 
 ## Milestones under option B
 
@@ -41,7 +41,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 |---|---|---|---|
 | Day 1 | Thu 2026-10-15 | The written request to the pilot's Pyramid administrator and the Pyramid reseller is sent (the questions are in [08-pyramid-connector.md](08-pyramid-connector.md#17-questions-for-the-pyramid-administrator)). The request for the data processing agreement is sent. The product owner session is booked. The private companion repository for internal research exists and is pushed, and SP0 (E01-S01) is done; both were done on 2026-10-05. Krister confirms the persona list and the epic order, which clears the needs-confirmation of ADR 0049. | |
 | Week 1 | by Fri 2026-10-23 | handoff's `setup_project` reports ready (E00). The Node 26 hook tests, the time zone suite and the benchmarks have run on the `node:26` Debian image (E01-S05). A Windows PC of the pilot's planner PC class is in hand for SP3 and the NVDA passes. The product owner session has taken place. | Node 26 or Node 24 LTS ([0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md)) |
-| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
+| M0 | Fri 2026-10-30 | The ADRs that E02 and E03 need are accepted: [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md), [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md), [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md), [0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) and the E02 list ([0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) and, under the working default of M-68, [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)). Every product owner answer is recorded, or became a plant or connector setting whose default its ADR records. Krister and the product owner have written three to six pilot acceptance criteria (draft PA-1 to PA-6 in [01-product-and-scope.md](01-product-and-scope.md#pilot-acceptance-criteria-draft)) and settled whether double entry in Pyramid during shadow mode is acceptable, and for how long. The product owner has said whether operators report in NorthMES or in Pyramid. Krister has confirmed the MCP defaults (off per installation, personal access tokens before OAuth). | Decisions. The ledger opens. |
 | SP3 verdict | Fri 2026-11-06 | The board spike is measured on the planner-class PC: 60 fps while scrolling at day zoom, p95 frame time at most 33 ms while dragging at week zoom, no long task over 50 ms, and keyboard move mode steps one snap and one machine. `e2e/board-perf.spec.ts` exists. | An interactive board, or one more week that limits the rendered range |
 | Skeleton target | Fri 2026-11-13 | `e2e/skeleton.spec.ts` is green on the built `all` process. The Pyramid write method names have arrived. | If the spec is red, hardening freezes: only skeleton tasks run until it is green. |
 | M1 | Fri 2026-11-20 | `e2e/skeleton.spec.ts` and the resolve-hook test are required in `ci / gate`. The SP3 second-fail deadline has passed. The first weekly ledger rows exist. | If SP3 failed twice: the job order table view with the shared Move dialog plus a read-only timeline carries planning (cut 8). |
@@ -96,8 +96,8 @@ Estimates are raw ledger days from the internal research notes named in the tabl
 | E03 | planning: Plan production in a pure scheduling package | Not estimated | E00, E01-S02 | M2 |
 | E04 | web: Ship the shell, design tokens and shared UI patterns | Shell services and token fixes 6 (internal research note 21); web hooks and UI patterns 11 to 14 (internal research note 33); shell hardening inside the 35 to 51 platform days | E02, D1, D2 | M2 |
 | E05 | core: Sign users in and make every write an audited command | Audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated | E02 | M2 |
-| E06 | core: Hold master data, units, settings and plant calendars | Units 9 (internal research note 35); list kit 17.5 to 24 gross, overlapping internal research note 33 (internal research note 34); master-data kit 6 to 8, settings 3, generators 3 to 4 (internal research note 33); calendars not estimated | E05, E04, E03-S01 | M2 |
-| E07 | planning: Plan orders in per-planner drafts and run autoplan | Drafts, Save, soft locks and row statuses 4 to 7 (internal research note 32); production orders and the autoplan job not estimated | E06, E03 | M3 |
+| E06 | core: Hold master data, units, settings and plant calendars | Units 9 (internal research note 35); list kit 17.5 to 24 gross, overlapping internal research note 33 (internal research note 34); master-data kit 6 to 8, settings 3, generators 3 to 4 (internal research note 33); calendars not estimated | E05, E04, E03-S01; E06-S14 also on E07-S08 and E08-S10 (production planning) and on E06-S13, E09-S06, E11-S01 and E13-S03 (its module steps) | M2; E06-S14 at M4, after E08-S10 |
+| E07 | planning: Plan orders in per-planner drafts and run autoplan | Drafts, Save, soft locks and row statuses 4 to 7 (internal research note 32); production orders and the autoplan job not estimated | E06 (not E06-S14), E03 | M3 |
 | E08 | planning: Move job orders on the board and in the table view | About 35 for the board (internal research note 05), 3 of them spent in E01; 8 for board accessibility and the table view (internal research note 21); click-to-place 1.5 of that is cut candidate 2 | E01-S04 verdict, D3, E04; E07 for data wiring | M4 |
 | E09 | pyramid-connector: Import Pyramid orders, materials and stock | Not estimated; the field unit map is 1 (internal research note 35) | E06 | M2 |
 | E10 | pyramid-connector: Write the committed plan back to Pyramid | Not estimated | E09, E07 | M2 target, M3 decision |
@@ -114,7 +114,7 @@ Estimates are raw ledger days from the internal research notes named in the tabl
 | E21 | plugins: Build the example plugins outside the workspace | Two examples 2 and plugin build, pack and check 2 to 3 (internal research note 20); widget remote 1 to 2 (internal research note 19); partly spent in E02 | E02 | M2 |
 | E22 | core: Keep the regulated path open | 8 to 10 (internal research note 24), much of it delivered inside E05 and E11 | E05 | M4 |
 
-Board-core tasks in E08 wait only for the SP3 verdict and design approval D3; only the board's data-wiring story waits for E07. E09 starts right after core master data (E06), inside M2. The first E03 runs start once E02-S01-T01 (the foundation pull request) has settled the root configuration files, or once all root configuration changes have landed in one session pull request.
+Board-core tasks in E08 wait only for the SP3 verdict and design approval D3; only the board's data-wiring story waits for E07. E09 starts right after core master data (E06), inside M2. E06-S14, the onboarding wizard, waits until production planning is built (E07-S08 and E08-S10, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)), so E06 closes at M4 while the rest of E06 lands in M2. No epic or story that depends on E06 waits for E06-S14. The first E03 runs start once E02-S01-T01 (the foundation pull request) has settled the root configuration files, or once all root configuration changes have landed in one session pull request.
 
 ### E00 repo: Make the repository ready for the first handoff run
 
@@ -1551,13 +1551,13 @@ Goal: port the integration spike test-first into the repository, so that one pro
 
 Who it is for: Maintainer. Also: Plugin developer.
 
-ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
+ADRs: [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0015](../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) (under the working default of M-68).
 
 Out of scope: the frontend widget plugin, `plugin check` and packaging `@northmes/web-build` for use outside the workspace (moved to E21, inside M2); Better Auth and real permissions (E05); audit (E05); hardening of the shell (E04); `@nestjs/swagger`, the OpenAPI document and public routes, which wait for [the public API epic after release 1](#after-release-1-the-public-api-epic).
 
 Estimate: timeboxed to about 20 working days, part of the platform estimate of 35 to 51 raw days (internal research notes 18, 19 and 20). Depends on: E00, E01-S05. Milestone: green by 2026-11-13; required in `ci / gate` from M1 (2026-11-20). If the spec is red on 2026-11-13, hardening freezes; if still red on 2026-11-27, the remotes take the tested Rsbuild path.
 
-Each story that builds an extension point also writes its recipe (the files to write, the commands, each boot or composition error with its meaning) as a project skill at `.claude/skills/<name>/SKILL.md`: `db-test`, `vertical-slice`, `graphql-subgraph` and `web-remote`. The fifth project skill, `dst-test`, comes with [E03-S01](#e03-s01-contracts-resolve-plant-wall-clock-times-and-work-in-time-windows). A project skill gets no `skills-lock.json` entry, because that file pins the third-party skills of [ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md), and joins handoff's `northmes` library group when it lands ([13 delivery and GitHub](13-delivery-and-github.md#agent-skills-in-the-repository)).
+Each story that builds an extension point also writes its recipe (the files to write, the commands, each boot or composition error with its meaning) as a project skill at `.claude/skills/<name>/SKILL.md`: `db-test`, `vertical-slice`, `graphql-subgraph` and `web-remote`. The fifth project skill, `dst-test`, comes with [E03-S01](#e03-s01-contracts-resolve-plant-wall-clock-times-and-work-in-time-windows). A project skill gets no `skills-lock.json` entry, because that file pins the third-party skills of [ADR 0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md), and joins handoff's `northmes` library group when it lands ([13 delivery and GitHub](13-delivery-and-github.md#agent-skills-in-the-repository)). The validator point's recipe starts the `northmes-plugin` skill ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
 
 E02-S01-T01 is the foundation pull request. It lands every root configuration change the skeleton needs (`package.json`, the catalog in `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `vitest.config.ts`, `turbo.json`, `biome.json`) in one session pull request. It lands before E01-S04-T01, which rebases its `package.json` and lockfile change on it. E02 tasks run in interactive sessions, or as `human` tasks started on `northmes-guided`. The tasks are in [the E02 shaping file](E02-walking-skeleton.md): E02-S08-T01 (the stack script) and E02-S08-T05 (`pnpm dev`) run before E02-S07, and E02-S05 (#23) closes after E02-S08-T02 and E02-S08-T03, which hold its spec `e2e/shell-degraded.spec.ts` and the browser check for zero CSP violations.
 
@@ -1657,12 +1657,13 @@ As a plugin developer, I want my built plugin dropped into `plugins/` to veto a 
 
 Module: platform, planning, `examples/plugin-validator`. Blocked by: E02-S02, E02-S03. Design: none.
 
-ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
+ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0003](../adr/0003-module-package-shape-and-the-definemodule-manifest.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) (under the working default of M-68).
 
 Acceptance criteria:
 
 - Core has `Article` and planning has `ProductionOrder` at tracer depth, and `planningReleaseProductionOrder` maps to a registered, validatable command handler.
-- `example-validator`, built with `pnpm plugin:build example-validator` (Rolldown, `HOST_PROVIDED` external) and loaded from `plugins/`, rejects a release with `core.command_rejected` naming `rejectedBy`.
+- `example-validator`, built with `pnpm plugin:build example-validator` (Rolldown, `HOST_PROVIDED` external) and loaded from `plugins/`, lists its validator under `validates` in its manifest and rejects a release with `core.command_rejected` whose `details` carry `rejectedBy`, the validator's code, its details and the message the server renders from the plugin's `defineErrors` ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)).
+- Boot exits 1 on a `validates` entry without a registered validator, a registered validator without an entry, and a validator whose `timeoutMs` is above the limit planning declares for the command.
 - A validator slower than its limit, or one that throws, rejects the command and the handler does not run.
 - A payload that does not match the validator's MIT contract schema is rejected with `core.validator_contract_mismatch`.
 - The SDK exception filter, registered once as `APP_FILTER`, writes `code`, `errorCode` and `details` into the GraphQL error that carries `core.command_rejected`; the correlation id arrives with E05-S01.
@@ -1671,7 +1672,8 @@ Acceptance criteria:
 
 Tests first:
 
-- `apps/server/test/command-bus.test.ts`: "a payload with quantity as an object is rejected with core.validator_contract_mismatch and the handler spy is not called".
+- `apps/server/test/command-bus.test.ts`: "a payload with quantity as an object is rejected with core.validator_contract_mismatch and the handler spy is not called"; "a veto's details carry rejectedBy, the code, the validator's details and the rendered message".
+- `apps/server/test/catalog.test.ts`: "a validates entry without a registered validator exits 1 naming the module and the command"; "a registered validator without a validates entry exits 1"; "a validator whose timeoutMs is above the owner's limit exits 1".
 - `apps/server/test/plugins/resolve-hook.int.test.ts`: "a plugin outside the host tree boots with the hook"; "a plugin bundling @nestjs/graphql fails boot".
 - `examples/plugin-validator/test/validator.int.test.ts`: "a release over the example limit is rejected".
 - `apps/server/test/boot/plugin-controller.int.test.ts` (boots the built server in a child process, because `createTestApp` takes in-repo modules only): "a fixture plugin whose Nest module reaches a controller makes boot exit 1 naming the plugin id".
@@ -2087,7 +2089,7 @@ As a planner, I want a broken or slow module to show a clear placeholder while t
 
 Module: web (`apps/web`, `apps/server`). Blocked by: E04-S01, design task D2. Design: D2 shell and navigation (a design task under this story).
 
-ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md).
 
 Acceptance criteria:
 
@@ -2098,6 +2100,8 @@ Acceptance criteria:
 - `/assets/browser-check.js` shows a plain page naming the browser and the minimum version below Chrome and Edge 111, Firefox 128 or Safari 16.4.
 - In-repo remotes ship no CSS; a remote that emits CSS bytes fails the build.
 - The sidebar comes only from routes: the shell builds each module's group, headed by its manifest `web.label`, from the routes whose `screenRoute` carries `nav`, ordered by `nav.order` and then by declaration order, with `nav.parent` nesting one level. `/api/v1/web/modules` adds `modules[].kind`, so core comes first and plugins sit in their own section. `help` entries appear in the help menu under their module label.
+- Nav entries carry icons ([ADR 0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)): `nav` takes `{ label, icon, order?, parent?, search? }`, where `icon` is a lucide-react component name from `navIconNames` in `@northmes/contracts`, required on an entry without `parent`, and `NavIcon` in `@northmes/ui` renders it, with a fallback icon for an unknown name. The manifest's `web` block requires `icon`, the catalog check refuses a `web` block without one, and `/api/v1/web/modules` adds `modules[].icon`.
+- The collapsed rail shows one icon per top-level nav entry in the sidebar's order, each link named by its label with a tooltip on hover and focus; a module that failed to load shows its manifest icon with "(unavailable)" in its accessible name.
 - An unknown path under a loaded module shows that module's not-found page with a title, one `h1` and a link to its first nav entry; the router's default not-found component covers every other path.
 
 Tests first:
@@ -2106,7 +2110,10 @@ Tests first:
 - `e2e/shell-degraded.spec.ts`: "a remote that times out shows the placeholder after 10 s".
 - `packages/web-build/test/css-guard.test.ts`: "a remote emitting CSS fails".
 - `apps/web/test/nav-from-routes.test.ts`: "a screenRoute with nav appears under its module, ordered by nav.order"; "a route that the plant's permissions deny has no entry"; "a nav entry with a preset search links to that search".
-- `apps/web/test/sidebar.test.tsx`: "entries without order keep declaration order"; "a nested entry renders under its parent"; "a plugin module renders in the plugins section"; "help entries appear in the help menu under their module label".
+- `apps/web/test/sidebar.test.tsx`: "entries without order keep declaration order"; "a nested entry renders under its parent"; "a plugin module renders in the plugins section"; "help entries appear in the help menu under their module label"; "the collapsed rail shows one icon per top-level entry in sidebar order, each named by its label"; "a module whose remote failed shows its manifest icon in the rail, named with (unavailable)".
+- `packages/ui/test/nav-icon.test.tsx`: "every name in navIconNames renders an svg with aria-hidden"; "an unknown name renders the fallback icon".
+- `packages/web-sdk/test/screen-route-nav.test-d.ts` in the `types` project: a top-level nav entry without `icon` fails typecheck.
+- `apps/server/test/catalog.test.ts`: "a web block without icon exits 1 naming the module".
 - `e2e/not-found.spec.ts`: "an unknown path under a loaded module shows its not-found page with a title and one h1".
 
 ##### E04-S02-T01 web: Design the shell, navigation and station frame (D2)
@@ -2117,13 +2124,14 @@ Labels: `task`, `design`, `human`, `area: web`. Blocked by: E04-S01-T01. D2 runs
 
 ```markdown
 Plan: E04-S02-T01
-Owning story: E04-S02 (issue number once it exists). UI tasks waiting on this: the UI tasks of E04-S02 to E04-S05 and the sign-in task of E05-S05.
+Owning story: E04-S02 (issue number once it exists). UI tasks waiting on this: the UI tasks of E04-S02 to E04-S05, the sign-in task of E05-S05 and the admin frame task of E05-S15.
 Page: shell/shell-<issue>-navigation.dc.html (variations page first: yes, the shell is a new kind of screen)
 
 ## Frames
 - Sidebar with core, module and plugin sections in a stable order, one group per module and nav entries nested one level; the collapsed rail; the 320 px sheet
-- Top bar with breadcrumb, page actions slot, help menu with entries grouped by module, and user menu
-- Plant switcher as a menu of links
+- Top bar with the sidebar trigger, breadcrumb, page actions slot and help menu with entries grouped by module; user menu at the foot of the sidebar
+- Plant switcher at the top of the sidebar as a menu of links grouped by company, with a plant in onboarding marked "Onboarding"; the company and plant crumbs
+- The admin frame at `/admin` without a plant; the plant list at `/`; the page "Your company is not open yet" and the page with the plant's name, for example "Plant D is not open yet"
 - Skip link, landmarks and the title pattern ("Planning board · Plant A · NorthMES")
 - The module unavailable placeholder with its "(unavailable)" menu entry, the module not-found page, the error panel and the minimal status route
 - The blocking reload dialog and the "Live updates paused, reconnecting" banner
@@ -2137,7 +2145,7 @@ Page: shell/shell-<issue>-navigation.dc.html (variations page first: yes, the sh
 shadcn components by name, tokens from D1, keyboard and focus order, landmarks, ARIA roles, names and announcements, final English copy, WCAG 2.2 criteria by number
 
 ## References
-docs/adr/0019-web-shell-with-react-module-federation-remotes.md, docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/plan/06-web-and-ux.md (shell layout, failure handling, order of design work); the approved D1 page
+docs/adr/0019-web-shell-with-react-module-federation-remotes.md, docs/adr/0021-accessibility-target-wcag-2-2-aa.md, docs/adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md, docs/adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md, docs/plan/06-web-and-ux.md (shell layout, failure handling, order of design work); the approved D1 page
 
 ## Output
 docs/design/shell/shell-<issue>-navigation.md and its PNGs; the shared frames shell/Shell.dc.html and shell/StationFrame.dc.html that later pages mount; Design section on the waiting UI tasks
@@ -2186,9 +2194,9 @@ Issue: northMES/northmes#42.
 
 As a planner who works in two plants, I want to switch plant from the shell and keep two plants open in two tabs, so that I never see or change one plant's data in the other.
 
-Module: web (`apps/web`, `packages/web-sdk`). Blocked by: E04-S02, E05-S03. Design: D2.
+Module: web (`apps/web`, `packages/web-sdk`, `apps/server`). Blocked by: E04-S02, E05-S03. Design: D2.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md).
 
 Acceptance criteria:
 
@@ -2196,11 +2204,17 @@ Acceptance criteria:
 - `createNorthmesClient({ plantId })` returns one Apollo client per plant with its own graphql-ws client; a plant switch disposes the old one.
 - When the new plant's module set or versions differ, the shell does one full navigation; otherwise it swaps the permission set and the client.
 - Each plant link keeps the current route and its search when the route's only path param is `$plant`. On a route with entity params it goes to the nearest ancestor route without them and drops the search, and the full navigation uses the same target.
-- Nav entries and widgets follow the current plant's permissions.
+- Nav entries and slot contributions follow the current plant's permissions.
+- `/api/v1/web/modules` returns `companies`: every plant the user can open, grouped under its company and sorted by name; a station principal gets an empty list ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+- The plant switcher is the first item of the sidebar in the expanded sidebar, the rail and the 320 px sheet. It lists the plants grouped by company, with group labels only when they span more than one company, and the shell hides it when the user can open fewer than two plants. A plant of another company follows the same switch rules ([ADR 0067](../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md)).
+- The first crumb is the plant, a link to `/$plant`; when the user's plants span more than one company, a company crumb without a link comes before it.
 
 Tests first:
 
 - `apps/web/test/plant-switch.test.tsx`: "a different module set triggers one document navigation"; "on /plant-a/planning/orders/1 the plant-b link is /plant-b/planning/orders".
+- `apps/web/test/plant-switcher.test.tsx`: "plants of two companies render under two group labels"; "plants of one company render without group labels"; "with one plant the switcher is not rendered"; "the switcher is the first item of the sidebar".
+- `packages/web-sdk/test/use-breadcrumbs.test.tsx`: "a detail route yields plant, module, list and entity crumbs, and the plant crumb links to /plant-a"; "with plants in two companies a company crumb without a link comes first".
+- `apps/server/test/rest/web-modules.int.test.ts`: "a user with plants in two companies gets both companies with their plants sorted by name".
 - `e2e/plant-switch.spec.ts`: "two tabs on two plants each show only their own orders".
 
 #### E04-S05 web: Keep live updates through restarts and catch stale tabs
@@ -2324,15 +2338,15 @@ Tests first:
 
 Issue: northMES/northmes#48.
 
-Goal: build the platform server pieces every module uses: the command pipeline with Zod contracts and the error model, the audit trail in the command transaction, the scope tree with plants, row-level security with transaction-local scopes, Better Auth sign-in, roles and permissions in core tables, same-origin and credential rules, user management, the outbox with pg-boss jobs, plant-authorized subscriptions and the time scalars.
+Goal: build the platform server pieces every module uses: the command pipeline with Zod contracts and the error model, the audit trail in the command transaction, the scope tree with plants, the CLI that creates companies and their first company admins, the admin pages that create plants, row-level security with transaction-local scopes, Better Auth sign-in, roles and permissions in core tables, same-origin and credential rules, user management, the outbox with pg-boss jobs, plant-authorized subscriptions and the time scalars.
 
-Who it is for: Plant admin. Also: Planner, Plugin developer, Maintainer.
+Who it is for: Plant admin. Also: Planner, Plugin developer, Maintainer, Hosting partner.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0012](../adr/0012-commands-as-the-single-write-path.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Out of scope: station credentials (E11), MCP tokens (E12), integration tokens (the public API epic after release 1), the reporting schema, single sign-on, company mode across plants, the pseudonymization command.
 
-Estimate: audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated. Depends on: E02. Milestone: M2. Tasks in E05-S03 to E05-S08 touch authentication, row-level security or secrets, so they carry `human` and run on the guided graph.
+Estimate: audit 3 to 5 (internal research note 22); command pipeline, data helpers, error catalog and jobs wrapper 6.5 to 9.5 (internal research note 33); identity, tenancy, events and realtime not estimated. Depends on: E02. Milestone: M2. Tasks in E05-S03 to E05-S08, E05-S14 and E05-S15 touch authentication, authorization, row-level security or secrets, so they carry `human` and run on the guided graph.
 
 #### E05-S01 core: Write every change through the command pipeline
 
@@ -2402,20 +2416,20 @@ As a plant admin, I want my company and its plants in one scope tree, so that ev
 
 Module: core. Blocked by: E05-S02. Design: none.
 
-ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
+ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - A Better Auth organization is a company; `core.plant.id` equals the plant's node id in `core.scope` (company root, plant children).
-- Each plant has a slug unique per company, an IANA zone and a production day start; an unknown slug is NOT_FOUND and never falls back to a default plant.
-- The plant slug schema in core's contracts refuses `api`, `graphql`, `mcp`, `health`, `modules`, `assets` and `station`, because a plant slug is the first segment of an SPA path and these are server paths or the station mount ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
-- The principal plugin validates `x-northmes-plant` against role assignments with the ancestor walk; an unauthorized plant fails with FORBIDDEN, `core.plant_forbidden` and one `permission.denied` security event.
+- Each plant has a slug unique per installation (`unique (slug)` on `core.plant`), an IANA zone and a production day start, so a user with plants in several companies keeps `/$plant` URLs; an unknown slug is NOT_FOUND and never falls back to a default plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+- The plant slug schema in core's contracts refuses `api`, `graphql`, `mcp`, `health`, `modules`, `assets`, `station` and `admin`, because a plant slug is the first segment of an SPA path and these are server paths, the station mount or the admin mount ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+- The principal plugin validates `x-northmes-plant` against role assignments with the ancestor walk and never reads Better Auth's active organization; an unauthorized plant fails with FORBIDDEN, `core.plant_forbidden` and one `permission.denied` security event.
 - One principal resolution serves a request that touches three subgraphs.
 
 Tests first:
 
 - `apps/server/test/gateway/principal.int.test.ts`: "a viewer at A with header B gets core.plant_forbidden and one security event"; "one session lookup serves three subgraphs".
-- `modules/core/contracts/test/plant-slug.test.ts`: "slugs api, graphql, mcp, health, modules, assets and station are refused"; "slug hel is accepted".
+- `modules/core/contracts/test/plant-slug.test.ts`: "slugs api, graphql, mcp, health, modules, assets, station and admin are refused"; "slug hel is accepted".
 
 Notes: public API paths will carry the plant slug (`/api/v<major>/<module-id>/plants/{plant}/...`), so renaming a slug would break integrations as well as bookmarks and links. This story decides whether a slug can be renamed at all.
 
@@ -2442,23 +2456,23 @@ Tests first:
 - `packages/testing/test/rls/write-set.int.test.ts`: "an UPDATE of a plant B row from a plant A request touches 0 rows"; "a viewer with no write role has an empty write set".
 - `apps/server/test/catalog-lint.int.test.ts`: "a FOR ALL policy fails the lint naming the table".
 
-#### E05-S05 core: Sign in with Better Auth and create the first admin by CLI
+#### E05-S05 core: Sign in with Better Auth and reset a password from the CLI
 
 Issue: northMES/northmes#53.
 
-As a plant admin, I want to sign in with a username or email and a password, and to create the first admin from the command line, so that nobody on the plant network can claim admin rights before IT finishes setup.
+As a plant admin, I want to sign in with a username or email and a password, and to reset a locked-out user's password from the command line, so that nobody on the plant network can claim admin rights through a web setup route and access comes back without one.
 
 Module: core (`modules/core`, `apps/server`, `apps/web`). Blocked by: E05-S03. Design: sign-in page (part of design task D2).
 
-ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md).
+ADRs: [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - `better-auth` 1.7.x is pinned exactly; it runs on its Kysely adapter with its own pool as `nm_auth` in schema `auth`, and its SQL is generated into core migrations with a drift test.
 - Better Auth runs with `basePath: "/api/v1/auth"`, and `toNodeHandler(auth)` is mounted at `/api/v1/auth/*` before body parsing; the sign-in page calls the same path, so a Better Auth client in the browser takes the same `basePath`. This is the library family under `/api/v1` ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)).
 - Sign-up is disabled, `immutableUsername` is on, the session cookie is `SameSite=Strict`, the cookie cache is at most 60 s, and rate-limit storage is in the database.
-- Every `/admin/*` path under `/api/v1/auth` is disabled; boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
-- `northmes admin create` and `northmes admin reset-password` run in the one-off migrate container, write a security event under surface `cli` and print a temporary password once.
+- Every `/admin/*` and `/organization/*` path under `/api/v1/auth` is disabled, so no signed-in user creates an organization over HTTP ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)); boot refuses `BETTER_AUTH_TELEMETRY`; the `testUtils` entry point is not in the production image.
+- `northmes admin reset-password --username <username> --reason <text> [--json]` runs in the one-off migrate container, writes one command row with principal type `system`, the system principal `core.cli` that a core migration seeds, and surface `cli`, writes one security event and prints a temporary password once. It never prompts and takes no password as a flag. There is no `northmes admin create`: companies and their first company admins come from `northmes company create` (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - Sign-in, failed sign-in and sign-out write security events.
 - `nm_app` reads user names only through the `security_invoker` view `core.user_directory(id, name, username, banned)` and has no grant on `auth.account` or `auth.session`; only `nm_auth` reaches the `auth` schema.
 
@@ -2466,8 +2480,10 @@ Tests first:
 
 - `modules/core/test/auth/drift.int.test.ts`: "Better Auth's generated SQL equals the committed migration".
 - `modules/core/test/auth/grants.int.test.ts`: "as nm_app, select from auth.account fails"; "as nm_app, select from core.user_directory returns the seeded planner".
-- `apps/server/test/cli/admin-create.int.test.ts`: "admin create writes one security event and a temporary password".
+- `apps/server/test/cli/reset-password.int.test.ts`: "reset-password writes one command row with surface cli and principal core.cli, one security event and a temporary password"; "a missing --reason exits 2 without a prompt".
+- `apps/server/test/cli/commands.test.ts`: "admin create is not a command".
 - `modules/core/test/auth/base-path.int.test.ts`: "GET /api/v1/auth/get-session without a cookie returns 200 with a null body"; "GET /api/auth/get-session returns 404".
+- `modules/core/test/auth/organization-paths.int.test.ts`: "POST /api/v1/auth/organization/create with a planner's session returns 404 and creates no organization"; "every HTTP path of the organization plugin answers 404".
 - `apps/web/test/auth-client.test.ts`: "the auth client requests its session from /api/v1/auth/get-session".
 - `e2e/sign-in.spec.ts`: "a wrong password shows the error and keeps the username".
 
@@ -2642,36 +2658,91 @@ Tests first:
 
 Issue: northMES/northmes#61.
 
-As a plant admin, I want security event partitions dropped after a retention period I can see and change, so that the security log does not grow without limit while command and change rows stay.
+As a plant admin, I want security event partitions dropped after a retention period I can see and change on the host, so that the security log does not grow without limit while command and change rows stay.
 
-Module: audit. Blocked by: E05-S02, E06-S08. Design: none.
+Module: audit. Blocked by: E05-S02, E05-S14. Design: none.
 
-ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md).
+ADRs: [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
-- Security event partitions older than the audited retention setting are dropped through a SECURITY DEFINER drop function with a pinned `search_path`, and each drop is recorded.
+- Security event partitions older than the installation setting `audit.securityEventRetentionDays` (name proposed) are dropped through a SECURITY DEFINER drop function with a pinned `search_path`, and each drop is recorded. The setting is one value for the installation, because a monthly partition holds the events of every company, and `northmes installation set` changes it on the host (M-60).
 - Audit command and change rows have no limit by default.
 
 Tests first:
 
-- `modules/audit/test/retention.int.test.ts`: "a partition older than the setting is dropped and the drop recorded".
+- `modules/audit/test/retention.int.test.ts`: "a partition older than the installation setting audit.securityEventRetentionDays is dropped and the drop recorded".
 
 Notes: ADR 0013 awaits a lawyer's confirmation on retention, so the default period stays a setting.
+
+#### E05-S14 core: Create companies and their first admins from the CLI
+
+As a hosting partner, I want to create a customer's companies and their first company admins with scriptable commands on the host, and to add a company admin when a company has lost every one, so that no company can create another and every company can be recovered without database access.
+
+Module: core (`modules/core`, `apps/server`). Blocked by: E05-S05, E05-S06, E05-S08. Design: none.
+
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md).
+
+Acceptance criteria:
+
+- `northmes company create --name <text> --admin-username <username> [--id <uuidv7>] [--admin-name <text>] [--admin-email <address>] --reason <text> [--json]` runs in the one-off migrate container. In one command it creates the Better Auth organization on the server (slug: the company id; owner member: the first admin), the company node, the company's `core.onboarding` row and the assignment of core's company admin role at the company node. A new user gets a temporary password, printed once, and a `.invalid` placeholder email when `--admin-email` is missing; an existing user gets the role and no password.
+- `northmes company add-admin --company <id> --username <username> [--name <text>] [--email <address>] --reason <text> [--json]` assigns core's company admin role at an existing company and adds the user to the company's organization as a member when the user is not one. It writes the membership before core's command, so a rerun after a failure between them assigns the role. A user who already holds the role and is a member makes it a no-op with exit 0; a banned user exits 3. This is the recovery path when a company has lost every company admin (M-58).
+- `northmes company list [--json]` prints each company's id, name, onboarding state, plant count and admin usernames, and writes no command row.
+- Core's manifest ships the company admin role, and the permission sync in `northmes migrate` gives it every installed permission, plugins' included (M-61).
+- `--id` makes a run idempotent: the same id and input exits 0 with `replayed: true` and prints no password; the same id with other input exits 3; a run that failed after Better Auth's write completes when it runs again: it reuses the organization and the user, runs core's command, exits 0 with `replayed: false` and prints no password.
+- Every write is a command with principal type `system`, the system principal `core.cli`, surface `cli`, the company node as scope and the required `--reason`, plus one security event (`cli.company_created` or `cli.company_admin_added`). Exit codes: 0 done, 1 unexpected error, 2 usage error, 3 refused, 4 company not found. No command prompts or takes a password as a flag. A temporary password appears only on standard output, never in a command row, a security event or a log line.
+- `northmes installation show [--json]` reads `core.installation_setting` and writes no command row and no security event. `northmes installation set <key> <value> --reason <text> [--json]` writes it with a command row and one security event `cli.installation_setting_changed`; `set` refuses an unknown key with exit 2. Each key arrives with the story that reads it: `mcp.enabled` in E12-S04, `outbound.allowedHosts` in E13-S02 and `audit.securityEventRetentionDays` in E05-S13 (M-60). The table carries the audit capture trigger, and its statement trigger bumps `core.config_revision`.
+- No GraphQL field, page or HTTP path creates a company; the organization plugin's paths are disabled in E05-S05.
+
+Tests first:
+
+- `apps/server/test/cli/company-create.int.test.ts`: "company create writes one command row with surface cli and principal core.cli, one security event, and prints the temporary password once"; "a replay with the same id creates nothing, exits 0 with replayed true and prints no password"; "with the organization written and no core command, a rerun creates the company once, exits 0 with replayed false and prints no password"; "the same id with another name exits 3"; "an existing username gets the company admin role and no new password"; "--json prints one object with companyId and adminUserId"; "the temporary password appears in no command row, security event or log line"; "a missing --reason exits 2 without a prompt".
+- `apps/server/test/cli/company-add-admin.int.test.ts`: "add-admin restores a company whose company admins were all removed"; "a user who already holds the role is a no-op with exit 0"; "a member without the role after a failed run gets the role on the rerun"; "a banned user exits 3".
+- `modules/core/test/company-admin-role.int.test.ts`: "after the permission sync the company admin role holds every installed permission, a plugin's included"; "a company admin assigns planning's planner role at a plant".
+- `apps/server/test/cli/installation-settings.int.test.ts`: "an unknown key exits 2".
+
+Notes: Krister answered M-60 on 2026-10-06 (`northmes installation set` on the host), and ADR 0066 waits for his confirmation of M-61. The commands receive `auth_secret` in the migrate container when Better Auth needs it to create a user (M-53). The ledger row for this story, E05-S15, E06-S14 and the module steps is in ADR 0066 under Changes to ADR 0055. Krister left its figure open, so it carries the planning session's estimate of 2026-10-06: 13 to 21.5 raw days (E05-S14 2.5 to 3.5, E05-S15 3 to 5, E06-S14 5 to 8, the five module steps 2.5 to 5), without the onboarding wizard's design task and gate time. Per epic that is E05 5.5 to 8.5 (E05-S14 and E05-S15) and E06 7.5 to 13 (E06-S14 with the five module steps, which arrive with it). Velocity checkpoint 1 (M2) checks the E05 part, velocity checkpoint 3 (M4) checks the E06 part, which lands with E06-S14 at M4, and M-04 stays open.
+
+#### E05-S15 core: Create plants on admin pages at /admin
+
+As a plant admin who holds core's company admin role, I want to create my company's plants on an admin page outside any plant, so that a new company gets its first plant and each new site is added without database access.
+
+Module: core, web (`modules/core`, `modules/core/contracts`, `modules/core/web`, `apps/server`, `apps/web`, `packages/web-sdk`, `packages/contracts`). Blocked by: E05-S14, E04-S04, E04-S07, E06-S05. Design: D2 for the admin frame and the plant list at `/`; the canonical list and form page for the plant page.
+
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md).
+
+Acceptance criteria:
+
+- `/admin` is a shell mount outside `/$plant` that sends the user to `/admin/core`. A remote returns its admin pages from `adminRoutes(adminRoute)` under `/admin/<id>`, and only core does in release 1. Core's link manifest has an `admin` section whose builders take no plant. The per-remote route harness also walks `adminRoutes`, so every admin leaf route has a title, and titles under `/admin` leave the plant segment out ("Plants · Admin · NorthMES").
+- `GET /api/v1/web/modules` without `plant` answers a user session with `plant: null`, `companies`, `admin` and the permissions the user holds at each company node, keyed by company id, and lists the core module when `admin` is true. `admin` is true for a user who holds `core.plant:create` or `core.onboarding:manage` at a company.
+- Requests from `/admin` carry no `x-northmes-plant`. The gateway serves such an operation only when every root field in it is one of core's plant-free admin fields (`coreAdminCompanies`, `coreUpdateCompany`, `coreAdminPlants`, `coreCreatePlant`, names proposed), each checked with `can()` at its company node; any other field without a plant fails with FORBIDDEN `core.plant_forbidden`.
+- `/admin/core` lists the companies where the user holds an admin permission and renames one with `core.updateCompany`. `/admin/core/plants` lists the plants of those companies and creates one with `core.createPlant` (name, slug, IANA zone, production day start) at a company where the user holds `core.plant:create`. The command writes the plant's `core.onboarding` row. A slug that another plant of the installation uses returns `fieldErrors` on `slug` with `core.plant_slug_taken`, and the message names no company.
+- `/` sends a user with one plant and `admin` false to that plant, and a user with no plant and `admin` true to `/admin`; every other user sees their plants grouped by company there, with a link to `/admin` when `admin` is true. No default plant is ever picked.
+
+Tests first:
+
+- `modules/core/test/plants.int.test.ts`: "a company admin creates plant hel in their company"; "creating a plant in another company is FORBIDDEN"; "slug hel used by a plant of another company is refused with fieldErrors on slug and a message that names no company".
+- `apps/server/test/gateway/plant-free.int.test.ts`: "coreAdminPlants without x-northmes-plant succeeds for a company admin"; "an operation without the header that selects a planning field fails with core.plant_forbidden"; "the plant-free root fields equal the release 1 list".
+- `apps/server/test/rest/web-modules.int.test.ts`: "without plant a company admin gets plant null, admin true and the core module"; "without plant a user with one plant role gets admin false and no modules"; "a company role with no plant yet gives a company with an empty plants list"; "without plant a company admin of one company who is a planner in another gets core.plant:create only under the first company id".
+- `apps/web/test/admin-mount.test.tsx`: "the core remote's adminRoutes mount under /admin/core"; "a remote whose admin route path differs from its id is rejected"; "every admin leaf route has a title without a plant segment".
+- `apps/web/test/landing.test.tsx`: "one plant and admin false redirects / to /hel"; "no plant and admin true redirects / to /admin".
+- `packages/contracts/test/define-module-links.test.ts`: "an admin section builder builds /admin/core/plants without a plant".
+
+Notes: the plant form reuses the zone picker and the production day start rule of E06-S05. The onboarding wizard, the plant gate and the routing of a company in onboarding at `/` arrive with E06-S14, after production planning is built; until then a new plant is usable at once. Krister confirmed the `/admin` path on 2026-10-06 (M-59).
 
 ### E06 core: Hold master data, units, settings and plant calendars
 
 Issue: northMES/northmes#62.
 
-Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, and plant calendars that yield availability windows. A new register then costs one definition and a handful of files.
+Goal: give planning and the connector the master data they plan on: plants, equipment groups, equipment, tools, articles, routings and operations, customers and warehouses, built through the master-data kit and the list kit, with SI units, audited settings, the date, clock and number format per company and plant, plant calendars that yield availability windows, and the onboarding wizard that keeps each new plant closed until it has what planners need. A new register then costs one definition and a handful of files.
 
 Who it is for: Plant admin. Also: Planner, Plugin developer.
 
-ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0053](../adr/0053-translation-english-first-general-translation-later.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Out of scope: CSV and Excel import of registers, list export, the reporting schema, the screen and plugin generators.
 
-Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated. Depends on: E05, E04, E03-S01. Milestone: M2, because E09 starts right after core master data.
+Estimate: units 9 (internal research note 35); list kit 17.5 to 24 gross (internal research note 34), overlapping the master-data kit 6 to 8, settings 3 and generators 3 to 4 (internal research note 33); calendars not estimated; the onboarding wizard with its five module steps (E06-S14) shares the ledger row of ADR 0066 with E05-S14 and E05-S15, and its part of the planning session's estimate of 2026-10-06 is 7.5 to 13, which velocity checkpoint 3 (M4) checks, because E06-S14 lands at M4 (see the notes of E05-S14). Depends on: E05, E04, E03-S01; E06-S14 also waits for E07-S08 and E08-S10 and for E06-S13, E09-S06, E11-S01 and E13-S03. Milestone: M2, because E09 starts right after core master data; E06-S14 lands at M4, after production planning is built (ADR 0066).
 
 #### E06-S01 contracts: Convert units through the NorthMES unit catalog
 
@@ -2864,7 +2935,7 @@ Acceptance criteria:
 - `SettingsForm` renders the definition and saves through a command. It reads labels through schema metadata, so a schema built with a remote's own Zod copy renders.
 - The SDK settings reader returns each field's effective value with its source (`default`, `company`, `plant`). At plant scope, `SettingsForm` shows the inherited company or default value for each field without a plant value, and offers to clear a plant value.
 - Statement triggers bump `core.config_revision` on changes to settings, roles, assignments, retention and installed modules, and every audit command row carries the revision.
-- Behaviour switches that look like infrastructure (the `/mcp` switch, connector shadow or live mode) are settings commands.
+- Behaviour switches that look like infrastructure, such as a connector's shadow or live mode, are settings commands. Installation-wide switches such as `/mcp` are not company settings: `northmes installation set` changes them on the host (E05-S14, [ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 Tests first:
 
@@ -2988,7 +3059,50 @@ Tests first:
 
 - `e2e/presentation.spec.ts`: the company uses `dmyDot` and plant P2 overrides it with `iso`; an order deadline shows `25.10.2026` at P1 and `2026-10-25` after switching to P2; the switch causes no document navigation when the module set is unchanged. The spec also runs in a Playwright project with locale `en-US` and shows the same strings.
 
-Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one.
+Notes: the two-plant check reads an order deadline on the production order list, so this story follows E07-S01; E07-S01 shows dates with the defaults until then. E12-S02 and E22-S02 add the MCP tool result and the audit export to the wire test. A user value for the three fields waits with the settings cascade below company and plant (cut candidate 1); the time zone never gets one. The formats steps of the onboarding wizard arrive with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+
+#### E06-S14 core: Guide a new company and each new plant through onboarding
+
+As a plant admin, I want an onboarding wizard on my first sign-in to a new company and for each new plant, which keeps the plant closed until its calendar and a plannable machine exist, so that nobody plans on a guessed time zone, production day start or shift times.
+
+Module: core, web, planning, pyramid-connector, ai, production-start (`modules/core`, `modules/core/contracts`, `modules/core/web`, `modules/planning`, `modules/pyramid-connector`, `modules/ai`, `modules/production-start`, `apps/server`, `apps/web`, `packages/sdk`, `packages/web-sdk`). Blocked by: E05-S15, E06-S05, E06-S11, E06-S13, E07-S08, E08-S10, E09-S06, E11-S01, E13-S03. Design: onboarding wizard with every step, the module steps included (a design task under this story, with a variations round, because the wizard is a new kind of screen).
+
+ADRs: [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md), [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md), [0033](../adr/0033-online-operator-station-in-the-production-start-module.md), [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md).
+
+Acceptance criteria:
+
+- A module declares its wizard steps in the manifest's `onboarding` key, `[{ key, level, order, required, permission, link }]` (name proposed), and registers `isComplete(scopeId)` through its API module; the catalog check refuses the key in a plugin's manifest.
+- `core.onboarding_step` records confirmed and skipped steps with who, when and an optional reason. `core.recordOnboardingStep` and `core.completeOnboarding` need `core.onboarding:manage` at the node. `core.completeOnboarding` re-runs every required check in its transaction, fails with `core.onboarding_incomplete` whose `details.steps` lists the open required steps, opens the plant, completes the company's row for its first plant, and emits `core.onboarding.completed`. It locks the plant's onboarding row before its checks, so a second call on an open plant succeeds without a change or an event. The onboarding tables bump `core.config_revision`.
+- The plant check in `PrincipalResolver` admits only holders of `core.onboarding:manage` at a plant that is not open. The check admits a station at the plant of its credential, not through a role ([ADR 0033](../adr/0033-online-operator-station-in-the-production-start-module.md)). Any other principal with a role there, and every station of that plant, gets FORBIDDEN `core.plant_not_ready` and no security event on every request except the module list, which answers it with 200, the `plant` object and no modules; a user without a role there gets `core.plant_forbidden` from the module list too. Completing onboarding drops the cached state, and an open plant never closes.
+- `/api/v1/web/modules` adds `onboardingState` to companies, plants and `plant`. A plant in onboarding is listed only for holders of `core.onboarding:manage`, and the switcher marks it "Onboarding"; for anyone else with a role there, the endpoint returns the `plant` object and no modules, and the shell shows the page with the plant's name, for example "Plant D is not open yet" ("Its onboarding is not complete. You can open it once an admin completes onboarding."). Holders of `core.onboarding:manage` see the banner with the plant's name, for example "Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it.", with the link "Continue onboarding" to the wizard.
+- The company wizard at `/admin/core/onboarding/$companyId` holds the company step (rename) and the first plant step (`core.createPlant`), then moves to the plant wizard at `/$plant/core/onboarding`. Core's plant steps: plant (required: confirmed by the admin; the zone and the production day start can change until the first calendar version exists), calendar (required: a version with at least one shift; the week preview and plant holidays come from E06-S10 and E06-S11), machines (required: one plannable machine), people (users and company and plant roles) and review and open. Company steps of other modules appear in the first plant's wizard; later plants show them as done with an edit link.
+- Core's formats steps, both optional: the company step at `/admin/core/onboarding/$companyId` with a live sample of a date, a clock time and a number in the values being edited, and the plant step that inherits or overrides each field of `core.presentation` (E06-S13).
+- Planning declares the planning rules step over the settings of E07-S08: company values in the first plant's wizard, a plant override later, each default shown with the ADR that records it. The step is required while a planning setting has no recorded default.
+- The connector declares the ERP connection step (company level, not required to open a plant): polling, file mode or not used; the endpoint and credentials; `cycleTimeBasis`, `fieldTimeUnits` and `operatorReportingSystem`; the warehouse rules and the default plant; write-back stays in shadow mode. The step offers a first import, and the machines it creates count for the machines step.
+- The ai module declares the AI assistant step (company level, optional): a provider, alias bindings, Test connection, the privacy acknowledgement and the features; skipping leaves AI off.
+- Production-start declares the stations step (plant level, optional, shown only when `operatorReportingSystem` is `northmes`): station records, with pairing later at each station PC. An admin can create and pair a station while the plant is in onboarding.
+- The wizard reads one query that returns each step as todo, done, skipped or blocked and opens the first todo; another browser or admin resumes at the same step, and `version` refuses a stale write.
+- `/` sends a holder of `core.onboarding:manage` at a company in onboarding to its company wizard, or to `/admin` when there are several; a user whose plants are all in onboarding sees the page "Your company is not open yet" ("Its onboarding is not complete. You can open its plants once an admin completes onboarding.").
+- The wizard meets WCAG 2.2 AA ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)): each step is a `screenRoute` with its own title and `h1`, and focus moves to it on a step change; the step list is a list of links in a fixed order whose current step carries `aria-current="step"`; each step's state is text, never only a color or an icon; each step saves through `useCommandForm`, so server `fieldErrors` keep the typed values; values entered earlier in the flow are shown again instead of asked for again (3.3.7); the review step lists every step's state and the plant's zone and production day start before "Open plant" (3.3.4).
+- The plant fixtures in `@northmes/testing`, the end-to-end worker plants and the demo seed create plants whose onboarding is complete, unless a test asks for a plant in onboarding, so the gate breaks no earlier test.
+- The data migration that ships the gate opens every plant that exists when it runs and completes the row of every company with a plant, in the audit context of `northmes migrate`, so plants that were usable before the gate stay usable; a company without a plant stays in onboarding. The plant check treats a plant without a `core.onboarding` row as not open.
+
+Tests first:
+
+- `modules/core/test/onboarding.int.test.ts`: "completeOnboarding without a shift fails with core.onboarding_incomplete naming the calendar step"; "completeOnboarding without a plannable machine fails naming the machines step"; "a skipped step records who skipped it and the reason"; "opening the first plant completes the company's onboarding"; "two admins recording one step with the same version give core.version_conflict"; "two completeOnboarding calls at the same time open the plant once and emit one core.onboarding.completed"; "the gate's migration opens every existing plant, completes each company with a plant and leaves a company without a plant in onboarding".
+- `apps/server/test/gateway/plant-gate.int.test.ts`: "a planner at a plant in onboarding gets FORBIDDEN core.plant_not_ready and no security event"; "a holder of core.onboarding:manage reads the plant in onboarding"; "after completeOnboarding the planner reads the plant on the next request"; "a station request at a plant in onboarding fails with core.plant_not_ready"; "a plant without a core.onboarding row admits only holders of core.onboarding:manage".
+- `modules/core/test/plants.int.test.ts`: "the zone of a plant with a calendar version cannot change".
+- `apps/web/test/onboarding-wizard.test.tsx`: "the step list marks the current step with aria-current step and writes each state as text"; "moving to the next step focuses its h1"; "a server fieldError on the slug keeps the typed values"; "the review step lists the zone and the production day start before Open plant".
+- `e2e/a11y/onboarding-wizard.spec.ts`: "every core step of the company and plant wizards passes axe".
+- `packages/testing/test/plant-fixture.int.test.ts`: "a plant from the fixture is open unless the test asks for one in onboarding".
+- `apps/server/test/catalog.test.ts`: "a plugin manifest with an onboarding key exits 1 naming the plugin".
+- `modules/planning/test/onboarding-step.int.test.ts`: "a plant cannot open while frozenHours has no value".
+- `apps/server/test/rest/web-modules.int.test.ts`: "a plant in onboarding is listed for a holder of core.onboarding:manage with onboardingState inProgress and left out for a planner"; "a planner asking for a plant in onboarding gets 200 with onboardingState inProgress and no modules"; "a user without a role at a plant in onboarding gets 403 with core.plant_forbidden"; "a station cookie at a plant in onboarding gets 200 with onboardingState inProgress and no modules".
+- `apps/web/test/landing.test.tsx`: "a company admin of a company in onboarding goes from / to its company wizard"; "a company admin of two companies in onboarding goes from / to /admin"; "a planner whose plants are all in onboarding sees Your company is not open yet".
+- `apps/web/test/plant-switcher.test.tsx`: "a plant in onboarding carries Onboarding in its link text".
+- `e2e/company-onboarding.spec.ts`: "after company create, the first admin signs in, changes the password, lands in the company wizard, creates plant hel, adds a calendar and one machine, opens the plant, and a planner then opens /hel".
+
+Notes: Krister decided on 2026-10-06 to wait with the onboarding wizard until production planning is built, so that its steps follow what planning needs, and the wizard stays in release 1. Its design task, the plant gate and the five module steps wait with it ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)). E07-S08 holds the planning settings that the planning rules step shows. E08-S10 is the last planning story that reads what the plant, calendar and machines steps collect, through E08-S01 (the board in plant time, machines grouped by equipment group, non-working time from availability windows) and E07-S09 (the board range after the autoplan of E07-S07). The module steps arrive here instead of in E06-S13, E07-S08, E09-S06, E11-S01 and E13-S03, because the manifest's `onboarding` key ships with the code that reads it; if cut 5 removes E11, the stations step and the E11-S01 blocker go with it. Until this story is built, a new plant is usable at once (E05-S15). E11-S02 and E12-S04 each get their `core.plant_not_ready` test from whichever of that story and this one is built second. The plant gate changes the plant check in `PrincipalResolver`, so the tasks that build it touch authorization, carry `human` and run on the guided graph, as the E05 tasks do. The scrap reason register joins the stations step once M-33 names its owner, and operators and badges join the people step once a story builds badge enrolment.
 
 ### E07 planning: Plan orders in per-planner drafts and run autoplan
 
@@ -3002,7 +3116,7 @@ ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](.
 
 Out of scope: the board UI (E08), Pyramid import (E09), agent proposals (E15), solver plugins, BOM explosion into child orders.
 
-Estimate: drafts, Save, soft locks and row statuses 4 to 7 raw days (internal research note 32); the rest not estimated. Depends on: E06, E03; ADR 0029 accepted before the first migration. Milestone: M3.
+Estimate: drafts, Save, soft locks and row statuses 4 to 7 raw days (internal research note 32); the rest not estimated. Depends on: E06 (not E06-S14, which waits for E07-S08 and E08-S10), E03; ADR 0029 accepted before the first migration. Milestone: M3.
 
 #### E07-S01 planning: Release production orders with their operations and job orders
 
@@ -3189,6 +3303,8 @@ Tests first:
 
 - `modules/planning/test/settings.test.ts`: "the defaults equal the ADR defaults"; "changing the deadline rule changes TC10's latest start".
 
+Notes: the planning rules step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+
 #### E07-S09 planning: Serve the board range and the late-order facts
 
 Issue: northMES/northmes#86.
@@ -3259,7 +3375,7 @@ As a planner, I want each block to show the fields I chose and its state in text
 
 Module: planning. Blocked by: E08-S01. Design: D3.
 
-ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0030](../adr/0030-a-planning-board-built-in-house.md), [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md).
 
 Acceptance criteria:
 
@@ -3267,7 +3383,7 @@ Acceptance criteria:
 - Blocks show the states committed, mine in draft, held by another planner, hard-locked, started, conflict, late, overdue, finish pending and material warning, each with a marker in the text color; the fill is always the order color.
 - Block text is black or white from `textColorFor`, and every block has a foreground-colored border.
 - Each block's accessible name is built through `aria-labelledby` from visible spans with `lang` plus hidden spans for times and states.
-- `BoardFieldSlot` carries `accessibleText`; core and plugins fill fields through it.
+- `planning/board/block-fields/v1` is a slot of the `field` kind ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)): core and plugins fill fields through it, each contribution's `useValues` loads its values for the board's loaded range in one query, and its synchronous `render` returns text, an optional icon and `accessibleText`.
 - `order=<production order id>` in the board URL opens that order's detail panel, so a shared link shows the same order.
 
 Tests first:
@@ -3623,6 +3739,8 @@ Tests first:
 - `modules/pyramid-connector/test/inbox.int.test.ts`: "three polls with the same broken order give one item with count 3".
 - `modules/pyramid-connector/test/auto-create-equipment.int.test.ts`: "a job order on non-plannable equipment comes back under notPlannable".
 
+Notes: the ERP connection step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+
 #### E09-S07 pyramid-connector: Import stock and re-date planned movements
 
 Issue: northMES/northmes#106.
@@ -3829,6 +3947,8 @@ Tests first:
 
 - `modules/core/test/station-credential.int.test.ts`: "a station key cannot call a planner query"; "revocation closes the socket with 4403".
 
+Notes: the stations step of the onboarding wizard, and creating and pairing a station while its plant is in onboarding, arrive with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+
 #### E11-S02 production-start: Sign operators in by badge at a station
 
 Issue: northMES/northmes#116.
@@ -3851,6 +3971,8 @@ Tests first:
 
 - `modules/core/test/station-sign-in.int.test.ts`: "a second sign-in ends the first session with reason replaced"; "five unknown badges lock sign-in for 5 minutes".
 - `e2e/station-sign-in.spec.ts`: "a badge scan into the badge field signs the operator in".
+
+Notes: the plant gate of E06-S14 also stops sign-in at a plant whose onboarding is not complete, with `core.plant_not_ready`. Whichever of this story and E06-S14 is built second adds "sign-in at a station of a plant in onboarding fails with core.plant_not_ready" to `modules/core/test/station-sign-in.int.test.ts` ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E11-S03 production-start: Start, pause and finish a job at the station
 
@@ -4051,14 +4173,14 @@ Issue: northMES/northmes#126.
 
 As a planner, I want to connect my own MCP client to NorthMES with a personal access token, so that my agent reads the plan as me and nothing more.
 
-Module: planning, core, platform. Blocked by: E12-S03, E05-S07. Design: personal access token page (canonical list and form page).
+Module: planning, core, platform. Blocked by: E12-S03, E05-S07, E05-S14. Design: personal access token page (canonical list and form page).
 
-ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md).
+ADRs: [0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md), [0011](../adr/0011-principals-credentials-and-same-origin-rules.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - `/mcp` runs inside the Nest app in the `api` role on `@modelcontextprotocol/server` v2 with `legacy: "stateless"` and validates `Origin` and `Host`.
-- `/mcp` is off per installation by default; an audited setting turns it on; `POST /mcp` returns 404 while it is off.
+- `/mcp` is off per installation by default; `northmes installation set mcp.enabled true --reason <text>` on the host turns it on with a command row and a security event; `POST /mcp` returns 404 while it is off ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 - Sign-in is a personal access token (api-key `configId` `mcp`, prefix `nms_mcp_`, expiry at most 90 days); each call's rights are the token's scopes intersected with a live `can()`; `/graphql` rejects these tokens.
 - `tools/list` is filtered by the union of the user's plant permissions with `cacheScope: "private"`, a short `ttlMs` and `listChanged: false`; every call re-checks permission at the named plant.
 - Calls work in both protocol eras.
@@ -4068,7 +4190,7 @@ Tests first:
 - `apps/server/test/mcp.disabled.int.test.ts`: "POST /mcp returns 404 while the setting is off".
 - `apps/server/test/mcp/tools.int.test.ts`: "every tool declares both annotations and an outputSchema"; "a session cookie without a bearer gets 401"; "a plant A user never gets plant B rows".
 
-Notes: cut 3. Each release gets one manual smoke test with Claude Code against `/mcp`.
+Notes: cut 3. Each release gets one manual smoke test with Claude Code against `/mcp`. Whichever of this story and E06-S14 is built second adds "a tool call naming a plant in onboarding fails with core.plant_not_ready" to `apps/server/test/mcp/tools.int.test.ts` (ADR 0066).
 
 ### E13 ai: Configure customer AI providers and meter usage
 
@@ -4113,16 +4235,16 @@ Issue: northMES/northmes#129.
 
 As a plant admin, I want to add an OpenRouter, Azure OpenAI or OpenAI-compatible provider with my own key, so that AI features run on my account and my data stays under my control.
 
-Module: ai, core. Blocked by: E13-S01, E06-S08. Design: Integrations page with provider cards (a design task under this story).
+Module: ai, core. Blocked by: E13-S01, E06-S08, E05-S14. Design: Integrations page with provider cards (a design task under this story).
 
-ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0047](../adr/0047-secrets-and-the-installation-key.md).
+ADRs: [0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [0047](../adr/0047-secrets-and-the-installation-key.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md).
 
 Acceptance criteria:
 
 - Provider configs are integration cards: a Zod config schema rendered as a form, write-only secrets, a fixed privacy checklist per kind; the table carries `scope_id`, and release 1 shows company level only.
 - OpenRouter defaults to `provider: { data_collection: 'deny', zdr: true }`; Azure accepts an API key or an Entra client secret or certificate with an allowlisted `authorityHost`; OpenAI-compatible servers declare their capabilities.
 - Secrets use AES-256-GCM with associated data over table, row, column and endpoint host; changing a base URL without a new secret fails with `core.secret_reentry_required`.
-- Private and link-local targets need an installation allowlist entry; 169.254.0.0/16 and the database host are always blocked.
+- Private and link-local targets need an entry in the installation setting `outbound.allowedHosts`, set with `northmes installation set` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)); 169.254.0.0/16 and the database host are always blocked.
 - Editing a key writes one change row with a redacted diff; `ai.provider:manage` guards the cards.
 
 Tests first:
@@ -4149,6 +4271,8 @@ Acceptance criteria:
 Tests first:
 
 - `modules/ai/test/test-connection.int.test.ts`: "a stub OpenRouter answering the probe with a no-matching-endpoint 404 marks the binding unusable with reason routing, and enabling the feature fails"; "a stub that returns a tool call records the tools capability".
+
+Notes: the AI assistant step of the onboarding wizard arrives with E06-S14, which waits for this story ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 #### E13-S04 ai: Meter every model call and stop at the budget
 
@@ -5081,11 +5205,11 @@ As a plugin developer, I want my widget to render in the planning board's side p
 
 Module: plugins (`examples/plugin-widget`), planning. Blocked by: E02-S05, E04-S07. Design: none (example only).
 
-ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md).
+ADRs: [0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0019](../adr/0019-web-shell-with-react-module-federation-remotes.md), [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md).
 
 Acceptance criteria:
 
-- `example-widget` contributes to `planning/board/side/v1` with a required label, an `order` and a permission; `<Slot>` renders it in `WidgetFrame` as a section with `aria-labelledby`.
+- `example-widget` lists its contribution to `planning/board/side/v1` in its manifest's `web.contributes` with a required label, an `order` and a permission, and its remote supplies a `region` implementation under the same id ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)); `<Slot>` renders it in `WidgetFrame` as a section with `aria-labelledby`.
 - Each contribution has its own error boundary keyed by contribution id, reset by the selected entity, and focus moves to the fallback when it was inside the widget.
 - The plugin's stylesheet carries the plugin prefix and no preflight; a check fails on an unprefixed utility selector.
 - `pluginStyles({ prefix })` in `@northmes/web-build` writes the stylesheet entry from Tailwind's `theme.css` and `utilities.css` with the prefix and `@northmes/ui/theme.css`; `example-widget` uses it and copies no token value.
@@ -5281,7 +5405,7 @@ The pilot is not asked whether it wants the assistant. AI stays in scope by Kris
 
 The path runs through dates outside the developer's control as much as through build days.
 
-1. Decisions by M0 (2026-10-30): ADR [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) accepted, then E07's migrations (E07-S01 to E07-S05), then the board's data wiring (E08-S10). The product owner's answers or their recorded defaults gate E03-S04, E03-S05, E07-S05 and E07-S07.
+1. Decisions by M0 (2026-10-30): ADR [0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) accepted, then E07's migrations (E07-S01 to E07-S05), then the board's data wiring (E08-S10), then the onboarding wizard (E06-S14), which waits for E08-S10 and E07-S08. The product owner's answers or their recorded defaults gate E03-S04, E03-S05, E07-S05 and E07-S07.
 2. The board: SP3 on 2026-10-26 to 2026-11-06 (E01-S04) with its verdict on 2026-11-06, a second-fail deadline on 2026-11-20, then design approval D3, then about 35 raw days of board work (E08), then the board accessibility gate (E20-S02) and the first NVDA pass (E20-S04). The second NVDA pass (E20-S05) comes before the pilot install.
 3. The skeleton: E00 ready by 2026-10-21, E02 green by 2026-11-13, required in `ci / gate` at M1 (2026-11-20), the Rsbuild exit on 2026-11-27 if still red. E04, E05 and E06 all start from it.
 4. Pyramid: write method names by 2026-11-13, a test endpoint or recorded pairs by 2026-12-18, E09 done and live write-back verified by 2027-01-22 as the target, and the product owner's fallback decision on 2027-02-26 if Pyramid has no write path (E10-S04).
@@ -5298,6 +5422,7 @@ flowchart LR
   E06 --> E09["E09 Pyramid import<br/>by 2027-01-22"]
   E07 --> E08wire["E08-S10 board data wiring"]
   E08core --> E08wire --> E20["E20 NVDA passes"]
+  E08wire --> E06S14["E06-S14 onboarding wizard"] --> Install
   E09 --> E10["E10 write-back<br/>verified 2027-01-22 or fallback 2027-02-26"]
   E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade rehearsal"]
   E20 --> Install["Pilot install<br/>set at M4"]

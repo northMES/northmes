@@ -177,7 +177,7 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 - A gateway plugin resolves the principal in `onContextBuilding`, once per client request, through `PrincipalResolver(request, plant)` from the SDK. The same resolver serves REST controllers, `/api/v1/ai/chat` and `/mcp` ([0010][adr-0010], [0011][adr-0011]).
 - Session path: Better Auth database sessions with a cookie cache whose `maxAge` is at most 60 s.
 - Station path: the resolver verifies the key in the `__Host-nm_station` cookie, loads `core.credential`, takes the plant from the credential's scope and rejects a differing `x-northmes-plant`. On HTTP it adds the operator from `x-northmes-operator-session` after checking that the operator session is open and belongs to this station. When a station cookie is present, session cookies are ignored except on sign-out and admin deregistration ([0033][adr-0033]).
-- Plant: the Apollo HTTP link sends the route plant's id in `x-northmes-plant`. The resolver validates it against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode: core.plant_forbidden`, data null and one `permission.denied` security event. No request falls back to a default plant, and the plant is never stored on the session ([0007][adr-0007]).
+- Plant: the Apollo HTTP link sends the route plant's id in `x-northmes-plant`. The resolver validates it against `core.role_assignment` with the ancestor walk. An unknown or unauthorized plant fails with `FORBIDDEN`, `errorCode: core.plant_forbidden`, data null and one `permission.denied` security event. No request falls back to a default plant, and the plant is never stored on the session ([0007][adr-0007]). At a plant whose onboarding is not complete, only a holder of `core.onboarding:manage` passes; any other principal with a role there gets `FORBIDDEN` with `core.plant_not_ready` and no security event. An operation without the header is served only when every root field in it is one of core's plant-free admin fields, which the admin pages under `/admin` use ([0066][adr-0066]).
 - The resolved principal (user or station, roles at the plant, permission set, read and write scopes) reaches every subgraph call as an object in process. No header, no signature and no second session lookup are involved; the spike saw one session lookup for a request that touched three subgraphs.
 - Subgraph context: `{ principal, correlationId, loaders, subgraph }`. Data access opens transactions that set `read_scopes` and `write_scopes` with transaction-local `set_config` from that principal ([0008][adr-0008]).
 - `/graphql` rejects personal access tokens of api-key `configId` `mcp` and any token whose `aud` ends in `/mcp` with 401, so an agent that can read its MCP token cannot call the commit mutation as the user.
@@ -430,12 +430,15 @@ Codes named by the decisions so far:
 | Code | Meaning |
 |---|---|
 | `core.forbidden` | permission denied at the target's scope (`FORBIDDEN`) |
-| `core.plant_forbidden` | `x-northmes-plant` names a plant the principal may not use (`FORBIDDEN`) |
+| `core.plant_forbidden` | `x-northmes-plant` names a plant the principal may not use, or an operation without the header selects a field that is not plant-free (`FORBIDDEN`) |
+| `core.plant_not_ready` | the plant's onboarding is not complete and the principal does not hold `core.onboarding:manage` (`FORBIDDEN`, no security event) ([0066][adr-0066]) |
+| `core.plant_slug_taken` | another plant of the installation uses the slug; `fieldErrors` on `slug`, and the message names no company |
+| `core.onboarding_incomplete` | `core.completeOnboarding` found an open required step; `details.steps` lists them |
 | `core.version_conflict` | `expectedVersion` is stale |
 | `planning.production_order.locked` | another planner's soft lock holds the order |
 | `core.code_taken` | code clash within a scope; the message hides the other plant's key |
 | `core.crossScopeReference` | a reference points outside the same scope or its ancestors |
-| `core.command_rejected` | a command validator vetoed; `details` names `rejectedBy` |
+| `core.command_rejected` | a command validator vetoed; `details` carry `rejectedBy`, the validator's `code`, that code's `details` and the `message` the server renders from the validating module's `defineErrors` ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) |
 | `core.validator_contract_mismatch` | a validator payload failed the owner's contract |
 | `core.client_outdated` | mutation from a tab running an older build |
 | `core.secret_reentry_required` | an outbound URL changed without a new secret |
@@ -667,7 +670,7 @@ Boot asserts that Better Auth's `enableSessionForAPIKeys` is false and that `dis
 
 | Header | Direction | Set by | Meaning |
 |---|---|---|---|
-| `x-northmes-plant` | request | Apollo HTTP link | id of the route's plant; validated per request |
+| `x-northmes-plant` | request | Apollo HTTP link | id of the route's plant; validated per request; absent on requests from `/admin` |
 | `x-northmes-csrf` | request | Apollo HTTP link, SSE client | presence required by the gateway's CSRF prevention |
 | `x-northmes-client-build` | request | `createNorthmesClient` | build the tab booted with |
 | `x-northmes-operator-session` | request | station client | operator bearer for the station's open operator session; stored hashed |
@@ -688,8 +691,8 @@ Every REST route either resolves its principal through `PrincipalResolver` or ca
 
 | Route | Method | Permission or credential | Limits and behaviour |
 |---|---|---|---|
-| `/api/v1/auth/*` | Better Auth | none before sign-in | `toNodeHandler(auth)` mounted before body parsing; sign-up disabled; `/admin/*`, api-key client endpoints and `/token` answer 404 |
-| `/api/v1/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per company; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes, each with its `kind` (`core`, `module` or `plugin`), a SHA-384 hash of its manifest and `integrity: null` for a module with missing files, plus permissions per plant and `plant { id, slug, name, timeZone, presentation }` with the plant's resolved presentation values ([06-web-and-ux.md](06-web-and-ux.md), [0061][adr-0061]) |
+| `/api/v1/auth/*` | Better Auth | none before sign-in | `toNodeHandler(auth)` mounted before body parsing; sign-up disabled; `/admin/*`, `/organization/*`, api-key client endpoints and `/token` answer 404, so a company is created only by the CLI ([0066][adr-0066]) |
+| `/api/v1/web/modules?plant=<slug>` | GET | session or station | `plant` is the plant slug from the URL, unique per installation; 401 without a session, 403 for an unauthorized plant; lists enabled, permitted and compatible remotes, each with its `kind` (`core`, `module` or `plugin`), its `icon`, a SHA-384 hash of its manifest and `integrity: null` for a module with missing files, plus permissions per plant and `plant { id, slug, name, timeZone, presentation }` with the plant's resolved presentation values ([06-web-and-ux.md](06-web-and-ux.md), [0061][adr-0061]). It also returns the user's `companies` with their plants and onboarding state, `admin` and `plant.onboardingState`; at a plant in onboarding it lists no modules for a user without `core.onboarding:manage`; called by a user session without `plant`, it returns `plant: null` and the user's permissions at each company node, keyed by company id, and lists the modules with admin routes when `admin` is true ([0066][adr-0066], [0067][adr-0067]) |
 | `/modules/<id>/<version>/*` | GET | public | immutable caching; remotes hold no data |
 | `/api/v1/web/client-errors` | POST | session or station | same-origin, rate-limited, 8 kB body cap; body `{ moduleId, moduleVersion, stage, code, messageTemplate, route, fingerprint }` with `stage` one of `manifest`, `entry`, `validate`, `render`, `slot`, `chunk`, `csp`, `insecure-context`; CSP reports go to the same route; rows group by fingerprint with counts in a core table on the audit no-trigger list |
 | `/api/v1/ai/chat` | POST | session; `ai.assistant:use` plus each tool's permission at the named plant | strict Zod body: roles `user` or `assistant`, part types `text` and `step-start`, at most 40 messages and 40 000 characters; client tool parts and system messages are dropped; a file part or a 41st message returns 400; the request carries the route's plant; the response is the AI SDK UI message stream with keep-alive; a budget stop ends it with `data-ai-stop budget-exhausted` ([10-ai-and-agents.md](10-ai-and-agents.md)) |
@@ -708,14 +711,14 @@ Every REST route under `/api/v<major>/` belongs to one of three route families: 
 | Public API | `/api/v<major>/<module-id>/...`; none in release 1 | outside systems, with integration tokens | the compatibility promise of its API major; the only routes in the OpenAPI document |
 | First-party | `/api/v1/web/modules`, `/api/v1/web/client-errors`, `/api/v1/station`, `/api/v1/ai/chat`, `/api/v1/pyramid-connector/import-file` | the shell, the remotes and the stations from the same image | none; a route may change in any lockstep minor, build matching keeps its callers in step, and it never appears in the OpenAPI document |
 | Library | `/api/v1/auth/*`: Better Auth's `toNodeHandler` with `basePath` `/api/v1/auth` | the shell's sign-in, sign-out and session | Better Auth's own; Better Auth defines the routes under its base path |
-| Root routes (outside the families) | `/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths (`/`, `/$plant/...`, `/station/$stationId`) | probes, GraphQL and MCP clients, browsers | outside the API versions, because these are probes, protocols and static mounts, not REST API routes |
+| Root routes (outside the families) | `/health`, `/health/live`, `/health/ready`, `/graphql`, `/mcp`, `/modules/<id>/<version>/*`, `/assets/*` and the SPA paths (`/`, `/$plant/...`, `/station/$stationId`, `/admin/...`) | probes, GraphQL and MCP clients, browsers | outside the API versions, because these are probes, protocols and static mounts, not REST API routes |
 
 - First-party routes share the version segment with the public API. When the public API moves to v2, the first-party routes move in the same release, together with the shell.
 - Host-owned first-party routes sit under `web` and `station`. Module-owned ones sit under the owner's id, such as `ai` and `pyramid-connector`, so a public route and a first-party route may share a module segment. The family comes from the controller's declaration, not from the path.
 - One SDK helper, `ApiController({ module, family })` from `@northmes/sdk/rest`, builds every controller path. The server calls neither `app.setGlobalPrefix` nor `app.enableVersioning`: with a global prefix and URI versioning every root controller must sit on an `exclude` list, and a forgotten entry moves a route without any error.
 - The boot route check (step 10 in [02-architecture.md](02-architecture.md#boot-sequence)) reads the helper's metadata. It stops boot when a REST controller path does not start with `api/v<major>/` and is not on the root allowlist, when a controller off the root allowlist was not declared through `ApiController`, when two controllers register the same method and path (Express would serve the first without an error), when a public controller's module segment differs from its owner's id, and when a plugin root reaches a controller before the public API exists ([03-modules-and-extensibility.md](03-modules-and-extensibility.md#rest-routes-and-plugins)).
 - The catalog check refuses the module ids `web`, `station` and `auth`, because they are the first-party and library segments under `/api/v1`.
-- Core's plant slug schema refuses the slugs `api`, `graphql`, `mcp`, `health`, `modules`, `assets` and `station`, because a plant slug is the first segment of an SPA URL and these words are server paths or the station mount ([06-web-and-ux.md](06-web-and-ux.md#shell-routes-and-mount-points)).
+- Core's plant slug schema refuses the slugs `api`, `graphql`, `mcp`, `health`, `modules`, `assets`, `station` and `admin`, because a plant slug is the first segment of an SPA URL and these words are server paths, the station mount or the admin mount ([06-web-and-ux.md](06-web-and-ux.md#shell-routes-and-mount-points), [0066][adr-0066]).
 
 Accepted ADRs written before [0064][adr-0064], such as [0019][adr-0019] for the module list, name the first-party routes without the `v1` segment. The paths in this plan follow [0064][adr-0064].
 
@@ -751,7 +754,7 @@ Release 1 ships one MCP endpoint with a read-mostly planning toolset ([0034][adr
 ### Endpoint
 
 - `POST /mcp` lives inside the Nest app in the `api` role. It is built on `@modelcontextprotocol/server` v2 directly in a Nest controller, not on `@rekog/mcp-nest`, with `createMcpHandler(factory, { legacy: "stateless" })`, so clients of the 2026-07-28 revision and 2025-era clients both work. No session store and no sticky sessions are needed. Specification: https://modelcontextprotocol.io/specification/2026-07-28.
-- The endpoint is disabled per installation by default and enabled through an audited settings command, not an environment variable ([0022][adr-0022]). While it is off, `POST /mcp` returns 404.
+- The endpoint is disabled per installation by default and enabled through an audited command, `northmes installation set mcp.enabled true` on the host, not an environment variable ([0022][adr-0022], [0066][adr-0066]). While it is off, `POST /mcp` returns 404.
 - The controller validates `Origin` and `Host` itself, because the SDK handler checks neither.
 
 ### Sign-in and principal
@@ -933,3 +936,5 @@ Further open questions are collected in [16-open-questions.md](16-open-questions
 [adr-0061]: ../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md
 [adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md
+[adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
+[adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md

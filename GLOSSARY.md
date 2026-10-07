@@ -9,6 +9,8 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | `company` (Company) | The business that uses NorthMES and owns its plants, master data and customers. Better Auth calls it an organization; ISA-95 calls it the enterprise. | tenant; organization outside the auth module |
 | `plant` (Plant) | One production site of a company, with its own time zone, machines, calendars and production orders. ISA-95 calls it a site; ERPs often tell plants apart by warehouse or department. | site, factory, location |
 | `scope` | A node in the scope tree (company, plant, and later area and line) that a row, a code and a role assignment belong to. | level, tenant |
+| installation | One NorthMES deployment: one database and one image version, serving one customer that may hold several companies. It is not a scope, and no role is held at it; the people who run the host create its companies with the CLI. | instance, tenant, site |
+| `onboarding` (Onboarding) | The steps of the onboarding wizard that a new company and each new plant go through, such as the plant's calendar and its first machine, before planners, operators and stations can use the plant. The company wizard and the plant wizard are its two parts. A plant whose onboarding is complete is open, and an open plant never closes again. It is not a job order's setup (see setup under Rates and durations). | setup, plant setup, provisioning |
 | plant time | The wall-clock time in the plant's time zone, which every screen shows with a zone label when the browser zone differs from the plant zone. | local time (ambiguous), server time |
 | presentation settings | The company and plant settings that decide how dates, clock times and numbers are shown and typed: the date format, the hour cycle and the number format in `core.presentation`. Stored and transmitted values never change with them, and the plant's time zone is not one of them. | locale (NorthMES pins one base locale), regional settings, display preferences |
 
@@ -58,7 +60,7 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | cycles per piece | How many cycles one piece needs. | strokes |
 | retool time | The time to set a machine up for an operation before the first piece. Pyramid sends `RetoolTime`, and some sites send setup as a separate row named "Ställtid". | changeover, toolchange |
 | fixed time | A duration added to an operation whatever the quantity. Pyramid sends it as `ExtendedTime`. | extra time |
-| setup | The first part of a job order: retool time plus fixed time. | preparation |
+| setup | The first part of a job order: retool time plus fixed time. It is not onboarding, the steps a new company and each new plant go through (see onboarding under Company and plants). | preparation |
 | run | The part of a job order after setup, when pieces are made. | production time |
 | planning factor | The divisor that stretches run time from the ideal machine speed to the expected real speed; by default the operation's OEE target. | efficiency, speed factor |
 | OEE target | The target overall equipment effectiveness of an operation, as a fraction. Pyramid sends `Oee` as a percentage. | expected OEE |
@@ -141,7 +143,12 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | plugin | A module that is installed into NorthMES without being part of the core repository's release. | extension, add-on |
 | command | A named write with a validated input; every change to data in NorthMES is one command. | mutation (that is its GraphQL form), action |
 | command validator | Plugin code that can veto a command before it runs. | interceptor, hook |
-| slot | A named place in a screen where another module or a plugin renders content. | extension point (in UI context) |
+| validator verdict | What a command validator returns: pass, or a veto with an error code, its details and a message. A throw, a timeout or a malformed verdict counts as a rejection. A later `ask` verdict asks the person to confirm with a reason. | result, decision |
+| extension point | A place that its owning module declares and versions, where another module or a plugin can extend NorthMES: on the server a validatable command, an event or a keyed entity type, on the web a slot. Anything else is internal and may change in any release. | hook, extension (alone) |
+| slot | A named place in a screen where another module or a plugin renders content. It is the form an extension point takes on the web, and its owner declares its slot kind. | extension point (in UI context) |
+| slot kind | The kind a slot's owner declares, which fixes what a contribution provides and what the host draws: route, region, tab, field, item, banner or action. In the field, item, banner and action kinds the contribution returns data and the host draws it. | slot type |
+| contribution | One module's entry at an extension point: data in its manifest (an id, the slot or point, and on the web a label, an order and a permission) plus code that the module's server part or remote supplies under the same id. | widget (for every kind), extension |
+| plugin inventory | The list that `pnpm plugin:check` prints from a plugin's manifest and composed schema: the slots it fills, the commands it vetoes, the events it consumes, the fields it adds, and its permissions, roles, settings and tables. It shows what the plugin declares, not what its code does beyond that. | capabilities, scopes |
 | background job | A unit of work in the job queue, such as an autoplan run or a write-back. It is not a job order. | job (alone, when a job order is meant), task |
 | public API | The REST routes under `/api/v<major>/<module-id>/` that outside systems call with an integration token. They carry the compatibility promise and are the only routes in the OpenAPI document; release 1 has none. Earlier documents call it the integration REST API. | REST API (alone; first-party routes are REST too) |
 | first-party route | A REST route under `/api/v<major>/` that only the shell, the remotes and the stations of the same image call, such as `/api/v1/web/modules`. It shares the version segment with the public API but carries no compatibility promise and never appears in the OpenAPI document. | internal API, private API |
