@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
+import { readFileSync } from 'node:fs';
 import { Client } from 'pg';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 import { useTestDatabase } from '../src/index.ts';
+
+const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
 async function query<Row>(connectionString: string, sql: string): Promise<Row[]> {
   const client = new Client({ connectionString });
@@ -34,5 +37,14 @@ describe('the test database', () => {
     );
 
     expect(rows).toEqual([{ marker: 'nm_marker' }]);
+  });
+
+  it('the container image equals the digest in infra/pg-image.json', async () => {
+    const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
+
+    expect(inject('pgImage')).toBe(image);
+    expect(image).toContain('@sha256:');
+    const rows = await query<{ version: string }>(connectionString, 'select version()');
+    expect(rows[0]?.version).toMatch(/^PostgreSQL 18\./);
   });
 });
