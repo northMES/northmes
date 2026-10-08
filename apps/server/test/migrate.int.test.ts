@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { query, useTestDatabase } from '@northmes/testing';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
+import { cli } from '../src/cli.ts';
 import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
 import { imageVersion, inRepoModule } from './fixtures/catalog.ts';
 
@@ -149,5 +153,66 @@ describe('concurrent migrate runs', () => {
       fixtureFiles.length,
     ]);
     expect(records).toEqual(fixtureFiles.map(({ module, name }) => ({ module, name })));
+  });
+});
+
+describe('pnpm northmes migrate', () => {
+  const db = useTestDatabase();
+  let secretsDir: string;
+
+  beforeAll(() => {
+    secretsDir = mkdtempSync(join(tmpdir(), 'northmes-migrate-'));
+  });
+
+  afterAll(() => {
+    if (secretsDir) rmSync(secretsDir, { recursive: true, force: true });
+  });
+
+  // ConfigModule writes the validated environment into process.env, as it does in the server. The
+  // stubs remove these keys for the test, and unstubAllEnvs takes them out again afterwards.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('E02-S02 pnpm northmes migrate boots the catalog without listening and migrates it as nm_owner', async () => {
+    for (const key of ['DATABASE_URL', 'NORTHMES_DB_OWNER_PASSWORD_FILE'])
+      vi.stubEnv(key, undefined);
+    const databaseUrl = new URL(db.ownerUrl);
+    const passwordFile = join(secretsDir, 'db_owner_password');
+    writeFileSync(passwordFile, `${decodeURIComponent(databaseUrl.password)}\n`, { mode: 0o600 });
+    databaseUrl.username = '';
+    databaseUrl.password = '';
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+
+    await cli(['migrate'], {
+      env: {
+        NODE_ENV: 'test',
+        DATABASE_URL: databaseUrl.href,
+        NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
+      },
+      exit,
+      log,
+    });
+    const schemas = await query(
+      db.ownerUrl,
+      `select n.nspname as schema, r.rolname as owner
+         from pg_namespace n
+         join pg_roles r on r.oid = n.nspowner
+        where n.nspname in ('core', 'planning')
+        order by n.nspname`,
+    );
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(log.error).not.toHaveBeenCalled();
+    // The in-repo modules have no migration files yet, and nothing listens.
+    expect(log.info.mock.calls).toEqual([
+      ['Modules in boot order: core, planning'],
+      ['Migrations up to date'],
+    ]);
+    expect(schemas).toEqual([
+      { schema: 'core', owner: 'nm_mod_core' },
+      { schema: 'planning', owner: 'nm_mod_planning' },
+    ]);
   });
 });
