@@ -163,6 +163,22 @@ describe('the shell', () => {
     ).toEqual(['Quality', 'Planning (unavailable)', 'Maintenance']);
   });
 
+  it('E02-S05 a remote whose ./module differs from its list entry gets a placeholder route and names the problem', async () => {
+    const { runtime } = fakeRuntime({ quality: { ...qualityModule, version: '0.3.0' } });
+
+    const loaded = await loadModules([quality], runtime);
+    renderShellAt('/plant-a/quality', loaded);
+
+    expect(loaded).toEqual([
+      {
+        listed: quality,
+        module: null,
+        problem: 'version is 0.3.0, expected 0.4.0 from the server entry',
+      },
+    ]);
+    expect(await screen.findByText('The Quality module could not be loaded.')).toBeDefined();
+  });
+
   it("E02-S05 a module's screen queries the gateway with the client for the plant in the URL", async () => {
     const { runtime } = fakeRuntime({ quality: qualityModule });
     const fetch = vi.fn<typeof globalThis.fetch>(
