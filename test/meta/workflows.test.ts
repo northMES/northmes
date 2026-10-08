@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 
 interface Step {
   name?: string;
+  if?: string;
   uses?: string;
   run?: string;
   with?: Record<string, unknown>;
@@ -12,6 +13,7 @@ interface Step {
 
 interface Job {
   name?: string;
+  if?: string;
   needs?: string | string[];
   'runs-on'?: unknown;
   steps?: Step[];
@@ -168,6 +170,20 @@ describe('workflows', () => {
     for (const { where, step } of checkouts) {
       expect(step.with?.['persist-credentials'], where).toBe(false);
     }
+  });
+
+  // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
+  it('ci / gate runs after a failed or cancelled job and then fails', () => {
+    const { workflow, id } = jobNamed('ci / gate');
+    const gate = workflow.jobs[id];
+
+    expect(gate?.if).toBe('always()');
+    expect(gate?.steps).toContainEqual(
+      expect.objectContaining({
+        if: "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')",
+        run: 'exit 1',
+      }),
+    );
   });
 
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
