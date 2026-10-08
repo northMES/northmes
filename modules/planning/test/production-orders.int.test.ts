@@ -15,6 +15,19 @@ function fixtureAt(plant: string): CommandContext {
   return { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' };
 }
 
+const ordersQuery = `{
+  planningProductionOrders { number quantity status article { code name } }
+}`;
+
+interface OrdersAnswer {
+  planningProductionOrders: {
+    number: string;
+    quantity: string;
+    status: string;
+    article: { code: string; name: string } | null;
+  }[];
+}
+
 describe('planningProductionOrders', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
@@ -64,6 +77,37 @@ describe('planningProductionOrders', () => {
       ),
     );
   }
+
+  it("E02-S04 planningProductionOrders lists the plant's orders with their article names", async () => {
+    const plant = given.plant();
+    const shelf = await writeArticle(plant, 'SH-210', 'Shelf board');
+    const leg = await writeArticle(plant, 'LG-712', 'Table leg');
+    await writeOrder(plant, '6202', leg, '12.5');
+    await writeOrder(plant, '6201', shelf, '120');
+
+    const answer = await (await clientAt(plant)).send<OrdersAnswer>(ordersQuery);
+
+    // quantity is the numeric(18,6) column as decimal text, so no digit passes through a float.
+    expect(answer).toEqual({
+      status: 200,
+      data: {
+        planningProductionOrders: [
+          {
+            number: '6201',
+            quantity: '120.000000',
+            status: 'planned',
+            article: { code: 'SH-210', name: 'Shelf board' },
+          },
+          {
+            number: '6202',
+            quantity: '12.500000',
+            status: 'planned',
+            article: { code: 'LG-712', name: 'Table leg' },
+          },
+        ],
+      },
+    });
+  });
 
   it('E02-S04 an order at another plant is not listed', async () => {
     const plant = given.plant();
