@@ -129,4 +129,12 @@ describe('the shell', () => {
       paths.map((path) => ({ path, status: 200, csp, cacheControl: 'no-cache', body: index })),
     );
   });
+
+  it('E02-S05 hashed shell assets are immutable', async () => {
+    const url = await serve(['core', 'planning']);
+
+    const asset = await cachingOf(`${url}/assets/index-7b3e9a1c.js`);
+
+    expect(asset).toEqual({ status: 200, cacheControl: 'public, max-age=31536000, immutable' });
+  });
 });
