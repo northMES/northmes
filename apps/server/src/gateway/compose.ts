@@ -1,26 +1,44 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto';
-import type { SubgraphEntry } from '@northmes/sdk/graphql';
 import { composeServices, compositionHasErrors } from '@theguild/federation-composition';
 import { parse } from 'graphql';
+import { type CompositionProblem, checkRules, type SubgraphSdl } from './rules.ts';
 
 /** The URL of a subgraph in the supergraph. The in-process transport executes it in this process. */
 export function inProcessUrl(name: string): string {
   return `inproc://${name}`;
 }
 
+/** Every NorthMES rule and composition error of one composition, one "[code] message" line each. */
+export class SupergraphCompositionError extends Error {
+  readonly problems: readonly string[];
+
+  constructor(problems: readonly CompositionProblem[]) {
+    const lines = problems.map(({ code, message }) => `[${code}] ${message}`);
+    super(['Supergraph composition failed', ...lines.map((line) => `- ${line}`)].join('\n'));
+    this.name = 'SupergraphCompositionError';
+    this.problems = lines;
+  }
+}
+
 /**
- * Composes the subgraphs into the supergraph SDL with @theguild/federation-composition (ADR 0015).
- * Throws one Error that lists every composition error.
+ * Composes the subgraphs into the supergraph SDL with @theguild/federation-composition, after the
+ * NorthMES rules (ADR 0015). Throws one SupergraphCompositionError that lists every rule and
+ * composition error.
  */
-export function composeSupergraph(subgraphs: readonly SubgraphEntry[]): string {
+export function composeSupergraph(subgraphs: readonly SubgraphSdl[]): string {
+  const ruleProblems = checkRules(subgraphs);
   const result = composeServices(
     subgraphs.map(({ name, sdl }) => ({ name, typeDefs: parse(sdl), url: inProcessUrl(name) })),
   );
   if (compositionHasErrors(result)) {
-    const lines = result.errors.map((error) => `- ${error.message}`);
-    throw new Error(['Supergraph composition failed', ...lines].join('\n'));
+    const compositionProblems = result.errors.map((error) => ({
+      code: String(error.extensions.code),
+      message: error.message,
+    }));
+    throw new SupergraphCompositionError([...ruleProblems, ...compositionProblems]);
   }
+  if (ruleProblems.length > 0) throw new SupergraphCompositionError(ruleProblems);
   return result.supergraphSdl;
 }
 
