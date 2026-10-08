@@ -14,23 +14,47 @@ export const seedScopes = {
   plant: '019a0000-0000-7000-8000-00000000a001',
 };
 
+// Each record has a fixed id, so a second run finds it and writes nothing.
 const articles = [
-  { code: 'BR-140', name: 'Wall bracket' },
-  { code: 'PN-305', name: 'Side panel' },
-  { code: 'CW-220', name: 'Caster wheel' },
+  { id: '019a0000-0000-7000-8000-0000000a0001', code: 'BR-140', name: 'Wall bracket' },
+  { id: '019a0000-0000-7000-8000-0000000a0002', code: 'PN-305', name: 'Side panel' },
+  { id: '019a0000-0000-7000-8000-0000000a0003', code: 'CW-220', name: 'Caster wheel' },
 ];
 
+const [bracket, panel, caster] = articles.map(({ id }) => id);
+
 const orders = [
-  { number: 'DEV-1001', article: 'BR-140', quantity: '500' },
-  { number: 'DEV-1002', article: 'PN-305', quantity: '80' },
-  { number: 'DEV-1003', article: 'CW-220', quantity: '1200' },
-  { number: 'DEV-1004', article: 'BR-140', quantity: '150' },
+  {
+    id: '019a0000-0000-7000-8000-0000000b0001',
+    number: 'DEV-1001',
+    articleId: bracket,
+    quantity: '500',
+  },
+  {
+    id: '019a0000-0000-7000-8000-0000000b0002',
+    number: 'DEV-1002',
+    articleId: panel,
+    quantity: '80',
+  },
+  {
+    id: '019a0000-0000-7000-8000-0000000b0003',
+    number: 'DEV-1003',
+    articleId: caster,
+    quantity: '1200',
+  },
+  {
+    id: '019a0000-0000-7000-8000-0000000b0004',
+    number: 'DEV-1004',
+    articleId: bracket,
+    quantity: '150',
+  },
 ];
 
 /**
  * Writes the seed in one transaction as the role appUrl logs in as, nm_app, with the seed plant as
  * its read and write scope, so the row-level security policies apply as they do in the server
- * (ADR 0008).
+ * (ADR 0008). A record that exists, also one a person changed since, is left as it is, so a second
+ * run adds nothing.
  * @param {string} appUrl
  */
 export async function seed(appUrl) {
@@ -43,20 +67,19 @@ export async function seed(appUrl) {
               set_config('northmes.write_scopes', $1::uuid[]::text, true)`,
       [[seedScopes.plant]],
     );
-    /** @type {Map<string, string>} */
-    const articleIds = new Map();
-    for (const { code, name } of articles) {
-      const { rows } = await client.query(
-        'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
-        [seedScopes.plant, code, name],
-      );
-      articleIds.set(code, rows[0].id);
-    }
-    for (const { number, article, quantity } of orders) {
+    for (const { id, code, name } of articles) {
       await client.query(
-        `insert into planning.production_order (scope_id, number, article_id, quantity)
-         values ($1, $2, $3, $4)`,
-        [seedScopes.plant, number, articleIds.get(article), quantity],
+        `insert into core.article (id, scope_id, code, name) values ($1, $2, $3, $4)
+         on conflict (id) do nothing`,
+        [id, seedScopes.plant, code, name],
+      );
+    }
+    for (const { id, number, articleId, quantity } of orders) {
+      await client.query(
+        `insert into planning.production_order (id, scope_id, number, article_id, quantity)
+         values ($1, $2, $3, $4, $5)
+         on conflict (id) do nothing`,
+        [id, seedScopes.plant, number, articleId, quantity],
       );
     }
     await client.query('commit');
