@@ -9,11 +9,30 @@ import ts from 'typescript';
  * @typedef {{ path: string, line: number, literal: string }} Finding
  */
 
+/**
+ * The folders the rule covers. Paths are repository-relative with forward slashes, as `git ls-files`
+ * prints them.
+ */
+const scannedFolders = [
+  /^modules\/[^/]+\/web\//,
+  /^examples\/[^/]+\/web\//,
+  /^apps\/web\//,
+  /^e2e\//,
+];
+
+/** TypeScript and JavaScript sources, the files the TypeScript parser reads. */
+const sourceExtension = /\.[cm]?[jt]sx?$/;
+
 /** The JSX attributes that take a path. */
 const pathAttributes = new Set(['to', 'href']);
 
 /** The calls whose options object takes a path in `to`. */
 const navigationCalls = new Set(['navigate', 'redirect']);
+
+/** @param {string} path */
+function isScanned(path) {
+  return sourceExtension.test(path) && scannedFolders.some((folder) => folder.test(path));
+}
 
 /** @param {string} value */
 function isAppPath(value) {
@@ -151,7 +170,7 @@ export function scan(files, allowlist) {
   /** @type {Finding[]} */
   const findings = [];
 
-  for (const { path, text } of files) {
+  for (const { path, text } of files.filter((file) => isScanned(file.path))) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
     const visit = (node) => {
       const literals = pathExpressions(node, source).flatMap((expression) =>
