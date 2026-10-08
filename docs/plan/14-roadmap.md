@@ -608,7 +608,7 @@ scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility,
 .github/PULL_REQUEST_TEMPLATE.md (new): validation impact none, UI only, records, security, calculation or data migration
 .coderabbit.yaml (already on main and valid; keep reviews.auto_review.auto_incremental_review, reviews.request_changes_workflow, reviews.allow_author_approval and reviews.review_progress true, and reviews.commit_status and reviews.fail_commit_status false)
 test/meta/github-files.test.ts (new)
-scripts/repo/check-ruleset.mjs (new) and scripts/repo/check-ruleset.test.ts (new): reads the main ruleset through the GitHub API; a weekly CI job named repo settings runs check-ruleset.mjs against the live main ruleset (ADR 0065)
+scripts/repo/check-ruleset.mjs (new) and scripts/repo/check-ruleset.test.ts (new): reads the main ruleset through the GitHub API, checks its pull request rule (ADR 0065) and checks that its strict required status checks list every job name of .github/workflows/ci.yml from the GitHub Actions app (ADR 0069); a weekly CI job named repo settings runs check-ruleset.mjs against the live main ruleset (ADR 0065)
 Seam: the test parses the YAML and Markdown files.
 
 ## Tests first
@@ -618,6 +618,7 @@ Seam: the test parses the YAML and Markdown files.
 - github-files.test.ts: "scripts/labels.sh creates epic, story, task, human, design and spike"
 - github-files.test.ts: ".bestpractices.json names the project id"
 - check-ruleset.test.ts: "a ruleset with 0 required approvals fails naming required_approving_review_count"
+- check-ruleset.test.ts: "a ruleset without ci / test fails naming ci / test"
 
 ## Design
 none

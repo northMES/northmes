@@ -73,6 +73,7 @@ ADR 0039 is accepted, so its text stays as it was.
 
 * `test/meta/workflows.test.ts`: "the CI workflow has exactly the jobs ci / lint, ci / typecheck, ci / build, ci / test, ci / pr title, ci / linked issue and ci / gate". It fails on a renamed, added or removed job, so the change that makes it pass names the ruleset edit.
 * `test/meta/workflows.test.ts`: "ci / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg", "ci / gate needs every other job in its workflow" and "ci / gate runs after a failed, cancelled or skipped job and then fails".
+* Ruleset check (task E00-S04-T03): `scripts/repo/check-ruleset.mjs` fails when the `required_status_checks` rule of the `main` ruleset does not list every job name of `.github/workflows/ci.yml` with `integration_id` 15368, or when `strict_required_status_checks_policy` is false. `scripts/repo/check-ruleset.test.ts`: "a ruleset without ci / test fails naming ci / test".
 
 Inspection step, not a check: `gh api repos/northmes/northmes/rulesets/<id>` lists the seven checks under the `required_status_checks` rule, each with `integration_id` 15368.
 
