@@ -298,12 +298,13 @@ describe('workflows', () => {
     }
   });
 
-  it('every job sets its own permissions, at most contents: read', () => {
+  it('every job sets its own permissions: contents: read, and none for ci / gate, which reads no files', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
-      expect(job.permissions, where).toEqual({ contents: 'read' });
+      const expected = job.name === 'ci / gate' ? {} : { contents: 'read' };
+      expect(job.permissions, where).toEqual(expected);
     }
   });
 
