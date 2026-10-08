@@ -130,3 +130,24 @@ describe('migrate', () => {
     expect(await records()).toEqual(before);
   });
 });
+
+describe('concurrent migrate runs', () => {
+  const db = useTestDatabase();
+
+  it('E02-S02 two concurrent runs apply each file once', async () => {
+    const runs = await Promise.all([
+      migrate({ ownerUrl: db.ownerUrl, catalog }),
+      migrate({ ownerUrl: db.ownerUrl, catalog }),
+    ]);
+    const records = await query(
+      db.ownerUrl,
+      'select module, name from northmes_meta.migration order by module, name',
+    );
+
+    expect(runs.map((run) => run.applied.length).sort((a, b) => a - b)).toEqual([
+      0,
+      fixtureFiles.length,
+    ]);
+    expect(records).toEqual(fixtureFiles.map(({ module, name }) => ({ module, name })));
+  });
+});
