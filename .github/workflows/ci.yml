@@ -78,6 +78,43 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:tz
 
+  # The pull request checks read the event, so they run only for pull requests. Their scripts take
+  # the event values from environment variables: interpolated into a run script, a title or body
+  # could inject shell code.
+  pr-title:
+    name: ci / pr title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-title.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+
+  # Renovate and release pull requests finish no issue and are exempt.
+  linked-issue:
+    name: ci / linked issue
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/linked-issue.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
   # so ci / gate always runs and fails itself instead.
   gate:
