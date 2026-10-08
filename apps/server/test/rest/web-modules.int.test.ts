@@ -20,6 +20,12 @@ afterEach(async () => {
   testApp = undefined;
 });
 
+/** The status and the Cache-Control header of a GET of `url`. */
+async function cachingOf(url: string) {
+  const response = await fetch(url);
+  return { status: response.status, cacheControl: response.headers.get('cache-control') };
+}
+
 /** Boots the in-repo modules that `modules` names with the fixture web files, and returns its URL. */
 async function serve(modules: readonly string[]): Promise<string> {
   testApp = await createTestApp({ modules, hostFactory: hostFactoryWithWebFiles(webFiles) });
@@ -65,5 +71,21 @@ describe('the web module list', () => {
         },
       ],
     });
+  });
+});
+
+describe('the remote files', () => {
+  it('E02-S05 hashed remote files are immutable and mf-manifest.json is no-cache', async () => {
+    const remote = `${await serve(['core', 'planning'])}/modules/planning/${planning.version}`;
+
+    const hashed = await cachingOf(`${remote}/assets/module-5e8c1f2a.js`);
+    const manifest = await cachingOf(`${remote}/mf-manifest.json`);
+    const entry = await cachingOf(`${remote}/remoteEntry.js`);
+    const stats = await cachingOf(`${remote}/mf-stats.json`);
+
+    expect(hashed).toEqual({ status: 200, cacheControl: 'public, max-age=31536000, immutable' });
+    expect(manifest).toEqual({ status: 200, cacheControl: 'no-cache' });
+    expect(entry).toEqual({ status: 200, cacheControl: 'no-cache' });
+    expect(stats).toEqual({ status: 200, cacheControl: 'no-cache' });
   });
 });
