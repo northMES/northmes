@@ -81,6 +81,15 @@ function isNamedRelativePath(value) {
 }
 
 /**
+ * Whether a literal starts with text. A template literal that starts with a substitution starts
+ * with a value the check does not know, such as a link builder's `to`.
+ * @param {ts.Node} node
+ */
+function startsWithText(node) {
+  return !ts.isTemplateExpression(node) || node.head.text !== '';
+}
+
+/**
  * The name of the function a call calls: `navigate` for both `navigate()` and `router.navigate()`.
  * @param {ts.CallExpression} call
  */
@@ -219,7 +228,10 @@ export function scan(files, allowlist) {
       );
       for (const literal of literals) {
         const reported =
-          isAppPath(literal.text) || (literal.name === 'to' && isNamedRelativePath(literal.text));
+          isAppPath(literal.text) ||
+          (literal.name === 'to' &&
+            startsWithText(literal.node) &&
+            isNamedRelativePath(literal.text));
         if (reported && !isAllowed(path, literal.text)) {
           const start = literal.node.getStart(source);
           findings.push({
