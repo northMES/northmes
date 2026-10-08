@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034 |
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-06 the index holds 68 ADRs: 37 accepted and 31 proposed, 65 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
+On 2026-10-08 the index holds 69 ADRs: 37 accepted and 32 proposed, 66 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -165,5 +165,6 @@ On 2026-10-06 the index holds 68 ADRs: 37 accepted and 31 proposed, 65 for relea
 | 0066 | [Companies created by the CLI, plant slugs unique per installation, company settings at /settings and an onboarding wizard before a plant opens](0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | 1 | maintainer (the company admin role holding every installed permission) |
 | 0067 | [Plant switcher across companies, nav icons by lucide name and a top bar slot](0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md) | proposed | 1 | maintainer (the top bar slot id; top bar items drawn from data) |
 | 0068 | [Extension points declared by their owners, contributions as manifest data with code by id, and a plugin inventory](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) | proposed | 1 | maintainer (the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the command.rejected security event and the validator record at the first regulated sale; acceptance before the skeleton's validator story) |
+| 0069 | [Require each CI job as a status check on main](0069-require-each-ci-job-as-a-status-check-on-main.md) | proposed | 1 | |
 
-Next free number: 0069. Only Krister Johansson sets a status to accepted.
+Next free number: 0070. Only Krister Johansson sets a status to accepted.
