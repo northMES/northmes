@@ -47,4 +47,27 @@ describe('startStack', () => {
     // GitHub Actions sets CI=true in every job.
     expect(await reusesUnder({ NORTHMES_STACK_REUSE: '1', CI: 'true' })).toBe(false);
   });
+
+  it('E02-S08 stop leaves a reused container running and stops any other container once', async () => {
+    const reused = fakeContainers();
+    const notReused = fakeContainers();
+    const withReuse = await startStack({
+      stateDir,
+      env: { NORTHMES_STACK_REUSE: '1' },
+      startContainer: reused.startContainer,
+      prepare,
+    });
+    const withoutReuse = await startStack({
+      stateDir,
+      env: {},
+      startContainer: notReused.startContainer,
+      prepare,
+    });
+
+    await withReuse.stop();
+    await withoutReuse.stop();
+
+    expect(reused.stop).not.toHaveBeenCalled();
+    expect(notReused.stop).toHaveBeenCalledTimes(1);
+  });
 });
