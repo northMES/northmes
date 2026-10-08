@@ -5,10 +5,10 @@ import { existsSync, globSync, readFileSync, realpathSync, watch } from 'node:fs
 import { join, relative } from 'node:path';
 import { boardUrl } from './board.mjs';
 import { freePorts } from './ports.mjs';
-import { repositoryRoot, run, say, start } from './processes.mjs';
+import { messageOf, repositoryRoot, run, say, start } from './processes.mjs';
 import { startStack } from './stack.mjs';
 
-/** @typedef {import('./processes.mjs').PlannedProcess} DevProcess */
+/** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
 
 /**
  * @typedef {object} DevPorts
@@ -49,7 +49,7 @@ export async function devPlan({ server, shell, remotes }) {
     // A remote resolves the workspace packages to their dist/, and @module-federation/vite reads
     // the named exports of @northmes/web-sdk from its dist/, so turbo builds the packages that the
     // shell and each remote depend on before their dev servers start.
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     build: {
       name: 'build',
       command: 'pnpm',
@@ -63,7 +63,7 @@ export async function devPlan({ server, shell, remotes }) {
       ],
       env: {},
     },
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     watch: {
       name: 'tsc',
       command: 'pnpm',
@@ -77,7 +77,7 @@ export async function devPlan({ server, shell, remotes }) {
       ],
       env: {},
     },
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     server: {
       name: 'server',
       command: 'node',
@@ -88,14 +88,14 @@ export async function devPlan({ server, shell, remotes }) {
         NORTHMES_PUBLIC_ORIGIN: loopbackOrigin(shell),
       },
     },
-    /** @type {DevProcess[]} */
+    /** @type {PlannedProcess[]} */
     web: [
       viteDevServer('shell', 'apps/web', shell, { NORTHMES_DEV_PROXY: JSON.stringify(proxy) }),
       ...Object.entries(remotes).map(([id, port]) => viteDevServer(id, `modules/${id}/web`, port)),
     ],
     // The built server runs migrate. pnpm northmes would build the server through turbo first,
     // over the files that tsc -b --watch writes.
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     migrate: {
       name: 'migrate',
       command: 'node',
@@ -122,7 +122,7 @@ export function completedBuild(line) {
  * @param {string} dir
  * @param {number} port
  * @param {Record<string, string>} [env]
- * @returns {DevProcess}
+ * @returns {PlannedProcess}
  */
 function viteDevServer(name, dir, port, env = {}) {
   return {
@@ -284,7 +284,7 @@ async function dev() {
         try {
           await run(plan.migrate, { env: stack.env });
         } catch (error) {
-          log(`${error instanceof Error ? error.message : String(error)}; the server runs on`);
+          log(`${messageOf(error)}; the server runs on`);
           return;
         }
         restartServer();
@@ -298,7 +298,7 @@ async function dev() {
       });
     }
   } catch (error) {
-    log(error instanceof Error ? error.message : String(error));
+    log(messageOf(error));
     await stop(1);
   }
 }

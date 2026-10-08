@@ -37,6 +37,14 @@ process.on('exit', () => {
 });
 
 /**
+ * The message of an error that a step threw, for a line of output.
+ * @param {unknown} error
+ */
+export function messageOf(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * Prints a line of pnpm dev or pnpm demo itself under name.
  * @param {string} name
  * @param {string} line

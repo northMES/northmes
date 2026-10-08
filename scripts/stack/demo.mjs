@@ -3,10 +3,10 @@
 // origin and one port.
 
 import { boardUrl } from './board.mjs';
-import { run, say, start } from './processes.mjs';
+import { messageOf, run, say, start } from './processes.mjs';
 import { startStack } from './stack.mjs';
 
-/** @typedef {import('./processes.mjs').PlannedProcess} DevProcess */
+/** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
 
 /**
  * What pnpm demo runs: pnpm build, which builds the server, the shell and every remote, then the
@@ -20,9 +20,9 @@ export async function demoPlan(stackEnv, env) {
   const port = env.PORT || stackEnv.PORT || '';
   const origin = `http://127.0.0.1:${port}`;
   return {
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     build: { name: 'build', command: 'pnpm', args: ['build'], env: {} },
-    /** @type {DevProcess} */
+    /** @type {PlannedProcess} */
     server: {
       name: 'server',
       command: 'node',
@@ -76,7 +76,7 @@ async function demo() {
       await stop(code === 0 ? 0 : 1);
     }
   } catch (error) {
-    log(error instanceof Error ? error.message : String(error));
+    log(messageOf(error));
     await stop(1);
   }
 }
