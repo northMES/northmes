@@ -285,4 +285,66 @@ describe('coreArticles', () => {
     expect(await countsOf('edges { node { code } }')).toHaveLength(0);
     expect(await countsOf('totalCount edges { node { code } }')).toHaveLength(1);
   });
+
+  /** The errorCode of each error of an answer. */
+  function errorCodes(answer: { errors?: readonly { extensions?: Record<string, unknown> }[] }) {
+    return answer.errors?.map(({ extensions }) => [extensions?.code, extensions?.errorCode]);
+  }
+
+  it('E06-S02 a cursor from another orderBy, or one coreArticles did not write, is refused with core.list.invalid_cursor', async () => {
+    const client = await catalogPlant();
+    const byCode = await list(client, { first: 2 });
+    const cursor = byCode.data?.coreArticles.pageInfo.endCursor ?? undefined;
+    const notAnId = Buffer.from(JSON.stringify([1, 'code.AL,id.AL', 'BR-140', 'x'])).toString(
+      'base64url',
+    );
+
+    for (const args of [
+      { first: 2, after: cursor, orderBy: [{ field: 'NAME' as const }] },
+      {
+        last: 2,
+        before: cursor,
+        orderBy: [{ field: 'CODE' as const, direction: 'DESC' as const }],
+      },
+      { first: 2, after: 'not-a-cursor' },
+      { first: 2, after: notAnId },
+    ]) {
+      const answer = await list(client, args);
+
+      expect(answer.data, JSON.stringify(args)).toBeNull();
+      expect(errorCodes(answer), JSON.stringify(args)).toEqual([
+        ['BAD_USER_INPUT', 'core.list.invalid_cursor'],
+      ]);
+    }
+  });
+
+  it('E06-S02 a page size outside 1 to 100, after with before, a repeated sort field and a search over 100 characters are refused with core.list.bad_argument', async () => {
+    const client = await catalogPlant();
+    const cursor = (await list(client, { first: 1 })).data?.coreArticles.pageInfo.endCursor;
+    if (!cursor) throw new Error('the first page has no cursor');
+
+    for (const args of [
+      { first: 0 },
+      { first: 101 },
+      { last: 0 },
+      { last: 101 },
+      { after: cursor, before: cursor },
+      {
+        orderBy: [
+          { field: 'NAME' as const },
+          { field: 'NAME' as const, direction: 'DESC' as const },
+        ],
+      },
+      { search: 'x'.repeat(101) },
+    ]) {
+      const answer = await list(client, args);
+
+      expect(answer.data, JSON.stringify(args)).toBeNull();
+      expect(errorCodes(answer), JSON.stringify(args)).toEqual([
+        ['BAD_USER_INPUT', 'core.list.bad_argument'],
+      ]);
+    }
+    // 100 characters are allowed, as are 100 rows.
+    expect((await list(client, { first: 100, search: 'x'.repeat(100) })).errors).toBeUndefined();
+  });
 });
