@@ -2,6 +2,8 @@
 import * as ApolloClient from '@apollo/client';
 import * as ApolloReact from '@apollo/client/react';
 import type { ModuleFederation } from '@module-federation/runtime';
+import { apiPath } from '@northmes/contracts';
+import type { WebModuleEntry } from '@northmes/web-sdk';
 import * as WebSdk from '@northmes/web-sdk';
 import * as TanstackRouter from '@tanstack/react-router';
 import * as React from 'react';
@@ -64,4 +66,27 @@ export function shareSingletons(
       ]),
     ),
   );
+}
+
+/** One module of the web module list that GET /api/v1/web/modules answers with (ADR 0019). */
+export interface ListedModule extends WebModuleEntry {
+  /** The Module Federation name of the module's remote. */
+  readonly remoteName: string;
+  /** The module's menu label, from the web block of its manifest. */
+  readonly label: string;
+  /** The module's menu position, from the web block of its manifest. */
+  readonly order: number;
+  /** The URL of the remote's mf-manifest.json. */
+  readonly manifestUrl: string;
+  /** The SHA-384 of the remote's mf-manifest.json, or null when the server misses its files. */
+  readonly integrity: string | null;
+}
+
+/** Fetches the modules the server lists for this shell, in the server's order. */
+export async function fetchModuleList(
+  fetch: (url: string) => Promise<Response>,
+): Promise<readonly ListedModule[]> {
+  const response = await fetch(apiPath('web', 'modules'));
+  const { modules } = (await response.json()) as { readonly modules: readonly ListedModule[] };
+  return modules;
 }
