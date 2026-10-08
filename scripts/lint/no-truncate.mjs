@@ -60,6 +60,25 @@ function quoteEnd(text, from, quote, backslashEscapes) {
 }
 
 /**
+ * The offset just past the closing marker of a block comment whose text starts at from. Block
+ * comments nest, as in Postgres, so each opening marker inside needs a closing marker of its own.
+ * @param {string} text
+ * @param {number} from
+ */
+function blockCommentEnd(text, from) {
+  let depth = 1;
+  for (let index = from; index < text.length - 1; index += 1) {
+    const pair = text.slice(index, index + 2);
+    if (pair === '/*' || pair === '*/') {
+      depth += pair === '/*' ? 1 : -1;
+      index += 1;
+      if (depth === 0) return index + 1;
+    }
+  }
+  return text.length;
+}
+
+/**
  * The comment, string, quoted identifier or dollar-quoted body that starts at start, as the offset
  * just past its end, or undefined when none starts there. An unclosed one runs to the end of text.
  * @param {string} text
@@ -72,10 +91,7 @@ function regionAt(text, start) {
     const newline = text.indexOf('\n', start);
     return { end: newline === -1 ? text.length : newline, comment: true };
   }
-  if (pair === '/*') {
-    const close = text.indexOf('*/', start + 2);
-    return { end: close === -1 ? text.length : close + 2, comment: true };
-  }
+  if (pair === '/*') return { end: blockCommentEnd(text, start + 2), comment: true };
   const before = text[start - 1] ?? '';
   if (text[start] === "'") {
     const escapes = /[eE]/.test(before) && !/[\w$]/.test(text[start - 2] ?? '');
