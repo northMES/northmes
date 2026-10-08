@@ -22,7 +22,7 @@ import { AppModule, type AppOptions, type ServerEntry } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
-import { checkPending } from '../migrate/pending.ts';
+import { checkPending, type MigrationCheckMode } from '../migrate/pending.ts';
 import { inRepoManifests } from '../modules.ts';
 import { builtShellDir, webDirOf } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
@@ -106,6 +106,11 @@ export interface Booted<Env> {
   readonly secrets: Secrets;
   /** The checked catalog in boot order. */
   readonly catalog: readonly CatalogEntry[];
+  /**
+   * The migration files that boot step 5 found pending, as <module id>/<file name>. Only the boot
+   * of pnpm northmes migrate goes on with pending files.
+   */
+  readonly pending: readonly string[];
   /** The created app, which listens on nothing. */
   readonly app: NestExpressApplication;
 }
@@ -189,14 +194,19 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
   return servers;
 }
 
-/** What boot runs for: the server, or pnpm northmes migrate before its first file. */
-type BootMode = 'serve' | 'migrate';
-
-/** DATABASE_URL, which carries no login (ADR 0060), with the login of a role. */
-function loginUrl(databaseUrl: string, role: string, password: string): string {
+/**
+ * The login of boot step 5 on DATABASE_URL, which carries none (ADR 0060): nm_app for the server,
+ * and nm_owner for pnpm northmes migrate, whose secrets hold no nm_app password.
+ */
+function migrationCheckUrl(
+  databaseUrl: string,
+  mode: MigrationCheckMode,
+  secrets: Secrets,
+): string {
   const url = new URL(databaseUrl);
-  url.username = role;
-  url.password = password;
+  url.username = mode === 'serve' ? 'nm_app' : 'nm_owner';
+  url.password =
+    mode === 'serve' ? secrets.NORTHMES_DB_APP_PASSWORD : secrets.NORTHMES_DB_OWNER_PASSWORD;
   return url.href;
 }
 
@@ -215,20 +225,19 @@ async function bootSteps<
     log,
   }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
   appOptions: AppOptions = {},
-  mode: BootMode = 'serve',
+  mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
   const entries = await importManifests(manifests, importManifest, resolveManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
-  if (mode === 'serve') {
-    const appUrl = loginUrl(env.DATABASE_URL, 'nm_app', secrets.NORTHMES_DB_APP_PASSWORD);
-    await checkPending(appUrl, catalog);
-  }
+  const pending = await checkPending(migrationCheckUrl(env.DATABASE_URL, mode, secrets), catalog, {
+    mode,
+  });
   const servers = await importServers(catalog);
   const root = AppModule.forRoot(config, servers, appOptions);
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
-  return { env, secrets, catalog, app };
+  return { env, secrets, catalog, pending, app };
 }
 
 /** The interface the server listens on. */

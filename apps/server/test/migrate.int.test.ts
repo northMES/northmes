@@ -447,9 +447,11 @@ describe('pnpm northmes migrate', () => {
 
     expect(exit).not.toHaveBeenCalled();
     expect(log.error).not.toHaveBeenCalled();
-    // Each file of the in-repo modules is logged as migrate applies it, and nothing listens.
+    // Each file of the in-repo modules is logged as pending by the boot's migration check, and
+    // again as migrate applies it, and nothing listens.
     expect(log.info.mock.calls).toEqual([
       ['Modules in boot order: core, planning'],
+      ...records.map(({ module, name }) => [`Pending ${module}/${name}`]),
       ...records.map(({ module, name }) => [`Applied ${module}/${name}`]),
       ['Migrations up to date'],
     ]);
