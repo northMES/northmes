@@ -38,10 +38,15 @@ function rootScript(name: string | undefined): string | undefined {
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
 const pullRequestChecks = ['ci / pr title', 'ci / linked issue'];
 
+function workflowPaths(): string[] {
+  return globSync('.github/workflows/*.{yml,yaml}', { cwd: root }).sort();
+}
+
 function workflows(): Workflow[] {
-  return globSync('.github/workflows/*.{yml,yaml}', { cwd: root })
-    .sort()
-    .map((path) => ({ ...(parse(readFileSync(`${root}${path}`, 'utf8')) as Workflow), path }));
+  return workflowPaths().map((path) => ({
+    ...(parse(readFileSync(`${root}${path}`, 'utf8')) as Workflow),
+    path,
+  }));
 }
 
 function jobNamed(name: string): { workflow: Workflow; id: string } {
@@ -90,6 +95,22 @@ function turboTasks(command: string): string[] {
 }
 
 describe('workflows', () => {
+  // A tag can move to other code; a commit SHA cannot. Renovate keeps the version comment next to
+  // the SHA current (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md).
+  it('every uses: line pins a 40-character SHA', () => {
+    const uses = workflowPaths().flatMap((path) =>
+      readFileSync(`${root}${path}`, 'utf8')
+        .split('\n')
+        .map((line, index) => ({ where: `${path}:${index + 1}`, line }))
+        .filter(({ line }) => /^\s*(?:- +)?uses:/.test(line)),
+    );
+
+    expect(uses, 'uses: lines').not.toHaveLength(0);
+    for (const { where, line } of uses) {
+      expect(line, where).toMatch(/uses: [\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d+(?:\.\d+)*$/);
+    }
+  });
+
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('ci / gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
