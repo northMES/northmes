@@ -1,0 +1,30 @@
+diff --git a/lib/index.js b/lib/index.js
+index 372077bc6a93546dfbb9c08dca96c6254a8f07e7..a892477c179ad274f1005aa724f46350caf1b66e 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -8588,7 +8588,12 @@ function pluginModuleParseEnd_default(excludeFn, options, controller = createMod
+ 				if (typeof this.resolve !== "function") return;
+ 				if (controller.resolutionProbed.has(pendingId)) return;
+ 				controller.resolutionProbed.add(pendingId);
+-				this.resolve(pendingId, id, { skipSelf: true }).then((resolved) => {
++				// NorthMES backport of module-federation/vite#1400: the probe is an internal lookup, which
++				// the share hooks skip instead of taking it for a fresh import of a shared package.
++				this.resolve(pendingId, id, {
++					skipSelf: true,
++					custom: { __mfSharedEntryLookup: true }
++				}).then((resolved) => {
+ 					if (!resolved?.external) return;
+ 					controller.externalSet.add(pendingId);
+ 					controller.parseStartSet.delete(pendingId);
+@@ -8597,7 +8602,10 @@ function pluginModuleParseEnd_default(excludeFn, options, controller = createMod
+ 			};
+ 			const addPendingIds = (ids) => {
+ 				for (const pendingId of ids || []) {
+-					if (!this.getModuleInfo(pendingId) || controller.externalSet.has(pendingId) || matchesExternal(configuredExternal, pendingId, id) || excludeFn(pendingId)) continue;
++					// NorthMES backport of module-federation/vite#1400 (released in 1.23.2): no ModuleInfo
++					// check here. Rolldown has no ModuleInfo for an import it has resolved but not loaded
++					// yet, and skipping it let the barrier complete before that import was parsed.
++					if (controller.externalSet.has(pendingId) || matchesExternal(configuredExternal, pendingId, id) || excludeFn(pendingId)) continue;
+ 					controller.parseStartSet.add(pendingId);
+ 					if (!controller.parseEndSet.has(pendingId)) probeExternal(pendingId);
+ 				}

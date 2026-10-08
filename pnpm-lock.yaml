@@ -166,6 +166,9 @@ overrides:
   '@module-federation/dts-plugin>adm-zip': 0.6.1
   '@module-federation/dts-plugin>undici': 7.29.1
 
+patchedDependencies:
+  '@module-federation/vite@1.22.1': 14e59fd34c7bdac3a18bb41c9f50bad806de23e78953d18493939242c2af60f1
+
 importers:
 
   .:
@@ -851,7 +854,7 @@ importers:
     dependencies:
       '@module-federation/vite':
         specifier: 'catalog:'
-        version: 1.22.1(typescript@6.0.3)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
+        version: 1.22.1(patch_hash=14e59fd34c7bdac3a18bb41c9f50bad806de23e78953d18493939242c2af60f1)(typescript@6.0.3)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.1.1(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -5513,7 +5516,7 @@ snapshots:
 
   '@module-federation/third-party-dts-extractor@2.9.0': {}
 
-  '@module-federation/vite@1.22.1(typescript@6.0.3)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))':
+  '@module-federation/vite@1.22.1(patch_hash=14e59fd34c7bdac3a18bb41c9f50bad806de23e78953d18493939242c2af60f1)(typescript@6.0.3)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@module-federation/dts-plugin': 2.9.0(typescript@6.0.3)
       '@module-federation/runtime': 2.9.0
