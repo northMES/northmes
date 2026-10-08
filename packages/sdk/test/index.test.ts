@@ -28,4 +28,8 @@ describe('@northmes/sdk root', () => {
     expect(jsdoc, 'a JSDoc block directly above defineModule').not.toBeNull();
     expect(jsdoc?.[1]).toMatch(/(?:^|\s)@internal\b/);
   });
+
+  it('E02-S01 packages/sdk carries its MIT LICENSE', () => {
+    expect(readPackageFile('LICENSE')).toMatch(/^MIT License\n/);
+  });
 });
