@@ -4,6 +4,7 @@
 import { existsSync, globSync, readFileSync, realpathSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { boardUrl } from './board.mjs';
 
 const repositoryRoot = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
 
@@ -33,10 +34,10 @@ export function webRemotes() {
 /**
  * What pnpm dev starts on ports: tsc -b --watch over the server's projects, the built server, which
  * pnpm dev starts after each completed build, and the Vite dev servers of the shell and of each
- * remote.
+ * remote; and the URL of the seed plant's board on the shell's origin, which it prints.
  * @param {DevPorts} ports
  */
-export function devPlan({ server, shell, remotes }) {
+export async function devPlan({ server, shell, remotes }) {
   const serverOrigin = loopbackOrigin(server);
   const remoteOrigins = Object.entries(remotes).map(([id, port]) => [
     `/modules/${id}/`,
@@ -72,6 +73,7 @@ export function devPlan({ server, shell, remotes }) {
       viteDevServer('shell', 'apps/web', shell, { NORTHMES_DEV_PROXY: JSON.stringify(proxy) }),
       ...Object.entries(remotes).map(([id, port]) => viteDevServer(id, `modules/${id}/web`, port)),
     ],
+    boardUrl: await boardUrl(loopbackOrigin(shell)),
   };
 }
 
