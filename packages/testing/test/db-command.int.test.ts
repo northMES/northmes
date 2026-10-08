@@ -11,4 +11,11 @@ describe('given', () => {
     expect(plants).toEqual([expect.stringMatching(uuidv7), expect.stringMatching(uuidv7)]);
     expect(plants[0]).not.toBe(plants[1]);
   });
+
+  it('E02-S02 given.company() returns a fresh scope id on each call', () => {
+    const companies = [given.company(), given.company()];
+
+    expect(companies).toEqual([expect.stringMatching(uuidv7), expect.stringMatching(uuidv7)]);
+    expect(companies[0]).not.toBe(companies[1]);
+  });
 });
