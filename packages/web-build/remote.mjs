@@ -28,7 +28,8 @@ export function defineRemoteConfig({ id, version, entry = './src/module.tsx' }) 
       noRemoteCss(),
       react(),
       federation({
-        // A remote name allows no hyphens, so production-start becomes productionStart (ADR 0003).
+        // A remote name allows no hyphens, so production-start becomes productionStart, as
+        // moduleNames in @northmes/sdk derives it (ADR 0003).
         name: id.replace(/-([a-z0-9])/g, (_, character) => character.toUpperCase()),
         filename: 'remoteEntry.js',
         manifest: true,

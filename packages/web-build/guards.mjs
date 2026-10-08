@@ -35,8 +35,8 @@ function installedPackageOf(moduleId) {
  * Fails the build when a chunk holds code from a package the shell shares as a singleton, for
  * example through a subpath outside the share keys, such as @apollo/client/cache. That code would
  * run as a second copy beside the shell's, with its own React context or Apollo cache. graphql
- * is no share key, because a remote reaches it only through Apollo Client, but a second copy of
- * it breaks graphql's instanceof checks all the same.
+ * has no share key, because a remote reaches it only through Apollo Client, so code from graphql
+ * in a chunk is a second copy too.
  *
  * @returns {import('vite').Plugin}
  */
