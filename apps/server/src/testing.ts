@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { join } from 'node:path';
+import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { HostFactory } from '@northmes/testing';
+import { Pool, type PoolClient } from 'pg';
 import { AppModule } from './app.module.ts';
 import { imageVersion, importServers, inRepoCatalog } from './boot/boot.ts';
 import type { CatalogEntry } from './catalog/check-catalog.ts';
@@ -59,4 +61,52 @@ function filesIn(webDir: string, catalog: readonly CatalogEntry[]) {
       webDir: join(webDir, 'modules', entry.manifest.id),
     })),
   };
+}
+
+/** What statementsDuring returns. */
+export interface StatementsDuring<Result> {
+  /** What fn resolved to. */
+  readonly result: Result;
+  /** The SQL text of each statement the pool sent while fn ran, in the order it sent them. */
+  readonly statements: readonly string[];
+}
+
+/** The SQL text of the first argument of a pg query call: a string or a query config. */
+function statementText(query: unknown): string {
+  if (typeof query === 'string') return query;
+  const text = (query as { text?: unknown } | null)?.text;
+  return typeof text === 'string' ? text : '';
+}
+
+/**
+ * Runs fn and records every statement that the app's nm_app pool sends until fn settles, such as
+ * the reads of one GraphQL request. A test counts them, for example to show that the rows a list
+ * references are read in one batch and not once per row. The pool's clients are wrapped only while
+ * fn runs.
+ */
+export async function statementsDuring<Result>(
+  app: INestApplication,
+  fn: () => Promise<Result>,
+): Promise<StatementsDuring<Result>> {
+  const pool = app.get(Pool);
+  const statements: string[] = [];
+  const wrapped = new Set<PoolClient>();
+  // The pool emits acquire before it hands a client out, also an idle one it reuses.
+  const wrap = (client: PoolClient) => {
+    if (wrapped.has(client)) return;
+    wrapped.add(client);
+    const query: (...args: unknown[]) => unknown = client.query;
+    client.query = ((...args: unknown[]) => {
+      statements.push(statementText(args[0]));
+      return Reflect.apply(query, client, args);
+    }) as PoolClient['query'];
+  };
+  pool.on('acquire', wrap);
+  try {
+    return { result: await fn(), statements };
+  } finally {
+    pool.off('acquire', wrap);
+    // Each client reads query from pg's Client prototype again.
+    for (const client of wrapped) Reflect.deleteProperty(client, 'query');
+  }
 }

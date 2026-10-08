@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory } from '@northmes/server/testing';
+import { hostFactory, statementsDuring } from '@northmes/server/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -18,6 +18,9 @@ function fixtureAt(plant: string): CommandContext {
 const ordersQuery = `{
   planningProductionOrders { number quantity status article { code name } }
 }`;
+
+/** A statement that reads or writes core.article, as Kysely or plain SQL names it. */
+const onArticleTable = /\bcore"?\."?article\b/;
 
 interface OrdersAnswer {
   planningProductionOrders: {
@@ -126,5 +129,30 @@ describe('planningProductionOrders', () => {
       status: 200,
       data: { planningProductionOrders: [{ number: '6301' }] },
     });
+  });
+
+  it('E02-S04 three orders on three articles resolve their articles with one SQL query', async () => {
+    const plant = given.plant();
+    const articles = [
+      ['DR-330', 'Drawer front'],
+      ['DR-331', 'Drawer side'],
+      ['DR-332', 'Drawer back'],
+    ] as const;
+    for (const [index, [code, name]] of articles.entries()) {
+      await writeOrder(plant, `640${index + 1}`, await writeArticle(plant, code, name), '8');
+    }
+    const client = await clientAt(plant);
+    if (!testApp) throw new Error('the test app did not start');
+
+    const { result: answer, statements } = await statementsDuring(testApp.app, () =>
+      client.send<OrdersAnswer>(ordersQuery),
+    );
+
+    expect(answer.data?.planningProductionOrders.map((order) => order.article?.name)).toEqual([
+      'Drawer front',
+      'Drawer side',
+      'Drawer back',
+    ]);
+    expect(statements.filter((statement) => onArticleTable.test(statement))).toHaveLength(1);
   });
 });
