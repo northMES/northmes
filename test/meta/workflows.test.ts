@@ -325,6 +325,17 @@ describe('workflows', () => {
     );
   });
 
+  // The main ruleset requires only ci / gate, so a job it does not need never blocks a merge.
+  it('ci / gate needs every other job in its workflow', () => {
+    const { workflow, id } = jobNamed('ci / gate');
+
+    expect(allNeedsOf(workflow.jobs, id).sort()).toEqual(
+      Object.keys(workflow.jobs)
+        .filter((job) => job !== id)
+        .sort(),
+    );
+  });
+
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('ci / gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
