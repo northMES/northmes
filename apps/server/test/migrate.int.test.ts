@@ -7,12 +7,13 @@ import { ModuleRef } from '@nestjs/core';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
 import { Pool } from 'pg';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootForMigrate } from '../src/boot/boot.ts';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
 import { cli } from '../src/cli.ts';
 import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
 import { imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
+import { migrateEnvKeys, useMigrateEnv } from './fixtures/server-env.ts';
 
 /** The folder of a fixture module's migration files. */
 function fixtureMigrations(id: string): string {
@@ -392,46 +393,25 @@ describe('migrate confines a plugin to its own schema', () => {
 
 describe('pnpm northmes migrate', () => {
   const db = useTestDatabase({ template: emptyTemplateDatabase });
-  let secretsDir: string;
-
-  beforeAll(() => {
-    secretsDir = mkdtempSync(join(tmpdir(), 'northmes-migrate-'));
-  });
-
-  afterAll(() => {
-    if (secretsDir) rmSync(secretsDir, { recursive: true, force: true });
-  });
+  // The environment of migrate: DATABASE_URL without a login and the owner's password in a secret
+  // file.
+  const env = useMigrateEnv({ database: db });
 
   // ConfigModule writes the validated environment into process.env, as it does in the server. The
-  // stubs remove these keys for the test, and unstubAllEnvs takes them out again afterwards.
+  // stubs remove these keys for each test, and unstubAllEnvs takes them out again afterwards.
+  beforeEach(() => {
+    for (const key of migrateEnvKeys) vi.stubEnv(key, undefined);
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
-
-  /**
-   * The environment of migrate: DATABASE_URL without a login and the owner's password in a secret
-   * file. The keys are stubbed, so ConfigModule's writes to process.env end with the test.
-   */
-  function migrateEnv(): Record<string, string> {
-    for (const key of ['DATABASE_URL', 'NORTHMES_DB_OWNER_PASSWORD_FILE'])
-      vi.stubEnv(key, undefined);
-    const databaseUrl = new URL(db.ownerUrl);
-    const passwordFile = join(secretsDir, 'db_owner_password');
-    writeFileSync(passwordFile, `${decodeURIComponent(databaseUrl.password)}\n`, { mode: 0o600 });
-    databaseUrl.username = '';
-    databaseUrl.password = '';
-    return {
-      NODE_ENV: 'test',
-      DATABASE_URL: databaseUrl.href,
-      NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
-    };
-  }
 
   it('E02-S02 pnpm northmes migrate boots the catalog without listening and migrates it as nm_owner', async () => {
     const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
     const exit = vi.fn<(code: number) => void>();
 
-    await cli(['migrate'], { env: migrateEnv(), exit, log });
+    await cli(['migrate'], { env, exit, log });
     const schemas = await query(
       db.ownerUrl,
       `select n.nspname as schema, r.rolname as owner
@@ -464,7 +444,7 @@ describe('pnpm northmes migrate', () => {
   it('E02-S04 the boot of pnpm northmes migrate constructs no nm_app pool, and its ScopedDatabase refuses a transaction', async () => {
     // The migrate environment holds no nm_app password (ADR 0060).
     const { app } = await bootForMigrate({
-      env: migrateEnv(),
+      env,
       importManifest: (specifier) => import(specifier),
       exit: vi.fn<(code: number) => void>(),
       log: { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() },
@@ -488,7 +468,7 @@ describe('pnpm northmes migrate', () => {
     const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
     const exit = vi.fn<(code: number) => void>();
     // The first run applies the in-repo files, or finds them applied.
-    await cli(['migrate'], { env: migrateEnv(), exit, log });
+    await cli(['migrate'], { env, exit, log });
     // A record whose sha256 no longer matches its file stands for a file edited after it applied.
     const [file] = await query<{ module: string; name: string }>(
       db.ownerUrl,
@@ -500,7 +480,7 @@ describe('pnpm northmes migrate', () => {
     );
     log.info.mockClear();
 
-    await cli(['migrate'], { env: migrateEnv(), exit, log });
+    await cli(['migrate'], { env, exit, log });
 
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.error.mock.calls).toEqual([
