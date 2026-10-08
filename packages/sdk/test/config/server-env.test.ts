@@ -13,9 +13,16 @@ afterEach(() => {
 });
 
 describe('serverEnvSchema', () => {
+  // The database keys every valid server environment holds.
+  const databaseKeys = {
+    DATABASE_URL: 'postgres://db.internal:5432/northmes',
+    NORTHMES_DB_APP_PASSWORD_FILE: '/run/secrets/db_app_password',
+  };
+
   it('E02-S01 loadEnv(serverEnvSchema)() reads PORT and NORTHMES_PUBLIC_ORIGIN from process.env', () => {
     vi.stubEnv('PORT', '8080');
     vi.stubEnv('NORTHMES_PUBLIC_ORIGIN', 'https://mes.example.com');
+    for (const [key, value] of Object.entries(databaseKeys)) vi.stubEnv(key, value);
 
     const env = loadEnv(serverEnvSchema)();
 
@@ -25,7 +32,10 @@ describe('serverEnvSchema', () => {
 
   it('E02-S01 a record without PORT fails naming PORT', () => {
     const error = configErrorOf(() =>
-      loadEnv(serverEnvSchema)({ NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com' }),
+      loadEnv(serverEnvSchema)({
+        NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+        ...databaseKeys,
+      }),
     );
 
     expect(error.problems).toHaveLength(1);
@@ -36,6 +46,7 @@ describe('serverEnvSchema', () => {
     const env = loadEnv(serverEnvSchema)({
       PORT: '0',
       NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+      ...databaseKeys,
     });
 
     expect(env.PORT).toBe(0);
@@ -43,7 +54,7 @@ describe('serverEnvSchema', () => {
 
   it('E02-S01 a missing public origin, PORT 70000 and role web are listed together without their values', () => {
     const error = configErrorOf(() =>
-      loadEnv(serverEnvSchema)({ PORT: '70000', NORTHMES_ROLE: 'web' }),
+      loadEnv(serverEnvSchema)({ PORT: '70000', NORTHMES_ROLE: 'web', ...databaseKeys }),
     );
 
     expect(keysOf(error)).toEqual(['NORTHMES_PUBLIC_ORIGIN', 'NORTHMES_ROLE', 'PORT']);
@@ -57,6 +68,7 @@ describe('serverEnvSchema', () => {
     const env = loadEnv(serverEnvSchema)({
       PORT: '8080',
       NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+      ...databaseKeys,
     });
 
     expect(env.NODE_ENV).toBe('production');
@@ -64,7 +76,11 @@ describe('serverEnvSchema', () => {
   });
 
   it('E02-S01 an http://127.0.0.1 origin passes with NODE_ENV test and fails with production', () => {
-    const record = { PORT: '8080', NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:8080' };
+    const record = {
+      PORT: '8080',
+      NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:8080',
+      ...databaseKeys,
+    };
 
     const env = loadEnv(serverEnvSchema)({ ...record, NODE_ENV: 'test' });
     const error = configErrorOf(() =>
@@ -80,7 +96,7 @@ describe('serverEnvSchema', () => {
   it('E02-S01 a public origin with a path, even a single slash, fails', () => {
     for (const origin of ['https://mes.example.com/', 'https://mes.example.com/northmes']) {
       const error = configErrorOf(() =>
-        loadEnv(serverEnvSchema)({ PORT: '8080', NORTHMES_PUBLIC_ORIGIN: origin }),
+        loadEnv(serverEnvSchema)({ PORT: '8080', NORTHMES_PUBLIC_ORIGIN: origin, ...databaseKeys }),
       );
 
       expect(error.problems, origin).toHaveLength(1);

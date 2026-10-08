@@ -32,6 +32,8 @@ describe('the built server', () => {
         NODE_ENV: 'production',
         NORTHMES_ROLE: 'web',
         PORT: '70000',
+        DATABASE_URL: 'postgres://db.internal:5432/northmes',
+        NORTHMES_DB_APP_PASSWORD_FILE: join(dir, 'db_app_password'),
       },
     });
     const [header, ...problems] = stderr.trimEnd().split('\n');

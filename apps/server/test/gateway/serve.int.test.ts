@@ -4,20 +4,20 @@ import type { ModuleManifest } from '@northmes/sdk';
 import { gqlClient } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 import { alpha } from '../fixtures/subgraphs/alpha.ts';
 import { beta } from '../fixtures/subgraphs/beta.ts';
 import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 import { EarlyQuery, probe } from '../fixtures/subgraphs/probe.ts';
 
-// A valid server environment. PORT 0 lets the operating system pick a free port.
-const env = { NODE_ENV: 'test', PORT: '0', NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4100' };
+const env = useServerEnv();
 
 let app: INestApplication | undefined;
 
 // ConfigModule writes the validated environment into process.env, as it does in the server. The
 // stubs remove these keys for each test, and unstubAllEnvs takes them out again afterwards.
 beforeEach(() => {
-  for (const key of ['PORT', 'NORTHMES_PUBLIC_ORIGIN', 'NORTHMES_ROLE']) vi.stubEnv(key, undefined);
+  for (const key of serverEnvKeys) vi.stubEnv(key, undefined);
 });
 
 afterEach(async () => {

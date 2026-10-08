@@ -12,9 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { AppModule } from '../../src/app.module.ts';
 import { boot } from '../../src/boot/boot.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
+import { appPassword, serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
-// A valid server environment. PORT 0 lets the operating system pick a free port.
-const env = { NODE_ENV: 'test', PORT: '0', NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4100' };
+const env = useServerEnv();
 
 // Collects the lines boot writes.
 function recordingLog() {
@@ -35,7 +35,7 @@ let app: INestApplication | undefined;
 // ConfigModule writes the validated environment into process.env, as it does in the server. The
 // stubs remove these keys for each test, and unstubAllEnvs takes them out again afterwards.
 beforeEach(() => {
-  for (const key of ['PORT', 'NORTHMES_PUBLIC_ORIGIN', 'NORTHMES_ROLE']) vi.stubEnv(key, undefined);
+  for (const key of serverEnvKeys) vi.stubEnv(key, undefined);
 });
 
 afterEach(async () => {
@@ -92,8 +92,8 @@ describe('boot', () => {
     // serverEnvSchema reads PORT as a number and defaults NORTHMES_ROLE to all.
     expect(config?.get('PORT')).toBe(0);
     expect(config?.get('NORTHMES_ROLE')).toBe('all');
-    // The server environment has no secret file keys yet, so the secrets namespace is empty.
-    expect(app?.get(secretsConfig.KEY)).toEqual({});
+    // The secrets namespace holds the value of each secret file the environment names.
+    expect(app?.get(secretsConfig.KEY)).toEqual({ NORTHMES_DB_APP_PASSWORD: appPassword });
   });
 
   it('E02-S02 boot resolves each manifest it was given through resolveManifest', async () => {
