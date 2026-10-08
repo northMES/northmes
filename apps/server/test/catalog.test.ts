@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { BootError } from '../src/boot/boot-error.ts';
 import { type CatalogEntry, checkCatalog } from '../src/catalog/check-catalog.ts';
-import { core, imageVersion, inRepoModule } from './fixtures/catalog.ts';
+import { core, imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
 
 // The BootError that checkCatalog throws for a catalog it refuses.
 function refusal(entries: readonly CatalogEntry[]): BootError {
@@ -23,5 +23,18 @@ describe('checkCatalog', () => {
     expect(error.exitCode).toBe(1);
     expect(error.problems).toEqual([problem]);
     expect(error.message).toContain(problem);
+  });
+
+  it('E02-S01 a core module that depends on a plugin is refused', () => {
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core']),
+      plugin('overtime-validator', ['planning']),
+      inRepoModule('scheduling', ['planning', 'overtime-validator']),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Core module scheduling must not depend on plugin overtime-validator',
+    ]);
   });
 });
