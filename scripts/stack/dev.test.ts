@@ -111,4 +111,25 @@ describe('devPlan', () => {
       env: {},
     });
   });
+
+  it('E02-S08 pnpm dev builds the workspace packages that the shell and the remotes import before their dev servers start', async () => {
+    const plan = await devPlan(ports);
+
+    // A remote resolves workspace packages to their dist/, and @module-federation/vite reads the
+    // named exports of @northmes/web-sdk from its dist/. Turbo builds what each one depends on.
+    expect(plan.build).toEqual({
+      name: 'build',
+      command: 'pnpm',
+      args: [
+        'exec',
+        'turbo',
+        'run',
+        'build',
+        '--filter=@northmes/web^...',
+        '--filter=@northmes/planning-web^...',
+        '--output-logs=errors-only',
+      ],
+      env: {},
+    });
+  });
 });
