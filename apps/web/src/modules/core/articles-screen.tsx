@@ -6,7 +6,7 @@ import { Link } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { buttonVariants } from '../../ui/button-variants.ts';
 import { DataTable, type DataTableColumn } from '../../ui/data-table.tsx';
-import { PageFrame } from '../../ui/page-frame.tsx';
+import { PageFrame, type PageState } from '../../ui/page-frame.tsx';
 import { type Article, CoreArticles } from './articles.graphql.ts';
 
 /** The page size of the list (design ui-222, open question 15). */
@@ -35,32 +35,58 @@ const columns: readonly DataTableColumn<Article>[] = [
   { id: 'name', header: 'Name', sortable: true, cell: (article) => article.name },
 ];
 
+/** New article, the page's main action, as a link to the new article page. */
+function NewArticleLink() {
+  const { plantId } = useShell();
+  return (
+    <Link to={coreLinks.articles.new({ plant: plantId }).href} className={buttonVariants()}>
+      <Plus aria-hidden />
+      New article
+    </Link>
+  );
+}
+
 /**
  * The articles of the plant (design ui-222, LI1): one page of the DataTable, sorted by article
- * number, with Previous, Next and the row range, and New article in the page actions.
+ * number, with Previous, Next and the row range, and New article in the page actions. While a
+ * page loads, the table draws skeleton rows (ST2); a plant without articles shows No articles yet
+ * (ST3), and a failed load an error with Try again (ST4).
  */
 export function ArticlesScreen() {
-  const { plantId } = useShell();
-  const { data } = useQuery(CoreArticles, {
+  const { data, error, refetch } = useQuery(CoreArticles, {
     variables: { first: pageSize, orderBy: [{ field: 'CODE', direction: 'ASC' }] },
     fetchPolicy: 'cache-and-network',
   });
   const page = data?.coreArticles;
+  let state: PageState = { status: 'ready' };
+  if (page === undefined && error !== undefined) {
+    state = {
+      status: 'error',
+      title: 'Could not load articles',
+      description: 'Check the connection, then try again.',
+      onRetry: () => {
+        refetch().catch(() => {});
+      },
+    };
+  } else if (page === undefined) {
+    state = { status: 'loading' };
+  } else if (page.totalCount === 0) {
+    state = {
+      status: 'empty',
+      title: 'No articles yet',
+      description:
+        'Articles come from an import or are created here. Create the first one, or wait for the next import.',
+      action: <NewArticleLink />,
+    };
+  }
   return (
-    <PageFrame
-      title="Articles"
-      actions={
-        <Link to={coreLinks.articles.new({ plant: plantId }).href} className={buttonVariants()}>
-          <Plus aria-hidden />
-          New article
-        </Link>
-      }
-    >
+    <PageFrame title="Articles" actions={<NewArticleLink />} state={state}>
       <DataTable
         label="Articles"
         columns={columns}
         rows={page?.edges.map(({ node }) => node) ?? []}
         getRowId={(article) => article.id}
+        loading={page === undefined}
         sort={{ id: 'code', desc: false }}
         paging={{
           page: 1,
