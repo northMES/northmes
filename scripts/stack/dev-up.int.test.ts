@@ -21,7 +21,9 @@ let stack: Awaited<ReturnType<typeof startStack>> | undefined;
 
 beforeAll(async () => {
   stateDir = mkdtempSync(join(tmpdir(), 'northmes-stack-'));
-  stack = await startStack({ stateDir, northmes });
+  // No opt-in to container reuse, so a NORTHMES_STACK_REUSE=1 in the shell leaves no container
+  // running after the test.
+  stack = await startStack({ stateDir, env: {}, northmes });
 }, 240_000);
 
 afterAll(async () => {

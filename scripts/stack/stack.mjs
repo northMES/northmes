@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import { readSecret, writeDevConfig } from './config.mjs';
+import { containerReuse, readSecret, writeDevConfig } from './config.mjs';
 import { freePort } from './ports.mjs';
 import { seed } from './seed.mjs';
 
@@ -117,22 +117,23 @@ function startPostgresContainer({ image, password, reuse }) {
  * DATABASE_URL of the container, which changes from run to run, and a PORT that freePort took with
  * the public origin on it.
  *
- * With reuse, which the caller takes from containerReuse, Testcontainers reuses the container of an
- * earlier run with the same settings, and stop leaves it running, so the container outlives the run
- * (ADR 0058). The database steps then run again on it, and they are idempotent.
+ * When env opts in to reuse (containerReuse), Testcontainers reuses the container of an earlier run
+ * with the same settings, and stop leaves it running, so the container outlives the run (ADR 0058).
+ * The database steps then run again on it, and they are idempotent. The caller cannot turn reuse
+ * on in CI.
  * @param {{
  *   stateDir?: string,
- *   reuse?: boolean,
+ *   env?: Readonly<Record<string, string | undefined>>,
  *   northmes?: Northmes,
  *   startContainer?: StartContainer,
  *   prepare?: typeof prepareDatabase,
- * }} [options] stateDir defaults to .northmes/ at the repository root, and reuse to false.
- *   startContainer starts Postgres, by default through Testcontainers, and prepare runs the
- *   database steps with northmes, by default prepareDatabase.
+ * }} [options] stateDir defaults to .northmes/ at the repository root, and env, the stack's own
+ *   environment, to process.env. startContainer starts Postgres, by default through
+ *   Testcontainers, and prepare runs the database steps with northmes, by default prepareDatabase.
  */
 export async function startStack({
   stateDir = join(repositoryRoot, '.northmes'),
-  reuse = false,
+  env: stackEnv = process.env,
   northmes = pnpmNorthmes,
   startContainer = startPostgresContainer,
   prepare = prepareDatabase,
@@ -140,6 +141,7 @@ export async function startStack({
   const devEnv = writeDevConfig(stateDir);
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8'));
   const password = readSecret(devEnv.POSTGRES_PASSWORD_FILE ?? '');
+  const reuse = containerReuse(stackEnv);
   const container = await startContainer({ image, password, reuse });
   const stop = async () => {
     if (!reuse) await container.stop();
