@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Command, CommandBus, Validator } from '@northmes/sdk/commands';
+import type { Command, CommandBus, Validator, ValidatorVerdict } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError } from '@northmes/sdk/errors';
 
@@ -28,6 +28,17 @@ export class CommandRejected extends DomainError {
       message,
       details: { rejectedBy },
     });
+  }
+}
+
+/**
+ * A validator that failed instead of answering (ADR 0037). The command fails closed, and the client
+ * reads only "Unexpected error.". What the validator threw is the cause, for the server's log.
+ */
+export class ValidatorFailed extends Error {
+  constructor(cause: unknown) {
+    super('Unexpected error.', { cause });
+    this.name = 'ValidatorFailed';
   }
 }
 
@@ -92,7 +103,12 @@ export class CommandBusImpl implements CommandBus {
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }
-          const verdict = await validator.check(parsed.data);
+          let verdict: ValidatorVerdict;
+          try {
+            verdict = await validator.check(parsed.data);
+          } catch (error) {
+            throw new ValidatorFailed(error);
+          }
           if (verdict.verdict === 'veto') throw new CommandRejected(module, verdict.message);
         }
       }

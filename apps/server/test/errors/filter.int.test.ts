@@ -7,6 +7,7 @@ import { given, gqlClient, useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
+import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 import { alpha } from '../fixtures/subgraphs/alpha.ts';
@@ -100,5 +101,26 @@ describe('the exception filter', () => {
         },
       ],
     });
+  });
+
+  it('E02-S04 a throwing validator reaches the client as Unexpected error.', async () => {
+    const booted = await bootFixtures(dispatch, brokenRules);
+    const client = gqlClient(await booted.getUrl(), {
+      headers: { 'x-northmes-plant': given.plant() },
+    });
+
+    const answer = await client.send(
+      `mutation ($input: DispatchReleaseJobInput!) {
+        dispatchReleaseJob(input: $input) { id status }
+      }`,
+      { input: { id: JOB_ID } },
+    );
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [{ message: 'Unexpected error.', path: ['dispatchReleaseJob'] }],
+    });
+    expect(JSON.stringify(answer)).not.toContain(BROKEN_CHECK_ERROR);
   });
 });
