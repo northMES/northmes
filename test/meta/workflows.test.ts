@@ -16,8 +16,11 @@ interface Job {
   steps?: Step[];
 }
 
+type Permissions = string | Record<string, string>;
+
 interface Workflow {
   path: string;
+  permissions?: Permissions;
   jobs: Record<string, Job>;
 }
 
@@ -108,6 +111,17 @@ describe('workflows', () => {
     expect(uses, 'uses: lines').not.toHaveLength(0);
     for (const { where, line } of uses) {
       expect(line, where).toMatch(/uses: [\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d+(?:\.\d+)*$/);
+    }
+  });
+
+  // Without top-level permissions a job gets the repository's default token permissions; with
+  // them, a job that needs more raises its own.
+  it('every workflow sets top-level permissions', () => {
+    const all = workflows();
+
+    expect(all, 'workflows').not.toHaveLength(0);
+    for (const { path, permissions } of all) {
+      expect(permissions, path).toBeDefined();
     }
   });
 
