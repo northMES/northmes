@@ -21,9 +21,14 @@ const secretFiles = {
   NORTHMES_DB_AUTH_PASSWORD_FILE: 'db_auth_password',
 };
 
+const devEnvHeader = `# Written by the stack script (ADR 0058). The processes it starts read these keys; the secret
+# values are in the files that the _FILE keys name, never in this file (ADR 0060).
+`;
+
 /**
  * Writes the dev secret files under dir/secrets/, each with a random value that starts with the
- * dev marker and with mode 0600, and returns the environment that points the _FILE keys at them.
+ * dev marker and with mode 0600, and dir/dev.env, which sets NODE_ENV to development and points the
+ * _FILE keys at the secret files. Returns the environment dev.env holds.
  * @param {string} dir The stack's state directory, .northmes/ at the repository root.
  * @returns {Record<string, string>}
  */
@@ -31,11 +36,13 @@ export function writeDevConfig(dir) {
   const secretsDir = join(dir, 'secrets');
   mkdirSync(secretsDir, { recursive: true, mode: 0o700 });
   /** @type {Record<string, string>} */
-  const env = {};
+  const env = { NODE_ENV: 'development' };
   for (const [key, name] of Object.entries(secretFiles)) {
     const path = join(secretsDir, name);
     writeFileSync(path, `${devSecretMarker}${randomBytes(32).toString('hex')}\n`, { mode: 0o600 });
     env[key] = path;
   }
+  const lines = Object.entries(env).map(([key, value]) => `${key}=${value}\n`);
+  writeFileSync(join(dir, 'dev.env'), `${devEnvHeader}${lines.join('')}`);
   return env;
 }
