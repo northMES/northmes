@@ -5,12 +5,14 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { moduleNames } from '@northmes/sdk';
 import {
   defineSubgraph,
+  type SubgraphContext,
   type SubgraphEntry,
   SubgraphRegistry,
   SubgraphRegistryModule,
 } from '@northmes/sdk/graphql';
+import { execute, parse } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CatalogModule } from '../fixtures/graphql/catalog.ts';
+import { CatalogArticles, CatalogModule } from '../fixtures/graphql/catalog.ts';
 import { ProductionStartModule } from '../fixtures/graphql/production-start.ts';
 
 const opened: TestingModule[] = [];
@@ -45,6 +47,29 @@ function subgraph(registry: SubgraphRegistry, name: string): SubgraphEntry {
 function rootFields(entry: SubgraphEntry): string[] {
   const fields = Object.keys(entry.schema.getQueryType()?.getFields() ?? {});
   return fields.filter((field) => field !== '_service' && field !== '_entities');
+}
+
+/** A fresh subgraph context, as the gateway creates one per client request and subgraph. */
+function requestContext(): SubgraphContext {
+  return { loaders: new Map() };
+}
+
+const ARTICLE_ENTITIES = parse(`
+  query ($representations: [_Any!]!) {
+    _entities(representations: $representations) {
+      ... on Article { id name }
+    }
+  }
+`);
+
+/** Resolves Article references the way the gateway asks the owning subgraph for them. */
+function resolveArticles(entry: SubgraphEntry, context: SubgraphContext, ids: readonly string[]) {
+  return execute({
+    schema: entry.schema,
+    document: ARTICLE_ENTITIES,
+    variableValues: { representations: ids.map((id) => ({ __typename: 'Article', id })) },
+    contextValue: context,
+  });
 }
 
 describe('defineSubgraph', () => {
@@ -91,5 +116,25 @@ describe('defineSubgraph', () => {
     expect(subgraph(registry, 'catalog').sdl).toContain(
       'type Article @key(fields: "id") {\n  id: ID!\n  name: String!\n}',
     );
+  });
+});
+
+describe('loaderFor', () => {
+  it('E02-S03 loaderFor batches three loads in one request into one call', async () => {
+    const { registry, moduleRef } = await buildSubgraphs({ catalog: CatalogModule });
+
+    const result = await resolveArticles(subgraph(registry, 'catalog'), requestContext(), [
+      'a-1',
+      'a-2',
+      'a-3',
+    ]);
+
+    expect(result.errors).toBeUndefined();
+    expect(result.data?._entities).toEqual([
+      { id: 'a-1', name: 'Hex bolt M8' },
+      { id: 'a-2', name: 'Flat washer 8' },
+      { id: 'a-3', name: 'Lock nut M8' },
+    ]);
+    expect(moduleRef.get(CatalogArticles).batches).toEqual([['a-1', 'a-2', 'a-3']]);
   });
 });
