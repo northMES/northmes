@@ -3,7 +3,7 @@
 // statement whose privilege list names TRUNCATE is a finding, wherever it sits in a migration
 // file: on its own, split over several lines, or inside ALTER DEFAULT PRIVILEGES. So is GRANT ALL
 // on tables, which includes TRUNCATE; GRANT ALL on another kind of object, such as a schema or a
-// sequence, is not.
+// sequence, is not. A GRANT inside a -- or /* */ comment is not a statement and is skipped.
 //
 // test/meta/no-truncate.test.ts scans every .sql file under a migrations folder outside docs/, so
 // pnpm check fails on a finding.
@@ -34,6 +34,16 @@ function grantsTruncate(privileges, object) {
 }
 
 /**
+ * Replaces each -- line comment and each block comment with spaces and keeps its newlines, so a
+ * comment can neither hide a GRANT nor fake one, and offsets and line numbers stay the same. A --
+ * inside a string literal counts as a comment too, which a GRANT in a migration does not need.
+ * @param {string} text
+ */
+function blankComments(text) {
+  return text.replace(/--[^\n]*|\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+}
+
+/**
  * The 1-based line of an offset in text.
  * @param {string} text
  * @param {number} offset
@@ -52,7 +62,7 @@ export function scan(files) {
   const findings = [];
 
   for (const { path, text } of files) {
-    for (const grant of text.matchAll(grantPattern)) {
+    for (const grant of blankComments(text).matchAll(grantPattern)) {
       if (grantsTruncate(grant.groups?.privileges ?? '', grant.groups?.object ?? '')) {
         findings.push({ path, line: lineAt(text, grant.index) });
       }
