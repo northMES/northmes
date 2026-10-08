@@ -13,5 +13,24 @@
       "@northmes/source": "./server/api/index.ts",
       "default": "./dist/server/api/index.js"
     }
+  },
+  "dependencies": {
+    "@apollo/subgraph": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/graphql": "catalog:",
+    "@northmes/sdk": "workspace:*",
+    "graphql": "catalog:",
+    "kysely": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@northmes/testing": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

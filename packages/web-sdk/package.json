@@ -9,5 +9,29 @@
       "@northmes/source": "./src/index.ts",
       "default": "./dist/index.js"
     }
+  },
+  "peerDependencies": {
+    "@apollo/client": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "graphql": "catalog:",
+    "graphql-ws": "catalog:",
+    "react": "catalog:",
+    "rxjs": "catalog:"
+  },
+  "devDependencies": {
+    "@apollo/client": "catalog:",
+    "@biomejs/biome": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "graphql": "catalog:",
+    "graphql-ws": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rxjs": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

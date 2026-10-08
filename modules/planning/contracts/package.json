@@ -9,5 +9,18 @@
       "@northmes/source": "./src/index.ts",
       "default": "./dist/index.js"
     }
+  },
+  "dependencies": {
+    "@northmes/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

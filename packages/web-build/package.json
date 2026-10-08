@@ -12,5 +12,32 @@
       "@northmes/source": "./remote.mjs",
       "default": "./remote.mjs"
     }
+  },
+  "dependencies": {
+    "@module-federation/vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "catalog:"
+  },
+  "devDependencies": {
+    "@apollo/client": "catalog:",
+    "@biomejs/biome": "catalog:",
+    "@northmes/contracts": "workspace:*",
+    "@northmes/planning-contracts": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
+    "@tanstack/react-router": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "graphql": "catalog:",
+    "graphql-ws": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rxjs": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

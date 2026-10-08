@@ -1,5 +1,6 @@
 {
   "name": "northmes",
+  "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
@@ -22,10 +23,21 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@northmes/contracts": "workspace:*",
+    "@northmes/planning-contracts": "workspace:*",
+    "@northmes/sdk": "workspace:*",
+    "@northmes/server": "workspace:*",
+    "@northmes/testing": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "graphql": "catalog:",
     "happy-dom": "catalog:",
+    "pg": "catalog:",
+    "rolldown": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "yaml": "catalog:"
   }

@@ -9,5 +9,44 @@
       "@northmes/source": "./src/testing.ts",
       "default": "./dist/testing.js"
     }
+  },
+  "dependencies": {
+    "@apollo/subgraph": "catalog:",
+    "@graphql-hive/gateway-runtime": "catalog:",
+    "@graphql-mesh/transport-common": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/graphql": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@northmes/contracts": "workspace:*",
+    "@northmes/module-core": "workspace:*",
+    "@northmes/module-planning": "workspace:*",
+    "@northmes/sdk": "workspace:*",
+    "@theguild/federation-composition": "catalog:",
+    "graphql": "catalog:",
+    "graphql-subscriptions": "catalog:",
+    "graphql-ws": "catalog:",
+    "kysely": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "semver": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@nestjs/testing": "catalog:",
+    "@northmes/testing": "workspace:*",
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/ws": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

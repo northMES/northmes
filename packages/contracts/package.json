@@ -9,5 +9,17 @@
       "@northmes/source": "./src/index.ts",
       "default": "./dist/index.js"
     }
+  },
+  "peerDependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "fast-check": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }
