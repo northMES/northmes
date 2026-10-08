@@ -57,4 +57,41 @@ describe('mit-imports', () => {
       },
     ]);
   });
+
+  it('E02-S01 a test file of an MIT package that imports an AGPL package fails', () => {
+    const findings = scan(workspacePackages, [
+      {
+        path: 'packages/sdk/test/host.int.test.ts',
+        text: [
+          "import { createHostApp } from '@northmes/server/testing';",
+          "const { loadCatalog } = await import('@northmes/module-planning');",
+          "import { boot } from '../../../apps/server/src/boot/boot.ts';",
+          "import { contract } from '../../contracts/src/index.ts';",
+          "const main = new URL('../../../apps/server/dist/main.js', import.meta.url);",
+          '',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      {
+        kind: 'import',
+        path: 'packages/sdk/test/host.int.test.ts',
+        line: 1,
+        imported: '@northmes/server',
+      },
+      {
+        kind: 'import',
+        path: 'packages/sdk/test/host.int.test.ts',
+        line: 2,
+        imported: '@northmes/module-planning',
+      },
+      {
+        kind: 'import',
+        path: 'packages/sdk/test/host.int.test.ts',
+        line: 3,
+        imported: '@northmes/server',
+      },
+    ]);
+  });
 });
