@@ -30,6 +30,11 @@ export interface BootOptions {
   readonly manifests?: readonly string[];
   /** Imports the manifest module that a specifier names. main.ts passes a dynamic import. */
   readonly importManifest: (specifier: string) => Promise<{ default: ModuleManifest }>;
+  /**
+   * Resolves each manifest specifier, so boot finds the migrations folder of its package. Without
+   * it, boot uses import.meta.resolve.
+   */
+  readonly resolveManifest?: ResolveManifest;
   /** Ends the process with an exit code. main.ts passes process.exit. */
   readonly exit: (code: number) => void;
   /** Where boot writes its lines: progress to info, problems to error. main.ts passes console. */
@@ -181,13 +186,12 @@ async function bootSteps<
   {
     manifests = inRepoManifests,
     importManifest,
+    resolveManifest = (specifier) => import.meta.resolve(specifier),
     log,
-  }: Pick<BootOptions, 'manifests' | 'importManifest' | 'log'>,
+  }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const entries = await importManifests(manifests, importManifest, (specifier) =>
-    import.meta.resolve(specifier),
-  );
+  const entries = await importManifests(manifests, importManifest, resolveManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const subgraphs = await importServers(catalog);
   const app = await NestFactory.create(AppModule.forRoot(config, subgraphs), {
