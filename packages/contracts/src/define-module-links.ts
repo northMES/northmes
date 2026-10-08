@@ -88,7 +88,8 @@ function href(pattern: string, params: Params, search: LinkSearch): string {
     )
     .join('/');
   const query = Object.entries(search)
-    .map(([key, value]) => `${key}=${value}`)
+    .filter(([, value]) => value !== '')
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&');
   return query === '' ? path : `${path}?${query}`;
 }
