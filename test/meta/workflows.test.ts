@@ -521,6 +521,8 @@ describe('workflows', () => {
         with: expect.objectContaining({
           path: expect.stringContaining('coverage/lcov.info'),
           'if-no-files-found': 'error',
+          // A re-run of the job uploads the same name again within the workflow run.
+          overwrite: true,
         }),
       }),
     ]);

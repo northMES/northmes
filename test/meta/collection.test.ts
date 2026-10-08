@@ -294,6 +294,10 @@ describe('collection', () => {
       'x.test-d.ts',
       'x.int.test.ts',
       'x.test.tsx',
+      'e2e/x.spec.ts',
+      'vite.config.ts',
+      'apps/web/vite.config.ts',
+      'playwright.config.ts',
     ];
     let directory: string;
 
@@ -310,7 +314,7 @@ describe('collection', () => {
       rmSync(directory, { recursive: true, force: true });
     });
 
-    it('coverage include follows the project globs and leaves out docs/sources, dist and fixtures', () => {
+    it('coverage include follows the project globs and leaves out docs/sources, dist, fixtures, Playwright specs and config files', () => {
       expect(covered(directory)).toEqual([...sources].sort());
     }, 60_000);
   });
