@@ -1,61 +1,75 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { randomBytes } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { query, useTestDatabase } from '@northmes/testing';
-import { afterAll, describe, expect, inject, it } from 'vitest';
+import {
+  emptyTemplateDatabase,
+  type PostgresServer,
+  query,
+  startPostgres,
+  useTestDatabase,
+} from '@northmes/testing';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
+import { bootstrapRoles } from '../../src/db/bootstrap.ts';
 import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';
 import { migrateTemplate } from '../global-setup.ts';
 
-/** Logs in to database as role with password, on the container of the run. */
-function urlFor(role: string, password: string, database: string): string {
-  const { host, port } = inject('pg');
-  const credentials = `${encodeURIComponent(role)}:${encodeURIComponent(password)}`;
-  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
-}
-
 const templateName = /^nm_template_[0-9a-f]{16}$/;
 
+// migrateTemplate clones and renames databases as the superuser, which tests never log in as on
+// the run's server (ADR 0041). This test runs it on a server of its own, which it bootstraps and
+// gives an empty template, as the global setups do on the run's server.
 describe('the template of a test run', () => {
-  const superuser = inject('pg');
-  const created: string[] = [];
+  const passwords = {
+    owner: randomBytes(16).toString('hex'),
+    app: randomBytes(16).toString('hex'),
+    auth: randomBytes(16).toString('hex'),
+  };
+  let server: PostgresServer;
   let migrationsDir: string | undefined;
+
+  /** Logs in to database as role with password, on this test's server. */
+  function urlFor(role: string, password: string, database: string): string {
+    const { host, port } = server.connection;
+    const credentials = `${encodeURIComponent(role)}:${encodeURIComponent(password)}`;
+    return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
+  }
+
+  beforeAll(async () => {
+    server = await startPostgres();
+    const { user, password, database } = server.connection;
+    const superuserUrl = urlFor(user, password, database);
+    await bootstrapRoles(superuserUrl, passwords);
+    await query(superuserUrl, `create database ${emptyTemplateDatabase}`);
+  }, 120_000);
 
   afterAll(async () => {
     if (migrationsDir) rmSync(migrationsDir, { recursive: true, force: true });
-    const admin = urlFor(superuser.user, superuser.password, superuser.database);
-    for (const name of created) {
-      // Postgres refuses to drop a database flagged as a template.
-      await query(admin, `alter database "${name}" is_template false`);
-      await query(admin, `drop database "${name}"`);
-    }
+    await server?.stop();
   });
 
   it('E02-S02 the template name changes with the migration files and an unchanged run reuses it', async () => {
     migrationsDir = mkdtempSync(join(tmpdir(), 'northmes-template-hash-'));
     const file = join(migrationsDir, '20261008120000_note.sql');
-    // The owner role of a module belongs to the server, which the other test files share, so this
-    // file migrates a module of its own.
     const catalog = checkCatalog([{ ...inRepoModule('template-hash'), migrationsDir }], {
       imageVersion,
     });
     const options = {
-      superuser,
-      ownerPassword: inject('pgRolePasswords').owner,
+      superuser: server.connection,
+      ownerPassword: passwords.owner,
       catalog,
     };
 
     writeFileSync(file, '-- migration: expand\ncreate table template_hash.note (id integer);\n');
     const first = await migrateTemplate(options);
-    created.push(first.name);
     const unchanged = await migrateTemplate(options);
     writeFileSync(
       file,
       '-- migration: expand\ncreate table template_hash.note (id integer, body text);\n',
     );
     const changed = await migrateTemplate(options);
-    created.push(changed.name);
     // nm_owner holds no right on the module's table, so the columns are read from the catalog,
     // which information_schema would filter by privilege.
     const columns = await query(
