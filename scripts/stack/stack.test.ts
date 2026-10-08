@@ -70,4 +70,26 @@ describe('startStack', () => {
     expect(reused.stop).not.toHaveBeenCalled();
     expect(notReused.stop).toHaveBeenCalledTimes(1);
   });
+
+  it('E02-S08 the stack takes its port after the database steps, which run without PORT', async () => {
+    // The port is free only until a process binds it, and the database steps take seconds, so the
+    // stack takes the port once they are done.
+    const stepEnvs: Readonly<Record<string, string>>[] = [];
+    const { startContainer } = fakeContainers();
+    const stack = await startStack({
+      stateDir,
+      env: {},
+      startContainer,
+      prepare: async (env) => {
+        stepEnvs.push(env);
+      },
+    });
+
+    expect(stepEnvs).toHaveLength(1);
+    expect(stepEnvs[0]?.DATABASE_URL).toBe('postgres://127.0.0.1:54320/northmes');
+    expect(stepEnvs[0]).not.toHaveProperty('PORT');
+    expect(stepEnvs[0]).not.toHaveProperty('NORTHMES_PUBLIC_ORIGIN');
+    expect(Number(stack.env.PORT)).toBeGreaterThan(0);
+    expect(stack.env.NORTHMES_PUBLIC_ORIGIN).toBe(`http://127.0.0.1:${stack.env.PORT}`);
+  });
 });
