@@ -174,6 +174,43 @@ describe('boot', () => {
     expect(log.info).not.toHaveBeenCalled();
   });
 
+  it.for([
+    { reason: 'is missing', content: undefined, problem: /^cannot be read \(ENOENT\)$/ },
+    { reason: 'is not JSON', content: '{ plugins: [] }', problem: /^is not JSON: .+/ },
+    {
+      reason: 'lists its plugins as one string',
+      content: '{ "plugins": "plugins/scrap-rules" }',
+      problem: /^plugins: Invalid input: expected array, received string$/,
+    },
+  ])(
+    'E02-S04 a northmes.config.json that $reason exits 1 naming the file',
+    async ({ content, problem }) => {
+      const configDir = mkdtempSync(join(tmpdir(), 'northmes-config-'));
+      onTestFinished(() => rmSync(configDir, { recursive: true, force: true }));
+      const file = join(configDir, 'northmes.config.json');
+      if (content !== undefined) writeFileSync(file, content);
+      // ConfigModule writes NORTHMES_CONFIG into process.env; unstubAllEnvs takes it out again.
+      vi.stubEnv('NORTHMES_CONFIG', undefined);
+      const log = recordingLog();
+      const exit = vi.fn<(code: number) => void>();
+
+      app = await boot({
+        env: { ...env, NORTHMES_CONFIG: file },
+        importManifest: (specifier) => import(specifier),
+        exit,
+        log,
+      });
+
+      const [header, line = ''] = String(log.error.mock.calls[0]?.[0]).split('\n');
+      expect(app).toBeUndefined();
+      expect(exit.mock.calls).toEqual([[1]]);
+      expect(header).toBe('refused to start (1 problem)');
+      expect(line.startsWith(`- ${file}: `)).toBe(true);
+      expect(line.slice(`- ${file}: `.length)).toMatch(problem);
+      expect(log.info).not.toHaveBeenCalled();
+    },
+  );
+
   it('E02-S04 a validator from a module without dependsOn on the owner exits 1 with its message', async () => {
     const log = recordingLog();
     const exit = vi.fn<(code: number) => void>();
