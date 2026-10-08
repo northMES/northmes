@@ -1,24 +1,12 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
-
-/**
- * Makes a key's rule its error message, so a problem states the rule and never the value. Zod
- * reports a missing key with input undefined.
- */
-function rule(text: string) {
-  return {
-    error: (issue: { input?: unknown }) =>
-      issue.input === undefined ? `missing, must be ${text}` : `must be ${text}`,
-  };
-}
+import { nodeEnv, rule } from './keys.ts';
 
 const PORT_RULE = 'an integer from 0 to 65535';
 
 /** The environment of apps/server in every role (ADR 0060). */
 export const serverEnvSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'], rule('development, test or production'))
-    .default('production'),
+  NODE_ENV: nodeEnv,
   NORTHMES_ROLE: z.enum(['all', 'api', 'worker'], rule('all, api or worker')).default('all'),
   PORT: z
     .string(rule(PORT_RULE))
