@@ -9,4 +9,8 @@ describe('moduleNames', () => {
     expect(names.gql).toBe('productionStart');
     expect(names.sql).toBe('production_start');
   });
+
+  it('E02-S01 the owner role of production-start is nm_mod_production_start', () => {
+    expect(moduleNames('production-start').ownerRole).toBe('nm_mod_production_start');
+  });
 });
