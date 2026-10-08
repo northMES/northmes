@@ -14,6 +14,7 @@ import {
 import type { CommandContract } from '@northmes/contracts';
 import { GraphQLError } from 'graphql';
 import { z } from 'zod';
+import type { FieldError } from '../errors/domain-error.ts';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
 
 function capitalize(name: string): string {
@@ -78,17 +79,21 @@ function inputType(contract: CommandContract, typeName: string): Type {
 }
 
 /**
- * Parses a command's input with its contract. A failure is BAD_USER_INPUT (ADR 0012); the
- * fieldErrors extension arrives with the error model (E05-S01).
+ * Parses a command's input with its contract. A failure is BAD_USER_INPUT with one fieldErrors
+ * entry per Zod issue, whose path is relative to the input (ADR 0012, ADR 0017).
  */
 function parseInput(contract: CommandContract, input: unknown): unknown {
   const parsed = contract.input.safeParse(input);
   if (parsed.success) return parsed.data;
-  const problems = parsed.error.issues.map(
-    (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
-  );
+  const { issues } = parsed.error;
+  const problems = issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`);
+  const fieldErrors: FieldError[] = issues.map(({ path, message, code }) => ({
+    path: path.map((segment) => (typeof segment === 'symbol' ? String(segment) : segment)),
+    message,
+    code,
+  }));
   throw new GraphQLError(`Invalid input for ${contract.name}: ${problems.join('; ')}`, {
-    extensions: { code: 'BAD_USER_INPUT' },
+    extensions: { code: 'BAD_USER_INPUT', fieldErrors },
   });
 }
 
