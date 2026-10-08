@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -103,6 +103,34 @@ function checkProjects(): string[] {
   };
   const vitest = scripts.check?.split(' && ').find((command) => command.startsWith('vitest run'));
   return [...(vitest ?? '').matchAll(/--project[= ](\S+)/g)].map((match) => match[1] ?? '');
+}
+
+// The files in the lcov report that a coverage run of the unit project writes under `directory`,
+// by path relative to `directory`. The test files get Vitest's globals, so they import nothing from
+// a tree that has no node_modules.
+function covered(directory: string): string[] {
+  const result = spawnSync(
+    process.execPath,
+    [
+      vitestBin,
+      'run',
+      '--config',
+      config,
+      '--root',
+      directory,
+      '--project',
+      'unit',
+      '--globals',
+      '--coverage',
+    ],
+    { cwd: root, encoding: 'utf8', env: environment(), maxBuffer: 64 * 1024 * 1024 },
+  );
+  expect(result.status, result.stderr).toBe(0);
+
+  const lcov = readFileSync(join(directory, 'coverage/lcov.info'), 'utf8');
+  return [...lcov.matchAll(/^SF:(.+)$/gm)]
+    .map(([, file]) => relative(directory, resolve(directory, file ?? '')))
+    .sort();
 }
 
 // A test file that some project is meant to collect: not under node_modules, dist or docs/sources.
@@ -243,5 +271,47 @@ describe('collection', () => {
       expect(listed.has('e2e/x.spec.ts')).toBe(false);
       expect(isCollectable('e2e/x.spec.ts')).toBe(false);
     });
+  });
+
+  // The coverage include follows the project globs, so a threshold on one domain later sees every
+  // source file in it, also one that no test loads (docs/plan/11-quality-and-testing.md).
+  describe('coverage in a synthetic tree', () => {
+    const sources = [
+      'x.ts',
+      'packages/a/src/x.ts',
+      'modules/a/web/x.tsx',
+      'scripts/x.mjs',
+      'scripts/x.mts',
+    ];
+    const left = [
+      'docs/sources/spike/x.ts',
+      'dist/x.ts',
+      'packages/a/dist/x.ts',
+      'node_modules/pkg/x.ts',
+      'packages/a/test/fixtures/x.ts',
+      'fixtures/x.mjs',
+      'packages/a/src/x.d.ts',
+      'x.test-d.ts',
+      'x.int.test.ts',
+      'x.test.tsx',
+    ];
+    let directory: string;
+
+    beforeAll(() => {
+      directory = realpathSync(mkdtempSync(join(tmpdir(), 'coverage-')));
+      for (const path of [...sources, ...left]) {
+        mkdirSync(dirname(join(directory, path)), { recursive: true });
+        writeFileSync(join(directory, path), 'export const one = 1;\n');
+      }
+      writeFileSync(join(directory, 'x.test.ts'), "it('runs', () => {});\n");
+    });
+
+    afterAll(() => {
+      rmSync(directory, { recursive: true, force: true });
+    });
+
+    it('coverage include follows the project globs and leaves out docs/sources, dist and fixtures', () => {
+      expect(covered(directory)).toEqual([...sources].sort());
+    }, 60_000);
   });
 });
