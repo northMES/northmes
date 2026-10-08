@@ -15,8 +15,9 @@ export interface ScopedDatabase<DB> {
   /**
    * Runs fn in one Kysely transaction. Its first statement sets northmes.read_scopes and
    * northmes.write_scopes to the scope sets of the principal that the request or job runs as,
-   * transaction-local, so no scope outlives the transaction. The transaction commits when fn
-   * resolves and rolls back when it rejects.
+   * transaction-local, so no scope outlives the transaction. Without a principal, such as for a
+   * request without a plant, both sets are empty and the transaction reads and writes nothing. The
+   * transaction commits when fn resolves and rolls back when it rejects.
    */
   transaction<Result>(fn: (tx: Transaction<DB>) => Promise<Result>): Promise<Result>;
 }
