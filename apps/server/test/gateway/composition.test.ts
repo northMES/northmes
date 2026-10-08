@@ -1,17 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { buildSubgraphSchema, printSubgraphSchema } from '@apollo/subgraph';
+import { parse } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import { checkRules, type SubgraphSdl } from '../../src/gateway/rules.ts';
 
-/** The federation link every subgraph SDL starts with, as defineSubgraph prints it. */
+/** The federation link of every subgraph, as defineSubgraph declares it. */
 const link =
   'extend schema @link(url: "https://specs.apollo.dev/federation/v2.9", import: ["@key", "@shareable", "@external", "@requires"])';
 
-/** A subgraph named after its module's GraphQL name, with the federation link before `sdl`. */
-function subgraph(name: string, sdl: string): SubgraphSdl {
-  return { name, sdl: `${link}\n${sdl}` };
+/**
+ * A subgraph named after its module's GraphQL name, whose SDL is printed the way defineSubgraph
+ * prints it: with federation's own root fields, directives and types.
+ */
+function subgraph(name: string, typeDefs: string): SubgraphSdl {
+  const schema = buildSubgraphSchema(parse(`${link}\n${typeDefs}`));
+  return { name, sdl: printSubgraphSchema(schema) };
 }
 
 describe('the NorthMES composition rules', () => {
+  it("E02-S03 federation's own root fields and types break no rule", () => {
+    const alpha = subgraph(
+      'alpha',
+      'type Thing @key(fields: "id") { id: ID! name: String } type Query { alphaThing: Thing }',
+    );
+    const beta = subgraph(
+      'beta',
+      'type Crate @key(fields: "id") { id: ID! } type Query { betaCrates: [Crate!]! }',
+    );
+
+    expect(checkRules([alpha, beta])).toEqual([]);
+  });
+
   it('E02-S03 a root field without a module prefix fails with its rule id', () => {
     const gamma = subgraph(
       'gamma',
