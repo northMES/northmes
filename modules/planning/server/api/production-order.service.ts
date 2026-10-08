@@ -19,6 +19,16 @@ export interface ProductionOrderRecord {
   readonly version: number;
 }
 
+/** The columns of planning.production_order that make a ProductionOrderRecord. */
+export const recordColumns = [
+  'id',
+  'number',
+  'article_id as articleId',
+  'quantity',
+  'status',
+  'version',
+] as const;
+
 /**
  * Reads production orders through the ScopedDatabase, so a caller sees only the orders at the
  * scopes of the principal it runs as.
@@ -32,7 +42,7 @@ export class ProductionOrderService {
     return this.db.transaction((tx) =>
       tx
         .selectFrom('planning.production_order')
-        .select(['id', 'number', 'article_id as articleId', 'quantity', 'status', 'version'])
+        .select(recordColumns)
         .orderBy('number')
         .orderBy('id')
         .execute(),

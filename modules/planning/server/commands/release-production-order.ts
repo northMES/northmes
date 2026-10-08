@@ -3,12 +3,15 @@ import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
 import type { Selectable, Transaction } from 'kysely';
-import type { ProductionOrderRecord } from '../api/production-order.service.ts';
+import { type ProductionOrderRecord, recordColumns } from '../api/production-order.service.ts';
 import type { PlanningDatabase, ProductionOrderTable } from '../db.ts';
 import { ProductionOrder } from '../production-order.resolver.ts';
 import { releasePayload } from './release-payload.ts';
 
-/** The transaction the command bus opened for this run of the command (ADR 0012). */
+/**
+ * What the command bus hands the command: the transaction it opened for this run of the command
+ * (ADR 0012), here with planning's table types.
+ */
 interface PlanningContext {
   readonly tx: Transaction<PlanningDatabase>;
 }
@@ -61,7 +64,7 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
       .updateTable('planning.production_order')
       .set({ status: 'released' })
       .where('id', '=', id)
-      .returning(['id', 'number', 'article_id as articleId', 'quantity', 'status', 'version'])
+      .returning(recordColumns)
       .executeTakeFirstOrThrow();
   },
 });
