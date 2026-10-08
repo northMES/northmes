@@ -8,6 +8,31 @@ import { z } from 'zod';
  */
 export type CommandTarget = 'new' | 'existing' | 'none';
 
+/** Any Zod object schema, whatever its unknown-key mode. */
+type ObjectSchema = z.ZodObject<z.core.$ZodShape, z.core.$ZodObjectConfig>;
+
+/**
+ * Command validators of other modules and plugins may veto a validatable command. They get a
+ * payload that the owner builds and parses with this schema, never the input (ADR 0037).
+ */
+type CommandValidation =
+  | { readonly validatable: true; readonly payload: z.ZodType }
+  | { readonly validatable?: false; readonly payload?: undefined };
+
+export type CommandContractOptions = {
+  /** `<module GraphQL name>.<command>`, such as planning.releaseProductionOrder. */
+  readonly name: string;
+  readonly target: CommandTarget;
+  /** The fields a person edits, with their refinements. Forms validate these (ADR 0017). */
+  readonly fields: ObjectSchema;
+  /** Optional until the permission check of the pipeline arrives (E05-S01). */
+  readonly permission?: string;
+  /** Optional until the shared reason input arrives (E05-S01). */
+  readonly reason?: 'optional' | 'required';
+  /** Optional until the signature stage is declared (E05-S01). */
+  readonly signature?: 'none';
+} & CommandValidation;
+
 /** Extends fields by the id that names the target entity. extend keeps the refinements. */
 function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObjectConfig>(
   fields: z.ZodObject<Shape, Config>,
@@ -16,52 +41,36 @@ function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObject
 }
 
 /** A command's input schema: the fields, plus the target's id when the target is an entity. */
-type CommandInput<
-  Target extends CommandTarget,
-  Shape extends z.core.$ZodShape,
-  Config extends z.core.$ZodObjectConfig,
-> = Target extends 'none' ? z.ZodObject<Shape, Config> : ReturnType<typeof withId<Shape, Config>>;
-
-export interface CommandContractOptions<
-  Name extends string,
-  Target extends CommandTarget,
-  Fields extends z.ZodObject,
-> {
-  /** `<module GraphQL name>.<command>`, such as planning.releaseProductionOrder. */
-  readonly name: Name;
-  readonly target: Target;
-  /** The fields a person edits, with their refinements. Forms validate these (ADR 0017). */
-  readonly fields: Fields;
-}
+type CommandInput<Options extends CommandContractOptions> = Options['target'] extends 'none'
+  ? Options['fields']
+  : ReturnType<typeof withId<Options['fields']['shape'], Options['fields']['_zod']['config']>>;
 
 /**
  * A command's contract, plain data in the owning module's MIT contracts package, so manifests,
  * validators, plugins and web remotes read it without Nest or React (ADR 0012, ADR 0017).
  */
-export interface CommandContract<
-  Name extends string = string,
-  Target extends CommandTarget = CommandTarget,
-  Fields extends z.ZodObject = z.ZodObject,
-  Input extends z.ZodObject = z.ZodObject,
-> extends CommandContractOptions<Name, Target, Fields> {
-  /**
-   * The schema the command pipeline parses every input with before anything else runs. It is
-   * fields, extended by id unless the target is none, so it keeps the refinements of fields.
-   */
-  readonly input: Input;
-}
+export type CommandContract<Options extends CommandContractOptions = CommandContractOptions> =
+  Options & {
+    /**
+     * The schema the command pipeline parses every input with before anything else runs. It is
+     * fields, extended by id unless the target is none, so it keeps the refinements of fields.
+     */
+    readonly input: CommandInput<Options>;
+  };
 
 /** Declares a command's contract and derives its input from its fields and target. */
-export function defineCommandContract<
-  const Name extends string,
-  const Target extends CommandTarget,
-  Shape extends z.core.$ZodShape,
-  Config extends z.core.$ZodObjectConfig,
->(
-  options: CommandContractOptions<Name, Target, z.ZodObject<Shape, Config>>,
-): CommandContract<Name, Target, z.ZodObject<Shape, Config>, CommandInput<Target, Shape, Config>> {
+export function defineCommandContract<const Options extends CommandContractOptions>(
+  options: Options,
+): CommandContract<Options> {
+  // The types already refuse this; the check covers a contract built without them.
+  const { name } = options;
+  if (options.validatable && !options.payload) {
+    throw new Error(
+      `Command ${name} is validatable, so its contract needs a payload schema (ADR 0037)`,
+    );
+  }
   const input = options.target === 'none' ? options.fields : withId(options.fields);
   // TypeScript does not narrow a conditional type on a generic parameter, so the branch above
   // cannot check against CommandInput itself.
-  return { ...options, input: input as CommandInput<Target, Shape, Config> };
+  return { ...options, input: input as CommandInput<Options> };
 }
