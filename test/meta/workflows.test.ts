@@ -298,6 +298,15 @@ describe('workflows', () => {
     }
   });
 
+  it('every job sets its own permissions, at most contents: read', () => {
+    const jobs = allJobs();
+
+    expect(jobs, 'jobs').not.toHaveLength(0);
+    for (const { where, job } of jobs) {
+      expect(job.permissions, where).toEqual({ contents: 'read' });
+    }
+  });
+
   it('test jobs take runs-on from a repository variable', () => {
     const testJobs = allJobs().filter(({ job }) => isTestJob(job));
 
