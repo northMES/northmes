@@ -476,8 +476,8 @@ ADRs: [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chai
 
 Acceptance criteria:
 
-- Every pull request and every push to `main` runs the jobs of `ci.yml`, `license gate`, `dependency audit` and CodeQL, and each of them is a strict required check ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
-- `CI / gate` runs the unit and integration projects in both the UTC and the Europe/Stockholm legs.
+- Every pull request runs the jobs of `ci.yml`, `license gate`, `dependency audit` and CodeQL, every push to `main` runs the jobs of `ci.yml` and CodeQL, and each of them is a strict required check ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
+- `CI / test` runs the unit and integration projects in both the UTC and the Europe/Stockholm legs.
 - A pull request title that is not a Conventional Commit, or a pull request without `Closes #N`, fails its check.
 - A third-party GPL-3.0, AGPL or LGPL dependency fails the license gate by name.
 - `main` accepts only squash merges with the PR title as subject and an empty body, with resolved threads and no bypass.

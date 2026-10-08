@@ -265,11 +265,9 @@ reviews:
 
   tools:
     # CI/CD pipeline analysis: when a GitHub Actions check fails, CodeRabbit reads its log and
-    # comments a fix on the lines that caused it. It waits for the checks up to timeout_ms; the test
-    # job runs both time zone legs and takes two to three minutes.
+    # comments a fix on the lines that caused it. The schema has no timeout setting.
     github-checks:
       enabled: true
-      timeout_ms: 180000
     # Biome is the project's linter and formatter; one linter, one rule set.
     biome:
       enabled: true
