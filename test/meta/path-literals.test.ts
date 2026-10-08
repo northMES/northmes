@@ -1,5 +1,28 @@
-import { describe, expect, it } from 'vitest';
-import { scan } from '../../scripts/lint/path-literals.mjs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { scan, trackedFiles } from '../../scripts/lint/path-literals.mjs';
+
+interface Finding {
+  path: string;
+  line: number;
+  literal: string;
+}
+
+// A finding as a failing check prints it: file, line and literal.
+function describeFinding({ path, line, literal }: Finding): string {
+  return `${path}:${line}: ${literal}`;
+}
+
+// git in these tests sees no GIT_DIR or GIT_INDEX_FILE from a hook.
+function environment(): Record<string, string> {
+  const inherited = Object.entries(process.env).filter(
+    (entry): entry is [string, string] => entry[1] !== undefined && !entry[0].startsWith('GIT_'),
+  );
+  return Object.fromEntries(inherited);
+}
 
 describe('path-literals', () => {
   it('E02-S05 a fixture <Link to="/x"> in a module web file fails, and a builder call passes', () => {
@@ -195,5 +218,45 @@ describe('path-literals', () => {
         'Path literal allowlist entry 2 (e2e/board.spec.ts, /x) gives no reason',
       );
     }
+  });
+
+  describe('over git ls-files', () => {
+    let repository: string;
+
+    function git(...args: string[]) {
+      const result = spawnSync('git', args, {
+        cwd: repository,
+        encoding: 'utf8',
+        env: environment(),
+      });
+      expect(result.status, result.stderr).toBe(0);
+    }
+
+    function write(path: string, text: string) {
+      mkdirSync(dirname(join(repository, path)), { recursive: true });
+      writeFileSync(join(repository, path), text);
+    }
+
+    beforeAll(() => {
+      repository = mkdtempSync(join(tmpdir(), 'path-literals-'));
+      git('init', '-q');
+      write(
+        'modules/planning/web/src/board.tsx',
+        'const a = 1;\nexport const b = <Link to="/x">X</Link>;\n',
+      );
+      write('packages/ui/test/link.test.tsx', '<Link to="/x">X</Link>;\n');
+      git('add', '.');
+      write('apps/web/src/draft.tsx', '<Link to="/y">Y</Link>;\n');
+    });
+
+    afterAll(() => {
+      rmSync(repository, { recursive: true, force: true });
+    });
+
+    it('E02-S05 a literal in a tracked file fails naming the file and line, and an untracked file is not read', () => {
+      const findings = scan(trackedFiles(repository), []);
+
+      expect(findings.map(describeFinding)).toEqual(['modules/planning/web/src/board.tsx:2: /x']);
+    });
   });
 });
