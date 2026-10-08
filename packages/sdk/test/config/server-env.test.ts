@@ -22,4 +22,13 @@ describe('serverEnvSchema', () => {
     expect(error.problems).toHaveLength(1);
     expect(error.problems[0]).toMatch(/^PORT: /);
   });
+
+  it('E02-S01 PORT 0 is accepted as the number 0, so the operating system picks the port', () => {
+    const env = loadEnv(serverEnvSchema)({
+      PORT: '0',
+      NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+    });
+
+    expect(env.PORT).toBe(0);
+  });
 });
