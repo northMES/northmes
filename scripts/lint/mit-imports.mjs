@@ -2,7 +2,11 @@
 // Keeps AGPL code out of the MIT packages (docs/adr/0056-mit-sdk-packages-the-extension-exception-
 // and-the-trademark-policy.md). Every source and test file of a workspace package whose license is
 // MIT is read for its imports, and an import of a workspace package whose license is AGPL is a
-// finding that names the importing file, its line and the imported package.
+// finding that names the importing file, its line and the imported package. An import names a
+// package by its name, with or without a subpath, or by a relative path that lands in the
+// package's folder. Static, type-only and dynamic imports, re-exports and require calls all count.
+// A path built with new URL(..., import.meta.url) is not an import, so a test can still spawn
+// AGPL code by path.
 
 import { posix } from 'node:path';
 import ts from 'typescript';
@@ -32,14 +36,15 @@ function packageName(specifier) {
 }
 
 /**
- * The workspace package whose folder holds a path, the deepest one when packages nest.
+ * The workspace package whose folder is or holds a path, the deepest one when packages nest.
  * @param {readonly { dir: string, manifest: Manifest }[]} packages
  * @param {string} path
  */
 function owner(packages, path) {
   let found;
   for (const candidate of packages) {
-    if (path.startsWith(`${candidate.dir}/`) && candidate.dir.length > (found?.dir.length ?? -1)) {
+    const holds = path === candidate.dir || path.startsWith(`${candidate.dir}/`);
+    if (holds && candidate.dir.length > (found?.dir.length ?? -1)) {
       found = candidate;
     }
   }
@@ -64,7 +69,9 @@ export function scan(packages, files) {
     }
     const lineStarts = ts.computeLineStarts(text);
     for (const { fileName, pos } of ts.preProcessFile(text, true, true).importedFiles) {
-      const imported = byName.get(packageName(fileName));
+      const imported = /^\.\.?(\/|$)/.test(fileName)
+        ? owner(workspace, posix.join(posix.dirname(path), fileName))
+        : byName.get(packageName(fileName));
       if (imported && isAgpl(imported.manifest)) {
         const line = ts.computeLineAndCharacterOfPosition(lineStarts, pos).line + 1;
         findings.push({ kind: 'import', path, line, imported: imported.manifest.name });
