@@ -14,6 +14,11 @@ describe('ci / pr title', () => {
     }
   });
 
+  it('accepts ! before the colon for a breaking change', () => {
+    expect(checkTitle('feat(planning)!: drop the legacy order import').ok).toBe(true);
+    expect(checkTitle('chore!: require Node 26').ok).toBe(true);
+  });
+
   it('fails a title that is not a Conventional Commit with an allowed type, naming the title', () => {
     const titles = [
       'Show late orders on the board',
