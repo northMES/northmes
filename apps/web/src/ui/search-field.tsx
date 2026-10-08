@@ -12,6 +12,8 @@ const searchDelay = 300;
 const maxSearchLength = 100;
 
 export interface SearchFieldProps {
+  /** The id of the input, so a page can move focus to it, as Clear filters does. */
+  readonly id?: string;
   /** The accessible name, which the field also shows as its placeholder, such as "Search articles". */
   readonly label: string;
   /** The search in effect, such as the q key of the URL; the field follows it when it changes. */
@@ -25,7 +27,7 @@ export interface SearchFieldProps {
  * The search input of a list toolbar (design ui-222, keyboard model): typing searches after a
  * pause, Escape or Clear search empties it at once, and focus stays in the field throughout.
  */
-export function SearchField({ label, value, onSearch, className }: SearchFieldProps) {
+export function SearchField({ id, label, value, onSearch, className }: SearchFieldProps) {
   const [text, setText] = useState(value);
   const [shown, setShown] = useState(value);
   // The last search this field sent, so its echo through value keeps the text typed since.
@@ -77,6 +79,7 @@ export function SearchField({ label, value, onSearch, className }: SearchFieldPr
       />
       <input
         ref={input}
+        id={id}
         type="search"
         aria-label={label}
         placeholder={label}
