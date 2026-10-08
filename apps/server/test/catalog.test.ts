@@ -48,6 +48,21 @@ describe('checkCatalog', () => {
     expect(error.problems).toEqual(['Module dependency cycle: planning -> scheduling -> planning']);
   });
 
+  it('E02-S01 a cycle names only its own modules, in cycle order, starting from the smallest id', () => {
+    // The walk reaches the cycle from assembly and enters it at scheduling.
+    const error = refusal([
+      core,
+      inRepoModule('assembly', ['core', 'scheduling']),
+      inRepoModule('scheduling', ['quality']),
+      inRepoModule('quality', ['planning']),
+      inRepoModule('planning', ['scheduling']),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module dependency cycle: planning -> scheduling -> quality -> planning',
+    ]);
+  });
+
   it('E02-S01 modules come back core first, in dependency order, plugins last', () => {
     const catalog = checkCatalog(
       [
