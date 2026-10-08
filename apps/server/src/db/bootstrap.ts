@@ -16,10 +16,13 @@ const superuser = 'postgres';
 /** The roles of ADR 0006 that bootstrap creates, with their attributes and password. */
 const roles: readonly { name: string; attributes: string; password?: keyof RolePasswords }[] = [
   { name: 'nm_owner', attributes: 'login createrole', password: 'owner' },
-  { name: 'nm_app', attributes: 'login nosuperuser nocreaterole nobypassrls', password: 'app' },
-  { name: 'nm_auth', attributes: 'login', password: 'auth' },
-  { name: 'nm_ext', attributes: 'nologin' },
+  { name: 'nm_app', attributes: 'login nocreaterole', password: 'app' },
+  { name: 'nm_auth', attributes: 'login nocreaterole', password: 'auth' },
+  { name: 'nm_ext', attributes: 'nologin nocreaterole' },
 ];
+
+/** Attributes no role of NorthMES holds, named on every role so that one made by hand loses them. */
+const withheld = 'nosuperuser nocreatedb noreplication nobypassrls';
 
 /**
  * The role statements carry the passwords. These settings keep every statement of the session out
@@ -39,8 +42,9 @@ const unloggedSession = [
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
  * nm_ext is a group that cannot log in, which nm_owner administers. Every role's time zone is
  * pinned to UTC, per role because a database cloned from a template loses its database settings.
- * A role that exists keeps its password and gets its attributes again, so an nm_app made by hand
- * loses SUPERUSER, CREATEROLE and BYPASSRLS, and a second run changes nothing.
+ * A role that exists keeps its password and gets its attributes again, so a role made by hand loses
+ * SUPERUSER, CREATEDB, REPLICATION and BYPASSRLS, and CREATEROLE unless it is nm_owner. A second
+ * run changes nothing. Role names and attributes are constants of this file, never input.
  */
 export async function bootstrapRoles(
   superuserUrl: string,
@@ -62,9 +66,9 @@ export async function bootstrapRoles(
     for (const { name, attributes, password } of roles) {
       if (!exists.has(name)) {
         const secret = password ? ` password ${client.escapeLiteral(passwords[password])}` : '';
-        await client.query(`create role ${name} ${attributes}${secret}`);
+        await client.query(`create role ${name} ${attributes} ${withheld}${secret}`);
       } else {
-        await client.query(`alter role ${name} ${attributes}`);
+        await client.query(`alter role ${name} ${attributes} ${withheld}`);
       }
       await client.query(`alter role ${name} set timezone = 'UTC'`);
     }
