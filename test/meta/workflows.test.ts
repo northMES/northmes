@@ -436,6 +436,24 @@ describe('workflows', () => {
     expect([...workflowsByJobName].filter(([, paths]) => paths.length > 1)).toEqual([]);
   });
 
+  // GitHub shows a check as <workflow name> / <job name>, so a job named ci / e2e in the workflow
+  // CI would show as CI / ci / e2e, and the main ruleset would require it as ci / e2e
+  // (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  it('no job name starts with its workflow name and a slash', () => {
+    const jobs = workflows().flatMap(({ path, name: workflowName, jobs }) =>
+      Object.entries(jobs ?? {}).map(([id, job]) => ({
+        where: `${path} job ${id}`,
+        prefix: `${(workflowName ?? path).toLowerCase()} /`,
+        name: (job.name ?? id).toLowerCase(),
+      })),
+    );
+
+    expect(jobs, 'jobs').not.toHaveLength(0);
+    for (const { where, prefix, name } of jobs) {
+      expect(name.startsWith(prefix), `${where} is named ${name}`).toBe(false);
+    }
+  });
+
   // One check covers all tests in both time zones. TZ sets the time zone of the Node process and
   // NM_TEST_PG_TZ the session zone of the test database, so each leg sets both. A step runs only
   // after passed steps by default, so the Europe/Stockholm leg names its own condition: it runs
