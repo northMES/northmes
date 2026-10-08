@@ -6,5 +6,6 @@ import { randomUUIDv7 } from 'node:crypto';
  * no row exists for it.
  */
 export const given = {
+  company: (): string => randomUUIDv7(),
   plant: (): string => randomUUIDv7(),
 };
