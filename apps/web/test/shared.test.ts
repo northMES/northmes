@@ -26,12 +26,37 @@ function registeredKeys(dev: boolean): string[] {
 
 let runtimes = 0;
 
-/** A federation runtime that holds the shell's shares, under a name no other test uses. */
-function shellRuntime(): ModuleFederation {
+/**
+ * A federation runtime for a remote that declares each key with import: false, under a name no
+ * other test uses. For each key it holds the entry that @module-federation/vite generates: the
+ * version the remote was built against and a getter that throws. It shares the scope of a runtime
+ * that holds the shell's shares, as a remote's container does once the shell initialises it.
+ */
+function remoteRuntime(keys: readonly string[]): ModuleFederation {
   runtimes += 1;
-  const runtime = createInstance({ name: `northmesShell${runtimes}`, remotes: [] });
-  shareSingletons(runtime, { dev: true, versions });
-  return runtime;
+  const shell = createInstance({ name: `northmesShell${runtimes}`, remotes: [] });
+  shareSingletons(shell, { dev: true, versions });
+  const remote = createInstance({
+    name: `planning${runtimes}`,
+    remotes: [],
+    shared: Object.fromEntries(
+      keys.map((key) => [
+        key,
+        {
+          version: '1.2.3',
+          scope: 'default',
+          get: async () => {
+            throw new Error(`Shared module '${key}' must be provided by host`);
+          },
+          shareConfig: { singleton: true, requiredVersion: false },
+        },
+      ]),
+    ),
+  });
+  const scope = shell.shareScopeMap.default;
+  if (scope === undefined) throw new Error('the shell registered no default share scope');
+  remote.initShareScopeMap('default', scope);
+  return remote;
 }
 
 /** The module that runtime hands to code that loads the share key. */
@@ -47,7 +72,7 @@ describe('shareSingletons', () => {
   });
 
   it("E02-S05 each share hands a remote the shell's own module instance", async () => {
-    const runtime = shellRuntime();
+    const runtime = remoteRuntime(singletons({ dev: true }));
 
     expect(await moduleOf(runtime, 'react')).toBe(React);
     expect(await moduleOf(runtime, 'react-dom')).toBe(ReactDOM);
@@ -57,31 +82,5 @@ describe('shareSingletons', () => {
     expect(await moduleOf(runtime, '@apollo/client')).toBe(ApolloClient);
     expect(await moduleOf(runtime, '@apollo/client/react')).toBe(ApolloReact);
     expect(await moduleOf(runtime, '@northmes/web-sdk')).toBe(WebSdk);
-  });
-
-  it("E02-S05 a remote's consume-only entry for a key does not replace the shell's share", async () => {
-    const shell = shellRuntime();
-    // The entry that @module-federation/vite generates for a key a remote declares with
-    // import: false: the version the remote was built against and a getter that throws.
-    const remote = createInstance({
-      name: 'planning',
-      remotes: [],
-      shared: {
-        react: {
-          version: '1.2.3',
-          scope: 'default',
-          get: async () => {
-            throw new Error("Shared module 'react' must be provided by host");
-          },
-          shareConfig: { singleton: true, requiredVersion: false },
-        },
-      },
-    });
-    // What the remote's container does when the shell initialises it with its share scope.
-    const scope = shell.shareScopeMap.default;
-    if (scope === undefined) throw new Error('the shell registered no default share scope');
-    remote.initShareScopeMap('default', scope);
-
-    expect(await moduleOf(remote, 'react')).toBe(React);
   });
 });
