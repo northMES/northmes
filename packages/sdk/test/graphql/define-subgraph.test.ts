@@ -14,6 +14,7 @@ import { execute, parse } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CatalogArticles, CatalogModule } from '../fixtures/graphql/catalog.ts';
 import { ProductionStartModule } from '../fixtures/graphql/production-start.ts';
+import { QualityModule } from '../fixtures/graphql/quality.ts';
 
 const opened: TestingModule[] = [];
 
@@ -115,6 +116,15 @@ describe('defineSubgraph', () => {
     );
     expect(subgraph(registry, 'catalog').sdl).toContain(
       'type Article @key(fields: "id") {\n  id: ID!\n  name: String!\n}',
+    );
+  });
+
+  it('E02-S03 a module that only adds a field to Article keeps its entityRef stub in its subgraph', async () => {
+    // No field of the quality module returns Article; the stub is only the parent of a field.
+    const { registry } = await buildSubgraphs({ catalog: CatalogModule, quality: QualityModule });
+
+    expect(subgraph(registry, 'quality').sdl).toContain(
+      'type Article @key(fields: "id") {\n  id: ID!\n  qualityInspectionRequired: Boolean\n}',
     );
   });
 });
