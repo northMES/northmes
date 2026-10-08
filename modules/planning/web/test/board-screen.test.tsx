@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { MockLink } from '@apollo/client/testing';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
@@ -22,6 +23,31 @@ function order(number: string, quantity: string, status: string, article: string
   };
 }
 
+/** The board query, answered with these orders. */
+function boardQuery(...orders: ReturnType<typeof order>[]): MockLink.MockedResponse {
+  return {
+    request: { query: PlanningBoard },
+    result: { data: { planningProductionOrders: orders } },
+  };
+}
+
+/** The release of the order with `id`, answered with `result`. */
+function releaseOf(id: string, result: MockLink.MockedResponse['result']): MockLink.MockedResponse {
+  return {
+    request: { query: PlanningReleaseProductionOrder, variables: { input: { id } } },
+    result,
+  };
+}
+
+/** Renders the board screen with a MockedProvider that answers `mocks`, each once. */
+function renderBoard(mocks: MockLink.MockedResponse[]) {
+  render(
+    <MockedProvider mocks={mocks}>
+      <BoardScreen />
+    </MockedProvider>,
+  );
+}
+
 /** The text of each cell of a row. */
 function cells(row: HTMLElement): (string | null)[] {
   return within(row)
@@ -31,25 +57,12 @@ function cells(row: HTMLElement): (string | null)[] {
 
 describe('BoardScreen', () => {
   it('E02-S05 the board stub lists production orders with their article names', async () => {
-    const mocks = [
-      {
-        request: { query: PlanningBoard },
-        result: {
-          data: {
-            planningProductionOrders: [
-              order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1),
-              order('7102', '12.500000', 'released', 'Hinge pin', 2),
-            ],
-          },
-        },
-      },
-    ];
-
-    render(
-      <MockedProvider mocks={mocks}>
-        <BoardScreen />
-      </MockedProvider>,
-    );
+    renderBoard([
+      boardQuery(
+        order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1),
+        order('7102', '12.500000', 'released', 'Hinge pin', 2),
+      ),
+    ]);
 
     const board = await screen.findByTestId('board-screen');
     expect(cells(await within(board).findByTestId('order-7101'))).toEqual([
@@ -73,15 +86,9 @@ describe('BoardScreen', () => {
   });
 
   it('E02-S05 the board stub shows the error when its query fails', async () => {
-    const mocks = [
+    renderBoard([
       { request: { query: PlanningBoard }, error: new Error('The GraphQL gateway is not ready.') },
-    ];
-
-    render(
-      <MockedProvider mocks={mocks}>
-        <BoardScreen />
-      </MockedProvider>,
-    );
+    ]);
 
     expect((await screen.findByRole('alert')).textContent).toBe(
       'The production orders could not be loaded: The GraphQL gateway is not ready.',
@@ -92,38 +99,19 @@ describe('BoardScreen', () => {
     const user = userEvent.setup();
     // One answer for the board's query: a second run of it would find no mock and fail, so the row
     // can only change through the mutation's result in the cache.
-    const mocks = [
-      {
-        request: { query: PlanningBoard },
-        result: {
-          data: {
-            planningProductionOrders: [order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)],
+    renderBoard([
+      boardQuery(order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)),
+      releaseOf('order-7101', {
+        data: {
+          planningReleaseProductionOrder: {
+            __typename: 'ProductionOrder',
+            id: 'order-7101',
+            status: 'released',
+            version: 2,
           },
         },
-      },
-      {
-        request: {
-          query: PlanningReleaseProductionOrder,
-          variables: { input: { id: 'order-7101' } },
-        },
-        result: {
-          data: {
-            planningReleaseProductionOrder: {
-              __typename: 'ProductionOrder',
-              id: 'order-7101',
-              status: 'released',
-              version: 2,
-            },
-          },
-        },
-      },
-    ];
-
-    render(
-      <MockedProvider mocks={mocks}>
-        <BoardScreen />
-      </MockedProvider>,
-    );
+      }),
+    ]);
 
     const row = await screen.findByTestId('order-7101');
     await user.click(within(row).getByRole('button', { name: 'Release order 7101' }));
@@ -137,43 +125,24 @@ describe('BoardScreen', () => {
 
   it('E02-S05 a rejected release shows the message and errorCode in the row', async () => {
     const user = userEvent.setup();
-    const mocks = [
-      {
-        request: { query: PlanningBoard },
-        result: {
-          data: {
-            planningProductionOrders: [order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)],
-          },
-        },
-      },
-      {
-        request: {
-          query: PlanningReleaseProductionOrder,
-          variables: { input: { id: 'order-7101' } },
-        },
-        // The answer of a validator's veto: no data, and one error with the validator's message.
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'Order 7101 asks for 40, above the release limit of 25',
-              path: ['planningReleaseProductionOrder'],
-              extensions: {
-                code: 'PRECONDITION',
-                errorCode: 'core.command_rejected',
-                details: { rejectedBy: 'example-validator' },
-              },
+    renderBoard([
+      boardQuery(order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)),
+      // The answer of a validator's veto: no data, and one error with the validator's message.
+      releaseOf('order-7101', {
+        data: null,
+        errors: [
+          {
+            message: 'Order 7101 asks for 40, above the release limit of 25',
+            path: ['planningReleaseProductionOrder'],
+            extensions: {
+              code: 'PRECONDITION',
+              errorCode: 'core.command_rejected',
+              details: { rejectedBy: 'example-validator' },
             },
-          ],
-        },
-      },
-    ];
-
-    render(
-      <MockedProvider mocks={mocks}>
-        <BoardScreen />
-      </MockedProvider>,
-    );
+          },
+        ],
+      }),
+    ]);
 
     const row = await screen.findByTestId('order-7101');
     await user.click(within(row).getByRole('button', { name: 'Release order 7101' }));
