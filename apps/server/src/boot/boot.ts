@@ -152,10 +152,6 @@ async function importManifests(
 }
 
 export interface InRepoCatalogOptions {
-  /**
-   * Resolves each manifest. Without it, inRepoCatalog uses packageJsonOf, as boot does.
-   */
-  readonly resolveManifest?: ResolveManifest;
   /** The ids of the in-repo modules to keep. Without it, the catalog holds every in-repo module. */
   readonly modules?: readonly string[];
 }
@@ -166,12 +162,9 @@ export interface InRepoCatalogOptions {
  */
 export async function inRepoCatalog(
   importManifest: BootOptions['importManifest'],
-  {
-    resolveManifest = packageJsonOf,
-    modules,
-  }: InRepoCatalogOptions = {},
+  { modules }: InRepoCatalogOptions = {},
 ): Promise<CatalogEntry[]> {
-  const entries = await importManifests(inRepoManifests, importManifest, resolveManifest);
+  const entries = await importManifests(inRepoManifests, importManifest, packageJsonOf);
   const kept = modules ? entries.filter(({ manifest }) => modules.includes(manifest.id)) : entries;
   return checkCatalog(kept, { imageVersion: imageVersion() });
 }
