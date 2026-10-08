@@ -78,4 +78,18 @@ describe('defineSubgraph', () => {
 
     expect(registry.all().map((entry) => entry.name)).toEqual(['catalog', 'productionStart']);
   });
+
+  it('E02-S03 entityRef(Article) adds a key-only Article stub to the referencing subgraph', async () => {
+    const { registry } = await buildSubgraphs({
+      catalog: CatalogModule,
+      'production-start': ProductionStartModule,
+    });
+
+    expect(subgraph(registry, 'productionStart').sdl).toContain(
+      'type Article @key(fields: "id") {\n  id: ID!\n}',
+    );
+    expect(subgraph(registry, 'catalog').sdl).toContain(
+      'type Article @key(fields: "id") {\n  id: ID!\n  name: String!\n}',
+    );
+  });
 });

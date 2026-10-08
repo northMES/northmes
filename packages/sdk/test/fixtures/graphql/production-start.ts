@@ -1,23 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Fixture module production-start: owns ProductionOrder and references catalog's Article.
 import { Module } from '@nestjs/common';
-import {
-  Directive,
-  Field,
-  ID,
-  ObjectType,
-  Parent,
-  Query,
-  ResolveField,
-  Resolver,
-} from '@nestjs/graphql';
+import { Field, ID, ObjectType, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
+import { graphqlKit } from '@northmes/sdk/graphql';
+
+const gql = graphqlKit(() => ProductionStartModule);
 
 /** Catalog's Article, referenced by name and key only. */
-@ObjectType('Article', { registerIn: () => ProductionStartModule })
-@Directive('@key(fields: "id")')
-export class ArticleRef {
-  @Field(() => ID) id!: string;
-}
+export const ArticleRef = gql.entityRef('Article');
 
 @ObjectType('ProductionOrder', { registerIn: () => ProductionStartModule })
 export class ProductionOrder {
