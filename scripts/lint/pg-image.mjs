@@ -19,9 +19,11 @@ const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*
 // follow the colon, so `postgres:(\d+)` and `postgres:${TAG}` are not references.
 const composeImagePattern = /^\s*image:\s*["']?(?<image>postgres:[A-Za-z0-9][^\s"']*)["']?\s*$/;
 
-// PostgreSqlContainer('literal') with a quoted literal. An identifier argument has no quote, and a
-// template literal with `${` stops the match at the `$`, so both are left alone.
-const containerCallPattern = /PostgreSqlContainer\(\s*(['"`])(?<literal>[^'"`$]+)\1/;
+// PostgreSqlContainer('literal') with a quoted literal, or PostgreSqlContainer() with none. An
+// identifier argument has no quote, and a template literal with `${` stops the match at the `$`, so
+// both are left alone.
+const containerCallPattern =
+  /PostgreSqlContainer\(\s*(?:(['"`])(?<literal>[^'"`$]+)\1|(?<noArgument>\)))/;
 
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
@@ -63,7 +65,8 @@ function referenceOn(path, content) {
     return composeImagePattern.exec(content)?.groups?.image;
   }
   if (isTestFile(path)) {
-    return containerCallPattern.exec(content)?.groups?.literal;
+    const call = containerCallPattern.exec(content)?.groups;
+    return call?.noArgument ? 'PostgreSqlContainer()' : call?.literal;
   }
   return undefined;
 }

@@ -101,6 +101,17 @@ describe('pg-image', () => {
       expect(findings).toEqual([]);
     });
 
+    it('scan does not report regex text that names postgres: in a test file', () => {
+      const findings = scan([
+        {
+          path: 'packages/testing/test/harness.int.test.ts',
+          text: 'const major = /^postgres:(\\d+)[@-]/.exec(image)?.[1];\n',
+        },
+      ]);
+
+      expect(findings).toEqual([]);
+    });
+
     it('scan reports postgres:18 without the digest', () => {
       const findings = scan([{ path: 'Dockerfile', text: 'FROM postgres:18\n' }]);
 
