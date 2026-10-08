@@ -19,6 +19,11 @@ function configErrorOf(fn: () => unknown): ConfigError {
   throw new Error('expected a ConfigError, but nothing was thrown');
 }
 
+/** The keys a ConfigError names, sorted. Each problem reads "KEY: rule". */
+function keysOf(error: ConfigError): string[] {
+  return error.problems.map((problem) => problem.split(':')[0] ?? problem).sort();
+}
+
 describe('serverEnvSchema', () => {
   it('E02-S01 a record without PORT fails naming PORT', () => {
     const error = configErrorOf(() =>
@@ -43,11 +48,7 @@ describe('serverEnvSchema', () => {
       loadEnv(serverEnvSchema)({ PORT: '70000', NORTHMES_ROLE: 'web' }),
     );
 
-    expect(error.problems.map((problem) => problem.split(':')[0]).sort()).toEqual([
-      'NORTHMES_PUBLIC_ORIGIN',
-      'NORTHMES_ROLE',
-      'PORT',
-    ]);
+    expect(keysOf(error)).toEqual(['NORTHMES_PUBLIC_ORIGIN', 'NORTHMES_ROLE', 'PORT']);
     expect(error.problems).toContain('PORT: must be an integer from 0 to 65535');
     expect(error.problems).toContain('NORTHMES_ROLE: must be all, api or worker');
     expect(error.message).not.toContain('70000');
@@ -114,8 +115,6 @@ describe('migrateEnvSchema and bootstrapEnvSchema', () => {
       ...bootstrapKeys,
     });
 
-    const keysOf = (error: ConfigError) =>
-      error.problems.map((problem) => problem.split(':')[0]).sort();
     expect(keysOf(configErrorOf(() => loadEnv(migrateEnvSchema)({})))).toEqual(
       Object.keys(migrateKeys).sort(),
     );
