@@ -77,6 +77,17 @@ describe('serverEnvSchema', () => {
     expect(error.problems[0]).toMatch(/^NORTHMES_PUBLIC_ORIGIN: must be /);
     expect(error.message).not.toContain('127.0.0.1:8080');
   });
+
+  it('E02-S01 a public origin with a path, even a single slash, fails', () => {
+    for (const origin of ['https://mes.example.com/', 'https://mes.example.com/northmes']) {
+      const error = configErrorOf(() =>
+        loadEnv(serverEnvSchema)({ PORT: '8080', NORTHMES_PUBLIC_ORIGIN: origin }),
+      );
+
+      expect(error.problems, origin).toHaveLength(1);
+      expect(error.problems[0], origin).toMatch(/^NORTHMES_PUBLIC_ORIGIN: must be /);
+    }
+  });
 });
 
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {
