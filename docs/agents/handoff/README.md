@@ -206,7 +206,7 @@ All of these hold:
 2. Criteria 4 and 5 above, over the latest merges.
 3. CodeRabbit reviews every pull request without anyone posting `@coderabbitai review` (the repository has 10 or more stars, or an automatic trigger has been checked on 5 pull requests), and the last 10 runs recorded no `github.reviewers_timeout`.
 4. Unresolved review threads do not block an automatic merge: either CodeRabbit resolves its own threads after the coder's fix, checked on 5 pull requests, or the ruleset no longer requires conversation resolution. Otherwise the merge step names the open threads and waits until a person resolves them.
-5. `ci / e2e` is a required check, since nobody tries UI changes by hand.
+5. `CI / e2e` is a required check, since nobody tries UI changes by hand.
 
 ### How to switch
 

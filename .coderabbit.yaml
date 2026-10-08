@@ -264,6 +264,10 @@ reviews:
           description then says why no test changed.
 
   tools:
+    # CI/CD pipeline analysis: when a GitHub Actions check fails, CodeRabbit reads its log and
+    # comments a fix on the lines that caused it. The schema has no timeout setting.
+    github-checks:
+      enabled: true
     # Biome is the project's linter and formatter; one linter, one rule set.
     biome:
       enabled: true

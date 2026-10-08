@@ -107,7 +107,7 @@ Root scripts:
 | `pnpm test:ai`, `pnpm test:e2e:ai` | The live AI suites | A person, or the scheduled live workflow |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`ci / linked issue`, `ci / pr title` and, from the first public route, `ci / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
 
 ## Testcontainers harness
 
@@ -265,7 +265,7 @@ flowchart LR
 |---|---|
 | `e2e/skeleton.spec.ts`: the integration check of the walking skeleton on the built `all` process with Testcontainers Postgres | Required in `ci / gate` from M1, together with the resolve-hook test ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)) |
 | `e2e/a11y/board.axe.spec.ts`: populated, locked block, move mode and paused states | Required in `ci / a11y` from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
-| Planner, station and Pyramid flows listed in [07](07-production-planning.md), [08](08-pyramid-connector.md) and [09](09-operator-station.md) | `ci / e2e`; required once stable, and before the lean handoff graph |
+| Planner, station and Pyramid flows listed in [07](07-production-planning.md), [08](08-pyramid-connector.md) and [09](09-operator-station.md) | `e2e`; required from the change that adds it ([#281](https://github.com/northMES/northmes/issues/281), [ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | The committed N-1 build of the example widget loads with no console error and no CSP violation | Pull requests that touch the shared singleton list or the federation packages ([ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)) |
 | The example plugin spec after an install from packed tarballs outside the repository | the `plugin-outside` job ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)) |
 | `reconnect-after-outage.spec.ts`, `e2e/board-perf.spec.ts` | nightly |
@@ -361,7 +361,7 @@ The workflows, rulesets and runner settings are in [13-delivery-and-github.md](1
 flowchart LR
   ide["Interactive session<br/>Claude Code hooks:<br/>related tests, changed tests"]
   tester["handoff Tester<br/>pnpm check, 20 min"]
-  pr["Pull request<br/>ci / gate, ci / a11y,<br/>license gate, dependency audit,<br/>CodeQL, ci / e2e"]
+  pr["Pull request<br/>the CI jobs, license gate,<br/>dependency audit, CodeQL"]
   main["main<br/>same checks, image build and scan"]
   nightly["Nightly<br/>ops tests, N-1 image, image smoke,<br/>time zone and Temporal legs,<br/>benches, board-perf, reconnect"]
   release["Release<br/>images, offline bundle,<br/>SBOMs, attestations"]
@@ -371,34 +371,40 @@ flowchart LR
 
 ### Required checks
 
-The ruleset on `main` requires these checks, strict (the branch must be up to date):
+The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
 
 | Check | Runs |
 |---|---|
-| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration, web and types projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists), `ci / cla` (before the first outside pull request) and `ci / openapi diff` (with the first public route). |
-| `ci / a11y` | The axe specs over the board states, from the first board pull request |
+| `lint` | turbo `lint`, then `pnpm gen --check` |
+| `typecheck` | turbo `typecheck` |
+| `build` | turbo `build` |
+| `test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
+| `pr title` | The title is a Conventional Commit with an allowed type |
+| `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
+| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists), `cla` (before the first outside pull request) and `openapi diff` (with the first public route). |
+| `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
 | `CodeQL` | GitHub's default setup for `actions` and `javascript-typescript` |
 
-`ci / gate` is the one aggregate check, so jobs inside `ci.yml` change without a ruleset edit. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
+Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so no two workflows share a job name, which `test/meta/workflows.test.ts` checks. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 
-`ci / openapi diff` is a job inside `ci / gate` that ships with the first public route; release 1 has none ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
+`openapi diff` is a job of `ci.yml` that `CI / gate` needs, and it ships with the first public route; release 1 has none ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
 
 - It runs `oasdiff breaking` on `schema/openapi-v1.json` against the base branch with `--fail-on ERR`, so each pull request sees only its own changes.
 - oasdiff is a release binary pinned and checked against its checksum, or `oasdiff/oasdiff-action/breaking` pinned by digest ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
 - In 0.x an ERR-level break fails unless the pull request title carries `!`, the breaking-change marker of [ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), which also bumps the minor and puts the break in the changelog. From 1.0 every ERR-level break in the public API fails, with or without `!`, and a break needs a new API major.
 - WARN-level findings are reported and do not block.
-- Like `ci / pr title`, it reads the pull request, so it is not part of `pnpm check`. `pnpm openapi:diff` runs the same comparison locally and only reports.
+- Like `CI / pr title`, it reads the pull request, so it is not part of `pnpm check`. `pnpm openapi:diff` runs the same comparison locally and only reports.
 - `test/meta/openapi-diff.test.ts` runs the job's script on fixture pairs: a removed response field under a title without `!` exits 1, the same change titled `feat(planning)!:` exits 0, an added optional response field exits 0, and at version 1.0.0 a removed field exits 1 even with `!`.
 
 ### Other checks on pull requests
 
-Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there; whether one of them joins `ci / gate` is decided by the task that adds it. `ci / e2e` becomes required before the project moves to the lean handoff graph.
+Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `CI / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `e2e`, `fresh-worktree` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
 
 | Check | Runs | When |
 |---|---|---|
-| `ci / e2e` | `pnpm e2e` with Chromium, traces uploaded on failure | Every pull request and push to `main` |
+| `e2e` | `pnpm e2e` with Chromium, traces uploaded on failure | Every pull request and push to `main` |
 | `fresh-worktree` | `git worktree add`, `pnpm install --frozen-lockfile`, `pnpm test:int` with no build step | Every pull request |
 | `plugin-outside` | Packs the MIT packages, installs an example plugin from those tarballs outside the repository, builds it, drops it into a plugins directory, boots and runs the example spec | Every pull request |
 | Image build and scan | Builds the app and Postgres images without pushing; Trivy or Grype pinned by digest; fails on critical findings that have a fix | Pull requests and `main`, once a Dockerfile exists |
@@ -474,5 +480,5 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Is the pilot host amd64, so the image smoke and bundle jobs match it? | pilot IT | amd64 |
 | Where does the Playwright package live (`apps/e2e` or a root `e2e` folder)? | not assigned | Specs use `e2e/...` paths as the ADRs name them |
 | Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester and `tests-changed.mjs` in runs |
-| When does `ci / e2e` become a required check? | maintainer | Before the lean handoff graph |
+| When does `e2e` become a required check? | maintainer | In the change that adds it to `ci.yml` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | Is "Pause live updates" wanted, which decides whether `pause.spec.ts` stays? | product owner | Built as designed |

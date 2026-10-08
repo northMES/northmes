@@ -2517,7 +2517,7 @@ none, internal
 - [ ] With the planning remote's files removed, the shell shows the placeholder route and "(unavailable)" in the menu
 ```
 
-##### E02-S08-T03, #281 repo: Gate on the skeleton spec in ci / e2e
+##### E02-S08-T03, #281 repo: Gate on the skeleton spec in e2e
 
 Labels: `task`, `human`, `area: ci` (changes CI workflows). Blocked by: E02-S08-T02 (#280), E00-S04-T01 (#196).
 
@@ -2527,11 +2527,11 @@ Covers: criterion 5; E02-S05 criterion 7 (zero violations in the browser); tests
 Plan: E02-S08-T03
 
 ## Goal
-e2e/skeleton.spec.ts runs on the built all process with core, planning and example-validator loaded from plugins/. The board lists the seeded orders with article names under the strict CSP with zero securitypolicyviolation events; a release over the example limit shows the validator's message; a release in a second browser context appears on the board. ci.yml gets the ci / e2e job, which builds and runs pnpm e2e on every pull request.
+e2e/skeleton.spec.ts runs on the built all process with core, planning and example-validator loaded from plugins/. The board lists the seeded orders with article names under the strict CSP with zero securitypolicyviolation events; a release over the example limit shows the validator's message; a release in a second browser context appears on the board. ci.yml gets the e2e job, which builds and runs pnpm e2e on every pull request.
 
 ## Where in the code
 e2e/skeleton.spec.ts (new)
-.github/workflows/ci.yml (exists; ci / e2e job)
+.github/workflows/ci.yml (exists; e2e job)
 test/meta/workflows.test.ts (exists)
 Seam: the e2e fixtures from E02-S08-T02; workflows.test.ts parses ci.yml.
 
@@ -2539,7 +2539,7 @@ Seam: the e2e fixtures from E02-S08-T02; workflows.test.ts parses ci.yml.
 - skeleton.spec.ts: "E02-S08 the board lists orders with article names"
 - skeleton.spec.ts: "E02-S08 a vetoed release shows the validator message"
 - skeleton.spec.ts: "E02-S08 a release in a second context appears on the board"
-- workflows.test.ts: "E02-S08 ci / e2e builds and runs pnpm e2e"
+- workflows.test.ts: "E02-S08 e2e builds and runs pnpm e2e"
 
 ## Design
 none
@@ -2550,16 +2550,16 @@ docs/adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md
 docs/adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md
 
 ## Out of scope
-Making the spec required in ci / gate at M1 (a ruleset change), the Chromium project with Temporal deleted (later).
+The ruleset edit that adds e2e after the merge (a person's, ADR 0069), the Chromium project with Temporal deleted (later).
 
 ## Changelog
-ci(repo): run the walking skeleton spec in ci / e2e
+ci(repo): run the walking skeleton spec in e2e
 
 ## Acceptance criteria
 - [ ] skeleton.spec.ts passes on the built all process with example-validator loaded
 - [ ] The board test records zero securitypolicyviolation events
 - [ ] A vetoed release shows the validator's message, and a release in one context appears in the other
-- [ ] ci / e2e runs the spec on every pull request
+- [ ] CI / e2e runs the spec on every pull request
 ```
 
 ##### E02-S08-T04, #282 repo: Run integration tests in a fresh worktree in CI

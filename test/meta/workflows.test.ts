@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface Step {
+  id?: string;
   if?: string;
   uses?: string;
   run?: string;
@@ -25,6 +26,7 @@ type Permissions = string | Record<string, string>;
 
 interface Workflow {
   path: string;
+  name?: string;
   on?: unknown;
   permissions?: Permissions;
   jobs: Record<string, Job>;
@@ -45,7 +47,7 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-const pullRequestChecks = ['ci / pr title', 'ci / linked issue'];
+const pullRequestChecks = ['pr title', 'linked issue'];
 
 // A GitHub Actions expression as a workflow writes it.
 function expression(source: string): string {
@@ -54,11 +56,11 @@ function expression(source: string): string {
 
 // What each pull request check runs, and the pull request fields it reads from the environment.
 const pullRequestCheckSteps = {
-  'ci / pr title': {
+  'pr title': {
     run: 'node scripts/ci/pr-title.mjs',
     env: { PR_TITLE: expression('github.event.pull_request.title') },
   },
-  'ci / linked issue': {
+  'linked issue': {
     run: 'node scripts/ci/linked-issue.mjs',
     env: {
       PR_BODY: expression('github.event.pull_request.body'),
@@ -69,10 +71,17 @@ const pullRequestCheckSteps = {
   },
 };
 
+// The jobs of the CI workflow, which GitHub shows as CI / <job name>. The main ruleset requires
+// each of them as a status check by its job name
+// (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list
+// needs a ruleset edit: an added name after the merge, a removed or old name just before it.
+const ciJobs = ['lint', 'typecheck', 'build', 'test', 'pr title', 'linked issue', 'gate'];
+
 // The checks the main ruleset requires from workflow files
-// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). CodeQL runs as
-// GitHub's default setup, outside the workflow files.
-const requiredChecks = ['ci / gate', 'license gate', 'dependency audit'];
+// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
+// docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). CodeQL runs as GitHub's default
+// setup, outside the workflow files.
+const requiredChecks = [...ciJobs, 'license gate', 'dependency audit'];
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -298,12 +307,12 @@ describe('workflows', () => {
     }
   });
 
-  it('every job sets its own permissions: contents: read, and none for ci / gate, which reads no files', () => {
+  it('every job sets its own permissions: contents: read, and none for CI / gate, which reads no files', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
-      const expected = job.name === 'ci / gate' ? {} : { contents: 'read' };
+      const expected = job.name === 'gate' ? {} : { contents: 'read' };
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -346,10 +355,10 @@ describe('workflows', () => {
   });
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
-  // On a pull request every job that ci / gate needs runs, so a skipped one means lint, build or
+  // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
   // tests did not run. A push to main skips the pull request checks.
-  it('ci / gate runs after a failed, cancelled or skipped job and then fails', () => {
-    const { job: gate } = jobNamed('ci / gate');
+  it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
+    const { job: gate } = jobNamed('gate');
 
     expect(gate.if).toBe('always()');
     expect(gate.steps).toContainEqual(
@@ -364,7 +373,7 @@ describe('workflows', () => {
 
   // A push to main has no pull request to check. An event value interpolated into a run script
   // could inject shell code, so the scripts read the pull request from environment variables.
-  it('ci / pr title and ci / linked issue run on pull requests only and read the pull request from environment variables', () => {
+  it('CI / pr title and CI / linked issue run on pull requests only and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { job } = jobNamed(name);
 
@@ -375,8 +384,8 @@ describe('workflows', () => {
 
   // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
   // fix to the title or body.
-  it('ci / gate needs ci / pr title and ci / linked issue, and an edited pull request re-runs them', () => {
-    const { workflow, id } = jobNamed('ci / gate');
+  it('CI / gate needs CI / pr title and CI / linked issue, and an edited pull request re-runs them', () => {
+    const { workflow, id } = jobNamed('gate');
     const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
     const on = workflow.on as { pull_request?: { types?: string[] } };
 
@@ -386,9 +395,10 @@ describe('workflows', () => {
     );
   });
 
-  // The main ruleset requires only ci / gate, so a job it does not need never blocks a merge.
-  it('ci / gate needs every other job in its workflow', () => {
-    const { workflow, id } = jobNamed('ci / gate');
+  // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
+  // request on which one of them did not run.
+  it('CI / gate needs every other job in its workflow', () => {
+    const { workflow, id } = jobNamed('gate');
 
     expect(allNeedsOf(workflow.jobs, id).sort()).toEqual(
       Object.keys(workflow.jobs)
@@ -397,24 +407,82 @@ describe('workflows', () => {
     );
   });
 
-  // TZ sets the time zone of the Node process and NM_TEST_PG_TZ the session zone of the test
-  // database, so each leg sets both.
-  it('ci / gate runs the unit and integration projects in the UTC and the Europe/Stockholm legs', () => {
-    const { workflow, id } = jobNamed('ci / gate');
-    const runs = allNeedsOf(workflow.jobs, id).flatMap((need) =>
-      vitestRunsOf(workflow.jobs[need] ?? {}),
+  // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
+  // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, pr title, linked issue and gate', () => {
+    const ci = workflows().find(({ name }) => name === 'CI');
+
+    expect(ci, 'a workflow named CI').toBeDefined();
+    expect(
+      Object.values(ci?.jobs ?? {})
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...ciJobs].sort());
+  });
+
+  // A required status check matches a check by its name and the app that reports it, not by the
+  // workflow, so a job named build in another workflow would also satisfy the required build check.
+  // A job without a name reports its id.
+  it('no two workflows share a job name', () => {
+    const workflowsByJobName = new Map<string, string[]>();
+    for (const { path, jobs } of workflows()) {
+      const names = new Set(Object.entries(jobs ?? {}).map(([id, job]) => job.name ?? id));
+      for (const name of names) {
+        workflowsByJobName.set(name, [...(workflowsByJobName.get(name) ?? []), path]);
+      }
+    }
+
+    expect(workflowsByJobName.size, 'job names').not.toBe(0);
+    expect([...workflowsByJobName].filter(([, paths]) => paths.length > 1)).toEqual([]);
+  });
+
+  // GitHub shows a check as <workflow name> / <job name>, so a job named ci / e2e in the workflow
+  // CI would show as CI / ci / e2e, and the main ruleset would require it as ci / e2e
+  // (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  it('no job name starts with its workflow name and a slash', () => {
+    const jobs = workflows().flatMap(({ path, name: workflowName, jobs }) =>
+      Object.entries(jobs ?? {}).map(([id, job]) => ({
+        where: `${path} job ${id}`,
+        prefix: `${(workflowName ?? path).toLowerCase()} /`,
+        name: (job.name ?? id).toLowerCase(),
+      })),
     );
 
-    for (const zone of ['UTC', 'Europe/Stockholm']) {
-      expect(runs, zone).toContainEqual({
-        env: expect.objectContaining({ TZ: zone, NM_TEST_PG_TZ: zone }),
-        projects: expect.arrayContaining(['unit', 'integration']),
-      });
+    expect(jobs, 'jobs').not.toHaveLength(0);
+    for (const { where, prefix, name } of jobs) {
+      expect(name.startsWith(prefix), `${where} is named ${name}`).toBe(false);
     }
   });
 
-  it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
-    const { workflow, id } = jobNamed('ci / gate');
+  // One check covers all tests in both time zones. TZ sets the time zone of the Node process and
+  // NM_TEST_PG_TZ the session zone of the test database, so each leg sets both. A step runs only
+  // after passed steps by default, so the Europe/Stockholm leg names its own condition: it runs
+  // after a failed UTC leg, so a failure that shows only in Stockholm reports in the same run, and
+  // not after a failed install, which skips the UTC leg.
+  it('CI / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg', () => {
+    const { job } = jobNamed('test');
+
+    expect(job.steps).toContainEqual(expect.objectContaining({ id: 'utc', run: 'pnpm test' }));
+    expect(job.steps).toContainEqual(
+      expect.objectContaining({
+        if: "!cancelled() && steps.utc.outcome != 'skipped'",
+        run: 'pnpm test:tz',
+      }),
+    );
+    expect(vitestRunsOf(job)).toEqual([
+      {
+        env: expect.objectContaining({ TZ: 'UTC', NM_TEST_PG_TZ: 'UTC' }),
+        projects: expect.arrayContaining(['unit', 'integration', 'web', 'types']),
+      },
+      {
+        env: expect.objectContaining({ TZ: 'Europe/Stockholm', NM_TEST_PG_TZ: 'Europe/Stockholm' }),
+        projects: expect.arrayContaining(['unit', 'integration']),
+      },
+    ]);
+  });
+
+  it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
+    const { workflow, id } = jobNamed('gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
       (need) => !pullRequestChecks.includes(workflow.jobs[need]?.name ?? ''),
     );
@@ -422,7 +490,7 @@ describe('workflows', () => {
       ['pnpm check', 'pnpm check:full'].flatMap(commandsOf).flatMap(turboTasks),
     );
 
-    expect(gated, 'the jobs ci / gate needs').not.toHaveLength(0);
+    expect(gated, 'the jobs CI / gate needs').not.toHaveLength(0);
     for (const need of gated) {
       for (const { run } of workflow.jobs[need]?.steps ?? []) {
         const where = `${workflow.path} job ${need} step ${JSON.stringify(run)}`;

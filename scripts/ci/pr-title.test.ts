@@ -5,7 +5,7 @@ import { checkTitle } from './pr-title.mjs';
 
 const script = fileURLToPath(new URL('./pr-title.mjs', import.meta.url));
 
-// Runs the script as the ci / pr title job does, with the title in PR_TITLE.
+// Runs the script as the CI / pr title job does, with the title in PR_TITLE.
 function run(title: string) {
   return spawnSync(process.execPath, [script], {
     env: { PATH: process.env.PATH, PR_TITLE: title },
@@ -13,7 +13,7 @@ function run(title: string) {
   });
 }
 
-describe('ci / pr title', () => {
+describe('CI / pr title', () => {
   it('accepts security(core): ...', () => {
     expect(checkTitle('security(core): end the sessions of a disabled user').ok).toBe(true);
   });
