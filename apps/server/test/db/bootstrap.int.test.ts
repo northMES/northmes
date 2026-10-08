@@ -14,6 +14,12 @@ let secretsDir: string;
 // Logs in as the server's superuser, which bootstrap needs and the checks of the role catalog use.
 let superuserUrl: string;
 
+/** A URL to the bootstrapped server's database that logs in as role with password. */
+function urlFor(role: string, password: string): string {
+  const { host, port, database } = server.connection;
+  return `postgres://${role}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+}
+
 const passwords = {
   owner: randomBytes(16).toString('hex'),
   app: randomBytes(16).toString('hex'),
@@ -112,5 +118,23 @@ describe('pnpm northmes db bootstrap', () => {
     );
 
     expect(rows).toEqual([{ rolsuper: false, rolcreaterole: false, rolbypassrls: false }]);
+  });
+
+  it('E02-S02 nm_owner, nm_app and nm_auth log in with the passwords in their secret files', async () => {
+    const logins = [
+      ['nm_owner', passwords.owner],
+      ['nm_app', passwords.app],
+      ['nm_auth', passwords.auth],
+    ] as const;
+
+    const users = await Promise.all(
+      logins.map(([role, password]) => query(urlFor(role, password), 'select current_user')),
+    );
+
+    expect(users).toEqual([
+      [{ current_user: 'nm_owner' }],
+      [{ current_user: 'nm_app' }],
+      [{ current_user: 'nm_auth' }],
+    ]);
   });
 });
