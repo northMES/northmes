@@ -110,4 +110,12 @@ describe('module manifests', () => {
       "import { readFileSync } from 'node:fs'",
     ]);
   });
+
+  it('E02-S01 the import-line check reports a second import on the same line', () => {
+    const source =
+      "import { defineModule } from '@northmes/sdk'; import { readFileSync } from 'node:fs';\n" +
+      "export default defineModule({ id: 'core', version: readFileSync('x', 'utf8'), northmes: '*' });\n";
+
+    expect(disallowedImports(source)).toEqual(["import { readFileSync } from 'node:fs';"]);
+  });
 });
