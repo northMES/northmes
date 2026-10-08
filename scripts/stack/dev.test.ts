@@ -249,6 +249,27 @@ describe('superviseDev', () => {
     expect(dev.envOf('server')).toEqual(dev.stack.env);
   });
 
+  it('E02-S08 pnpm dev prints the board URL once, when the first server listens', async () => {
+    const dev = fakeDev();
+    const plan = await devPlan(ports);
+    superviseDev({ plan, ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+
+    expect(dev.logs.filter((line) => line.includes(plan.boardUrl))).toEqual([]);
+
+    dev.print('server', 'Listening on http://127.0.0.1:41001');
+    // A restarted server listens again, and the URL stays where it was printed.
+    dev.print('tsc', completed);
+    await settle();
+    dev.print('server', 'Listening on http://127.0.0.1:41001');
+
+    expect(dev.logs.filter((line) => line.includes(plan.boardUrl))).toEqual([
+      `The board of the seeded plant: ${plan.boardUrl}`,
+    ]);
+  });
+
   it('E02-S08 a changed migration file makes pnpm dev run northmes migrate once and then restart the server', async () => {
     const dev = fakeDev();
     superviseDev({ plan: await devPlan(ports), ...dev.options });
