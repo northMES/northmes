@@ -167,9 +167,11 @@ export async function inRepoCatalog(
 
 /**
  * Boot step 6: imports the server entry of every module that has one, in boot order, and names
- * its subgraph after the module's GraphQL name.
+ * its subgraph after the module's GraphQL name. createTestApp's host factory runs the same step.
  */
-async function importServers(catalog: readonly CatalogEntry[]): Promise<DefineSubgraphOptions[]> {
+export async function importServers(
+  catalog: readonly CatalogEntry[],
+): Promise<DefineSubgraphOptions[]> {
   const subgraphs: DefineSubgraphOptions[] = [];
   for (const { manifest } of catalog) {
     if (!manifest.server) continue;

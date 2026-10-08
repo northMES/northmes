@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { HostFactory } from '@northmes/testing';
 import { AppModule } from './app.module.ts';
-import { imageVersion, inRepoCatalog } from './boot/boot.ts';
+import { imageVersion, importServers, inRepoCatalog } from './boot/boot.ts';
 import type { CatalogEntry } from './catalog/check-catalog.ts';
 import { builtShellDir } from './web/static-mounts.ts';
 import { serveWeb } from './web/web.module.ts';
@@ -12,10 +12,11 @@ import { serveWeb } from './web/web.module.ts';
 /**
  * The host factory that createTestApp from @northmes/testing calls (ADR 0041). It runs the boot
  * steps of ADR 0002 that come before listening, in the test process: the catalog of the in-repo
- * modules that `modules` names, then the Nest app with the test's ConfigModule as AppModule's first
- * import. The app listens on nothing. A catalog problem throws one BootError. A provider that fails
- * to build rejects with its error, where Nest would by default abort the process and the Vitest
- * worker with it.
+ * modules that `modules` names, the server entry of each of them that has one, then the Nest app
+ * with the test's ConfigModule as AppModule's first import and a subgraph per server entry. The app
+ * listens on nothing. A catalog problem throws one BootError. A provider that fails to build
+ * rejects with its error, where Nest would by default abort the process and the Vitest worker with
+ * it.
  */
 export const hostFactory: HostFactory = createHostFactory();
 
@@ -34,10 +35,14 @@ export function hostFactoryWithWebFiles(webDir: string): HostFactory {
 function createHostFactory(webDir?: string): HostFactory {
   return async ({ modules, config }) => {
     const catalog = await inRepoCatalog((specifier) => import(specifier), { modules });
-    const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(config), {
-      logger: ['error', 'warn'],
-      abortOnError: false,
-    });
+    const subgraphs = await importServers(catalog);
+    const app = await NestFactory.create<NestExpressApplication>(
+      AppModule.forRoot(config, subgraphs),
+      {
+        logger: ['error', 'warn'],
+        abortOnError: false,
+      },
+    );
     const web =
       webDir === undefined ? { shellDir: builtShellDir, catalog } : filesIn(webDir, catalog);
     serveWeb(app, { northmes: imageVersion(), ...web });
