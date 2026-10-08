@@ -83,12 +83,13 @@ export function rangeProblems(entries: readonly CatalogEntry[], imageVersion: st
 
 /**
  * A problem for every permission or command key that does not start with its module's GraphQL
- * name (ADR 0003).
+ * name, and every event key that does not start with its SQL name (ADR 0003).
  */
 export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
   const problems: string[] = [];
   for (const { manifest } of entries) {
-    const prefix = `${moduleNames(manifest.id).gql}.`;
+    const names = moduleNames(manifest.id);
+    const prefix = `${names.gql}.`;
     for (const key of Object.keys(manifest.permissions ?? {})) {
       if (!key.startsWith(prefix)) {
         problems.push(
@@ -100,6 +101,14 @@ export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
       if (!key.startsWith(prefix)) {
         problems.push(
           `Module ${manifest.id} declares command "${key}", which must start with "${prefix}"`,
+        );
+      }
+    }
+    const eventPrefix = `${names.sql}.`;
+    for (const key of Object.keys(manifest.events ?? {})) {
+      if (!key.startsWith(eventPrefix)) {
+        problems.push(
+          `Module ${manifest.id} declares event "${key}", which must start with "${eventPrefix}"`,
         );
       }
     }
