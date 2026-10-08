@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ServerResponse } from 'node:http';
 import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
+
+/** The folder of the shell that apps/web builds. */
+export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
 
 /**
  * The files of a remote whose names stay the same from build to build. A browser asks the server

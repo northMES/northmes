@@ -5,6 +5,8 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { HostFactory } from '@northmes/testing';
 import { AppModule } from './app.module.ts';
 import { imageVersion, inRepoCatalog } from './boot/boot.ts';
+import type { CatalogEntry } from './catalog/check-catalog.ts';
+import { builtShellDir } from './web/static-mounts.ts';
 import { serveWeb } from './web/web.module.ts';
 
 /**
@@ -18,8 +20,8 @@ import { serveWeb } from './web/web.module.ts';
 export const hostFactory: HostFactory = createHostFactory();
 
 /**
- * The host factory of hostFactory, whose app serves the web files under webDir: each module's
- * built remote from modules/<id>/.
+ * The host factory of hostFactory, whose app serves the web files under webDir: the shell from
+ * shell/ and each module's built remote from modules/<id>/.
  */
 export function hostFactoryWithWebFiles(webDir: string): HostFactory {
   return createHostFactory(webDir);
@@ -33,13 +35,19 @@ function createHostFactory(webDir?: string): HostFactory {
       abortOnError: false,
     });
     const web =
-      webDir === undefined
-        ? catalog
-        : catalog.map((entry) => ({
-            ...entry,
-            webDir: join(webDir, 'modules', entry.manifest.id),
-          }));
-    serveWeb(app, { northmes: imageVersion(), catalog: web });
+      webDir === undefined ? { shellDir: builtShellDir, catalog } : filesIn(webDir, catalog);
+    serveWeb(app, { northmes: imageVersion(), ...web });
     return { app, modules: catalog.map(({ manifest }) => manifest.id) };
+  };
+}
+
+/** The shell in <webDir>/shell/ and each module's remote in <webDir>/modules/<id>/. */
+function filesIn(webDir: string, catalog: readonly CatalogEntry[]) {
+  return {
+    shellDir: join(webDir, 'shell'),
+    catalog: catalog.map((entry) => ({
+      ...entry,
+      webDir: join(webDir, 'modules', entry.manifest.id),
+    })),
   };
 }

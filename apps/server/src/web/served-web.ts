@@ -10,6 +10,8 @@ import type { CatalogEntry } from '../catalog/check-catalog.ts';
 export interface WebFiles {
   /** The NorthMES version of this build, which the module list reports. */
   readonly northmes: string;
+  /** The folder of the built shell, which holds index.html. */
+  readonly shellDir: string;
   /** The checked catalog in boot order. */
   readonly catalog: readonly CatalogEntry[];
 }
@@ -30,10 +32,14 @@ export interface WebModuleEntry {
 /** The web files of the app, which serveWeb hands over before the app initialises. */
 @Injectable()
 export class ServedWeb {
-  #served?: { readonly northmes: string; readonly modules: readonly WebModuleEntry[] };
+  #served?: {
+    readonly northmes: string;
+    readonly shellDir: string;
+    readonly modules: readonly WebModuleEntry[];
+  };
 
   /** Reads the remote manifest of each catalog module with a web block and hashes it. */
-  serve({ northmes, catalog }: WebFiles): void {
+  serve({ northmes, shellDir, catalog }: WebFiles): void {
     const modules = catalog.flatMap(({ manifest, webDir }) => {
       if (!manifest.web) return [];
       const { id, version } = manifest;
@@ -49,11 +55,15 @@ export class ServedWeb {
         },
       ];
     });
-    this.#served = { northmes, modules };
+    this.#served = { northmes, shellDir, modules };
   }
 
   get northmes(): string {
     return this.#servedOrThrow().northmes;
+  }
+
+  get shellDir(): string {
+    return this.#servedOrThrow().shellDir;
   }
 
   get modules(): readonly WebModuleEntry[] {
