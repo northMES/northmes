@@ -45,6 +45,8 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
       // SET lets nm_owner give the role a schema and run files as it; nm_owner keeps none of
       // its rights.
       await client.query(`grant ${role} to current_user with set true, inherit false`);
+      // The module role uses the REFERENCES grants that other modules give nm_ext (ADR 0006).
+      await client.query(`grant nm_ext to ${role} with inherit true, set false`);
       await client.query(`create schema ${client.escapeIdentifier(sql)} authorization ${role}`);
       for (const file of readMigrationFiles(migrationsDir)) {
         // A file that fails leaves its transaction open, and closing the connection rolls it

@@ -37,7 +37,7 @@ const unloggedSession = [
 /**
  * Creates the database roles as the superuser that superuserUrl logs in as (ADR 0005, ADR 0006):
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
- * nm_ext is a group that cannot log in. Every role's time zone is pinned to UTC, per role because a
+ * nm_ext is a group that cannot log in, which nm_owner administers. Every role's time zone is pinned to UTC, per role because a
  * database cloned from a template loses its database settings. A role that exists keeps its
  * attributes and password, so a second run changes nothing.
  */
@@ -67,6 +67,9 @@ export async function bootstrapRoles(
     }
     const database = client.escapeIdentifier(rows[0]?.database ?? '');
     await client.query(`grant create on database ${database} to nm_owner`);
+    // migrate makes each module role a member of nm_ext, which takes ADMIN on nm_ext. nm_owner
+    // gets none of the group's rights.
+    await client.query('grant nm_ext to nm_owner with admin true, inherit false, set false');
     await client.query('commit');
   } finally {
     await client.end();
