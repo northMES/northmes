@@ -119,13 +119,16 @@ jobs:
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
-  # so ci / gate always runs and fails itself instead.
+  # so ci / gate always runs and fails itself instead. On a pull request every job it needs runs,
+  # so a skipped one fails it too; a push to main skips only the pull request checks.
   gate:
     name: ci / gate
     if: always()
     needs: [static, test-utc, test-stockholm, pr-title, linked-issue]
     runs-on: ubuntu-24.04
     steps:
-      - name: Fail when a job that ci / gate needs failed or was cancelled
-        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+      - name: Fail when a job that ci / gate needs did not pass
+        if: >-
+          contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+          || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))
         run: exit 1
