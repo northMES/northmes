@@ -204,12 +204,31 @@ async function bootSteps<
   return { env, secrets, catalog, app };
 }
 
+/** The interface the server listens on. */
+const listenHost = '127.0.0.1';
+
+/**
+ * Listens on PORT. A port that another process holds closes the app and stops the boot with a
+ * BootError that names PORT (ADR 0058).
+ */
+async function listen(app: NestExpressApplication, port: number): Promise<void> {
+  try {
+    await app.listen(port, listenHost);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+    await app.close();
+    throw new BootError([
+      `PORT: ${listenHost}:${port} is in use by another process (EADDRINUSE). Stop that process, or set PORT to a free port or to 0`,
+    ]);
+  }
+}
+
 async function serve(options: BootOptions): Promise<INestApplication> {
   const { log } = options;
   const { env, catalog, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
   // The static mounts go in before listen initialises the app and adds the routes after them.
   serveWeb(app, { northmes: imageVersion(), shellDir: builtShellDir, catalog });
-  await app.listen(env.PORT, '127.0.0.1');
+  await listen(app, env.PORT);
   const { supergraphHash } = app.get(GatewayService);
   if (supergraphHash) log.info(`Serving ${GATEWAY_PATH} with supergraph=${supergraphHash}`);
   log.info(`Listening on ${await app.getUrl()}`);
