@@ -395,7 +395,7 @@ One message per event goes through the shell's polite region:
 
 ### WCAG 2.2 criteria
 
-The page meets level AA (ADR 0021). The notes cite 1.3.1, 1.4.1, 1.4.3, 1.4.10, 1.4.11, 1.4.13, 2.1.1, 2.1.2, 2.4.2, 2.4.3, 2.4.6, 2.4.7, 2.4.11, 2.5.8, 3.2.2, 3.2.3, 3.2.4, 3.3.1, 3.3.3, 3.3.7, 4.1.2 and 4.1.3. The ones the page leans on: 1.4.10, because 320 by 640 has no sideways page scroll and only the roles table scrolls both ways, in its own region; 1.4.13 for the Granted by tooltip; 2.4.2 for the titles "No access to Roles · Plant A · NorthMES" and "You no longer have access to Plant B · NorthMES"; 3.2.2, because ticking a permission does not save; 3.2.4, one word for one meaning, which the decision on the No access cells keeps; 3.3.1 and 3.3.3, because refusals name the permission, the place and who can act; and 3.3.7, because typed values stay after a refusal.
+The page meets level AA (ADR 0021). The notes cite 1.3.1, 1.4.1, 1.4.3, 1.4.10, 1.4.11, 1.4.13, 2.1.1, 2.1.2, 2.4.2, 2.4.3, 2.4.6, 2.4.7, 2.4.11, 2.5.8, 3.2.2, 3.2.3, 3.2.4, 3.3.1, 3.3.3, 3.3.7, 4.1.2 and 4.1.3. The primary criteria are: 1.4.10, because 320 by 640 has no sideways page scroll and only the roles table scrolls both ways, in its own region; 1.4.13 for the Granted by tooltip; 2.4.2 for the titles "No access to Roles · Plant A · NorthMES" and "You no longer have access to Plant B · NorthMES"; 3.2.2, because ticking a permission does not save; 3.2.4, one word for one meaning, which the decision on the No access cells keeps; 3.3.1 and 3.3.3, because refusals name the permission, the place and who can act; and 3.3.7, because typed values stay after a refusal.
 
 ### Permission ids shown on the page
 
