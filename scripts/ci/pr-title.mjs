@@ -27,12 +27,18 @@ export function checkTitle(title) {
   };
 }
 
+// A workflow command for an error annotation. GitHub decodes %25, %0D and %0A in its message.
+function errorAnnotation(message) {
+  const encoded = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  return `::error::${encoded}`;
+}
+
 // The job passes the title through the environment, never inside the run script, so a title cannot
 // inject shell code.
 if (import.meta.main) {
   const { ok, message } = checkTitle(process.env.PR_TITLE ?? '');
   if (!ok) {
-    console.log(`::error::${message}`);
+    console.log(errorAnnotation(message));
     process.exitCode = 1;
   }
 }
