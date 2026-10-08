@@ -22,6 +22,7 @@ import { parse } from 'yaml';
 /**
  * @typedef {{ name?: string, license?: string }} Manifest
  * @typedef {{ path: string, manifest: Manifest }} WorkspacePackage
+ * @typedef {WorkspacePackage & { dir: string }} PackageFolder
  * @typedef {{ path: string, text: string }} SourceFile
  * @typedef {{ kind: 'import', path: string, line: number, imported: string }
  *   | { kind: 'license', path: string, license: string | undefined }} Finding
@@ -37,8 +38,17 @@ const contractsPackage = /^modules\/[^/]+\/contracts$/;
 const examplePlugin = /^examples\/[^/]+$/;
 
 /**
+ * Each package with the folder its package.json sits in.
+ * @param {readonly WorkspacePackage[]} packages
+ * @returns {PackageFolder[]}
+ */
+function folders(packages) {
+  return packages.map((entry) => ({ ...entry, dir: posix.dirname(entry.path) }));
+}
+
+/**
  * Whether the rule covers a package's files: an MIT package or an examples plugin.
- * @param {{ dir: string, manifest: Manifest }} entry
+ * @param {PackageFolder} entry
  */
 function isScanned(entry) {
   return entry.manifest.license === 'MIT' || examplePlugin.test(entry.dir);
@@ -60,7 +70,7 @@ function packageName(specifier) {
 
 /**
  * The workspace package whose folder is or holds a path, the deepest one when packages nest.
- * @param {readonly { dir: string, manifest: Manifest }[]} packages
+ * @param {readonly PackageFolder[]} packages
  * @param {string} path
  */
 function owner(packages, path) {
@@ -82,14 +92,11 @@ function owner(packages, path) {
  * @returns {Finding[]}
  */
 export function scan(packages, files) {
-  const workspace = packages.map(({ path, manifest }) => ({ dir: posix.dirname(path), manifest }));
+  const workspace = folders(packages);
   const byName = new Map(workspace.map((entry) => [entry.manifest.name, entry]));
   /** @type {Finding[]} */
-  const findings = packages
-    .filter(
-      ({ path, manifest }) =>
-        contractsPackage.test(posix.dirname(path)) && manifest.license !== 'MIT',
-    )
+  const findings = workspace
+    .filter(({ dir, manifest }) => contractsPackage.test(dir) && manifest.license !== 'MIT')
     .map(({ path, manifest }) => ({ kind: 'license', path, license: manifest.license }));
 
   for (const { path, text } of files) {
@@ -143,21 +150,21 @@ export function trackedWorkspace(cwd) {
 
   const top = git('rev-parse', '--show-toplevel').trim();
   const read = (path) => readFileSync(join(top, path), 'utf8');
+  const exists = (path) => statSync(join(top, path), { throwIfNoEntry: false })?.isFile();
   const globs = parse(read('pnpm-workspace.yaml'))?.packages ?? [];
-  const tracked = git('-C', top, 'ls-files', '-z')
-    .split('\0')
-    .filter((path) => path && statSync(join(top, path), { throwIfNoEntry: false })?.isFile());
+  const tracked = git('-C', top, 'ls-files', '-z').split('\0');
 
   const packages = tracked
     .filter(
       (path) =>
         posix.basename(path) === 'package.json' &&
-        globs.some((glob) => posix.matchesGlob(posix.dirname(path), glob)),
+        globs.some((glob) => posix.matchesGlob(posix.dirname(path), glob)) &&
+        exists(path),
     )
     .map((path) => ({ path, manifest: JSON.parse(read(path)) }));
-  const workspace = packages.map(({ path, manifest }) => ({ dir: posix.dirname(path), manifest }));
+  const workspace = folders(packages);
   const files = tracked
-    .filter((path) => sourceExtension.test(path) && owner(workspace, path))
+    .filter((path) => sourceExtension.test(path) && owner(workspace, path) && exists(path))
     .map((path) => ({ path, text: read(path) }));
 
   return { packages, files };
