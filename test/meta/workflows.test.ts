@@ -603,7 +603,7 @@ describe('workflows', () => {
   // Without --no-telemetry react-doctor sends the scan to its score API, prints a share URL and
   // reports crashes to Sentry
   // (docs/adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md). The
-  // job runs a root script, so pnpm react-doctor runs the same scan on a developer's machine.
+  // job runs a root script, so the meta tests can read its flags.
   it('the react doctor job runs with --no-telemetry', () => {
     const { workflow, id, job } = jobNamed('react doctor');
     const runs = (job.steps ?? [])

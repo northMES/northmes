@@ -13,6 +13,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Run every command as `pnpm` or `git` from the repository root, through a root script, `pnpm --filter` or `pnpm -C`.
 - Start the subject of a commit that adds a failing test with `test:`.
 - Bring a new dependency in its own pull request, at a version older than Renovate's `minimumReleaseAge` window.
+- Do not run react-doctor, through `pnpm react-doctor` or any other command: it runs in CI only (`CI / react doctor`) until its vendor confirms that agents may run it (ADR 0040).
 - Packages published under MIT (`packages/sdk`, `packages/web-sdk`, `packages/ui`, `packages/contracts`, `packages/web-build`, `packages/testing`, every `modules/*/contracts` package and the generator package) import only MIT or other permissive code, never the AGPL modules.
 
 ## Scope
