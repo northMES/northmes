@@ -26,10 +26,10 @@ const scannedFolders = [
 /** TypeScript and JavaScript sources, the files the TypeScript parser reads. */
 const sourceExtension = /\.[cm]?[jt]sx?$/;
 
-/** The JSX attributes that take a path. */
-const pathAttributes = new Set(['to', 'href']);
+/** The JSX attributes, and the options of a navigate or redirect call, that take a path. */
+const pathNames = ['to', 'href'];
 
-/** The calls whose options object takes a path in `to`. */
+/** The calls whose options object takes a path in `to` or `href`. */
 const navigationCalls = new Set(['navigate', 'redirect']);
 
 /** @param {string} path */
@@ -58,26 +58,26 @@ function calleeName(call) {
 }
 
 /**
- * The value of a property written as `name: value` or `'name': value` in an object literal.
+ * The values of the properties written as `name: value` or `'name': value` in an object literal
+ * whose name is one of `names`.
  * @param {ts.ObjectLiteralExpression} object
- * @param {string} name
+ * @param {readonly string[]} names
+ * @returns {ts.Expression[]}
  */
-function propertyValue(object, name) {
-  for (const property of object.properties) {
-    if (
-      ts.isPropertyAssignment(property) &&
-      (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
-      property.name.text === name
-    ) {
-      return property.initializer;
-    }
-  }
-  return undefined;
+function propertyValues(object, names) {
+  return object.properties.flatMap((property) =>
+    ts.isPropertyAssignment(property) &&
+    (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
+    names.includes(property.name.text)
+      ? [property.initializer]
+      : [],
+  );
 }
 
 /**
  * The expressions in a node that take an app path: the value of a `to` or `href` JSX attribute, the
- * `to` option of a navigate call and the URL of a `goto` call such as `page.goto(url)`.
+ * `to` or `href` option of a navigate or redirect call and the URL of a `goto` call such as
+ * `page.goto(url)`.
  * @param {ts.Node} node
  * @param {ts.SourceFile} source
  * @returns {ts.Expression[]}
@@ -85,7 +85,7 @@ function propertyValue(object, name) {
 function pathExpressions(node, source) {
   if (ts.isJsxAttribute(node)) {
     const value = node.initializer;
-    if (!value || !pathAttributes.has(node.name.getText(source))) {
+    if (!value || !pathNames.includes(node.name.getText(source))) {
       return [];
     }
     if (ts.isJsxExpression(value)) {
@@ -103,8 +103,7 @@ function pathExpressions(node, source) {
       return [first];
     }
     if (name && navigationCalls.has(name) && ts.isObjectLiteralExpression(first)) {
-      const to = propertyValue(first, 'to');
-      return to ? [to] : [];
+      return propertyValues(first, pathNames);
     }
   }
   return [];
