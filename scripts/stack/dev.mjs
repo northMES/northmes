@@ -121,17 +121,19 @@ export function completedBuild(line) {
 /**
  * Runs the processes of plan on a started stack: starts tsc -b --watch, restarts the server after
  * each completed build, and runs northmes migrate and then restarts the server when a migration
- * file changes.
+ * file changes. A migrate that fails leaves the server running.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
  *   start: typeof import('./processes.mjs').start,
  *   run: typeof import('./processes.mjs').run,
  *   watch: (dir: string, changed: () => void) => void,
+ *   log: (line: string) => void,
  * }} options start and run start a process and run one to its end, as processes.mjs does. watch
- *   calls changed after each change below dir, a folder relative to the repository root.
+ *   calls changed after each change below dir, a folder relative to the repository root. log
+ *   prints a line of pnpm dev itself.
  */
-export function superviseDev({ plan, stack, start, run, watch }) {
+export function superviseDev({ plan, stack, start, run, watch, log }) {
   /** @type {import('./processes.mjs').StartedProcess | undefined} */
   let server;
   // Restarts and migrate runs go one after the other, in the order they were asked for.
@@ -150,7 +152,12 @@ export function superviseDev({ plan, stack, start, run, watch }) {
 
   const migrate = () => {
     queue = queue.then(async () => {
-      await run(plan.migrate, { env: stack.env });
+      try {
+        await run(plan.migrate, { env: stack.env });
+      } catch (error) {
+        log(`${messageOf(error)}; the server runs on`);
+        return;
+      }
       restartServer();
     });
   };
