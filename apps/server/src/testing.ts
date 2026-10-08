@@ -4,8 +4,8 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { HostFactory } from '@northmes/testing';
 import { AppModule } from './app.module.ts';
-import { inRepoCatalog } from './boot/boot.ts';
-import { mountStatic } from './web/static-mounts.ts';
+import { imageVersion, inRepoCatalog } from './boot/boot.ts';
+import { serveWeb } from './web/web.module.ts';
 
 /**
  * The host factory that createTestApp from @northmes/testing calls (ADR 0041). It runs the boot
@@ -32,12 +32,14 @@ function createHostFactory(webDir?: string): HostFactory {
       logger: ['error', 'warn'],
       abortOnError: false,
     });
-    if (webDir !== undefined) {
-      mountStatic(
-        app,
-        catalog.map((entry) => ({ ...entry, webDir: join(webDir, 'modules', entry.manifest.id) })),
-      );
-    }
+    const web =
+      webDir === undefined
+        ? catalog
+        : catalog.map((entry) => ({
+            ...entry,
+            webDir: join(webDir, 'modules', entry.manifest.id),
+          }));
+    serveWeb(app, { northmes: imageVersion(), catalog: web });
     return { app, modules: catalog.map(({ manifest }) => manifest.id) };
   };
 }

@@ -42,7 +42,7 @@ export interface BootOptions {
 }
 
 /** The NorthMES version of this build, from the server's package.json. */
-function imageVersion(): string {
+export function imageVersion(): string {
   const packageJson = new URL('../../package.json', import.meta.url);
   return (JSON.parse(readFileSync(packageJson, 'utf8')) as { version: string }).version;
 }
