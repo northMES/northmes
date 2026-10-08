@@ -9,11 +9,13 @@ const closesIssue =
 // in [bot], so only the Renovate app has this login.
 const renovate = 'renovate[bot]';
 
-// release-please opens the release pull request from a branch with this prefix.
+// release-please opens the release pull request from a branch with this prefix in this repository.
+// A fork can name a branch the same way, so the prefix counts only outside forks.
 const releaseBranch = 'release-please--branches--';
 
-export function checkLinkedIssue({ body, author, headRef }) {
-  if (author === renovate || headRef.startsWith(releaseBranch) || closesIssue.test(body)) {
+export function checkLinkedIssue({ body, author, headRef, fromFork }) {
+  const release = !fromFork && headRef.startsWith(releaseBranch);
+  if (author === renovate || release || closesIssue.test(body)) {
     return { ok: true, message: '' };
   }
   return {
