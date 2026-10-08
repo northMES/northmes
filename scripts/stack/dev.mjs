@@ -34,7 +34,8 @@ export function webRemotes() {
 /**
  * What pnpm dev starts on ports: tsc -b --watch over the server's projects, the built server, which
  * pnpm dev starts after each completed build, and the Vite dev servers of the shell and of each
- * remote; and the URL of the seed plant's board on the shell's origin, which it prints.
+ * remote; northmes migrate, which it runs when a file in one of the migrations folders changes; and
+ * the URL of the seed plant's board on the shell's origin, which it prints.
  * @param {DevPorts} ports
  */
 export async function devPlan({ server, shell, remotes }) {
@@ -54,7 +55,14 @@ export async function devPlan({ server, shell, remotes }) {
     watch: {
       name: 'tsc',
       command: 'pnpm',
-      args: ['exec', 'tsc', '-b', '--watch', '--preserveWatchOutput', ...serverProjects()],
+      args: [
+        'exec',
+        'tsc',
+        '-b',
+        '--watch',
+        '--preserveWatchOutput',
+        ...inServerPackages('tsconfig.build.json'),
+      ],
       env: {},
     },
     /** @type {DevProcess} */
@@ -73,6 +81,16 @@ export async function devPlan({ server, shell, remotes }) {
       viteDevServer('shell', 'apps/web', shell, { NORTHMES_DEV_PROXY: JSON.stringify(proxy) }),
       ...Object.entries(remotes).map(([id, port]) => viteDevServer(id, `modules/${id}/web`, port)),
     ],
+    // The built server runs migrate. pnpm northmes would build the server through turbo first,
+    // over the files that tsc -b --watch writes.
+    /** @type {DevProcess} */
+    migrate: {
+      name: 'migrate',
+      command: 'node',
+      args: ['apps/server/dist/main.js', 'migrate'],
+      env: {},
+    },
+    migrations: inServerPackages('migrations'),
     boardUrl: await boardUrl(loopbackOrigin(shell)),
   };
 }
@@ -110,14 +128,14 @@ function loopbackOrigin(port) {
 }
 
 /**
- * The tsconfig.build.json of apps/server and of every workspace package it depends on, which the
- * built server loads from their dist/, relative to the repository root and each package before the
- * packages that depend on it.
+ * The folder of apps/server and of every workspace package it depends on, which the built server
+ * loads from their dist/, relative to the repository root and each package before the packages
+ * that depend on it.
  * @returns {string[]}
  */
-function serverProjects() {
+function serverPackages() {
   /** @type {string[]} */
-  const projects = [];
+  const dirs = [];
   const visited = new Set();
   /** @param {string} dir */
   const visit = (dir) => {
@@ -129,9 +147,18 @@ function serverProjects() {
         visit(realpathSync(join(dir, 'node_modules', name)));
       }
     }
-    const project = join(dir, 'tsconfig.build.json');
-    if (existsSync(project)) projects.push(relative(repositoryRoot, project));
+    dirs.push(relative(repositoryRoot, dir));
   };
   visit(join(repositoryRoot, 'apps/server'));
-  return projects;
+  return dirs;
+}
+
+/**
+ * The paths below the server's packages that exist, such as each package's tsconfig.build.json.
+ * @param {string} path
+ */
+function inServerPackages(path) {
+  return serverPackages()
+    .map((dir) => join(dir, path))
+    .filter((file) => existsSync(join(repositoryRoot, file)));
 }
