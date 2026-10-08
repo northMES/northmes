@@ -52,9 +52,11 @@ export interface LinkEntry<Pattern extends string = string> {
   readonly pattern: Pattern;
 }
 
-// The key of the entry a manifest and each builder carry. Only this module holds it, so no entry
-// name can take it, and their string keys stay the names of their child entries.
-const entryKey: unique symbol = Symbol('link entry');
+// The key of the entry a manifest and each builder carry. A symbol key cannot collide with an entry
+// name, and Object.keys skips it, so their string keys stay the names of their child entries. The
+// key comes from the global symbol registry, because every remote bundles its own copy of this
+// package (ADR 0062), and the shell's copy must read the entries a remote's copy built.
+const entryKey: unique symbol = Symbol.for('@northmes/contracts/link-entry');
 
 /** A link manifest or one of its builders, which carries the entry that linkEntry reads. */
 export interface LinkNode<Pattern extends string> {
