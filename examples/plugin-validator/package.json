@@ -31,6 +31,7 @@
     "@northmes/testing": "workspace:*",
     "@types/ms": "catalog:",
     "@types/node": "catalog:",
+    "graphql": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "typescript": "catalog:",

@@ -215,6 +215,9 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
 
   apps/server:
     dependencies:
@@ -431,6 +434,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
+      graphql:
+        specifier: 16.14.2
+        version: 16.14.2
       reflect-metadata:
         specifier: 'catalog:'
         version: 0.2.2
