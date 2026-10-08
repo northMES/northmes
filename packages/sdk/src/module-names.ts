@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: MIT
 export interface ModuleNames {
   readonly id: string;
+  /** GraphQL subgraph name, root field prefix, permission and command prefix. */
   readonly gql: string;
+  /** Postgres schema and role suffix. */
   readonly sql: string;
+  /** Postgres role that owns the module's schema: `nm_mod_<sql>`. */
   readonly ownerRole: string;
+  /** Module Federation remote name (no hyphens allowed). */
   readonly remote: string;
 }
 
+/** kebab-case: starts with a letter, then lower-case segments joined by single hyphens. */
 export const MODULE_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
 export function moduleNames(id: string): ModuleNames {
