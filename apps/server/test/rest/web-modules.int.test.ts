@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { apiPath } from '@northmes/contracts';
@@ -13,7 +13,7 @@ import { GatewayService } from '../../src/gateway/gateway.module.ts';
 import { WebModulesController } from '../../src/web/web-modules.controller.ts';
 
 // Built web files in the layout hostFactoryWithWebFiles reads: the shell in shell/ and each module's
-// remote in modules/<id>/.
+// remote in modules/<id>/. example-widget is not an in-repo module, so no catalog loads it.
 const webFiles = fileURLToPath(new URL('../fixtures/web/', import.meta.url));
 
 let testApp: TestApp | undefined;
@@ -90,6 +90,15 @@ describe('the remote files', () => {
     expect(manifest).toEqual({ status: 200, cacheControl: 'no-cache' });
     expect(entry).toEqual({ status: 200, cacheControl: 'no-cache' });
     expect(stats).toEqual({ status: 200, cacheControl: 'no-cache' });
+  });
+
+  it('E02-S05 a module outside the catalog gets 404 on its mf-manifest.json although its files are on disk', async () => {
+    const url = await serve(['core', 'planning']);
+
+    const response = await fetch(`${url}/modules/example-widget/0.0.0/mf-manifest.json`);
+
+    expect(existsSync(join(webFiles, 'modules', 'example-widget', 'mf-manifest.json'))).toBe(true);
+    expect(response.status).toBe(404);
   });
 });
 

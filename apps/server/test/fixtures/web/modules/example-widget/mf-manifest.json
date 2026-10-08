@@ -1,0 +1,15 @@
+{
+  "id": "exampleWidget",
+  "name": "exampleWidget",
+  "metaData": {
+    "name": "exampleWidget",
+    "type": "app",
+    "buildInfo": { "buildVersion": "0.0.0", "buildName": "@northmes/example-widget-web" },
+    "remoteEntry": { "name": "remoteEntry.js", "path": "", "type": "module" },
+    "globalName": "exampleWidget",
+    "publicPath": "auto"
+  },
+  "shared": [],
+  "remotes": [],
+  "exposes": []
+}
