@@ -6,19 +6,23 @@ import { defineCommandContract } from '@northmes/contracts';
 import { COMMAND_BUS, type Command, type CommandBus, defineCommand } from '@northmes/sdk/commands';
 import { defineSubgraph, SubgraphRegistry, SubgraphRegistryModule } from '@northmes/sdk/graphql';
 import { execute, type GraphQLSchema, parse } from 'graphql';
+import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { PlanningModule, ReleaseProductionOrder } from '../fixtures/commands/planning.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 
-/** Records every command it gets and runs its handler, as the bus does after its own steps. */
+/**
+ * Records every command it gets and runs its handler, as the bus does after its own steps. The
+ * fixture's handler reads no table, so it gets a stand-in for the transaction.
+ */
 class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
   async run<Input, Result>(command: Command<Input, Result>, input: Input): Promise<Result> {
     this.calls.push({ command, input });
-    return command.handle(input);
+    return command.handle(input, { tx: {} as Transaction<unknown> });
   }
 }
 
