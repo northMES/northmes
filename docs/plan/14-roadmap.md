@@ -303,7 +303,7 @@ packages/testing/src/database.ts (new): useTestDatabase() clones the template pe
 vitest.config.ts: integration project for **/*.int.test.ts with the global setup
 packages/testing/test/harness.int.test.ts (new)
 Every new .ts file starts with // SPDX-License-Identifier: MIT (the package license).
-Seam: useTestDatabase() returns { connectionString, databaseName }; tests talk to Postgres with pg.
+Seam: useTestDatabase() returns { appUrl, ownerUrl, databaseName }; tests talk to Postgres with pg.
 
 ## Tests first
 - harness.int.test.ts: "each test file gets its own database"
