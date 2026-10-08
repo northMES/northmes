@@ -2,6 +2,9 @@
 // (docs/adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md). A GRANT
 // statement whose privilege list names TRUNCATE is a finding, wherever it sits in a migration
 // file: on its own, split over several lines, or inside ALTER DEFAULT PRIVILEGES.
+//
+// test/meta/no-truncate.test.ts scans every .sql file under a migrations folder outside docs/, so
+// pnpm check fails on a finding.
 
 /**
  * @typedef {{ path: string, text: string }} MigrationFile
