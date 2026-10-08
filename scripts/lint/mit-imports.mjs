@@ -144,10 +144,10 @@ export function scan(packages, files) {
 }
 
 /**
- * Reads the root package and the workspace packages that pnpm-workspace.yaml names, and their
- * source files, among the files `git ls-files` lists in the repository that holds `cwd`, with paths
- * relative to its top level. Untracked files and tracked files missing from the working tree are
- * not read. git runs without the GIT_* variables of a hook, so it reads the repository that holds
+ * Reads the root package, the workspace packages that pnpm-workspace.yaml names and the source
+ * files of the packages the rule covers, among the files `git ls-files` lists in the repository
+ * that holds `cwd`, with paths relative to its top level. Untracked files and tracked files missing
+ * from the working tree are not read. git runs without the GIT_* variables of a hook, so it reads the repository that holds
  * `cwd`.
  * @param {string} cwd
  * @returns {{ packages: WorkspacePackage[], files: SourceFile[] }}
@@ -189,7 +189,10 @@ export function trackedWorkspace(cwd) {
     .map((path) => ({ path, manifest: JSON.parse(read(path)) }));
   const workspace = folders(packages);
   const files = tracked
-    .filter((path) => sourceExtension.test(path) && owner(workspace, path) && exists(path))
+    .filter((path) => {
+      const own = sourceExtension.test(path) && owner(workspace, path);
+      return own && isScanned(own) && exists(path);
+    })
     .map((path) => ({ path, text: read(path) }));
 
   return { packages, files };
