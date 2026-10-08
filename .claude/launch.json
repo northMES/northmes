@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "handoff-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["demo"],
+      "port": 4310,
+      "autoPort": true
+    }
+  ]
+}
