@@ -266,6 +266,22 @@ describe('migrate refuses a module whose files break a naming rule', () => {
       [],
     );
   });
+
+  it('E02-S02 a file without an expand or contract marker is refused', async () => {
+    // The folder's first file carries the marker, and its second starts with another comment.
+    const run = migrate({ ownerUrl: db.ownerUrl, catalog: catalogWithPlanning('unmarked') });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'planning/20260110080000_shift.sql has no expand or contract marker; start the file with "-- migration: expand" or "-- migration: contract"',
+      ],
+    });
+    expect(await query(db.ownerUrl, 'select module, name from northmes_meta.migration')).toEqual(
+      [],
+    );
+  });
 });
 
 describe('pnpm northmes migrate', () => {
