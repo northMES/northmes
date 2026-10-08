@@ -81,6 +81,19 @@ describe('pg-image', () => {
     expect(findings).toEqual([]);
   });
 
+  it('scan skips the two pg-image files', () => {
+    const findings = scan([
+      // The test file quotes the call it checks for, so a skip entry keeps it out of the scan.
+      { path: 'test/meta/pg-image.test.ts', text: "new PostgreSqlContainer('postgres:17');\n" },
+      // These two are not Dockerfiles, Compose files or test files, so no matcher reads them and no
+      // skip entry is needed. This test pins that they stay unreported.
+      { path: 'scripts/lint/pg-image.mjs', text: '    image: postgres:17\n' },
+      { path: 'infra/pg-image.json', text: '    image: postgres:17\n' },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
