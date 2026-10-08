@@ -265,7 +265,7 @@ flowchart LR
 |---|---|
 | `e2e/skeleton.spec.ts`: the integration check of the walking skeleton on the built `all` process with Testcontainers Postgres | Required in `ci / gate` from M1, together with the resolve-hook test ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)) |
 | `e2e/a11y/board.axe.spec.ts`: populated, locked block, move mode and paused states | Required in `ci / a11y` from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
-| Planner, station and Pyramid flows listed in [07](07-production-planning.md), [08](08-pyramid-connector.md) and [09](09-operator-station.md) | `ci / e2e`; required once stable, and before the lean handoff graph |
+| Planner, station and Pyramid flows listed in [07](07-production-planning.md), [08](08-pyramid-connector.md) and [09](09-operator-station.md) | `ci / e2e`; required from the change that adds it ([#281](https://github.com/northMES/northmes/issues/281), [ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | The committed N-1 build of the example widget loads with no console error and no CSP violation | Pull requests that touch the shared singleton list or the federation packages ([ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)) |
 | The example plugin spec after an install from packed tarballs outside the repository | the `plugin-outside` job ([ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)) |
 | `reconnect-after-outage.spec.ts`, `e2e/board-perf.spec.ts` | nightly |
@@ -400,7 +400,7 @@ Each job in `ci.yml` is a required check of its own, so the merge box shows each
 
 ### Other checks on pull requests
 
-Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `ci / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `ci / e2e` becomes required before the project moves to the lean handoff graph.
+Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `ci / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `ci / e2e`, `fresh-worktree` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
 
 | Check | Runs | When |
 |---|---|---|
@@ -480,5 +480,5 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Is the pilot host amd64, so the image smoke and bundle jobs match it? | pilot IT | amd64 |
 | Where does the Playwright package live (`apps/e2e` or a root `e2e` folder)? | not assigned | Specs use `e2e/...` paths as the ADRs name them |
 | Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester and `tests-changed.mjs` in runs |
-| When does `ci / e2e` become a required check? | maintainer | Before the lean handoff graph |
+| When does `ci / e2e` become a required check? | maintainer | In the change that adds it to `ci.yml` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | Is "Pause live updates" wanted, which decides whether `pause.spec.ts` stays? | product owner | Built as designed |
