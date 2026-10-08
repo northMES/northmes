@@ -3,14 +3,36 @@ import { globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
 // Every REST path comes from ApiController (ADR 0064). A global prefix or URI versioning would also
 // move the root routes, and a root route missing from Nest's exclude list would move without an
-// error. A call is the method name followed by an opening parenthesis, optional chaining included.
-const forbiddenCall = /\b(?:setGlobalPrefix|enableVersioning)\s*(?:\?\.\s*)?\(/;
+// error.
+const forbiddenMethods = new Set(['setGlobalPrefix', 'enableVersioning']);
+
+// The lines of the calls of a forbidden method in one source file, read with the TypeScript parser
+// so a call split across lines or made with optional chaining is found. A call's line is the line
+// of the method name.
+function forbiddenCallLines(path: string, source: string): number[] {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true);
+  const lines: number[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      forbiddenMethods.has(node.expression.name.text)
+    ) {
+      const start = node.expression.name.getStart(file);
+      lines.push(file.getLineAndCharacterOfPosition(start).line + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return lines;
+}
 
 // Each call of setGlobalPrefix or enableVersioning in a source file under <base>/apps, as
 // "<path>:<line>" with the path relative to base.
@@ -21,9 +43,9 @@ function globalPrefixCalls(base: string): string[] {
   }).sort();
 
   return files.flatMap((path) =>
-    readFileSync(join(base, path), 'utf8')
-      .split('\n')
-      .flatMap((line, index) => (forbiddenCall.test(line) ? [`${path}:${index + 1}`] : [])),
+    forbiddenCallLines(path, readFileSync(join(base, path), 'utf8')).map(
+      (line) => `${path}:${line}`,
+    ),
   );
 }
 
