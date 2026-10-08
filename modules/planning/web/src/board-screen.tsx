@@ -1,15 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { CombinedGraphQLErrors, type ErrorLike } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { type BoardOrder, PlanningBoard } from './board.graphql.ts';
 import { PlanningReleaseProductionOrder } from './release.graphql.ts';
 
 /**
- * One order of the board stub. A planned order has a Release button, whose answer the normalized
- * cache merges into this order, so the row shows the new status and version without another run of
- * the board's query.
+ * What a failed release shows: each GraphQL error's message with the errorCode of its DomainError,
+ * such as core.command_rejected with the validator's message for a veto, or the message alone of an
+ * error that carries no errorCode or never reached the server.
+ */
+function failureText(error: ErrorLike): string {
+  if (!CombinedGraphQLErrors.is(error)) return error.message;
+  return error.errors
+    .map(({ message, extensions }) =>
+      typeof extensions?.errorCode === 'string' ? `${message} (${extensions.errorCode})` : message,
+    )
+    .join(' ');
+}
+
+/**
+ * One order of the board stub. A planned order has a Release button. The normalized cache merges
+ * a release's answer into this order, so the row shows the new status and version without another
+ * run of the board's query; a failed release leaves the order as it was and shows the failure.
  */
 function OrderRow({ order }: { readonly order: BoardOrder }) {
-  const [release] = useMutation(PlanningReleaseProductionOrder);
+  const [release, { error }] = useMutation(PlanningReleaseProductionOrder);
   return (
     <tr data-testid={`order-${order.number}`}>
       <td>{order.number}</td>
@@ -27,6 +42,7 @@ function OrderRow({ order }: { readonly order: BoardOrder }) {
             Release
           </button>
         )}
+        {error && <p role="alert">{failureText(error)}</p>}
       </td>
     </tr>
   );
