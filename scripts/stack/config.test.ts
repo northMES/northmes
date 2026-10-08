@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
@@ -58,5 +58,21 @@ describe('writeDevConfig', () => {
       NORTHMES_DB_AUTH_PASSWORD_FILE: join(dir, 'secrets/db_auth_password'),
     });
     expect(env).toEqual(devEnv);
+  });
+
+  it('E02-S08 a second run keeps dev.env and the secret files', () => {
+    const first = writeDevConfig(dir);
+    // What the first run wrote, with a key added to dev.env by hand.
+    appendFileSync(join(dir, 'dev.env'), 'NORTHMES_ROLE=api\n');
+    const written = () => ({
+      devEnv: readFileSync(join(dir, 'dev.env'), 'utf8'),
+      secrets: secretFiles(first).map(([, path]) => readFileSync(path, 'utf8')),
+    });
+    const before = written();
+
+    const second = writeDevConfig(dir);
+
+    expect(written()).toEqual(before);
+    expect(second).toEqual({ ...first, NORTHMES_ROLE: 'api' });
   });
 });
