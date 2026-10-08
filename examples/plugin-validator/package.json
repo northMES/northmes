@@ -10,6 +10,10 @@
       "default": "./dist/manifest.js"
     }
   },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@northmes/planning-contracts": "workspace:*",
     "ms": "catalog:"
