@@ -87,4 +87,16 @@ describe('createNorthmesClient', () => {
     expect(JSON.parse(socket?.sent[0] ?? '')).toEqual({ type: 'connection_init' });
     subscription.unsubscribe();
   });
+
+  it("E02-S05 the graphql-ws client connects to /graphql on the page's host, over wss on an https page", async () => {
+    vi.stubGlobal('location', new URL('https://northmes.test:8443/plant-a/planning/board'));
+    const { WebSocket, sockets } = mockWebSocket();
+    const client = createNorthmesClient({ plantId: 'plant-a', webSocketImpl: WebSocket });
+
+    const subscription = client.subscribe({ query: boardChanged }).subscribe(() => {});
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+
+    expect(sockets[0]?.url).toBe('wss://northmes.test:8443/graphql');
+    subscription.unsubscribe();
+  });
 });
