@@ -17,6 +17,14 @@ export interface CompositionProblem {
 
 const rootTypes = new Set(['Query', 'Mutation', 'Subscription']);
 
+/** The fields federation adds to the Query type of every subgraph. */
+const federationRootFields = new Set(['_service', '_entities']);
+
+/** The types federation adds to every subgraph: its own and those of the specs it links. */
+function isFederationType(type: string): boolean {
+  return ['_Service', '_Any', '_Entity'].includes(type) || /^(link|federation)__/.test(type);
+}
+
 /**
  * The NorthMES rules that composition runs before composeServices (ADR 0015). Returns every
  * problem, in subgraph order, and an empty list when the subgraphs keep every rule.
@@ -33,7 +41,7 @@ function typeOwnershipProblems(subgraphs: readonly SubgraphSdl[]): CompositionPr
     for (const definition of parse(sdl).definitions) {
       if (!isTypeDefinitionNode(definition)) continue;
       const type = definition.name.value;
-      if (rootTypes.has(type)) continue;
+      if (rootTypes.has(type) || isFederationType(type)) continue;
       const owner = owners.get(type);
       if (owner === undefined) {
         owners.set(type, name);
@@ -59,7 +67,7 @@ function rootFieldPrefixProblems({ name, sdl }: SubgraphSdl): CompositionProblem
     if (definition.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
     if (!rootTypes.has(definition.name.value)) continue;
     for (const field of definition.fields ?? []) {
-      if (prefixed.test(field.name.value)) continue;
+      if (prefixed.test(field.name.value) || federationRootFields.has(field.name.value)) continue;
       problems.push({
         code: 'NORTHMES_ROOT_FIELD_PREFIX',
         message: `${definition.name.value}.${field.name.value} of subgraph "${name}" must start with "${name}" and an upper-case letter`,
