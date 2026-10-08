@@ -324,4 +324,31 @@ describe('pnpm northmes migrate', () => {
       await app.close();
     }
   });
+
+  it('E02-S02 pnpm northmes migrate exits 1 naming an applied file whose sha256 changed', async () => {
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+    // The first run applies the in-repo files, or finds them applied.
+    await cli(['migrate'], { env: migrateEnv(), exit, log });
+    // A record whose sha256 no longer matches its file stands for a file edited after it applied.
+    const [file] = await query<{ module: string; name: string }>(
+      db.ownerUrl,
+      `update northmes_meta.migration
+          set sha256 = repeat('0', 64)
+        where (module, name) = (select module, name from northmes_meta.migration
+                                 order by module, name limit 1)
+       returning module, name`,
+    );
+    log.info.mockClear();
+
+    await cli(['migrate'], { env: migrateEnv(), exit, log });
+
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        `refused to migrate (1 problem)\n- ${file?.module}/${file?.name} changed after it was applied; put the change in a new migration file`,
+      ],
+    ]);
+    expect(log.info.mock.calls).toEqual([['Modules in boot order: core, planning']]);
+  });
 });
