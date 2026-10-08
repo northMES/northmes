@@ -11,6 +11,12 @@ export interface MigrateOptions {
   readonly catalog: readonly CatalogEntry[];
 }
 
+/**
+ * How long a run waits for the migration lock that another run holds before it gives up. The
+ * timeout covers the lock only, not the statements of the files.
+ */
+const lockTimeout = '1min';
+
 export interface MigrateResult {
   /** The files this run applied, as <module id>/<file name>, in the order it applied them. */
   readonly applied: readonly string[];
@@ -20,13 +26,22 @@ export interface MigrateResult {
  * Applies the migration files of every catalog module in catalog order (ADR 0006). Each module's
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
- * are recorded in northmes_meta.migration.
+ * are recorded in northmes_meta.migration. A run holds the migration advisory lock of the
+ * database throughout, so concurrent runs apply each file once.
  */
 export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<MigrateResult> {
   const client = new Client({ connectionString: ownerUrl });
   await client.connect();
   const applied: string[] = [];
   try {
+    // A session lock outlives the transaction that takes it and ends with the connection, so a
+    // second run waits until this one is done and then finds every file applied.
+    await client.query(
+      `begin;
+       set local lock_timeout = '${lockTimeout}';
+       select pg_advisory_lock(hashtextextended('northmes.migrate', 0));
+       commit`,
+    );
     await client.query('create schema if not exists northmes_meta');
     await client.query(
       `create table if not exists northmes_meta.migration (
