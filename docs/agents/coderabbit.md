@@ -16,7 +16,7 @@ Path instructions tell it what to flag per area:
 | `modules/*/domain/**`, `modules/*/server/domain/**` | Imports of Nest, Kysely or `pg`, and use of `process.env` |
 | `**/migrations/**/*.sql` outside `docs/sources` | Missing expand or contract marker, a new table without row-level security and split policies, `FOR ALL` policies, write policies wider than the read policy, `TRUNCATE` grants, missing audit trigger or uuid `id`, secret-like columns, `CREATE INDEX CONCURRENTLY` advice |
 | `modules/*/web/**`, `packages/ui/**` | WCAG 2.2 AA gaps (keyboard, single-pointer alternative to drag, 24 px targets, state by color alone, missing names and labels, focus hidden), live regions outside `announce()`, direct `@base-ui/*` or Radix imports, values that are not tokens |
-| MIT packages (`packages/contracts`, `sdk`, `web-sdk`, `ui`, `web-build`, `testing`, `modules/*/contracts`) | Imports of AGPL code, a license field that is not MIT, breaking changes without `!` in the PR title |
+| MIT packages (`packages/contracts`, `sdk`, `web-sdk`, `ui`, `testing`, `modules/*/contracts`) | Imports of AGPL code, a license field that is not MIT, breaking changes without `!` in the PR title |
 | `**/*.test.{ts,tsx}`, `**/e2e/**` | A behaviour change without a test, a shared database instead of `@testcontainers/postgresql`, real AI calls outside `*.ai.test.ts` files and `pnpm test:e2e:ai` runs |
 | `docs/adr/**` | Missing MADR front matter, a new ADR with a status other than `proposed`, Confirmation items that name no test, lint rule or CI check |
 | `docs/**`, `**/*.md`, `.github/**/*.md`, `apps/docs/**/*.mdx` | Em and en dashes, Title Case headings, curly quotes, emojis, MDX components outside the portable subset |
