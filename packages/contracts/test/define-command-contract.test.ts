@@ -58,4 +58,18 @@ describe('defineCommandContract', () => {
 
     expect(contract.input.parse({ id: ORDER_ID, horizonDays: 14 })).toEqual({ horizonDays: 14 });
   });
+
+  it('E02-S04 a validatable contract without the schema of its validator payload is refused', () => {
+    const options = {
+      name: 'planning.releaseProductionOrder',
+      target: 'existing',
+      fields: z.object({}),
+      validatable: true,
+    } as const;
+
+    // @ts-expect-error A validatable contract declares its validator payload schema (ADR 0037).
+    expect(() => defineCommandContract(options)).toThrow(
+      'Command planning.releaseProductionOrder is validatable, so its contract needs a payload schema',
+    );
+  });
 });
