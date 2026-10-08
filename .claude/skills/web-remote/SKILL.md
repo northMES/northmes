@@ -41,6 +41,8 @@ What every remote shares:
 
 - `pnpm exec turbo run build --filter=@northmes/planning-web`: the remote and the packages it builds against. It writes `modules/planning/web/dist/` with `mf-manifest.json`, `remoteEntry.js` and `assets/`. A plain `vite build` in the package resolves the contracts packages to their `dist/`, so build through turbo, which builds them first.
 - `pnpm build`: every package, the shell and every remote.
+- `pnpm dev`: the stack, the server, the shell's dev server and one Vite dev server per `modules/*/web` package, and the board URL of the seeded plant. The shell's dev server forwards `/modules/<id>/` to the remote's dev server, so the page has one origin and a remote edit shows after a reload. Before the dev servers start, pnpm dev builds the workspace packages the shell and each remote import, because a remote resolves them to their `dist/`.
+- `pnpm demo`: what handoff's `handoff-demo` runs, the built `all` process on `PORT` with every remote from `pnpm build`.
 - `pnpm exec vitest run --project web --project unit modules/planning/web/test`: the remote's tests.
 - `pnpm exec vitest run --project unit packages/web-build/test/guards.test.ts`: the guard tests.
 - `pnpm --filter @northmes/planning-web run typecheck`; `lint` runs the same way.

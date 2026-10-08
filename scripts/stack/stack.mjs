@@ -75,19 +75,29 @@ function loginUrl(databaseUrl, role, password) {
   return url.href;
 }
 
+/** @typedef {(line: string) => void} Log Takes one progress line of the stack. */
+
 /**
  * Prepares the database that env.DATABASE_URL names: northmes db bootstrap creates the roles as the
  * container's superuser, northmes migrate applies the migrations as nm_owner, and the seed writes
- * the tracer records as nm_app. Each step reads its passwords from the secret files env names.
+ * the tracer records as nm_app. Each step reads its passwords from the secret files env names, and
+ * log gets a line before each step starts.
  * @param {Readonly<Record<string, string>>} env The stack's environment, with DATABASE_URL.
- * @param {{ northmes?: Northmes }} [options] northmes runs the server's commands; by default
- *   through pnpm northmes.
+ * @param {{ northmes?: Northmes, seed?: typeof seed, log?: Log }} [options] northmes runs the
+ *   server's commands, by default through pnpm northmes, and seed writes the seed through a URL that
+ *   logs in as nm_app.
  */
-export async function prepareDatabase(env, { northmes = pnpmNorthmes } = {}) {
+export async function prepareDatabase(
+  env,
+  { northmes = pnpmNorthmes, seed: writeSeed = seed, log = () => {} } = {},
+) {
+  log('Creating the database roles: pnpm northmes db bootstrap');
   await run(northmes, ['db', 'bootstrap'], env);
+  log('Migrating the database: pnpm northmes migrate');
   await run(northmes, ['migrate'], env);
+  log('Seeding the fictional articles and production orders');
   const appPassword = readSecret(env.NORTHMES_DB_APP_PASSWORD_FILE ?? '');
-  await seed(loginUrl(env.DATABASE_URL ?? '', 'nm_app', appPassword));
+  await writeSeed(loginUrl(env.DATABASE_URL ?? '', 'nm_app', appPassword));
 }
 
 /**
@@ -129,9 +139,11 @@ function startPostgresContainer({ image, password, reuse }) {
  *   northmes?: Northmes,
  *   startContainer?: StartContainer,
  *   prepare?: typeof prepareDatabase,
+ *   log?: Log,
  * }} [options] stateDir defaults to .northmes/ at the repository root, and env, the stack's own
  *   environment, to process.env. startContainer starts Postgres, by default through
- *   Testcontainers, and prepare runs the database steps with northmes, by default prepareDatabase.
+ *   Testcontainers, and prepare runs the database steps with northmes and log, by default
+ *   prepareDatabase. log gets a line before each step starts.
  */
 export async function startStack({
   stateDir = join(repositoryRoot, '.northmes'),
@@ -139,11 +151,13 @@ export async function startStack({
   northmes = pnpmNorthmes,
   startContainer = startPostgresContainer,
   prepare = prepareDatabase,
+  log = () => {},
 } = {}) {
   const devEnv = writeDevConfig(stateDir);
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8'));
   const password = readSecret(devEnv.POSTGRES_PASSWORD_FILE ?? '');
   const reuse = containerReuse(stackEnv);
+  log(`Starting Postgres from ${image}${reuse ? ', reusing the container of an earlier run' : ''}`);
   const container = await startContainer({ image, password, reuse });
   const stop = async () => {
     if (!reuse) await container.stop();
@@ -153,7 +167,7 @@ export async function startStack({
       ...devEnv,
       DATABASE_URL: `postgres://${container.getHost()}:${container.getPort()}/${database}`,
     };
-    await prepare(databaseEnv, { northmes });
+    await prepare(databaseEnv, { northmes, log });
     // The port is taken last, so no step that takes seconds runs between taking it and handing it
     // to the caller.
     const port = await freePort();
