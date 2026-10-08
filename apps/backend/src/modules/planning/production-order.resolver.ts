@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject } from '@nestjs/common';
-import { Field, ID, Int, ObjectType, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
-import { graphqlKit } from '@northmes/sdk/graphql';
+import {
+  Context,
+  Field,
+  ID,
+  Int,
+  ObjectType,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
+import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
+import { Article, type ArticleRecord, ArticleService } from '../core/api/index.ts';
 import {
   type ProductionOrderRecord,
   ProductionOrderService,
 } from './api/production-order.service.ts';
-import { PlanningModule } from './planning.module.ts';
-
-const gql = graphqlKit(() => PlanningModule);
-
-/** Core's Article, referenced by name and key only. */
-export const ArticleRef = gql.entityRef('Article');
 
 /** An order to make a quantity of one article at one plant (GLOSSARY.md). */
-@ObjectType('ProductionOrder', { registerIn: () => PlanningModule })
+@ObjectType('ProductionOrder')
 export class ProductionOrder {
   @Field(() => ID) id!: string;
   @Field(() => String) number!: string;
@@ -28,7 +33,10 @@ export class ProductionOrder {
 
 @Resolver(() => ProductionOrder)
 export class ProductionOrderResolver {
-  constructor(@Inject(ProductionOrderService) private readonly orders: ProductionOrderService) {}
+  constructor(
+    @Inject(ProductionOrderService) private readonly orders: ProductionOrderService,
+    @Inject(ArticleService) private readonly articles: ArticleService,
+  ) {}
 
   /** The production orders at the request's plant, by number. */
   @Query(() => [ProductionOrder])
@@ -36,9 +44,17 @@ export class ProductionOrderResolver {
     return this.orders.list();
   }
 
-  /** The article the order makes, which the core subgraph resolves; null when core has none. */
-  @ResolveField(() => ArticleRef, { nullable: true })
-  article(@Parent() order: ProductionOrderRecord): { __typename: 'Article'; id: string } {
-    return { __typename: 'Article', id: order.articleId };
+  /**
+   * The article the order makes, or null when core has none at the request's scopes. The request's
+   * core.article loader reads the articles of every order in a list with one query of core's API.
+   */
+  @ResolveField(() => Article, { nullable: true })
+  article(
+    @Parent() order: ProductionOrderRecord,
+    @Context() context: RequestContext,
+  ): Promise<ArticleRecord | null> {
+    return loaderFor(context, 'core.article', (ids: readonly string[]) =>
+      this.articles.byIds(ids),
+    ).load(order.articleId);
   }
 }

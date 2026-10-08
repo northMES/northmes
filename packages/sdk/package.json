@@ -43,7 +43,6 @@
     "dataloader": "catalog:"
   },
   "peerDependencies": {
-    "@apollo/subgraph": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -55,9 +54,6 @@
     "zod": "catalog:"
   },
   "peerDependenciesMeta": {
-    "@apollo/subgraph": {
-      "optional": true
-    },
     "@nestjs/common": {
       "optional": true
     },
@@ -87,7 +83,6 @@
     }
   },
   "devDependencies": {
-    "@apollo/subgraph": "catalog:",
     "@biomejs/biome": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",

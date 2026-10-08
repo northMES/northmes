@@ -16,9 +16,6 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@apollo/subgraph": "catalog:",
-    "@graphql-hive/gateway-runtime": "catalog:",
-    "@graphql-mesh/transport-common": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -28,7 +25,6 @@
     "@northmes/contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/sdk": "workspace:*",
-    "@theguild/federation-composition": "catalog:",
     "graphql": "catalog:",
     "graphql-subscriptions": "catalog:",
     "graphql-ws": "catalog:",

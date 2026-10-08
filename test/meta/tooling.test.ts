@@ -204,7 +204,7 @@ describe('tooling', () => {
   });
 
   it('E02-S01 Vitest gives transformed code the graphql copy that Node loads for dependencies', () => {
-    // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Nest and the gateway
+    // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Nest and GraphQL Yoga
     // get index.js from Node, and a second copy breaks graphql's instanceof checks (ADR 0015).
     const nodeCopy = createRequire(import.meta.url)('graphql') as typeof import('graphql');
 

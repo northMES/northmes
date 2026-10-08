@@ -15,7 +15,6 @@ describe('isHostProvided', () => {
         '@nestjs/common',
         '@nestjs/core',
         '@nestjs/graphql',
-        '@apollo/subgraph',
         'graphql',
         'reflect-metadata',
         'rxjs',

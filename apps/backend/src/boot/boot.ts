@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { type ModuleManifest, moduleNames } from '@northmes/sdk';
+import type { ModuleManifest } from '@northmes/sdk';
 import {
   ConfigError,
   loadEnv,
@@ -17,7 +17,6 @@ import {
 } from '@northmes/sdk/config';
 import { AppModule, type AppOptions, type ServerEntry } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
-import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
 import { checkPending, type MigrationCheckMode } from '../migrate/pending.ts';
 import { inRepoManifests, inRepoMigrationsDir } from '../modules.ts';
@@ -164,8 +163,8 @@ export async function inRepoCatalog(
 }
 
 /**
- * Boot step 6: imports the server entry of every module that has one, in boot order, and names
- * its subgraph after the module's GraphQL name. createTestApp's host factory runs the same step.
+ * Boot step 6: imports the server entry of every module that has one, in boot order.
+ * createTestApp's host factory runs the same step.
  */
 export async function importServers(catalog: readonly CatalogEntry[]): Promise<ServerEntry[]> {
   const servers: ServerEntry[] = [];
@@ -173,7 +172,7 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
     const { manifest } = entry;
     if (!manifest.server) continue;
     const { default: module } = await importServer(entry, manifest.server);
-    servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module, manifest });
+    servers.push({ id: manifest.id, module, manifest });
   }
   return servers;
 }
@@ -181,7 +180,7 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
 /**
  * Imports the server entry of one catalog entry. An entry that throws while it loads stops the
  * boot with a BootError naming the module or plugin: boot never skips it, because a skipped server
- * part would drop its validators and its subgraph (ADR 0002).
+ * part would drop its validators and its resolvers (ADR 0002).
  */
 async function importServer(
   { manifest, kind }: CatalogEntry,
@@ -280,8 +279,6 @@ async function serve(options: BootOptions): Promise<INestApplication> {
   // The static mounts go in before listen initialises the app and adds the routes after them.
   serveWeb(app, { shellDir: builtShellDir });
   await listen(app, env.PORT);
-  const { supergraphHash } = app.get(GatewayService);
-  if (supergraphHash) log.info(`Serving ${GATEWAY_PATH} with supergraph=${supergraphHash}`);
   log.info(`Listening on ${await app.getUrl()}`);
   return app;
 }

@@ -23,13 +23,10 @@ minimumReleaseAge: 20160
 
 catalog:
   '@apollo/client': 4.3.1
-  '@apollo/subgraph': 2.15.1
   '@base-ui/react': 1.8.0
   '@biomejs/biome': 2.5.14
   '@fontsource/ibm-plex-mono': 5.3.0
   '@fontsource/ibm-plex-sans': 5.3.0
-  '@graphql-hive/gateway-runtime': 2.11.1
-  '@graphql-mesh/transport-common': 1.1.0
   '@hookform/resolvers': 5.9.1
   '@module-federation/runtime': 2.9.0
   '@module-federation/vite': 1.22.1
@@ -48,7 +45,6 @@ catalog:
   '@testing-library/dom': 10.4.2
   '@testing-library/react': 16.3.3
   '@testing-library/user-event': 14.6.7
-  '@theguild/federation-composition': 0.27.0
   '@types/culori': 4.0.1
   '@types/express': 5.0.6
   '@types/ms': 2.1.0

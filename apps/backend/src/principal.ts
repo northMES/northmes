@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 /**
  * Who a request acts as, at the plant the request works at (ADR 0007, ADR 0011). One principal is
- * resolved per request. Until E05 the gateway's tracer principal is the only kind.
+ * resolved per request. Until E05 the GraphQL server's tracer principal is the only kind.
  */
 export interface Principal {
   /** The scope id of the plant the request works at. */

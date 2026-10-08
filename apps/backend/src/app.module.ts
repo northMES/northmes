@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, Module, type Type } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import type { ModuleManifest } from '@northmes/sdk';
 import { DomainErrorFilter } from '@northmes/sdk/errors';
-import {
-  type DefineSubgraphOptions,
-  defineSubgraph,
-  SubgraphRegistryModule,
-} from '@northmes/sdk/graphql';
+import { BootError } from './boot/boot-error.ts';
 import { CommandsModule } from './commands/commands.module.ts';
 import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
-import { GatewayModule } from './gateway/gateway.module.ts';
+import { GraphqlModule } from './graphql/graphql.module.ts';
+import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
 import { WebModule } from './web/web.module.ts';
 
-/** A catalog module's server entry, which boot step 6 imports, named for its subgraph. */
-export interface ServerEntry extends DefineSubgraphOptions {
+/** A catalog module's server entry, which boot step 6 imports. */
+export interface ServerEntry {
   /** The module's id. */
   readonly id: string;
+  /** The Nest module of the entry, whose resolvers join the one schema. */
+  readonly module: Type;
   /** The module's manifest. */
   readonly manifest: ModuleManifest;
 }
@@ -35,25 +34,30 @@ export class AppModule {
    * Imports config first: the ConfigModule that boot created before it imported any manifest
    * (ADR 0060). Then the database that `options.database` names (the nm_app pool and the
    * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, every module's
-   * Nest module, one subgraph per module and the gateway that serves them on /graphql (ADR 0015).
-   * `servers` are in boot order. The SDK's exception filter is registered here and nowhere else
-   * (ADR 0012).
+   * Nest module and the GraphQL module that builds one schema from their resolvers and serves it on
+   * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
+   * module's prefix throws one BootError before Nest builds anything. The SDK's exception filter is
+   * registered here and nowhere else (ADR 0012).
    */
   static forRoot(
     config: DynamicModule,
     servers: readonly ServerEntry[] = [],
     { database = 'app' }: AppOptions = {},
   ): DynamicModule {
+    const problems = rootFieldProblems(servers);
+    if (problems.length > 0) throw new BootError(problems);
+    // A schema needs a Query field, so a catalog whose modules declare none serves no /graphql.
+    const declaresQuery = servers.some((server) =>
+      rootFieldsOf(server).some((field) => field.startsWith('Query.')),
+    );
     return {
       module: AppModule,
       imports: [
         config,
         DatabaseModule.forRoot(database),
         CommandsModule.forRoot(servers),
-        SubgraphRegistryModule,
         ...servers.map((server) => server.module),
-        ...servers.map((server) => defineSubgraph(server)),
-        GatewayModule,
+        ...(declaresQuery ? [GraphqlModule] : []),
         WebModule,
       ],
       providers: [{ provide: APP_FILTER, useClass: DomainErrorFilter }],

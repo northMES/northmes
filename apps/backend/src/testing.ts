@@ -13,7 +13,7 @@ import { serveWeb } from './web/web.module.ts';
  * The host factory that createTestApp from @northmes/testing calls (ADR 0041). It runs the boot
  * steps of ADR 0002 that come before listening, in the test process: the catalog of the in-repo
  * modules that `modules` names, the server entry of each of them that has one, then the Nest app
- * with the test's ConfigModule as AppModule's first import and a subgraph per server entry. The app
+ * with the test's ConfigModule as AppModule's first import and one schema from every server entry. The app
  * listens on nothing. A catalog problem throws one BootError. A provider that fails to build
  * rejects with its error, where Nest would by default abort the process and the Vitest worker with
  * it.

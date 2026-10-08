@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import DataLoader from 'dataloader';
-import type { SubgraphContext } from './context.ts';
+import type { RequestContext } from './context.ts';
 
 /** A per-request batch loader. */
 export interface Loader<K, V> {
@@ -21,7 +21,7 @@ export type BatchLoad<K, R> = (keys: readonly K[]) => Promise<readonly R[]>;
  * entries gives a loader of Article.
  */
 export function loaderFor<K, R>(
-  context: SubgraphContext,
+  context: RequestContext,
   name: string,
   batch: BatchLoad<K, R>,
 ): Loader<K, Exclude<R, Error>> {

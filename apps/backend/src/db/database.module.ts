@@ -25,7 +25,7 @@ export type DatabaseMode = 'app' | 'none';
 /**
  * Provides the server's one nm_app pool, under the Pool class, and the ScopedDatabase on it under
  * DATABASE. Global, so every module's Nest module injects DATABASE without importing this one; it
- * holds no resolvers, so it adds nothing to a subgraph. The pool ends when the app shuts down. In
+ * holds no resolvers, so it adds nothing to the schema. The pool ends when the app shuts down. In
  * mode 'none' there is no pool to end.
  */
 @Global()

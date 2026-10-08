@@ -14,8 +14,8 @@ const owner = 'nm_owner';
 export async function migrateCommand(options: BootOptions): Promise<void> {
   const { env, secrets, catalog, pending, app } = await bootForMigrate(options);
   try {
-    // Init builds every subgraph and composes the supergraph, as boot does before it listens, so
-    // a SupergraphCompositionError stops migrate before its first file (ADR 0006).
+    // Init builds the one schema, as boot does before it listens, so a schema error stops migrate
+    // before its first file (ADR 0006).
     await app.init();
     for (const file of pending) options.log.info(`Pending ${file}`);
     const ownerUrl = new URL(env.DATABASE_URL);
