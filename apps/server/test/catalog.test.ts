@@ -38,6 +38,16 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E02-S01 a cycle is refused naming every module in it', () => {
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core', 'scheduling']),
+      inRepoModule('scheduling', ['core', 'planning']),
+    ]);
+
+    expect(error.problems).toEqual(['Module dependency cycle: planning -> scheduling -> planning']);
+  });
+
   it('E02-S01 modules come back core first, in dependency order, plugins last', () => {
     const catalog = checkCatalog(
       [
