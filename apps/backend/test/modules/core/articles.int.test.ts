@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory } from '@northmes/backend/testing';
+import { hostFactory, statementsDuring } from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -267,5 +267,22 @@ describe('coreArticles', () => {
     expect(await found('%')).toEqual([[], 0]);
     expect(await found('_')).toEqual([[], 0]);
     expect(await found('   ')).toEqual([catalog.map(({ code }) => code), 7]);
+  });
+
+  it('E06-S02 coreArticles counts the articles only when a query selects totalCount', async () => {
+    const client = await catalogPlant();
+    if (!testApp) throw new Error('the test app did not start');
+    const app = testApp.app;
+    /** The statements of one coreArticles request that count rows. */
+    const countsOf = async (selection: string) => {
+      const { result, statements } = await statementsDuring(app, () =>
+        client.send(`{ coreArticles(first: 2) { ${selection} } }`),
+      );
+      expect(result.errors).toBeUndefined();
+      return statements.filter((statement) => statement.includes('count(*)'));
+    };
+
+    expect(await countsOf('edges { node { code } }')).toHaveLength(0);
+    expect(await countsOf('totalCount edges { node { code } }')).toHaveLength(1);
   });
 });
