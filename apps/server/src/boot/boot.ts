@@ -54,8 +54,8 @@ async function loadConfig(env: BootOptions['env']) {
     isGlobal: true,
     ignoreEnvFile: true,
     cache: true,
-    // forRoot hands validate the merged process.env. The environment boot was given is already
-    // validated: main.ts gives process.env, and a test its own record.
+    // forRoot would validate process.env. Boot validates the environment it was given instead,
+    // which is process.env in main.ts and a record of its own in a test.
     validate: () => serverEnv,
     load: [secretsConfig],
   });
@@ -78,13 +78,21 @@ export async function boot(options: BootOptions): Promise<INestApplication | und
   }
 }
 
-async function bootSteps({ env, importManifest, log }: BootOptions): Promise<INestApplication> {
-  const { serverEnv, config } = await loadConfig(env);
+/** Boot step 3: imports the manifest of every in-repo module. No Nest code of a module loads. */
+async function importManifests(
+  importManifest: BootOptions['importManifest'],
+): Promise<CatalogEntry[]> {
   const entries: CatalogEntry[] = [];
   for (const specifier of inRepoManifests) {
     const { default: manifest } = await importManifest(specifier);
     entries.push({ manifest, kind: 'module' });
   }
+  return entries;
+}
+
+async function bootSteps({ env, importManifest, log }: BootOptions): Promise<INestApplication> {
+  const { serverEnv, config } = await loadConfig(env);
+  const entries = await importManifests(importManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const app = await NestFactory.create(AppModule.forRoot(config), { logger: ['error', 'warn'] });
   await app.listen(serverEnv.PORT, '127.0.0.1');

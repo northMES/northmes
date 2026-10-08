@@ -34,7 +34,8 @@ async function createTemplate(connection: PgConnection): Promise<void> {
  * /var/lib/postgresql, so the mount covers it and the data lives in memory and goes with the
  * container. The server runs without durability (see serverArgs). The superuser password and the
  * database name are random for each run, so no run shares a credential with another. The run also
- * gets a temporary directory for state its test files share, such as the server build of bootBuilt.
+ * gets a temporary directory for state its test files share, such as the outcome of the one server
+ * build that bootBuilt runs.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
