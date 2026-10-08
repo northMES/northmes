@@ -204,7 +204,7 @@ describe('path-literals', () => {
   it('E02-S05 a to template literal that starts with a substitution passes', () => {
     const text = [
       'export const open = (',
-      '  <Link to={`${planningLinks.orders({ plant }).to}?tab=open`}>Open</Link>',
+      `  <Link to={\`\${planningLinks.orders({ plant }).to}?tab=open\`}>Open</Link>`,
       ');',
       '',
     ].join('\n');

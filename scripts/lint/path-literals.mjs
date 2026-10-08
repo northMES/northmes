@@ -90,6 +90,20 @@ function startsWithText(node) {
 }
 
 /**
+ * Whether a literal written in the attribute, option or call `name` is an app path: an absolute
+ * path on this origin anywhere, and in a `to` also a relative path that starts with text and names
+ * a segment.
+ * @param {string} name
+ * @param {{ node: ts.Node, text: string }} literal
+ */
+function isAppPathLiteral(name, literal) {
+  return (
+    isAppPath(literal.text) ||
+    (name === 'to' && startsWithText(literal.node) && isNamedRelativePath(literal.text))
+  );
+}
+
+/**
  * The name of the function a call calls: `navigate` for both `navigate()` and `router.navigate()`.
  * @param {ts.CallExpression} call
  */
@@ -224,15 +238,10 @@ export function scan(files, allowlist) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
     const visit = (node) => {
       const literals = pathExpressions(node, source).flatMap(({ name, expression }) =>
-        leadingLiterals(expression, source).map((literal) => ({ name, ...literal })),
+        leadingLiterals(expression, source).filter((literal) => isAppPathLiteral(name, literal)),
       );
       for (const literal of literals) {
-        const reported =
-          isAppPath(literal.text) ||
-          (literal.name === 'to' &&
-            startsWithText(literal.node) &&
-            isNamedRelativePath(literal.text));
-        if (reported && !isAllowed(path, literal.text)) {
+        if (!isAllowed(path, literal.text)) {
           const start = literal.node.getStart(source);
           findings.push({
             path,
