@@ -3,7 +3,9 @@
 // statement whose privilege list names TRUNCATE is a finding, wherever it sits in a migration
 // file: on its own, split over several lines, or inside ALTER DEFAULT PRIVILEGES. So is GRANT ALL
 // on tables, which includes TRUNCATE; GRANT ALL on another kind of object, such as a schema or a
-// sequence, is not. A GRANT inside a -- or /* */ comment is not a statement and is skipped.
+// sequence, is not. A GRANT inside a -- or /* */ comment is not a statement and is skipped. Text
+// inside a string, a quoted identifier or a dollar-quoted body is scanned as it is, so a GRANT run
+// through EXECUTE is a finding, and so is one in a comment inside a DO block's body.
 //
 // test/meta/no-truncate.test.ts scans every .sql file under a migrations folder outside docs/, so
 // pnpm check fails on a finding.
@@ -34,14 +36,84 @@ function grantsTruncate(privileges, object) {
   return allPattern.test(privileges.trim()) && !otherKindPattern.test(object.trim());
 }
 
+// A dollar quote's tag: $$ or $name$, where the name does not start with a digit.
+const dollarTagPattern = /\$(?:[A-Za-z_]\w*)?\$/y;
+
+/**
+ * The offset just past the closing quote of a string or quoted identifier whose text starts at
+ * from. A doubled quote is an escaped quote, and so is a backslash before one in an E'' string.
+ * @param {string} text
+ * @param {number} from
+ * @param {string} quote
+ * @param {boolean} backslashEscapes
+ */
+function quoteEnd(text, from, quote, backslashEscapes) {
+  for (let index = from; index < text.length; index += 1) {
+    if (backslashEscapes && text[index] === '\\') {
+      index += 1;
+    } else if (text[index] === quote) {
+      if (text[index + 1] !== quote) return index + 1;
+      index += 1;
+    }
+  }
+  return text.length;
+}
+
+/**
+ * The comment, string, quoted identifier or dollar-quoted body that starts at start, as the offset
+ * just past its end, or undefined when none starts there. An unclosed one runs to the end of text.
+ * @param {string} text
+ * @param {number} start
+ * @returns {{ end: number, comment: boolean } | undefined}
+ */
+function regionAt(text, start) {
+  const pair = text.slice(start, start + 2);
+  if (pair === '--') {
+    const newline = text.indexOf('\n', start);
+    return { end: newline === -1 ? text.length : newline, comment: true };
+  }
+  if (pair === '/*') {
+    const close = text.indexOf('*/', start + 2);
+    return { end: close === -1 ? text.length : close + 2, comment: true };
+  }
+  const before = text[start - 1] ?? '';
+  if (text[start] === "'") {
+    const escapes = /[eE]/.test(before) && !/[\w$]/.test(text[start - 2] ?? '');
+    return { end: quoteEnd(text, start + 1, "'", escapes), comment: false };
+  }
+  if (text[start] === '"') return { end: quoteEnd(text, start + 1, '"', false), comment: false };
+  if (text[start] === '$' && !/[\w$]/.test(before)) {
+    dollarTagPattern.lastIndex = start;
+    const tag = dollarTagPattern.exec(text)?.[0];
+    if (tag !== undefined) {
+      const close = text.indexOf(tag, start + tag.length);
+      return { end: close === -1 ? text.length : close + tag.length, comment: false };
+    }
+  }
+  return undefined;
+}
+
 /**
  * Replaces each -- line comment and each block comment with spaces and keeps its newlines, so a
  * comment can neither hide a GRANT nor fake one, and offsets and line numbers stay the same. A --
- * inside a string literal counts as a comment too, which a GRANT in a migration does not need.
+ * or a /* inside a string, a quoted identifier or a dollar-quoted body starts no comment.
  * @param {string} text
  */
 function blankComments(text) {
-  return text.replace(/--[^\n]*|\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  let blanked = '';
+  let index = 0;
+  while (index < text.length) {
+    const region = regionAt(text, index);
+    if (region === undefined) {
+      blanked += text[index];
+      index += 1;
+    } else {
+      const part = text.slice(index, region.end);
+      blanked += region.comment ? part.replace(/[^\n]/g, ' ') : part;
+      index = region.end;
+    }
+  }
+  return blanked;
 }
 
 /**
