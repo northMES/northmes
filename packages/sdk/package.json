@@ -1,0 +1,36 @@
+{
+  "name": "@northmes/sdk",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@northmes/source": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./config": {
+      "@northmes/source": "./src/config/index.ts",
+      "default": "./dist/config/index.js"
+    },
+    "./graphql": {
+      "@northmes/source": "./src/graphql/index.ts",
+      "default": "./dist/graphql/index.js"
+    },
+    "./rest": {
+      "@northmes/source": "./src/rest/index.ts",
+      "default": "./dist/rest/index.js"
+    },
+    "./data": {
+      "@northmes/source": "./src/data/index.ts",
+      "default": "./dist/data/index.js"
+    },
+    "./commands": {
+      "@northmes/source": "./src/commands/index.ts",
+      "default": "./dist/commands/index.js"
+    },
+    "./errors": {
+      "@northmes/source": "./src/errors/index.ts",
+      "default": "./dist/errors/index.js"
+    }
+  }
+}

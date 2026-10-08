@@ -1,0 +1,13 @@
+{
+  "name": "@northmes/web-sdk",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@northmes/source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}

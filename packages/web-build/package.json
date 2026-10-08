@@ -1,0 +1,16 @@
+{
+  "name": "@northmes/web-build",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "@northmes/source": "./shared.mjs",
+      "default": "./shared.mjs"
+    },
+    "./remote": {
+      "@northmes/source": "./remote.mjs",
+      "default": "./remote.mjs"
+    }
+  }
+}
