@@ -128,4 +128,19 @@ describe.skipIf(!existsSync(`${root}.git`))('repository', () => {
     // Test fixtures hold plugins as well, and they are committed.
     expect(git('check-ignore', 'apps/server/test/fixtures/plugins/x/package.json')).toBe('');
   });
+
+  it('E02-S01 .gitattributes marks the schema snapshots and the *.gen.* files as generated', () => {
+    const generated = [
+      'schema/api.graphql',
+      'schema/supergraph.graphql',
+      'modules/planning/schema.graphql',
+      'modules/planning/web/src/documents.gen.ts',
+    ];
+
+    for (const path of generated) {
+      expect(git('check-attr', 'linguist-generated', '--', path).trim(), path).toBe(
+        `${path}: linguist-generated: true`,
+      );
+    }
+  });
 });
