@@ -51,14 +51,14 @@ export async function main(argv, io) {
     io.error(`No module folder ${moduleFolder}`);
     return 1;
   }
-  let rendered;
+  let path;
+  let sql;
   try {
-    rendered = render({ module, slug, now: io.now() });
+    ({ path, sql } = render({ module, slug, now: io.now() }));
   } catch (error) {
     io.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
-  const { path, sql } = rendered;
   const file = join(io.root, path);
   await mkdir(dirname(file), { recursive: true });
   // wx refuses to replace a file that exists.
