@@ -78,9 +78,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:tz
 
+  # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
+  # so ci / gate always runs and fails itself instead.
   gate:
     name: ci / gate
+    if: always()
     needs: [static, test-utc, test-stockholm]
     runs-on: ubuntu-24.04
     steps:
-      - run: echo "Every job that ci / gate needs passed."
+      - name: Fail when a job that ci / gate needs failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
