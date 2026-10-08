@@ -49,6 +49,15 @@ const crateArrived = `subscription ($plantId: ID!) {
   betaCrateArrived(plantId: $plantId) { plantId crate { label thing { name } } }
 }`;
 
+/** The one event of betaCrateArrived at a plant. */
+function crateOneArrived(plantId: string): GqlEvent {
+  return {
+    data: {
+      betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
+    },
+  };
+}
+
 describe('subscriptions on /graphql', () => {
   it('E02-S03 a subscription delivers one event over graphql-ws', async () => {
     const url = await bootFixtures(alpha, beta);
@@ -61,11 +70,7 @@ describe('subscriptions on /graphql', () => {
       client.subscribe(crateArrived, { plantId }, { transport: 'graphql-ws' }),
     );
 
-    expect(event).toEqual({
-      data: {
-        betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
-      },
-    });
+    expect(event).toEqual(crateOneArrived(plantId));
   });
 
   it('E02-S03 a subscription delivers one event over SSE', async () => {
@@ -76,11 +81,7 @@ describe('subscriptions on /graphql', () => {
       gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'sse' }),
     );
 
-    expect(event).toEqual({
-      data: {
-        betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
-      },
-    });
+    expect(event).toEqual(crateOneArrived(plantId));
   });
 
   it('E02-S03 a subscription sent before the first HTTP request works', async () => {
@@ -91,10 +92,6 @@ describe('subscriptions on /graphql', () => {
       gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'graphql-ws' }),
     );
 
-    expect(event).toEqual({
-      data: {
-        betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
-      },
-    });
+    expect(event).toEqual(crateOneArrived(plantId));
   });
 });

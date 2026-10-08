@@ -57,8 +57,9 @@ export class GatewayService implements OnApplicationBootstrap {
       landingPage: false,
       graphiql: false,
     });
-    // The gateway would otherwise load the supergraph on the first request. Awaiting it here moves
-    // supergraph errors to boot, and requests get the 503 until it has resolved.
+    // The gateway would otherwise load the supergraph on the first HTTP request, and a graphql-ws
+    // subscription sent before it would find no schema. Awaiting it here moves supergraph errors
+    // to boot, and requests get the 503 until it has resolved.
     await runtime.getSchema();
     this.#runtime = runtime;
     this.#supergraphHash = supergraphHash(supergraph);
