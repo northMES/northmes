@@ -38,6 +38,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
+    "ws": "catalog:",
     "zod": "catalog:"
   }
 }
