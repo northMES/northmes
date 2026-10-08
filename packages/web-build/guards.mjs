@@ -32,12 +32,14 @@ function installedPackageOf(moduleId) {
 /**
  * Fails the build when a chunk holds code from a package the shell shares as a singleton, for
  * example through a subpath outside the share keys, such as @apollo/client/cache. That code would
- * run as a second copy beside the shell's, with its own React context or Apollo cache.
+ * run as a second copy beside the shell's, with its own React context or Apollo cache. graphql
+ * is no share key, because a remote reaches it only through Apollo Client, but a second copy of
+ * it breaks graphql's instanceof checks all the same.
  *
  * @returns {import('vite').Plugin}
  */
 export function noBundledSingletons() {
-  const forbidden = new Set(singletons().map(packageOfKey));
+  const forbidden = new Set([...singletons().map(packageOfKey), 'graphql']);
   return {
     name: 'northmes:no-bundled-singletons',
     apply: 'build',
@@ -60,9 +62,9 @@ export function noBundledSingletons() {
         const details = [...offenders].map(([name, where]) => `  ${name}: ${where}`);
         this.error(
           [
-            `this remote bundles ${names.join(', ')}. The shell provides each singleton package ` +
-              'once (ADR 0019), and a remote reaches one only through a share key in shared.mjs ' +
-              'of @northmes/web-build:',
+            `this remote bundles ${names.join(', ')}. The shell provides the singleton packages ` +
+              'and graphql once (ADR 0019), and a remote reaches them only through the share ' +
+              'keys in shared.mjs of @northmes/web-build:',
             ...details,
           ].join('\n'),
         );
