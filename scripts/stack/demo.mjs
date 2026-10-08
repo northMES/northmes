@@ -3,7 +3,7 @@
 // origin and one port.
 
 import { boardUrl } from './board.mjs';
-import { messageOf, run, say, start } from './processes.mjs';
+import { messageOf, onStopSignal, run, say, start } from './processes.mjs';
 import { startStack } from './stack.mjs';
 
 /** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
@@ -34,9 +34,9 @@ export async function demoPlan(stackEnv, env) {
 }
 
 /**
- * Runs pnpm demo until SIGINT, SIGTERM or the server's exit: starts the stack, builds every package
- * with pnpm build, starts the built server and prints the board URL once it listens. Stopping ends
- * the server and the stack's container.
+ * Runs pnpm demo until SIGINT, SIGTERM, SIGHUP or the server's exit: starts the stack, builds
+ * every package with pnpm build, starts the built server and prints the board URL once it listens.
+ * Stopping ends the server and the stack's container.
  */
 async function demo() {
   /** @param {string} line */
@@ -54,8 +54,7 @@ async function demo() {
     await stack.stop();
     process.exit(code);
   };
-  process.once('SIGINT', () => stop(0));
-  process.once('SIGTERM', () => stop(0));
+  onStopSignal(() => stop(0));
 
   try {
     const plan = await demoPlan(stack.env, process.env);

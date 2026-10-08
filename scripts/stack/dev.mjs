@@ -5,7 +5,7 @@ import { existsSync, globSync, readFileSync, realpathSync, watch } from 'node:fs
 import { join, relative } from 'node:path';
 import { boardUrl } from './board.mjs';
 import { freePorts } from './ports.mjs';
-import { messageOf, repositoryRoot, run, say, start } from './processes.mjs';
+import { messageOf, onStopSignal, repositoryRoot, run, say, start } from './processes.mjs';
 import { startStack } from './stack.mjs';
 
 /** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
@@ -194,10 +194,10 @@ function inServerPackages(path) {
 }
 
 /**
- * Runs pnpm dev until SIGINT or SIGTERM: starts the stack, builds what the dev servers import,
- * starts the dev servers and tsc -b --watch, restarts the server after each completed build, runs
- * northmes migrate when a migration file changes, and prints the board URL once the server listens.
- * Stopping ends every process and the stack's container.
+ * Runs pnpm dev until SIGINT, SIGTERM or SIGHUP: starts the stack, builds what the dev servers
+ * import, starts the dev servers and tsc -b --watch, restarts the server after each completed
+ * build, runs northmes migrate when a migration file changes, and prints the board URL once the
+ * server listens. Stopping ends every process and the stack's container.
  */
 async function dev() {
   /** @param {string} line */
@@ -219,8 +219,7 @@ async function dev() {
     await stack.stop();
     process.exit(code);
   };
-  process.once('SIGINT', () => stop(0));
-  process.once('SIGTERM', () => stop(0));
+  onStopSignal(() => stop(0));
 
   try {
     const remotes = webRemotes();

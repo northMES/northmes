@@ -45,6 +45,18 @@ export function messageOf(error) {
 }
 
 /**
+ * Calls stop on SIGINT, which Ctrl+C sends, on SIGTERM and on SIGHUP, which a terminal that closes
+ * sends. The started processes run in process groups of their own, so these signals reach only
+ * pnpm dev or pnpm demo, which must stop the processes itself.
+ * @param {() => unknown} stop
+ */
+export function onStopSignal(stop) {
+  /** @type {NodeJS.Signals[]} */
+  const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+  for (const signal of signals) process.once(signal, () => stop());
+}
+
+/**
  * Prints a line of pnpm dev or pnpm demo itself under name.
  * @param {string} name
  * @param {string} line
