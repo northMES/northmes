@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { type DynamicModule, Module } from '@nestjs/common';
+import {
+  type DefineSubgraphOptions,
+  defineSubgraph,
+  SubgraphRegistryModule,
+} from '@northmes/sdk/graphql';
+import { GatewayModule } from './gateway/gateway.module.ts';
 
 /** The root module of the server. */
 @Module({})
@@ -7,9 +13,22 @@ import { type DynamicModule, Module } from '@nestjs/common';
 export class AppModule {
   /**
    * Imports config first: the ConfigModule that boot created before it imported any manifest
-   * (ADR 0060).
+   * (ADR 0060). Then every module's Nest module, one subgraph per module and the gateway that
+   * serves them on /graphql (ADR 0015).
    */
-  static forRoot(config: DynamicModule): DynamicModule {
-    return { module: AppModule, imports: [config] };
+  static forRoot(
+    config: DynamicModule,
+    subgraphs: readonly DefineSubgraphOptions[] = [],
+  ): DynamicModule {
+    return {
+      module: AppModule,
+      imports: [
+        config,
+        SubgraphRegistryModule,
+        ...subgraphs.map((subgraph) => subgraph.module),
+        ...subgraphs.map((subgraph) => defineSubgraph(subgraph)),
+        GatewayModule,
+      ],
+    };
   }
 }

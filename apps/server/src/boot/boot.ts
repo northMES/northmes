@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import type { ModuleManifest } from '@northmes/sdk';
+import { type ModuleManifest, moduleNames } from '@northmes/sdk';
 import {
   ConfigError,
   loadEnv,
@@ -11,6 +11,7 @@ import {
   secretsConfig,
   serverEnvSchema,
 } from '@northmes/sdk/config';
+import type { DefineSubgraphOptions } from '@northmes/sdk/graphql';
 import { AppModule } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { inRepoManifests } from '../modules.ts';
@@ -19,6 +20,8 @@ import { BootError } from './boot-error.ts';
 export interface BootOptions {
   /** The environment the server runs with. Without it, loadEnv reads process.env (ADR 0060). */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** The import specifiers of the manifests boot loads. Without it, the in-repo modules' ones. */
+  readonly manifests?: readonly string[];
   /** Imports the manifest module that a specifier names. main.ts passes a dynamic import. */
   readonly importManifest: (specifier: string) => Promise<{ default: ModuleManifest }>;
   /** Ends the process with an exit code. main.ts passes process.exit. */
@@ -78,23 +81,46 @@ export async function boot(options: BootOptions): Promise<INestApplication | und
   }
 }
 
-/** Boot step 3: imports the manifest of every in-repo module. No Nest code of a module loads. */
+/** Boot step 3: imports the manifest of every module. No Nest code of a module loads. */
 async function importManifests(
+  specifiers: readonly string[],
   importManifest: BootOptions['importManifest'],
 ): Promise<CatalogEntry[]> {
   const entries: CatalogEntry[] = [];
-  for (const specifier of inRepoManifests) {
+  for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
     entries.push({ manifest, kind: 'module' });
   }
   return entries;
 }
 
-async function bootSteps({ env, importManifest, log }: BootOptions): Promise<INestApplication> {
+/**
+ * Boot step 6: imports the server entry of every module that has one, in boot order, and names
+ * its subgraph after the module's GraphQL name.
+ */
+async function importServers(catalog: readonly CatalogEntry[]): Promise<DefineSubgraphOptions[]> {
+  const subgraphs: DefineSubgraphOptions[] = [];
+  for (const { manifest } of catalog) {
+    if (!manifest.server) continue;
+    const { default: module } = await manifest.server();
+    subgraphs.push({ name: moduleNames(manifest.id).gql, module });
+  }
+  return subgraphs;
+}
+
+async function bootSteps({
+  env,
+  manifests = inRepoManifests,
+  importManifest,
+  log,
+}: BootOptions): Promise<INestApplication> {
   const { serverEnv, config } = await loadConfig(env);
-  const entries = await importManifests(importManifest);
+  const entries = await importManifests(manifests, importManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
-  const app = await NestFactory.create(AppModule.forRoot(config), { logger: ['error', 'warn'] });
+  const subgraphs = await importServers(catalog);
+  const app = await NestFactory.create(AppModule.forRoot(config, subgraphs), {
+    logger: ['error', 'warn'],
+  });
   await app.listen(serverEnv.PORT, '127.0.0.1');
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
   log.info(`Listening on ${await app.getUrl()}`);
