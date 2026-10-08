@@ -84,4 +84,19 @@ describe('path-literals', () => {
       { path: 'e2e/board.spec.ts', line: 2, literal: '/x' },
     ]);
   });
+
+  it('E02-S05 an allowlist entry without a reason fails', () => {
+    const files = [{ path: 'e2e/board.spec.ts', text: "await page.goto('/x');\n" }];
+    const withReason = { path: 'e2e/board.spec.ts', literal: '/y', reason: 'A reason.' };
+
+    for (const entry of [
+      { path: 'e2e/board.spec.ts', literal: '/x' },
+      { path: 'e2e/board.spec.ts', literal: '/x', reason: '' },
+      { path: 'e2e/board.spec.ts', literal: '/x', reason: ' \n' },
+    ]) {
+      expect(() => scan(files, [withReason, entry]), JSON.stringify(entry)).toThrow(
+        'Path literal allowlist entry 2 (e2e/board.spec.ts, /x) gives no reason',
+      );
+    }
+  });
 });
