@@ -6,13 +6,17 @@ import { migrate } from './runner.ts';
 const owner = 'nm_owner';
 
 /**
- * pnpm northmes migrate: runs the boot steps without listening (bootForMigrate) and logs the files
- * that its migration check found pending, then applies the catalog's migration files as nm_owner
- * on DATABASE_URL, with the password from the owner's secret file. The app closes afterwards.
+ * pnpm northmes migrate: runs the boot steps without listening (bootForMigrate), initialises the
+ * app and logs the files that its migration check found pending, then applies the catalog's
+ * migration files as nm_owner on DATABASE_URL, with the password from the owner's secret file. The
+ * app closes afterwards.
  */
 export async function migrateCommand(options: BootOptions): Promise<void> {
   const { env, secrets, catalog, pending, app } = await bootForMigrate(options);
   try {
+    // Init builds every subgraph and composes the supergraph, as boot does before it listens, so
+    // a SupergraphCompositionError stops migrate before its first file (ADR 0006).
+    await app.init();
     for (const file of pending) options.log.info(`Pending ${file}`);
     const ownerUrl = new URL(env.DATABASE_URL);
     ownerUrl.username = owner;
