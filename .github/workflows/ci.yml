@@ -1,8 +1,9 @@
 # The CI checks for pull requests and pushes to main. The main ruleset requires each job here as a
 # status check, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a
-# renamed, added or removed job needs a ruleset edit in the same change; test/meta/workflows.test.ts
-# lists the job names. Every job that ci / gate needs, except the two pull request checks, runs root
-# pnpm scripts that pnpm check or pnpm check:full contains.
+# renamed, added or removed job needs a ruleset edit: an added name after the merge, a removed or
+# old name just before it. test/meta/workflows.test.ts lists the job names. Every job that ci / gate
+# needs, except the two pull request checks, runs root pnpm scripts that pnpm check or pnpm
+# check:full contains.
 name: CI
 
 on:

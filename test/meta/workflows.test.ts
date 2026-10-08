@@ -72,8 +72,8 @@ const pullRequestCheckSteps = {
 };
 
 // The jobs of the CI workflow. The main ruleset requires each of them as a status check
-// (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list needs a
-// ruleset edit in the same change.
+// (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list
+// needs a ruleset edit: an added name after the merge, a removed or old name just before it.
 const ciJobs = [
   'ci / lint',
   'ci / typecheck',
@@ -414,8 +414,8 @@ describe('workflows', () => {
     );
   });
 
-  // The main ruleset names each CI job, so a renamed, added or removed job must come with a ruleset
-  // edit (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
+  // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
   it('the CI workflow has exactly the jobs ci / lint, ci / typecheck, ci / build, ci / test, ci / pr title, ci / linked issue and ci / gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 

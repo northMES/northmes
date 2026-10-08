@@ -44,7 +44,7 @@ The jobs of `ci.yml`:
 
 The `main` ruleset requires these seven checks, strict (the branch must be up to date), each with the GitHub Actions app (integration id 15368) as its source: `ci / lint`, `ci / typecheck`, `ci / build`, `ci / test`, `ci / pr title`, `ci / linked issue` and `ci / gate`. `license gate`, `dependency audit` and `CodeQL` stay required as ADR 0050 decides. CodeRabbit stays required through the approving review rule of [ADR 0065](0065-coderabbit-check-run-and-a-required-approval-on-main.md), not as a status check.
 
-A job added to `ci.yml` joins the list in the change that adds it: `ci / e2e` ([#281](https://github.com/northMES/northmes/issues/281)), `ci / coverage` ([#338](https://github.com/northMES/northmes/issues/338)) and `ci / react doctor` ([#339](https://github.com/northMES/northmes/issues/339)) when they land. A person edits the ruleset after the change merges, because agents change no repository settings.
+A job added to `ci.yml` joins the list in the change that adds it: `ci / e2e` ([#281](https://github.com/northMES/northmes/issues/281)), `ci / coverage` ([#338](https://github.com/northMES/northmes/issues/338)) and `ci / react doctor` ([#339](https://github.com/northMES/northmes/issues/339)) when they land. A person edits the ruleset, because agents change no repository settings. A new job's name joins the ruleset after the change that adds it merges. A renamed or removed job's old name leaves the ruleset just before that change merges, because its pull request no longer reports the old check, and a new name joins after the merge.
 
 ### Changes to ADR 0050
 
@@ -67,7 +67,7 @@ ADR 0039 is accepted, so its text stays as it was.
 * Good, because a failed lint, typecheck, build or test run shows by its own name as a required check.
 * Good, because `ci / gate` still fails a pull request on which a job was skipped, which GitHub would count as a passed required check.
 * Bad, because the two time zone legs run one after the other in `ci / test`, so that check takes as long as both legs together. The Europe/Stockholm leg still runs after a failed UTC leg, so a failure in either zone reports in the same run.
-* Bad, because renaming, adding or removing a job needs a ruleset edit in the same change. A required check that no job reports any more blocks every pull request, and a new job missing from the ruleset does not show as required.
+* Bad, because renaming, adding or removing a job needs a ruleset edit timed to its merge: an old name leaves just before it, and a new name joins after it. A required check that no job reports any more blocks every pull request, and a new job missing from the ruleset does not show as required.
 
 ### Confirmation
 
@@ -82,7 +82,7 @@ Inspection step, not a check: `gh api repos/northmes/northmes/rulesets/<id>` lis
 
 * Good, because each kind of check shows as required in the merge box.
 * Good, because `ci / gate` still catches a skipped or cancelled job.
-* Bad, because a renamed or added job needs a ruleset edit in the same change.
+* Bad, because a renamed, added or removed job needs a ruleset edit timed to its merge.
 
 ### Only `ci / gate` required
 
