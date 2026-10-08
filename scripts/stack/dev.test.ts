@@ -169,6 +169,7 @@ function fakeDev({ failing = [] }: { failing?: string[] } = {}) {
   const logs: string[] = [];
   const env = new Map<string, Readonly<Record<string, string>> | undefined>();
   const printers = new Map<string, (line: string) => void>();
+  const exits = new Map<string, (code: number | null) => void>();
   const watchers = new Map<string, () => void>();
   const stack = {
     env: { DATABASE_URL: 'postgres://127.0.0.1:41000/northmes', PORT: '41001' },
@@ -184,6 +185,7 @@ function fakeDev({ failing = [] }: { failing?: string[] } = {}) {
     const exited = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
       exit = (code) => resolve({ code, signal: code === null ? 'SIGTERM' : null });
     });
+    exits.set(planned.name, exit);
     return {
       name: planned.name,
       exited,
@@ -207,6 +209,8 @@ function fakeDev({ failing = [] }: { failing?: string[] } = {}) {
     envOf: (name: string) => env.get(name),
     /** Prints line as the process with this name. */
     print: (name: string, line: string) => printers.get(name)?.(line),
+    /** Ends the process with this name on its own with code. */
+    exit: (name: string, code: number) => exits.get(name)?.(code),
     /** The folders that pnpm dev watches. */
     watched: () => [...watchers.keys()],
     /** Changes a file in dir, a folder that pnpm dev watches. */
@@ -311,5 +315,31 @@ describe('superviseDev', () => {
       'stop server',
       'stop stack',
     ]);
+    // The processes exit because pnpm dev stopped them, which is no reason to report.
+    expect(dev.logs.filter((line) => line.includes('exited'))).toEqual([]);
+  });
+
+  it.each(['shell', 'planning', 'tsc'])(
+    'E02-S08 pnpm dev fails when %s exits on its own, and says why',
+    async (name) => {
+      const dev = fakeDev();
+      const supervisor = superviseDev({ plan: await devPlan(ports), ...dev.options });
+      await settle();
+
+      dev.exit(name, 1);
+      await supervisor.failed;
+
+      expect(dev.logs).toContain(`${name} exited with 1, so pnpm dev stops`);
+    },
+  );
+
+  it('E02-S08 pnpm dev fails when the build of the packages the dev servers import fails, and says why', async () => {
+    const dev = fakeDev({ failing: ['build'] });
+    const supervisor = superviseDev({ plan: await devPlan(ports), ...dev.options });
+
+    await supervisor.failed;
+
+    expect(dev.events).toEqual(['run build']);
+    expect(dev.logs).toContain('pnpm exited with 1');
   });
 });
