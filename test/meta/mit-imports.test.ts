@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { scan } from '../../scripts/lint/mit-imports.mjs';
+import { scan, trackedWorkspace } from '../../scripts/lint/mit-imports.mjs';
+
+const root = fileURLToPath(new URL('../../', import.meta.url));
+
+type Finding =
+  | { kind: 'import'; path: string; line: number; imported: string }
+  | { kind: 'license'; path: string; license: string | undefined };
+
+// A finding as a failing test prints it: the file and the package it imports, or the manifest and
+// its license.
+function describeFinding(finding: Finding): string {
+  return finding.kind === 'import'
+    ? `${finding.path}:${finding.line} imports ${finding.imported}`
+    : `${finding.path} has license ${finding.license ?? '(none)'}, not MIT`;
+}
 
 const workspacePackages = [
   {
@@ -155,5 +170,21 @@ describe('mit-imports', () => {
       },
       { kind: 'license', path: 'modules/stock/contracts/package.json', license: undefined },
     ]);
+  });
+
+  it('E02-S01 the repository passes', () => {
+    const { packages, files } = trackedWorkspace(root);
+
+    expect(packages.map(({ path }) => path)).toEqual(
+      expect.arrayContaining([
+        'apps/server/package.json',
+        'examples/plugin-validator/package.json',
+        'modules/planning/contracts/package.json',
+        'packages/sdk/package.json',
+      ]),
+    );
+    expect(packages.filter(({ path }) => path.startsWith('docs/'))).toEqual([]);
+    expect(files.map(({ path }) => path)).toContain('packages/sdk/src/index.ts');
+    expect(scan(packages, files).map(describeFinding)).toEqual([]);
   });
 });
