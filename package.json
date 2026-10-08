@@ -25,7 +25,7 @@
     "adr:next": "node scripts/adr/next-number.mjs",
     "northmes": "turbo run build --filter=@northmes/server --output-logs=errors-only && node apps/server/dist/main.js",
     "gen:migration": "node scripts/gen-migration.mjs",
-    "plugin:build": "node scripts/plugin-build.mjs",
+    "plugin:build": "turbo run build --filter=@northmes/sdk --output-logs=errors-only && node scripts/plugin-build.mjs",
     "dev": "node scripts/stack/dev.mjs",
     "demo": "node scripts/stack/demo.mjs",
     "e2e": "pnpm build && playwright test"

@@ -3,8 +3,8 @@
 // per process, and bundles everything else. The installable package (package.json, dist/ and
 // migrations/) is then copied to plugins/<id>/, where the host loads it from.
 //
-// The script imports HOST_PROVIDED from @northmes/sdk. Under plain node that resolves to the SDK's
-// build output, so the SDK must be built first (pnpm build does it).
+// The script imports isHostProvided from @northmes/sdk. Under plain node that resolves to the
+// SDK's build output, so the root script pnpm plugin:build builds the SDK with turbo first.
 
 import { existsSync, realpathSync } from 'node:fs';
 import { cp, readdir, readFile, rm } from 'node:fs/promises';
