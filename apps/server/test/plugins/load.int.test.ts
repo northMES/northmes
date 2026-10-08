@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { bootBuilt, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { BootError } from '../../src/boot/boot-error.ts';
+import { readConfigFile } from '../../src/boot/config-file.ts';
 
 const repositoryRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
@@ -87,5 +89,28 @@ describe('plugins listed in northmes.config.json', () => {
     // @nestjs/core.
     expect(nestFiles['@nestjs/common']).toHaveLength(1);
     expect(nestFiles['@nestjs/core']).toHaveLength(1);
+  });
+});
+
+describe('northmes.config.json', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'northmes-config-'));
+  });
+
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('E02-S04 config version 0.3.0 with image 0.4.0 stops boot naming both', () => {
+    const file = join(dir, 'northmes.config.json');
+    writeFileSync(file, JSON.stringify({ northmes: '0.3.0', plugins: [] }));
+
+    expect(() => readConfigFile(file, { imageVersion: '0.4.0' })).toThrow(
+      new BootError([
+        `${file}: config names 0.3.0, this image is 0.4.0. Set northmes to 0.4.0 or remove it`,
+      ]),
+    );
   });
 });

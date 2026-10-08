@@ -11,7 +11,7 @@ import { secretsConfig } from '@northmes/sdk/config';
 import { useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { AppModule } from '../../src/app.module.ts';
-import { boot } from '../../src/boot/boot.ts';
+import { boot, imageVersion } from '../../src/boot/boot.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
@@ -141,6 +141,34 @@ describe('boot', () => {
     expect(log.error.mock.calls).toEqual([
       [
         'refused to start (1 problem)\n- Module planning depends on "quality", which is not installed',
+      ],
+    ]);
+    expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it("E02-S04 a northmes.config.json that names a version other than the image's exits 1 naming both", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), 'northmes-config-'));
+    onTestFinished(() => rmSync(configDir, { recursive: true, force: true }));
+    const file = join(configDir, 'northmes.config.json');
+    writeFileSync(file, JSON.stringify({ northmes: '0.3.0', plugins: [] }));
+    // ConfigModule writes NORTHMES_CONFIG into process.env; unstubAllEnvs takes it out again.
+    vi.stubEnv('NORTHMES_CONFIG', undefined);
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+
+    app = await boot({
+      env: { ...env, NORTHMES_CONFIG: file },
+      importManifest: (specifier) => import(specifier),
+      exit,
+      log,
+    });
+
+    const image = imageVersion();
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        `refused to start (1 problem)\n- ${file}: config names 0.3.0, this image is ${image}. Set northmes to ${image} or remove it`,
       ],
     ]);
     expect(log.info).not.toHaveBeenCalled();
