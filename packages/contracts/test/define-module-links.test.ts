@@ -1,6 +1,30 @@
 // SPDX-License-Identifier: MIT
+import { globSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineModuleLinks } from '@northmes/contracts';
 import { describe, expect, it } from 'vitest';
+
+const packageRoot = fileURLToPath(new URL('../', import.meta.url));
+
+// The packages that packages/contracts lists in any dependency field of its package.json.
+function declaredPackages(): string[] {
+  const manifest = JSON.parse(readFileSync(`${packageRoot}package.json`, 'utf8')) as Record<
+    string,
+    Record<string, string> | undefined
+  >;
+  const fields = ['dependencies', 'peerDependencies', 'devDependencies', 'optionalDependencies'];
+  return fields.flatMap((field) => Object.keys(manifest[field] ?? {}));
+}
+
+// Each import specifier in the package's src files, as "<file>: <specifier>".
+function sourceImports(): string[] {
+  return globSync('src/**/*.ts', { cwd: packageRoot }).flatMap((file) => {
+    const text = readFileSync(`${packageRoot}${file}`, 'utf8');
+    return [...text.matchAll(/(?:from|import)\s*\(?\s*'([^']+)'/g)].map(
+      (match) => `${file}: ${match[1]}`,
+    );
+  });
+}
 
 const links = defineModuleLinks('planning', {
   orders: { path: 'orders', children: { order: { path: '$orderId' } } },
@@ -52,5 +76,12 @@ describe('defineModuleLinks', () => {
 
     expect(link.href).toBe('/plant-a/planning/orders?q=a%26b%20c%23d&x%3Dy=1');
     expect(new URL(link.href, 'http://localhost').searchParams.get('q')).toBe('a&b c#d');
+  });
+
+  it('E02-S05 packages/contracts declares and imports no router package', () => {
+    const imports = sourceImports();
+
+    expect(imports, 'the scan finds the imports in src').toContain('src/index.ts: ./api-path.ts');
+    expect([...declaredPackages(), ...imports].filter((name) => /router/i.test(name))).toEqual([]);
   });
 });
