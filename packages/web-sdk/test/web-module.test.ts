@@ -37,4 +37,10 @@ describe('validateWebModule', () => {
   it('E02-S05 validateWebModule accepts a top route path with a leading slash, as the router does', () => {
     expect(validateWebModule({ ...planning, routes: routesAt('/planning') }, entry)).toEqual([]);
   });
+
+  it('E02-S05 validateWebModule names routes that are not a function', () => {
+    expect(validateWebModule({ ...planning, routes: undefined }, entry)).toEqual([
+      'routes is missing, expected a function',
+    ]);
+  });
 });
