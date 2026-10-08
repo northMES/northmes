@@ -68,6 +68,11 @@ const pullRequestCheckSteps = {
   },
 };
 
+// The checks the main ruleset requires from workflow files
+// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). CodeQL runs as
+// GitHub's default setup, outside the workflow files.
+const requiredChecks = ['ci / gate', 'license gate', 'dependency audit'];
+
 // The events a workflow's `on` names, in any of its three forms.
 function triggersOf(on: unknown): string[] {
   if (typeof on === 'string') {
@@ -181,6 +186,25 @@ describe('workflows', () => {
     expect(all, 'workflows').not.toHaveLength(0);
     for (const { path, on } of all) {
       expect(triggersOf(on), path).not.toContain('pull_request_target');
+    }
+  });
+
+  // A workflow that a paths filter skips never reports its check, and a required check that never
+  // reports blocks the merge. A job that applies to some paths only decides in its first step.
+  it('required workflows have no paths filter', () => {
+    const required = workflows().filter(({ jobs }) =>
+      Object.values(jobs ?? {}).some((job) => requiredChecks.includes(job.name ?? '')),
+    );
+
+    expect(required, 'workflows with a required check').not.toHaveLength(0);
+    for (const { path, on } of required) {
+      const events = on !== null && typeof on === 'object' ? Object.entries(on) : [];
+      for (const [event, filters] of events) {
+        const keys = Object.keys(filters ?? {});
+
+        expect(keys, `${path} on.${event}`).not.toContain('paths');
+        expect(keys, `${path} on.${event}`).not.toContain('paths-ignore');
+      }
     }
   });
 
