@@ -8,6 +8,7 @@ import { loadEnv, readSecrets, secretsConfig, serverEnvSchema } from '@northmes/
 import { AppModule } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { inRepoManifests } from '../modules.ts';
+import { BootError } from './boot-error.ts';
 
 export interface BootOptions {
   /** The environment the server runs with. main.ts passes process.env. */
@@ -55,8 +56,22 @@ async function loadConfig(env: BootOptions['env']) {
   return { serverEnv, config };
 }
 
-/** Boots the server in the order of ADR 0002 and returns the listening app. */
-export async function boot({ env, importManifest, log }: BootOptions): Promise<INestApplication> {
+/**
+ * Boots the server in the order of ADR 0002 and returns the listening app. A BootError is written
+ * to log.error and ends the process with its exit code; boot then returns undefined.
+ */
+export async function boot(options: BootOptions): Promise<INestApplication | undefined> {
+  try {
+    return await bootSteps(options);
+  } catch (error) {
+    if (!(error instanceof BootError)) throw error;
+    options.log.error(error.message);
+    options.exit(error.exitCode);
+    return undefined;
+  }
+}
+
+async function bootSteps({ env, importManifest, log }: BootOptions): Promise<INestApplication> {
   const { serverEnv, config } = await loadConfig(env);
   const entries: CatalogEntry[] = [];
   for (const specifier of inRepoManifests) {
