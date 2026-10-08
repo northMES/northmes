@@ -13,7 +13,10 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { AppModule } from '../../src/app.module.ts';
 import { boot } from '../../src/boot/boot.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
+import { dispatch } from '../fixtures/commands/dispatch.ts';
+import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
+import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 
 // Boot step 5 reads the migration records of the in-repo modules as nm_app, so the server needs a
 // migrated database.
@@ -141,6 +144,21 @@ describe('boot', () => {
       ],
     ]);
     expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it('E02-S04 a validator from a module without dependsOn on the owner exits 1 with its message', async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+
+    app = await boot({ env, ...fixtureCatalog(dispatch, strayRules), exit, log });
+
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        'refused to start (1 problem)\n- Validator quantity-cap of module stray-rules is on dispatch.releaseJob of module dispatch, which is not in the dependsOn of stray-rules',
+      ],
+    ]);
   });
 
   it("E02-S05 boot serves each module's remote from web/dist of its package", async () => {
