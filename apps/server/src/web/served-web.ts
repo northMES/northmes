@@ -93,13 +93,21 @@ interface RemoteManifest {
   }[];
 }
 
-/** The integrity of the remote in webDir, or null when its manifest or a file it lists is missing. */
+/**
+ * The integrity of the remote in webDir, or null when its manifest is missing or does not parse, or
+ * a file it lists is missing.
+ */
 function integrityOf(webDir: string): string | null {
   const file = join(webDir, 'mf-manifest.json');
   if (!existsSync(file)) return null;
   const manifest = readFileSync(file);
-  const listed = filesListedIn(JSON.parse(manifest.toString('utf8')));
-  if (listed.some((path) => !existsSync(join(webDir, path)))) return null;
+  try {
+    const listed = filesListedIn(JSON.parse(manifest.toString('utf8')));
+    if (listed.some((path) => !existsSync(join(webDir, path)))) return null;
+  } catch {
+    // A manifest that is not JSON in the shape of RemoteManifest names no remote the shell can load.
+    return null;
+  }
   return `sha384-${createHash('sha384').update(manifest).digest('base64')}`;
 }
 
