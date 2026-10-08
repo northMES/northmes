@@ -42,7 +42,8 @@ interface ModuleFiles {
  * database throughout, so concurrent runs apply each file once.
  *
  * The run checks the files of every module before it applies any, and throws a MigrationError
- * that lists every problem when an applied file's sha256 changed.
+ * that lists every problem when an applied file's sha256 changed or two files of a module share a
+ * timestamp prefix.
  */
 export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<MigrateResult> {
   const client = new Client({ connectionString: ownerUrl });
@@ -51,7 +52,7 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     await takeMigrationLock(client);
     await createMigrationTable(client);
     const modules = await readModuleFiles(client, catalog);
-    const problems = changedFiles(modules);
+    const problems = [...changedFiles(modules), ...sharedPrefixes(modules)];
     if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
     for (const { names, files, recorded } of modules) {
@@ -93,6 +94,22 @@ function changedFiles(modules: readonly ModuleFiles[]): string[] {
         (file) =>
           `${names.id}/${file.name} changed after it was applied; put the change in a new migration file`,
       ),
+  );
+}
+
+/**
+ * A problem for each timestamp prefix that two or more files of one module share. The prefix is the
+ * part of the name before its first underscore.
+ */
+function sharedPrefixes(modules: readonly ModuleFiles[]): string[] {
+  return modules.flatMap(({ names, files }) =>
+    [...Map.groupBy(files, (file) => file.name.split('_', 1)[0])]
+      .filter(([, shared]) => shared.length > 1)
+      .map(([prefix, shared]) => {
+        const paths = shared.map((file) => `${names.id}/${file.name}`);
+        const listed = `${paths.slice(0, -1).join(', ')} and ${paths.at(-1)}`;
+        return `${listed} share the timestamp prefix ${prefix}; give each file a timestamp of its own`;
+      }),
   );
 }
 
