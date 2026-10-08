@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-07
+date: 2026-10-08
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson; internal research note 32
 informed: module and plugin authors, contributors and coding agents
@@ -224,7 +224,7 @@ export function defineConsumer<E extends EventContract>(c: {
 
 | Kind | The contribution provides | The host draws | Fixed rules |
 |---|---|---|---|
-| route | `routes`, `stationRoutes` or `adminRoutes` subtrees | the layout, the nav entry from `screenRoute`, the breadcrumb, the not-found page | the path equals the module id ([ADR 0019][adr-0019]); every leaf route has a title ([ADR 0021][adr-0021]) |
+| route | `routes`, `stationRoutes` or `settingsRoutes` subtrees | the layout, the nav entry from `screenRoute`, the breadcrumb, the not-found page | the path equals the module id ([ADR 0019][adr-0019]); every leaf route has a title ([ADR 0021][adr-0021]) |
 | region | a component | a `WidgetFrame` section named by the manifest label, inside an error boundary keyed by contribution and entity | rendered for the selected item only, never per row or block ([ADR 0037][adr-0037]) |
 | tab | a lazy component | a tab in `EntityDetailPage` after the owner's tabs; the URL `tab` value is the contribution id | an unknown id falls back to `general` ([ADR 0062][adr-0062]) |
 | field | `useValues(props, ids)`, called once per slot instance; a synchronous `render(value)` that returns `{ text, icon?, accessibleText }`; and an optional `Hover` component that may fetch | the value inside the owner's layout: a block field, a header line, or a list column headed by the label; on the board, `Hover` inside the block's hover card | one query per slot instance, never per item; the owner calls each contribution's `useValues` in its own loader component inside its own error boundary, so a throw, or a plant switch that changes the permitted contributions, touches only that contribution; where the value joins an interactive element's name, as on a board block, `accessibleText` contains the visible text (WCAG 2.5.3); a contributed column is not sortable or filterable ([ADR 0016][adr-0016]) |
@@ -236,7 +236,7 @@ Block fields and list columns share one kind. Both are a value per item, loaded 
 
 | Slot id | Kind | Owner | Props (frozen) | Wide | Narrow (below about 640 px) | When |
 |---|---|---|---|---|---|---|
-| `/$plant/<id>/*`, `/station/$stationId`, `/admin/<id>/*` | route | each module | route params | the module's own pages | the same | decided; `adminRoutes` only for core in release 1 ([ADR 0066][adr-0066]) |
+| `/$plant/<id>/*`, `/station/$stationId`, `/settings/$companyId/<id>/*` | route | each module | route params | the module's own pages | the same | decided; `settingsRoutes` only for core in release 1 ([ADR 0066][adr-0066]) |
 | `core/shell/aside/v1` | region, one docked | core | `{ plantId }` | docked beside `main` | modal sheet | release 1, the AI chat panel; M-39 decides whether the shell or core's remote supplies it |
 | `planning/board/side/v1` | region | planning | `{ plantId, paused }` | docked beside the board | D3 decides | release 1, `example-widget` |
 | `planning/board/header/v1` | field | planning | `{ plantId }`; one item, the plant | one line in the header | wraps; the full text stays in the accessible name | release 1, the Pyramid connector, if M-31 gives it a remote |
@@ -270,7 +270,7 @@ export function item<S extends SlotOfKind<"item">>(slot: S, impl: {
   Content: ComponentType;
 }): ItemImpl<S>;
 export function banner<S extends SlotOfKind<"banner">>(slot: S, impl: {
-  layouts: readonly ("plant" | "admin" | "station")[];
+  layouts: readonly ("plant" | "settings" | "station")[];   // settings: company settings at /settings/$companyId
   useBanners(props: SlotProps[S]): readonly BannerSpec[];
 }): BannerImpl<S>;
 // later, with the action kind and planning/order/actions/v1
@@ -290,7 +290,7 @@ export interface BannerSpec {
 export function useHost<S extends SlotId>(slot: S): {
   readonly props: Readonly<SlotProps[S]>;            // ids and declared scalars
   readonly plant: { readonly id: string; readonly slug: string } | null;
-  readonly layout: "plant" | "admin" | "station";
+  readonly layout: "plant" | "settings" | "station";
   readonly size: "compact" | "regular";              // measured from the contribution's container
   readonly time: PlantTime;                          // usePlantTime()
   can(permission: PermissionId): boolean;            // usePermission(); display only, the server checks again
@@ -425,14 +425,14 @@ D2 needs no built slot beyond these pieces; [D2 coverage](#d2-coverage) lists wh
 | `ValidatorContext` (`ctx`) for validators | the first validator that reads anything beyond its payload |
 | `validatorHarness`, `mountContribution`, `consumerHarness` and `renderSlot` in `@northmes/testing` | the first validator or contribution outside the examples, or the public SDK |
 | `plugin:check --json` | its first machine reader (`upgrade.sh` or `config export`) |
-| `item` kind and `core/top-bar/items/v1` | the notifications module ([ADR 0067][adr-0067]); on `/admin` its props carry no plant, so the bell's count there needs plant-free fields (M-66) |
+| `item` kind and `core/top-bar/items/v1` | the notifications module ([ADR 0067][adr-0067]); on company settings pages its props carry no plant, so the bell's count there needs plant-free fields (M-66) |
 | `banner` kind and `core/shell/banners/v1` | the first module banner; the candidate is the AI budget banner if M-31 gives the `ai` module a remote (M-63) |
 | `tab` kind and `planning/order/tabs/v1` | the first contributor that needs more room than a panel |
 | `planning/orders/columns/v1` | the first contributor with data in the orders list |
 | `action` kind and `planning/order/actions/v1` | the first contributed command on another module's entity |
 | `production-start/station/panels/v1` | a second module at the station |
 | Opt-in tabs and columns on master-data kit pages | the first contributor to a core register page |
-| `adminRoutes` for modules other than core | the first non-core admin page ([ADR 0066][adr-0066]) |
+| `settingsRoutes` for modules other than core | the first company settings page of a module other than core ([ADR 0066][adr-0066]) |
 | Onboarding steps from plugins | a plugin that needs values before a plant opens ([ADR 0066][adr-0066] refuses the key in a plugin) |
 | A settings page rendered from a server-only plugin's schema | the first server-only plugin with settings |
 | `ctx.data`, plugin consumers that run commands, jobs as a system principal | the first plugin that keeps state ([ADR 0037][adr-0037]) |
@@ -657,5 +657,5 @@ The planning session scored the three designs from 1 (poor) to 5 (strong). It di
 [adr-0058]: 0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
 [adr-0062]: 0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0063]: 0063-agent-skills-from-library-authors-pinned-in-the-repository.md
-[adr-0066]: 0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
+[adr-0066]: 0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md
 [adr-0067]: 0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md

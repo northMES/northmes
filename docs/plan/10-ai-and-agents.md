@@ -352,7 +352,7 @@ stateDiagram-v2
 
 - One `/mcp` endpoint inside the Nest app in the `api` role ([ADR 0034](../adr/0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md)), built on `@modelcontextprotocol/server` v2 directly (not `@rekog/mcp-nest`) with `legacy: "stateless"`, so clients of the 2026-07-28 protocol revision and 2025-era clients both work from one endpoint.
 - `/mcp` validates `Origin` and `Host` itself, because the SDK handler checks neither.
-- `/mcp` is disabled per installation by default and enabled with the audited command `northmes installation set mcp.enabled true` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md); behaviour switches never live in environment variables). `POST /mcp` returns 404 while it is off.
+- `/mcp` is disabled per installation by default and enabled with the audited command `northmes installation set mcp.enabled true` on the host ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md); behaviour switches never live in environment variables). `POST /mcp` returns 404 while it is off.
 - `tools/list` is filtered by the union of the user's plant permissions, with `cacheScope: "private"`, a short `ttlMs` and `listChanged: false`. Every call re-checks permission at the plant it names.
 
 ### Release 1 toolset
