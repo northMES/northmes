@@ -46,6 +46,8 @@ export interface ListDeclaration<SortField extends string> {
   readonly sortFields: Readonly<Record<SortField, SortColumn>>;
   /** The order of a call without orderBy. */
   readonly defaultOrderBy: readonly OrderBy<NoInfer<SortField>>[];
+  /** The text columns that search matches a part of, ignoring case (ADR 0016). */
+  readonly search: readonly string[];
 }
 
 /** The arguments of a list's root field (ADR 0016). */
@@ -131,6 +133,16 @@ function reversed(keys: readonly Key[]): Key[] {
   }));
 }
 
+/**
+ * The rows whose search columns hold `search`, ignoring case. A backslash escapes % and _ in the
+ * pattern, so they match themselves.
+ */
+function matching(columns: readonly string[], search: string) {
+  const pattern = `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+  const matches = columns.map((column) => sql`${sql.ref(column)} ilike ${pattern}`);
+  return sql<SqlBool>`(${sql.join(matches, sql` or `)})`;
+}
+
 /** How one call reads its page. */
 interface PagePlan {
   /** True when last or before asks for the page before a cursor, or for the last page. */
@@ -141,6 +153,8 @@ interface PagePlan {
   readonly signature: string;
   /** The sort values of the after or before cursor. */
   readonly from: readonly string[] | undefined;
+  /** The trimmed search, or undefined when the call searches for nothing. */
+  readonly search: string | undefined;
 }
 
 /**
@@ -160,7 +174,8 @@ function planOf<SortField extends string>(
   const signature = signatureOf(keys);
   const cursor = backward ? args.before : args.after;
   const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
-  return { backward, size, keys, signature, from };
+  const search = args.search?.trim() || undefined;
+  return { backward, size, keys, signature, from, search };
 }
 
 /**
@@ -260,13 +275,16 @@ export function defineList<const SortField extends string>(
       query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
       args: ListArgs<SortField>,
     ): Promise<Connection<Row>> {
-      const { backward, size, keys, signature, from } = planOf(declaration, args);
+      const { backward, size, keys, signature, from, search } = planOf(declaration, args);
+      // The rows of the list without paging: those that search matches.
+      const listed = (tx: Transaction<DB>) =>
+        search ? query(tx).where(matching(declaration.search, search)) : query(tx);
       // A backward page reads the rows before the cursor in the opposite order, and reverses them.
       const readKeys = backward ? reversed(keys) : keys;
       const aliases = keys.map((_key, index) => `_nm_key_${index}`);
 
       const rows = await db.transaction((tx) => {
-        let rowsQuery = query(tx);
+        let rowsQuery = listed(tx);
         if (from) rowsQuery = rowsQuery.where(afterValues(readKeys, from));
         let ordered = rowsQuery.select(
           keys.map(({ column }, index) =>
@@ -300,7 +318,7 @@ export function defineList<const SortField extends string>(
         },
         count: () =>
           db.transaction(async (tx) => {
-            const { rows } = await sql<{ count: string }>`select count(*) as count from (${query(
+            const { rows } = await sql<{ count: string }>`select count(*) as count from (${listed(
               tx,
             )}) as list`.execute(tx);
             return Number(rows[0]?.count);
