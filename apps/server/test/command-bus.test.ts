@@ -14,8 +14,7 @@ const ORDER_ID = '01920000-0000-7000-8000-000000000001';
  * with how it ended: committed when fn resolves, rolled back when it rejects.
  */
 class FakeScopedDatabase implements ScopedDatabase<unknown> {
-  readonly transactions: { tx: Transaction<unknown>; outcome?: 'committed' | 'rolled back' }[] =
-    [];
+  readonly transactions: { tx: Transaction<unknown>; outcome?: 'committed' | 'rolled back' }[] = [];
 
   async transaction<Result>(fn: (tx: Transaction<unknown>) => Promise<Result>): Promise<Result> {
     const entry: (typeof this.transactions)[number] = { tx: {} as Transaction<unknown> };
