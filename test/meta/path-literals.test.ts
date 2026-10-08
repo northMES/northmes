@@ -201,6 +201,17 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 a to template literal that starts with a substitution passes', () => {
+    const text = [
+      'export const open = (',
+      '  <Link to={`${planningLinks.orders({ plant }).to}?tab=open`}>Open</Link>',
+      ');',
+      '',
+    ].join('\n');
+
+    expect(scan([{ path: 'apps/web/src/open.tsx', text }], [])).toEqual([]);
+  });
+
   it('E02-S05 only source files under modules/*/web, examples/*/web, apps/web and e2e are scanned', () => {
     const link = '<Link to="/x">X</Link>;\n';
     const paths = [
