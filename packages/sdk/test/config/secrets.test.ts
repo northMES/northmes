@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { readSecrets, secretsConfig } from '@northmes/sdk/config';
+import { DEV_SECRET_MARKER, readSecrets, secretsConfig } from '@northmes/sdk/config';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { configErrorOf, keysOf } from './config-error.ts';
 
@@ -77,5 +77,22 @@ describe('readSecrets', () => {
     ]);
     expect(error.message).not.toContain(dir);
     expect(error.message).not.toContain('auth-secret-0d3e');
+  });
+
+  it('E02-S01 a dev-marked secret fails with NODE_ENV production', () => {
+    const devSecret = `${DEV_SECRET_MARKER}9c1f07e2`;
+    // The stack script writes the dev secret files with mode 0600 (ADR 0058).
+    const files = {
+      NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-4a90', 0o600),
+      NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', devSecret, 0o600),
+    };
+
+    const secrets = readSecrets(files, { nodeEnv: 'development' });
+    const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'production' }));
+
+    expect(secrets.NORTHMES_AUTH_SECRET).toBe(devSecret);
+    expect(error.code).toBe('CONFIG_DEV_SECRET_IN_PRODUCTION');
+    expect(keysOf(error)).toEqual(['NORTHMES_AUTH_SECRET_FILE']);
+    expect(error.message).not.toContain('9c1f07e2');
   });
 });
