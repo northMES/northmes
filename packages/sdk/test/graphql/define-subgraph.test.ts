@@ -68,4 +68,14 @@ describe('defineSubgraph', () => {
 
     expect(registry.all().map((entry) => entry.name)).toEqual(['productionStart']);
   });
+
+  it('E02-S03 two subgraphs build in one process without multiple types named', async () => {
+    // Both modules declare a type named Article: catalog owns it, production-start references it.
+    const { registry } = await buildSubgraphs({
+      catalog: CatalogModule,
+      'production-start': ProductionStartModule,
+    });
+
+    expect(registry.all().map((entry) => entry.name)).toEqual(['catalog', 'productionStart']);
+  });
 });
