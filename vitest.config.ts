@@ -1,3 +1,4 @@
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const ignored = ['**/node_modules/**', '**/dist/**', 'docs/sources/**'];
@@ -26,8 +27,10 @@ export default defineConfig({
       },
       {
         extends: true,
+        plugins: [react()],
         test: {
           name: 'web',
+          environment: 'happy-dom',
           include: ['**/*.test.tsx'],
           exclude: ignored,
         },
