@@ -39,7 +39,8 @@ const unloggedSession = [
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
  * nm_ext is a group that cannot log in, which nm_owner administers. Every role's time zone is
  * pinned to UTC, per role because a database cloned from a template loses its database settings.
- * A role that exists keeps its attributes and password, so a second run changes nothing.
+ * A role that exists keeps its password and gets its attributes again, so an nm_app made by hand
+ * loses SUPERUSER, CREATEROLE and BYPASSRLS, and a second run changes nothing.
  */
 export async function bootstrapRoles(
   superuserUrl: string,
@@ -62,6 +63,8 @@ export async function bootstrapRoles(
       if (!exists.has(name)) {
         const secret = password ? ` password ${client.escapeLiteral(passwords[password])}` : '';
         await client.query(`create role ${name} ${attributes}${secret}`);
+      } else {
+        await client.query(`alter role ${name} ${attributes}`);
       }
       await client.query(`alter role ${name} set timezone = 'UTC'`);
     }
