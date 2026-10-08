@@ -107,6 +107,25 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E02-S01 three problems are listed as 3 problems', () => {
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core', 'quality']),
+      inRepoModule('scheduling', ['core', 'overtime-validator']),
+      plugin('overtime-validator', ['shift-calendar']),
+      plugin('shift-calendar', ['overtime-validator']),
+    ]);
+
+    expect(error.message).toBe(
+      [
+        'refused to start (3 problems)',
+        '- Module planning depends on "quality", which is not installed',
+        '- Core module scheduling must not depend on plugin overtime-validator',
+        '- Module dependency cycle: overtime-validator -> shift-calendar -> overtime-validator',
+      ].join('\n'),
+    );
+  });
+
   it('E02-S01 modules come back core first, in dependency order, plugins last', () => {
     const catalog = checkCatalog(
       [
