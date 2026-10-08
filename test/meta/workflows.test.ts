@@ -2,6 +2,7 @@ import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import vitestConfig from '../../vitest.config.ts';
 
 interface Step {
   id?: string;
@@ -36,6 +37,10 @@ interface PackageJson {
   scripts?: Record<string, string>;
 }
 
+interface VitestConfig {
+  test?: { coverage?: { thresholds?: unknown } };
+}
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
 const rootScripts =
@@ -48,6 +53,19 @@ function rootScript(name: string | undefined): string | undefined {
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
 const pullRequestChecks = ['pr title', 'linked issue'];
+
+// The steps that copy a report of an earlier step into the job summary. They check nothing, so no
+// root script runs them.
+const reportSteps = ['node scripts/ci/coverage-summary.mjs'];
+
+// Collecting coverage adds a report to a Vitest run and changes neither the tests it runs nor, while
+// vitest.config.ts sets no coverage threshold, its result. A run of the same projects without
+// --coverage stands for it.
+const coverageFlag = / --coverage(?= |$)/;
+
+function withoutCoverage(command: string): string {
+  return command.replace(coverageFlag, '');
+}
 
 // A GitHub Actions expression as a workflow writes it.
 function expression(source: string): string {
@@ -198,6 +216,7 @@ function isTestJob(job: Job): boolean {
 interface VitestRun {
   env: Record<string, string>;
   projects: string[];
+  coverage: boolean;
 }
 
 function vitestRunsOf(job: Job): VitestRun[] {
@@ -216,7 +235,8 @@ function vitestRunsOf(job: Job): VitestRun[] {
       const projects = [...(match[2] ?? '').matchAll(/--project (\S+)/g)].map(
         ([, project]) => project ?? '',
       );
-      return [{ env: { ...job.env, ...step.env, ...inline }, projects }];
+      const coverage = coverageFlag.test(match[2] ?? '');
+      return [{ env: { ...job.env, ...step.env, ...inline }, projects, coverage }];
     }),
   );
 }
@@ -462,7 +482,9 @@ describe('workflows', () => {
   it('CI / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg', () => {
     const { job } = jobNamed('test');
 
-    expect(job.steps).toContainEqual(expect.objectContaining({ id: 'utc', run: 'pnpm test' }));
+    expect(job.steps).toContainEqual(
+      expect.objectContaining({ id: 'utc', run: 'pnpm test:coverage' }),
+    );
     expect(job.steps).toContainEqual(
       expect.objectContaining({
         if: "!cancelled() && steps.utc.outcome != 'skipped'",
@@ -470,15 +492,39 @@ describe('workflows', () => {
       }),
     );
     expect(vitestRunsOf(job)).toEqual([
-      {
+      expect.objectContaining({
         env: expect.objectContaining({ TZ: 'UTC', NM_TEST_PG_TZ: 'UTC' }),
         projects: expect.arrayContaining(['unit', 'integration', 'web', 'types']),
-      },
-      {
+      }),
+      expect.objectContaining({
         env: expect.objectContaining({ TZ: 'Europe/Stockholm', NM_TEST_PG_TZ: 'Europe/Stockholm' }),
         projects: expect.arrayContaining(['unit', 'integration']),
-      },
+      }),
     ]);
+  });
+
+  // Coverage comes from the UTC leg (docs/plan/11-quality-and-testing.md). The summary and the
+  // upload follow it with no condition of their own, so they run only after a passed UTC leg, the
+  // only run after which Vitest writes the report, and before the Europe/Stockholm leg.
+  it('the UTC test leg collects coverage and uploads the lcov report', () => {
+    const { job } = jobNamed('test');
+    const steps = job.steps ?? [];
+    const utc = steps.findIndex(({ id }) => id === 'utc');
+    const stockholm = steps.findIndex(({ run }) => run === 'pnpm test:tz');
+    const between = steps.slice(utc + 1, stockholm);
+
+    expect(vitestRunsOf(job).map(({ coverage }) => coverage)).toEqual([true, false]);
+    expect(between).toEqual([
+      expect.objectContaining({ run: 'node scripts/ci/coverage-summary.mjs' }),
+      expect.objectContaining({
+        uses: expect.stringMatching(/^actions\/upload-artifact@/),
+        with: expect.objectContaining({
+          path: expect.stringContaining('coverage/lcov.info'),
+          'if-no-files-found': 'error',
+        }),
+      }),
+    ]);
+    expect(between.map((step) => step.if)).toEqual([undefined, undefined]);
   });
 
   it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
@@ -491,18 +537,27 @@ describe('workflows', () => {
     );
 
     expect(gated, 'the jobs CI / gate needs').not.toHaveLength(0);
+    expect(
+      (vitestConfig as VitestConfig).test?.coverage?.thresholds,
+      'a coverage threshold',
+    ).toBeUndefined();
     for (const need of gated) {
       for (const { run } of workflow.jobs[need]?.steps ?? []) {
         const where = `${workflow.path} job ${need} step ${JSON.stringify(run)}`;
-        // Installing the dependencies is the setup every pnpm script needs.
-        if (run === undefined || run.trim() === 'pnpm install --frozen-lockfile') {
+        // Installing the dependencies is the setup every pnpm script needs, and a report step checks
+        // nothing.
+        if (
+          run === undefined ||
+          run.trim() === 'pnpm install --frozen-lockfile' ||
+          reportSteps.includes(run.trim())
+        ) {
           continue;
         }
         const script = rootScript(/^pnpm (\S+)/.exec(run.trim())?.[1]);
 
         expect(script, `${where} calls a root script`).toBeDefined();
         for (const command of commandsOf(run.trim()).flatMap(turboTasks)) {
-          expect([...contained], where).toContain(command);
+          expect([...contained], where).toContain(withoutCoverage(command));
         }
       }
     }
