@@ -115,4 +115,18 @@ describe('migrate', () => {
       { role: 'nm_mod_planning', member: 'nm_owner', admin: true, inherit: false, set: true },
     ]);
   });
+
+  it('E02-S02 a second run is a no-op', async () => {
+    const records = () =>
+      query(
+        db.ownerUrl,
+        'select module, name, sha256, applied_at from northmes_meta.migration order by module, name',
+      );
+    const before = await records();
+
+    const second = await migrate({ ownerUrl: db.ownerUrl, catalog });
+
+    expect(second.applied).toEqual([]);
+    expect(await records()).toEqual(before);
+  });
 });
