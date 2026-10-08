@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { AnyRoute } from '@tanstack/react-router';
-import type { PlantRoute } from './routes.ts';
+import { createMountRoutes, type PlantRoute } from './routes.ts';
 
 /** The default export of a remote's ./module entry (ADR 0019). It has no nav list (ADR 0062). */
 export interface WebModule {
@@ -33,6 +33,14 @@ export function validateWebModule(value: unknown, entry: WebModuleEntry): string
     problems.push(
       `version is ${shown(module.version)}, expected ${entry.version} from the server entry`,
     );
+  }
+  if (typeof module.routes === 'function') {
+    const top: AnyRoute = module.routes(createMountRoutes().plantRoute);
+    // A pathless route has an id option instead of a path.
+    const path = 'path' in top.options ? top.options.path : undefined;
+    if (path !== entry.id) {
+      problems.push(`the top route path is ${shown(path)}, expected the module id ${entry.id}`);
+    }
   }
   return problems;
 }

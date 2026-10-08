@@ -2,7 +2,7 @@
 import { createRootRoute, createRoute } from '@tanstack/react-router';
 
 /** Creates the shell's root route and, under it, the $plant route that every module mounts under. */
-function createMountRoutes() {
+export function createMountRoutes() {
   const rootRoute = createRootRoute();
   const plantRoute = createRoute({ getParentRoute: () => rootRoute, path: '$plant' });
   return { rootRoute, plantRoute };
