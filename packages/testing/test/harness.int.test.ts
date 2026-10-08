@@ -18,7 +18,7 @@ function superuserUrl(database: string): string {
 }
 
 describe('the test database', () => {
-  const { appUrl, databaseName } = useTestDatabase();
+  const { appUrl, ownerUrl, databaseName } = useTestDatabase();
 
   it('the connection string points at the database named databaseName', async () => {
     const rows = await query<{ current_database: string }>(appUrl, 'select current_database()');
@@ -126,17 +126,17 @@ describe('the test database', () => {
     expect(rows[0]?.version).toMatch(new RegExp(`^PostgreSQL ${major}\\.`));
   });
 
-  // harness-sibling.int.test.ts runs the same test with a table of its own, in parallel.
+  // harness-sibling.int.test.ts runs the same test with a schema of its own, in parallel.
   it('each test file gets its own database', async () => {
     expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
-    await query(superuserUrl(databaseName), 'create table harness_only (id integer)');
+    await query(ownerUrl, 'create schema harness_only');
 
-    const rows = await query<{ tablename: string }>(
+    const rows = await query<{ nspname: string }>(
       appUrl,
-      "select tablename from pg_tables where schemaname = 'public' order by tablename",
+      "select nspname from pg_namespace where nspname in ('harness_only', 'sibling_only')",
     );
 
-    expect(rows.map((row) => row.tablename)).toEqual(['harness_only', 'nm_marker']);
+    expect(rows).toEqual([{ nspname: 'harness_only' }]);
   });
 });
 

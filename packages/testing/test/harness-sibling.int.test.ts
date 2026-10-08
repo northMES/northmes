@@ -1,27 +1,20 @@
 // SPDX-License-Identifier: MIT
-import { describe, expect, inject, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { query, useTestDatabase } from '../src/index.ts';
 
-/** Logs in to database as the container's superuser, which may create a table in public. */
-function superuserUrl(database: string): string {
-  const { user, password, host, port } = inject('pg');
-  const credentials = `${encodeURIComponent(user)}:${encodeURIComponent(password)}`;
-  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
-}
-
-// harness.int.test.ts runs the same test with a table of its own, in parallel.
+// harness.int.test.ts runs the same test with a schema of its own, in parallel.
 describe('the test database of the sibling file', () => {
-  const { appUrl, databaseName } = useTestDatabase();
+  const { appUrl, ownerUrl, databaseName } = useTestDatabase();
 
   it('each test file gets its own database', async () => {
     expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
-    await query(superuserUrl(databaseName), 'create table sibling_only (id integer)');
+    await query(ownerUrl, 'create schema sibling_only');
 
-    const rows = await query<{ tablename: string }>(
+    const rows = await query<{ nspname: string }>(
       appUrl,
-      "select tablename from pg_tables where schemaname = 'public' order by tablename",
+      "select nspname from pg_namespace where nspname in ('harness_only', 'sibling_only')",
     );
 
-    expect(rows.map((row) => row.tablename)).toEqual(['nm_marker', 'sibling_only']);
+    expect(rows).toEqual([{ nspname: 'sibling_only' }]);
   });
 });
