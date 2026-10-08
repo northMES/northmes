@@ -15,18 +15,27 @@ interface PlanningContext {
 
 /**
  * Reads the order and locks its row until the command's transaction ends, so the validators and
- * the handler see the same order and a second release waits for the first.
+ * the handler see the same order and a second release waits for the first. An order outside the
+ * principal's scopes is not found, like one that does not exist.
  */
-function lockOrder(
+async function lockOrder(
   tx: Transaction<PlanningDatabase>,
   id: string,
 ): Promise<Selectable<ProductionOrderTable>> {
-  return tx
+  const order = await tx
     .selectFrom('planning.production_order')
     .selectAll()
     .where('id', '=', id)
     .forUpdate()
-    .executeTakeFirstOrThrow();
+    .executeTakeFirst();
+  if (!order) {
+    throw new DomainError({
+      code: 'core.not_found',
+      kind: 'not_found',
+      message: `Production order ${id} was not found`,
+    });
+  }
+  return order;
 }
 
 /**
