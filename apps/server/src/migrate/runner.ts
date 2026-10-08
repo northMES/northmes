@@ -158,15 +158,23 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
 /**
  * Applies one file and records it in one transaction. The record is written as nm_owner, and the
  * file runs under SET LOCAL ROLE of the module's owner role. A file that fails leaves its
- * transaction open, and closing the connection rolls it back with its record.
+ * transaction open, and closing the connection rolls it back with its record. The failure is a
+ * MigrationError that names the module, the file and the owner role it ran as, because Postgres
+ * refuses a statement on another module's schema with the role's rights.
  */
 async function applyFile(client: Client, names: ModuleNames, file: MigrationFile): Promise<void> {
-  await client.query('begin');
-  await client.query(
-    'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
-    [names.id, file.name, file.sha256],
-  );
-  await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
-  await client.query(file.sql);
-  await client.query('commit');
+  try {
+    await client.query('begin');
+    await client.query(
+      'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
+      [names.id, file.name, file.sha256],
+    );
+    await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
+    await client.query(file.sql);
+    await client.query('commit');
+  } catch (error) {
+    throw new MigrationError([
+      `${names.id}/${file.name} failed as ${names.ownerRole} and was rolled back: ${(error as Error).message}`,
+    ]);
+  }
 }
