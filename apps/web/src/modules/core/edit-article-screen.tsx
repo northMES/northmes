@@ -3,7 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { coreLinks, updateArticle } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { announce } from '../../ui/announce.ts';
 import { fieldId } from '../../ui/field.ts';
 import { PageFrame } from '../../ui/page-frame.tsx';
@@ -26,7 +26,8 @@ interface EditArticleFormProps {
 function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const { plantId } = useShell();
   const navigate = useNavigate();
-  const [expectedVersion, setExpectedVersion] = useState(article.version);
+  // The version the form was filled from; only a save reads it, so it is no render state.
+  const expectedVersion = useRef(article.version);
   const [conflict, setConflict] = useState(false);
   const form = useZodForm(updateArticle.fields, {
     defaultValues: { code: article.code, name: article.name },
@@ -37,7 +38,9 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     setConflict(false);
     try {
       const { data } = await update({
-        variables: { input: { id: article.id, expectedVersion, ...values } },
+        variables: {
+          input: { id: article.id, expectedVersion: expectedVersion.current, ...values },
+        },
       });
       if (!data) return;
       announce(`Article ${data.coreUpdateArticle.code} saved`);
@@ -60,7 +63,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     const saved = await reload();
     if (saved === undefined) return;
     form.reset({ code: saved.code, name: saved.name });
-    setExpectedVersion(saved.version);
+    expectedVersion.current = saved.version;
     setConflict(false);
     // reset drops the field refs that setFocus reads until the next render, so focus goes by id.
     document.getElementById(fieldId('code'))?.focus();
