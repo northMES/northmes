@@ -4,8 +4,11 @@ import { Module } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { COMMAND_BUS, type Command, type CommandBus } from '@northmes/sdk/commands';
 import { defineSubgraph, SubgraphRegistry, SubgraphRegistryModule } from '@northmes/sdk/graphql';
+import { execute, type GraphQLSchema, parse } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PlanningModule } from '../fixtures/commands/planning.ts';
+import { PlanningModule, ReleaseProductionOrder } from '../fixtures/commands/planning.ts';
+
+const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 
 /** Records every command it gets and runs its handler, as the bus does after its own steps. */
 class FakeCommandBus implements CommandBus {
@@ -43,6 +46,22 @@ async function buildPlanningSubgraph() {
   return { planning, bus };
 }
 
+const RELEASE = parse(`
+  mutation ($input: PlanningReleaseProductionOrderInput!) {
+    planningReleaseProductionOrder(input: $input) { id status }
+  }
+`);
+
+/** Sends planningReleaseProductionOrder to the subgraph, as the gateway does for a client. */
+function release(schema: GraphQLSchema, input: Record<string, unknown>) {
+  return execute({
+    schema,
+    document: RELEASE,
+    variableValues: { input },
+    contextValue: { loaders: new Map() },
+  });
+}
+
 describe('defineCommand', () => {
   it("E02-S04 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input", async () => {
     const { planning } = await buildPlanningSubgraph();
@@ -53,5 +72,27 @@ describe('defineCommand', () => {
     expect(planning.sdl).toContain(
       'input PlanningReleaseProductionOrderInput {\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
     );
+  });
+
+  it('E02-S04 the generated field sends the parsed input to the command bus', async () => {
+    const { planning, bus } = await buildPlanningSubgraph();
+
+    const result = await release(planning.schema, {
+      id: ORDER_ID,
+      note: '  Rush order  ',
+      quantity: 120,
+    });
+
+    expect(result.errors).toBeUndefined();
+    expect(result.data).toEqual({
+      planningReleaseProductionOrder: { id: ORDER_ID, status: 'released' },
+    });
+    // The contract trims note, so the bus gets the parsed input and not the one the client sent.
+    expect(bus.calls).toEqual([
+      {
+        command: ReleaseProductionOrder.command,
+        input: { id: ORDER_ID, note: 'Rush order', quantity: 120 },
+      },
+    ]);
   });
 });
