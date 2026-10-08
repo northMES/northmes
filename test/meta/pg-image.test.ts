@@ -72,6 +72,27 @@ describe('pg-image', () => {
       expect(scan([{ path: 'Dockerfile', text: `FROM ${image}\n` }])).toEqual([]);
     });
 
+    it('scan does not report the configured image in a Compose file or a PostgreSqlContainer call', () => {
+      const { image } = JSON.parse(
+        readFileSync(fileURLToPath(new URL('../../infra/pg-image.json', import.meta.url)), 'utf8'),
+      );
+
+      const findings = scan([
+        { path: 'compose.yaml', text: `services:\n  db:\n    image: ${image}\n` },
+        { path: 'a.int.test.ts', text: `new PostgreSqlContainer('${image}');\n` },
+      ]);
+
+      expect(findings).toEqual([]);
+    });
+
+    it('scan does not report an identifier argument to PostgreSqlContainer', () => {
+      const findings = scan([
+        { path: 'a.int.test.ts', text: 'await new PostgreSqlContainer(image).start();\n' },
+      ]);
+
+      expect(findings).toEqual([]);
+    });
+
     it('scan reports postgres:18 without the digest', () => {
       const findings = scan([{ path: 'Dockerfile', text: 'FROM postgres:18\n' }]);
 

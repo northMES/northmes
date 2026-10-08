@@ -19,6 +19,10 @@ const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*
 // follow the colon, so `postgres:(\d+)` and `postgres:${TAG}` are not references.
 const composeImagePattern = /^\s*image:\s*["']?(?<image>postgres:[A-Za-z0-9][^\s"']*)["']?\s*$/;
 
+// PostgreSqlContainer('literal') with a quoted literal. An identifier argument has no quote, and a
+// template literal with `${` stops the match at the `$`, so both are left alone.
+const containerCallPattern = /PostgreSqlContainer\(\s*(['"`])(?<literal>[^'"`$]+)\1/;
+
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
  * @typedef {{ path: string, line: number, reference: string }} Finding
@@ -35,24 +39,33 @@ function isCompose(path) {
   return /^(docker-)?compose.*\.ya?ml$/.test(basename(path));
 }
 
-/**
- * The image reference a line names, if the file kind has a pattern for it.
- * @param {string} path
- * @param {string} content
- */
-function referenceOn(path, content) {
-  if (isDockerfile(path)) {
-    return fromPattern.exec(content)?.groups?.image;
-  }
-  if (isCompose(path)) {
-    return composeImagePattern.exec(content)?.groups?.image;
-  }
-  return undefined;
+/** @param {string} path */
+function isTestFile(path) {
+  return /\.test(-d)?\.[^.]+$/.test(basename(path));
 }
 
 /** @param {string} reference */
 function isPostgres(reference) {
   return reference.split(/[:@]/)[0] === 'postgres';
+}
+
+/**
+ * The Postgres image reference a line names, if the file kind has a pattern for it.
+ * @param {string} path
+ * @param {string} content
+ */
+function referenceOn(path, content) {
+  if (isDockerfile(path)) {
+    const image = fromPattern.exec(content)?.groups?.image;
+    return image && isPostgres(image) ? image : undefined;
+  }
+  if (isCompose(path)) {
+    return composeImagePattern.exec(content)?.groups?.image;
+  }
+  if (isTestFile(path)) {
+    return containerCallPattern.exec(content)?.groups?.literal;
+  }
+  return undefined;
 }
 
 /**
@@ -67,7 +80,7 @@ export function scan(files) {
   for (const { path, text } of files) {
     text.split('\n').forEach((content, index) => {
       const reference = referenceOn(path, content);
-      if (reference && isPostgres(reference) && reference !== configuredImage) {
+      if (reference && reference !== configuredImage) {
         findings.push({ path, line: index + 1, reference });
       }
     });
