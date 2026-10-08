@@ -66,4 +66,12 @@ describe('the gateway on /graphql', () => {
     ]);
     expect(ready).toEqual({ status: 200, data: { __typename: 'Query' } });
   });
+
+  it('E02-S03 the boot log shows supergraph= and a 12 hex hash', async () => {
+    const { log } = await bootFixtures(alpha, beta);
+
+    const lines = log.info.mock.calls.map(([line]) => line);
+
+    expect(lines).toContainEqual(expect.stringMatching(/\bsupergraph=[0-9a-f]{12}\b/));
+  });
 });
