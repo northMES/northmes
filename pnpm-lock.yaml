@@ -594,12 +594,18 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.5.14
+      '@northmes/testing':
+        specifier: workspace:*
+        version: link:../../../packages/testing
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2
+      graphql:
+        specifier: 16.14.2
+        version: 16.14.2
       temporal-polyfill:
         specifier: 'catalog:'
         version: 1.0.5

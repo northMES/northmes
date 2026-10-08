@@ -17,8 +17,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@northmes/testing": "workspace:*",
     "@types/node": "catalog:",
     "fast-check": "catalog:",
+    "graphql": "catalog:",
     "temporal-polyfill": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
