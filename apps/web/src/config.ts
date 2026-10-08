@@ -22,7 +22,11 @@ export async function loadWebConfig(
   const response = await fetch('/config.json');
   const json = response.ok && response.headers.get('content-type')?.includes('json') === true;
   if (!json) return { apiUrl: pageOrigin };
-  const { apiUrl } = (await response.json()) as { readonly apiUrl?: unknown };
+  const config: unknown = await response.json();
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+    throw new Error('config.json: the file must hold a JSON object');
+  }
+  const { apiUrl } = config as { readonly apiUrl?: unknown };
   if (apiUrl === undefined) return { apiUrl: pageOrigin };
   if (!isHttpUrl(apiUrl)) {
     throw new Error(`config.json: apiUrl must be an absolute http or https URL, got ${apiUrl}`);
