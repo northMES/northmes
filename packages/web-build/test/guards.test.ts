@@ -106,4 +106,10 @@ describe('remote build guards', () => {
         .sort(byName),
     );
   });
+
+  it('E02-S05 a remote bundling @apollo/client fails naming the package', async () => {
+    await expect(buildFixture('remote-apollo')).rejects.toThrow(
+      /this remote bundles .*@apollo\/client/,
+    );
+  });
 });
