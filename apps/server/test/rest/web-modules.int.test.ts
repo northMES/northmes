@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -186,6 +194,24 @@ describe('the remote files', () => {
 
     expect(existsSync(join(webFiles, 'modules', 'example-widget', 'mf-manifest.json'))).toBe(true);
     expect(response.status).toBe(404);
+  });
+
+  it("E02-S05 a symlink in a remote's folder that points outside it answers 404", async () => {
+    const files = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    onTestFinished(() => rmSync(files, { recursive: true, force: true }));
+    const remote = join(files, 'modules', 'planning');
+    cpSync(join(webFiles, 'modules', 'planning'), remote, { recursive: true });
+    const outside = join(files, 'outside.txt');
+    writeFileSync(outside, 'a file outside the remote\n');
+    symlinkSync(outside, join(remote, 'assets', 'leak-0a1b2c3d.js'));
+    const url = await serve(['core', 'planning'], files);
+
+    const response = await fetch(
+      `${url}/modules/planning/${planning.version}/assets/leak-0a1b2c3d.js`,
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toContain('outside the remote');
   });
 
   it("E02-S05 a missing remote file answers 404 without the server's file path", async () => {
