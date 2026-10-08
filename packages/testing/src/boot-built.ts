@@ -19,6 +19,10 @@ const root = fileURLToPath(new URL('../../../', import.meta.url));
 const serverMain = join(root, 'apps/server/dist/main.js');
 const buildArgs = ['--filter', '@northmes/server...', 'run', 'build'];
 
+// A waiting test file gives up before the 120 s timeout of the built-server tests, so a build that
+// never wrote its outcome fails with this module's error instead of a Vitest timeout.
+const outcomeWaitMs = 100_000;
+
 export interface BootBuiltOptions {
   /** The whole environment of the server. Nothing is inherited from the test process. */
   readonly env: Readonly<Record<string, string>>;
@@ -37,8 +41,8 @@ interface BuildOutcome {
 
 /**
  * Builds apps/server and the workspace packages it depends on, once per test run. The first test
- * file to ask creates a lock directory in the run directory and builds; the others wait for the
- * outcome it writes there.
+ * file to ask creates a lock directory in the run directory and builds; the others wait up to
+ * outcomeWaitMs for the outcome it writes there.
  */
 async function buildServerOnce(runDir: string): Promise<void> {
   const lock = join(runDir, 'server-build');
@@ -53,7 +57,15 @@ async function buildServerOnce(runDir: string): Promise<void> {
     writeFileSync(`${outcomeFile}.tmp`, JSON.stringify(outcome));
     renameSync(`${outcomeFile}.tmp`, outcomeFile);
   }
-  while (!existsSync(outcomeFile)) await sleep(100);
+  const deadline = Date.now() + outcomeWaitMs;
+  while (!existsSync(outcomeFile)) {
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `no outcome of pnpm ${buildArgs.join(' ')} in ${lock} after ${outcomeWaitMs / 1000} s; the test file that started the build may have crashed`,
+      );
+    }
+    await sleep(100);
+  }
   const outcome = JSON.parse(readFileSync(outcomeFile, 'utf8')) as BuildOutcome;
   if (outcome.status !== 0) {
     throw new Error(`pnpm ${buildArgs.join(' ')} failed:\n${outcome.output}`);
