@@ -42,8 +42,8 @@ interface ModuleFiles {
  * database throughout, so concurrent runs apply each file once.
  *
  * The run checks the files of every module before it applies any, and throws a MigrationError
- * that lists every problem when an applied file's sha256 changed or two files of a module share a
- * timestamp prefix.
+ * that lists every problem when an applied file's sha256 changed, two files of a module share a
+ * timestamp prefix or a file lacks its expand or contract marker.
  */
 export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<MigrateResult> {
   const client = new Client({ connectionString: ownerUrl });
@@ -52,7 +52,11 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     await takeMigrationLock(client);
     await createMigrationTable(client);
     const modules = await readModuleFiles(client, catalog);
-    const problems = [...changedFiles(modules), ...sharedPrefixes(modules)];
+    const problems = [
+      ...changedFiles(modules),
+      ...sharedPrefixes(modules),
+      ...unmarkedFiles(modules),
+    ];
     if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
     for (const { names, files, recorded } of modules) {
@@ -110,6 +114,21 @@ function sharedPrefixes(modules: readonly ModuleFiles[]): string[] {
         const listed = `${paths.slice(0, -1).join(', ')} and ${paths.at(-1)}`;
         return `${listed} share the timestamp prefix ${prefix}; give each file a timestamp of its own`;
       }),
+  );
+}
+
+/** The first line of a migration file, which states whether the file expands or contracts. */
+const markers = ['-- migration: expand', '-- migration: contract'];
+
+/** A problem for each file whose first line is not its expand or contract marker (ADR 0045). */
+function unmarkedFiles(modules: readonly ModuleFiles[]): string[] {
+  return modules.flatMap(({ names, files }) =>
+    files
+      .filter((file) => !markers.includes(file.sql.split('\n', 1)[0]?.trimEnd() ?? ''))
+      .map(
+        (file) =>
+          `${names.id}/${file.name} has no expand or contract marker; start the file with "-- migration: expand" or "-- migration: contract"`,
+      ),
   );
 }
 

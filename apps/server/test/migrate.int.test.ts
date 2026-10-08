@@ -34,22 +34,22 @@ const fixtureFiles = [
   {
     module: 'core',
     name: '20260105080000_article.sql',
-    sha256: '3843fcbfa5ea7f75c47b14da24f49cc0f8e7e9a419a656b936961887bb1c5f9f',
+    sha256: '9d616515fa1a0c0559fa418e0635e0676e88341eb9098865573a6d7790ff2226',
   },
   {
     module: 'core',
     name: '20260107080000_article_name.sql',
-    sha256: '7bc050daf883fa47dbb7269494f562e0599fcb03981dd6ad2fcaf274455276b4',
+    sha256: '21a42f6c5d6c740940bb1d5e991e9de17691fb89094a477ced3731e3bd78fe49',
   },
   {
     module: 'planning',
     name: '20260106080000_production_order.sql',
-    sha256: '68045a8dd101e8d0f3c5e77bba208adaef3d015a2f5e3cb7d71844de13914a26',
+    sha256: '260cf722f1446cffa2a1cf4e3b38efabc9559b9070874f9c9353d7d7d007b798',
   },
   {
     module: 'planning',
     name: '20260108080000_production_order_quantity.sql',
-    sha256: '5ae28ac1ae6a6803d97bb04abb2faf2411dd284d20b5760c24a550af17ba4629',
+    sha256: '08066b277f30e993854c0c8d77bc496a6d11c859dd53c10ccd69ef548b4043c3',
   },
 ];
 
