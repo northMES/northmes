@@ -35,28 +35,30 @@ export function mountStatic(
   app: NestExpressApplication,
   { shellDir, catalog }: Pick<WebFiles, 'shellDir' | 'catalog'>,
 ): void {
-  app.useStaticAssets(join(shellDir, 'assets'), {
-    prefix: '/assets/',
-    index: false,
-    fallthrough: false,
-    setHeaders: (response: ServerResponse) => response.setHeader('Cache-Control', IMMUTABLE),
-  });
-  app.use('/assets/', answerWithStatus);
+  mount(app, join(shellDir, 'assets'), '/assets/', () => IMMUTABLE);
   for (const { manifest, webDir } of catalog) {
     if (!manifest.web || webDir === undefined) continue;
-    app.useStaticAssets(webDir, {
-      prefix: `/modules/${manifest.id}/${manifest.version}/`,
-      index: false,
-      fallthrough: false,
-      setHeaders: (response: ServerResponse, path: string) => {
-        response.setHeader(
-          'Cache-Control',
-          FIXED_NAMES.has(basename(path)) ? 'no-cache' : IMMUTABLE,
-        );
-      },
-    });
-    app.use(`/modules/${manifest.id}/${manifest.version}/`, answerWithStatus);
+    mount(app, webDir, `/modules/${manifest.id}/${manifest.version}/`, (path) =>
+      FIXED_NAMES.has(basename(path)) ? 'no-cache' : IMMUTABLE,
+    );
   }
+}
+
+/** Serves the files in dir at prefix with the Cache-Control that cacheControl gives each file. */
+function mount(
+  app: NestExpressApplication,
+  dir: string,
+  prefix: string,
+  cacheControl: (path: string) => string,
+): void {
+  app.useStaticAssets(dir, {
+    prefix,
+    index: false,
+    fallthrough: false,
+    setHeaders: (response: ServerResponse, path: string) =>
+      response.setHeader('Cache-Control', cacheControl(path)),
+  });
+  app.use(prefix, answerWithStatus);
 }
 
 /**
