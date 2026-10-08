@@ -19,15 +19,23 @@ type ParamNames<Pattern extends string> = Pattern extends `${infer Head}/${infer
 /** The params of a route pattern, one string value for each $param. */
 export type LinkParams<Pattern extends string> = { readonly [Name in ParamNames<Pattern>]: string };
 
-/** What a link builder returns: the route pattern and params for the router, and the finished href. */
+/** The search of a link, one string value per key. Typed search keys come with defineSearch. */
+export type LinkSearch = Readonly<Record<string, string>>;
+
+/**
+ * What a link builder returns: the route pattern, params and search for the router, and the
+ * finished href for code without one.
+ */
 export interface ModuleLink<Pattern extends string> {
   readonly to: Pattern;
   readonly params: LinkParams<Pattern>;
+  readonly search: LinkSearch;
   readonly href: string;
 }
 
 export type LinkBuilder<Pattern extends string> = (
   params: LinkParams<Pattern>,
+  search?: LinkSearch,
 ) => ModuleLink<Pattern>;
 
 type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
@@ -61,19 +69,28 @@ function builders(parent: string, entries: LinkEntryDefinitions): Record<string,
   return Object.fromEntries(
     Object.entries(entries).map(([name, entry]) => {
       const pattern = `${parent}/${entry.path}`;
-      const build = (params: Params) => ({ to: pattern, params, href: href(pattern, params) });
+      const build = (params: Params, search: LinkSearch = {}) => ({
+        to: pattern,
+        params,
+        search,
+        href: href(pattern, params, search),
+      });
       return [name, Object.assign(build, builders(pattern, entry.children ?? {}))];
     }),
   );
 }
 
-function href(pattern: string, params: Params): string {
-  return pattern
+function href(pattern: string, params: Params, search: LinkSearch): string {
+  const path = pattern
     .split('/')
     .map((segment) =>
       segment.startsWith('$') ? param(pattern, segment.slice(1), params) : segment,
     )
     .join('/');
+  const query = Object.entries(search)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
+  return query === '' ? path : `${path}?${query}`;
 }
 
 // The encoded value of one param. An empty value throws, because the href would lose the segment.
