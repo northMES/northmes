@@ -121,8 +121,8 @@ export function completedBuild(line) {
 /**
  * Runs the processes of plan on a started stack: builds what the dev servers import, starts the
  * dev servers and tsc -b --watch, restarts the server after each completed build, and runs
- * northmes migrate and then restarts the server when a migration file changes. A migrate that
- * fails leaves the server running.
+ * northmes migrate and then restarts the server when a migration file changes, and prints the
+ * board URL once the server listens. A migrate that fails leaves the server running.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
@@ -167,13 +167,22 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
       failWith(`${planned.name} exited with ${code}, so pnpm dev stops`),
     );
   };
+  let listened = false;
   // Restarts and migrate runs go one after the other, in the order they were asked for.
   let queue = Promise.resolve();
   const restartServer = () => {
     queue = queue.then(async () => {
       await server?.stop();
       if (stopping) return;
-      server = start(plan.server, { env: stack.env });
+      server = start(plan.server, {
+        env: stack.env,
+        onLine: (line) => {
+          if (listened || !line.includes('Listening on')) return;
+          listened = true;
+          log(`The board of the seeded plant: ${plan.boardUrl}`);
+          log('Ctrl+C stops pnpm dev and its Postgres container.');
+        },
+      });
     });
   };
   const migrate = () => {
