@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
-    "check": "node scripts/check-node.mjs && turbo run lint typecheck && pnpm gen --check && vitest run --project unit --project integration --project types",
+    "check": "node scripts/check-node.mjs && turbo run lint typecheck && pnpm gen --check && vitest run --project unit --project integration --project web --project types",
     "check:full": "pnpm check && pnpm test:tz",
     "test:handoff": "pnpm check",
     "build": "turbo run build",
