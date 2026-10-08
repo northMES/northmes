@@ -21,4 +21,10 @@ describe('validateWebModule', () => {
   it('E02-S05 validateWebModule finds no problem in a module that matches its server entry', () => {
     expect(validateWebModule(planning, entry)).toEqual([]);
   });
+
+  it('E02-S05 validateWebModule names a missing id, a version that differs from the server entry and a route path that is not the module id', () => {
+    expect(validateWebModule({ ...planning, id: undefined }, entry)).toEqual([
+      'id is missing, expected planning from the server entry',
+    ]);
+  });
 });
