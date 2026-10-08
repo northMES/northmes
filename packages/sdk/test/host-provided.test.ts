@@ -25,4 +25,10 @@ describe('isHostProvided', () => {
       ]),
     );
   });
+
+  it('E02-S01 isHostProvided matches subpaths such as graphql/language and not graphqlx', () => {
+    expect(isHostProvided('graphql/language')).toBe(true);
+    expect(isHostProvided('@nestjs/graphql/dist/index.js')).toBe(true);
+    expect(isHostProvided('graphqlx')).toBe(false);
+  });
 });
