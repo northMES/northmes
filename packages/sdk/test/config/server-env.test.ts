@@ -31,4 +31,20 @@ describe('serverEnvSchema', () => {
 
     expect(env.PORT).toBe(0);
   });
+
+  it('E02-S01 a missing public origin, PORT 70000 and role web are listed together without their values', () => {
+    const error = configErrorOf(() =>
+      loadEnv(serverEnvSchema)({ PORT: '70000', NORTHMES_ROLE: 'web' }),
+    );
+
+    expect(error.problems.map((problem) => problem.split(':')[0]).sort()).toEqual([
+      'NORTHMES_PUBLIC_ORIGIN',
+      'NORTHMES_ROLE',
+      'PORT',
+    ]);
+    expect(error.problems).toContain('PORT: must be an integer from 0 to 65535');
+    expect(error.problems).toContain('NORTHMES_ROLE: must be all, api or worker');
+    expect(error.message).not.toContain('70000');
+    expect(error.message).not.toContain('web');
+  });
 });
