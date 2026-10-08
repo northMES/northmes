@@ -11,6 +11,7 @@ import {
   type ReturnTypeFunc,
 } from '@nestjs/graphql';
 import type { CommandContract } from '@northmes/contracts';
+import { GraphQLError } from 'graphql';
 import { z } from 'zod';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
 
@@ -52,6 +53,21 @@ function inputType(contract: CommandContract, typeName: string): Type {
 }
 
 /**
+ * Parses a command's input with its contract. A failure is BAD_USER_INPUT (ADR 0012); the
+ * fieldErrors extension arrives with the error model (E05-S01).
+ */
+function parseInput(contract: CommandContract, input: unknown): unknown {
+  const parsed = contract.input.safeParse(input);
+  if (parsed.success) return parsed.data;
+  const problems = parsed.error.issues.map(
+    (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
+  );
+  throw new GraphQLError(`Invalid input for ${contract.name}: ${problems.join('; ')}`, {
+    extensions: { code: 'BAD_USER_INPUT' },
+  });
+}
+
+/**
  * A resolver class with the command's Mutation field. Its one argument, input, has the input type
  * built from the contract, and the field parses the input with the contract and sends the result
  * to the command bus.
@@ -66,7 +82,7 @@ export function mutationResolver(command: Command, returns: ReturnTypeFunc): Typ
 
     @Mutation(returns, { name: fieldName })
     run(@Args('input', { type: () => Input }) input: unknown): Promise<unknown> {
-      return this.bus.run(command, command.contract.input.parse(input));
+      return this.bus.run(command, parseInput(command.contract, input));
     }
   }
   // Nest's messages name the class, so it carries the field's name.
