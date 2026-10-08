@@ -2,7 +2,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { findPackageJSON } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { type PgConnection, templateDatabase } from '@northmes/testing';
+import { emptyTemplateDatabase, type PgConnection } from '@northmes/testing';
 import { Client } from 'pg';
 import type { TestProject } from 'vitest/node';
 import { inRepoCatalog } from '../src/boot/boot.ts';
@@ -22,13 +22,13 @@ function urlFor(
   return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
 }
 
-/** Logs in to the template database as the container's superuser. */
-function templateUrl(pg: PgConnection): string {
-  return urlFor(pg, pg.user, pg.password, templateDatabase);
+/** Logs in to the empty template as the container's superuser. */
+function emptyTemplateUrl(pg: PgConnection): string {
+  return urlFor(pg, pg.user, pg.password, emptyTemplateDatabase);
 }
 
 export interface TemplateOptions {
-  /** The container's superuser, who creates the template database. */
+  /** The container's superuser, who clones the empty template into the new one. */
   readonly superuser: PgConnection;
   /** The password of nm_owner, as which migrate runs. */
   readonly ownerPassword: string;
@@ -72,16 +72,16 @@ export async function migrateTemplate({
     const existing = await client.query('select 1 from pg_database where datname = $1', [name]);
     if (existing.rowCount !== 0) return { name, reused: true };
     const building = `${name}_${randomBytes(4).toString('hex')}`;
+    const buildingId = client.escapeIdentifier(building);
+    const nameId = client.escapeIdentifier(name);
     await client.query(
-      `create database ${client.escapeIdentifier(building)} template ${client.escapeIdentifier(templateDatabase)}`,
+      `create database ${buildingId} template ${client.escapeIdentifier(emptyTemplateDatabase)}`,
     );
     // A clone does not copy the database privileges of its template (ADR 0006).
-    await client.query(`grant create on database ${client.escapeIdentifier(building)} to nm_owner`);
+    await client.query(`grant create on database ${buildingId} to nm_owner`);
     await migrate({ ownerUrl: urlFor(superuser, 'nm_owner', ownerPassword, building), catalog });
-    await client.query(
-      `alter database ${client.escapeIdentifier(building)} rename to ${client.escapeIdentifier(name)}`,
-    );
-    await client.query(`alter database ${client.escapeIdentifier(name)} is_template true`);
+    await client.query(`alter database ${buildingId} rename to ${nameId}`);
+    await client.query(`alter database ${nameId} is_template true`);
     return { name, reused: false };
   } finally {
     await client.end();
@@ -102,7 +102,7 @@ export default async function setup(project: TestProject): Promise<void> {
     app: randomBytes(32).toString('hex'),
     auth: randomBytes(32).toString('hex'),
   };
-  await bootstrapRoles(templateUrl(pg), passwords);
+  await bootstrapRoles(emptyTemplateUrl(pg), passwords);
   const catalog = await inRepoCatalog(
     (specifier) => import(specifier),
     // The in-repo modules register no resolve hook, so Node's default resolver finds the package of
@@ -113,11 +113,11 @@ export default async function setup(project: TestProject): Promise<void> {
       return pathToFileURL(packageJson).href;
     },
   );
-  const template = await migrateTemplate({
+  const { name } = await migrateTemplate({
     superuser: pg,
     ownerPassword: passwords.owner,
     catalog,
   });
-  project.provide('pgTemplate', template.name);
+  project.provide('pgTemplate', name);
   project.provide('pgRolePasswords', { owner: passwords.owner, app: passwords.app });
 }

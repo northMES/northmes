@@ -44,8 +44,11 @@ export interface TestDatabase {
   databaseName: string;
 }
 
-/** The database that every test database is cloned from. */
-export const templateDatabase = 'nm_template';
+/**
+ * The empty template that the harness's global setup creates. The server's global setup clones it
+ * into the template that holds the migrated modules, which useTestDatabase clones.
+ */
+export const emptyTemplateDatabase = 'nm_template';
 
 function connectionStringFor(pg: PgConnection, databaseName: string): string {
   const credentials = `${encodeURIComponent(pg.user)}:${encodeURIComponent(pg.password)}`;
