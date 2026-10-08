@@ -44,6 +44,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const editArticleRoute = createRoute({
     getParentRoute: () => articleRoute,
     path: linkEntry(coreLinks.articles.article.edit).path,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'EditArticleScreen'),
   });
   return coreRoute.addChildren([
     articlesRoute.addChildren([

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import { buttonVariants } from '../../ui/button-variants.ts';
-import { PageFrame, type PageState } from '../../ui/page-frame.tsx';
-import { type Article, CoreArticle } from './articles.graphql.ts';
+import { PageFrame } from '../../ui/page-frame.tsx';
+import type { Article } from './articles.graphql.ts';
+import { useArticle } from './use-article.tsx';
 
 /** The article's Identity section (design ui-222, DE1): a card with its number and name. */
 function Identity({ article }: { readonly article: Article | undefined }) {
@@ -45,38 +45,7 @@ function Identity({ article }: { readonly article: Article | undefined }) {
  */
 export function ArticleScreen() {
   const { plantId } = useShell();
-  const { articleId } = useParams({ strict: false });
-  const id = articleId ?? '';
-  const { data, error, refetch } = useQuery(CoreArticle, { variables: { id } });
-  const article = data?.coreArticle ?? undefined;
-  let state: PageState = { status: 'ready' };
-  if (data === undefined && error !== undefined) {
-    state = {
-      status: 'error',
-      title: 'Could not load the article',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
-    };
-  } else if (data === undefined) {
-    state = { status: 'loading' };
-  } else if (article === undefined) {
-    state = {
-      status: 'empty',
-      title: 'This article does not exist or you cannot see it',
-      description:
-        'The link may be out of date, or the article belongs to a plant you have no role in.',
-      action: (
-        <Link
-          to={coreLinks.articles({ plant: plantId }).href}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Back to Articles
-        </Link>
-      ),
-    };
-  }
+  const { article, state } = useArticle();
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
