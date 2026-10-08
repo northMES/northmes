@@ -9,9 +9,15 @@
 // lands in the package's folder. Static, type-only and dynamic imports, re-exports and require
 // calls all count. A path built with new URL(..., import.meta.url) is not an import, so a test can
 // still spawn AGPL code by path.
+//
+// test/meta/mit-imports.test.ts runs the scan over the workspace packages that pnpm-workspace.yaml
+// names and the files `git ls-files` lists, so pnpm check fails on a finding.
 
-import { posix } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { readFileSync, statSync } from 'node:fs';
+import { join, posix } from 'node:path';
 import ts from 'typescript';
+import { parse } from 'yaml';
 
 /**
  * @typedef {{ name?: string, license?: string }} Manifest
@@ -104,4 +110,55 @@ export function scan(packages, files) {
   }
 
   return findings;
+}
+
+/**
+ * Reads the workspace packages that pnpm-workspace.yaml names and their source files, among the
+ * files `git ls-files` lists in the repository that holds `cwd`, with paths relative to its top
+ * level. The repository root is not one of the packages. Untracked files and tracked files missing
+ * from the working tree are not read. git runs without the GIT_* variables of a hook, so it reads
+ * the repository that holds `cwd`.
+ * @param {string} cwd
+ * @returns {{ packages: WorkspacePackage[], files: SourceFile[] }}
+ */
+export function trackedWorkspace(cwd) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+  );
+  const git = (...args) => {
+    const result = spawnSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      env,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.status !== 0) {
+      throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
+    }
+    return result.stdout;
+  };
+
+  const top = git('rev-parse', '--show-toplevel').trim();
+  const read = (path) => readFileSync(join(top, path), 'utf8');
+  const globs = parse(read('pnpm-workspace.yaml'))?.packages ?? [];
+  const tracked = git('-C', top, 'ls-files', '-z')
+    .split('\0')
+    .filter((path) => path && statSync(join(top, path), { throwIfNoEntry: false })?.isFile());
+
+  const packages = tracked
+    .filter(
+      (path) =>
+        posix.basename(path) === 'package.json' &&
+        globs.some((glob) => posix.matchesGlob(posix.dirname(path), glob)),
+    )
+    .map((path) => ({ path, manifest: JSON.parse(read(path)) }));
+  const workspace = packages.map(({ path, manifest }) => ({ dir: posix.dirname(path), manifest }));
+  const files = tracked
+    .filter((path) => sourceExtension.test(path) && owner(workspace, path))
+    .map((path) => ({ path, text: read(path) }));
+
+  return { packages, files };
 }
