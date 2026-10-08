@@ -28,7 +28,11 @@ export function createNorthmesClient(options: CreateNorthmesClientOptions): Apol
     fetch: options.fetch,
   });
   const ws = new GraphQLWsLink(
-    createClient({ url: '/graphql', webSocketImpl: options.webSocketImpl }),
+    createClient({
+      // The browser floor (ADR 0019) has WebSocket constructors that need an absolute URL.
+      url: () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/graphql`,
+      webSocketImpl: options.webSocketImpl,
+    }),
   );
   return new ApolloClient({
     link: ApolloLink.split(
