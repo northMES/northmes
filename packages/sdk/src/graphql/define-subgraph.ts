@@ -41,8 +41,16 @@ export function defineSubgraph({ name, module }: DefineSubgraphOptions): Dynamic
     driver: InProcessSubgraphDriver,
     subgraphName: name,
     include: [module],
-    autoSchemaFile: { federation: { ...FEDERATION_LINK, directives: [...FEDERATION_LINK.directives] } },
+    autoSchemaFile: {
+      federation: { ...FEDERATION_LINK, directives: [...FEDERATION_LINK.directives] },
+    },
     // Guards, interceptors and filters also run on fields reached through _entities.
     fieldResolverEnhancers: ['guards', 'interceptors', 'filters'],
+    // @nestjs/graphql 14 filters types by registerIn only when it receives includeModules, and on
+    // the federation path it passes include on to the resolvers but not to the type filter. This
+    // internal key reaches the filter, so each module's types stay in its own subgraph.
+    buildSchemaOptions: {
+      includeModules: [module],
+    } as InProcessSubgraphOptions['buildSchemaOptions'],
   });
 }
