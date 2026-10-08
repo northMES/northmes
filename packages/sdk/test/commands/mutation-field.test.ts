@@ -123,6 +123,31 @@ describe('defineCommand', () => {
     expect(bus.calls).toEqual([]);
   });
 
+  it('E05-S01 an input that fails the contract returns BAD_USER_INPUT with a fieldErrors entry per Zod issue', async () => {
+    const { schema } = await buildPlanningSchema();
+
+    const result = await release(schema, {
+      id: 'po-1',
+      expectedVersion: 0,
+      note: 'Rush order',
+      quantity: 120,
+    });
+
+    expect(result.errors?.map(({ extensions }) => extensions)).toEqual([
+      {
+        code: 'BAD_USER_INPUT',
+        fieldErrors: [
+          { path: ['id'], message: 'Invalid UUID', code: 'invalid_format' },
+          {
+            path: ['expectedVersion'],
+            message: 'Too small: expected number to be >=1',
+            code: 'too_small',
+          },
+        ],
+      },
+    ]);
+  });
+
   it('E05-S01 defineCommand refuses a contract field that is not a required ID, string, number or 32-bit integer, naming it', () => {
     const fieldsWith = {
       urgent: z.object({ urgent: z.boolean() }),
