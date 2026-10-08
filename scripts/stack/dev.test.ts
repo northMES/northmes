@@ -291,6 +291,32 @@ describe('superviseDev', () => {
     expect(dev.envOf('migrate')).toEqual(dev.stack.env);
   });
 
+  it('E02-S08 pnpm dev says so when the server exits on its own, and the next completed build starts it again', async () => {
+    const dev = fakeDev();
+    superviseDev({ plan: await devPlan(ports), ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+
+    dev.exit('server', 1);
+    await settle();
+
+    expect(dev.logs).toContain(
+      'The server exited with 1; the next build that tsc -b --watch completes starts it again',
+    );
+
+    // A restart stops the server on purpose, which pnpm dev does not report.
+    dev.print('tsc', completed);
+    await settle();
+
+    expect(dev.logs.filter((line) => line.startsWith('The server exited'))).toHaveLength(1);
+    expect(dev.events.filter((event) => event.endsWith(' server'))).toEqual([
+      'start server',
+      'stop server',
+      'start server',
+    ]);
+  });
+
   it('E02-S08 pnpm dev keeps the running server when northmes migrate fails, and says why', async () => {
     const dev = fakeDev({ failing: ['migrate'] });
     superviseDev({ plan: await devPlan(ports), ...dev.options });
