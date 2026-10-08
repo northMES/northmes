@@ -19,9 +19,10 @@ const grantPattern = /\bgrant\s+(?<privileges>[^;]*?)\s+on\s+(?<object>[^;]*?)\s
 // ALL or ALL PRIVILEGES without a column list, which on a table includes TRUNCATE.
 const allPattern = /^all(?:\s+privileges)?$/i;
 
-// The object kinds of GRANT ... ON other than tables. An object without a kind is a table.
+// The object kinds of GRANT ... ON other than tables. An object without a kind is a table. A kind
+// keyword is followed by whitespace and the object's name, so in types.rejection, types is a schema.
 const otherKindPattern =
-  /^(?:all\s+)?(?:sequences?|database|domain|foreign\s+(?:data\s+wrapper|server)|functions?|procedures?|routines?|language|large\s+object|parameter|schemas?|tablespace|types?)\b/i;
+  /^(?:all\s+)?(?:sequences?|database|domain|foreign\s+(?:data\s+wrapper|server)|functions?|procedures?|routines?|language|large\s+object|parameter|schemas?|tablespace|types?)\s/i;
 
 /**
  * Whether a GRANT with this privilege list on this object grants TRUNCATE.
