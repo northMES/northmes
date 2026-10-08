@@ -103,8 +103,16 @@ async function findPlugin(root, id) {
  * @param {import('./plugin-build.d.mts').MainIo} io
  */
 export async function main(argv, io) {
+  if (argv.length !== 1) {
+    io.error('Usage: pnpm plugin:build <id>');
+    return 1;
+  }
   const [id] = argv;
   const dir = await findPlugin(io.root, id);
+  if (dir === undefined) {
+    io.error(`No package under examples/ is named ${id}`);
+    return 1;
+  }
   const outDir = join(io.root, 'plugins', id);
   await buildPlugin(dir, outDir);
   io.log(`Built ${relative(io.root, dir)} into ${relative(io.root, outDir)}`);
