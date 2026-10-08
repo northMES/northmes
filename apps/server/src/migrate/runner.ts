@@ -59,9 +59,9 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
     for (const { names, files, recorded } of modules) {
-      await createOwnerRoleAndSchema(client, names);
-      for (const file of files.filter((file) => !recorded.has(file.name))) {
-        await applyFile(client, names, file);
+      const pending = files.filter((file) => !recorded.has(file.name));
+      for (const [index, file] of pending.entries()) {
+        await applyFile(client, names, file, { createOwner: index === 0 });
         applied.push(`${names.id}/${file.name}`);
       }
     }
@@ -131,8 +131,9 @@ async function createMigrationTable(client: Client): Promise<void> {
 
 /**
  * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app and
- * nm_ext use the schema. Roles belong to the server, so the role may come from a run on another database; the
- * grants are given again either way.
+ * nm_ext use the schema. It runs in the transaction of the module's first pending file, and
+ * leaves that transaction under SET LOCAL ROLE of the owner role. Roles belong to the server, so
+ * the role may come from a run on another database; the grants are given again either way.
  */
 async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Promise<void> {
   const role = client.escapeIdentifier(names.ownerRole);
@@ -149,29 +150,35 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   await client.query(`create schema if not exists ${schema} authorization ${role}`);
   // Only the schema's owner may grant on it, since nm_owner inherits none of its rights. The
   // module's migration files grant nm_app its rights on each table.
-  await client.query('begin');
   await client.query(`set local role ${role}`);
   await client.query(`grant usage on schema ${schema} to nm_app`);
   // A foreign key into the schema also needs USAGE on it. The table's own REFERENCES grant still
   // decides whether a key may point at it (ADR 0006).
   await client.query(`grant usage on schema ${schema} to nm_ext`);
-  await client.query('commit');
 }
 
 /**
  * Applies one file and records it in one transaction. The record is written as nm_owner, and the
- * file runs under SET LOCAL ROLE of the module's owner role. A file that fails leaves its
- * transaction open, and closing the connection rolls it back with its record. The failure is a
- * MigrationError that names the module, the file and the owner role it ran as, because Postgres
- * refuses a statement on another module's schema with the role's rights.
+ * file runs under SET LOCAL ROLE of the module's owner role. With createOwner, which the module's
+ * first pending file sets, the same transaction first creates the owner role and the schema, so a
+ * refused first file leaves neither behind. A file that fails leaves its transaction open, and
+ * closing the connection rolls it back with its record. The failure is a MigrationError that names
+ * the module, the file and the owner role it ran as, because Postgres refuses a statement on
+ * another module's schema with the role's rights.
  */
-async function applyFile(client: Client, names: ModuleNames, file: MigrationFile): Promise<void> {
+async function applyFile(
+  client: Client,
+  names: ModuleNames,
+  file: MigrationFile,
+  { createOwner }: { readonly createOwner: boolean },
+): Promise<void> {
   try {
     await client.query('begin');
     await client.query(
       'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
       [names.id, file.name, file.sha256],
     );
+    if (createOwner) await createOwnerRoleAndSchema(client, names);
     await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
     await client.query(file.sql);
     await client.query('commit');
