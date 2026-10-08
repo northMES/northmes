@@ -378,7 +378,7 @@ The ruleset on `main` requires these checks, strict (the branch must be up to da
 | `ci / lint` | turbo `lint`, then `pnpm gen --check` |
 | `ci / typecheck` | turbo `typecheck` |
 | `ci / build` | turbo `build` |
-| `ci / test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job |
+| `ci / test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
 | `ci / pr title` | The title is a Conventional Commit with an allowed type |
 | `ci / linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `ci / gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists), `ci / cla` (before the first outside pull request) and `ci / openapi diff` (with the first public route). |

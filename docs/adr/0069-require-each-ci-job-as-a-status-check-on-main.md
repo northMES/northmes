@@ -37,7 +37,7 @@ The jobs of `ci.yml`:
 | `ci / lint` | `pnpm lint`, then `pnpm gen --check` |
 | `ci / typecheck` | `pnpm typecheck` |
 | `ci / build` | `pnpm build` |
-| `ci / test` | `pnpm test` (the `unit`, `integration`, `web` and `types` projects) with `TZ` and `NM_TEST_PG_TZ` set to `UTC`, then `pnpm test:tz` (the `unit` and `integration` projects in `Europe/Stockholm`) as a second step |
+| `ci / test` | `pnpm test` (the `unit`, `integration`, `web` and `types` projects) with `TZ` and `NM_TEST_PG_TZ` set to `UTC`, then `pnpm test:tz` (the `unit` and `integration` projects in `Europe/Stockholm`) as a second step, which also runs when the UTC step failed and does not run when a failed install skipped it |
 | `ci / pr title` | As before, on pull requests only |
 | `ci / linked issue` | As before, on pull requests only |
 | `ci / gate` | Needs every other job, and fails when one of them failed or was cancelled, or was skipped on a pull request |
@@ -66,7 +66,7 @@ ADR 0039 is accepted, so its text stays as it was.
 
 * Good, because a failed lint, typecheck, build or test run shows by its own name as a required check.
 * Good, because `ci / gate` still fails a pull request on which a job was skipped, which GitHub would count as a passed required check.
-* Bad, because the two time zone legs run one after the other in `ci / test`, so that check takes as long as both legs together.
+* Bad, because the two time zone legs run one after the other in `ci / test`, so that check takes as long as both legs together. The Europe/Stockholm leg still runs after a failed UTC leg, so a failure in either zone reports in the same run.
 * Bad, because renaming, adding or removing a job needs a ruleset edit in the same change. A required check that no job reports any more blocks every pull request, and a new job missing from the ruleset does not show as required.
 
 ### Confirmation

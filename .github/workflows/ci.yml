@@ -72,7 +72,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-  # One check covers all tests in both time zones: the UTC leg, then the Europe/Stockholm leg.
+  # One check covers all tests in both time zones: the UTC leg, then the Europe/Stockholm leg. The
+  # Stockholm leg also runs after a failed UTC leg, so a failure that shows only in Stockholm reports
+  # in the same run; it does not run when a failed install skipped the UTC leg.
   test:
     name: ci / test
     permissions:
@@ -94,11 +96,13 @@ jobs:
         with:
           node-version-file: .node-version
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      - id: utc
+        run: pnpm test
         env:
           TZ: UTC
           NM_TEST_PG_TZ: UTC
-      - run: pnpm test:tz
+      - if: "!cancelled() && steps.utc.outcome != 'skipped'"
+        run: pnpm test:tz
 
   # The pull request checks read the event, so they run only for pull requests. Their scripts take
   # the event values from environment variables: interpolated into a run script, a title or body
