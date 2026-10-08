@@ -127,4 +127,10 @@ describe('remote build guards', () => {
     await expect(built).rejects.toThrow(/defineWebModule .*version 0\.3\.0/);
     await expect(built).rejects.toThrow(/manifest .*version 0\.4\.0/);
   });
+
+  it('E02-S05 a remote whose defineWebModule version is not a string literal fails naming the entry', async () => {
+    await expect(buildFixture('remote-version-expression')).rejects.toThrow(
+      /string literal .*defineWebModule in \.\/src\/module\.tsx/,
+    );
+  });
 });
