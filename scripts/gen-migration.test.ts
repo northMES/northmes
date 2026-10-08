@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { render } from './gen-migration.mjs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { main, render } from './gen-migration.mjs';
 
 // 21:04:05 at UTC+2 is 19:04:05 UTC.
 const now = new Date('2026-10-08T21:04:05+02:00');
@@ -27,5 +30,40 @@ describe('gen:migration', () => {
     const { path } = render({ module: 'production-start', slug: 'work_note', now });
 
     expect(path).toBe('modules/production-start/migrations/20261008190405_work_note.sql');
+  });
+});
+
+describe('pnpm gen:migration', () => {
+  let root: string;
+  const lines: string[] = [];
+  const errors: string[] = [];
+  const io = () => ({
+    log: (line: string) => lines.push(line),
+    error: (line: string) => errors.push(line),
+    root,
+    now: () => now,
+  });
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'gen-migration-'));
+    mkdirSync(join(root, 'modules/production-start'), { recursive: true });
+    lines.length = 0;
+    errors.length = 0;
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("E02-S02 pnpm gen:migration writes the rendered file into the module's migrations folder", async () => {
+    const exitCode = await main(['production-start', 'work_note'], io());
+
+    const path = 'modules/production-start/migrations/20261008190405_work_note.sql';
+    expect(exitCode).toBe(0);
+    expect(readFileSync(join(root, path), 'utf8')).toBe(
+      render({ module: 'production-start', slug: 'work_note', now }).sql,
+    );
+    expect(lines).toEqual([`Wrote ${path}`]);
+    expect(errors).toEqual([]);
   });
 });
