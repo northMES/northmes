@@ -191,12 +191,31 @@ export async function inRepoCatalog(
  */
 export async function importServers(catalog: readonly CatalogEntry[]): Promise<ServerEntry[]> {
   const servers: ServerEntry[] = [];
-  for (const { manifest } of catalog) {
+  for (const entry of catalog) {
+    const { manifest } = entry;
     if (!manifest.server) continue;
-    const { default: module } = await manifest.server();
+    const { default: module } = await importServer(entry, manifest.server);
     servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module, manifest });
   }
   return servers;
+}
+
+/**
+ * Imports the server entry of one catalog entry. An entry that throws while it loads stops the
+ * boot with a BootError naming the module or plugin: boot never skips it, because a skipped server
+ * part would drop its validators and its subgraph (ADR 0002).
+ */
+async function importServer(
+  { manifest, kind }: CatalogEntry,
+  server: NonNullable<ModuleManifest['server']>,
+): ReturnType<typeof server> {
+  try {
+    return await server();
+  } catch (error) {
+    const name = kind === 'plugin' ? 'Plugin' : 'Module';
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BootError([`${name} ${manifest.id} failed to load its server part: ${reason}`]);
+  }
 }
 
 /**
