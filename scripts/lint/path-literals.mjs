@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
- * @typedef {{ path: string, literal: string, reason: string }} AllowlistEntry
+ * @typedef {{ path: string, literal: string, reason?: string }} AllowlistEntry
  * @typedef {{ path: string, line: number, literal: string }} Finding
  */
 
@@ -86,12 +86,27 @@ function pathExpressions(node, source) {
 }
 
 /**
- * Finds app paths written as string literals.
+ * Throws on the first allowlist entry whose reason is missing or blank.
+ * @param {readonly AllowlistEntry[]} allowlist
+ */
+function checkReasons(allowlist) {
+  allowlist.forEach((entry, index) => {
+    if (typeof entry.reason !== 'string' || entry.reason.trim() === '') {
+      throw new Error(
+        `Path literal allowlist entry ${index + 1} (${entry.path}, ${entry.literal}) gives no reason`,
+      );
+    }
+  });
+}
+
+/**
+ * Finds app paths written as string literals. Throws when an allowlist entry gives no reason.
  * @param {readonly RepositoryFile[]} files
  * @param {readonly AllowlistEntry[]} allowlist
  * @returns {Finding[]}
  */
 export function scan(files, allowlist) {
+  checkReasons(allowlist);
   const isAllowed = (path, literal) =>
     allowlist.some((entry) => entry.path === path && entry.literal === literal);
   /** @type {Finding[]} */
