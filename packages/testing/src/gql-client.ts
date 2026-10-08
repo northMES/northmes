@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { GraphQLFormattedError } from 'graphql';
+import { createClient } from 'graphql-ws';
 
 /** What /graphql answered: the HTTP status, and the GraphQL result when the body is JSON. */
 export interface GqlAnswer<TData = Record<string, unknown>> {
@@ -8,18 +9,37 @@ export interface GqlAnswer<TData = Record<string, unknown>> {
   readonly errors?: readonly GraphQLFormattedError[];
 }
 
+/** The GraphQL result of one subscription event. */
+export type GqlEvent<TData = Record<string, unknown>> = Omit<GqlAnswer<TData>, 'status'>;
+
+/** How a subscription reaches /graphql: graphql-ws on its upgrade, or SSE. */
+export type SubscriptionTransport = 'graphql-ws';
+
+export interface SubscribeOptions {
+  readonly transport: SubscriptionTransport;
+}
+
 export interface GqlClient {
   /** Sends one operation as a JSON POST to /graphql. */
   send<TData = Record<string, unknown>>(
     document: string,
     variables?: Readonly<Record<string, unknown>>,
   ): Promise<GqlAnswer<TData>>;
+  /**
+   * Starts a subscription and yields its events in order. Calling return() on the generator ends
+   * the subscription and closes its connection.
+   */
+  subscribe<TData = Record<string, unknown>>(
+    document: string,
+    variables: Readonly<Record<string, unknown>> | undefined,
+    options: SubscribeOptions,
+  ): AsyncGenerator<GqlEvent<TData>, void, undefined>;
 }
 
 export interface GqlClientOptions {
   /**
    * Headers sent with every operation, such as x-northmes-plant, which names the request's plant
-   * until sign-in arrives (E05).
+   * until sign-in arrives (E05). A graphql-ws subscription sends them with its handshake.
    */
   readonly headers?: Readonly<Record<string, string>>;
 }
@@ -43,5 +63,61 @@ export function gqlClient(url: string, { headers = {} }: GqlClientOptions = {}):
       const { data, errors } = (await response.json()) as Omit<GqlAnswer<TData>, 'status'>;
       return { ...answer, data, errors };
     },
+    subscribe<TData>(document: string, variables?: Readonly<Record<string, unknown>>) {
+      return overGraphqlWs<TData>(endpoint, headers, { query: document, variables });
+    },
   };
+}
+
+/** One subscription on its own graphql-ws connection, which it closes when it ends. */
+async function* overGraphqlWs<TData>(
+  endpoint: URL,
+  headers: Readonly<Record<string, string>>,
+  payload: { query: string; variables?: Readonly<Record<string, unknown>> | undefined },
+): AsyncGenerator<GqlEvent<TData>, void, undefined> {
+  const url = new URL(endpoint);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  const client = createClient({
+    url: url.href,
+    webSocketImpl: webSocketWith(headers),
+    retryAttempts: 0,
+  });
+  try {
+    yield* client.iterate<TData>({ ...payload, variables: { ...payload.variables } });
+  } catch (error) {
+    throw connectionError(url, error);
+  } finally {
+    await client.dispose();
+  }
+}
+
+/**
+ * graphql-ws rejects with the socket's close or error event when the connection fails, which
+ * reads badly in a test failure. This turns such an event into an Error that says what happened.
+ */
+function connectionError(url: URL, error: unknown): unknown {
+  if (error instanceof Error) return error;
+  const { code, reason } = error as { code?: number; reason?: string };
+  const message = code
+    ? `graphql-ws on ${url.href} closed with code ${code}${reason ? `: ${reason}` : ''}`
+    : `graphql-ws could not connect to ${url.href}`;
+  return new Error(message, { cause: error });
+}
+
+/**
+ * Node's WebSocket, which also takes an init object with handshake headers. The DOM types that
+ * TypeScript loads by default know only the protocols argument.
+ */
+const NodeWebSocket = WebSocket as unknown as new (
+  url: string | URL,
+  init: { protocols?: string | string[]; headers: Readonly<Record<string, string>> },
+) => WebSocket;
+
+/** Node's WebSocket, sending `headers` with its handshake. */
+function webSocketWith(headers: Readonly<Record<string, string>>): typeof WebSocket {
+  return class extends NodeWebSocket {
+    constructor(url: string | URL, protocols?: string | string[]) {
+      super(url, { protocols, headers });
+    }
+  } as typeof WebSocket;
 }
