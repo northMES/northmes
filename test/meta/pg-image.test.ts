@@ -69,6 +69,18 @@ describe('pg-image', () => {
     expect(findings).toEqual([{ path: 'a.int.test.ts', line: 2, reference: 'PostgreSqlContainer()' }]);
   });
 
+  it('scan skips docs/**', () => {
+    const findings = scan([
+      { path: 'docs/sources/spike/compose.yaml', text: 'services:\n  db:\n    image: postgres:17\n' },
+      {
+        path: 'docs/sources/spike/test/pg.test.mjs',
+        text: "new PostgreSqlContainer('postgres:18.4-alpine');\n",
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
