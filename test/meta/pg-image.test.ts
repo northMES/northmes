@@ -85,6 +85,14 @@ describe('pg-image', () => {
     ]);
   });
 
+  it('scan reports a literal in a PostgreSqlContainer call with a space before the parenthesis', () => {
+    const findings = scan([
+      { path: 'a.int.test.ts', text: "await new PostgreSqlContainer ('postgres:17').start();\n" },
+    ]);
+
+    expect(findings).toEqual([{ path: 'a.int.test.ts', line: 1, reference: 'postgres:17' }]);
+  });
+
   it('scan ignores a call to a name that only ends in PostgreSqlContainer', () => {
     const findings = scan([
       {
