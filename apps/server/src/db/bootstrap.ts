@@ -22,6 +22,19 @@ const roles: readonly { name: string; attributes: string; password?: keyof RoleP
 ];
 
 /**
+ * The role statements carry the passwords. These settings keep every statement of the session out
+ * of the server log, whatever logging the server runs with. Postgres samples a transaction when it
+ * starts, so they apply to the session and come before BEGIN.
+ */
+const unloggedSession = [
+  "log_statement = 'none'",
+  'log_min_duration_statement = -1',
+  'log_min_duration_sample = -1',
+  'log_transaction_sample_rate = 0',
+  "log_min_error_statement = 'panic'",
+];
+
+/**
  * Creates the database roles as the superuser that superuserUrl logs in as (ADR 0005, ADR 0006):
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
  * nm_ext is a group that cannot log in. Every role's time zone is pinned to UTC, per role because a
@@ -35,6 +48,8 @@ export async function bootstrapRoles(
   const client = new Client({ connectionString: superuserUrl });
   await client.connect();
   try {
+    for (const setting of unloggedSession) await client.query(`set ${setting}`);
+    await client.query('begin');
     const { rows } = await client.query<{ database: string }>(
       'select current_database() as database',
     );
@@ -43,11 +58,6 @@ export async function bootstrapRoles(
       [roles.map((role) => role.name)],
     );
     const exists = new Set(existing.rows.map((row) => row.rolname));
-    await client.query('begin');
-    // The statements carry the passwords, so none of them reaches the server log, not even when
-    // one fails.
-    await client.query("set local log_statement = 'none'");
-    await client.query("set local log_min_error_statement = 'panic'");
     for (const { name, attributes, password } of roles) {
       if (!exists.has(name)) {
         const secret = password ? ` password ${client.escapeLiteral(passwords[password])}` : '';
