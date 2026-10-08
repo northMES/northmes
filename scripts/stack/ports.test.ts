@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
-import { freePort } from './ports.mjs';
+import { freePort, freePorts } from './ports.mjs';
 
 const servers: Server[] = [];
 
@@ -27,6 +27,21 @@ describe('freePort', () => {
     expect(new Set(ports).size).toBe(2);
     for (const port of ports) expect(port).toBeGreaterThan(0);
     // Each instance can listen on its port: no EADDRINUSE.
+    await expect(Promise.all(ports.map(listenOn))).resolves.toBeDefined();
+  });
+});
+
+describe('freePorts', () => {
+  it('E02-S08 the ports pnpm dev takes in one process are disjoint and leave out the stack port', async () => {
+    // freePort closes its socket before it resolves, so the next call may get the same port. pnpm
+    // dev takes the stack's PORT for the server and one more port for the shell and each remote.
+    const stackPort = await freePort();
+
+    const ports = await freePorts(8, { except: [stackPort] });
+
+    expect(ports).toHaveLength(8);
+    expect(new Set(ports).size).toBe(8);
+    expect(ports).not.toContain(stackPort);
     await expect(Promise.all(ports.map(listenOn))).resolves.toBeDefined();
   });
 });
