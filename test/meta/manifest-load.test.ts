@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -36,14 +37,18 @@ for (const url of process.argv.slice(1)) {
 process.stdout.write(JSON.stringify({ resolved, manifests }));
 `;
 
-// The static import and re-export statements of a module, each on one line, with or without a
-// closing semicolon. Lazy entries such as `server: () => import('./server/core.module.js')` are
-// expressions, not import lines.
+// The static import and re-export statements of a module, read with the TypeScript parser, each
+// with its whitespace collapsed and its closing semicolon kept when it has one. Lazy entries such
+// as `server: () => import('./server/core.module.js')` are expressions, not import statements.
 function importLines(source: string): string[] {
-  const statements = source.match(
-    /^(?:import|export)\b[^;]*?\bfrom\s*['"][^'"]*['"][^;\n]*;?|^import\s*['"][^'"]*['"];?/gm,
-  );
-  return (statements ?? []).map((statement) => statement.replace(/\s+/g, ' '));
+  const file = ts.createSourceFile('northmes.module.ts', source, ts.ScriptTarget.Latest);
+  return file.statements
+    .filter(
+      (statement) =>
+        ts.isImportDeclaration(statement) ||
+        (ts.isExportDeclaration(statement) && statement.moduleSpecifier !== undefined),
+    )
+    .map((statement) => statement.getText(file).replace(/\s+/g, ' '));
 }
 
 // What a manifest may import: defineModule from the SDK root and the version of its own package.
