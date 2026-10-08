@@ -85,6 +85,30 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 redirect({ to }) and router.navigate({ to }) fail, also when the call spans lines', () => {
+    const text = [
+      'export const route = {',
+      '  beforeLoad: () => {',
+      '    throw redirect({',
+      "      to: '/x',",
+      '      replace: true,',
+      '    });',
+      '  },',
+      '};',
+      'export function go(router: Router) {',
+      "  return router.navigate({ to: '/y' });",
+      '}',
+      '',
+    ].join('\n');
+
+    const findings = scan([{ path: 'modules/planning/web/src/routes.ts', text }], []);
+
+    expect(findings).toEqual([
+      { path: 'modules/planning/web/src/routes.ts', line: 4, literal: '/x' },
+      { path: 'modules/planning/web/src/routes.ts', line: 10, literal: '/y' },
+    ]);
+  });
+
   it('E02-S05 an allowlist entry without a reason fails', () => {
     const files = [{ path: 'e2e/board.spec.ts', text: "await page.goto('/x');\n" }];
     const withReason = { path: 'e2e/board.spec.ts', literal: '/y', reason: 'A reason.' };
