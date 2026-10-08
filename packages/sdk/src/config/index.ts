@@ -8,5 +8,5 @@ export {
   migrateEnvSchema,
 } from './entry-schemas.ts';
 export { loadEnv } from './load-env.ts';
-export { readSecrets, type Secrets, secretsConfig } from './secrets.ts';
+export { DEV_SECRET_MARKER, readSecrets, type Secrets, secretsConfig } from './secrets.ts';
 export { type ServerEnv, serverEnvSchema } from './server-env.ts';

@@ -13,6 +13,12 @@ export type Secrets<Key extends `${string}_FILE` = `${string}_FILE`> = {
   readonly [K in Key as SecretName<K>]: string;
 };
 
+/**
+ * Starts every secret the stack script writes for development, so production can refuse one
+ * (ADR 0058).
+ */
+export const DEV_SECRET_MARKER = 'northmes-dev-secret-';
+
 let secretsRead: Secrets | undefined;
 
 /** Reads one secret file, or states the rule it breaks without its path or content. */
@@ -32,12 +38,13 @@ function readSecretFile(path: string): { value: string } | { problem: string } {
 
 /**
  * Reads the file each _FILE key points at and keeps the values for secretsConfig. A missing, empty
- * or other-readable file is listed in one ConfigError naming its key. The values stay out of
- * process.env (ADR 0060).
+ * or other-readable file is listed in one ConfigError naming its key. Once every file reads, a dev
+ * secret with NODE_ENV production fails with CONFIG_DEV_SECRET_IN_PRODUCTION. The values stay out
+ * of process.env (ADR 0060).
  */
 export function readSecrets<Key extends `${string}_FILE`>(
   files: Readonly<Record<Key, string>>,
-  _options: { nodeEnv: z.output<typeof nodeEnv> },
+  options: { nodeEnv: z.output<typeof nodeEnv> },
 ): Secrets<Key> {
   const secrets: Record<string, string> = {};
   const problems: string[] = [];
@@ -47,6 +54,17 @@ export function readSecrets<Key extends `${string}_FILE`>(
     else secrets[key.replace(/_FILE$/, '')] = file.value;
   }
   if (problems.length > 0) throw new ConfigError(problems);
+  if (options.nodeEnv === 'production') {
+    const devSecrets = Object.keys(files).filter((key) =>
+      secrets[key.replace(/_FILE$/, '')]?.startsWith(DEV_SECRET_MARKER),
+    );
+    if (devSecrets.length > 0) {
+      throw new ConfigError(
+        devSecrets.map((key) => `${key}: holds a dev secret, which NODE_ENV production refuses`),
+        { code: 'CONFIG_DEV_SECRET_IN_PRODUCTION' },
+      );
+    }
+  }
   secretsRead = secrets;
   return secrets as Secrets<Key>;
 }

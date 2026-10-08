@@ -6,11 +6,17 @@
  */
 export class ConfigError extends Error {
   readonly problems: readonly string[];
+  /** Set when the problems share a cause that has its own name. */
+  readonly code: 'CONFIG_DEV_SECRET_IN_PRODUCTION' | undefined;
 
-  constructor(problems: readonly string[]) {
+  constructor(
+    problems: readonly string[],
+    options: { code?: 'CONFIG_DEV_SECRET_IN_PRODUCTION' } = {},
+  ) {
     super(listProblems(problems));
     this.name = 'ConfigError';
     this.problems = problems;
+    this.code = options.code;
   }
 }
 
