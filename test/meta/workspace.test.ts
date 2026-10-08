@@ -15,7 +15,10 @@ interface WorkspaceConfig {
 
 interface PackageJson {
   license?: string;
+  dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -37,6 +40,15 @@ function workspaceManifests(): string[] {
   return (readWorkspace().packages ?? [])
     .flatMap((pattern) => globSync(`${pattern}/package.json`, { cwd: root }))
     .filter((path) => !path.split('/').includes('node_modules'));
+}
+
+// Every package a manifest names as a dependency, dev dependency or peer.
+function declared(manifest: PackageJson): string[] {
+  return Object.keys({
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+    ...manifest.peerDependencies,
+  });
 }
 
 function git(...args: string[]): string {
@@ -75,6 +87,25 @@ describe('workspace', () => {
     for (const path of manifests) {
       const expected = mit.test(path) ? 'MIT' : 'AGPL-3.0-or-later';
       expect(readPackageJson(path).license, path).toBe(expected);
+    }
+  });
+
+  it('E02-S01 every package that lists @northmes/testing also lists the peers it requires', () => {
+    // The harness imports graphql, vitest and zod at run time and takes each from the package that
+    // runs it, so a package that leaves one out reaches it only through another package's folder.
+    const testing = readPackageJson('packages/testing/package.json');
+    const required = Object.keys(testing.peerDependencies ?? {}).filter(
+      (name) => testing.peerDependenciesMeta?.[name]?.optional !== true,
+    );
+    const users = ['package.json', ...workspaceManifests()].filter((path) =>
+      declared(readPackageJson(path)).includes('@northmes/testing'),
+    );
+
+    expect(required).toEqual(expect.arrayContaining(['graphql', 'vitest', 'zod']));
+    expect(users).toContain('apps/server/package.json');
+    for (const path of users) {
+      const missing = required.filter((name) => !declared(readPackageJson(path)).includes(name));
+      expect(missing, path).toEqual([]);
     }
   });
 
