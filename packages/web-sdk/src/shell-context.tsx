@@ -14,6 +14,16 @@ export function ShellProvider({ value, children }: { value: ShellState; children
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }
 
+/**
+ * Reads the shell's state. A module that bundles its own copy of this package reads a context the
+ * shell never provided, so the hook throws instead of returning nothing.
+ */
 export function useShell(): ShellState {
-  return useContext(ShellContext) as ShellState;
+  const value = useContext(ShellContext);
+  if (value === null) {
+    throw new Error(
+      'useShell() found no ShellProvider: the shell and this module hold two copies of @northmes/web-sdk',
+    );
+  }
+  return value;
 }
