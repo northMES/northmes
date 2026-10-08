@@ -14,23 +14,24 @@ const releaseFields = z
   });
 
 describe('defineCommandContract', () => {
-  it('E02-S04 a contract with target existing has an input of id plus its fields', () => {
+  it('E05-S01 a contract with target existing has an input of id, expectedVersion and its fields', () => {
     const contract = defineCommandContract({
       name: 'planning.releaseProductionOrder',
       target: 'existing',
       fields: releaseFields,
     });
+    const input = { id: ORDER_ID, expectedVersion: 3, note: '', quantity: 120 };
 
-    expect(contract.input.parse({ id: ORDER_ID, note: '', quantity: 120 })).toEqual({
-      id: ORDER_ID,
-      note: '',
-      quantity: 120,
-    });
-    expect(contract.input.safeParse({ note: '', quantity: 120 }).success).toBe(false);
-    expect(contract.input.safeParse({ id: 'po-1', note: '', quantity: 120 }).success).toBe(false);
+    expect(contract.input.parse(input)).toEqual(input);
+    expect(contract.input.safeParse({ ...input, id: undefined }).success).toBe(false);
+    expect(contract.input.safeParse({ ...input, id: 'po-1' }).success).toBe(false);
+    expect(contract.input.safeParse({ ...input, expectedVersion: undefined }).success).toBe(false);
+    expect(contract.input.safeParse({ ...input, expectedVersion: 0 }).success).toBe(false);
+    expect(contract.input.safeParse({ ...input, expectedVersion: 1.5 }).success).toBe(false);
+    expect(contract.input.safeParse({ ...input, expectedVersion: 2 ** 31 }).success).toBe(false);
     expect(
       contract.input
-        .safeParse({ id: ORDER_ID, note: '', quantity: 900 })
+        .safeParse({ ...input, quantity: 900 })
         .error?.issues.map(({ path, message }) => ({ path, message })),
     ).toEqual([{ path: ['note'], message: 'A release above 500 needs a note' }]);
   });
