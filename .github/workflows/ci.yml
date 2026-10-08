@@ -133,8 +133,8 @@ jobs:
   # so a skipped one fails it too; a push to main skips only the pull request checks.
   gate:
     name: ci / gate
-    permissions:
-      contents: read
+    # The gate reads only the results of the jobs it needs, so its token gets no permissions.
+    permissions: {}
     if: always()
     needs: [static, test-utc, test-stockholm, pr-title, linked-issue]
     runs-on: ubuntu-24.04
