@@ -408,7 +408,7 @@ flowchart TD
 
 | Step | What happens | Fails hard on |
 |---|---|---|
-| 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)) | an invalid or missing environment key; a missing, empty or other-readable secret file; an unreadable config file; a version field that differs from the image |
+| 1. Config | parse the environment against `serverEnvSchema`, read the secret files and read `northmes.config.json` ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)) | an invalid or missing environment key; a missing, unreadable, empty or other-readable secret file, or a secret path that is not a regular file; an unreadable config file; a version field that differs from the image |
 | 2. Resolve hook | `module.registerHooks` maps host-provided packages imported from any plugin root to the host's copy | |
 | 3. Manifests | import every manifest; manifests import only `defineModule`, so no Nest code loads | missing `exports["./manifest"]`, import error, invalid id |
 | 4. Catalog checks | duplicate ids, derived-name collisions, reserved ids (`web`, `station` and `auth`, the first-party and library path segments under `/api/v1`), `dependsOn` present, no cycles, no core module depending on a plugin, `northmes` range, key prefixes, slot ownership; topological order with core first | any of these |

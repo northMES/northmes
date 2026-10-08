@@ -23,23 +23,29 @@ let secretsRead: Secrets | undefined;
 
 /** Reads one secret file, or states the rule it breaks without its path or content. */
 function readSecretFile(path: string): { value: string } | { problem: string } {
-  const stats = statSync(path, { throwIfNoEntry: false });
-  if (stats === undefined) return { problem: 'must point at an existing file' };
-  if (!stats.isFile()) return { problem: 'must point at a regular file' };
-  // install.sh writes each secret 0440 for root and the app's group, so group read passes and
-  // only read by others is refused (ADR 0047).
-  if ((stats.mode & 0o004) !== 0) {
-    return { problem: 'must point at a file that others cannot read, such as mode 0440 or 0600' };
+  try {
+    const stats = statSync(path, { throwIfNoEntry: false });
+    if (stats === undefined) return { problem: 'must point at an existing file' };
+    if (!stats.isFile()) return { problem: 'must point at a regular file' };
+    // install.sh writes each secret 0440 for root and the app's group, so group read passes and
+    // only read by others is refused (ADR 0047).
+    if ((stats.mode & 0o004) !== 0) {
+      return { problem: 'must point at a file that others cannot read, such as mode 0440 or 0600' };
+    }
+    // Editors and echo end a file with a newline, which is not part of the secret.
+    const value = readFileSync(path, 'utf8').replace(/\n$/, '');
+    if (value === '') return { problem: 'must point at a file that is not empty' };
+    return { value };
+  } catch {
+    // An fs error names the path, so it is dropped and only the rule is stated.
+    return { problem: 'must point at a file this process can read' };
   }
-  // Editors and echo end a file with a newline, which is not part of the secret.
-  const value = readFileSync(path, 'utf8').replace(/\n$/, '');
-  if (value === '') return { problem: 'must point at a file that is not empty' };
-  return { value };
 }
 
 /**
- * Reads the file each _FILE key points at and keeps the values for secretsConfig. A missing, empty
- * or other-readable file is listed in one ConfigError naming its key. Once every file reads, a dev
+ * Reads the file each _FILE key points at and keeps the values for secretsConfig. A missing,
+ * unreadable, empty or other-readable file, or a path that is not a regular file, is listed in one
+ * ConfigError naming its key. Once every file reads, a dev
  * secret with NODE_ENV production fails with CONFIG_DEV_SECRET_IN_PRODUCTION. The values stay out
  * of process.env (ADR 0060).
  */
