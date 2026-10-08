@@ -5,6 +5,7 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
+    "build": "vite build",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
