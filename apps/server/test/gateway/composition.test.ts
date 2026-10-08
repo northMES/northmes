@@ -97,6 +97,34 @@ describe('the NorthMES composition rules', () => {
     ]);
   });
 
+  it('E02-S03 a value type that another subgraph defines with a plain @key fails with NORTHMES_TYPE_OWNERSHIP in either order', () => {
+    const delta = subgraph(
+      'delta',
+      'type Size @shareable { id: ID! } type Query { deltaSize: Size }',
+    );
+    // Epsilon puts a plain @key on delta's type instead of defining a type of its own. Composition
+    // accepts the pair, because delta shares id and epsilon resolves height from it.
+    const epsilon = subgraph(
+      'epsilon',
+      'type Size @key(fields: "id") { id: ID! height: Int } type Query { epsilonSize: Size }',
+    );
+
+    expect(checkRules([delta, epsilon])).toEqual([
+      {
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message:
+          'Size is defined in subgraphs "delta" and "epsilon"; one module owns a type that is not an entity',
+      },
+    ]);
+    expect(checkRules([epsilon, delta])).toEqual([
+      {
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message:
+          'Size is defined in subgraphs "epsilon" and "delta"; one module owns a type that is not an entity',
+      },
+    ]);
+  });
+
   it('E02-S03 PageInfo in two subgraphs breaks no rule, as an SDK shared type', () => {
     const pageInfo = 'type PageInfo @shareable { hasNextPage: Boolean! endCursor: String }';
     const delta = subgraph(
