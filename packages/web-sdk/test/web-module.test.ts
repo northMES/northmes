@@ -33,4 +33,8 @@ describe('validateWebModule', () => {
       'the top route path is board, expected the module id planning',
     ]);
   });
+
+  it('E02-S05 validateWebModule accepts a top route path with a leading slash, as the router does', () => {
+    expect(validateWebModule({ ...planning, routes: routesAt('/planning') }, entry)).toEqual([]);
+  });
 });
