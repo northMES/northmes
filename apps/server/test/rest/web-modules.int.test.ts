@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { apiPath } from '@northmes/contracts';
 import planning from '@northmes/module-planning/manifest';
@@ -10,7 +12,8 @@ import serverPackage from '../../package.json' with { type: 'json' };
 import { GatewayService } from '../../src/gateway/gateway.module.ts';
 import { WebModulesController } from '../../src/web/web-modules.controller.ts';
 
-// Built web files in the layout hostFactoryWithWebFiles reads: each module's remote in modules/<id>/.
+// Built web files in the layout hostFactoryWithWebFiles reads: the shell in shell/ and each module's
+// remote in modules/<id>/.
 const webFiles = fileURLToPath(new URL('../fixtures/web/', import.meta.url));
 
 let testApp: TestApp | undefined;
@@ -87,5 +90,34 @@ describe('the remote files', () => {
     expect(manifest).toEqual({ status: 200, cacheControl: 'no-cache' });
     expect(entry).toEqual({ status: 200, cacheControl: 'no-cache' });
     expect(stats).toEqual({ status: 200, cacheControl: 'no-cache' });
+  });
+});
+
+describe('the shell', () => {
+  it('E02-S05 an SPA path answers with the strict self Content-Security-Policy', async () => {
+    const url = await serve(['core', 'planning']);
+    const index = readFileSync(join(webFiles, 'shell', 'index.html'), 'utf8');
+    // The root, a module screen under a plant and a station: the SPA paths of ADR 0064.
+    const paths = ['/', '/01920000-0000-7000-8000-000000000001/planning', '/station/station-1'];
+
+    const answers = await Promise.all(
+      paths.map(async (path) => {
+        const response = await fetch(`${url}${path}`);
+        return {
+          path,
+          status: response.status,
+          csp: response.headers.get('content-security-policy'),
+          cacheControl: response.headers.get('cache-control'),
+          body: await response.text(),
+        };
+      }),
+    );
+
+    const csp =
+      "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; " +
+      "img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+    expect(answers).toEqual(
+      paths.map((path) => ({ path, status: 200, csp, cacheControl: 'no-cache', body: index })),
+    );
   });
 });
