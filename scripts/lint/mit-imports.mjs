@@ -69,6 +69,28 @@ function packageName(specifier) {
 }
 
 /**
+ * Whether a package folder is or holds a path. The root package's folder `.` holds every path in
+ * the repository.
+ * @param {string} dir
+ * @param {string} path
+ */
+function holds(dir, path) {
+  if (dir === '.') {
+    return path !== '..' && !path.startsWith('../');
+  }
+  return path === dir || path.startsWith(`${dir}/`);
+}
+
+/**
+ * How deep a package folder sits, so the deepest package that holds a path owns it. The root
+ * package's folder `.` counts as 0.
+ * @param {string} dir
+ */
+function depth(dir) {
+  return dir === '.' ? 0 : dir.length;
+}
+
+/**
  * The workspace package whose folder is or holds a path, the deepest one when packages nest.
  * @param {readonly PackageFolder[]} packages
  * @param {string} path
@@ -76,8 +98,7 @@ function packageName(specifier) {
 function owner(packages, path) {
   let found;
   for (const candidate of packages) {
-    const holds = path === candidate.dir || path.startsWith(`${candidate.dir}/`);
-    if (holds && candidate.dir.length > (found?.dir.length ?? -1)) {
+    if (holds(candidate.dir, path) && depth(candidate.dir) > (found ? depth(found.dir) : -1)) {
       found = candidate;
     }
   }
