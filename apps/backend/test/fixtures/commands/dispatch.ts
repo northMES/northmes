@@ -23,7 +23,7 @@ export class Job {
   @Field(() => String) status!: string;
 }
 
-/** The module's own reads, which give its subgraph a Query root. */
+/** The module's own reads, which give the schema a Query root. */
 @Resolver(() => Job)
 export class JobResolver {
   @Query(() => [Job])

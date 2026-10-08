@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigService } from '@nestjs/config';
+import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { hostFactory, hostFactoryWithShell } from '@northmes/backend/testing';
-import { SubgraphRegistry } from '@northmes/sdk/graphql';
 import { createTestApp, type TestApp } from '@northmes/testing';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
@@ -26,13 +26,13 @@ describe('createTestApp', () => {
     expect(testApp.app.get(ConfigService).get('PORT')).toBe(0);
   });
 
-  it("E02-S04 createTestApp builds a subgraph from each module's server entry", async () => {
+  it('E02-S04 createTestApp builds one schema from the server entries of the modules it boots', async () => {
     testApp = await createTestApp({ modules: ['core'], hostFactory });
 
-    const subgraphs = testApp.app.get(SubgraphRegistry).all();
+    const query = testApp.app.get(GraphQLSchemaHost).schema.getQueryType();
 
-    // The subgraph is named after the module's GraphQL name, as on the real boot.
-    expect(subgraphs.map(({ name }) => name)).toEqual(['core']);
+    // Core's root fields, and none of planning, which the test did not boot.
+    expect(Object.keys(query?.getFields() ?? {})).toEqual(['coreArticle']);
   });
 });
 

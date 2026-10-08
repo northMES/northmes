@@ -12,7 +12,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
-import { tracerPrincipal } from '../../src/gateway/tracer-principal.ts';
+import { tracerPrincipal } from '../../src/graphql/principal.ts';
 import { migrate } from '../../src/migrate/runner.ts';
 import { type Principal, runAs } from '../../src/principal.ts';
 import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';

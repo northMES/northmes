@@ -1,31 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Fixture module alpha: owns the entity Thing and resolves references to it.
+// Fixture module alpha: owns Thing, and hands out its things through its API module, AlphaApiModule.
 import { Inject, Injectable, Module } from '@nestjs/common';
-import {
-  Args,
-  Context,
-  Directive,
-  Field,
-  ID,
-  ObjectType,
-  Parent,
-  Query,
-  ResolveReference,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import { defineModule } from '@northmes/sdk';
-import { type EntityReference, loaderFor, type SubgraphContext } from '@northmes/sdk/graphql';
 import { GraphQLError } from 'graphql';
 
-@ObjectType('Thing', { registerIn: () => AlphaModule })
-@Directive('@key(fields: "id")')
+@ObjectType('Thing')
 export class Thing {
   @Field(() => ID) id!: string;
   @Field(() => String) name!: string;
 }
 
+/** Alpha's thing store, which its API exports. It records every batch it serves. */
 @Injectable()
 export class AlphaThings {
+  readonly batches: string[][] = [];
   readonly #rows = new Map<string, Thing>([
     ['t-1', { id: 't-1', name: 'Spindle' }],
     ['t-2', { id: 't-2', name: 'Gear wheel' }],
@@ -36,6 +25,7 @@ export class AlphaThings {
   }
 
   async byIds(ids: readonly string[]): Promise<(Thing | GraphQLError)[]> {
+    this.batches.push([...ids]);
     return ids.map(
       (id) =>
         this.#rows.get(id) ??
@@ -43,6 +33,10 @@ export class AlphaThings {
     );
   }
 }
+
+/** Alpha's public API: plain providers and no resolvers. */
+@Module({ providers: [AlphaThings], exports: [AlphaThings] })
+export class AlphaApiModule {}
 
 @Resolver(() => Thing)
 export class ThingResolver {
@@ -52,19 +46,9 @@ export class ThingResolver {
   alphaThing(@Args('id', { type: () => ID }) id: string): Thing | undefined {
     return this.things.byId(id);
   }
-
-  @ResolveReference()
-  resolveReference(
-    @Parent() reference: EntityReference,
-    @Context() context: SubgraphContext,
-  ): Promise<Thing> {
-    return loaderFor(context, 'alpha.thing', (ids: readonly string[]) =>
-      this.things.byIds(ids),
-    ).load(reference.id);
-  }
 }
 
-@Module({ providers: [AlphaThings, ThingResolver] })
+@Module({ imports: [AlphaApiModule], providers: [ThingResolver] })
 export class AlphaModule {}
 
 export const alpha = defineModule({

@@ -9,9 +9,9 @@ import { boot } from '../../src/boot/boot.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
+import { alpha } from '../fixtures/graphql/alpha.ts';
+import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
-import { alpha } from '../fixtures/subgraphs/alpha.ts';
-import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 
 const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
 

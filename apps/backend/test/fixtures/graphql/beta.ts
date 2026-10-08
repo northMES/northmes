@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Fixture module beta: owns Crate, whose thing field references alpha's Thing by key, and a
+// Fixture module beta: owns Crate, whose thing field reads alpha's Thing through alpha's API, and a
 // subscription that announces one crate at the plant its argument names.
-import { Module } from '@nestjs/common';
+import { Inject, Module } from '@nestjs/common';
 import {
   Args,
+  Context,
   Field,
   ID,
   ObjectType,
@@ -14,14 +15,10 @@ import {
   Subscription,
 } from '@nestjs/graphql';
 import { defineModule } from '@northmes/sdk';
-import { graphqlKit } from '@northmes/sdk/graphql';
+import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
+import { AlphaApiModule, AlphaThings, Thing } from './alpha.ts';
 
-const gql = graphqlKit(() => BetaModule);
-
-/** Alpha's Thing, referenced by name and key only. */
-export const ThingRef = gql.entityRef('Thing');
-
-@ObjectType('Crate', { registerIn: () => BetaModule })
+@ObjectType('Crate')
 export class Crate {
   @Field(() => ID) id!: string;
   @Field(() => String) label!: string;
@@ -29,7 +26,7 @@ export class Crate {
 }
 
 /** The event of betaCrateArrived: a crate arrived at a plant. */
-@ObjectType('CrateArrival', { registerIn: () => BetaModule })
+@ObjectType('CrateArrival')
 export class CrateArrival {
   @Field(() => ID) plantId!: string;
   @Field(() => Crate) crate!: Crate;
@@ -37,6 +34,8 @@ export class CrateArrival {
 
 @Resolver(() => Crate)
 export class CrateResolver {
+  constructor(@Inject(AlphaThings) private readonly things: AlphaThings) {}
+
   @Query(() => [Crate])
   betaCrates(): Crate[] {
     return [
@@ -45,9 +44,12 @@ export class CrateResolver {
     ];
   }
 
-  @ResolveField(() => ThingRef, { nullable: true })
-  thing(@Parent() crate: Crate): { __typename: 'Thing'; id: string } {
-    return { __typename: 'Thing', id: crate.thingId };
+  /** Alpha's thing in the crate, which the request's alpha.thing loader reads in one batch. */
+  @ResolveField(() => Thing, { nullable: true })
+  thing(@Parent() crate: Crate, @Context() context: RequestContext): Promise<Thing> {
+    return loaderFor(context, 'alpha.thing', (ids: readonly string[]) =>
+      this.things.byIds(ids),
+    ).load(crate.thingId);
   }
 
   /** Delivers one event, the arrival of crate one at the plant the argument names, and ends. */
@@ -59,7 +61,7 @@ export class CrateResolver {
   }
 }
 
-@Module({ providers: [CrateResolver] })
+@Module({ imports: [AlphaApiModule], providers: [CrateResolver] })
 export class BetaModule {}
 
 export const beta = defineModule({

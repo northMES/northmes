@@ -5,10 +5,10 @@ import type { ModuleManifest } from '@northmes/sdk';
 import { type GqlEvent, given, gqlClient } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import { alpha } from '../fixtures/graphql/alpha.ts';
+import { beta } from '../fixtures/graphql/beta.ts';
+import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
-import { alpha } from '../fixtures/subgraphs/alpha.ts';
-import { beta } from '../fixtures/subgraphs/beta.ts';
-import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 
 const env = useServerEnv();
 
@@ -77,7 +77,7 @@ function upgradeAnswer(url: string, path: string): Promise<string> {
   });
 }
 
-/** beta's subscription, with a field of alpha's Thing that the gateway joins through _entities. */
+/** beta's subscription, with alpha's Thing, which beta's thing field reads through alpha's API. */
 const crateArrived = `subscription ($plantId: ID!) {
   betaCrateArrived(plantId: $plantId) { plantId crate { label thing { name } } }
 }`;

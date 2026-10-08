@@ -4,11 +4,10 @@ import type { ModuleManifest } from '@northmes/sdk';
 import { gqlClient } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import { AlphaThings, alpha } from '../fixtures/graphql/alpha.ts';
+import { beta } from '../fixtures/graphql/beta.ts';
+import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
-import { alpha } from '../fixtures/subgraphs/alpha.ts';
-import { beta } from '../fixtures/subgraphs/beta.ts';
-import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
-import { EarlyQuery, probe } from '../fixtures/subgraphs/probe.ts';
 
 const env = useServerEnv();
 
@@ -35,8 +34,8 @@ async function bootFixtures(...manifests: readonly ModuleManifest[]) {
   return { url: await app.getUrl(), log };
 }
 
-describe('the gateway on /graphql', () => {
-  it('E02-S03 a query across two fixture subgraphs resolves the entity reference over HTTP', async () => {
+describe('the one schema on /graphql', () => {
+  it("E02-S03 a query resolves a field that one module adds with another module's API over HTTP", async () => {
     const { url } = await bootFixtures(alpha, beta);
 
     const answer = await gqlClient(url).send('{ betaCrates { label thing { id name } } }');
@@ -50,28 +49,18 @@ describe('the gateway on /graphql', () => {
         ],
       },
     });
+    // The request's loader read the things of both crates in one call of alpha's API.
+    expect(app?.get(AlphaThings).batches).toEqual([['t-1', 't-2']]);
   });
 
-  it('E02-S03 /graphql answers 503 until the gateway has its schema', async () => {
-    const { url } = await bootFixtures(alpha, beta, probe);
+  it('E02-S03 the schema holds the root fields of every booted module', async () => {
+    const { url } = await bootFixtures(alpha, beta);
 
-    const early = app?.get(EarlyQuery).answers;
-    const ready = await gqlClient(url).send('{ __typename }');
+    const answer = await gqlClient(url).send<{
+      __schema: { queryType: { fields: { name: string }[] } };
+    }>('{ __schema { queryType { fields { name } } } }');
 
-    expect(early).toEqual([
-      {
-        status: 503,
-        errors: [expect.objectContaining({ extensions: { code: 'UNAVAILABLE' } })],
-      },
-    ]);
-    expect(ready).toEqual({ status: 200, data: { __typename: 'Query' } });
-  });
-
-  it('E02-S03 the boot log shows supergraph= and a 12 hex hash', async () => {
-    const { log } = await bootFixtures(alpha, beta);
-
-    const lines = log.info.mock.calls.map(([line]) => line);
-
-    expect(lines).toContainEqual(expect.stringMatching(/\bsupergraph=[0-9a-f]{12}\b/));
+    const names = answer.data?.__schema.queryType.fields.map(({ name }) => name);
+    expect(names).toEqual(['alphaThing', 'betaCrates']);
   });
 });

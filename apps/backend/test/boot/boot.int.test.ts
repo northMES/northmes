@@ -16,8 +16,8 @@ import { imageVersion } from '../../src/version.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
+import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
-import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 
 // Boot step 5 reads the migration records of the in-repo modules as nm_app, so the server needs a
 // migrated database.
@@ -63,10 +63,8 @@ describe('boot', () => {
 
     expect(exit).not.toHaveBeenCalled();
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
-    // Core's server entry gives the gateway a supergraph to serve.
     expect(log.info.mock.calls).toEqual([
       ['Modules in boot order: core, planning'],
-      [expect.stringMatching(/^Serving \/graphql with supergraph=[0-9a-f]{12}$/)],
       [`Listening on ${url}`],
     ]);
     expect(log.error).not.toHaveBeenCalled();
