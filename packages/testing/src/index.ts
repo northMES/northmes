@@ -25,4 +25,8 @@ export type {
 } from './db-command.ts';
 export { given } from './given.ts';
 export { type GqlAnswer, type GqlClient, gqlClient } from './gql-client.ts';
-export { type PostgresServer, startPostgres } from './postgres-server.ts';
+export {
+  type PostgresServer,
+  type StartPostgresOptions,
+  startPostgres,
+} from './postgres-server.ts';
