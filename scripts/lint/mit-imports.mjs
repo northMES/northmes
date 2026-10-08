@@ -3,7 +3,7 @@
 // and-the-trademark-policy.md). Every source and test file of a workspace package whose license is
 // MIT, and of every plugin under examples/, is read for its imports. An import of a workspace
 // package whose license is AGPL is a finding that names the importing file, its line and the
-// imported package.
+// imported package. A modules/*/contracts package whose license is not MIT is a finding as well.
 //
 // An import names a package by its name, with or without a subpath, or by a relative path that
 // lands in the package's folder. Static, type-only and dynamic imports, re-exports and require
@@ -17,11 +17,15 @@ import ts from 'typescript';
  * @typedef {{ name?: string, license?: string }} Manifest
  * @typedef {{ path: string, manifest: Manifest }} WorkspacePackage
  * @typedef {{ path: string, text: string }} SourceFile
- * @typedef {{ kind: 'import', path: string, line: number, imported: string }} Finding
+ * @typedef {{ kind: 'import', path: string, line: number, imported: string }
+ *   | { kind: 'license', path: string, license: string | undefined }} Finding
  */
 
 /** TypeScript and JavaScript sources, the files the TypeScript parser reads. */
 const sourceExtension = /\.[cm]?[jt]sx?$/;
+
+/** A module's contracts package, which is MIT (ADR 0003 and ADR 0056). */
+const contractsPackage = /^modules\/[^/]+\/contracts$/;
 
 /** Plugins under examples/ show plugin authors the rule, whatever their own license. */
 const examplePlugin = /^examples\/[^/]+$/;
@@ -65,8 +69,8 @@ function owner(packages, path) {
 }
 
 /**
- * Finds imports of AGPL workspace packages in the files of MIT packages and examples plugins. An
- * import of the file's own package is not a finding.
+ * Finds contracts packages that are not MIT, then imports of AGPL workspace packages in the files
+ * of MIT packages and examples plugins. An import of the file's own package is not a finding.
  * @param {readonly WorkspacePackage[]} packages Each package's package.json path and manifest.
  * @param {readonly SourceFile[]} files Repository-relative paths with forward slashes.
  * @returns {Finding[]}
@@ -75,7 +79,12 @@ export function scan(packages, files) {
   const workspace = packages.map(({ path, manifest }) => ({ dir: posix.dirname(path), manifest }));
   const byName = new Map(workspace.map((entry) => [entry.manifest.name, entry]));
   /** @type {Finding[]} */
-  const findings = [];
+  const findings = packages
+    .filter(
+      ({ path, manifest }) =>
+        contractsPackage.test(posix.dirname(path)) && manifest.license !== 'MIT',
+    )
+    .map(({ path, manifest }) => ({ kind: 'license', path, license: manifest.license }));
 
   for (const { path, text } of files) {
     const own = owner(workspace, path);
