@@ -7,5 +7,18 @@ export interface BuiltPlugin {
   readonly imports: Readonly<Record<string, readonly string[]>>;
 }
 
-/** Builds the plugin package in `dir` into its dist/ folder. */
+/**
+ * Builds the plugin package in `dir` into its dist/ folder and copies the installable package
+ * (package.json, dist/ and migrations/) to `outDir`, which it empties first.
+ */
 export function buildPlugin(dir: string, outDir: string): Promise<BuiltPlugin>;
+
+export interface MainIo {
+  log(line: string): void;
+  error(line: string): void;
+  /** The repository root, which holds examples/ and plugins/. */
+  readonly root: string;
+}
+
+/** pnpm plugin:build <id>: builds the plugin and copies it to plugins/<id>/, returns the exit code. */
+export function main(argv: readonly string[], io: MainIo): Promise<number>;
