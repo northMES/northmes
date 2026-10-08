@@ -250,7 +250,7 @@ Standard to lean when all of these hold:
 2. Criteria 4 and 5 above hold over the latest merges.
 3. CodeRabbit reviews every pull request without anyone posting `@coderabbitai review` (the repository has 10 or more stars, or an automatic trigger has been checked on 5 pull requests), and the last 10 runs recorded no reviewer timeout.
 4. Unresolved review threads do not block an automatic merge: CodeRabbit resolves its own threads after the coder's fix, checked on 5 pull requests, or the ruleset no longer requires thread resolution.
-5. `ci / e2e` is a required check, since nobody tries UI changes by hand.
+5. `CI / e2e` is a required check, since nobody tries UI changes by hand.
 
 Step one rung down when a pull request merged by the standard or lean graph is reverted; when 2 follow-up fix pull requests land within 10 merged tasks; when `ci / gate` fails on `main` twice in one week; when 3 or more runs in one week stop on an exhausted loop; or when the weekly sample finds a broken NorthMES rule the code review missed. A revert caused by a security or data defect goes straight back to guided. On the standard and lean graphs Krister reads two of their merged pull requests a week, picked at random, plus every pull request that merged after a reviewer timeout. Each switch, in either direction, is Krister's decision and goes into the weekly log with its trigger; clean runs count again from the date of a step down.
 
