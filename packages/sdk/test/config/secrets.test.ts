@@ -92,6 +92,34 @@ describe('readSecrets', () => {
     expect(error.message).not.toContain(dir);
   });
 
+  // Root reads every file whatever its mode, so only another user sees the read fail.
+  it.skipIf(process.getuid?.() === 0)(
+    'E02-S01 a secret file this process cannot read fails naming its key',
+    () => {
+      const locked = join(dir, 'locked');
+      mkdirSync(locked);
+      const files = {
+        NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', 'auth-secret-7a42', 0o200),
+        NORTHMES_INSTALLATION_KEY_FILE: secretFile('locked/installation_key', 'install-key-3c71'),
+      };
+      // Without search permission on its directory, the file cannot even be looked up.
+      chmodSync(locked, 0o600);
+
+      try {
+        const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'production' }));
+
+        expect(error.problems).toEqual([
+          'NORTHMES_AUTH_SECRET_FILE: must point at a file this process can read',
+          'NORTHMES_INSTALLATION_KEY_FILE: must point at a file this process can read',
+        ]);
+        expect(error.message).not.toContain(dir);
+      } finally {
+        // afterEach removes the directory, which needs search permission on it again.
+        chmodSync(locked, 0o700);
+      }
+    },
+  );
+
   it('E02-S01 a dev-marked secret fails with NODE_ENV production', () => {
     const devSecret = `${DEV_SECRET_MARKER}9c1f07e2`;
     // The stack script writes the dev secret files with mode 0600 (ADR 0058).
