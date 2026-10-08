@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { federation } from '@module-federation/vite';
 import react from '@vitejs/plugin-react';
-import { noBundledSingletons, noRemoteCss } from './guards.mjs';
+import { noBundledSingletons, noRemoteCss, webModuleVersion } from './guards.mjs';
 import { remoteShared } from './shared.mjs';
 
 /**
@@ -23,6 +23,7 @@ export function defineRemoteConfig({ id, version, entry = './src/module.tsx' }) 
     // The server serves each remote's files at this path (ADR 0019).
     base: `/modules/${id}/${version}/`,
     plugins: [
+      webModuleVersion({ entry, version }),
       noBundledSingletons(),
       noRemoteCss(),
       react(),

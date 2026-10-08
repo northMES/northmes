@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-// Vite plugins that fail a remote's build when it breaks a rule of ADR 0019.
+// Vite plugins that fail a remote's build when it breaks a rule of ADR 0003 or ADR 0019.
+import { readFileSync } from 'node:fs';
+import { extname, resolve } from 'node:path';
 import { singletons } from './shared.mjs';
 
 /**
@@ -93,6 +95,89 @@ export function noRemoteCss() {
         this.error(
           `this remote emits CSS (${sheets.join(', ')}). A remote under modules/*/web imports no ` +
             "stylesheet, because the shell's one stylesheet covers its classes (ADR 0019).",
+        );
+      }
+    },
+  };
+}
+
+/**
+ * Every node of an ESTree AST, depth first.
+ *
+ * @param {unknown} node
+ * @returns {Generator<Record<string, any>>}
+ */
+function* nodesOf(node) {
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      yield* nodesOf(item);
+    }
+  } else if (typeof node === 'object' && node !== null) {
+    if ('type' in node) {
+      yield node;
+    }
+    for (const value of Object.values(node)) {
+      yield* nodesOf(value);
+    }
+  }
+}
+
+/**
+ * The version that a defineWebModule call in a program passes as a string literal.
+ *
+ * @param {unknown} program
+ * @returns {string | undefined}
+ */
+function declaredVersion(program) {
+  for (const node of nodesOf(program)) {
+    if (
+      node.type === 'CallExpression' &&
+      node.callee.type === 'Identifier' &&
+      node.callee.name === 'defineWebModule' &&
+      node.arguments[0]?.type === 'ObjectExpression'
+    ) {
+      const property = node.arguments[0].properties.find(
+        (/** @type {Record<string, any>} */ candidate) =>
+          candidate.type === 'Property' &&
+          candidate.key.type === 'Identifier' &&
+          candidate.key.name === 'version',
+      );
+      return typeof property?.value.value === 'string' ? property.value.value : undefined;
+    }
+  }
+  return undefined;
+}
+
+/** @type {Record<string, 'js' | 'jsx' | 'ts' | 'tsx'>} */
+const languages = { '.jsx': 'jsx', '.ts': 'ts', '.tsx': 'tsx' };
+
+/**
+ * Fails the build when the version that the remote's entry passes to defineWebModule differs
+ * from the version of the module's manifest. Both repeat the same value, and the server serves
+ * the remote under the manifest's version (ADR 0003).
+ *
+ * @param {{ entry: string, version: string }} options
+ * @returns {import('vite').Plugin}
+ */
+export function webModuleVersion({ entry, version }) {
+  let entryFile = '';
+  return {
+    name: 'northmes:web-module-version',
+    apply: 'build',
+    configResolved(config) {
+      entryFile = resolve(config.root, entry);
+    },
+    // The check reads the entry itself before the build starts: an error raised in transform
+    // leaves @module-federation/vite waiting for its module parse timeout of 10 s.
+    buildStart() {
+      const program = this.parse(readFileSync(entryFile, 'utf8'), {
+        lang: languages[extname(entryFile)] ?? 'js',
+      });
+      const declared = declaredVersion(program);
+      if (declared !== version) {
+        this.error(
+          `defineWebModule in ${entry} declares version ${declared}, but the module manifest ` +
+            `declares version ${version} (ADR 0003).`,
         );
       }
     },
