@@ -53,9 +53,12 @@ describe('subscriptions on /graphql', () => {
   it('E02-S03 a subscription delivers one event over graphql-ws', async () => {
     const url = await bootFixtures(alpha, beta);
     const plantId = given.plant();
+    const client = gqlClient(url);
+    // A screen loads its data over HTTP before it subscribes.
+    await client.send('{ betaCrates { label } }');
 
     const event = await firstEvent(
-      gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'graphql-ws' }),
+      client.subscribe(crateArrived, { plantId }, { transport: 'graphql-ws' }),
     );
 
     expect(event).toEqual({
@@ -71,6 +74,21 @@ describe('subscriptions on /graphql', () => {
 
     const event = await firstEvent(
       gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'sse' }),
+    );
+
+    expect(event).toEqual({
+      data: {
+        betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
+      },
+    });
+  });
+
+  it('E02-S03 a subscription sent before the first HTTP request works', async () => {
+    const url = await bootFixtures(alpha, beta);
+    const plantId = given.plant();
+
+    const event = await firstEvent(
+      gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'graphql-ws' }),
     );
 
     expect(event).toEqual({
