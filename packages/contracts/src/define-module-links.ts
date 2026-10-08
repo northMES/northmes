@@ -65,9 +65,14 @@ export function defineModuleLinks<
 
 type Params = Readonly<Record<string, string>>;
 
+// Each builder carries its children's builders as properties, so an entry may not take the name of
+// a property every function has (name, length, call, apply, bind, toString and the like).
 function builders(parent: string, entries: LinkEntryDefinitions): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(entries).map(([name, entry]) => {
+      if (name in Function.prototype) {
+        throw new Error(`Link entry ${name} under ${parent} has the name of a function property`);
+      }
       const pattern = `${parent}/${entry.path}`;
       const build = (params: Params, search: LinkSearch = {}) => ({
         to: pattern,
