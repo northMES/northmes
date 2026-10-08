@@ -36,6 +36,21 @@ describe('loadWebConfig', () => {
     expect(await loadWebConfig(fetch, pageOrigin)).toEqual({ apiUrl: pageOrigin });
   });
 
+  it('E02-S05 a config.json that is not a JSON object stops the web with the reason', async () => {
+    const values = [null, [], 'https://api.northmes.test', 42];
+
+    const reasons = await Promise.all(
+      values.map((value) =>
+        loadWebConfig(
+          answering(() => Response.json(value)),
+          pageOrigin,
+        ).catch((error: unknown) => (error instanceof Error ? error.message : String(error))),
+      ),
+    );
+
+    expect(reasons).toEqual(values.map(() => 'config.json: the file must hold a JSON object'));
+  });
+
   it('E02-S05 a config.json whose apiUrl is no absolute http URL stops the web with the reason', async () => {
     const fetch = answering(() => Response.json({ apiUrl: '/api' }));
 
