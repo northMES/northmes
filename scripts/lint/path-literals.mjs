@@ -34,9 +34,12 @@ function isScanned(path) {
   return sourceExtension.test(path) && scannedFolders.some((folder) => folder.test(path));
 }
 
-/** @param {string} value */
+/**
+ * An absolute path on this origin. A protocol-relative URL (`//host/...`) names another host.
+ * @param {string} value
+ */
 function isAppPath(value) {
-  return value.startsWith('/');
+  return value.startsWith('/') && !value.startsWith('//');
 }
 
 /**
