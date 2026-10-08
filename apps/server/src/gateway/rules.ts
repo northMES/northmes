@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Kind, parse } from 'graphql';
+import { isTypeDefinitionNode, Kind, parse } from 'graphql';
 
 /** What the NorthMES rules read of a subgraph. */
 export interface SubgraphSdl {
@@ -22,7 +22,30 @@ const rootTypes = new Set(['Query', 'Mutation', 'Subscription']);
  * problem, in subgraph order, and an empty list when the subgraphs keep every rule.
  */
 export function checkRules(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
-  return subgraphs.flatMap(rootFieldPrefixProblems);
+  return [...subgraphs.flatMap(rootFieldPrefixProblems), ...typeOwnershipProblems(subgraphs)];
+}
+
+/** NORTHMES_TYPE_OWNERSHIP: a type is defined in one subgraph, the module that owns it. */
+function typeOwnershipProblems(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
+  const owners = new Map<string, string>();
+  const problems: CompositionProblem[] = [];
+  for (const { name, sdl } of subgraphs) {
+    for (const definition of parse(sdl).definitions) {
+      if (!isTypeDefinitionNode(definition)) continue;
+      const type = definition.name.value;
+      if (rootTypes.has(type)) continue;
+      const owner = owners.get(type);
+      if (owner === undefined) {
+        owners.set(type, name);
+        continue;
+      }
+      problems.push({
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message: `${type} is defined in subgraphs "${owner}" and "${name}"; one module owns a type that is not an entity`,
+      });
+    }
+  }
+  return problems;
 }
 
 /**
