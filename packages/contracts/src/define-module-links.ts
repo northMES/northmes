@@ -94,11 +94,17 @@ function href(pattern: string, params: Params, search: LinkSearch): string {
   return query === '' ? path : `${path}?${query}`;
 }
 
-// The encoded value of one param. An empty value throws, because the href would lose the segment.
+// The encoded value of one param. An empty value throws, because the href would lose the segment,
+// and so do . and .., because URL parsing would drop the segment or climb out of the route.
 function param(pattern: string, name: string, params: Params): string {
   const value = params[name];
   if (!value) {
     throw new Error(`Link ${pattern} has an empty value for ${name}`);
+  }
+  if (value === '.' || value === '..') {
+    throw new Error(
+      `Link ${pattern} has the value ${JSON.stringify(value)} for ${name}, which is not a path segment`,
+    );
   }
   return encodeURIComponent(value);
 }
