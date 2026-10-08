@@ -38,6 +38,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const articleDetailRoute = createRoute({
     getParentRoute: () => articleRoute,
     path: '/',
+    component: lazyRouteComponent(() => import('./screens.ts'), 'ArticleScreen'),
   });
   const editArticleRoute = createRoute({
     getParentRoute: () => articleRoute,
