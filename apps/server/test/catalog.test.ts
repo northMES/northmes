@@ -284,6 +284,24 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it("E02-S01 a module that declares another module's slot is refused naming the module and the slot", () => {
+    const panels = 'planning/order/panels/v1';
+    // acme-panel copies planning's slot into its own slots, so its contribution would otherwise
+    // count as one to its own slot and pass without a dependency on planning.
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core'], { web: webPart([panels]) }),
+      plugin('acme-panel', ['core'], {
+        web: webPart([panels], [contribution('acme-panel.notes', panels)]),
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module acme-panel declares slot "planning/order/panels/v1", which must start with "acme-panel/"',
+      'Module acme-panel contributes "acme-panel.notes" to slot "planning/order/panels/v1" of planning, which acme-panel does not depend on',
+    ]);
+  });
+
   it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
     const { locale, outcomes } = checkInCzechLocale([
       [
