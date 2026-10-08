@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { AnyRoute } from '@tanstack/react-router';
+import { type AnyRoute, trimPathLeft } from '@tanstack/react-router';
 import { createMountRoutes, type PlantRoute } from './routes.ts';
 
 /** The default export of a remote's ./module entry (ADR 0019). It has no nav list (ADR 0062). */
@@ -35,14 +35,21 @@ export function validateWebModule(value: unknown, entry: WebModuleEntry): string
     );
   }
   if (typeof module.routes === 'function') {
-    const top: AnyRoute = module.routes(createMountRoutes().plantRoute);
-    // A pathless route has an id option instead of a path.
-    const path = 'path' in top.options ? top.options.path : undefined;
+    const path = routePath(module.routes(createMountRoutes().plantRoute));
     if (path !== entry.id) {
       problems.push(`the top route path is ${shown(path)}, expected the module id ${entry.id}`);
     }
   }
   return problems;
+}
+
+// The path the router gives a route: its path option without leading slashes. A pathless route
+// has an id option instead, and no path.
+function routePath(route: AnyRoute): string | undefined {
+  const { options } = route;
+  return 'path' in options && typeof options.path === 'string'
+    ? trimPathLeft(options.path)
+    : undefined;
 }
 
 function shown(field: unknown): string {
