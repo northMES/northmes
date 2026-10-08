@@ -15,4 +15,29 @@ describe('cli', () => {
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.info).not.toHaveBeenCalled();
   });
+
+  it('E02-S02 db bootstrap with an invalid environment exits 1 and lists every bad key without its value', async () => {
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+
+    // DATABASE_URL carries a login, and the four secret file keys are missing.
+    await cli(['db', 'bootstrap'], {
+      env: { DATABASE_URL: 'postgres://postgres:hunter2@db:5432/northmes' },
+      exit,
+      log,
+    });
+    const [header, ...problems] = (log.error.mock.calls[0]?.[0] ?? '').split('\n');
+
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(header).toBe('invalid configuration (5 problems)');
+    expect(problems.map((problem) => problem.split(':')[0]).sort()).toEqual([
+      '- DATABASE_URL',
+      '- NORTHMES_DB_APP_PASSWORD_FILE',
+      '- NORTHMES_DB_AUTH_PASSWORD_FILE',
+      '- NORTHMES_DB_OWNER_PASSWORD_FILE',
+      '- POSTGRES_PASSWORD_FILE',
+    ]);
+    expect(log.error.mock.calls.join('\n')).not.toContain('hunter2');
+    expect(log.info).not.toHaveBeenCalled();
+  });
 });
