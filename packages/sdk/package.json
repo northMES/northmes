@@ -33,6 +33,11 @@
       "default": "./dist/errors/index.js"
     }
   },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
   "dependencies": {
     "@northmes/contracts": "workspace:*"
   },
