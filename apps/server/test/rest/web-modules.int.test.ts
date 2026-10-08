@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -102,6 +102,21 @@ describe('the web module list', () => {
       ]);
     },
   );
+
+  it('E02-S05 a remote whose mf-manifest.json does not parse is listed with integrity null', async () => {
+    const files = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    onTestFinished(() => rmSync(files, { recursive: true, force: true }));
+    const remote = join(files, 'modules', 'planning');
+    cpSync(join(webFiles, 'modules', 'planning'), remote, { recursive: true });
+    writeFileSync(join(remote, 'mf-manifest.json'), '{ "metaData": ');
+    const url = await serve(['core', 'planning'], files);
+
+    const response = await fetch(`${url}${apiPath('web', 'modules')}`);
+
+    expect((await response.json()).modules).toEqual([
+      expect.objectContaining({ id: 'planning', integrity: null }),
+    ]);
+  });
 });
 
 describe('the remote files', () => {
