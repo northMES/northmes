@@ -14,23 +14,11 @@ export interface ModuleNames {
 /** kebab-case: starts with a letter, then lower-case segments joined by single hyphens. */
 export const MODULE_ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
-/**
- * Postgres truncates identifiers longer than 63 bytes, so two long ids could share one owner
- * role. The id is ASCII, so its length in characters is its length in bytes.
- */
-const MAX_OWNER_ROLE_LENGTH = 63;
-
 export function moduleNames(id: string): ModuleNames {
   if (!MODULE_ID.test(id)) {
     throw new Error(`Invalid module id "${id}": use kebab-case [a-z][a-z0-9]*(-[a-z0-9]+)*`);
   }
   const gql = id.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
   const sql = id.replaceAll('-', '_');
-  const ownerRole = `nm_mod_${sql}`;
-  if (ownerRole.length > MAX_OWNER_ROLE_LENGTH) {
-    throw new Error(
-      `Invalid module id "${id}": the owner role ${ownerRole} is longer than ${MAX_OWNER_ROLE_LENGTH} bytes, the Postgres identifier limit`,
-    );
-  }
-  return { id, gql, sql, ownerRole, remote: gql };
+  return { id, gql, sql, ownerRole: `nm_mod_${sql}`, remote: gql };
 }
