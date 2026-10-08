@@ -9,6 +9,7 @@ interface Step {
   if?: string;
   uses?: string;
   run?: string;
+  'working-directory'?: string;
   with?: Record<string, unknown>;
   env?: Record<string, string>;
 }
@@ -58,6 +59,13 @@ const pullRequestChecks = ['pr title', 'linked issue'];
 // root script runs them.
 const reportSteps = ['node scripts/ci/coverage-summary.mjs'];
 
+// The steps that prepare a job: installing the dependencies, which every pnpm script needs, and
+// adding the worktree that CI / fresh worktree installs and tests in. They check nothing, so no
+// root script runs them.
+function isSetupStep(run: string): boolean {
+  return run === 'pnpm install --frozen-lockfile' || /^git worktree add /.test(run);
+}
+
 // Collecting coverage adds a report to a Vitest run and changes neither the tests it runs nor, while
 // vitest.config.ts sets no coverage threshold, its result. A run of the same projects without
 // --coverage stands for it.
@@ -105,6 +113,7 @@ const ciJobs = [
   'build',
   'test',
   'react doctor',
+  'fresh worktree',
   'pr title',
   'linked issue',
   'gate',
@@ -211,6 +220,19 @@ function turboTasks(command: string): string[] {
   return match?.[1] === undefined
     ? [command]
     : match[1].split(' ').map((task) => `turbo run ${task}`);
+}
+
+// `vitest run --project unit --project integration` runs the unit and the integration projects,
+// which `vitest run --project unit` and `vitest run --project integration` run one each, with the
+// variables set in front of vitest. A Vitest command with other flags stays whole.
+function vitestProjects(command: string): string[] {
+  const match = /^((?:\w+=\S+ )*vitest run)((?: --project [\w-]+)+)$/.exec(command);
+  const run = match?.[1];
+  return run === undefined
+    ? [command]
+    : [...(match?.[2] ?? '').matchAll(/--project ([\w-]+)/g)].map(
+        ([, project]) => `${run} --project ${project}`,
+      );
 }
 
 // The runner of the test jobs (docs/plan/13-delivery-and-github.md): a pull request from a fork
@@ -400,7 +422,7 @@ describe('workflows', () => {
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
   // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
-  // tests did not run. A push to main skips the pull request checks.
+  // tests did not run. A push to main skips the pull request checks and CI / fresh worktree.
   it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('gate');
 
@@ -453,7 +475,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, pr title, linked issue and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, pr title, linked issue and gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -559,7 +581,10 @@ describe('workflows', () => {
       (need) => ![...pullRequestChecks, ...ciOnlyChecks].includes(workflow.jobs[need]?.name ?? ''),
     );
     const contained = new Set(
-      ['pnpm check', 'pnpm check:full'].flatMap(commandsOf).flatMap(turboTasks),
+      ['pnpm check', 'pnpm check:full']
+        .flatMap(commandsOf)
+        .flatMap(turboTasks)
+        .flatMap(vitestProjects),
     );
 
     expect(gated, 'the jobs CI / gate needs').not.toHaveLength(0);
@@ -570,20 +595,17 @@ describe('workflows', () => {
     for (const need of gated) {
       for (const { run } of workflow.jobs[need]?.steps ?? []) {
         const where = `${workflow.path} job ${need} step ${JSON.stringify(run)}`;
-        // Installing the dependencies is the setup every pnpm script needs, and a report step checks
-        // nothing.
-        if (
-          run === undefined ||
-          run.trim() === 'pnpm install --frozen-lockfile' ||
-          reportSteps.includes(run.trim())
-        ) {
+        if (run === undefined || isSetupStep(run.trim()) || reportSteps.includes(run.trim())) {
           continue;
         }
         const script = rootScript(/^pnpm (\S+)/.exec(run.trim())?.[1]);
 
         expect(script, `${where} calls a root script`).toBeDefined();
-        for (const command of commandsOf(run.trim()).flatMap(turboTasks)) {
-          expect([...contained], where).toContain(withoutCoverage(command));
+        for (const command of commandsOf(run.trim())
+          .map(withoutCoverage)
+          .flatMap(turboTasks)
+          .flatMap(vitestProjects)) {
+          expect([...contained], where).toContain(command);
         }
       }
     }
@@ -663,5 +685,37 @@ describe('workflows', () => {
     expect(commandsOf('pnpm react-doctor:summary')).toEqual([
       `node scripts/ci/react-doctor-summary.mjs ${report}`,
     ]);
+  });
+
+  // A handoff run starts in a fresh git worktree and runs tests right after one install, so the job
+  // adds a worktree, installs in it and runs the integration project there, with no build step.
+  // Tests that boot the built server build it through bootBuilt
+  // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
+  // The job runs on pull requests only; on main, CI / test runs the same integration tests.
+  it('E02-S08 the fresh-worktree job runs git worktree add, pnpm install --frozen-lockfile and pnpm test:int and no build', () => {
+    const { id, job } = jobNamed('fresh worktree');
+    const steps = job.steps ?? [];
+    const runs = steps.flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
+    const worktree = /^git worktree add --detach (\S+)$/.exec(runs[0] ?? '')?.[1];
+
+    expect(id).toBe('fresh-worktree');
+    expect(job.if).toBe("github.event_name == 'pull_request'");
+    expect(worktree, 'the directory that git worktree add creates').toBeDefined();
+    expect(
+      steps.map(({ uses, run, 'working-directory': directory }) => ({
+        step: uses?.replace(/@.*$/, '') ?? run?.trim(),
+        directory,
+      })),
+    ).toEqual([
+      { step: 'actions/checkout', directory: undefined },
+      { step: 'pnpm/action-setup', directory: undefined },
+      { step: 'actions/setup-node', directory: undefined },
+      { step: `git worktree add --detach ${worktree}`, directory: undefined },
+      { step: 'pnpm install --frozen-lockfile', directory: worktree },
+      { step: 'pnpm test:int', directory: worktree },
+    ]);
+    expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
+      [],
+    );
   });
 });
