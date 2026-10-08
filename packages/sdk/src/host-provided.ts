@@ -15,6 +15,7 @@ export const HOST_PROVIDED = [
   'reflect-metadata',
   'rxjs',
   'zod',
+  'temporal-polyfill',
 ] as const;
 
 export function isHostProvided(specifier: string): boolean {
