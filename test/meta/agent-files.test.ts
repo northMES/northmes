@@ -17,7 +17,7 @@ const projectSkills: readonly string[] = [
   'db-test',
   'vertical-slice',
   'graphql-subgraph',
-  'web-remote',
+  'web-module',
   'dst-test',
 ];
 
