@@ -82,7 +82,7 @@ describe('the exception filter', () => {
       `mutation ($input: DispatchReleaseJobInput!) {
         dispatchReleaseJob(input: $input) { id status }
       }`,
-      { input: { id: JOB_ID } },
+      { input: { id: JOB_ID, expectedVersion: 1 } },
     );
 
     // Both modules veto. release-limits boots first, so its veto is the one the client gets.
@@ -113,7 +113,7 @@ describe('the exception filter', () => {
       `mutation ($input: DispatchReleaseJobInput!) {
         dispatchReleaseJob(input: $input) { id status }
       }`,
-      { input: { id: JOB_ID } },
+      { input: { id: JOB_ID, expectedVersion: 1 } },
     );
 
     expect(answer).toMatchObject({
