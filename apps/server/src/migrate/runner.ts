@@ -79,12 +79,13 @@ async function createMigrationTable(client: Client): Promise<void> {
 }
 
 /**
- * Creates the module's NOLOGIN owner role and its schema unless they exist. Roles belong to the
- * server, so the role may come from a run on another database; the grants are given again either
- * way.
+ * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app use the
+ * schema. Roles belong to the server, so the role may come from a run on another database; the
+ * grants are given again either way.
  */
 async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Promise<void> {
   const role = client.escapeIdentifier(names.ownerRole);
+  const schema = client.escapeIdentifier(names.sql);
   const existing = await client.query('select 1 from pg_roles where rolname = $1', [
     names.ownerRole,
   ]);
@@ -94,9 +95,13 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   await client.query(`grant ${role} to current_user with set true, inherit false`);
   // The module role uses the REFERENCES grants that other modules give nm_ext (ADR 0006).
   await client.query(`grant nm_ext to ${role} with inherit true, set false`);
-  await client.query(
-    `create schema if not exists ${client.escapeIdentifier(names.sql)} authorization ${role}`,
-  );
+  await client.query(`create schema if not exists ${schema} authorization ${role}`);
+  // Only the schema's owner may grant on it, since nm_owner inherits none of its rights. The
+  // module's migration files grant nm_app its rights on each table.
+  await client.query('begin');
+  await client.query(`set local role ${role}`);
+  await client.query(`grant usage on schema ${schema} to nm_app`);
+  await client.query('commit');
 }
 
 /** The module's files that northmes_meta.migration has no record of, in lexical order. */
