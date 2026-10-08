@@ -36,11 +36,12 @@ for (const url of process.argv.slice(1)) {
 process.stdout.write(JSON.stringify({ resolved, manifests }));
 `;
 
-// The static import and re-export statements of a module, each on one line. Lazy entries such as
-// `server: () => import('./server/core.module.js')` are expressions, not import lines.
+// The static import and re-export statements of a module, each on one line, with or without a
+// closing semicolon. Lazy entries such as `server: () => import('./server/core.module.js')` are
+// expressions, not import lines.
 function importLines(source: string): string[] {
   const statements = source.match(
-    /^(?:import|export)\b[^;]*?\bfrom\s*['"][^'"]*['"][^;]*;|^import\s*['"][^'"]*['"];/gm,
+    /^(?:import|export)\b[^;]*?\bfrom\s*['"][^'"]*['"][^;\n]*;?|^import\s*['"][^'"]*['"];?/gm,
   );
   return (statements ?? []).map((statement) => statement.replace(/\s+/g, ' '));
 }
