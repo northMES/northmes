@@ -64,4 +64,19 @@ describe('subscriptions on /graphql', () => {
       },
     });
   });
+
+  it('E02-S03 a subscription delivers one event over SSE', async () => {
+    const url = await bootFixtures(alpha, beta);
+    const plantId = given.plant();
+
+    const event = await firstEvent(
+      gqlClient(url).subscribe(crateArrived, { plantId }, { transport: 'sse' }),
+    );
+
+    expect(event).toEqual({
+      data: {
+        betaCrateArrived: { plantId, crate: { label: 'Crate one', thing: { name: 'Spindle' } } },
+      },
+    });
+  });
 });
