@@ -91,6 +91,25 @@ export async function prepareDatabase(env, { northmes = pnpmNorthmes } = {}) {
 }
 
 /**
+ * @typedef {{ getHost(): string, getPort(): number, stop(): Promise<unknown> }} StartedPostgres
+ * @typedef {(settings: { image: string, password: string, reuse: boolean }) => Promise<StartedPostgres>} StartContainer
+ *   Starts the stack's Postgres container from image, with password for the superuser. With reuse,
+ *   Testcontainers reuses the container of an earlier run with the same settings.
+ */
+
+/**
+ * Starts Postgres through Testcontainers, with the stack's superuser and database.
+ * @type {StartContainer}
+ */
+function startPostgresContainer({ image, password, reuse }) {
+  const definition = new PostgreSqlContainer(image)
+    .withUsername(superuser)
+    .withPassword(password)
+    .withDatabase(database);
+  return (reuse ? definition.withReuse() : definition).start();
+}
+
+/**
  * Starts the stack: writes the dev configuration into stateDir (writeDevConfig), starts Postgres
  * from the image in infra/pg-image.json with the superuser password of the dev secrets, and
  * prepares its database (prepareDatabase). Resolves with the environment for the processes the
@@ -101,21 +120,27 @@ export async function prepareDatabase(env, { northmes = pnpmNorthmes } = {}) {
  * With reuse, which the caller takes from containerReuse, Testcontainers reuses the container of an
  * earlier run with the same settings, and stop leaves it running, so the container outlives the run
  * (ADR 0058). The database steps then run again on it, and they are idempotent.
- * @param {{ stateDir?: string, reuse?: boolean, northmes?: Northmes }} [options] stateDir defaults
- *   to .northmes/ at the repository root, and reuse to false.
+ * @param {{
+ *   stateDir?: string,
+ *   reuse?: boolean,
+ *   northmes?: Northmes,
+ *   startContainer?: StartContainer,
+ *   prepare?: typeof prepareDatabase,
+ * }} [options] stateDir defaults to .northmes/ at the repository root, and reuse to false.
+ *   startContainer starts Postgres, by default through Testcontainers, and prepare runs the
+ *   database steps with northmes, by default prepareDatabase.
  */
 export async function startStack({
   stateDir = join(repositoryRoot, '.northmes'),
   reuse = false,
   northmes = pnpmNorthmes,
+  startContainer = startPostgresContainer,
+  prepare = prepareDatabase,
 } = {}) {
   const devEnv = writeDevConfig(stateDir);
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8'));
-  const definition = new PostgreSqlContainer(image)
-    .withUsername(superuser)
-    .withPassword(readSecret(devEnv.POSTGRES_PASSWORD_FILE ?? ''))
-    .withDatabase(database);
-  const container = await (reuse ? definition.withReuse() : definition).start();
+  const password = readSecret(devEnv.POSTGRES_PASSWORD_FILE ?? '');
+  const container = await startContainer({ image, password, reuse });
   const stop = async () => {
     if (!reuse) await container.stop();
   };
@@ -127,7 +152,7 @@ export async function startStack({
       PORT: String(port),
       NORTHMES_PUBLIC_ORIGIN: `http://127.0.0.1:${port}`,
     };
-    await prepareDatabase(env, { northmes });
+    await prepare(env, { northmes });
     return { env, stop };
   } catch (error) {
     // The caller gets no stop when the start fails, so the container stops here. A failing stop
