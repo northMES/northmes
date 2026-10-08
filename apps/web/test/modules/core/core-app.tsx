@@ -9,7 +9,7 @@ import {
   RouterProvider,
   useParams,
 } from '@tanstack/react-router';
-import { render } from '@testing-library/react';
+import { render, within } from '@testing-library/react';
 import { CoreArticle, CoreArticles } from '../../../src/modules/core/articles.graphql.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
 
@@ -120,4 +120,14 @@ export function articleQuery(node: ArticleNode): MockLink.MockedResponse {
     request: { query: CoreArticle, variables: { id: node.id } },
     result: { data: { coreArticle: node } },
   };
+}
+
+/** The text of each cell of each body row of a table. */
+export function bodyRows(table: HTMLElement): (string | null)[][] {
+  const [, ...rows] = within(table).getAllByRole('row');
+  return rows.map((row) =>
+    within(row)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent),
+  );
 }
