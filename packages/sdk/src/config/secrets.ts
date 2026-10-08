@@ -24,7 +24,8 @@ export function readSecrets<Key extends `${string}_FILE`>(
 ): Secrets<Key> {
   const secrets: Record<string, string> = {};
   for (const [key, path] of Object.entries<string>(files)) {
-    secrets[key.replace(/_FILE$/, '')] = readFileSync(path, 'utf8');
+    // Editors and echo end a file with a newline, which is not part of the secret.
+    secrets[key.replace(/_FILE$/, '')] = readFileSync(path, 'utf8').replace(/\n$/, '');
   }
   secretsRead = secrets;
   return secrets as Secrets<Key>;
