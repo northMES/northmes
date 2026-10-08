@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GraphQLSchema } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import vitestConfig from '../../vitest.config.ts';
@@ -167,6 +168,14 @@ describe('tooling', () => {
     // Vitest 5 lets an inline project inherit the root options by default; saying so keeps the
     // conditions in the unit project if that default changes.
     expect(unit?.extends).toBe(true);
+  });
+
+  it('E02-S01 Vitest gives transformed code the graphql copy that Node loads for dependencies', () => {
+    // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Nest and the gateway
+    // get index.js from Node, and a second copy breaks graphql's instanceof checks (ADR 0015).
+    const nodeCopy = createRequire(import.meta.url)('graphql') as typeof import('graphql');
+
+    expect(GraphQLSchema).toBe(nodeCopy.GraphQLSchema);
   });
 
   it('turbo is in the strict catalog and the root devDependencies take it from the catalog', () => {
