@@ -61,6 +61,14 @@ describe('pg-image', () => {
     ]);
   });
 
+  it('scan reports PostgreSqlContainer() with no argument', () => {
+    const findings = scan([
+      { path: 'a.int.test.ts', text: 'const a = 1;\nawait new PostgreSqlContainer().start();\n' },
+    ]);
+
+    expect(findings).toEqual([{ path: 'a.int.test.ts', line: 2, reference: 'PostgreSqlContainer()' }]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
