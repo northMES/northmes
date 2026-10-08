@@ -18,7 +18,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 - `packages/testing/src/config-for-test.ts`: `configForTest(overrides, secrets)`, the ConfigModule of a test app.
 - `packages/testing/src/create-test-app.ts` and `apps/server/src/testing.ts`: `createTestApp` and the host factory it calls. `apps/server/src/testing.ts` also holds `statementsDuring`, the statement counter on the app's pool.
 - `apps/server/src/db/database.module.ts`: the app's one `nm_app` pool (the `Pool` provider) and the `ScopedDatabase` under `DATABASE` from `@northmes/sdk/data`. `apps/server/src/principal.ts`: `runAs(principal, fn)`, which names the principal whose scope sets each transaction in `fn` sets.
-- `packages/testing/src/boot-built.ts`: `bootBuilt`, which starts the built server in a child process.
+- `packages/testing/src/boot-built.ts`: `bootBuilt`, which starts the built server in a child process. With `args: ['migrate']` or `args: ['db', 'bootstrap']` it runs that `pnpm northmes` command on the built server instead.
 - `scripts/templates/table.sql`, rendered by `scripts/gen-migration.mjs`: the table template with its four policies.
 - `apps/server/src/migrate/runner.ts`: `migrate`, which the template setup and `pnpm northmes migrate` run.
 - `scripts/lint/no-truncate.mjs`, run by `test/meta/no-truncate.test.ts`: refuses a migration that grants TRUNCATE.
