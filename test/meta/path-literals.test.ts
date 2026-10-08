@@ -176,7 +176,7 @@ describe('path-literals', () => {
     ]);
   });
 
-  it('E02-S05 a URL with a scheme or a host, a fragment and a relative path are not app paths and pass', () => {
+  it('E02-S05 a URL with a scheme or a host, a fragment and a relative to of . and .. pass, and a relative to with a named segment fails', () => {
     const text = [
       'export const links = (',
       '  <footer>',
@@ -186,12 +186,19 @@ describe('path-literals', () => {
       '    <a href="#main">Skip to content</a>',
       '    <Link to="..">Back</Link>',
       '    <Link to="./history">History</Link>',
+      '    <Link to="../orders">Orders</Link>',
       '  </footer>',
       ');',
+      "export const up = () => router.navigate({ to: '../..' });",
+      "export const open = () => router.navigate({ to: 'history' });",
       '',
     ].join('\n');
 
-    expect(scan([{ path: 'apps/web/src/footer.tsx', text }], [])).toEqual([]);
+    expect(scan([{ path: 'apps/web/src/footer.tsx', text }], [])).toEqual([
+      { path: 'apps/web/src/footer.tsx', line: 8, literal: './history' },
+      { path: 'apps/web/src/footer.tsx', line: 9, literal: '../orders' },
+      { path: 'apps/web/src/footer.tsx', line: 13, literal: 'history' },
+    ]);
   });
 
   it('E02-S05 only source files under modules/*/web, examples/*/web, apps/web and e2e are scanned', () => {
