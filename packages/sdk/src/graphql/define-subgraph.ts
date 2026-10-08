@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { DynamicModule, Type } from '@nestjs/common';
-import { GraphQLModule } from '@nestjs/graphql';
+import { type BuildSchemaOptions, type Federation2Config, GraphQLModule } from '@nestjs/graphql';
 import { InProcessSubgraphDriver, type InProcessSubgraphOptions } from './driver.ts';
 import { entityStubsOf } from './entity-ref.ts';
 
@@ -8,7 +8,7 @@ import { entityStubsOf } from './entity-ref.ts';
  * @nestjs/graphql 14 links federation v2.14 by default, and the composition library accepts v2.0
  * to v2.9, so every subgraph pins v2.9 and imports only the directives NorthMES uses (ADR 0015).
  */
-const FEDERATION_LINK = {
+const FEDERATION_LINK: Federation2Config = {
   version: 2,
   importUrl: 'https://specs.apollo.dev/federation/v2.9',
   directives: [
@@ -24,7 +24,7 @@ const FEDERATION_LINK = {
     '@cost',
     '@listSize',
   ],
-} as const;
+};
 
 export interface DefineSubgraphOptions {
   /** The module's GraphQL name from moduleNames, so the root field prefix has one source. */
@@ -38,21 +38,20 @@ export interface DefineSubgraphOptions {
  * GraphQLModule.
  */
 export function defineSubgraph({ name, module }: DefineSubgraphOptions): DynamicModule {
+  const buildSchemaOptions: BuildSchemaOptions & { includeModules: Type[] } = {
+    // @nestjs/graphql 14 filters types by registerIn only when it receives includeModules, and on
+    // the federation path it passes include on to the resolvers but not to the type filter. This
+    // internal key reaches the filter, so each module's types stay in its own subgraph.
+    includeModules: [module],
+    orphanedTypes: entityStubsOf(module),
+  };
   return GraphQLModule.forRoot<InProcessSubgraphOptions>({
     driver: InProcessSubgraphDriver,
     subgraphName: name,
     include: [module],
-    autoSchemaFile: {
-      federation: { ...FEDERATION_LINK, directives: [...FEDERATION_LINK.directives] },
-    },
+    autoSchemaFile: { federation: FEDERATION_LINK },
     // Guards, interceptors and filters also run on fields reached through _entities.
     fieldResolverEnhancers: ['guards', 'interceptors', 'filters'],
-    // @nestjs/graphql 14 filters types by registerIn only when it receives includeModules, and on
-    // the federation path it passes include on to the resolvers but not to the type filter. This
-    // internal key reaches the filter, so each module's types stay in its own subgraph.
-    buildSchemaOptions: {
-      includeModules: [module],
-      orphanedTypes: entityStubsOf(module),
-    } as InProcessSubgraphOptions['buildSchemaOptions'],
+    buildSchemaOptions,
   });
 }

@@ -34,6 +34,8 @@ async function buildSubgraphs(modules: Record<string, Type>) {
     ],
   }).compile();
   opened.push(moduleRef);
+  // Nest logs every error a resolver throws, also the NOT_FOUND a test expects.
+  moduleRef.useLogger(false);
   await moduleRef.init();
   return { registry: moduleRef.get(SubgraphRegistry), moduleRef };
 }
