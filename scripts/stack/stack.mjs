@@ -115,7 +115,9 @@ function startPostgresContainer({ image, password, reuse }) {
  * prepares its database (prepareDatabase). Resolves with the environment for the processes the
  * caller starts and stop, which stops the container. The environment adds to dev.env the
  * DATABASE_URL of the container, which changes from run to run, and a PORT that freePort took with
- * the public origin on it.
+ * the public origin on it. The stack takes that port after the database steps, and it is free only
+ * until some process binds it: another process can still take it before the caller's server
+ * listens. Boot then stops with a BootError that names PORT.
  *
  * When env opts in to reuse (containerReuse), Testcontainers reuses the container of an earlier run
  * with the same settings, and stop leaves it running, so the container outlives the run (ADR 0058).
@@ -147,14 +149,19 @@ export async function startStack({
     if (!reuse) await container.stop();
   };
   try {
-    const port = await freePort();
-    const env = {
+    const databaseEnv = {
       ...devEnv,
       DATABASE_URL: `postgres://${container.getHost()}:${container.getPort()}/${database}`,
+    };
+    await prepare(databaseEnv, { northmes });
+    // The port is taken last, so no step that takes seconds runs between taking it and handing it
+    // to the caller.
+    const port = await freePort();
+    const env = {
+      ...databaseEnv,
       PORT: String(port),
       NORTHMES_PUBLIC_ORIGIN: `http://127.0.0.1:${port}`,
     };
-    await prepare(env, { northmes });
     return { env, stop };
   } catch (error) {
     // The caller gets no stop when the start fails, so the container stops here. A failing stop
