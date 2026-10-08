@@ -281,13 +281,17 @@ describe('workflows', () => {
   });
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
-  it('ci / gate runs after a failed or cancelled job and then fails', () => {
+  // On a pull request every job that ci / gate needs runs, so a skipped one means lint, build or
+  // tests did not run. A push to main skips the pull request checks.
+  it('ci / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('ci / gate');
 
     expect(gate.if).toBe('always()');
     expect(gate.steps).toContainEqual(
       expect.objectContaining({
-        if: "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')",
+        if:
+          "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')" +
+          " || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))",
         run: 'exit 1',
       }),
     );
