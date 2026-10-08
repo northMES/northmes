@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { readFileSync } from 'node:fs';
+import { findPackageJSON } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -34,7 +36,7 @@ export interface BootOptions {
   readonly importManifest: (specifier: string) => Promise<{ default: ModuleManifest }>;
   /**
    * Resolves each manifest specifier, so boot finds the migrations folder of its package. Without
-   * it, boot uses import.meta.resolve.
+   * it, boot uses packageJsonOf.
    */
   readonly resolveManifest?: ResolveManifest;
   /** Ends the process with an exit code. main.ts passes process.exit. */
@@ -120,6 +122,17 @@ export async function bootForMigrate(options: BootOptions): Promise<Booted<Migra
 export type ResolveManifest = (specifier: string) => string;
 
 /**
+ * Boot's ResolveManifest: the file URL of the package.json at the root of the manifest's package.
+ * The folder above the manifest file would not do for an in-repo module: its manifest imports its
+ * package.json, so the build writes a copy of that file into dist/.
+ */
+function packageJsonOf(specifier: string): string {
+  const packageJson = findPackageJSON(specifier, import.meta.url);
+  if (!packageJson) throw new Error(`No package.json for ${specifier}`);
+  return pathToFileURL(packageJson).href;
+}
+
+/**
  * Boot step 3: imports the manifest of every module. No Nest code of a module loads. A module's
  * migration files are in the migrations folder of its package, and its built remote in web/dist/.
  */
@@ -140,8 +153,7 @@ async function importManifests(
 
 export interface InRepoCatalogOptions {
   /**
-   * Resolves each manifest. Boot uses import.meta.resolve. The integration tests' global setup runs
-   * in Vite's module runner, which has no import.meta.resolve, so it passes a resolver of its own.
+   * Resolves each manifest. Without it, inRepoCatalog uses packageJsonOf, as boot does.
    */
   readonly resolveManifest?: ResolveManifest;
   /** The ids of the in-repo modules to keep. Without it, the catalog holds every in-repo module. */
@@ -155,7 +167,7 @@ export interface InRepoCatalogOptions {
 export async function inRepoCatalog(
   importManifest: BootOptions['importManifest'],
   {
-    resolveManifest = (specifier) => import.meta.resolve(specifier),
+    resolveManifest = packageJsonOf,
     modules,
   }: InRepoCatalogOptions = {},
 ): Promise<CatalogEntry[]> {
@@ -189,7 +201,7 @@ async function bootSteps<
   {
     manifests = inRepoManifests,
     importManifest,
-    resolveManifest = (specifier) => import.meta.resolve(specifier),
+    resolveManifest = packageJsonOf,
     log,
   }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
   appOptions: AppOptions = {},
