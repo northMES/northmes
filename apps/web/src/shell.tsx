@@ -53,7 +53,7 @@ interface PlantLayoutProps {
 
 /**
  * Moves focus to the page's h1 after each path change, one frame after the new route rendered, and
- * to main when the page has no h1 (ADR 0021). A change of the search alone leaves focus where it
+ * to main when the page has no h1 that takes focus (ADR 0021). A change of the search alone leaves focus where it
  * is, so sorting, searching and paging keep focus on their control.
  */
 function useFocusPageHeading() {
@@ -62,7 +62,8 @@ function useFocusPageHeading() {
   useEffect(() => {
     if (pathname === undefined) return;
     const frame = requestAnimationFrame(() => {
-      const heading = main.current?.querySelector<HTMLElement>('h1');
+      // An h1 without a tabindex, such as the board stub's, cannot take focus, so main does.
+      const heading = main.current?.querySelector<HTMLElement>('h1[tabindex]');
       (heading ?? main.current)?.focus();
     });
     return () => cancelAnimationFrame(frame);

@@ -110,8 +110,12 @@ export function PageFrame({
   children,
 }: PageFrameProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  // The page names the document while it shows; a page without a frame gets the plain name.
   useEffect(() => {
     document.title = `${title} · NorthMES`;
+    return () => {
+      document.title = 'NorthMES';
+    };
   }, [title]);
   // The action of an empty or error state, such as Go to the first page, removes the state and
   // the focused button with it. Unless the action moved focus itself, focus moves to the h1.
