@@ -167,6 +167,28 @@ describe('pg-image', () => {
       expect(findings).toEqual([]);
     });
 
+    it('scan reports a Postgres image in a file with CRLF line endings', () => {
+      const findings = scan([
+        { path: 'Dockerfile', text: 'FROM node:26\r\nFROM postgres:17\r\n' },
+        {
+          path: 'compose.yaml',
+          text: 'services:\r\n  a:\r\n    image: postgres:17\r\n  b:\r\n    image: postgres:16 # old\r\n',
+        },
+        {
+          path: 'a.int.test.ts',
+          text: "new PostgreSqlContainer('postgres:15');\r\nnew PostgreSqlContainer();\r\n",
+        },
+      ]);
+
+      expect(findings).toEqual([
+        { path: 'Dockerfile', line: 2, reference: 'postgres:17' },
+        { path: 'compose.yaml', line: 3, reference: 'postgres:17' },
+        { path: 'compose.yaml', line: 5, reference: 'postgres:16' },
+        { path: 'a.int.test.ts', line: 1, reference: 'postgres:15' },
+        { path: 'a.int.test.ts', line: 2, reference: 'PostgreSqlContainer()' },
+      ]);
+    });
+
     it('scan reports postgres:18 without the digest', () => {
       const findings = scan([{ path: 'Dockerfile', text: 'FROM postgres:18\n' }]);
 
