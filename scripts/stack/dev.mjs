@@ -119,18 +119,22 @@ export function completedBuild(line) {
 /** @typedef {Awaited<ReturnType<typeof devPlan>>} DevPlan */
 
 /**
- * Runs the processes of plan on a started stack: starts tsc -b --watch and restarts the server
- * after each completed build.
+ * Runs the processes of plan on a started stack: starts tsc -b --watch, restarts the server after
+ * each completed build, and runs northmes migrate and then restarts the server when a migration
+ * file changes.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
  *   start: typeof import('./processes.mjs').start,
- * }} options start starts a process, as processes.mjs does.
+ *   run: typeof import('./processes.mjs').run,
+ *   watch: (dir: string, changed: () => void) => void,
+ * }} options start and run start a process and run one to its end, as processes.mjs does. watch
+ *   calls changed after each change below dir, a folder relative to the repository root.
  */
-export function superviseDev({ plan, stack, start }) {
+export function superviseDev({ plan, stack, start, run, watch }) {
   /** @type {import('./processes.mjs').StartedProcess | undefined} */
   let server;
-  // Restarts go one after the other, in the order they were asked for.
+  // Restarts and migrate runs go one after the other, in the order they were asked for.
   let queue = Promise.resolve();
   const restartServer = () => {
     queue = queue.then(async () => {
@@ -143,6 +147,22 @@ export function superviseDev({ plan, stack, start }) {
       if (completedBuild(line)) restartServer();
     },
   });
+
+  const migrate = () => {
+    queue = queue.then(async () => {
+      await run(plan.migrate, { env: stack.env });
+      restartServer();
+    });
+  };
+  /** @type {NodeJS.Timeout | undefined} */
+  let pending;
+  for (const dir of plan.migrations) {
+    // An editor writes a file in several steps, so one change runs migrate once.
+    watch(dir, () => {
+      clearTimeout(pending);
+      pending = setTimeout(migrate, 300);
+    });
+  }
 }
 
 /**
