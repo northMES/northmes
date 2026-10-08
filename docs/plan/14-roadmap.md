@@ -3137,10 +3137,11 @@ Acceptance criteria:
 - The production order list uses the list kit; the detail page shows operations and job orders.
 - `z.output` of the release contract's input is assignable to the generated `PlanningReleaseProductionOrderInput` without a cast.
 - Order deadlines on the list and the detail page follow the plant's presentation settings.
+- A planner links a child production order to a parent in the same plant by hand with `planning.linkChildProductionOrder`. A link that would make a cycle, an order under itself or under one of its own descendants, fails with `planning.production_order.link_cycle`, whether or not PO-17 allows a linked child to have children of its own.
 
 Tests first:
 
-- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order".
+- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order"; "linking an order under itself or under one of its descendants fails with planning.production_order.link_cycle"; "two concurrent opposite links leave at most one link".
 - `modules/planning/test/status-transitions.test.ts`: "a finished job order cannot return to planned".
 - `modules/planning/web/test/commands.test-d.ts`: `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 
