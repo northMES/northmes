@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert } from 'lucide-react';
-import { useEffect, useId, useRef } from 'react';
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 import { fieldId } from './field.ts';
 
 /** One entry of the summary: a message, and the form field it belongs to when there is one. */
@@ -19,17 +19,22 @@ export interface ErrorSummaryProps {
    * focus when it appears and again whenever this value changes while it shows errors.
    */
   readonly focusKey?: unknown;
+  /**
+   * Text and actions under the list, such as the text of a version conflict and Reload article.
+   * With them, the summary shows also without errors.
+   */
+  readonly children?: ReactNode;
 }
 
 /**
  * The error summary at the top of a form (plan 06, Forms; WCAG 3.3.1): a group named by its
  * heading that takes focus after a failed submit, with each message as a link that moves focus to
- * its field. It renders nothing without errors.
+ * its field. It renders nothing without errors and children.
  */
-export function ErrorSummary({ heading, errors, focusKey }: ErrorSummaryProps) {
+export function ErrorSummary({ heading, errors, focusKey, children }: ErrorSummaryProps) {
   const summary = useRef<HTMLDivElement>(null);
   const headingId = useId();
-  const showing = errors.length > 0;
+  const showing = errors.length > 0 || children !== undefined;
 
   useEffect(() => {
     if (showing) summary.current?.focus();
@@ -49,26 +54,31 @@ export function ErrorSummary({ heading, errors, focusKey }: ErrorSummaryProps) {
         <CircleAlert aria-hidden className="size-4 shrink-0" />
         {heading}
       </h2>
-      <ul className="mt-2 flex list-disc flex-col gap-1 pl-10">
-        {errors.map(({ name, message }) => (
-          <li key={`${name ?? ''}:${message}`}>
-            {name === undefined ? (
-              message
-            ) : (
-              <a
-                href={`#${fieldId(name)}`}
-                className="underline underline-offset-2 hover:no-underline"
-                onClick={(event) => {
-                  event.preventDefault();
-                  document.getElementById(fieldId(name))?.focus();
-                }}
-              >
-                {message}
-              </a>
-            )}
-          </li>
-        ))}
-      </ul>
+      {errors.length > 0 && (
+        <ul className="mt-2 flex list-disc flex-col gap-1 pl-10">
+          {errors.map(({ name, message }) => (
+            <li key={`${name ?? ''}:${message}`}>
+              {name === undefined ? (
+                message
+              ) : (
+                <a
+                  href={`#${fieldId(name)}`}
+                  className="underline underline-offset-2 hover:no-underline"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    document.getElementById(fieldId(name))?.focus();
+                  }}
+                >
+                  {message}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {children !== undefined && (
+        <div className="mt-2 flex flex-col items-start gap-3 text-foreground">{children}</div>
+      )}
     </div>
   );
 }
