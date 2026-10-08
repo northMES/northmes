@@ -9,9 +9,24 @@ import ts from 'typescript';
  * @typedef {{ path: string, line: number, literal: string }} Finding
  */
 
+/** The JSX attributes that take a path. */
+const pathAttributes = new Set(['to', 'href']);
+
 /** @param {string} value */
 function isAppPath(value) {
   return value.startsWith('/');
+}
+
+/**
+ * The string literal a JSX attribute holds, written directly or inside braces.
+ * @param {ts.JsxAttribute} attribute
+ */
+function attributeLiteral(attribute) {
+  const value = attribute.initializer;
+  if (value && ts.isJsxExpression(value)) {
+    return value.expression && ts.isStringLiteral(value.expression) ? value.expression : undefined;
+  }
+  return value && ts.isStringLiteral(value) ? value : undefined;
 }
 
 /**
@@ -27,18 +42,16 @@ export function scan(files, _allowlist) {
   for (const { path, text } of files) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
     const visit = (node) => {
-      if (
-        ts.isJsxAttribute(node) &&
-        node.name.getText(source) === 'to' &&
-        node.initializer &&
-        ts.isStringLiteral(node.initializer) &&
-        isAppPath(node.initializer.text)
-      ) {
-        const start = node.initializer.getStart(source);
+      const literal =
+        ts.isJsxAttribute(node) && pathAttributes.has(node.name.getText(source))
+          ? attributeLiteral(node)
+          : undefined;
+      if (literal && isAppPath(literal.text)) {
+        const start = literal.getStart(source);
         findings.push({
           path,
           line: source.getLineAndCharacterOfPosition(start).line + 1,
-          literal: node.initializer.text,
+          literal: literal.text,
         });
       }
       ts.forEachChild(node, visit);
