@@ -9,7 +9,9 @@ describe('cli', () => {
 
     await cli(['migrate'], { env: {}, exit, log });
 
-    expect(log.error.mock.calls).toEqual([['Unknown command "migrate". Commands: serve']]);
+    expect(log.error.mock.calls).toEqual([
+      ['Unknown command "migrate". Commands: serve, db bootstrap'],
+    ]);
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.info).not.toHaveBeenCalled();
   });
