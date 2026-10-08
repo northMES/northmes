@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+import type { ModuleManifest } from '@northmes/sdk';
 import { DomainErrorFilter } from '@northmes/sdk/errors';
 import {
   type DefineSubgraphOptions,
@@ -16,6 +17,8 @@ import { WebModule } from './web/web.module.ts';
 export interface ServerEntry extends DefineSubgraphOptions {
   /** The module's id. */
   readonly id: string;
+  /** The module's manifest. */
+  readonly manifest: ModuleManifest;
 }
 
 /** How AppModule.forRoot builds the app beyond its config and server entries. */

@@ -189,7 +189,7 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
   for (const { manifest } of catalog) {
     if (!manifest.server) continue;
     const { default: module } = await manifest.server();
-    servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module });
+    servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module, manifest });
   }
   return servers;
 }
