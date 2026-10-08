@@ -14,6 +14,7 @@
     "typecheck": "turbo run typecheck",
     "gen": "node scripts/gen.mjs",
     "test": "vitest run --project unit --project integration --project web --project types",
+    "test:coverage": "vitest run --coverage --project unit --project integration --project web --project types",
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project integration",
     "test:ai": "vitest run --project ai",

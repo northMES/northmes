@@ -4,7 +4,7 @@
 # added or removed job needs a ruleset edit: an added name after the merge, a removed or old name
 # just before it. test/meta/workflows.test.ts lists the job names. Every job that CI / gate needs,
 # except the two pull request checks, runs root pnpm scripts that pnpm check or pnpm check:full
-# contains.
+# contains; the coverage summary step of CI / test only copies a report into the job summary.
 name: CI
 
 on:
@@ -76,7 +76,9 @@ jobs:
 
   # One check covers all tests in both time zones: the UTC leg, then the Europe/Stockholm leg. The
   # Stockholm leg also runs after a failed UTC leg, so a failure that shows only in Stockholm reports
-  # in the same run; it does not run when a failed install skipped the UTC leg.
+  # in the same run; it does not run when a failed install skipped the UTC leg. The UTC leg collects
+  # coverage, which is information only: after a passed UTC leg its summary goes to the job summary
+  # and the lcov report is kept as an artifact.
   test:
     name: test
     permissions:
@@ -99,10 +101,19 @@ jobs:
           node-version-file: .node-version
       - run: pnpm install --frozen-lockfile
       - id: utc
-        run: pnpm test
+        run: pnpm test:coverage
         env:
           TZ: UTC
           NM_TEST_PG_TZ: UTC
+      - run: node scripts/ci/coverage-summary.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage
+          path: |
+            coverage/lcov.info
+            coverage/lcov-report/
+          if-no-files-found: error
+          overwrite: true
       - if: "!cancelled() && steps.utc.outcome != 'skipped'"
         run: pnpm test:tz
 

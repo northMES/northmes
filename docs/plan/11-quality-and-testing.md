@@ -102,12 +102,13 @@ Root scripts:
 | `pnpm check:full` | `pnpm check`, the Europe/Stockholm leg and the end-to-end suite | Release 1's done conditions require it to pass on `main`; CI jobs call the parts it contains |
 | `pnpm test:unit`, `pnpm test:int` | One project | Local work |
 | `pnpm test:watch` | `vitest --project unit` | The TDD loop |
+| `pnpm test:coverage` | `vitest run --coverage` over `unit`, `integration`, `web` and `types` | The UTC leg of `CI / test` |
 | `pnpm test:tz` | Unit and integration with `TZ=Europe/Stockholm` and `NM_TEST_PG_TZ=Europe/Stockholm` | The Stockholm leg |
 | `pnpm e2e` | Build, then `playwright test` | Local end-to-end runs |
 | `pnpm test:ai`, `pnpm test:e2e:ai` | The live AI suites | A person, or the scheduled live workflow |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report.
 
 ## Testcontainers harness
 
