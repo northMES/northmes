@@ -116,4 +116,16 @@ describe.skipIf(!existsSync(`${root}.git`))('repository', () => {
     expect(git('check-ignore', ...ignored).split('\n').filter(Boolean)).toEqual(ignored);
     expect(git('ls-files', 'docs/research', 'docs/project-brief.md', 'rp-manifest.md')).toBe('');
   });
+
+  it('E02-S01 .gitignore ignores the local stack state and the drop-in plugins at the root only', () => {
+    const ignored = [
+      '.northmes/dev.env',
+      '.northmes/secrets/x',
+      'plugins/example-validator/dist/server.js',
+    ];
+
+    expect(git('check-ignore', ...ignored).split('\n').filter(Boolean)).toEqual(ignored);
+    // Test fixtures hold plugins as well, and they are committed.
+    expect(git('check-ignore', 'apps/server/test/fixtures/plugins/x/package.json')).toBe('');
+  });
 });
