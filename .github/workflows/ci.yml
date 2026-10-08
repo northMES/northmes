@@ -1,7 +1,8 @@
-# The CI gate for pull requests and pushes to main (docs/adr/0050-github-organization-rulesets-ci-
-# runners-and-supply-chain.md). The main ruleset requires only the check run of the job named
-# "ci / gate", so jobs join or leave the gate without a ruleset edit. Every job that ci / gate needs
-# runs root pnpm scripts that pnpm check or pnpm check:full contains.
+# The CI gate for pull requests and pushes to main, as
+# docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md decides it. The main
+# ruleset requires only the check run of the job named "ci / gate", so jobs join or leave the gate
+# without a ruleset edit. Every job that ci / gate needs, except the two pull request checks, runs
+# root pnpm scripts that pnpm check or pnpm check:full contains.
 name: CI
 
 on:
