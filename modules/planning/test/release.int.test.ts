@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { hostFactory } from '@northmes/server/testing';
+import {
+  type CommandContext,
+  createTestApp,
+  given,
+  gqlClient,
+  type TestApp,
+  useTestDatabase,
+} from '@northmes/testing';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+/** The context of a fixture write at `plant`. */
+function fixtureAt(plant: string): CommandContext {
+  return { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' };
+}
+
+const releaseMutation = `mutation ($input: PlanningReleaseProductionOrderInput!) {
+  planningReleaseProductionOrder(input: $input) { id status version }
+}`;
+
+const ordersQuery = '{ planningProductionOrders { id status version } }';
+
+describe('planningReleaseProductionOrder', () => {
+  const db = useTestDatabase();
+  let testApp: TestApp | undefined;
+
+  beforeAll(async () => {
+    testApp = await createTestApp({ modules: ['core', 'planning'], hostFactory, database: db });
+    await testApp.app.listen(0, '127.0.0.1');
+  });
+
+  // Vitest runs the afterAll hooks of a block last registered first, so the app and its pool close
+  // before useTestDatabase drops the database.
+  afterAll(async () => {
+    await testApp?.app.close();
+  });
+
+  /** A GraphQL client for the test app that names `plant` in x-northmes-plant. */
+  async function clientAt(plant: string) {
+    if (!testApp) throw new Error('the test app did not start');
+    return gqlClient(await testApp.app.getUrl(), { headers: { 'x-northmes-plant': plant } });
+  }
+
+  /** Writes a planned production order for 40 of a new article at `plant` and returns its id. */
+  async function writeOrder(plant: string, number: string): Promise<string> {
+    const { rows } = await db.command(fixtureAt(plant), (tx) =>
+      tx.query<{ id: string }>(
+        `with article as (
+           insert into core.article (scope_id, code, name) values ($1, 'SH-210', 'Shelf board')
+           returning id
+         )
+         insert into planning.production_order (scope_id, number, article_id, quantity)
+         select $1, $2, id, 40 from article
+         returning id`,
+        [plant, number],
+      ),
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error('the order insert returned no id');
+    return id;
+  }
+
+  it('E02-S04 planningReleaseProductionOrder sets the order to released and bumps its version', async () => {
+    const plant = given.plant();
+    const id = await writeOrder(plant, '6501');
+    const client = await clientAt(plant);
+
+    const answer = await client.send(releaseMutation, { input: { id } });
+
+    expect(answer).toEqual({
+      status: 200,
+      data: { planningReleaseProductionOrder: { id, status: 'released', version: 2 } },
+    });
+    expect(await client.send(ordersQuery)).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ id, status: 'released', version: 2 }] },
+    });
+  });
+});
