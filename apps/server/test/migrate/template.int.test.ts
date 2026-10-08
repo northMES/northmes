@@ -112,4 +112,19 @@ describe('the table template', () => {
     expect(atPlantA).toEqual([plantA]);
     expect(afterScopedTransaction).toEqual([]);
   });
+
+  it('E02-S02 an update by nm_app bumps version through the inline trigger', async () => {
+    // The update leaves every column as it is, so only the trigger changes version.
+    const updated = await connected(db.appUrl, (client) =>
+      inTransaction(client, [plantB], async () => {
+        const { rows } = await client.query(
+          `update ${table} set scope_id = scope_id where scope_id = $1 returning version`,
+          [plantB],
+        );
+        return rows;
+      }),
+    );
+
+    expect(updated).toEqual([{ version: 2 }]);
+  });
 });
