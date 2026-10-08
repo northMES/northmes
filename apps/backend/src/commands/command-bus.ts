@@ -7,7 +7,7 @@ import type {
   Versioned,
 } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
-import { DomainError } from '@northmes/sdk/errors';
+import { DomainError, toDomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
 import { currentPrincipal } from '../principal.ts';
 
@@ -191,7 +191,7 @@ export class CommandBusImpl implements CommandBus {
   ): Promise<Result> {
     const { name } = command.contract;
     const validators = this.#validators.get(name) ?? [];
-    return this.#database.transaction(async (tx) => {
+    return this.#transaction(async (tx) => {
       const plantId = currentPrincipal()?.plantId;
       // A command without a target gets undefined, which its Target type then is.
       const target = (await loadTarget(command, input, { tx, plantId })) as Target;
@@ -214,5 +214,17 @@ export class CommandBusImpl implements CommandBus {
       }
       return command.handle(input, context);
     });
+  }
+
+  /**
+   * Runs fn in one ScopedDatabase transaction. A database error, also one from the commit, reaches
+   * the caller as the DomainError toDomainError maps it to (ADR 0012).
+   */
+  async #transaction<Result>(fn: (tx: Transaction<unknown>) => Promise<Result>): Promise<Result> {
+    try {
+      return await this.#database.transaction(fn);
+    } catch (error) {
+      throw toDomainError(error);
+    }
   }
 }
