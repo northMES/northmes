@@ -5,6 +5,7 @@ import { parse } from 'yaml';
 
 interface PackageJson {
   exports?: unknown;
+  scripts?: Record<string, string>;
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -75,6 +76,20 @@ describe('source exports', () => {
 
         expect(conditions[0], `${path} ${subpath}`).toBe('@northmes/source');
         expect(conditions.indexOf('default'), `${path} ${subpath}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('E02-S01 no root or package script passes the @northmes/source condition', () => {
+    // Tests and dev resolve sources through the Vitest, Vite and TypeScript configs; a script that
+    // passes the condition to Node (--conditions, -C or NODE_OPTIONS) would run sources outside
+    // them, and production must never see it (ADR 0058).
+    const manifests = ['package.json', ...workspaceManifests()];
+
+    expect(manifests).toContain('apps/server/package.json');
+    for (const path of manifests) {
+      for (const [name, command] of Object.entries(readJson<PackageJson>(path).scripts ?? {})) {
+        expect(command, `${path} script ${name}`).not.toContain('@northmes/source');
       }
     }
   });
