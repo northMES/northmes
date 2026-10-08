@@ -56,10 +56,11 @@ function OrderRow({ order }: { readonly order: BoardOrder }) {
  * cell by the order number for the end-to-end specs. The real board comes with E08.
  */
 export function BoardScreen() {
-  const { data, error } = useQuery(PlanningBoard);
+  const { data, error, loading } = useQuery(PlanningBoard);
   return (
     <section data-testid="board-screen">
       <h1>Planning board</h1>
+      {loading && <p>Loading the production orders</p>}
       {error && <p role="alert">The production orders could not be loaded: {error.message}</p>}
       <table>
         <thead>

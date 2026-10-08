@@ -87,6 +87,9 @@ export async function fetchModuleList(
   fetch: (url: string) => Promise<Response>,
 ): Promise<readonly ListedModule[]> {
   const response = await fetch(apiPath('web', 'modules'));
+  if (!response.ok) {
+    throw new Error(`The module list answered ${response.status} ${response.statusText}`.trim());
+  }
   const { modules } = (await response.json()) as { readonly modules: readonly ListedModule[] };
   return modules;
 }
