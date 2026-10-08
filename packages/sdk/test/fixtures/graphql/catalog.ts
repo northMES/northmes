@@ -32,6 +32,11 @@ export class CatalogArticles {
     ['a-3', { id: 'a-3', name: 'Lock nut M8' }],
   ]);
 
+  /** Stores a new row, so a value cached before the rename keeps the old name. */
+  rename(id: string, name: string): void {
+    this.#rows.set(id, { id, name });
+  }
+
   byId(id: string): Article | undefined {
     return this.#rows.get(id);
   }

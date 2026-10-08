@@ -137,4 +137,16 @@ describe('loaderFor', () => {
     ]);
     expect(moduleRef.get(CatalogArticles).batches).toEqual([['a-1', 'a-2', 'a-3']]);
   });
+
+  it('E02-S03 two requests never share a cached value', async () => {
+    const { registry, moduleRef } = await buildSubgraphs({ catalog: CatalogModule });
+    const catalog = subgraph(registry, 'catalog');
+
+    const first = await resolveArticles(catalog, requestContext(), ['a-1']);
+    moduleRef.get(CatalogArticles).rename('a-1', 'Hex bolt M8 zinc plated');
+    const second = await resolveArticles(catalog, requestContext(), ['a-1']);
+
+    expect(first.data?._entities).toEqual([{ id: 'a-1', name: 'Hex bolt M8' }]);
+    expect(second.data?._entities).toEqual([{ id: 'a-1', name: 'Hex bolt M8 zinc plated' }]);
+  });
 });
