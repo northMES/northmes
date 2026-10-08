@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, useTestDatabase } from '@northmes/testing';
+import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
 import { cli } from '../src/cli.ts';
@@ -49,8 +49,11 @@ const fixtureFiles = [
   },
 ];
 
+// Each database here is cloned from the empty template, so it holds only what the test migrates.
+// The migrated template already holds the in-repo modules' schemas and records, which would hide a
+// migrate that does nothing and mix with the fixture files.
 describe('migrate', () => {
-  const db = useTestDatabase();
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
   let first: MigrateResult;
 
   beforeAll(async () => {
@@ -136,7 +139,7 @@ describe('migrate', () => {
 });
 
 describe('concurrent migrate runs', () => {
-  const db = useTestDatabase();
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
 
   it('E02-S02 two concurrent runs apply each file once', async () => {
     const runs = await Promise.all([
@@ -157,7 +160,7 @@ describe('concurrent migrate runs', () => {
 });
 
 describe('pnpm northmes migrate', () => {
-  const db = useTestDatabase();
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
   let secretsDir: string;
 
   beforeAll(() => {
