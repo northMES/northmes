@@ -31,7 +31,11 @@ export class CommandRejected extends DomainError {
   }
 }
 
-/** The time limit of a validator that declares none, in milliseconds. */
+/**
+ * The time limit of a validator that declares none, in milliseconds. Until owners declare a limit
+ * per command, it is also the longest limit a validator may declare: discoverValidators refuses a
+ * longer one at boot (ADR 0012 step 6).
+ */
 export const DEFAULT_VALIDATOR_TIMEOUT_MS = 2_000;
 
 /**

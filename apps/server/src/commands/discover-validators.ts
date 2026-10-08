@@ -2,7 +2,7 @@
 import type { ModuleManifest } from '@northmes/sdk';
 import type { CommandValidatorProvider } from '@northmes/sdk/commands';
 import { BootError } from '../boot/boot-error.ts';
-import type { RegisteredValidator } from './command-bus.ts';
+import { DEFAULT_VALIDATOR_TIMEOUT_MS, type RegisteredValidator } from './command-bus.ts';
 
 /** The providers that a module's server entry lists in its Nest module. */
 export interface ModuleProviders {
@@ -15,8 +15,9 @@ export interface ModuleProviders {
  * The command validators among the providers of each module, with the id of that module
  * (ADR 0037). `catalog` holds the manifests of the modules with a server entry. A validator may
  * only be on a command that its owner's manifest declares validatable, from a module whose
- * dependsOn names the owner. Throws one BootError that lists every validator that breaks either
- * rule.
+ * dependsOn names the owner, and its timeoutMs, when it sets one, is above 0 and no longer than
+ * the command's limit (ADR 0012 step 6). Owners declare no limit per command yet, so that limit is
+ * the host's default. Throws one BootError that lists every rule each validator breaks.
  */
 export function discoverValidators(
   catalog: readonly ModuleManifest[],
@@ -39,6 +40,12 @@ export function discoverValidators(
       problems.push(`${where}, which no module declares validatable`);
     } else if (!dependsOn.get(module)?.includes(owner)) {
       problems.push(`${where} of module ${owner}, which is not in the dependsOn of ${module}`);
+    }
+    const { timeoutMs } = validator;
+    if (timeoutMs !== undefined && !(timeoutMs > 0 && timeoutMs <= DEFAULT_VALIDATOR_TIMEOUT_MS)) {
+      problems.push(
+        `Validator ${validator.name} of module ${module} sets timeoutMs to ${timeoutMs}. Set it above 0 and at most ${DEFAULT_VALIDATOR_TIMEOUT_MS}, the limit of ${command}, or remove it`,
+      );
     }
   }
   if (problems.length > 0) throw new BootError(problems);

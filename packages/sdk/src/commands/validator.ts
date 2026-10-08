@@ -28,7 +28,9 @@ export interface Validator<Contract extends ValidatableContract = ValidatableCon
   readonly name: string;
   /**
    * How long check may take, in milliseconds. A check that has not answered by then rejects the
-   * command (ADR 0037). Without it, the host's default limit applies.
+   * command (ADR 0037). Without it, the host's default limit applies. It is above 0 and no longer
+   * than the command's limit, which is the host's default until owners declare one (ADR 0012), and
+   * boot refuses a validator that sets any other value.
    */
   readonly timeoutMs?: number;
   /**
