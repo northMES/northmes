@@ -124,7 +124,9 @@ jobs:
   # --no-telemetry skips react-doctor's score API, share URL and crash reports, and
   # --no-supply-chain skips its Socket.dev lookup of each dependency, which the supply-chain checks
   # of docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md cover. An error
-  # fails the job; warnings show in its log.
+  # fails the scan. With --json, react-doctor writes only its report, react-doctor-report.json, so
+  # the next step copies the findings into the job summary and the log; it also runs after a failed
+  # scan, and not when a failed install skipped the scan.
   react-doctor:
     name: react doctor
     permissions:
@@ -141,7 +143,10 @@ jobs:
         with:
           node-version-file: .node-version
       - run: pnpm install --frozen-lockfile
-      - run: pnpm react-doctor
+      - id: scan
+        run: pnpm react-doctor
+      - if: "!cancelled() && steps.scan.outcome != 'skipped'"
+        run: pnpm react-doctor:summary
 
   # The pull request checks read the event, so they run only for pull requests. Their scripts take
   # the event values from environment variables: interpolated into a run script, a title or body
