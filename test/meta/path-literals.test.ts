@@ -109,6 +109,31 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 a path in a template literal, a concatenation, a conditional or an as expression fails', () => {
+    const text = [
+      "test('order', async ({ page }) => {",
+      '  await page.goto(`/x`);',
+      `  await page.goto(\`/\${plant}/planning\`);`,
+      "  await page.goto('/' + plant + '/planning');",
+      "  await page.goto(isNew ? '/a' : planningLinks.orders({ plant }).href);",
+      "  await page.goto(('/b' as string));",
+      "  await page.goto('/c' satisfies string);",
+      '});',
+      '',
+    ].join('\n');
+
+    const findings = scan([{ path: 'e2e/order.spec.ts', text }], []);
+
+    expect(findings).toEqual([
+      { path: 'e2e/order.spec.ts', line: 2, literal: '/x' },
+      { path: 'e2e/order.spec.ts', line: 3, literal: `/\${plant}/planning` },
+      { path: 'e2e/order.spec.ts', line: 4, literal: '/' },
+      { path: 'e2e/order.spec.ts', line: 5, literal: '/a' },
+      { path: 'e2e/order.spec.ts', line: 6, literal: '/b' },
+      { path: 'e2e/order.spec.ts', line: 7, literal: '/c' },
+    ]);
+  });
+
   it('E02-S05 an allowlist entry without a reason fails', () => {
     const files = [{ path: 'e2e/board.spec.ts', text: "await page.goto('/x');\n" }];
     const withReason = { path: 'e2e/board.spec.ts', literal: '/y', reason: 'A reason.' };
