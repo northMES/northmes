@@ -6,6 +6,14 @@ describe('ci / pr title', () => {
     expect(checkTitle('security(core): end the sessions of a disabled user').ok).toBe(true);
   });
 
+  it('accepts a title without a scope', () => {
+    const types = 'feat fix security perf revert docs test ci chore refactor build'.split(' ');
+
+    for (const type of types) {
+      expect(checkTitle(`${type}: show late orders on the board`).ok, type).toBe(true);
+    }
+  });
+
   it('fails a title that is not a Conventional Commit with an allowed type, naming the title', () => {
     const titles = [
       'Show late orders on the board',
