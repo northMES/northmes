@@ -70,6 +70,13 @@ function readWorkspace(): WorkspaceConfig {
   return parse(readText('pnpm-workspace.yaml')) as WorkspaceConfig;
 }
 
+// The lockfile's snapshot keys for one package.
+function resolutions(name: string): string[] {
+  const keys = Object.keys((parse(readText('pnpm-lock.yaml')) as Lockfile).snapshots ?? {});
+
+  return keys.filter((key) => key.startsWith(`${name}@`));
+}
+
 function readDevDependencies(): Record<string, string> {
   return readJson<PackageJson>('package.json').devDependencies ?? {};
 }
@@ -226,10 +233,15 @@ describe('tooling', () => {
     // A snapshot key is a version plus the peers it resolved with, and each key installs its own
     // copy. Two keys for one package mean two copies, and Nest's module and GraphQL type registries
     // stop matching across them.
-    const keys = Object.keys((parse(readText('pnpm-lock.yaml')) as Lockfile).snapshots ?? {});
-    const resolutions = (name: string) => keys.filter((key) => key.startsWith(`${name}@`));
-
     expect(resolutions('@nestjs/core')).toHaveLength(1);
     expect(resolutions('@nestjs/graphql')).toHaveLength(1);
+  });
+
+  it('E02-S01 pnpm-lock.yaml holds one @apollo/client and one graphql-ws resolution', () => {
+    // @apollo/client is a shared singleton (ADR 0019), and web-build's guard fixtures build against
+    // it next to web-sdk. When one importer resolves graphql-ws with another optional ws peer, its
+    // @apollo/client gets a second snapshot and a second copy on disk.
+    expect(resolutions('@apollo/client')).toHaveLength(1);
+    expect(resolutions('graphql-ws')).toHaveLength(1);
   });
 });
