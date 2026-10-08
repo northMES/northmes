@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ServerResponse } from 'node:http';
-import { basename } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import type { CatalogEntry } from '../catalog/check-catalog.ts';
+import type { WebFiles } from './served-web.ts';
 
 /** The folder of the shell that apps/web builds. */
 export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
+
+/** The Cache-Control of a file with a content hash in its name. */
+const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 /**
  * The files of a remote whose names stay the same from build to build. A browser asks the server
@@ -14,8 +17,20 @@ export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.
  */
 const FIXED_NAMES = new Set(['mf-manifest.json', 'mf-stats.json', 'remoteEntry.js']);
 
-/** Serves the built remote of each catalog module with a web block at /modules/<id>/<version>/. */
-export function mountStatic(app: NestExpressApplication, catalog: readonly CatalogEntry[]): void {
+/**
+ * Serves the shell's hashed assets at /assets/ and the built remote of each catalog module with a
+ * web block at /modules/<id>/<version>/. A file missing under a mount is a 404.
+ */
+export function mountStatic(
+  app: NestExpressApplication,
+  { shellDir, catalog }: Pick<WebFiles, 'shellDir' | 'catalog'>,
+): void {
+  app.useStaticAssets(join(shellDir, 'assets'), {
+    prefix: '/assets/',
+    index: false,
+    fallthrough: false,
+    setHeaders: (response: ServerResponse) => response.setHeader('Cache-Control', IMMUTABLE),
+  });
   for (const { manifest, webDir } of catalog) {
     if (!manifest.web || webDir === undefined) continue;
     app.useStaticAssets(webDir, {
@@ -23,10 +38,9 @@ export function mountStatic(app: NestExpressApplication, catalog: readonly Catal
       index: false,
       fallthrough: false,
       setHeaders: (response: ServerResponse, path: string) => {
-        const fixed = FIXED_NAMES.has(basename(path));
         response.setHeader(
           'Cache-Control',
-          fixed ? 'no-cache' : 'public, max-age=31536000, immutable',
+          FIXED_NAMES.has(basename(path)) ? 'no-cache' : IMMUTABLE,
         );
       },
     });

@@ -23,6 +23,6 @@ export class WebModule {}
  * module list and the shell. Call it after NestFactory.create and before the app initialises.
  */
 export function serveWeb(app: NestExpressApplication, web: WebFiles): void {
-  mountStatic(app, web.catalog);
+  mountStatic(app, web);
   app.get(ServedWeb).serve(web);
 }
