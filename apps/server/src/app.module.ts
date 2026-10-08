@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { type DynamicModule, Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
+import { DomainErrorFilter } from '@northmes/sdk/errors';
 import {
   type DefineSubgraphOptions,
   defineSubgraph,
@@ -16,7 +18,8 @@ export class AppModule {
   /**
    * Imports config first: the ConfigModule that boot created before it imported any manifest
    * (ADR 0060). Then the nm_app pool and the ScopedDatabase on it, every module's Nest module, one
-   * subgraph per module and the gateway that serves them on /graphql (ADR 0015).
+   * subgraph per module and the gateway that serves them on /graphql (ADR 0015). The SDK's
+   * exception filter is registered here and nowhere else (ADR 0012).
    */
   static forRoot(
     config: DynamicModule,
@@ -33,6 +36,7 @@ export class AppModule {
         GatewayModule,
         WebModule,
       ],
+      providers: [{ provide: APP_FILTER, useClass: DomainErrorFilter }],
     };
   }
 }
