@@ -2,6 +2,7 @@
 import { createHash } from 'node:crypto';
 import { composeServices, compositionHasErrors } from '@theguild/federation-composition';
 import { parse } from 'graphql';
+import { BootError } from '../boot/boot-error.ts';
 import { type CompositionProblem, checkRules, type SubgraphSdl } from './rules.ts';
 
 /** The URL of a subgraph in the supergraph. The in-process transport executes it in this process. */
@@ -9,15 +10,14 @@ export function inProcessUrl(name: string): string {
   return `inproc://${name}`;
 }
 
-/** Every NorthMES rule and composition error of one composition, one "[code] message" line each. */
-export class SupergraphCompositionError extends Error {
-  readonly problems: readonly string[];
-
+/**
+ * Every NorthMES rule and composition error of one composition, one "[code] message" problem
+ * each. Composition runs in boot step 10, so it stops the boot with exit code 1 (ADR 0015).
+ */
+export class SupergraphCompositionError extends BootError {
   constructor(problems: readonly CompositionProblem[]) {
-    const lines = problems.map(({ code, message }) => `[${code}] ${message}`);
-    super(['Supergraph composition failed', ...lines.map((line) => `- ${line}`)].join('\n'));
+    super(problems.map(({ code, message }) => `[${code}] ${message}`));
     this.name = 'SupergraphCompositionError';
-    this.problems = lines;
   }
 }
 
