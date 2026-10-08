@@ -63,6 +63,20 @@ describe('serverEnvSchema', () => {
     expect(env.NODE_ENV).toBe('production');
     expect(env.NORTHMES_ROLE).toBe('all');
   });
+
+  it('E02-S01 an http://127.0.0.1 origin passes with NODE_ENV test and fails with production', () => {
+    const record = { PORT: '8080', NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:8080' };
+
+    const env = loadEnv(serverEnvSchema)({ ...record, NODE_ENV: 'test' });
+    const error = configErrorOf(() =>
+      loadEnv(serverEnvSchema)({ ...record, NODE_ENV: 'production' }),
+    );
+
+    expect(env.NORTHMES_PUBLIC_ORIGIN).toBe('http://127.0.0.1:8080');
+    expect(error.problems).toHaveLength(1);
+    expect(error.problems[0]).toMatch(/^NORTHMES_PUBLIC_ORIGIN: must be /);
+    expect(error.message).not.toContain('127.0.0.1:8080');
+  });
 });
 
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {
