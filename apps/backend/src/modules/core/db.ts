@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { Generated } from 'kysely';
+import type { Generated, GeneratedAlways } from 'kysely';
 
 /** core.article, as its migration creates it. */
 export interface ArticleTable {
@@ -8,6 +8,8 @@ export interface ArticleTable {
   version: Generated<number>;
   code: string;
   name: string;
+  /** lower(code), which the unique index of the code per scope holds. */
+  code_key: GeneratedAlways<string>;
 }
 
 /**

@@ -28,6 +28,8 @@ export interface DomainErrorOptions {
   readonly message: string;
   /** Values a client reads by code, such as rejectedBy of core.command_rejected. */
   readonly details?: Readonly<Record<string, unknown>>;
+  /** The fields of the command input the error is about, which a form shows it on. */
+  readonly fieldErrors?: readonly FieldError[];
 }
 
 /** The one error type of NorthMES, which every surface reports in the same shape (ADR 0012). */
@@ -35,12 +37,14 @@ export class DomainError extends Error {
   readonly code: string;
   readonly kind: DomainErrorKind;
   readonly details: Readonly<Record<string, unknown>> | undefined;
+  readonly fieldErrors: readonly FieldError[] | undefined;
 
-  constructor({ code, kind, message, details }: DomainErrorOptions) {
+  constructor({ code, kind, message, details, fieldErrors }: DomainErrorOptions) {
     super(message);
     this.name = 'DomainError';
     this.code = code;
     this.kind = kind;
     this.details = details;
+    this.fieldErrors = fieldErrors;
   }
 }

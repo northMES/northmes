@@ -7,3 +7,4 @@ export {
   type FieldError,
 } from './domain-error.ts';
 export { DomainErrorFilter } from './exception-filter.ts';
+export { toDomainError } from './to-domain-error.ts';

@@ -20,8 +20,8 @@ const graphqlCodes: Readonly<Record<DomainErrorKind, string>> = {
  * The one exception filter of the server. The host registers it once as APP_FILTER in its root
  * module, and modules and plugins register no filter of their own (ADR 0012). It catches every
  * exception. A DomainError thrown in a resolver becomes a GraphQL error whose extensions carry
- * code (from its kind), errorCode and details. Any other exception in a resolver passes on as it
- * was thrown. Outside GraphQL it leaves the answer to Nest's default filter, until REST routes
+ * code (from its kind), errorCode, details and fieldErrors, in the shape of a Zod failure's. Any
+ * other exception in a resolver passes on as it was thrown. Outside GraphQL it leaves the answer to Nest's default filter, until REST routes
  * answer with problem details.
  */
 @Catch()
@@ -37,6 +37,7 @@ export class DomainErrorFilter extends BaseExceptionFilter {
         code: graphqlCodes[exception.kind],
         errorCode: exception.code,
         details: exception.details,
+        fieldErrors: exception.fieldErrors,
       },
     });
   }
