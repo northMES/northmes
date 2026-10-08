@@ -73,4 +73,18 @@ describe('the NorthMES composition rules', () => {
       },
     ]);
   });
+
+  it('E02-S03 PageInfo in two subgraphs breaks no rule, as an SDK shared type', () => {
+    const pageInfo = 'type PageInfo @shareable { hasNextPage: Boolean! endCursor: String }';
+    const delta = subgraph(
+      'delta',
+      `${pageInfo} type ShiftConnection { pageInfo: PageInfo! } type Query { deltaShifts: ShiftConnection! }`,
+    );
+    const epsilon = subgraph(
+      'epsilon',
+      `${pageInfo} type CrewConnection { pageInfo: PageInfo! } type Query { epsilonCrews: CrewConnection! }`,
+    );
+
+    expect(checkRules([delta, epsilon])).toEqual([]);
+  });
 });
