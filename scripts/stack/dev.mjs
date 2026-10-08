@@ -117,12 +117,20 @@ export function completedBuild(line) {
 }
 
 /** @typedef {Awaited<ReturnType<typeof devPlan>>} DevPlan */
+/** @typedef {import('./processes.mjs').StartedProcess} StartedProcess */
+
+/**
+ * @typedef {object} DevSupervisor
+ * @property {Promise<void>} failed Resolves once pnpm dev cannot go on: the build failed, or a dev
+ *   server or tsc -b --watch exited on its own.
+ * @property {() => Promise<void>} stop Stops every process that pnpm dev started, then the stack.
+ */
 
 /**
  * Runs the processes of plan on a started stack: builds what the dev servers import, starts the
- * dev servers and tsc -b --watch, restarts the server after each completed build, and runs
- * northmes migrate and then restarts the server when a migration file changes, and prints the
- * board URL once the server listens. A migrate that fails leaves the server running.
+ * dev servers and tsc -b --watch, restarts the server after each completed build, runs northmes
+ * migrate and then restarts the server when a migration file changes, and prints the board URL
+ * once the server listens. A migrate that fails leaves the server running.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
@@ -133,14 +141,12 @@ export function completedBuild(line) {
  * }} options start and run start a process and run one to its end, as processes.mjs does. watch
  *   calls changed after each change below dir, a folder relative to the repository root. log
  *   prints a line of pnpm dev itself.
- * @returns {{ failed: Promise<void>, stop: () => Promise<void> }} failed resolves once pnpm dev
- *   cannot go on: the build failed, or a dev server or tsc -b --watch exited on its own. stop stops
- *   every process that superviseDev started, then the stack.
+ * @returns {DevSupervisor}
  */
 export function superviseDev({ plan, stack, start, run, watch, log }) {
-  /** @type {import('./processes.mjs').StartedProcess[]} */
-  const started = [];
-  /** @type {import('./processes.mjs').StartedProcess | undefined} */
+  /** @type {StartedProcess[]} */
+  const needed = [];
+  /** @type {StartedProcess | undefined} */
   let server;
   let stopping = false;
   /** @type {() => void} */
@@ -156,17 +162,18 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
     fail();
   };
   /**
-   * Starts planned with options, and fails once it exits on its own.
+   * Starts a process that pnpm dev cannot go on without.
    * @param {PlannedProcess} planned
    * @param {Parameters<typeof start>[1]} [options]
    */
   const startNeeded = (planned, options) => {
-    const child = start(planned, options);
-    started.push(child);
-    child.exited.then(({ code }) =>
+    const started = start(planned, options);
+    needed.push(started);
+    started.exited.then(({ code }) =>
       failWith(`${planned.name} exited with ${code}, so pnpm dev stops`),
     );
   };
+
   let listened = false;
   // Restarts and migrate runs go one after the other, in the order they were asked for.
   let queue = Promise.resolve();
@@ -188,6 +195,7 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
   const migrate = () => {
     queue = queue.then(async () => {
       if (stopping) return;
+      log('A migration file changed: northmes migrate');
       try {
         await run(plan.migrate, { env: stack.env });
       } catch (error) {
@@ -201,9 +209,11 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
   let pending;
 
   const begin = async () => {
+    log('Building the workspace packages that the shell and the remotes import');
     await run(plan.build);
     if (stopping) return;
     for (const planned of plan.web) startNeeded(planned);
+    log('Building the server with tsc -b --watch; the server starts after each completed build');
     startNeeded(plan.watch, {
       onLine: (line) => {
         if (completedBuild(line)) restartServer();
@@ -224,7 +234,7 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
     stop: async () => {
       stopping = true;
       clearTimeout(pending);
-      await Promise.all([...started, server].map((child) => child?.stop()));
+      await Promise.all([...needed, server].map((started) => started?.stop()));
       await stack.stop();
     },
   };
@@ -308,29 +318,23 @@ function inServerPackages(path) {
 }
 
 /**
- * Runs pnpm dev until SIGINT, SIGTERM or SIGHUP: starts the stack, builds what the dev servers
- * import, starts the dev servers and tsc -b --watch, restarts the server after each completed
- * build, runs northmes migrate when a migration file changes, and prints the board URL once the
- * server listens. Stopping ends every process and the stack's container.
+ * Runs pnpm dev until SIGINT, SIGTERM or SIGHUP: starts the stack, takes a port for the shell's
+ * dev server and one for each remote's, and runs the processes of devPlan with superviseDev.
+ * Stopping ends every process and the stack's container.
  */
 async function dev() {
   /** @param {string} line */
   const log = (line) => say('dev', line);
   const stack = await startStack({ log });
-  /** @type {import('./processes.mjs').StartedProcess[]} */
-  const web = [];
-  /** @type {import('./processes.mjs').StartedProcess | undefined} */
-  let watcher;
-  /** @type {import('./processes.mjs').StartedProcess | undefined} */
-  let server;
+  /** @type {DevSupervisor | undefined} */
+  let supervisor;
   let stopping = false;
   /** @param {number} code */
   const stop = async (code) => {
     if (stopping) return;
     stopping = true;
     log('Stopping the processes and the stack');
-    await Promise.all([...web, watcher, server].map((started) => started?.stop()));
-    await stack.stop();
+    await (supervisor ?? stack).stop();
     process.exit(code);
   };
   onStopSignal(() => stop(0));
@@ -346,70 +350,18 @@ async function dev() {
       shell,
       remotes: Object.fromEntries(remotes.map((id, index) => [id, remotePorts[index] ?? 0])),
     });
-    log('Building the workspace packages that the shell and the remotes import');
-    await run(plan.build);
-    for (const planned of plan.web) {
-      const started = start(planned);
-      web.push(started);
-      started.exited.then(({ code }) => {
-        if (stopping) return;
-        log(`${planned.name} exited with ${code}, so pnpm dev stops`);
-        stop(1);
-      });
-    }
-
-    let listened = false;
-    // Restarts and migrate runs go one after the other, in the order they were asked for.
-    let queue = Promise.resolve();
-    const restartServer = () => {
-      queue = queue.then(async () => {
-        await server?.stop();
-        if (stopping) return;
-        server = start(plan.server, {
-          env: stack.env,
-          onLine: (line) => {
-            if (listened || !line.includes('Listening on')) return;
-            listened = true;
-            log(`The board of the seeded plant: ${plan.boardUrl}`);
-            log('Ctrl+C stops pnpm dev and its Postgres container.');
-          },
-        });
-      });
-    };
-    log('Building the server with tsc -b --watch; the server starts after each completed build');
-    watcher = start(plan.watch, {
-      onLine: (line) => {
-        if (completedBuild(line)) restartServer();
+    if (stopping) return;
+    supervisor = superviseDev({
+      plan,
+      stack,
+      start,
+      run,
+      watch: (dir, changed) => {
+        watch(join(repositoryRoot, dir), { recursive: true }, changed);
       },
+      log,
     });
-    watcher.exited.then(({ code }) => {
-      if (stopping) return;
-      log(`tsc -b --watch exited with ${code}, so pnpm dev stops`);
-      stop(1);
-    });
-
-    /** @type {NodeJS.Timeout | undefined} */
-    let pending;
-    const migrate = () => {
-      queue = queue.then(async () => {
-        if (stopping) return;
-        log('A migration file changed: northmes migrate');
-        try {
-          await run(plan.migrate, { env: stack.env });
-        } catch (error) {
-          log(`${messageOf(error)}; the server runs on`);
-          return;
-        }
-        restartServer();
-      });
-    };
-    for (const dir of plan.migrations) {
-      // An editor writes a file in several steps, so one change runs migrate once.
-      watch(join(repositoryRoot, dir), { recursive: true }, () => {
-        clearTimeout(pending);
-        pending = setTimeout(migrate, 300);
-      });
-    }
+    supervisor.failed.then(() => stop(1));
   } catch (error) {
     log(messageOf(error));
     await stop(1);
