@@ -46,11 +46,27 @@ export function validateWebModule(value: unknown, entry: WebModuleEntry): string
     problems.push(`routes is ${shown(module.routes)}, expected a function`);
     return problems;
   }
-  const path = routePath(module.routes(createMountRoutes().plantRoute));
+  const route: unknown = module.routes(createMountRoutes().plantRoute);
+  if (!isRoute(route)) {
+    problems.push('routes did not return a route');
+    return problems;
+  }
+  const path = routePath(route);
   if (path !== entry.id) {
     problems.push(`the top route path is ${shown(path)}, expected the module id ${entry.id}`);
   }
   return problems;
+}
+
+// Whether a value has the options object that every route the router builds has.
+function isRoute(value: unknown): value is AnyRoute {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'options' in value &&
+    typeof value.options === 'object' &&
+    value.options !== null
+  );
 }
 
 // The path the router gives a route: its path option without leading slashes. A pathless route
