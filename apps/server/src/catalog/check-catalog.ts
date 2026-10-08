@@ -55,7 +55,7 @@ function dependencyOrder(
     const seen = state.get(id);
     if (seen === 'done') return;
     if (seen === 'visiting') {
-      problems.push(`Module dependency cycle: ${[...path, id].join(' -> ')}`);
+      problems.push(cycleProblem(path.slice(path.indexOf(id))));
       return;
     }
     state.set(id, 'visiting');
@@ -73,4 +73,15 @@ function dependencyOrder(
   if (core) visit(core, []);
   for (const entry of sorted) visit(entry, []);
   return ordered;
+}
+
+/**
+ * Names the modules of a cycle in cycle order, starting from the smallest id, so the same cycle
+ * reads the same whichever module the walk entered it at.
+ */
+function cycleProblem(cycle: readonly string[]): string {
+  const smallest = cycle.reduce((least, id) => (id < least ? id : least));
+  const start = cycle.indexOf(smallest);
+  const rotated = [...cycle.slice(start), ...cycle.slice(0, start), smallest];
+  return `Module dependency cycle: ${rotated.join(' -> ')}`;
 }
