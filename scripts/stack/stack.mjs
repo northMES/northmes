@@ -97,22 +97,27 @@ export async function prepareDatabase(env, { northmes = pnpmNorthmes } = {}) {
  * caller starts and stop, which stops the container. The environment adds to dev.env the
  * DATABASE_URL of the container, which changes from run to run, and a PORT that freePort took with
  * the public origin on it.
- * @param {{ stateDir?: string, northmes?: Northmes }} [options] stateDir defaults to .northmes/ at
- *   the repository root.
+ *
+ * With reuse, which the caller takes from containerReuse, Testcontainers reuses the container of an
+ * earlier run with the same settings, and stop leaves it running, so the container outlives the run
+ * (ADR 0058). The database steps then run again on it, and they are idempotent.
+ * @param {{ stateDir?: string, reuse?: boolean, northmes?: Northmes }} [options] stateDir defaults
+ *   to .northmes/ at the repository root, and reuse to false.
  */
 export async function startStack({
   stateDir = join(repositoryRoot, '.northmes'),
+  reuse = false,
   northmes = pnpmNorthmes,
 } = {}) {
   const devEnv = writeDevConfig(stateDir);
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8'));
-  const container = await new PostgreSqlContainer(image)
+  const definition = new PostgreSqlContainer(image)
     .withUsername(superuser)
     .withPassword(readSecret(devEnv.POSTGRES_PASSWORD_FILE ?? ''))
-    .withDatabase(database)
-    .start();
+    .withDatabase(database);
+  const container = await (reuse ? definition.withReuse() : definition).start();
   const stop = async () => {
-    await container.stop();
+    if (!reuse) await container.stop();
   };
   try {
     const port = await freePort();
