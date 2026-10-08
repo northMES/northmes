@@ -16,6 +16,11 @@ import { inProcessTransport } from './transport.ts';
 /** The one GraphQL endpoint of the server. */
 export const GATEWAY_PATH = '/graphql';
 
+/** The body of the 503 that /graphql answers before the gateway has its schema. */
+const NOT_READY = JSON.stringify({
+  errors: [{ message: 'The GraphQL gateway is not ready.', extensions: { code: 'UNAVAILABLE' } }],
+});
+
 /** Composes the subgraphs of every module and serves the supergraph (ADR 0015). */
 @Injectable()
 export class GatewayService implements OnApplicationBootstrap {
@@ -27,7 +32,7 @@ export class GatewayService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const subgraphs = this.registry.all();
     if (subgraphs.length === 0) return;
-    this.#runtime = createGatewayRuntime({
+    const runtime = createGatewayRuntime({
       supergraph: composeSupergraph(subgraphs),
       graphqlEndpoint: GATEWAY_PATH,
       // Every subgraph URL is inproc://<name>, and the gateway hands a subgraph without a
@@ -37,13 +42,16 @@ export class GatewayService implements OnApplicationBootstrap {
       landingPage: false,
       graphiql: false,
     });
-    await this.#runtime.getSchema();
+    // The gateway would otherwise load the supergraph on the first request. Awaiting it here moves
+    // supergraph errors to boot, and requests get the 503 until it has resolved.
+    await runtime.getSchema();
+    this.#runtime = runtime;
   }
 
-  /** Serves a request to GATEWAY_PATH. */
-  handle(request: IncomingMessage, response: ServerResponse, next: () => void): void {
+  /** Serves a request to GATEWAY_PATH, or answers 503 while the gateway has no schema. */
+  handle(request: IncomingMessage, response: ServerResponse): void {
     if (!this.#runtime) {
-      next();
+      response.writeHead(503, { 'content-type': 'application/json; charset=utf-8' }).end(NOT_READY);
       return;
     }
     void this.#runtime(request, response);
@@ -56,8 +64,8 @@ export class GatewayModule implements NestModule {
 
   configure(consumer: MiddlewareConsumer): void {
     consumer
-      .apply((request: IncomingMessage, response: ServerResponse, next: () => void) =>
-        this.gateway.handle(request, response, next),
+      .apply((request: IncomingMessage, response: ServerResponse) =>
+        this.gateway.handle(request, response),
       )
       .forRoutes(GATEWAY_PATH);
   }
