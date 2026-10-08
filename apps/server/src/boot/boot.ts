@@ -130,18 +130,30 @@ async function importManifests(
   return entries;
 }
 
+export interface InRepoCatalogOptions {
+  /**
+   * Resolves each manifest. Boot uses import.meta.resolve. The integration tests' global setup runs
+   * in Vite's module runner, which has no import.meta.resolve, so it passes a resolver of its own.
+   */
+  readonly resolveManifest?: ResolveManifest;
+  /** The ids of the in-repo modules to keep. Without it, the catalog holds every in-repo module. */
+  readonly modules?: readonly string[];
+}
+
 /**
  * Boot steps 3 and 4: the in-repo modules' manifests and migration folders, checked and in boot
- * order. Boot resolves each manifest with import.meta.resolve. The integration tests' global setup
- * runs in Vite's module runner, which has no import.meta.resolve, so it passes a resolver of its own.
+ * order.
  */
 export async function inRepoCatalog(
   importManifest: BootOptions['importManifest'],
-  resolveManifest: ResolveManifest = (specifier) => import.meta.resolve(specifier),
+  {
+    resolveManifest = (specifier) => import.meta.resolve(specifier),
+    modules,
+  }: InRepoCatalogOptions = {},
 ): Promise<CatalogEntry[]> {
-  return checkCatalog(await importManifests(inRepoManifests, importManifest, resolveManifest), {
-    imageVersion: imageVersion(),
-  });
+  const entries = await importManifests(inRepoManifests, importManifest, resolveManifest);
+  const kept = modules ? entries.filter(({ manifest }) => modules.includes(manifest.id)) : entries;
+  return checkCatalog(kept, { imageVersion: imageVersion() });
 }
 
 /**

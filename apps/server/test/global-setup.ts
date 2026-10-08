@@ -103,16 +103,15 @@ export default async function setup(project: TestProject): Promise<void> {
     auth: randomBytes(32).toString('hex'),
   };
   await bootstrapRoles(emptyTemplateUrl(pg), passwords);
-  const catalog = await inRepoCatalog(
-    (specifier) => import(specifier),
+  const catalog = await inRepoCatalog((specifier) => import(specifier), {
     // The in-repo modules register no resolve hook, so Node's default resolver finds the package of
     // each manifest, and the migrations folder sits next to its package.json.
-    (specifier) => {
+    resolveManifest: (specifier) => {
       const packageJson = findPackageJSON(specifier, import.meta.url);
       if (!packageJson) throw new Error(`No package.json for ${specifier}`);
       return pathToFileURL(packageJson).href;
     },
-  );
+  });
   const { name } = await migrateTemplate({
     superuser: pg,
     ownerPassword: passwords.owner,

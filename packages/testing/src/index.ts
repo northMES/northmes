@@ -3,6 +3,13 @@ export { type BootBuiltOptions, type BootBuiltResult, bootBuilt } from './boot-b
 export { query } from './client.ts';
 export { configForTest } from './config-for-test.ts';
 export {
+  type CreateTestAppOptions,
+  createTestApp,
+  type HostFactory,
+  type HostOptions,
+  type TestApp,
+} from './create-test-app.ts';
+export {
   emptyTemplateDatabase,
   type PgConnection,
   type RolePasswords,
