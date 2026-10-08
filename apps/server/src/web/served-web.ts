@@ -38,7 +38,10 @@ export class ServedWeb {
     readonly modules: readonly WebModuleEntry[];
   };
 
-  /** Reads the remote manifest of each catalog module with a web block and hashes it. */
+  /**
+   * Takes the web files over and hashes the remote manifest of each catalog module with a web
+   * block, once: the files of a build do not change while the server runs.
+   */
   serve({ northmes, shellDir, catalog }: WebFiles): void {
     const modules = catalog.flatMap(({ manifest, webDir }) => {
       if (!manifest.web) return [];

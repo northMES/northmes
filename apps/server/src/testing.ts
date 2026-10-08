@@ -27,6 +27,10 @@ export function hostFactoryWithWebFiles(webDir: string): HostFactory {
   return createHostFactory(webDir);
 }
 
+/**
+ * Builds the app of hostFactory and serves its web files as boot does: the built shell and each
+ * module's remote from web/dist/ of its package, or the files under webDir when it is given.
+ */
 function createHostFactory(webDir?: string): HostFactory {
   return async ({ modules, config }) => {
     const catalog = await inRepoCatalog((specifier) => import(specifier), { modules });

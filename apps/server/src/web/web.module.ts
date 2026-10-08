@@ -19,8 +19,10 @@ import { WebModulesController } from './web-modules.controller.ts';
 export class WebModule {}
 
 /**
- * Serves the web files from the app: the remote of each catalog module with a web block, the
- * module list and the shell. Call it after NestFactory.create and before the app initialises.
+ * Serves the web files from the app: the shell's assets, the remote of each catalog module with a
+ * web block, the module list and the shell. Call it after NestFactory.create and before the app
+ * initialises, so the static mounts come before the routes and the shell's route does not take
+ * their paths.
  */
 export function serveWeb(app: NestExpressApplication, web: WebFiles): void {
   mountStatic(app, web);

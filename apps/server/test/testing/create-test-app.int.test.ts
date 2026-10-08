@@ -6,16 +6,13 @@ import { ConfigService } from '@nestjs/config';
 import planning from '@northmes/module-planning/manifest';
 import { hostFactory, hostFactoryWithWebFiles } from '@northmes/server/testing';
 import { createTestApp, type TestApp } from '@northmes/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 let testApp: TestApp | undefined;
-let webDir: string | undefined;
 
 afterEach(async () => {
   await testApp?.app.close();
   testApp = undefined;
-  if (webDir) rmSync(webDir, { recursive: true, force: true });
-  webDir = undefined;
 });
 
 describe('createTestApp', () => {
@@ -56,7 +53,8 @@ describe('hostFactory', () => {
 
 describe('hostFactoryWithWebFiles', () => {
   it('E02-S05 hostFactoryWithWebFiles serves a module remote from the folder it is given', async () => {
-    webDir = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    const webDir = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    onTestFinished(() => rmSync(webDir, { recursive: true, force: true }));
     mkdirSync(join(webDir, 'modules', 'planning'), { recursive: true });
     writeFileSync(
       join(webDir, 'modules', 'planning', 'remoteEntry.js'),
