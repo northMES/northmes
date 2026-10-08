@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { moduleNames } from '@northmes/sdk';
@@ -111,12 +111,13 @@ function integrityOf(webDir: string): string | null {
   return `sha384-${createHash('sha384').update(manifest).digest('base64')}`;
 }
 
-/** Whether path, resolved against webDir, names a file inside webDir that exists. */
+/** Whether path, resolved against webDir, names a regular file inside webDir. */
 function servedFrom(webDir: string, path: string): boolean {
   const file = resolve(webDir, path);
   const inside = relative(webDir, file);
   const climbs = inside === '..' || inside.startsWith(`..${sep}`);
-  return inside !== '' && !climbs && !isAbsolute(inside) && existsSync(file);
+  if (inside === '' || climbs || isAbsolute(inside)) return false;
+  return statSync(file, { throwIfNoEntry: false })?.isFile() ?? false;
 }
 
 /** The remote entry and the JS and CSS of every exposed module, relative to the remote's folder. */
