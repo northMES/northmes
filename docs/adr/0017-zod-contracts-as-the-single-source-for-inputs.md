@@ -1,7 +1,7 @@
 ---
-status: "proposed"
-date: 2026-10-05
-decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+status: "accepted"
+date: 2026-10-08
+decision-makers: Krister Johansson
 consulted: internal research notes 02, 04, 33
 informed: NorthMES contributors
 release: "1"

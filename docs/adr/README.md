@@ -93,30 +93,30 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-08 the index holds 69 ADRs: 37 accepted and 32 proposed, 66 for release 1 and 3 for a later release. 18 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0015, 0016, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0060, 0061, 0062, 0063 and 0064.
+On 2026-10-08 the index holds 69 ADRs: 48 accepted and 21 proposed, 66 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
 | 0001 | [Record architecture decisions in MADR](0001-record-architecture-decisions-in-madr.md) | accepted | 1 | |
 | 0002 | [Modular monolith with module-owned schemas and process roles](0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) | accepted | 1 | |
-| 0003 | [Module package shape and the defineModule manifest](0003-module-package-shape-and-the-definemodule-manifest.md) | proposed | 1 | |
-| 0004 | [Monorepo tooling: pnpm, Turborepo, Node and TypeScript versions](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | 1 | maintainer (TypeScript 6.0.x) |
+| 0003 | [Module package shape and the defineModule manifest](0003-module-package-shape-and-the-definemodule-manifest.md) | accepted | 1 | |
+| 0004 | [Monorepo tooling: pnpm, Turborepo, Node and TypeScript versions](0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | accepted | 1 | maintainer (TypeScript 6.0.x) |
 | 0005 | [Postgres 18 official image with pgBackRest, TimescaleDB deferred](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | 1 | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
-| 0006 | [Kysely, SQL-first migrations and the NorthMES migration runner](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | proposed | 1 | |
+| 0006 | [Kysely, SQL-first migrations and the NorthMES migration runner](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | accepted | 1 | |
 | 0007 | [Tenancy: company, plants and the scope tree](0007-tenancy-company-plants-and-the-scope-tree.md) | accepted | 1 | product owner (customer order line scope); maintainer (one plant at a time) |
-| 0008 | [Row-level security with transaction-local scopes](0008-row-level-security-with-transaction-local-scopes.md) | proposed | 1 | |
+| 0008 | [Row-level security with transaction-local scopes](0008-row-level-security-with-transaction-local-scopes.md) | accepted | 1 | |
 | 0009 | [Code uniqueness per scope with an exclusion constraint](0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md) | proposed | 1 | product owner (case-insensitive codes, archived codes, level of operation tools) |
 | 0010 | [Identity with Better Auth, roles and permissions in core tables](0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) | accepted | 1 | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
 | 0011 | [Principals, credentials and same-origin rules](0011-principals-credentials-and-same-origin-rules.md) | proposed | 1 | |
-| 0012 | [Commands as the single write path](0012-commands-as-the-single-write-path.md) | proposed | 1 | |
+| 0012 | [Commands as the single write path](0012-commands-as-the-single-write-path.md) | accepted | 1 | |
 | 0013 | [Audit trail written in the command transaction](0013-audit-trail-written-in-the-command-transaction.md) | accepted | 1 | maintainer (lifecycle classes; tool results as exports); lawyer (retention, erasure) |
-| 0014 | [Outbox, event log and pg-boss jobs](0014-outbox-event-log-and-pg-boss-jobs.md) | proposed | 1 | |
+| 0014 | [Outbox, event log and pg-boss jobs](0014-outbox-event-log-and-pg-boss-jobs.md) | accepted | 1 | |
 | 0015 | [GraphQL Federation inside one process with an embedded Hive Gateway](0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md) | accepted | 1 | |
 | 0016 | [GraphQL list conventions: connections, relations, filter, sort, search and group by](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md) | accepted | 1 | |
-| 0017 | [Zod contracts as the single source for inputs](0017-zod-contracts-as-the-single-source-for-inputs.md) | proposed | 1 | |
+| 0017 | [Zod contracts as the single source for inputs](0017-zod-contracts-as-the-single-source-for-inputs.md) | accepted | 1 | |
 | 0018 | [Realtime subscriptions over graphql-ws fed by the event tail](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md) | accepted | 1 | |
 | 0019 | [Web shell with React Module Federation remotes](0019-web-shell-with-react-module-federation-remotes.md) | accepted | 1 | pilot IT (browser versions) |
-| 0020 | [Frontend libraries: TanStack Router, Apollo Client 4, shadcn/ui and forms](0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md) | proposed | 1 | maintainer (Base UI; token base) |
+| 0020 | [Frontend libraries: TanStack Router, Apollo Client 4, shadcn/ui and forms](0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md) | accepted | 1 | maintainer (Base UI; token base) |
 | 0021 | [Accessibility target WCAG 2.2 AA](0021-accessibility-target-wcag-2-2-aa.md) | accepted | 1 | product owner (is pause live updates wanted) |
 | 0022 | [Shared building blocks: packages, the master-data kit, settings and generators](0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | 1 | |
 | 0023 | [SI units with a NorthMES unit catalog](0023-si-units-with-a-northmes-unit-catalog.md) | accepted | 1 | product owner (pieces per hour) |
@@ -152,9 +152,9 @@ On 2026-10-08 the index holds 69 ADRs: 37 accepted and 32 proposed, 66 for relea
 | 0053 | [Translation: English first, General Translation later](0053-translation-english-first-general-translation-later.md) | accepted | 1 | |
 | 0054 | [File storage port with a Postgres driver](0054-file-storage-port-with-a-postgres-driver.md) | proposed | later | |
 | 0055 | [Release 1 scope under option B and the scope rule](0055-release-1-scope-under-option-b-and-the-scope-rule.md) | accepted | 1 | maintainer (ledger additions) |
-| 0056 | [MIT SDK packages, the extension exception and the trademark policy](0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | proposed | 1 | lawyer |
+| 0056 | [MIT SDK packages, the extension exception and the trademark policy](0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | accepted | 1 | lawyer |
 | 0057 | [Scheduling domain as a pure package in the planning module](0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) | proposed | 1 | maintainer |
-| 0058 | [Developer environment: source exports, one stack script and one gate command](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | 1 | |
+| 0058 | [Developer environment: source exports, one stack script and one gate command](0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | accepted | 1 | |
 | 0059 | [Time-series storage port with an open default backend](0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | later | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
 | 0060 | [Configuration with @nestjs/config, one Zod environment schema and secret files](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | 1 | |
 | 0061 | [Presentation settings for dates, clocks and numbers with one pinned locale](0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted | 1 | |
@@ -165,6 +165,6 @@ On 2026-10-08 the index holds 69 ADRs: 37 accepted and 32 proposed, 66 for relea
 | 0066 | [Companies created by the CLI, plant slugs unique per installation, company settings at /settings and an onboarding wizard before a plant opens](0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | 1 | maintainer (the company admin role holding every installed permission) |
 | 0067 | [Plant switcher across companies, nav icons by lucide name and a top bar slot](0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md) | proposed | 1 | maintainer (the top bar slot id; top bar items drawn from data) |
 | 0068 | [Extension points declared by their owners, contributions as manifest data with code by id, and a plugin inventory](0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) | proposed | 1 | maintainer (the ledger rows of the nine release 1 pieces; the AI budget banner as the first banner contribution; top bar items drawn from data; roles only for plugin permissions; plant-free fields for the notifications module; the command.rejected security event and the validator record at the first regulated sale; acceptance before the skeleton's validator story) |
-| 0069 | [Require each CI job as a status check on main](0069-require-each-ci-job-as-a-status-check-on-main.md) | proposed | 1 | |
+| 0069 | [Require each CI job as a status check on main](0069-require-each-ci-job-as-a-status-check-on-main.md) | accepted | 1 | |
 
 Next free number: 0070. Only Krister Johansson sets a status to accepted.

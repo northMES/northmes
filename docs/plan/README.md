@@ -151,17 +151,17 @@ The epics run in this order. Their dependencies, estimates and milestones are in
 
 ## ADRs needed by M0
 
-M0 (Fri 2026-10-30) requires these ADRs to be accepted ([14-roadmap.md](14-roadmap.md#milestones-under-option-b)). A box is ticked when the ADR is accepted and has no open needs-confirmation, which is the rule a task needs to move to Ready. The front matter of each ADR is the source of truth for its status; the status in parentheses is the state on 2026-10-05.
+M0 (Fri 2026-10-30) requires these ADRs to be accepted ([14-roadmap.md](14-roadmap.md#milestones-under-option-b)). A box is ticked when the ADR is accepted and has no open needs-confirmation, which is the rule a task needs to move to Ready. The front matter of each ADR is the source of truth for its status; the status in parentheses is the state on 2026-10-08.
 
 E02 needs:
 
-- [ ] [0003][adr-0003] module package and manifest (proposed)
-- [ ] [0006][adr-0006] migration roles and naming (proposed)
+- [x] [0003][adr-0003] module package and manifest (accepted)
+- [x] [0006][adr-0006] migration roles and naming (accepted)
 - [x] [0015][adr-0015] backend federation rules (accepted)
 - [ ] [0019][adr-0019] web remote contract and CSS rule (accepted; needs-confirmation: pilot IT, browser versions)
 - [ ] [0037][adr-0037] plugin surface and validator payload (accepted; needs-confirmation: maintainer and product owner)
 - [x] [0041][adr-0041] test layout and harness (accepted)
-- [ ] [0058][adr-0058] developer environment (proposed)
+- [x] [0058][adr-0058] developer environment (accepted)
 - [x] [0060][adr-0060] configuration and the environment schema (accepted)
 - [x] [0062][adr-0062] web form contracts, URL view state and module link manifests (accepted)
 - [x] [0064][adr-0064] REST routes under /api/v1, reserved ids and slugs, the boot route check (accepted)
@@ -172,7 +172,7 @@ E03 and the rest of M0 need:
 - [ ] [0029][adr-0029] per-planner drafts, soft locks and the plan revision (accepted; needs-confirmation: product owner)
 - [ ] [0055][adr-0055] release 1 scope and the scope rule (accepted; needs-confirmation: maintainer, ledger additions)
 - [ ] [0005][adr-0005] Postgres 18 official image with pgBackRest (accepted; needs-confirmation: maintainer, the pgBackRest source fallback)
-- [ ] [0004][adr-0004] monorepo tooling and the TypeScript 6.0.x pin (proposed)
+- [ ] [0004][adr-0004] monorepo tooling and the TypeScript 6.0.x pin (accepted; needs-confirmation: maintainer, TypeScript 6.0.x)
 - [ ] [0057][adr-0057] scheduling domain as a pure package (proposed)
 
 ## Decisions waiting for the maintainer

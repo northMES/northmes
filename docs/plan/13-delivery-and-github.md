@@ -15,11 +15,11 @@ This document says how NorthMES work moves from the plan to a released version. 
 | [0048](../adr/0048-documentation-on-docs7-at-docs-northmes-dev.md) | accepted | The docs site on Docs7 at docs.northmes.dev, public names under northmes.dev, the mail addresses |
 | [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) | accepted | Test first, Vitest projects, Testcontainers and Playwright |
 | [0042](../adr/0042-ai-in-tests-mocked-by-default-opt-in-live-runs.md) | accepted | Mocked AI by default, live runs only on request |
-| [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | Source exports, one stack script for dev, demo and e2e, one gate command |
+| [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | accepted | Source exports, one stack script for dev, demo and e2e, one gate command |
 | [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | Shared packages, recipes per extension point, `pnpm gen:migration` |
 | [0039](../adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md) | accepted | AGPL-3.0-or-later core and a contributor license agreement |
 | [0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) | proposed | The dependency license gate and SBOMs |
-| [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | proposed | MIT SDK packages, the extension exception, the trademark policy |
+| [0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | accepted | MIT SDK packages, the extension exception, the trademark policy |
 | [0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md) | accepted | The scope rule and the velocity row that sets the pilot date |
 
 ## Who does what

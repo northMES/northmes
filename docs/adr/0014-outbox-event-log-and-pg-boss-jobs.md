@@ -1,7 +1,7 @@
 ---
-status: "proposed"
-date: 2026-10-06
-decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+status: "accepted"
+date: 2026-10-08
+decision-makers: Krister Johansson
 consulted: internal research notes 06, 07, 15, 20, 22 and 32
 informed: module and plugin authors, pilot IT
 release: "1"

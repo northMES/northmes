@@ -8,9 +8,9 @@ NorthMES is built test first. Every change starts with a failing test, integrati
 |---|---|---|---|
 | TDD, Vitest projects, Testcontainers, Playwright, contract suites, nightly tests | [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) | accepted | none |
 | AI mocked by default, opt-in live runs | [0042](../adr/0042-ai-in-tests-mocked-by-default-opt-in-live-runs.md) | accepted | none |
-| Source exports, one stack script, one gate command | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | proposed | none |
+| Source exports, one stack script, one gate command | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | accepted | none |
 | Configuration, `configForTest` and the end-to-end environment | [0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md) | accepted | none |
-| Node and TypeScript pins, runtime test | [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | proposed | maintainer (TypeScript 6.0.x) |
+| Node and TypeScript pins, runtime test | [0004](../adr/0004-monorepo-tooling-pnpm-turborepo-node-and-typescript-versions.md) | accepted | maintainer (TypeScript 6.0.x) |
 | Pinned database image for tests | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
 | Time-series contract suite and benchmark gate (later) | [0059](../adr/0059-time-series-storage-port-with-an-open-default-backend.md) | proposed | maintainer (no TimescaleDB backend from the project); product owner (raw pulse retention) |
 | Time, Temporal and the time zone matrix | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | none |
