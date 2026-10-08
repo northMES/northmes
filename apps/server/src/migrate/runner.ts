@@ -79,8 +79,8 @@ async function createMigrationTable(client: Client): Promise<void> {
 }
 
 /**
- * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app use the
- * schema. Roles belong to the server, so the role may come from a run on another database; the
+ * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app and
+ * nm_ext use the schema. Roles belong to the server, so the role may come from a run on another database; the
  * grants are given again either way.
  */
 async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Promise<void> {
@@ -101,6 +101,9 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   await client.query('begin');
   await client.query(`set local role ${role}`);
   await client.query(`grant usage on schema ${schema} to nm_app`);
+  // A foreign key into the schema also needs USAGE on it. The table's own REFERENCES grant still
+  // decides whether a key may point at it (ADR 0006).
+  await client.query(`grant usage on schema ${schema} to nm_ext`);
   await client.query('commit');
 }
 

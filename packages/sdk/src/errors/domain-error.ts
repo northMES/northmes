@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+
+/** What went wrong, in the terms a client acts on. Each kind maps to one GraphQL code (ADR 0012). */
+export type DomainErrorKind =
+  | 'validation'
+  | 'unauthenticated'
+  | 'not_found'
+  | 'forbidden'
+  | 'conflict'
+  | 'precondition'
+  | 'unavailable';
+
+export interface DomainErrorOptions {
+  /** Stable and module-scoped, such as core.command_rejected. Never renamed after a release. */
+  readonly code: string;
+  readonly kind: DomainErrorKind;
+  /** The text the person who ran the operation reads. */
+  readonly message: string;
+  /** Values a client reads by code, such as rejectedBy of core.command_rejected. */
+  readonly details?: Readonly<Record<string, unknown>>;
+}
+
+/** The one error type of NorthMES, which every surface reports in the same shape (ADR 0012). */
+export class DomainError extends Error {
+  readonly code: string;
+  readonly kind: DomainErrorKind;
+  readonly details: Readonly<Record<string, unknown>> | undefined;
+
+  constructor({ code, kind, message, details }: DomainErrorOptions) {
+    super(message);
+    this.name = 'DomainError';
+    this.code = code;
+    this.kind = kind;
+    this.details = details;
+  }
+}

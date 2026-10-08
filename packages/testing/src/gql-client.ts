@@ -16,14 +16,23 @@ export interface GqlClient {
   ): Promise<GqlAnswer<TData>>;
 }
 
+export interface GqlClientOptions {
+  /**
+   * Headers sent with every operation, such as x-northmes-plant, which names the request's plant
+   * until sign-in arrives (E05).
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
 /** A GraphQL client for the server at `url`, the origin that app.getUrl() returns. */
-export function gqlClient(url: string): GqlClient {
+export function gqlClient(url: string, { headers = {} }: GqlClientOptions = {}): GqlClient {
   const endpoint = new URL('/graphql', url);
   return {
     async send<TData>(document: string, variables?: Readonly<Record<string, unknown>>) {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
+          ...headers,
           accept: 'application/graphql-response+json',
           'content-type': 'application/json',
         },

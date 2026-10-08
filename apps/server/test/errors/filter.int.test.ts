@@ -1,0 +1,104 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { INestApplication } from '@nestjs/common';
+import { ModulesContainer } from '@nestjs/core';
+import type { ModuleManifest } from '@northmes/sdk';
+import { DomainErrorFilter } from '@northmes/sdk/errors';
+import { given, gqlClient, useTestDatabase } from '@northmes/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { boot } from '../../src/boot/boot.ts';
+import { dispatch } from '../fixtures/commands/dispatch.ts';
+import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
+import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
+import { alpha } from '../fixtures/subgraphs/alpha.ts';
+import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
+
+const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
+describe('the exception filter', () => {
+  // The command bus opens a transaction for every command, so the server needs a database.
+  const db = useTestDatabase();
+  const env = useServerEnv({ database: db });
+  let app: INestApplication | undefined;
+
+  // ConfigModule writes the validated environment into process.env, as it does in the server. The
+  // stubs remove these keys for each test, and unstubAllEnvs takes them out again afterwards.
+  beforeEach(() => {
+    for (const key of serverEnvKeys) vi.stubEnv(key, undefined);
+  });
+
+  afterEach(async () => {
+    await app?.close();
+    app = undefined;
+    vi.unstubAllEnvs();
+  });
+
+  /** Boots the server with the fixture modules in place of the in-repo ones. */
+  async function bootFixtures(...manifests: readonly ModuleManifest[]): Promise<INestApplication> {
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    app = await boot({ env, ...fixtureCatalog(...manifests), exit: vi.fn(), log });
+    if (!app) throw new Error(`boot exited: ${log.error.mock.calls.join('\n')}`);
+    return app;
+  }
+
+  it('E02-S04 the exception filter is registered once as APP_FILTER', async () => {
+    const booted = await bootFixtures(alpha);
+
+    // Where an instance of the filter is provided: the module and the provider's token.
+    const registrations = [...booted.get(ModulesContainer).values()].flatMap((module) =>
+      [...module.providers.values()]
+        .filter(({ instance }) => instance instanceof DomainErrorFilter)
+        .map(({ token }) => ({ module: module.metatype.name, token: String(token) })),
+    );
+
+    // Nest gives each APP_FILTER provider a token of its own that starts with APP_FILTER.
+    expect(registrations).toEqual([
+      { module: 'AppModule', token: expect.stringMatching(/^APP_FILTER\b/) },
+    ]);
+  });
+
+  // Every path outside the server segments is an SPA path that the shell answers (ADR 0064), so
+  // the missing route is under /api/.
+  it("E02-S04 a request to a server path that does not exist still gets Nest's 404", async () => {
+    const booted = await bootFixtures(alpha);
+
+    const response = await fetch(new URL('/api/v1/no-such-route', await booted.getUrl()), {
+      signal: AbortSignal.timeout(2000),
+    });
+
+    expect({ status: response.status, body: await response.json() }).toEqual({
+      status: 404,
+      body: { statusCode: 404, message: 'Not Found' },
+    });
+  });
+
+  it('E02-S04 a veto reaches the client with code, errorCode core.command_rejected and details.rejectedBy', async () => {
+    const booted = await bootFixtures(dispatch, releaseLimits, auditRules);
+    const client = gqlClient(await booted.getUrl(), {
+      headers: { 'x-northmes-plant': given.plant() },
+    });
+
+    const answer = await client.send(
+      `mutation ($input: DispatchReleaseJobInput!) {
+        dispatchReleaseJob(input: $input) { id status }
+      }`,
+      { input: { id: JOB_ID } },
+    );
+
+    // Both modules veto. release-limits boots first, so its veto is the one the client gets.
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: 'Quantity 1500 is above the release limit of 1000',
+          path: ['dispatchReleaseJob'],
+          extensions: {
+            code: 'PRECONDITION',
+            errorCode: 'core.command_rejected',
+            details: { rejectedBy: 'release-limits' },
+          },
+        },
+      ],
+    });
+  });
+});

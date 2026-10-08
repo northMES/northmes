@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import planning from '@northmes/module-planning/manifest';
+import { SubgraphRegistry } from '@northmes/sdk/graphql';
 import { hostFactory, hostFactoryWithWebFiles } from '@northmes/server/testing';
 import { createTestApp, type TestApp } from '@northmes/testing';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
@@ -24,6 +25,15 @@ describe('createTestApp', () => {
     // The app runs in this process with the ConfigModule that configForTest built: serverEnvSchema
     // reads PORT as a number, and process.env has no PORT.
     expect(testApp.app.get(ConfigService).get('PORT')).toBe(0);
+  });
+
+  it("E02-S04 createTestApp builds a subgraph from each module's server entry", async () => {
+    testApp = await createTestApp({ modules: ['core'], hostFactory });
+
+    const subgraphs = testApp.app.get(SubgraphRegistry).all();
+
+    // The subgraph is named after the module's GraphQL name, as on the real boot.
+    expect(subgraphs.map(({ name }) => name)).toEqual(['core']);
   });
 });
 

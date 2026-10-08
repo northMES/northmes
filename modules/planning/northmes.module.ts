@@ -2,11 +2,17 @@
 import { defineModule } from '@northmes/sdk';
 import packageJson from './package.json' with { type: 'json' };
 
-export default defineModule({
+const manifest = defineModule({
   id: 'planning',
   version: packageJson.version,
   northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['core'],
   commands: { 'planning.releaseProductionOrder': { validatable: true } },
   web: { label: 'Planning', order: 20 },
+  // A lazy import, so the host reads the manifest without loading Nest (ADR 0003).
+  server: () => import('./server/index.ts'),
 });
+
+// TypeScript 6.0 leaves the .ts of an import() inside `export default <expression>` as it is,
+// which the build output could not load. An exported binding gets its import() rewritten to .js.
+export default manifest;
