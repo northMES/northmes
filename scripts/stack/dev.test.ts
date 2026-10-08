@@ -1,6 +1,7 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it } from 'vitest';
-import { completedBuild, devPlan, webRemotes } from './dev.mjs';
+import { completedBuild, devPlan, superviseDev, webRemotes } from './dev.mjs';
+import type { run, start } from './processes.mjs';
 import { seedScopes } from './seed.mjs';
 
 // The ports the stack hands pnpm dev: the server's PORT and one port each for the shell and the
@@ -145,5 +146,82 @@ describe('completedBuild', () => {
     expect(
       completedBuild('6:29:00 PM - File change detected. Starting incremental compilation...'),
     ).toBe(false);
+  });
+});
+
+// The line tsc -b --watch prints after a build without errors.
+const completed = '6:29:00 PM - Found 0 errors. Watching for file changes.';
+
+/** Lets every promise that the fakes resolved run its callbacks. */
+function settle() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+/**
+ * The stack, the processes and the file watcher of pnpm dev as fakes. events lists what pnpm dev
+ * did, in order: "start <name>" and "stop <name>" for a process, "run <name>" for a process it ran
+ * to its end, and "stop stack". A process counts as stopped once its stop resolved.
+ */
+function fakeDev() {
+  const events: string[] = [];
+  const env = new Map<string, Readonly<Record<string, string>> | undefined>();
+  const printers = new Map<string, (line: string) => void>();
+  const stack = {
+    env: { DATABASE_URL: 'postgres://127.0.0.1:41000/northmes', PORT: '41001' },
+    stop: async () => {
+      events.push('stop stack');
+    },
+  };
+  const startFake: typeof start = (planned, options = {}) => {
+    events.push(`start ${planned.name}`);
+    env.set(planned.name, options.env);
+    printers.set(planned.name, options.onLine ?? (() => {}));
+    let exit: (code: number | null) => void = () => {};
+    const exited = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
+      exit = (code) => resolve({ code, signal: code === null ? 'SIGTERM' : null });
+    });
+    return {
+      name: planned.name,
+      exited,
+      stop: async () => {
+        await Promise.resolve();
+        events.push(`stop ${planned.name}`);
+        exit(null);
+      },
+    };
+  };
+  const runFake: typeof run = async (planned, options = {}) => {
+    events.push(`run ${planned.name}`);
+    env.set(planned.name, options.env);
+  };
+  return {
+    events,
+    stack,
+    /** The environment that pnpm dev gave the process with this name on top of its own. */
+    envOf: (name: string) => env.get(name),
+    /** Prints line as the process with this name. */
+    print: (name: string, line: string) => printers.get(name)?.(line),
+    options: { stack, start: startFake, run: runFake },
+  };
+}
+
+describe('superviseDev', () => {
+  it('E02-S08 each build that tsc -b --watch completes stops the old server and starts one new server', async () => {
+    const dev = fakeDev();
+    superviseDev({ plan: await devPlan(ports), ...dev.options });
+    await settle();
+
+    dev.print('tsc', completed);
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+
+    expect(dev.events.filter((event) => event.endsWith(' server'))).toEqual([
+      'start server',
+      'stop server',
+      'start server',
+    ]);
+    // The server connects to the stack's database and listens on the stack's PORT.
+    expect(dev.envOf('server')).toEqual(dev.stack.env);
   });
 });
