@@ -7,10 +7,10 @@ describe('cli', () => {
     const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
     const exit = vi.fn<(code: number) => void>();
 
-    await cli(['migrate'], { env: {}, exit, log });
+    await cli(['seed'], { env: {}, exit, log });
 
     expect(log.error.mock.calls).toEqual([
-      ['Unknown command "migrate". Commands: serve, db bootstrap'],
+      ['Unknown command "seed". Commands: serve, db bootstrap, migrate'],
     ]);
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.info).not.toHaveBeenCalled();
@@ -36,6 +36,28 @@ describe('cli', () => {
       '- NORTHMES_DB_AUTH_PASSWORD_FILE',
       '- NORTHMES_DB_OWNER_PASSWORD_FILE',
       '- POSTGRES_PASSWORD_FILE',
+    ]);
+    expect(log.error.mock.calls.join('\n')).not.toContain('hunter2');
+    expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it('E02-S02 migrate with an invalid environment exits 1 and lists every bad key without its value', async () => {
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+
+    // DATABASE_URL carries a login, and the owner's secret file key is missing.
+    await cli(['migrate'], {
+      env: { DATABASE_URL: 'postgres://nm_owner:hunter2@db:5432/northmes' },
+      exit,
+      log,
+    });
+    const [header, ...problems] = (log.error.mock.calls[0]?.[0] ?? '').split('\n');
+
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(header).toBe('invalid configuration (2 problems)');
+    expect(problems.map((problem) => problem.split(':')[0]).sort()).toEqual([
+      '- DATABASE_URL',
+      '- NORTHMES_DB_OWNER_PASSWORD_FILE',
     ]);
     expect(log.error.mock.calls.join('\n')).not.toContain('hunter2');
     expect(log.info).not.toHaveBeenCalled();
