@@ -92,6 +92,22 @@ describe('defineModuleLinks', () => {
     expect(Object.keys(links)).toEqual(['orders']);
   });
 
+  it("E02-S05 linkEntry of a second copy of @northmes/contracts reads the entries the first copy's defineModuleLinks built", async () => {
+    // Every remote bundles its own copy of @northmes/contracts, and the shell's @northmes/web-sdk
+    // reads the remote's manifest with the shell's copy (ADR 0062). The query gives a second
+    // instance of the module.
+    const copyPath: string = '../src/define-module-links.ts?copy';
+    const copy: typeof import('../src/define-module-links.ts') = await import(
+      /* @vite-ignore */ copyPath
+    );
+
+    expect(copy.linkEntry).not.toBe(linkEntry);
+    expect(copy.linkEntry(links.orders.order)).toEqual({
+      path: '$orderId',
+      pattern: '/$plant/planning/orders/$orderId',
+    });
+  });
+
   it('E02-S05 packages/contracts declares and imports no router package', () => {
     const imports = sourceImports();
 
