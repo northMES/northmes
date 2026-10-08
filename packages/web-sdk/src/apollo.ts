@@ -4,6 +4,9 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { OperationTypeNode } from 'graphql';
 import { createClient } from 'graphql-ws';
 
+/** The gateway's one endpoint on the page's origin, for HTTP and for graphql-ws (ADR 0018). */
+const graphqlPath = '/graphql';
+
 export interface CreateNorthmesClientOptions {
   /** The plant's scope id. Every HTTP request names it in x-northmes-plant. */
   readonly plantId: string;
@@ -23,14 +26,15 @@ export interface CreateNorthmesClientOptions {
  */
 export function createNorthmesClient(options: CreateNorthmesClientOptions): ApolloClient {
   const http = new HttpLink({
-    uri: '/graphql',
+    uri: graphqlPath,
     headers: { 'x-northmes-plant': options.plantId },
     fetch: options.fetch,
   });
   const ws = new GraphQLWsLink(
     createClient({
       // The browser floor (ADR 0019) has WebSocket constructors that need an absolute URL.
-      url: () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/graphql`,
+      url: () =>
+        `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${graphqlPath}`,
       webSocketImpl: options.webSocketImpl,
     }),
   );
