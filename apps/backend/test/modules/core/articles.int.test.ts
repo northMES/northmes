@@ -249,4 +249,23 @@ describe('coreArticles', () => {
       'HG-120',
     ]);
   });
+
+  it('E06-S02 search finds articles by a part of their code or name, ignoring case and outer spaces, and totalCount counts the matches', async () => {
+    const client = await catalogPlant();
+    /** The codes and totalCount that search finds. */
+    const found = async (search: string) => {
+      const answer = await list(client, { search });
+      expect(answer.errors, search).toBeUndefined();
+      const connection = answer.data?.coreArticles;
+      return [connection?.edges.map(({ node }) => node.code), connection?.totalCount];
+    };
+
+    expect(await found('hg-1')).toEqual([['HG-110', 'HG-120'], 2]);
+    expect(await found('  HINGE ')).toEqual([['HG-110', 'HG-120'], 2]);
+    expect(await found('ca')).toEqual([['CW-220', 'HG-110', 'HG-120'], 3]);
+    // % and _ match themselves, not any text.
+    expect(await found('%')).toEqual([[], 0]);
+    expect(await found('_')).toEqual([[], 0]);
+    expect(await found('   ')).toEqual([catalog.map(({ code }) => code), 7]);
+  });
 });
