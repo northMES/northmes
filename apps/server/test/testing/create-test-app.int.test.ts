@@ -22,3 +22,27 @@ describe('createTestApp', () => {
     expect(testApp.app.get(ConfigService).get('PORT')).toBe(0);
   });
 });
+
+describe('hostFactory', () => {
+  // Nest aborts the process on a provider error by default, which ends the Vitest worker and hides
+  // the cause.
+  it('E02-S02 hostFactory rejects with the cause when a provider fails to build', async () => {
+    const built = hostFactory({
+      modules: ['core'],
+      config: {
+        module: class BrokenConfig {},
+        global: true,
+        providers: [
+          {
+            provide: 'broken',
+            useFactory: () => {
+              throw new Error('broken provider');
+            },
+          },
+        ],
+      },
+    });
+
+    await expect(built).rejects.toThrow('broken provider');
+  });
+});
