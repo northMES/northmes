@@ -32,15 +32,22 @@ export interface CreateTestAppOptions {
 
 /**
  * Builds the host app in the test process with the in-repo modules that `modules` names and the
- * configuration of configForTest, and initialises it (ADR 0041). Vitest's module runner does not
- * apply the resolve hook that loads plugins, so a test of a built plugin boots the built server
- * through bootBuilt instead (ADR 0037).
+ * configuration of configForTest, and initialises it (ADR 0041). When init fails, it closes the app
+ * and rejects with the init error. Vitest's module runner does not apply the resolve hook that
+ * loads plugins, so a test of a built plugin boots the built server through bootBuilt instead
+ * (ADR 0037).
  */
 export async function createTestApp({
   modules,
   hostFactory,
 }: CreateTestAppOptions): Promise<TestApp> {
   const testApp = await hostFactory({ modules, config: await configForTest() });
-  await testApp.app.init();
+  try {
+    await testApp.app.init();
+  } catch (error) {
+    // The caller never gets an app whose init failed, so close it here and keep the init error.
+    await testApp.app.close().catch(() => {});
+    throw error;
+  }
   return testApp;
 }
