@@ -38,6 +38,7 @@ afterEach(async () => {
   await app?.close();
   app = undefined;
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe('boot', () => {
@@ -59,6 +60,7 @@ describe('boot', () => {
 
   it("E02-S01 AppModule's first import is the ConfigModule built from loadEnv(serverEnvSchema) and secretsConfig", async () => {
     const exit = vi.fn<(code: number) => void>();
+    const forRoot = vi.spyOn(ConfigModule, 'forRoot');
 
     app = await boot({
       env,
@@ -71,6 +73,15 @@ describe('boot', () => {
     const [first] = root?.imports ?? [];
 
     expect(exit).not.toHaveBeenCalled();
+    // The server reads no .env file, and ConfigService caches what it reads.
+    expect(forRoot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isGlobal: true,
+        ignoreEnvFile: true,
+        cache: true,
+        load: [secretsConfig],
+      }),
+    );
     expect(first?.metatype).toBe(ConfigModule);
     expect(first?.isGlobal).toBe(true);
     const config = app?.get(ConfigService);
