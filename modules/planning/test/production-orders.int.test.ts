@@ -155,4 +155,24 @@ describe('planningProductionOrders', () => {
     ]);
     expect(statements.filter((statement) => onArticleTable.test(statement))).toHaveLength(1);
   });
+
+  it('E02-S04 statementsDuring refuses a second recording of the same pool while the first runs', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { app } = testApp;
+    let finishFirst = () => {};
+    const first = statementsDuring(
+      app,
+      () =>
+        new Promise<void>((resolve) => {
+          finishFirst = resolve;
+        }),
+    );
+
+    await expect(statementsDuring(app, async () => 'second')).rejects.toThrow(/already recording/);
+    finishFirst();
+    await first;
+    await expect(statementsDuring(app, async () => 'third')).resolves.toMatchObject({
+      result: 'third',
+    });
+  });
 });
