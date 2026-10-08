@@ -15,6 +15,10 @@ export default defineConfig({
     alias: [{ find: /^graphql$/, replacement: graphql }],
   },
   ssr: { resolve: { conditions: ['@northmes/source'] } },
+  // Vitest imports the global setup files in its own __vitest__ environment, which reads neither
+  // resolve.conditions nor ssr.resolve.conditions. apps/server's setup imports server and workspace
+  // source, which must not resolve to a stale dist/.
+  environments: { __vitest__: { resolve: { conditions: ['@northmes/source'] } } },
   test: {
     projects: [
       {
