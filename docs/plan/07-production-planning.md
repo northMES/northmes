@@ -796,7 +796,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Pyramid's order file has no parent reference, so imported orders plan independently by their ERP deadlines.
 - A planner may link a child to a parent by hand (`planning.linkChildProductionOrder`, plan proposal for the name). Linked children leave the top-level sort and plan right after their parent.
 - A child production order is always created in its parent's plant; a cross-plant link fails with `core.crossScopeReference`.
-- Linking refuses a cycle: an order cannot be linked under itself or under one of its own descendants, and the command fails with `planning.production_order.link_cycle` (plan proposal for the code). The command first selects the plant's `plant_plan_state` row `for update` ([Plan revision](#plan-revision)) and then walks the new parent's chain of parents, so links in one plant run one after another and the second of two opposite links fails with `planning.production_order.link_cycle` (plan proposal). Until PO-17 is answered, a linked child may have children of its own; the rule holds either way.
+- Linking refuses a cycle: an order cannot be linked under itself or under one of its own descendants, and the command fails with `planning.production_order.link_cycle` (plan proposal for the code). The command first selects the plant's `plant_plan_state` row `for update` ([Plan revision](#plan-revision)) and then walks the new parent's chain of parents, so links in one plant run one after another and the second of two opposite links fails with `planning.production_order.link_cycle` (plan proposal). A linked child may have children of its own (Krister, 2026-10-08; the product owner confirms it in PO-17).
 - NorthMES does not explode BOMs into new child orders in release 1.
 
 ## Planning board in release 1
@@ -1162,7 +1162,7 @@ Product owner:
 - `isLocked` on the operation or the job order; operation priority; the operator list sort.
 - Splitting the unreported remainder of a started job.
 - The spread rule for ERP quantity changes; field ownership against "NorthMES is master".
-- Child orders planned independently with links by hand only, and whether a linked child may have children of its own.
+- Child orders planned independently with links by hand only, and that a linked child may have children of its own.
 - Whether purchase requisitions count in the material warning.
 - Machines and job orders per week; whether "Pause live updates" is wanted.
 - Customer order line scope; the level of operation tools; case-insensitive codes and archived codes.

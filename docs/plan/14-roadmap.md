@@ -3137,7 +3137,7 @@ Acceptance criteria:
 - The production order list uses the list kit; the detail page shows operations and job orders.
 - `z.output` of the release contract's input is assignable to the generated `PlanningReleaseProductionOrderInput` without a cast.
 - Order deadlines on the list and the detail page follow the plant's presentation settings.
-- A planner links a child production order to a parent in the same plant by hand with `planning.linkChildProductionOrder`; a cross-plant link fails with `core.crossScopeReference`. Until PO-17 is answered, a linked child may have children of its own. A link that would make a cycle, an order under itself or under one of its own descendants, fails with `planning.production_order.link_cycle`.
+- A planner links a child production order to a parent in the same plant by hand with `planning.linkChildProductionOrder`; a cross-plant link fails with `core.crossScopeReference`. A linked child may have children of its own (Krister, 2026-10-08; the product owner confirms it in PO-17). A link that would make a cycle, an order under itself or under one of its own descendants, fails with `planning.production_order.link_cycle`.
 
 Tests first:
 
