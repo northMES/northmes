@@ -60,9 +60,9 @@ describe('pg-image', () => {
       expect(findings).toEqual([]);
     });
 
-    it('scan ignores files that are not Dockerfiles', () => {
+    it('scan ignores files that are neither Dockerfiles nor Compose files', () => {
       const findings = scan([
-        { path: 'compose.yaml', text: 'services:\n  db:\n    image: postgres:17\n' },
+        { path: 'config.yaml', text: 'services:\n  db:\n    image: postgres:17\n' },
         { path: 'README.md', text: '```\nFROM postgres:17\n```\n' },
       ]);
 

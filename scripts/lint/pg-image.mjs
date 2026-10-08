@@ -15,6 +15,9 @@ const configuredImage = JSON.parse(
 // FROM [--flag=value ...] image [AS name], with the instruction and AS in any case.
 const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*$/i;
 
+// A Compose `image: postgres:...` line, with the value optionally quoted.
+const composeImagePattern = /^\s*image:\s*["']?(?<image>postgres:\S+?)["']?\s*$/;
+
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
  * @typedef {{ path: string, line: number, reference: string }} Finding
@@ -24,6 +27,26 @@ const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*
 function isDockerfile(path) {
   const name = basename(path);
   return name === 'Dockerfile' || name.startsWith('Dockerfile.') || name.endsWith('.Dockerfile');
+}
+
+/** @param {string} path */
+function isCompose(path) {
+  return /^(docker-)?compose.*\.ya?ml$/.test(basename(path));
+}
+
+/**
+ * The image reference a line names, if the file kind has a pattern for it.
+ * @param {string} path
+ * @param {string} content
+ */
+function referenceOn(path, content) {
+  if (isDockerfile(path)) {
+    return fromPattern.exec(content)?.groups?.image;
+  }
+  if (isCompose(path)) {
+    return composeImagePattern.exec(content)?.groups?.image;
+  }
+  return undefined;
 }
 
 /** @param {string} reference */
@@ -41,11 +64,8 @@ export function scan(files) {
   const findings = [];
 
   for (const { path, text } of files) {
-    if (!isDockerfile(path)) {
-      continue;
-    }
     text.split('\n').forEach((content, index) => {
-      const reference = fromPattern.exec(content)?.groups?.image;
+      const reference = referenceOn(path, content);
       if (reference && isPostgres(reference) && reference !== configuredImage) {
         findings.push({ path, line: index + 1, reference });
       }
