@@ -76,4 +76,11 @@ describe('ScopedDatabase', () => {
 
     expect(scopes).toEqual([plantA]);
   });
+
+  it('E02-S04 a transaction without a plant reads zero rows', async () => {
+    // The tracer principal plugin gives a request without x-northmes-plant no principal.
+    const scopes = await scopesReadAs(null);
+
+    expect(scopes).toEqual([]);
+  });
 });
