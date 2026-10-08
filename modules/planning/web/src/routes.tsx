@@ -3,6 +3,7 @@ import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute } from '@tanstack/react-router';
+import { BoardScreen } from './board-screen.tsx';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -17,6 +18,7 @@ export function planningRoutes(plantRoute: PlantRoute) {
   const boardRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.board).path,
+    component: BoardScreen,
   });
   return planningRoute.addChildren([boardRoute]);
 }
