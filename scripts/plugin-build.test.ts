@@ -101,4 +101,20 @@ describe('pnpm plugin:build', () => {
     expect(lines).toEqual(['Built examples/plugin-labels into plugins/example-labels']);
     expect(errors).toEqual([]);
   });
+
+  it('E02-S04 pnpm plugin:build without an id or with an id no package under examples/ has exits 1 and writes nothing', async () => {
+    write(
+      join(root, 'examples/plugin-labels/package.json'),
+      '{ "name": "@northmes/example-labels" }',
+    );
+
+    const exitCodes = [await main([], io()), await main(['example-label'], io())];
+
+    expect(exitCodes).toEqual([1, 1]);
+    expect(errors).toEqual([
+      'Usage: pnpm plugin:build <id>',
+      'No package under examples/ is named example-label',
+    ]);
+    expect(readdirSync(root)).toEqual(['examples']);
+  });
 });
