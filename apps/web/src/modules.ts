@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { WebModule } from '@northmes/web-sdk';
+import { coreModule } from './modules/core/index.ts';
 import { planningModule } from './modules/planning/index.ts';
 
 /** One link of a module's menu group. */
@@ -26,6 +28,12 @@ export interface ShellModule {
  * imported here from its public api, index.ts.
  */
 export const shellModules: readonly ShellModule[] = [
+  {
+    module: coreModule,
+    label: 'Core',
+    order: 10,
+    links: [{ label: 'Articles', link: coreLinks.articles }],
+  },
   {
     module: planningModule,
     label: 'Planning',
