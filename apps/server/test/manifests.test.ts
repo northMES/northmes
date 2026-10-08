@@ -24,4 +24,8 @@ describe('planning manifest', () => {
   it('E02-S01 planning depends on core', () => {
     expect(planning.dependsOn).toEqual(['core']);
   });
+
+  it('E02-S01 planning northmes range accepts image version 0.0.0', () => {
+    expect(satisfies('0.0.0', planning.northmes), planning.northmes).toBe(true);
+  });
 });
