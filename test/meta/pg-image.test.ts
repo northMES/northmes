@@ -21,6 +21,20 @@ describe('pg-image', () => {
     expect(findings).toEqual([{ path: 'db/Dockerfile.dev', line: 3, reference: 'postgres:17' }]);
   });
 
+  it('scan reports a Compose image line for postgres:17', () => {
+    const text = 'services:\n  db:\n    image: postgres:17\n';
+
+    const findings = scan([
+      { path: 'compose.yaml', text },
+      { path: 'docker-compose.dev.yml', text },
+    ]);
+
+    expect(findings).toEqual([
+      { path: 'compose.yaml', line: 3, reference: 'postgres:17' },
+      { path: 'docker-compose.dev.yml', line: 3, reference: 'postgres:17' },
+    ]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
