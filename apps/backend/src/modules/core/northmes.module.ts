@@ -6,6 +6,7 @@ const manifest = defineModule({
   id: 'core',
   version: imageVersion(),
   northmes: '>=0.0.0-0 <0.1.0-0',
+  commands: { 'core.createArticle': {} },
   // A lazy import, so the host reads the manifest without loading Nest (ADR 0003).
   server: () => import('./index.ts'),
 });
