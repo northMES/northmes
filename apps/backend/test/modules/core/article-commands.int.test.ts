@@ -84,4 +84,43 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     );
     expect(listed.data?.coreArticles.totalCount).toBe(1);
   });
+
+  /** The error of a code that another article at the plant uses (ADR 0009, ADR 0012). */
+  const codeTaken = (path: string) => ({
+    message: 'The code is already taken.',
+    path: [path],
+    extensions: {
+      code: 'CONFLICT',
+      errorCode: 'core.code_taken',
+      fieldErrors: [
+        { path: ['code'], message: 'The code is already taken.', code: 'core.code_taken' },
+      ],
+    },
+  });
+
+  it('E06-S06 coreCreateArticle with a code that another article at the plant uses, in any case, returns core.code_taken on code', async () => {
+    const plant = given.plant();
+    const client = await clientAt(plant);
+    await client.send(createMutation, {
+      input: { id: randomUUIDv7(), code: 'HG-110', name: 'Cabinet hinge' },
+    });
+    const id = randomUUIDv7();
+
+    const answer = await client.send(createMutation, {
+      input: { id, code: 'hg-110', name: 'Cabinet hinge, left' },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [codeTaken('coreCreateArticle')],
+    });
+    expect(await readArticle(client, id)).toBeNull();
+    // Another plant may use the code.
+    const otherPlant = await clientAt(given.plant());
+    const other = await otherPlant.send(createMutation, {
+      input: { id: randomUUIDv7(), code: 'HG-110', name: 'Cabinet hinge' },
+    });
+    expect(other.errors).toBeUndefined();
+  });
 });
