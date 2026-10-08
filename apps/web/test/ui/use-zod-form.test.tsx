@@ -43,10 +43,10 @@ function ArticleForm({ save }: ArticleFormProps) {
         setServerErrors(form, await save(values));
       })}
     >
-      {server?.types && (
+      {server?.message && (
         <ul aria-label="Not placed on a field">
-          {Object.values(server.types).map((message) => (
-            <li key={String(message)}>{message}</li>
+          {server.message.split('\n').map((message) => (
+            <li key={message}>{message}</li>
           ))}
         </ul>
       )}
