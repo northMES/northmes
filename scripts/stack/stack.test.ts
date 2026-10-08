@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { startStack } from './stack.mjs';
+import { prepareDatabase, startStack } from './stack.mjs';
 
 // These tests start no container and touch no database: a fake starter stands in for
 // Testcontainers and the database steps do nothing. dev-up.int.test.ts runs the real ones.
@@ -91,5 +91,44 @@ describe('startStack', () => {
     expect(stepEnvs[0]).not.toHaveProperty('NORTHMES_PUBLIC_ORIGIN');
     expect(Number(stack.env.PORT)).toBeGreaterThan(0);
     expect(stack.env.NORTHMES_PUBLIC_ORIGIN).toBe(`http://127.0.0.1:${stack.env.PORT}`);
+  });
+
+  it('E02-S08 the stack reports each step before it runs it', async () => {
+    // pnpm dev and pnpm demo show these lines, since the output of pnpm northmes appears only when
+    // a step fails.
+    const events: string[] = [];
+    const { startContainer } = fakeContainers();
+
+    await startStack({
+      stateDir,
+      env: {},
+      startContainer: async (settings) => {
+        events.push('<container started>');
+        return startContainer(settings);
+      },
+      northmes: async (args) => {
+        events.push(`<pnpm northmes ${args.join(' ')}>`);
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+      prepare: (env, options) =>
+        prepareDatabase(env, {
+          ...options,
+          seed: async () => {
+            events.push('<seed>');
+          },
+        }),
+      log: (line) => events.push(line),
+    });
+
+    expect(events).toEqual([
+      expect.stringMatching(/^Starting Postgres from postgres:18@sha256:/),
+      '<container started>',
+      'Creating the database roles: pnpm northmes db bootstrap',
+      '<pnpm northmes db bootstrap>',
+      'Migrating the database: pnpm northmes migrate',
+      '<pnpm northmes migrate>',
+      'Seeding the fictional articles and production orders',
+      '<seed>',
+    ]);
   });
 });
