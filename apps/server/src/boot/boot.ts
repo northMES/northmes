@@ -7,7 +7,11 @@ import { type ModuleManifest, moduleNames } from '@northmes/sdk';
 import {
   ConfigError,
   loadEnv,
+  type MigrateEnv,
+  migrateEnvSchema,
   readSecrets,
+  type Secrets,
+  type ServerEnv,
   secretsConfig,
   serverEnvSchema,
 } from '@northmes/sdk/config';
@@ -15,6 +19,7 @@ import type { DefineSubgraphOptions } from '@northmes/sdk/graphql';
 import { AppModule } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
+import { migrationsDirOf } from '../migrate/files.ts';
 import { inRepoManifests } from '../modules.ts';
 import { BootError } from './boot-error.ts';
 
@@ -47,23 +52,24 @@ function secretFiles(env: Readonly<Record<string, unknown>>): Record<`${string}_
 }
 
 /**
- * Boot step 1 for the environment (ADR 0060): validates env with serverEnvSchema, reads the secret
- * files it names and creates the global ConfigModule that serves both. A bad key or secret file
- * throws one ConfigError.
+ * Boot step 1 for the environment (ADR 0060): reads the secret files that an entry point's
+ * validated environment names and creates the global ConfigModule that serves both. A bad secret
+ * file throws one ConfigError.
  */
-async function loadConfig(env: BootOptions['env']) {
-  const serverEnv = loadEnv(serverEnvSchema)(env);
-  readSecrets(secretFiles(serverEnv), { nodeEnv: serverEnv.NODE_ENV });
+async function loadConfig(
+  entryEnv: Readonly<Record<string, unknown>> & Pick<ServerEnv, 'NODE_ENV'>,
+) {
+  const secrets = readSecrets(secretFiles(entryEnv), { nodeEnv: entryEnv.NODE_ENV });
   const config = await ConfigModule.forRoot({
     isGlobal: true,
     ignoreEnvFile: true,
     cache: true,
     // forRoot would validate process.env. Boot validates the environment it was given instead,
     // which is process.env when main.ts runs it and a record of its own in a test.
-    validate: () => serverEnv,
+    validate: () => entryEnv,
     load: [secretsConfig],
   });
-  return { serverEnv, config };
+  return { secrets, config };
 }
 
 /**
@@ -73,7 +79,7 @@ async function loadConfig(env: BootOptions['env']) {
  */
 export async function boot(options: BootOptions): Promise<INestApplication | undefined> {
   try {
-    return await bootSteps(options);
+    return await serve(options);
   } catch (error) {
     if (!(error instanceof ConfigError || error instanceof BootError)) throw error;
     options.log.error(error.message);
@@ -82,7 +88,31 @@ export async function boot(options: BootOptions): Promise<INestApplication | und
   }
 }
 
-/** Boot step 3: imports the manifest of every module. No Nest code of a module loads. */
+/** What the boot steps hand the entry point that ran them. */
+export interface Booted<Env> {
+  /** The entry point's validated environment. */
+  readonly env: Env;
+  /** The values of the secret files that env names. */
+  readonly secrets: Secrets;
+  /** The checked catalog in boot order. */
+  readonly catalog: readonly CatalogEntry[];
+  /** The created app, which listens on nothing. */
+  readonly app: INestApplication;
+}
+
+/**
+ * The boot of pnpm northmes migrate (ADR 0006, ADR 0060): the boot steps with migrateEnvSchema, so
+ * the secrets hold only the owner password, and without listening. It throws a ConfigError or a
+ * BootError, and the caller closes the app.
+ */
+export async function bootForMigrate(options: BootOptions): Promise<Booted<MigrateEnv>> {
+  return bootSteps(loadEnv(migrateEnvSchema)(options.env), options);
+}
+
+/**
+ * Boot step 3: imports the manifest of every module. No Nest code of a module loads. A module's
+ * migration files are in the migrations folder of its package.
+ */
 async function importManifests(
   specifiers: readonly string[],
   importManifest: BootOptions['importManifest'],
@@ -90,7 +120,8 @@ async function importManifests(
   const entries: CatalogEntry[] = [];
   for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
-    entries.push({ manifest, kind: 'module' });
+    const migrationsDir = migrationsDirOf(import.meta.resolve(specifier));
+    entries.push({ manifest, kind: 'module', migrationsDir });
   }
   return entries;
 }
@@ -109,21 +140,35 @@ async function importServers(catalog: readonly CatalogEntry[]): Promise<DefineSu
   return subgraphs;
 }
 
-async function bootSteps({
-  env,
-  manifests = inRepoManifests,
-  importManifest,
-  log,
-}: BootOptions): Promise<INestApplication> {
-  const { serverEnv, config } = await loadConfig(env);
+/**
+ * The boot steps of ADR 0002 that run before the server listens, for an entry point's validated
+ * environment. pnpm northmes migrate runs the same steps before its first file.
+ */
+async function bootSteps<
+  Env extends Readonly<Record<string, unknown>> & Pick<ServerEnv, 'NODE_ENV'>,
+>(
+  env: Env,
+  {
+    manifests = inRepoManifests,
+    importManifest,
+    log,
+  }: Pick<BootOptions, 'manifests' | 'importManifest' | 'log'>,
+): Promise<Booted<Env>> {
+  const { secrets, config } = await loadConfig(env);
   const entries = await importManifests(manifests, importManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const subgraphs = await importServers(catalog);
   const app = await NestFactory.create(AppModule.forRoot(config, subgraphs), {
     logger: ['error', 'warn'],
   });
-  await app.listen(serverEnv.PORT, '127.0.0.1');
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
+  return { env, secrets, catalog, app };
+}
+
+async function serve(options: BootOptions): Promise<INestApplication> {
+  const { log } = options;
+  const { env: serverEnv, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
+  await app.listen(serverEnv.PORT, '127.0.0.1');
   const { supergraphHash } = app.get(GatewayService);
   if (supergraphHash) log.info(`Serving ${GATEWAY_PATH} with supergraph=${supergraphHash}`);
   log.info(`Listening on ${await app.getUrl()}`);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { ConfigError } from '@northmes/sdk/config';
 import { type BootOptions, boot } from './boot/boot.ts';
+import { BootError } from './boot/boot-error.ts';
 import { dbBootstrap } from './db/bootstrap.ts';
 import { migrateCommand } from './migrate/command.ts';
 
@@ -20,7 +21,7 @@ const commands: Readonly<Record<string, (context: CliContext) => Promise<void>>>
 
 /**
  * Runs the command that the arguments name, or serve when there are none. A command that stops on
- * a ConfigError writes its message to log.error and exits 1.
+ * a ConfigError or a BootError writes its message to log.error and exits 1.
  */
 export async function cli(argv: readonly string[], context: CliContext): Promise<void> {
   const name = argv.join(' ') || 'serve';
@@ -33,7 +34,7 @@ export async function cli(argv: readonly string[], context: CliContext): Promise
   try {
     await command(context);
   } catch (error) {
-    if (!(error instanceof ConfigError)) throw error;
+    if (!(error instanceof ConfigError || error instanceof BootError)) throw error;
     context.log.error(error.message);
     context.exit(1);
   }
