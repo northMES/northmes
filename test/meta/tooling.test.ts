@@ -48,6 +48,10 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
 }
 
+interface Lockfile {
+  snapshots?: Record<string, unknown>;
+}
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
 function readText(path: string): string {
@@ -193,5 +197,16 @@ describe('tooling', () => {
     const sources = Object.fromEntries([...failing, ...passing].map((path) => [path, read]));
 
     expect(processEnvErrors(sources)).toEqual([...failing].sort());
+  });
+
+  it('E02-S01 pnpm-lock.yaml holds one @nestjs/core and one @nestjs/graphql resolution', () => {
+    // A snapshot key is a version plus the peers it resolved with, and each key installs its own
+    // copy. Two keys for one package mean two copies, and Nest's module and GraphQL type registries
+    // stop matching across them.
+    const keys = Object.keys((parse(readText('pnpm-lock.yaml')) as Lockfile).snapshots ?? {});
+    const resolutions = (name: string) => keys.filter((key) => key.startsWith(`${name}@`));
+
+    expect(resolutions('@nestjs/core')).toHaveLength(1);
+    expect(resolutions('@nestjs/graphql')).toHaveLength(1);
   });
 });
