@@ -27,4 +27,11 @@ describe('defineModuleLinks', () => {
       href: '/plant-a/planning/orders?q=1001',
     });
   });
+
+  it('E02-S05 the href encodes each search key and value and leaves out empty values', () => {
+    const link = links.orders({ plant: 'plant-a' }, { q: 'a&b c#d', 'x=y': '1', sort: '' });
+
+    expect(link.href).toBe('/plant-a/planning/orders?q=a%26b%20c%23d&x%3Dy=1');
+    expect(new URL(link.href, 'http://localhost').searchParams.get('q')).toBe('a&b c#d');
+  });
 });
