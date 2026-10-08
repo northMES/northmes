@@ -17,7 +17,7 @@
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project integration",
     "test:ai": "vitest run --project ai",
-    "test:tz": "vitest run --project tz",
+    "test:tz": "TZ=Europe/Stockholm NM_TEST_PG_TZ=Europe/Stockholm vitest run --project unit --project integration",
     "lint:customer-data": "node scripts/lint/no-customer-data.mjs",
     "adr:next": "node scripts/adr/next-number.mjs",
     "northmes": "turbo run build --filter=@northmes/server --output-logs=errors-only && node apps/server/dist/main.js",
