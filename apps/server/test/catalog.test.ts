@@ -2,13 +2,20 @@
 import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { BootError } from '../src/boot/boot-error.ts';
-import { type CatalogEntry, checkCatalog } from '../src/catalog/check-catalog.ts';
+import {
+  type CatalogEntry,
+  type CatalogOptions,
+  checkCatalog,
+} from '../src/catalog/check-catalog.ts';
 import { core, imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
 
 // The BootError that checkCatalog throws for a catalog it refuses.
-function refusal(entries: readonly CatalogEntry[]): BootError {
+function refusal(
+  entries: readonly CatalogEntry[],
+  options: CatalogOptions = { imageVersion },
+): BootError {
   try {
-    checkCatalog(entries, { imageVersion });
+    checkCatalog(entries, options);
   } catch (error) {
     if (error instanceof BootError) return error;
     throw error;
@@ -176,6 +183,18 @@ describe('checkCatalog', () => {
 
     expect(error.problems).toEqual([
       'Modules press-2 and press2 derive the same name press2; give one of them another id',
+    ]);
+  });
+
+  it('E02-S01 image 0.5.0 outside range >=0.3.0 <0.5.0 is refused naming both versions', () => {
+    const error = refusal(
+      [inRepoModule('planning', [], { northmes: '>=0.3.0 <0.5.0' }), plugin('acme-audit')],
+      { imageVersion: '0.5.0' },
+    );
+
+    expect(error.problems).toEqual([
+      'Module planning 0.0.0 runs on NorthMES >=0.3.0 <0.5.0, and this image is 0.5.0',
+      'Module acme-audit 0.0.0 runs on NorthMES >=0.0.0-0 <0.1.0-0, and this image is 0.5.0',
     ]);
   });
 
