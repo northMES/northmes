@@ -2,12 +2,14 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
+import { inspect } from 'node:util';
+import { Logger } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { hostFactory } from '@northmes/server/testing';
-import { createTestApp, given, type TestApp, useTestDatabase } from '@northmes/testing';
+import { createTestApp, given, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { CompiledQuery } from 'kysely';
 import { Pool } from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
 import { tracerPrincipal } from '../../src/gateway/tracer-principal.ts';
@@ -126,5 +128,33 @@ describe('ScopedDatabase', () => {
     });
     // A transaction-local setting reads as an empty string once its transaction ends (ADR 0008).
     expect(after).toEqual({ user: 'nm_app', pid: inside?.pid, readScopes: '', writeScopes: '' });
+  });
+
+  it('E02-S04 after Postgres ends an idle connection of the pool, the server logs it without its connection settings and the next transaction runs', async () => {
+    const appPassword = decodeURIComponent(new URL(db.appUrl).password);
+    const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+    try {
+      // The transaction leaves its connection idle in the pool.
+      await scopesReadAs(tracerPrincipal(plantA));
+
+      // A restart, pg_terminate_backend or idle_session_timeout ends a connection the same way.
+      // nm_app may end the other connections of its own role. pg-pool drops each ended client and
+      // emits error on the pool, with the client and its password on the error.
+      await query(
+        db.appUrl,
+        `select pg_terminate_backend(pid)
+           from pg_stat_activity
+          where datname = current_database() and usename = 'nm_app' and pid <> pg_backend_pid()`,
+      );
+      await vi.waitFor(() => expect(pool().totalCount).toBe(0));
+
+      expect(warned).toHaveBeenCalledWith(
+        'The nm_app pool dropped an idle connection after error 57P01: terminating connection due to administrator command',
+      );
+      expect(inspect(warned.mock.calls, { depth: null })).not.toContain(appPassword);
+      expect(await scopesReadAs(tracerPrincipal(plantA))).toEqual([plantA]);
+    } finally {
+      warned.mockRestore();
+    }
   });
 });
