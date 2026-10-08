@@ -1,0 +1,47 @@
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DEV_SECRET_MARKER } from '@northmes/sdk/config';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { writeDevConfig } from './config.mjs';
+
+// The secret files of ADR 0060 that the database steps read: the superuser's for db bootstrap and
+// one for each login role it creates.
+const secretKeys = [
+  'NORTHMES_DB_APP_PASSWORD_FILE',
+  'NORTHMES_DB_AUTH_PASSWORD_FILE',
+  'NORTHMES_DB_OWNER_PASSWORD_FILE',
+  'POSTGRES_PASSWORD_FILE',
+];
+
+let dir: string;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'northmes-stack-config-'));
+});
+
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
+
+/** The secret file paths of an environment, by key. */
+function secretFiles(env: Readonly<Record<string, string>>): [string, string][] {
+  return Object.entries(env).filter(([key]) => key.endsWith('_FILE'));
+}
+
+describe('writeDevConfig', () => {
+  it('E02-S08 the dev secret files are written with mode 0600 and the dev marker', () => {
+    const env = writeDevConfig(dir);
+    const files = secretFiles(env);
+    const values = files.map(([, path]) => readFileSync(path, 'utf8'));
+
+    expect(files.map(([key]) => key).sort()).toEqual(secretKeys);
+    for (const [key, path] of files) {
+      expect(path, key).toMatch(new RegExp(`^${join(dir, 'secrets')}/`));
+      expect(statSync(path).mode & 0o777, key).toBe(0o600);
+    }
+    for (const value of values) expect(value.startsWith(DEV_SECRET_MARKER)).toBe(true);
+    // Each secret is random, so no two roles share a password.
+    expect(new Set(values).size).toBe(secretKeys.length);
+  });
+});
