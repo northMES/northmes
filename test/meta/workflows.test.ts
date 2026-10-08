@@ -16,6 +16,7 @@ interface Job {
   name?: string;
   if?: string;
   needs?: string | string[];
+  permissions?: Permissions;
   'runs-on'?: unknown;
   steps?: Step[];
 }
@@ -72,6 +73,18 @@ const pullRequestCheckSteps = {
 // (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). CodeQL runs as
 // GitHub's default setup, outside the workflow files.
 const requiredChecks = ['ci / gate', 'license gate', 'dependency audit'];
+
+// write-all grants id-token: write with every other permission.
+function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
+  return (
+    permissions === 'write-all' ||
+    (typeof permissions === 'object' && permissions?.['id-token'] === 'write')
+  );
+}
+
+function installsDependencies({ run }: Step): boolean {
+  return /\bpnpm (?:install|i|add)\b/.test(run ?? '');
+}
 
 // The events a workflow's `on` names, in any of its three forms.
 function triggersOf(on: unknown): string[] {
@@ -204,6 +217,20 @@ describe('workflows', () => {
 
         expect(keys, `${path} on.${event}`).not.toContain('paths');
         expect(keys, `${path} on.${event}`).not.toContain('paths-ignore');
+      }
+    }
+  });
+
+  // Install scripts of dependencies run in the job, and with id-token: write they could mint an
+  // OIDC token for the repository. A job that uploads or publishes with OIDC installs nothing.
+  it('no job both runs pnpm install and holds id-token: write', () => {
+    for (const { path, permissions, jobs } of workflows()) {
+      for (const [id, job] of Object.entries(jobs ?? {})) {
+        // A job without its own permissions gets the workflow's.
+        const idToken = holdsIdTokenWrite(job.permissions ?? permissions);
+        const installs = (job.steps ?? []).some(installsDependencies);
+
+        expect(idToken && installs, `${path} job ${id}`).toBe(false);
       }
     }
   });
