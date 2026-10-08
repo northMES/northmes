@@ -67,4 +67,21 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     expect(answer).toEqual({ status: 200, data: { coreCreateArticle: article } });
     expect(await readArticle(client, id)).toEqual(article);
   });
+
+  it('E06-S06 a retried coreCreateArticle with the same id returns the first article and creates no second one', async () => {
+    const client = await clientAt(given.plant());
+    const id = randomUUIDv7();
+    await client.send(createMutation, { input: { id, code: 'CW-220', name: 'Caster wheel' } });
+
+    const retry = await client.send(createMutation, {
+      input: { id, code: 'CW-221', name: 'Caster wheel, retried' },
+    });
+
+    const first = { id, code: 'CW-220', name: 'Caster wheel', version: 1 };
+    expect(retry).toEqual({ status: 200, data: { coreCreateArticle: first } });
+    const listed = await client.send<{ coreArticles: { totalCount: number } }>(
+      '{ coreArticles { totalCount } }',
+    );
+    expect(listed.data?.coreArticles.totalCount).toBe(1);
+  });
 });
