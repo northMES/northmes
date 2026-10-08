@@ -16,7 +16,7 @@ export default defineConfig({
   },
   ssr: { resolve: { conditions: ['@northmes/source'] } },
   // Vitest imports the global setup files in its own __vitest__ environment, which reads neither
-  // resolve.conditions nor ssr.resolve.conditions. apps/server's setup imports server and workspace
+  // resolve.conditions nor ssr.resolve.conditions. apps/backend's setup imports server and workspace
   // source, which must not resolve to a stale dist/.
   environments: { __vitest__: { resolve: { conditions: ['@northmes/source'] } } },
   test: {
@@ -58,7 +58,7 @@ export default defineConfig({
           // The harness starts Postgres first; the server setup prepares its database after it.
           globalSetup: [
             './packages/testing/src/global-setup.ts',
-            './apps/server/test/global-setup.ts',
+            './apps/backend/test/global-setup.ts',
           ],
         },
       },

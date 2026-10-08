@@ -11,7 +11,6 @@ export const HOST_PROVIDED = [
   '@nestjs/common',
   '@nestjs/core',
   '@nestjs/graphql',
-  '@apollo/subgraph',
   '@northmes/sdk',
   'graphql',
   'reflect-metadata',

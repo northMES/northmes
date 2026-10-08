@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 export interface ModuleNames {
   readonly id: string;
-  /** GraphQL subgraph name, root field prefix, permission and command prefix. */
+  /** GraphQL name: root field prefix, permission and command prefix. */
   readonly gql: string;
   /** Postgres schema and role suffix. */
   readonly sql: string;

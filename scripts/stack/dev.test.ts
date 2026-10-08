@@ -23,10 +23,8 @@ describe('devPlan', () => {
       '--preserveWatchOutput',
     ]);
     expect(plan.watch.args.slice(5).sort()).toEqual([
-      'apps/server/tsconfig.build.json',
-      'modules/core/tsconfig.build.json',
+      'apps/backend/tsconfig.build.json',
       'modules/planning/contracts/tsconfig.build.json',
-      'modules/planning/tsconfig.build.json',
       'packages/contracts/tsconfig.build.json',
       'packages/sdk/tsconfig.build.json',
     ]);
@@ -35,7 +33,7 @@ describe('devPlan', () => {
     expect(plan.server).toEqual({
       name: 'server',
       command: 'node',
-      args: ['apps/server/dist/main.js'],
+      args: ['apps/backend/dist/main.js'],
       env: {
         NORTHMES_ROLE: 'all',
         PORT: '41001',
@@ -104,11 +102,14 @@ describe('devPlan', () => {
 
     // pnpm dev watches each module's migrations folder, and the stack's environment holds the
     // owner's password file that migrate reads.
-    expect(plan.migrations).toEqual(['modules/core/migrations', 'modules/planning/migrations']);
+    expect(plan.migrations).toEqual([
+      'apps/backend/src/modules/core/migrations',
+      'apps/backend/src/modules/planning/migrations',
+    ]);
     expect(plan.migrate).toEqual({
       name: 'migrate',
       command: 'node',
-      args: ['apps/server/dist/main.js', 'migrate'],
+      args: ['apps/backend/dist/main.js', 'migrate'],
       env: {},
     });
   });
@@ -279,13 +280,16 @@ describe('superviseDev', () => {
     dev.events.length = 0;
 
     // An editor writes a file in several steps, and each step is a change.
-    dev.change('modules/planning/migrations');
-    dev.change('modules/planning/migrations');
-    dev.change('modules/planning/migrations');
+    dev.change('apps/backend/src/modules/planning/migrations');
+    dev.change('apps/backend/src/modules/planning/migrations');
+    dev.change('apps/backend/src/modules/planning/migrations');
     await vi.waitFor(() => expect(dev.events).toContain('run migrate'));
     await settle();
 
-    expect(dev.watched()).toEqual(['modules/core/migrations', 'modules/planning/migrations']);
+    expect(dev.watched()).toEqual([
+      'apps/backend/src/modules/core/migrations',
+      'apps/backend/src/modules/planning/migrations',
+    ]);
     expect(dev.events).toEqual(['run migrate', 'stop server', 'start server']);
     // migrate reads the owner's password file that the stack's environment names.
     expect(dev.envOf('migrate')).toEqual(dev.stack.env);
@@ -325,7 +329,7 @@ describe('superviseDev', () => {
     await settle();
     dev.events.length = 0;
 
-    dev.change('modules/planning/migrations');
+    dev.change('apps/backend/src/modules/planning/migrations');
     await vi.waitFor(() => expect(dev.events).toContain('run migrate'));
     await settle();
 

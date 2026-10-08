@@ -88,7 +88,7 @@ describe('gates', () => {
   it('E02-S01 the root scripts northmes, gen:migration, plugin:build, dev, demo and e2e exist', () => {
     // pnpm appends the arguments of `pnpm northmes db bootstrap` after dist/main.js.
     expect(rootScripts.northmes).toBe(
-      'turbo run build --filter=@northmes/server --output-logs=errors-only && node apps/server/dist/main.js',
+      'turbo run build --filter=@northmes/backend --output-logs=errors-only && node apps/backend/dist/main.js',
     );
     expect(rootScripts['gen:migration']).toBe('node scripts/gen-migration.mjs');
     // scripts/plugin-build.mjs imports the SDK's dist/, which a fresh clone does not have.

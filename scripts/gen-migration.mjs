@@ -41,7 +41,10 @@ export function render({ module, slug, now }) {
   }
   const schema = module.replaceAll('-', '_');
   const sql = tableTemplate.replaceAll('{{schema}}', schema).replaceAll('{{table}}', slug);
-  return { path: `modules/${module}/migrations/${timestamp(now)}_${slug}.sql`, sql };
+  return {
+    path: `apps/backend/src/modules/${module}/migrations/${timestamp(now)}_${slug}.sql`,
+    sql,
+  };
 }
 
 /**
@@ -56,7 +59,7 @@ export async function main(argv, io) {
     return 1;
   }
   const [module, slug] = argv;
-  const moduleFolder = `modules/${module}`;
+  const moduleFolder = `apps/backend/src/modules/${module}`;
   if (!existsSync(join(io.root, moduleFolder))) {
     io.error(`No module folder ${moduleFolder}`);
     return 1;

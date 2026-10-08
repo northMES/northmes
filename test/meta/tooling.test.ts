@@ -83,30 +83,6 @@ function readDevDependencies(): Record<string, string> {
   return readJson<PackageJson>('package.json').devDependencies ?? {};
 }
 
-/** The part of a turbo dry run that the tests read: each task with the files it hashes. */
-interface TurboDryRun {
-  tasks: { task: string; directory: string; inputs: Record<string, string> }[];
-}
-
-const turboBin = createRequire(import.meta.url).resolve('turbo/bin/turbo');
-
-// The build tasks of every remote under modules/*/web, as `turbo run build --dry=json` plans them.
-function remoteBuilds(): TurboDryRun['tasks'] {
-  const result = spawnSync(
-    process.execPath,
-    [turboBin, 'run', 'build', '--filter=./modules/*/web', '--dry=json'],
-    { cwd: root, encoding: 'utf8' },
-  );
-  if (result.status !== 0) {
-    throw new Error(`turbo run build --dry=json exited ${result.status}: ${result.stderr}`);
-  }
-  const tasks = (JSON.parse(result.stdout) as TurboDryRun).tasks;
-
-  return tasks.filter(
-    (task) => task.task === 'build' && /^modules\/[^/]+\/web$/.test(task.directory),
-  );
-}
-
 interface RdjsonReport {
   diagnostics?: { code?: { value?: string }; location?: { path?: string }; severity?: string }[];
 }
@@ -170,17 +146,6 @@ describe('tooling', () => {
     );
   });
 
-  it("E02-S05 turbo hashes the module's package.json into each remote's build, whose vite.config.ts reads the version from it", () => {
-    // The file lies outside the remote's package, so without it a version bump replays a cached
-    // dist/ with the old publicPath and the northmes:web-module-version guard never runs.
-    const builds = remoteBuilds();
-
-    expect(builds.map((build) => build.directory)).toContain('modules/planning/web');
-    for (const build of builds) {
-      expect(Object.keys(build.inputs), build.directory).toContain('../package.json');
-    }
-  });
-
   it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {
     const biome = readJson<BiomeConfig>('biome.json');
     const rules = biome.linter?.rules;
@@ -232,14 +197,14 @@ describe('tooling', () => {
     const config = vitestConfig as VitestConfig;
 
     // Vitest imports global setup files in its __vitest__ environment, so without the condition
-    // apps/server's setup would load a stale dist/ build of the workspace packages.
+    // apps/backend's setup would load a stale dist/ build of the workspace packages.
     expect(config.environments?.__vitest__?.resolve?.conditions).toEqual(
       expect.arrayContaining(['@northmes/source']),
     );
   });
 
   it('E02-S01 Vitest gives transformed code the graphql copy that Node loads for dependencies', () => {
-    // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Nest and the gateway
+    // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Nest and GraphQL Yoga
     // get index.js from Node, and a second copy breaks graphql's instanceof checks (ADR 0015).
     const nodeCopy = createRequire(import.meta.url)('graphql') as typeof import('graphql');
 
@@ -331,17 +296,17 @@ describe('tooling', () => {
     expect(listing).toEqual(['apps/web/package.json']);
   });
 
-  it('E02-S01 style/noProcessEnv fails in apps/server/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
+  it('E02-S01 style/noProcessEnv fails in apps/backend/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
     const read = 'export const port = process.env.PORT;\n';
     const failing = [
-      'apps/server/src/main.ts',
+      'apps/backend/src/main.ts',
       'modules/core/server/core.module.ts',
       'packages/contracts/src/index.ts',
     ];
     const passing = [
       'packages/sdk/src/config/load-env.ts',
-      'apps/server/src/main.test.ts',
-      'apps/server/test/global-setup.ts',
+      'apps/backend/src/main.test.ts',
+      'apps/backend/test/global-setup.ts',
       'scripts/stack/dev.mjs',
       'vitest.config.ts',
       'playwright.config.ts',

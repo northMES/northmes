@@ -64,18 +64,18 @@ describe('no global prefix', () => {
     try {
       writeFixture(
         base,
-        'apps/server/src/main.ts',
+        'apps/backend/src/main.ts',
         "const app = await NestFactory.create(AppModule);\napp.setGlobalPrefix('api');\n",
       );
       writeFixture(
         base,
-        'apps/server/src/versioning.ts',
+        'apps/backend/src/versioning.ts',
         'export function version(app) {\n  app.enableVersioning({ type: VersioningType.URI });\n}\n',
       );
 
       expect(globalPrefixCalls(base)).toEqual([
-        'apps/server/src/main.ts:2',
-        'apps/server/src/versioning.ts:2',
+        'apps/backend/src/main.ts:2',
+        'apps/backend/src/versioning.ts:2',
       ]);
     } finally {
       rmSync(base, { recursive: true, force: true });
@@ -87,7 +87,7 @@ describe('no global prefix', () => {
     try {
       writeFixture(
         base,
-        'apps/server/src/main.ts',
+        'apps/backend/src/main.ts',
         [
           'const app = await NestFactory.create(AppModule);',
           'app.setGlobalPrefix',
@@ -99,8 +99,8 @@ describe('no global prefix', () => {
       );
 
       expect(globalPrefixCalls(base)).toEqual([
-        'apps/server/src/main.ts:2',
-        'apps/server/src/main.ts:4',
+        'apps/backend/src/main.ts:2',
+        'apps/backend/src/main.ts:4',
       ]);
     } finally {
       rmSync(base, { recursive: true, force: true });

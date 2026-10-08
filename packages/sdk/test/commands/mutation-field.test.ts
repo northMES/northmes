@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
-import { Test, type TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
 import { defineCommandContract } from '@northmes/contracts';
 import { COMMAND_BUS, type Command, type CommandBus, defineCommand } from '@northmes/sdk/commands';
-import { defineSubgraph, SubgraphRegistry, SubgraphRegistryModule } from '@northmes/sdk/graphql';
-import { execute, type GraphQLSchema, parse } from 'graphql';
+import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { PlanningModule, ReleaseProductionOrder } from '../fixtures/commands/planning.ts';
+import { buildSchema } from '../fixtures/graphql/schema.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 
@@ -32,26 +32,17 @@ afterEach(async () => {
   await Promise.all(opened.splice(0).map((moduleRef) => moduleRef.close()));
 });
 
-/** Builds planning's subgraph the way the host does, with a fake bus under COMMAND_BUS. */
-async function buildPlanningSubgraph() {
+/** Builds planning's schema the way the host does, with a fake bus under COMMAND_BUS. */
+async function buildPlanningSchema() {
   const bus = new FakeCommandBus();
   @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
   class FakeCommandsModule {}
-  const moduleRef = await Test.createTestingModule({
-    imports: [
-      SubgraphRegistryModule,
-      { module: FakeCommandsModule, global: true },
-      PlanningModule,
-      defineSubgraph({ name: 'planning', module: PlanningModule }),
-    ],
-  }).compile();
+  const { schema, moduleRef } = await buildSchema([
+    { module: FakeCommandsModule, global: true },
+    PlanningModule,
+  ]);
   opened.push(moduleRef);
-  // Nest logs every error a resolver throws, also the BAD_USER_INPUT a test expects.
-  moduleRef.useLogger(false);
-  await moduleRef.init();
-  const [planning] = moduleRef.get(SubgraphRegistry).all();
-  if (!planning) throw new Error('No planning subgraph');
-  return { planning, bus };
+  return { schema, sdl: printSchema(schema), bus };
 }
 
 const RELEASE = parse(`
@@ -60,7 +51,7 @@ const RELEASE = parse(`
   }
 `);
 
-/** Sends planningReleaseProductionOrder to the subgraph, as the gateway does for a client. */
+/** Sends planningReleaseProductionOrder to the schema, as the server does for a client. */
 function release(schema: GraphQLSchema, input: Record<string, unknown>) {
   return execute({
     schema,
@@ -72,20 +63,20 @@ function release(schema: GraphQLSchema, input: Record<string, unknown>) {
 
 describe('defineCommand', () => {
   it("E02-S04 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input", async () => {
-    const { planning } = await buildPlanningSubgraph();
+    const { sdl } = await buildPlanningSchema();
 
-    expect(planning.sdl).toContain(
+    expect(sdl).toContain(
       'type Mutation {\n  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!\n}',
     );
-    expect(planning.sdl).toContain(
+    expect(sdl).toContain(
       'input PlanningReleaseProductionOrderInput {\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
     );
   });
 
   it('E02-S04 the generated field sends the parsed input to the command bus', async () => {
-    const { planning, bus } = await buildPlanningSubgraph();
+    const { schema, bus } = await buildPlanningSchema();
 
-    const result = await release(planning.schema, {
+    const result = await release(schema, {
       id: ORDER_ID,
       note: '  Rush order  ',
       quantity: 120,
@@ -105,10 +96,10 @@ describe('defineCommand', () => {
   });
 
   it('E02-S04 an input that fails the contract never reaches the bus', async () => {
-    const { planning, bus } = await buildPlanningSubgraph();
+    const { schema, bus } = await buildPlanningSchema();
 
     // GraphQL accepts any string as an ID; the contract wants a uuid.
-    const result = await release(planning.schema, {
+    const result = await release(schema, {
       id: 'po-1',
       note: 'Rush order',
       quantity: 120,

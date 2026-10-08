@@ -1,23 +1,11 @@
 // SPDX-License-Identifier: MIT
-// Fixture module catalog: owns the entity Article and resolves references to it.
+// Fixture module catalog: owns Article and reads the articles of a list of ids through a loader.
 import { Inject, Injectable, Module } from '@nestjs/common';
-import {
-  Args,
-  Context,
-  Directive,
-  Field,
-  ID,
-  ObjectType,
-  Parent,
-  Query,
-  ResolveReference,
-  Resolver,
-} from '@nestjs/graphql';
-import { type EntityReference, loaderFor, type SubgraphContext } from '@northmes/sdk/graphql';
+import { Args, Context, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
+import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
 import { GraphQLError } from 'graphql';
 
-@ObjectType('Article', { registerIn: () => CatalogModule })
-@Directive('@key(fields: "id")')
+@ObjectType('Article')
 export class Article {
   @Field(() => ID) id!: string;
   @Field(() => String) name!: string;
@@ -64,14 +52,16 @@ export class ArticleResolver {
     return this.articles.byId(id);
   }
 
-  @ResolveReference()
-  resolveReference(
-    @Parent() reference: EntityReference,
-    @Context() context: SubgraphContext,
-  ): Promise<Article> {
-    return loaderFor(context, 'catalog.article', (ids: readonly string[]) =>
-      this.articles.byIds(ids),
-    ).load(reference.id);
+  /** The articles with these ids, each loaded through the request's catalog.article loader. */
+  @Query(() => [Article], { nullable: 'items' })
+  catalogArticles(
+    @Args('ids', { type: () => [ID] }) ids: string[],
+    @Context() context: RequestContext,
+  ): Promise<Article>[] {
+    const loader = loaderFor(context, 'catalog.article', (keys: readonly string[]) =>
+      this.articles.byIds(keys),
+    );
+    return ids.map((id) => loader.load(id));
   }
 }
 

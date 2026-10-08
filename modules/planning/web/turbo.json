@@ -1,9 +1,0 @@
-{
-  "$schema": "../../../node_modules/turbo/schema.json",
-  "extends": ["//"],
-  "tasks": {
-    "build": {
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/modules/planning/package.json"]
-    }
-  }
-}

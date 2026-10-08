@@ -26,7 +26,7 @@ export async function demoPlan(stackEnv, env) {
     server: {
       name: 'server',
       command: 'node',
-      args: ['apps/server/dist/main.js'],
+      args: ['apps/backend/dist/main.js'],
       env: { NORTHMES_ROLE: 'all', PORT: port, NORTHMES_PUBLIC_ORIGIN: origin },
     },
     boardUrl: await boardUrl(origin),

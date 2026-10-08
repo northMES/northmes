@@ -48,7 +48,7 @@ function packageOf(
 
 describe('the license boundary of @northmes/testing', () => {
   // AGENTS.md: an MIT package imports only MIT or other permissive code, never the AGPL modules.
-  it('E02-S02 @northmes/testing imports nothing from apps/server or the modules', () => {
+  it('E02-S02 @northmes/testing imports nothing from apps/backend or the modules', () => {
     const packages = workspacePackages();
     const agpl = packages.filter(({ license }) => license !== 'MIT');
     const files = globSync('**/*.ts', { cwd: source });
@@ -65,11 +65,7 @@ describe('the license boundary of @northmes/testing', () => {
     );
 
     expect(agpl.map(({ name }) => name)).toEqual(
-      expect.arrayContaining([
-        '@northmes/server',
-        '@northmes/module-core',
-        '@northmes/module-planning',
-      ]),
+      expect.arrayContaining(['@northmes/backend', '@northmes/planning-web']),
     );
     expect(files).toEqual(expect.arrayContaining(['database.ts', 'db-command.ts', 'given.ts']));
     expect(agplImports).toEqual([]);

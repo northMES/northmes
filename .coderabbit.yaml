@@ -119,7 +119,7 @@ reviews:
     - '!docs/project-brief.md'
 
   path_instructions:
-    - path: 'modules/*/server/**'
+    - path: 'apps/backend/src/modules/**'
       instructions: |
         Server code of a NorthMES module (NestJS, Kysely, Postgres).
         - Commands are the single write path. Every write runs through a registered command handler, and every GraphQL Mutation field maps to one. Flag inserts, updates or deletes in resolvers, jobs, event handlers or services that bypass the command pipeline.
@@ -130,9 +130,9 @@ reviews:
         - <Id>ApiModule holds plain providers and no resolvers.
         - Flag sql.raw, sql.lit, and sql.ref or sql.id with non-literal input.
         - Time values are Temporal types or UTC instant strings. Flag Date objects passed as query parameters.
-        - Only modules/ai/server/model-call.ts may import streamText, generateText or embed from the ai package.
+        - Only apps/backend/src/modules/ai/model-call.ts may import streamText, generateText or embed from the ai package.
 
-    - path: 'modules/*/{domain,server/domain}/**'
+    - path: '{modules/*/domain,apps/backend/src/modules/*/domain}/**'
       instructions: |
         Pure domain code (plain TypeScript). Flag any import of @nestjs/*, kysely or pg, and any use of process.env.
 

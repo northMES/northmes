@@ -51,7 +51,7 @@ describe('.claude/launch.json', () => {
     expect(plan.server).toEqual({
       name: 'server',
       command: 'node',
-      args: ['apps/server/dist/main.js'],
+      args: ['apps/backend/dist/main.js'],
       env: {
         NORTHMES_ROLE: 'all',
         PORT: '4567',

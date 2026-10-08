@@ -27,7 +27,7 @@ const config = vitestConfig as VitestConfig;
 // The harness starts the container first; the server's setup then prepares its database.
 const globalSetupPaths = [
   resolve(root, 'packages/testing/src/global-setup.ts'),
-  resolve(root, 'apps/server/test/global-setup.ts'),
+  resolve(root, 'apps/backend/test/global-setup.ts'),
 ];
 
 function findProject(name: string): ProjectConfig | undefined {

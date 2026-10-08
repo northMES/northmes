@@ -54,7 +54,7 @@ function importLines(source: string): string[] {
 // What a manifest may import: defineModule from the SDK root and the version of its own package.
 const allowedImports = [
   /^import \{ defineModule \} from '@northmes\/sdk';$/,
-  /^import \w+ from '\.\/package\.json' with \{ type: 'json' \};$/,
+  /^import \{ imageVersion \} from '\.\.\/\.\.\/version\.ts';$/,
 ];
 
 // The import lines of a manifest source that allowedImports does not permit.
@@ -88,16 +88,16 @@ describe('module manifests', () => {
     const { resolved, manifests } = loadInFreshProcess(manifestPaths());
 
     expect(manifests).toContainEqual({
-      url: pathToFileURL(`${root}modules/core/northmes.module.ts`).href,
+      url: pathToFileURL(`${root}apps/backend/src/modules/core/northmes.module.ts`).href,
       id: 'core',
     });
     expect(resolved.filter((url) => url.includes('/@nestjs/'))).toEqual([]);
   });
 
-  it('E02-S01 every northmes.module.ts imports only defineModule and its own package.json', () => {
+  it("E02-S01 every northmes.module.ts imports only defineModule and the backend's imageVersion", () => {
     const paths = manifestPaths();
 
-    expect(paths).toContain('modules/core/northmes.module.ts');
+    expect(paths).toContain('apps/backend/src/modules/core/northmes.module.ts');
     for (const path of paths) {
       expect(disallowedImports(readFileSync(`${root}${path}`, 'utf8')), path).toEqual([]);
     }

@@ -14,13 +14,13 @@ export const releaseProductionOrder = defineCommandContract({
   fields: z.object({ note: z.string().trim(), quantity: z.number() }),
 });
 
-@ObjectType('ProductionOrder', { registerIn: () => PlanningModule })
+@ObjectType('ProductionOrder')
 export class ProductionOrder {
   @Field(() => ID) id!: string;
   @Field(() => String) status!: string;
 }
 
-/** A subgraph needs a Query root, which the module's own reads give it. */
+/** A schema needs a Query root, which the module's own reads give it. */
 @Resolver(() => ProductionOrder)
 export class ProductionOrderResolver {
   @Query(() => [ProductionOrder])

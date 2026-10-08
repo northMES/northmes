@@ -97,7 +97,7 @@ export function useTestDatabase(options: TestDatabaseOptions = {}): TestDatabase
   const template: string | undefined = options.template ?? inject('pgTemplate');
   if (!pg || !passwords || !template) {
     throw new Error(
-      'useTestDatabase() needs the global setups of @northmes/testing and apps/server, which only the integration project runs. Name the file *.int.test.ts.',
+      'useTestDatabase() needs the global setups of @northmes/testing and apps/backend, which only the integration project runs. Name the file *.int.test.ts.',
     );
   }
   // biome-ignore lint/style/noProcessEnv: Vitest sets VITEST_POOL_ID for each worker; it names no configuration.

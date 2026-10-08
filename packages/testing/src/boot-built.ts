@@ -24,9 +24,9 @@ declare module 'vitest' {
 
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 
-// The built server is started by path, so this MIT package imports nothing from apps/server.
-const serverMain = join(root, 'apps/server/dist/main.js');
-const buildArgs = ['--filter', '@northmes/server...', 'run', 'build'];
+// The built server is started by path, so this MIT package imports nothing from apps/backend.
+const serverMain = join(root, 'apps/backend/dist/main.js');
+const buildArgs = ['--filter', '@northmes/backend...', 'run', 'build'];
 
 // The folder that pnpm plugin:build <id> installs a plugin into, as plugins/<id>/.
 const pluginsDir = join(root, 'plugins');
@@ -114,7 +114,7 @@ function tryMkdir(path: string): boolean {
 }
 
 /**
- * Builds apps/server and the workspace packages it depends on, then each plugin that the config
+ * Builds apps/backend and the workspace packages it depends on, then each plugin that the config
  * lists under plugins/, each once per test run. A plugin build imports the built SDK, so it runs
  * after the server build.
  */
@@ -128,7 +128,7 @@ async function buildOnce(runDir: string, config: NorthmesConfig | undefined): Pr
 }
 
 /**
- * Starts the built server, apps/server/dist/main.js, with env, config and the command that args
+ * Starts the built server, apps/backend/dist/main.js, with env, config and the command that args
  * name, and resolves with its exit code and output once it exits. The server and the plugins the
  * config lists under plugins/ are built once per test run.
  */

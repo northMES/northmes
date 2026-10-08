@@ -1,0 +1,53 @@
+{
+  "name": "@northmes/backend",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "exports": {
+    "./testing": {
+      "@northmes/source": "./src/testing.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/graphql": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/terminus": "catalog:",
+    "@northmes/contracts": "workspace:*",
+    "@northmes/planning-contracts": "workspace:*",
+    "@northmes/sdk": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-subscriptions": "catalog:",
+    "graphql-ws": "catalog:",
+    "graphql-yoga": "catalog:",
+    "kysely": "catalog:",
+    "pg": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "semver": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@nestjs/testing": "catalog:",
+    "@northmes/testing": "workspace:*",
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/ws": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

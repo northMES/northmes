@@ -24,8 +24,8 @@ type ParsedInput<Contract extends CommandContract> = z.output<Contract['input']>
 
 /**
  * Registers a command's server code. Listed in the providers of the module's Nest module, it adds
- * the command's prefixed Mutation field to the module's subgraph, so the module writes no
- * resolver for it (ADR 0012). A contract field the generated input cannot carry throws here.
+ * the command's prefixed Mutation field to the schema, so the module writes no resolver for it
+ * (ADR 0012). A contract field the generated input cannot carry throws here.
  */
 export function defineCommand<Contract extends CommandContract, Result>(
   contract: Contract,
