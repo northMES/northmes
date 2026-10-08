@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import { migrateCommand } from '../../src/migrate/command.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 import { alpha } from '../fixtures/subgraphs/alpha.ts';
 import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
@@ -52,5 +58,71 @@ describe('boot with a composition error', () => {
     expect(app).toBeUndefined();
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.error.mock.calls).toEqual([[everyRuleBroken]]);
+  });
+});
+
+describe('pnpm northmes migrate with a composition error', () => {
+  // The database holds only what migrate applies, so a run that started would leave its records.
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
+  let dir: string;
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'northmes-migrate-'));
+    // The package of gamma's manifest, with one migration file.
+    mkdirSync(join(dir, 'gamma', 'migrations'), { recursive: true });
+    writeFileSync(join(dir, 'gamma', 'package.json'), '{}\n');
+    writeFileSync(
+      join(dir, 'gamma', 'migrations', '20260110080000_ping.sql'),
+      'create table gamma.ping (id int primary key);\n',
+    );
+  });
+
+  afterAll(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  /**
+   * The environment of migrate: DATABASE_URL without a login and the owner's password in a secret
+   * file. The keys are stubbed, so ConfigModule's writes to process.env end with the test.
+   */
+  function migrateEnv(): Record<string, string> {
+    for (const key of ['DATABASE_URL', 'NORTHMES_DB_OWNER_PASSWORD_FILE'])
+      vi.stubEnv(key, undefined);
+    const databaseUrl = new URL(db.ownerUrl);
+    const passwordFile = join(dir, 'db_owner_password');
+    writeFileSync(passwordFile, `${decodeURIComponent(databaseUrl.password)}\n`, { mode: 0o600 });
+    databaseUrl.username = '';
+    databaseUrl.password = '';
+    return {
+      NODE_ENV: 'test',
+      DATABASE_URL: databaseUrl.href,
+      NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
+    };
+  }
+
+  it('E02-S03 northmes migrate with a composition error exits 1 before its first file', async () => {
+    const run = migrateCommand({
+      env: migrateEnv(),
+      ...fixtureCatalog(gamma),
+      resolveManifest: () => pathToFileURL(join(dir, 'gamma', 'manifest.js')).href,
+      exit: vi.fn<(code: number) => void>(),
+      log: recordingLog(),
+    });
+
+    // pnpm northmes migrate ends with the exit code of the BootError it stops on.
+    await expect(run).rejects.toThrow(
+      expect.objectContaining({ name: 'SupergraphCompositionError', exitCode: 1 }),
+    );
+    // A run that started would have created the migration records and gamma's schema.
+    expect(
+      await query(
+        db.ownerUrl,
+        "select nspname from pg_namespace where nspname in ('northmes_meta', 'gamma')",
+      ),
+    ).toEqual([]);
   });
 });
