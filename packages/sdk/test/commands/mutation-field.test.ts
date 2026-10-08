@@ -17,7 +17,7 @@ class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
   async run<Input, Result>(command: Command<Input, Result>, input: Input): Promise<Result> {
-    this.calls.push({ command: command as Command, input });
+    this.calls.push({ command, input });
     return command.handle(input);
   }
 }
@@ -42,6 +42,8 @@ async function buildPlanningSubgraph() {
     ],
   }).compile();
   opened.push(moduleRef);
+  // Nest logs every error a resolver throws, also the BAD_USER_INPUT a test expects.
+  moduleRef.useLogger(false);
   await moduleRef.init();
   const [planning] = moduleRef.get(SubgraphRegistry).all();
   if (!planning) throw new Error('No planning subgraph');
