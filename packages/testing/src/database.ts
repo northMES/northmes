@@ -22,9 +22,23 @@ export interface RolePasswords {
   app: string;
 }
 
+/**
+ * What the global setup reads once from the server as its superuser, for the harness checks of the
+ * server itself. Tests never log in as the superuser, and nm_app sees neither the server's own time
+ * zone, which its role setting replaces, nor the data directory.
+ */
+export interface PgServerFacts {
+  /** The server's TimeZone setting. */
+  timeZone: string;
+  dataDirectory: string;
+  /** The text of the container's /proc/mounts. */
+  mounts: string;
+}
+
 declare module 'vitest' {
   export interface ProvidedContext {
     pg: PgConnection;
+    pgServer: PgServerFacts;
     /** The image the container started from, as read from infra/pg-image.json. */
     pgImage: string;
     pgRolePasswords: RolePasswords;

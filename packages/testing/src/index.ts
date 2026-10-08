@@ -12,6 +12,7 @@ export {
 export {
   emptyTemplateDatabase,
   type PgConnection,
+  type PgServerFacts,
   type RolePasswords,
   type TestDatabase,
   type TestDatabaseOptions,
