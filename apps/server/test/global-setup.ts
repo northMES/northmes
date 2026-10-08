@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash, randomBytes } from 'node:crypto';
-import { findPackageJSON } from 'node:module';
-import { pathToFileURL } from 'node:url';
 import { emptyTemplateDatabase, type PgConnection } from '@northmes/testing';
 import { Client } from 'pg';
 import type { TestProject } from 'vitest/node';
@@ -103,15 +101,7 @@ export default async function setup(project: TestProject): Promise<void> {
     auth: randomBytes(32).toString('hex'),
   };
   await bootstrapRoles(emptyTemplateUrl(pg), passwords);
-  const catalog = await inRepoCatalog((specifier) => import(specifier), {
-    // The in-repo modules register no resolve hook, so Node's default resolver finds the package of
-    // each manifest, and the migrations folder sits next to its package.json.
-    resolveManifest: (specifier) => {
-      const packageJson = findPackageJSON(specifier, import.meta.url);
-      if (!packageJson) throw new Error(`No package.json for ${specifier}`);
-      return pathToFileURL(packageJson).href;
-    },
-  });
+  const catalog = await inRepoCatalog((specifier) => import(specifier));
   const { name } = await migrateTemplate({
     superuser: pg,
     ownerPassword: passwords.owner,

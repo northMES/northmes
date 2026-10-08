@@ -26,6 +26,11 @@ const outcomeWaitMs = 100_000;
 export interface BootBuiltOptions {
   /** The whole environment of the server. Nothing is inherited from the test process. */
   readonly env: Readonly<Record<string, string>>;
+  /**
+   * The words of a pnpm northmes command, such as ['db', 'bootstrap'] or ['migrate']. Without them
+   * the server serves.
+   */
+  readonly args?: readonly string[];
 }
 
 export interface BootBuiltResult {
@@ -84,10 +89,10 @@ function tryMkdir(path: string): boolean {
 }
 
 /**
- * Starts the built server, apps/server/dist/main.js, with env and resolves with its exit code and
- * output once it exits. The server is built once per test run.
+ * Starts the built server, apps/server/dist/main.js, with env and the command that args name, and
+ * resolves with its exit code and output once it exits. The server is built once per test run.
  */
-export async function bootBuilt({ env }: BootBuiltOptions): Promise<BootBuiltResult> {
+export async function bootBuilt({ env, args = [] }: BootBuiltOptions): Promise<BootBuiltResult> {
   const runDir: string | undefined = inject('runDir');
   if (!runDir) {
     throw new Error(
@@ -95,7 +100,7 @@ export async function bootBuilt({ env }: BootBuiltOptions): Promise<BootBuiltRes
     );
   }
   await buildServerOnce(runDir);
-  const server = spawn(process.execPath, [serverMain], { cwd: root, env });
+  const server = spawn(process.execPath, [serverMain, ...args], { cwd: root, env });
   let stdout = '';
   let stderr = '';
   server.stdout.setEncoding('utf8').on('data', (chunk: string) => {
