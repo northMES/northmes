@@ -20,6 +20,23 @@ export default defineConfig({
   // source, which must not resolve to a stale dist/.
   environments: { __vitest__: { resolve: { conditions: ['@northmes/source'] } } },
   test: {
+    // A run with --coverage reports on every source file in the tree that the projects collect tests
+    // from, also one that no test loads, and leaves out the test files, declarations and fixtures.
+    // Coverage is information only: the scheduling domain gets the first threshold
+    // (docs/plan/11-quality-and-testing.md). CI / test publishes text-summary.txt in its job summary
+    // and keeps the lcov report.
+    coverage: {
+      provider: 'v8',
+      include: ['**/*.{ts,tsx,mts,mjs}'],
+      exclude: [
+        ...ignored,
+        '**/fixtures/**',
+        '**/*.test.{ts,tsx}',
+        '**/*.test-d.ts',
+        '**/*.d.{ts,mts}',
+      ],
+      reporter: ['text-summary', ['text-summary', { file: 'text-summary.txt' }], 'lcov'],
+    },
     projects: [
       {
         extends: true,
