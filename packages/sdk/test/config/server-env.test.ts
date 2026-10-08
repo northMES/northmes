@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: MIT
-import { ConfigError, loadEnv, serverEnvSchema } from '@northmes/sdk/config';
+import {
+  bootstrapEnvSchema,
+  ConfigError,
+  loadEnv,
+  migrateEnvSchema,
+  serverEnvSchema,
+} from '@northmes/sdk/config';
 import { describe, expect, it } from 'vitest';
 
 /** Calls fn and returns the ConfigError it throws, so a test can read its problems. */
@@ -56,5 +62,40 @@ describe('serverEnvSchema', () => {
 
     expect(env.NODE_ENV).toBe('production');
     expect(env.NORTHMES_ROLE).toBe('all');
+  });
+});
+
+describe('migrateEnvSchema and bootstrapEnvSchema', () => {
+  const DATABASE_URL = 'postgres://db.internal:5432/northmes';
+  const migrateKeys = {
+    DATABASE_URL,
+    NORTHMES_DB_OWNER_PASSWORD_FILE: '/run/secrets/db_owner_password',
+  };
+  const bootstrapKeys = {
+    DATABASE_URL,
+    POSTGRES_PASSWORD_FILE: '/run/secrets/postgres_password',
+    NORTHMES_DB_OWNER_PASSWORD_FILE: '/run/secrets/db_owner_password',
+    NORTHMES_DB_APP_PASSWORD_FILE: '/run/secrets/db_app_password',
+    NORTHMES_DB_AUTH_PASSWORD_FILE: '/run/secrets/db_auth_password',
+  };
+
+  it("E02-S01 migrateEnvSchema and bootstrapEnvSchema accept their entry point's keys without PORT", () => {
+    expect(loadEnv(migrateEnvSchema)(migrateKeys)).toEqual({
+      NODE_ENV: 'production',
+      ...migrateKeys,
+    });
+    expect(loadEnv(bootstrapEnvSchema)(bootstrapKeys)).toEqual({
+      NODE_ENV: 'production',
+      ...bootstrapKeys,
+    });
+
+    const keysOf = (error: ConfigError) =>
+      error.problems.map((problem) => problem.split(':')[0]).sort();
+    expect(keysOf(configErrorOf(() => loadEnv(migrateEnvSchema)({})))).toEqual(
+      Object.keys(migrateKeys).sort(),
+    );
+    expect(keysOf(configErrorOf(() => loadEnv(bootstrapEnvSchema)({})))).toEqual(
+      Object.keys(bootstrapKeys).sort(),
+    );
   });
 });
