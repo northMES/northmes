@@ -65,7 +65,7 @@ describe('the license boundary of @northmes/testing', () => {
     );
 
     expect(agpl.map(({ name }) => name)).toEqual(
-      expect.arrayContaining(['@northmes/backend', '@northmes/planning-web']),
+      expect.arrayContaining(['@northmes/backend', '@northmes/web']),
     );
     expect(files).toEqual(expect.arrayContaining(['database.ts', 'db-command.ts', 'given.ts']));
     expect(agplImports).toEqual([]);
