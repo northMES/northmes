@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ModulesContainer } from '@nestjs/core';
 import type { ModuleManifest } from '@northmes/sdk';
 import { secretsConfig } from '@northmes/sdk/config';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { AppModule } from '../../src/app.module.ts';
 import { boot } from '../../src/boot/boot.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
@@ -129,5 +133,32 @@ describe('boot', () => {
       ],
     ]);
     expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it("E02-S05 boot serves each module's remote from web/dist of its package", async () => {
+    // A package that holds a manifest and the module's built remote.
+    const packageDir = mkdtempSync(join(tmpdir(), 'northmes-package-'));
+    onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
+    writeFileSync(join(packageDir, 'package.json'), '{}\n');
+    mkdirSync(join(packageDir, 'web', 'dist'), { recursive: true });
+    writeFileSync(join(packageDir, 'web', 'dist', 'remoteEntry.js'), 'export const entry = 1;\n');
+    const specifier = '@northmes/fixture-shop-floor/manifest';
+    const shopFloor = {
+      ...inRepoModule('shop-floor').manifest,
+      web: { label: 'Shop floor', order: 30 },
+    };
+
+    app = await boot({
+      env,
+      manifests: [specifier],
+      importManifest: importFixtures({ [specifier]: shopFloor }),
+      resolveManifest: () => pathToFileURL(join(packageDir, 'northmes.module.js')).href,
+      exit: vi.fn<(code: number) => void>(),
+      log: recordingLog(),
+    });
+    const response = await fetch(`${await app?.getUrl()}/modules/shop-floor/0.0.0/remoteEntry.js`);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('export const entry = 1;\n');
   });
 });
