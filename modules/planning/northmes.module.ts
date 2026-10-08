@@ -5,6 +5,6 @@ import packageJson from './package.json' with { type: 'json' };
 export default defineModule({
   id: 'planning',
   version: packageJson.version,
-  northmes: '>=0.1.0 <0.2.0',
+  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['core'],
 });
