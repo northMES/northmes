@@ -22,7 +22,11 @@ export default defineConfig({
           name: 'integration',
           include: ['**/*.int.test.ts'],
           exclude: ignored,
-          globalSetup: ['./packages/testing/src/global-setup.ts'],
+          // The harness starts Postgres first; the server setup prepares its database after it.
+          globalSetup: [
+            './packages/testing/src/global-setup.ts',
+            './apps/server/test/global-setup.ts',
+          ],
         },
       },
       {
