@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert, Copy, RotateCw } from 'lucide-react';
-import { type ReactNode, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { announce } from './announce.ts';
 import { Button, IconButton } from './button.tsx';
 
@@ -96,7 +96,8 @@ export function ErrorState({
 
 /**
  * The frame of a screen (plan 06, UI patterns): the h1 from the route title, which the shell
- * focuses after a route change (tabindex -1), the page actions, the toolbar, and the data region
+ * focuses after a route change (tabindex -1) and which names the document ("Articles · NorthMES"),
+ * the page actions, the toolbar, and the data region
  * in its state. Loading marks the region busy around the content's skeleton; empty and error
  * replace the content. Try again moves focus to the h1, because the error state goes away.
  */
@@ -108,6 +109,9 @@ export function PageFrame({
   children,
 }: PageFrameProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    document.title = `${title} · NorthMES`;
+  }, [title]);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">

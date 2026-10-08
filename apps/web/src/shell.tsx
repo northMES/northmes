@@ -2,7 +2,14 @@
 import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { createNorthmesClient, createShellRoutes, ShellProvider } from '@northmes/web-sdk';
-import { createRouter, Outlet, type RouterHistory, useParams } from '@tanstack/react-router';
+import {
+  createRouter,
+  Outlet,
+  type RouterHistory,
+  useParams,
+  useRouterState,
+} from '@tanstack/react-router';
+import { useEffect, useRef } from 'react';
 import { Menu } from './menu.tsx';
 import type { ShellModule } from './modules.ts';
 
@@ -44,14 +51,34 @@ interface PlantLayoutProps {
   readonly clientFor: (plantId: string) => ApolloClient;
 }
 
+/**
+ * Moves focus to the page's h1 after each path change, one frame after the new route rendered, and
+ * to main when the page has no h1 (ADR 0021). A change of the search alone leaves focus where it
+ * is, so sorting, searching and paging keep focus on their control.
+ */
+function useFocusPageHeading() {
+  const main = useRef<HTMLElement>(null);
+  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname });
+  useEffect(() => {
+    if (pathname === undefined) return;
+    const frame = requestAnimationFrame(() => {
+      const heading = main.current?.querySelector<HTMLElement>('h1');
+      (heading ?? main.current)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
+  return main;
+}
+
 /** The $plant route's component: the menu, and the shell state and Apollo client of the plant. */
 function PlantLayout({ modules, clientFor }: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
+  const main = useFocusPageHeading();
   return (
     <ApolloProvider client={clientFor(plant)}>
       <ShellProvider value={{ plantId: plant }}>
         <Menu modules={modules} plant={plant} />
-        <main>
+        <main ref={main} tabIndex={-1}>
           <Outlet />
         </main>
       </ShellProvider>
