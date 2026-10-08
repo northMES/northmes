@@ -236,12 +236,16 @@ describe('workflows', () => {
     }
   });
 
-  // GitHub substitutes an expression into the script text before the shell runs it, so a title,
-  // body or branch name in a run script can inject shell code. Steps read them from env instead.
-  it('no run step interpolates an event value', () => {
+  // GitHub substitutes an expression into the script text before the shell or actions/github-script
+  // runs it, so a title, body or branch name in a script can inject code, also through env.*,
+  // format() or github['event']. Scripts read every value from env instead.
+  it('no run step or github-script script contains an expression', () => {
     for (const { where, job } of allJobs()) {
-      for (const { run } of job.steps ?? []) {
-        expect(run ?? '', where).not.toMatch(/\$\{\{[^}]*\bgithub\.(?:event|head_ref)\b/);
+      for (const { run, uses, with: inputs } of job.steps ?? []) {
+        expect(run ?? '', where).not.toContain('${{');
+        if (uses?.startsWith('actions/github-script@')) {
+          expect(String(inputs?.script ?? ''), `${where} github-script`).not.toContain('${{');
+        }
       }
     }
   });
