@@ -33,4 +33,10 @@ describe('the tracer principal plugin', () => {
     expect(principal.can('planning.productionOrder:release')).toBe(true);
     expect(principal.can('core.article:read')).toBe(true);
   });
+
+  it('E02-S04 a request without x-northmes-plant gets no principal', () => {
+    const { principal } = contextExtensionFor({});
+
+    expect(principal).toBeNull();
+  });
 });
