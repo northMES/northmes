@@ -64,6 +64,27 @@ describe('no-truncate', () => {
     ]);
   });
 
+  it('E02-S02 GRANT ALL on a table in a schema named like an object kind counts as a TRUNCATE grant', () => {
+    const path = 'modules/core/migrations/20261008120250_rejection.sql';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          'grant all on types.rejection to nm_app;',
+          'grant all on functions.audit_row to nm_app;',
+          'grant all on type types.status to nm_app;',
+          'grant all on all functions in schema functions to nm_app;',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 1 },
+      { path, line: 2 },
+    ]);
+  });
+
   it('E02-S02 a comment that names grant does not hide the TRUNCATE grant after it', () => {
     const path = 'modules/core/migrations/20261008120300_article.sql';
 
