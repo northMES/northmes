@@ -77,4 +77,32 @@ describe('planningReleaseProductionOrder', () => {
       data: { planningProductionOrders: [{ id, status: 'released', version: 2 }] },
     });
   });
+
+  it('E02-S04 releasing an order that is not planned returns a DomainError and changes nothing', async () => {
+    const plant = given.plant();
+    const id = await writeOrder(plant, '6502');
+    const client = await clientAt(plant);
+    await client.send(releaseMutation, { input: { id } });
+
+    const answer = await client.send(releaseMutation, { input: { id } });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: 'Production order 6502 is released, and only a planned order can be released',
+          path: ['planningReleaseProductionOrder'],
+          extensions: {
+            code: 'PRECONDITION',
+            errorCode: 'planning.production_order.not_planned',
+          },
+        },
+      ],
+    });
+    expect(await client.send(ordersQuery)).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ id, status: 'released', version: 2 }] },
+    });
+  });
 });
