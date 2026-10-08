@@ -13,7 +13,7 @@ import ts from 'typescript';
 const pathAttributes = new Set(['to', 'href']);
 
 /** The calls whose options object takes a path in `to`. */
-const navigationCalls = new Set(['navigate']);
+const navigationCalls = new Set(['navigate', 'redirect']);
 
 /** @param {string} value */
 function isAppPath(value) {
