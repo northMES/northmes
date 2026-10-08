@@ -27,6 +27,16 @@ const devEnvHeader = `# Written by the stack script (ADR 0058). The processes it
 `;
 
 /**
+ * True when the stack should reuse its Postgres container (Testcontainers' withReuse), which then
+ * outlives the run. A person opts in on a laptop with NORTHMES_STACK_REUSE=1. CI never reuses one,
+ * so any CI value turns it off (ADR 0058).
+ * @param {Readonly<Record<string, string | undefined>>} env The stack's own environment.
+ */
+export function containerReuse(env) {
+  return env.NORTHMES_STACK_REUSE === '1' && !env.CI;
+}
+
+/**
  * Writes a file unless it exists, and returns true when it wrote it.
  * @param {string} path
  * @param {string} content
