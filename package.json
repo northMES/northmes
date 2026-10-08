@@ -12,7 +12,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "gen": "node scripts/gen.mjs",
-    "test": "vitest run",
+    "test": "vitest run --project unit --project integration --project web --project types",
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project integration",
     "test:ai": "vitest run --project ai",
