@@ -19,13 +19,19 @@ export interface PostgresServer {
  * Starts a Postgres container from the image in infra/pg-image.json. The data directory is a tmpfs
  * mount: the image keeps it in /var/lib/postgresql/<major>/docker, under the image's volume at
  * /var/lib/postgresql, so the mount covers it and the data lives in memory and goes with the
- * container. The server runs without durability (see serverArgs). The superuser password and the
- * database name are random for each server, so no server shares a credential with another.
+ * container. The server runs without durability (see serverArgs). The superuser is postgres, as in
+ * the official image and in production, where northmes db bootstrap logs in with that name. Its
+ * password and the database name are random for each server, so no server shares a credential with
+ * another.
+ *
+ * The global setup starts the one server of a test run with it. A test file starts a server of its
+ * own only for server-wide state that a cloned database cannot isolate, such as the database roles.
  */
 export async function startPostgres(): Promise<PostgresServer> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
   const { password, database } = newRunCredentials();
   const container = await new PostgreSqlContainer(image)
+    .withUsername('postgres')
     .withPassword(password)
     .withDatabase(database)
     // biome-ignore lint/style/noProcessEnv: NM_TEST_PG_TZ picks the time zone leg of a test run, not app configuration.

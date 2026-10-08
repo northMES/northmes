@@ -176,8 +176,14 @@ describe('the global setup', () => {
   // Vitest only runs the teardown that setup returns, so a setup that rejects must stop the container itself.
   it('stops the container when preparing the template fails', async () => {
     const stop = vi.fn(async () => {});
+    // The index imports the container module, so the mock applies only to modules loaded afresh.
+    vi.resetModules();
     vi.doMock('@testcontainers/postgresql', () => ({
       PostgreSqlContainer: class {
+        withUsername() {
+          return this;
+        }
+
         withCommand() {
           return this;
         }
