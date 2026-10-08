@@ -30,6 +30,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const newArticleRoute = createRoute({
     getParentRoute: () => articlesRoute,
     path: linkEntry(coreLinks.articles.new).path,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'NewArticleScreen'),
   });
   const articleRoute = createRoute({
     getParentRoute: () => articlesRoute,
