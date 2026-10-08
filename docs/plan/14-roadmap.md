@@ -3126,7 +3126,7 @@ As a planner, I want to create a production order for an article and release it 
 
 Module: planning. Blocked by: E06-S06. Design: production order list and detail (canonical list and form page).
 
-ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
+ADRs: [0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md), [0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md), [0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md).
 
 Acceptance criteria:
 
@@ -3137,10 +3137,11 @@ Acceptance criteria:
 - The production order list uses the list kit; the detail page shows operations and job orders.
 - `z.output` of the release contract's input is assignable to the generated `PlanningReleaseProductionOrderInput` without a cast.
 - Order deadlines on the list and the detail page follow the plant's presentation settings.
+- A planner links a child production order to a parent in the same plant by hand with `planning.linkChildProductionOrder`; a cross-plant link fails with `core.crossScopeReference`. A linked child may have children of its own (Krister, 2026-10-08; the product owner confirms it in PO-17). A link that would make a cycle, an order under itself or under one of its own descendants, fails with `planning.production_order.link_cycle`.
 
 Tests first:
 
-- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order".
+- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order"; "a child order in another plant fails with core.crossScopeReference"; "linking an order under itself or under one of its descendants fails with planning.production_order.link_cycle"; "of two concurrent opposite links, one succeeds and the other fails with planning.production_order.link_cycle and changes no row".
 - `modules/planning/test/status-transitions.test.ts`: "a finished job order cannot return to planned".
 - `modules/planning/web/test/commands.test-d.ts`: `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 

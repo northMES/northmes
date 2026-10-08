@@ -178,6 +178,8 @@ Each item waits for its trigger. Where no trigger is named, the item waits for a
 | Pseudonymization command for erasure | The first erasure request | [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) |
 | Regulated profile and electronic signatures | The first device or pharma customer signs | [0051](../adr/0051-regulated-readiness-no-regret-rules.md) |
 | Solver plugins behind the `Scheduler` port; BOM explosion into child orders | None named | [0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md) |
+| graphology for graph algorithms in planning ([07](07-production-planning.md#graph-algorithms-with-graphology-later)) | Non-linear or branching routings, multi-level BOM explosion, in-memory where-used analysis or a critical-path view | none yet |
+| React Flow (`@xyflow/react`) for node-and-edge screens ([06](06-web-and-ux.md#node-and-edge-screens-with-react-flow-later)) | A designed node-and-edge screen, such as a branching routing editor or a genealogy graph | none yet |
 | Shared core import service | A second connector | [0031](../adr/0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md) |
 | Long-term support line | After 1.0, one minor per year gets 12 months of fixes | [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) |
 

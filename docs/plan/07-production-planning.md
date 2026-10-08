@@ -796,6 +796,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Pyramid's order file has no parent reference, so imported orders plan independently by their ERP deadlines.
 - A planner may link a child to a parent by hand (`planning.linkChildProductionOrder`, plan proposal for the name). Linked children leave the top-level sort and plan right after their parent.
 - A child production order is always created in its parent's plant; a cross-plant link fails with `core.crossScopeReference`.
+- Linking refuses a cycle: an order cannot be linked under itself or under one of its own descendants, and the command fails with `planning.production_order.link_cycle` (plan proposal for the code). The command runs in a `read committed` transaction, Postgres's default. It first selects the plant's `plant_plan_state` row `for update` and bumps the plan revision when it writes the link, because the autoplan snapshot holds the manual child links ([Plan revision](#plan-revision)). It then walks the new parent's chain of parents in a statement that starts after the lock is granted, so links in one plant run one after another, the walk sees the link committed by the command that held the lock before it, and the second of two opposite links fails with `planning.production_order.link_cycle` instead of a serialization error (plan proposal). A linked child may have children of its own (Krister, 2026-10-08; the product owner confirms it in PO-17).
 - NorthMES does not explode BOMs into new child orders in release 1.
 
 ## Planning board in release 1
@@ -980,7 +981,7 @@ GraphQL root fields carry the module prefix; lists are Relay connections with fi
 | `planning.setCustomerOrderLineDeliveringPlant`* | web | no | permission at company scope |
 | `planning.releaseProductionOrder` | web | yes | copies the routing with source id and version; creates one unplaced job order per operation; the example validator plugin attaches here |
 | `planning.setProductionOrderStatus`* | web | no | manual transitions, cancel, delivered |
-| `planning.linkChildProductionOrder`* | web | no | manual parent link, same plant |
+| `planning.linkChildProductionOrder`* | web | no | manual parent link, same plant; refuses a cycle |
 | `planning.moveJobOrderInDraft`* | web, proposal accept | no | takes the soft lock; writes a draft change |
 | `planning.splitJobOrderInDraft`* | web | no | see [Splitting and hard-locking by hand](#splitting-and-hard-locking-by-hand-plan-proposal) |
 | `planning.discardDraftChanges`*, `planning.rebaseDraftChange`* | web | no | per row or whole draft |
@@ -1051,6 +1052,19 @@ A product owner answer still missing on 2026-10-30 becomes a setting whose defau
 
 The planning rules step of the onboarding wizard shows these settings, each default with the ADR that records it. A plant cannot open while a setting without a recorded default has no value at the company or the plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
+## Graph algorithms with graphology (later)
+
+Release 1 uses no graph library. A routing is an ordered list of operations, the rules between operations relate consecutive operations only, and a linked child order has one parent. graphology (MIT), a graph data structure with algorithm packages such as graphology-dag, comes in when one of these triggers arrives:
+
+- non-linear or branching routings
+- multi-level BOM explosion
+- in-memory where-used analysis
+- a critical-path view
+
+The trigger brings an ADR at status proposed, or an amendment to [ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md) if graphology goes into `@northmes/planning-domain`, whose "May import" row names only `@northmes/contracts`. The dependency then comes in its own pull request. In the domain package graphology must not weaken determinism: `plan()` is invariant under any permutation of its input, and comparators compare code units and end on the id. graphology does not specify its node iteration order, and graphology-dag seeds its topological queue from that iteration, so sorting the input before the graph is built is not enough: a use in the domain package takes the next ready node by an explicit tie-break (code units, then the id) instead of the library's order, and the ADR that adopts graphology checks the pinned version's ordering behaviour with a permutation test. The snapshot stays plain data and holds no `Graph`, which is an event emitter.
+
+The module catalog does not use graphology ([E02-S01-T04, #229](E02-walking-skeleton.md#e02-s01-t04-229-platform-order-the-module-catalog-and-stop-on-missing-dependencies)). The catalog orders modules core first, in-repo modules before plugins, then by id, and a cycle error names every module in the cycle. graphology-dag's topological sort follows insertion order and throws on a cycle without naming any module, so it meets neither rule. The catalog keeps the hand-written depth-first search it ports from the integration spike.
+
 ## Tests
 
 Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [11-quality-and-testing.md](11-quality-and-testing.md)). Unit tests are `*.test.ts`, integration tests `*.int.test.ts` on Postgres from `@testcontainers/postgresql`, web tests `*.test.tsx`. Each test carries its requirement id; the case ids in this document (TC, CAL, TIME, AP, DR) serve as those ids until the numbering scheme exists. File paths are plan proposals.
@@ -1095,7 +1109,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - DR4 `soft-lock.int.test.ts`: A moves a job order of 1001, extends twice and saves: `job_order.version` increases once, and the audit trail holds one insert and one delete for the soft lock and none for the extensions. Two replicas with clocks 5 minutes apart report the same holder. A break with an empty reason is refused; with a reason the holder becomes B in one command row. Two concurrent takes on a free order: exactly one succeeds. A stale `expectedHolderId` returns a conflict. A viewer's break returns `FORBIDDEN` and one security event.
 - DR5 `autoplan-job.int.test.ts`: 10 concurrent requests on two instances while a run is active give one queued run and two executed runs; a worker that throws ends its run `failed` with the error stored; a killed worker lets a new run start within 30 s; revoking the requester's role before the run fails it with one security event and no change. A pausable plan port blocks the run while an import inserts an overlapping job order: the apply re-snapshots once and leaves no overlap. A calendar deviation added during compute forces a recompute. 20 operator quantity reports during compute do not stop the apply on its first attempt. A 1 600-row apply issues one `UPDATE` in 1 s or less. With A holding order 1001 and C running autoplan, A's draft row is still current and A's save succeeds.
 - DR6 `progress.int.test.ts`: `reportOperationProgress` moves a job order to `active` without bumping its version and bumps the plan revision; a Save that moves a job order which started meanwhile changes nothing for that row.
-- DR7 `release.int.test.ts`: release copies the routing with `source_operation_id` and `source_operation_version`; editing the routing afterwards leaves the order unchanged; a child order in another plant fails with `core.crossScopeReference`.
+- DR7 `release.int.test.ts`: release copies the routing with `source_operation_id` and `source_operation_version`; editing the routing afterwards leaves the order unchanged; a child order in another plant fails with `core.crossScopeReference`; linking 1002 under 1001 bumps the plan revision; linking 1001 under itself, or under 1002 while 1002 is linked under 1001, fails with `planning.production_order.link_cycle` and changes no row; of two concurrent links, 1001 under 1002 and 1002 under 1001, one succeeds and the other fails with `planning.production_order.link_cycle` and changes no row.
 - DR8 `pending-change.int.test.ts`: with order 1001 in A's draft and no live lock, an ERP quantity change applies; with a live lock it becomes pending and `job_order.version` is unchanged; B's accept while A holds the order is refused with A's name; A's accept rebases A's draft row and A's save succeeds. Spread rule unit case: job orders of 5 and 5, the first started, going from 10 to 12 gives 5 and 7.
 - DR9 `events.int.test.ts`: after a 500-row apply a subscriber receives at most 2 messages; the connector subscribes to no `planning.draft.*` and no `*.soft_lock_changed` event, so a soft lock enqueues zero write-back jobs.
 
@@ -1148,7 +1162,7 @@ Product owner:
 - `isLocked` on the operation or the job order; operation priority; the operator list sort.
 - Splitting the unreported remainder of a started job.
 - The spread rule for ERP quantity changes; field ownership against "NorthMES is master".
-- Child orders planned independently with links by hand only.
+- Child orders planned independently with links by hand only, and that a linked child may have children of its own.
 - Whether purchase requisitions count in the material warning.
 - Machines and job orders per week; whether "Pause live updates" is wanted.
 - Customer order line scope; the level of operation tools; case-insensitive codes and archived codes.

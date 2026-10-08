@@ -826,6 +826,20 @@ Pages live in area folders in the design project. `ui/` holds the styles (`ui/to
 
 The floor is declared in `@northmes/web-build`, which sets `build.target` explicitly for the shell and every remote ([0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). `/assets/browser-check.js` shows a plain page on anything older. Chrome and Edge 109 are the last versions on Windows 7 and 8.1, so those systems cannot run NorthMES. Every browser needs HTTPS with a certificate it trusts, because the manifest hash check uses `crypto.subtle`, which exists only in a secure context ([0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md)). Stations use a persistent browser profile, never Edge kiosk mode (InPrivate). Pilot IT reports the OS and browser versions on station and planner PCs before go-live. Automated tests run on Chromium; the manual screen reader pass uses NVDA with Chrome or Edge on Windows.
 
+## Node-and-edge screens with React Flow (later)
+
+No release 1 screen is a node-and-edge editor or viewer, so React Flow (`@xyflow/react`, MIT) is not added. The planning board is a resource timeline built in house, its operation links are an SVG overlay for the selected order ([07](07-production-planning.md#planning-board-in-release-1)), and routings and connector mapping are lists and forms. React Flow does not replace any of them. It comes in with the first designed node-and-edge screen, for example a routing editor once routings branch, or a genealogy graph for traceability. That screen brings this work, in this order:
+
+1. The screen gets a variations round, as every new kind of screen does ([Order of design work](#order-of-design-work)).
+2. An ADR at status proposed settles where React Flow's JS and CSS live and which layout engine places the nodes. In-repo remotes import no stylesheet ([CSS rules](#css-rules)), so its stylesheet cannot ship inside the remote that uses it. `@dagrejs/dagre` is MIT; elkjs is EPL-2.0, which is on none of the allowed lists of the license policy ([0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)).
+3. The dependency comes in its own pull request.
+4. A NorthMES wrapper closes the accessibility gaps, each covered by axe and keyboard-only end-to-end tests ([0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)):
+   - every node and edge has an accessible name that never contains an id (React Flow's default edge name reads the node ids);
+   - messages go through the shell's `announce()` instead of React Flow's own live region;
+   - every control meets the 24 px target ([Target size](#target-size-258));
+   - focus shows the D1 two-tone focus ring, because React Flow's stylesheet sets `outline: none`;
+   - a list or table holds the same content as the main path for screen readers, as the job order table view does for the board.
+
 ## Release 1 work list
 
 Each line is a candidate story; the delivery session splits it into thin vertical slices.
