@@ -163,4 +163,103 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' } }],
     });
   });
+
+  /** Creates an article through coreCreateArticle and returns it. */
+  async function create(client: GqlClient, code: string, name: string): Promise<Article> {
+    const answer = await client.send<{ coreCreateArticle: Article }>(createMutation, {
+      input: { id: randomUUIDv7(), code, name },
+    });
+    if (!answer.data) throw new Error(`the create failed: ${JSON.stringify(answer.errors)}`);
+    return answer.data.coreCreateArticle;
+  }
+
+  it('E06-S06 coreUpdateArticle changes the code and name and bumps the version', async () => {
+    const client = await clientAt(given.plant());
+    const { id } = await create(client, 'SB-500', 'Shelf board');
+
+    const answer = await client.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: ' SB-501 ', name: 'Shelf board, oak ' },
+    });
+
+    const article = { id, code: 'SB-501', name: 'Shelf board, oak', version: 2 };
+    expect(answer).toEqual({ status: 200, data: { coreUpdateArticle: article } });
+    expect(await readArticle(client, id)).toEqual(article);
+  });
+
+  it('E06-S06 coreUpdateArticle with a stale expectedVersion returns core.version_conflict and changes nothing', async () => {
+    const client = await clientAt(given.plant());
+    const { id } = await create(client, 'SB-600', 'Shelf board');
+    await client.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'SB-600', name: 'Shelf board, pine' },
+    });
+
+    const answer = await client.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'SB-601', name: 'Shelf board, birch' },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `Article ${id} is at version 2, and the change was made on version 1`,
+          path: ['coreUpdateArticle'],
+          extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+        },
+      ],
+    });
+    expect(await readArticle(client, id)).toEqual({
+      id,
+      code: 'SB-600',
+      name: 'Shelf board, pine',
+      version: 2,
+    });
+  });
+
+  it("E06-S06 coreUpdateArticle of an unknown id or another plant's article returns core.not_found", async () => {
+    const otherPlant = await clientAt(given.plant());
+    const { id: otherId } = await create(otherPlant, 'WB-100', 'Wall bracket');
+    const client = await clientAt(given.plant());
+
+    for (const id of [randomUUIDv7(), otherId]) {
+      const answer = await client.send(updateMutation, {
+        input: { id, expectedVersion: 1, code: 'WB-101', name: 'Wall bracket, wide' },
+      });
+
+      expect(answer).toMatchObject({
+        status: 200,
+        data: null,
+        errors: [
+          {
+            message: `Article ${id} was not found`,
+            path: ['coreUpdateArticle'],
+            extensions: { code: 'NOT_FOUND', errorCode: 'core.not_found' },
+          },
+        ],
+      });
+    }
+    expect(await readArticle(otherPlant, otherId)).toMatchObject({ code: 'WB-100', version: 1 });
+  });
+
+  it('E06-S06 coreUpdateArticle to a code that another article at the plant uses returns core.code_taken on code and changes nothing', async () => {
+    const client = await clientAt(given.plant());
+    await create(client, 'CW-300', 'Caster wheel');
+    const article = await create(client, 'CW-301', 'Caster wheel, braked');
+
+    const answer = await client.send(updateMutation, {
+      input: { id: article.id, expectedVersion: 1, code: 'cw-300', name: 'Caster wheel, braked' },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [codeTaken('coreUpdateArticle')],
+    });
+    expect(await readArticle(client, article.id)).toEqual(article);
+    // The article may keep its own code in another case.
+    const recased = await client.send(updateMutation, {
+      input: { id: article.id, expectedVersion: 1, code: 'cw-301', name: 'Caster wheel, braked' },
+    });
+    expect(recased.errors).toBeUndefined();
+  });
 });
