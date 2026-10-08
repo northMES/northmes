@@ -1,6 +1,9 @@
 // Keeps app paths out of string literals (docs/adr/0062-web-form-contracts-url-view-state-and-
 // module-link-manifests.md): paths come from link builders and apiPath.
 
+import { spawnSync } from 'node:child_process';
+import { readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import ts from 'typescript';
 
 /**
@@ -195,4 +198,41 @@ export function scan(files, allowlist) {
   }
 
   return findings;
+}
+
+/**
+ * Reads the files the scan covers among those `git ls-files` lists in the repository that holds
+ * `cwd`, with paths relative to its top level. Untracked files and tracked files missing from the
+ * working tree are not read. git runs without the GIT_* variables of a hook, so it reads the
+ * repository that holds `cwd`.
+ * @param {string} cwd
+ * @returns {RepositoryFile[]}
+ */
+export function trackedFiles(cwd) {
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+  );
+  const git = (...args) => {
+    const result = spawnSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      env,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    if (result.error) {
+      throw result.error;
+    }
+    if (result.status !== 0) {
+      throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
+    }
+    return result.stdout;
+  };
+
+  const top = git('rev-parse', '--show-toplevel').trim();
+  return git('-C', top, 'ls-files', '-z')
+    .split('\0')
+    .filter(
+      (path) => isScanned(path) && statSync(join(top, path), { throwIfNoEntry: false })?.isFile(),
+    )
+    .map((path) => ({ path, text: readFileSync(join(top, path), 'utf8') }));
 }
