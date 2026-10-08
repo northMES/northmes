@@ -31,10 +31,13 @@ function boardQuery(...orders: ReturnType<typeof order>[]): MockLink.MockedRespo
   };
 }
 
-/** The release of the order with `id`, answered with `result`. */
+/** The release of the order with `id` at version 1, answered with `result`. */
 function releaseOf(id: string, result: MockLink.MockedResponse['result']): MockLink.MockedResponse {
   return {
-    request: { query: PlanningReleaseProductionOrder, variables: { input: { id } } },
+    request: {
+      query: PlanningReleaseProductionOrder,
+      variables: { input: { id, expectedVersion: 1 } },
+    },
     result,
   };
 }

@@ -39,7 +39,9 @@ function OrderRow({ order }: { readonly order: BoardOrder }) {
             type="button"
             aria-label={`Release order ${order.number}`}
             disabled={loading}
-            onClick={() => release({ variables: { input: { id: order.id } } })}
+            onClick={() =>
+              release({ variables: { input: { id: order.id, expectedVersion: order.version } } })
+            }
           >
             Release
           </button>
