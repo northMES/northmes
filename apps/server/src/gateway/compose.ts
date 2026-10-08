@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { createHash } from 'node:crypto';
 import type { SubgraphEntry } from '@northmes/sdk/graphql';
 import { composeServices, compositionHasErrors } from '@theguild/federation-composition';
 import { parse } from 'graphql';
@@ -21,4 +22,9 @@ export function composeSupergraph(subgraphs: readonly SubgraphEntry[]): string {
     throw new Error(['Supergraph composition failed', ...lines].join('\n'));
   }
   return result.supergraphSdl;
+}
+
+/** The first 12 hex characters of the supergraph SDL's SHA-256, which names the supergraph. */
+export function supergraphHash(supergraph: string): string {
+  return createHash('sha256').update(supergraph).digest('hex').slice(0, 12);
 }

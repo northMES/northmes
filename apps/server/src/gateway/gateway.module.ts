@@ -10,7 +10,7 @@ import {
   type OnApplicationBootstrap,
 } from '@nestjs/common';
 import { SubgraphRegistry } from '@northmes/sdk/graphql';
-import { composeSupergraph } from './compose.ts';
+import { composeSupergraph, supergraphHash } from './compose.ts';
 import { inProcessTransport } from './transport.ts';
 
 /** The one GraphQL endpoint of the server. */
@@ -25,6 +25,7 @@ const NOT_READY = JSON.stringify({
 @Injectable()
 export class GatewayService implements OnApplicationBootstrap {
   #runtime?: GatewayRuntime;
+  #supergraphHash?: string;
 
   constructor(@Inject(SubgraphRegistry) private readonly registry: SubgraphRegistry) {}
 
@@ -32,8 +33,9 @@ export class GatewayService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const subgraphs = this.registry.all();
     if (subgraphs.length === 0) return;
+    const supergraph = composeSupergraph(subgraphs);
     const runtime = createGatewayRuntime({
-      supergraph: composeSupergraph(subgraphs),
+      supergraph,
       graphqlEndpoint: GATEWAY_PATH,
       // Every subgraph URL is inproc://<name>, and the gateway hands a subgraph without a
       // transport directive to the transport of kind http.
@@ -46,6 +48,12 @@ export class GatewayService implements OnApplicationBootstrap {
     // supergraph errors to boot, and requests get the 503 until it has resolved.
     await runtime.getSchema();
     this.#runtime = runtime;
+    this.#supergraphHash = supergraphHash(supergraph);
+  }
+
+  /** The hash of the supergraph the gateway serves, or undefined while it serves none. */
+  get supergraphHash(): string | undefined {
+    return this.#supergraphHash;
   }
 
   /** Serves a request to GATEWAY_PATH, or answers 503 while the gateway has no schema. */

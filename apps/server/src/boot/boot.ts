@@ -14,6 +14,7 @@ import {
 import type { DefineSubgraphOptions } from '@northmes/sdk/graphql';
 import { AppModule } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
+import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { inRepoManifests } from '../modules.ts';
 import { BootError } from './boot-error.ts';
 
@@ -123,6 +124,8 @@ async function bootSteps({
   });
   await app.listen(serverEnv.PORT, '127.0.0.1');
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
+  const { supergraphHash } = app.get(GatewayService);
+  if (supergraphHash) log.info(`Serving ${GATEWAY_PATH} with supergraph=${supergraphHash}`);
   log.info(`Listening on ${await app.getUrl()}`);
   return app;
 }
