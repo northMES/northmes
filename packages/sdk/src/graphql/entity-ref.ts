@@ -17,6 +17,18 @@ export interface GraphqlKit {
   entityRef(typeName: string): Type<EntityReference>;
 }
 
+/**
+ * Every stub entityRef created, with the module it belongs to. Nest leaves a type out of the
+ * schema when no field returns it, so a stub that is only the parent of a contributed field needs
+ * to reach the schema as an orphaned type.
+ */
+const stubs: { readonly type: Type<EntityReference>; readonly module: () => Type }[] = [];
+
+/** The entityRef stubs that belong to `module`'s subgraph. */
+export function entityStubsOf(module: Type): Type<EntityReference>[] {
+  return stubs.filter((stub) => stub.module() === module).map((stub) => stub.type);
+}
+
 /** Binds the GraphQL helpers to the module whose subgraph they declare types in. */
 export function graphqlKit(module: () => Type): GraphqlKit {
   return {
@@ -26,6 +38,7 @@ export function graphqlKit(module: () => Type): GraphqlKit {
       Field(() => ID)(Stub.prototype, 'id');
       Directive('@key(fields: "id")')(Stub);
       ObjectType(typeName, { registerIn: module })(Stub);
+      stubs.push({ type: Stub, module });
       return Stub;
     },
   };

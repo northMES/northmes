@@ -2,6 +2,7 @@
 import type { DynamicModule, Type } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { InProcessSubgraphDriver, type InProcessSubgraphOptions } from './driver.ts';
+import { entityStubsOf } from './entity-ref.ts';
 
 /**
  * @nestjs/graphql 14 links federation v2.14 by default, and the composition library accepts v2.0
@@ -51,6 +52,7 @@ export function defineSubgraph({ name, module }: DefineSubgraphOptions): Dynamic
     // internal key reaches the filter, so each module's types stay in its own subgraph.
     buildSchemaOptions: {
       includeModules: [module],
+      orphanedTypes: entityStubsOf(module),
     } as InProcessSubgraphOptions['buildSchemaOptions'],
   });
 }
