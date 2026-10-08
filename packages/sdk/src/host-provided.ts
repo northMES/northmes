@@ -18,6 +18,7 @@ export const HOST_PROVIDED = [
   'temporal-polyfill',
 ] as const;
 
+/** True for a host-provided package name and for any of its subpaths, such as `graphql/language`. */
 export function isHostProvided(specifier: string): boolean {
-  return HOST_PROVIDED.some((name) => specifier === name);
+  return HOST_PROVIDED.some((name) => specifier === name || specifier.startsWith(`${name}/`));
 }
