@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { globSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -50,6 +50,7 @@ interface WorkspaceConfig {
 }
 
 interface PackageJson {
+  dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 }
 
@@ -271,6 +272,63 @@ describe('tooling', () => {
 
     expect(readWorkspace().catalog?.dataloader).toMatch(/^2\.2\.\d+$/);
     expect(sdk.dependencies?.dataloader).toBe('catalog:');
+  });
+
+  it('E04-S01 the UI, form and table libraries are catalog entries that apps/web takes from the catalog', () => {
+    // ADR 0020 and the articles slice name these packages. Each pin is the newest release that was
+    // outside Renovate's 14-day window on 2026-10-09. culori and its types run the token contrast
+    // test, so they are dev dependencies.
+    const dependencies = {
+      '@base-ui/react': '1.8.0',
+      '@fontsource/ibm-plex-mono': '5.3.0',
+      '@fontsource/ibm-plex-sans': '5.3.0',
+      '@hookform/resolvers': '5.9.1',
+      '@tailwindcss/vite': '4.3.3',
+      '@tanstack/react-table': '9.2.4',
+      'class-variance-authority': '0.7.1',
+      clsx: '2.1.1',
+      'lucide-react': '1.48.0',
+      'react-hook-form': '7.88.0',
+      'tailwind-merge': '3.7.0',
+      tailwindcss: '4.3.3',
+      uuid: '14.0.2',
+    };
+    const devDependencies = { '@types/culori': '4.0.1', culori: '4.0.2' };
+    const catalog = readWorkspace().catalog ?? {};
+    const web = readJson<PackageJson>('apps/web/package.json');
+
+    expect(
+      Object.fromEntries(
+        Object.keys({ ...dependencies, ...devDependencies }).map((name) => [name, catalog[name]]),
+      ),
+    ).toEqual({
+      ...dependencies,
+      ...devDependencies,
+    });
+    for (const name of Object.keys(dependencies)) {
+      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBe('catalog:');
+    }
+    for (const name of Object.keys(devDependencies)) {
+      expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBe('catalog:');
+    }
+    // TanStack Table v9 is the version the project skill and ADR 0020 describe.
+    expect(catalog['@tanstack/react-table']).toMatch(/^9\.\d+\.\d+$/);
+  });
+
+  it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {
+    // The fonts ship in the web bundle. A package listing them would carry OFL-1.1 files into an
+    // MIT package (ADR 0040).
+    const manifests = ['apps', 'packages', 'modules', 'examples']
+      .flatMap((dir) => globSync(`${dir}/**/package.json`, { cwd: root }))
+      .filter((path) => !path.split('/').includes('node_modules'));
+    const listing = manifests.filter((path) => {
+      const manifest = readJson<PackageJson>(path);
+      const names = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
+
+      return names.some((name) => name.startsWith('@fontsource/ibm-plex-'));
+    });
+
+    expect(listing).toEqual(['apps/web/package.json']);
   });
 
   it('E02-S01 style/noProcessEnv fails in apps/server/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
