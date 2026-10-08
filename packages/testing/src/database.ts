@@ -105,6 +105,9 @@ export function useTestDatabase(): TestDatabase {
     await withClient(pg, async (client) => {
       const name = client.escapeIdentifier(databaseName);
       await client.query(`create database ${name} template ${templateDatabase}`);
+      // A clone does not copy the database privileges of its template, so the CREATE that
+      // bootstrap grants nm_owner on the template is granted again (ADR 0006).
+      await client.query(`grant create on database ${name} to nm_owner`);
     });
   });
 
