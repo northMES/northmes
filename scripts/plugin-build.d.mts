@@ -3,7 +3,10 @@
 export interface BuiltPlugin {
   /** The files the build wrote, relative to the plugin's folder, such as dist/server.js. */
   readonly files: readonly string[];
-  /** Per built file, the specifiers it still imports: the host-provided packages left external. */
+  /**
+   * Per built file, the package specifiers its code still imports, such as the host-provided
+   * packages the build left external. Imports of the build's own files are left out.
+   */
   readonly imports: Readonly<Record<string, readonly string[]>>;
 }
 
