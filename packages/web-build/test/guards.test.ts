@@ -116,4 +116,8 @@ describe('remote build guards', () => {
   it('E02-S05 a remote bundling graphql fails naming the package', async () => {
     await expect(buildFixture('remote-graphql')).rejects.toThrow(/this remote bundles .*graphql/);
   });
+
+  it('E02-S05 a remote under modules/*/web that emits CSS fails', async () => {
+    await expect(buildFixture('remote-css')).rejects.toThrow(/this remote emits CSS/);
+  });
 });
