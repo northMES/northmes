@@ -9,8 +9,11 @@ const closesIssue =
 // in [bot], so only the Renovate app has this login.
 const renovate = 'renovate[bot]';
 
-export function checkLinkedIssue({ body, author }) {
-  if (author === renovate || closesIssue.test(body)) {
+// release-please opens the release pull request from a branch with this prefix.
+const releaseBranch = 'release-please--branches--';
+
+export function checkLinkedIssue({ body, author, headRef }) {
+  if (author === renovate || headRef.startsWith(releaseBranch) || closesIssue.test(body)) {
     return { ok: true, message: '' };
   }
   return {
