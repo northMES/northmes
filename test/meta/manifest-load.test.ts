@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { spawnSync } from 'node:child_process';
-import { globSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -36,6 +36,21 @@ for (const url of process.argv.slice(1)) {
 process.stdout.write(JSON.stringify({ resolved, manifests }));
 `;
 
+// The static import and re-export statements of a module, each on one line. Lazy entries such as
+// `server: () => import('./server/core.module.js')` are expressions, not import lines.
+function importLines(source: string): string[] {
+  const statements = source.match(
+    /^(?:import|export)\b[^;]*?\bfrom\s*['"][^'"]*['"][^;]*;|^import\s*['"][^'"]*['"];/gm,
+  );
+  return (statements ?? []).map((statement) => statement.replace(/\s+/g, ' '));
+}
+
+// What a manifest may import: defineModule from the SDK root and the version of its own package.
+const allowedImports = [
+  /^import \{ defineModule \} from '@northmes\/sdk';$/,
+  /^import \w+ from '\.\/package\.json' with \{ type: 'json' \};$/,
+];
+
 interface LoadResult {
   resolved: string[];
   manifests: { url: string; id: string }[];
@@ -64,5 +79,17 @@ describe('module manifests', () => {
       id: 'core',
     });
     expect(resolved.filter((url) => url.includes('/@nestjs/'))).toEqual([]);
+  });
+
+  it('E02-S01 every northmes.module.ts imports only defineModule and its own package.json', () => {
+    const paths = manifestPaths();
+
+    expect(paths).toContain('modules/core/northmes.module.ts');
+    for (const path of paths) {
+      const lines = importLines(readFileSync(`${root}${path}`, 'utf8'));
+      const others = lines.filter((line) => !allowedImports.some((allowed) => allowed.test(line)));
+
+      expect(others, path).toEqual([]);
+    }
   });
 });
