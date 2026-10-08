@@ -10,9 +10,9 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 ## Files
 
 - `vitest.config.ts`: the `integration` project runs `*.int.test.ts` with two global setups, in this order.
-- `packages/testing/src/global-setup.ts`: starts the container from the image in `infra/pg-image.json` (`startPostgres` in `postgres-server.ts`) and creates the empty template `nm_template`.
+- `packages/testing/src/global-setup.ts`: starts the container from the image in `infra/pg-image.json` (`startPostgres` in `postgres-server.ts`), creates the empty template `nm_template` (`emptyTemplateDatabase`), and reads the server's time zone, data directory and mounts as the superuser into `inject('pgServer')`.
 - `apps/server/test/global-setup.ts`: bootstraps `nm_owner`, `nm_app`, `nm_auth` and `nm_ext` with passwords of this run, then migrates the in-repo modules into `nm_template_<16 hex>`, named after a hash of their migration files. An unchanged set of files reuses the template; a new or changed file gives a new name.
-- `packages/testing/src/database.ts`: `useTestDatabase()`, which clones the template for the calling file.
+- `packages/testing/src/database.ts`: `useTestDatabase()`, which clones the migrated template for the calling file, or the template that `useTestDatabase({ template })` names.
 - `packages/testing/src/db-command.ts`: `db.command`, the fixture writer.
 - `packages/testing/src/given.ts`: `given.plant()` and `given.company()`.
 - `packages/testing/src/config-for-test.ts`: `configForTest(overrides)`, the ConfigModule of a test app.
@@ -36,10 +36,11 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 2. Call `const db = useTestDatabase()` in the body of a `describe`, outside any hook. It registers the `beforeAll` that creates the file's database and the `afterAll` that drops it.
 3. Isolate each test in scopes of its own: `const plant = given.plant()`. The id is a fresh uuidv7 and no row exists for it.
 4. Write fixtures with `db.command({ principal, scopes: [plant], reason }, async (tx) => ...)`. It runs `fn` in one transaction as `nm_app`, with `northmes.read_scopes` and `northmes.write_scopes` both set to the scopes, and commits.
-5. Read through the same path: `db.command` with the scopes of the rows you expect, so the policies apply as they do in the server. Use `db.ownerUrl` only for tests at the database seam, such as migrate.
+5. Read through the same path: `db.command` with the scopes of the rows you expect, so the policies apply as they do in the server. Use `db.ownerUrl` only for tests at the database seam, such as migrate. A test of migrate itself calls `useTestDatabase({ template: emptyTemplateDatabase })`, so its database holds only what the test applies.
 6. For a test through the host app, call `createTestApp({ modules: ['core', 'planning'], hostFactory })` with `hostFactory` from `@northmes/server/testing`, and close `testApp.app` in `afterEach` or `afterAll`. It takes in-repo modules only; a test of a built plugin uses `bootBuilt` (ADR 0037). A test that builds a Nest app of its own imports `await configForTest({ KEY: 'value' })`, which never reads or writes `process.env`.
-7. Make a new table with `pnpm gen:migration` and keep its four policies, one per command.
-8. Start each test name with the story id, such as `E02-S02`.
+7. For server-wide state (the database roles, a server setting, the server log) or code that needs the superuser, start a server of the file's own: `server = await startPostgres({ settings: { log_statement: 'all' } })` in `beforeAll`, `await server.stop()` in `afterAll`. `server.connection` logs in as that server's superuser. `server.logs()` returns the log so far, which lags: run a probe statement and wait for it with `vi.waitFor` before checking what the log lacks.
+8. Make a new table with `pnpm gen:migration` and keep its four policies, one per command.
+9. Start each test name with the story id, such as `E02-S02`.
 
 ## Errors and their meaning
 
