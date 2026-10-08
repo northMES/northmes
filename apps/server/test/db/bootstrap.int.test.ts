@@ -104,4 +104,13 @@ describe('pnpm northmes db bootstrap', () => {
       },
     ]);
   });
+
+  it('E02-S02 nm_app has no SUPERUSER, CREATEROLE or BYPASSRLS', async () => {
+    const rows = await query(
+      superuserUrl,
+      "select rolsuper, rolcreaterole, rolbypassrls from pg_roles where rolname = 'nm_app'",
+    );
+
+    expect(rows).toEqual([{ rolsuper: false, rolcreaterole: false, rolbypassrls: false }]);
+  });
 });
