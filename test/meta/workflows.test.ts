@@ -639,4 +639,29 @@ describe('workflows', () => {
       expect(projects.sort(), command).toEqual(web.sort());
     }
   });
+
+  // The job reports its findings in the job summary (#339). With --json, react-doctor writes only
+  // the report, so the step after the scan copies the findings from it into the job summary and the
+  // log. That step also runs after a failed scan, and not when a failed install skipped the scan.
+  it('the react doctor job copies its findings into the job summary, also after a failed scan', () => {
+    const { job } = jobNamed('react doctor');
+    const steps = job.steps ?? [];
+    const scan = steps.findIndex(({ run }) => run === 'pnpm react-doctor');
+    const id = steps[scan]?.id;
+    const commands = reactDoctorCommandsOf(job);
+    const report = /--json-out (\S+)/.exec(commands[0] ?? '')?.[1];
+
+    expect(scan, 'the pnpm react-doctor step').not.toBe(-1);
+    expect(id, 'the id of the pnpm react-doctor step').toBeDefined();
+    expect(commands).toHaveLength(1);
+    expect(commands[0]?.split(' ')).toContain('--json');
+    expect(report, 'the --json-out path').toBeDefined();
+    expect(steps[scan + 1]).toEqual({
+      if: `!cancelled() && steps.${id}.outcome != 'skipped'`,
+      run: 'pnpm react-doctor:summary',
+    });
+    expect(commandsOf('pnpm react-doctor:summary')).toEqual([
+      `node scripts/ci/react-doctor-summary.mjs ${report}`,
+    ]);
+  });
 });
