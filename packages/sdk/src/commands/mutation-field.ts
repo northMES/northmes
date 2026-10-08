@@ -28,26 +28,34 @@ function mutationFieldName(commandName: string): string {
   return `${prefix}${capitalize(name)}`;
 }
 
-/** The GraphQL scalar of one input field, from its JSON Schema. */
-function scalarOf(property: z.core.JSONSchema._JSONSchema): ReturnTypeFunc {
-  if (typeof property === 'object') {
-    if (property.type === 'string' && property.format === 'uuid') return () => ID;
-    if (property.type === 'string') return () => String;
-    if (property.type === 'number') return () => Float;
-  }
-  throw new Error('Unsupported input field');
+/** The GraphQL scalar of a required input field, from its JSON Schema, or undefined. */
+function scalarOf(property: z.core.JSONSchema._JSONSchema): ReturnTypeFunc | undefined {
+  if (typeof property !== 'object') return undefined;
+  if (property.type === 'string' && property.format === 'uuid') return () => ID;
+  if (property.type === 'string') return () => String;
+  if (property.type === 'number') return () => Float;
+  return undefined;
 }
 
 /**
  * The input type of a command's mutation, built from contract.input. It covers the field kinds the
- * skeleton uses: ID, string and number.
+ * skeleton uses: required ID, string and number fields. Any other field throws, naming it, before
+ * a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
  */
 function inputType(contract: CommandContract, typeName: string): Type {
-  const Input = { [typeName]: class {} }[typeName] as Type;
   const schema = z.toJSONSchema(contract.input, { io: 'input' });
-  for (const [field, property] of Object.entries(schema.properties ?? {})) {
-    Field(scalarOf(property))(Input.prototype, field);
-  }
+  const required = new Set(schema.required);
+  const fields = Object.entries(schema.properties ?? {}).map(([field, property]) => {
+    const scalar = required.has(field) ? scalarOf(property) : undefined;
+    if (!scalar) {
+      throw new Error(
+        `Command ${contract.name}: input field ${field} is not a required ID, string or number, the kinds a generated mutation input supports so far`,
+      );
+    }
+    return { field, scalar };
+  });
+  const Input = { [typeName]: class {} }[typeName] as Type;
+  for (const { field, scalar } of fields) Field(scalar)(Input.prototype, field);
   InputType(typeName)(Input);
   return Input;
 }
