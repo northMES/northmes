@@ -25,7 +25,8 @@ const roles: readonly { name: string; attributes: string; password?: keyof RoleP
  * Creates the database roles as the superuser that superuserUrl logs in as (ADR 0005, ADR 0006):
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
  * nm_ext is a group that cannot log in. Every role's time zone is pinned to UTC, per role because a
- * database cloned from a template loses its database settings.
+ * database cloned from a template loses its database settings. A role that exists keeps its
+ * attributes and password, so a second run changes nothing.
  */
 export async function bootstrapRoles(
   superuserUrl: string,
@@ -37,14 +38,21 @@ export async function bootstrapRoles(
     const { rows } = await client.query<{ database: string }>(
       'select current_database() as database',
     );
+    const existing = await client.query<{ rolname: string }>(
+      'select rolname from pg_roles where rolname = any($1)',
+      [roles.map((role) => role.name)],
+    );
+    const exists = new Set(existing.rows.map((row) => row.rolname));
     await client.query('begin');
     // The statements carry the passwords, so none of them reaches the server log, not even when
     // one fails.
     await client.query("set local log_statement = 'none'");
     await client.query("set local log_min_error_statement = 'panic'");
     for (const { name, attributes, password } of roles) {
-      const secret = password ? ` password ${client.escapeLiteral(passwords[password])}` : '';
-      await client.query(`create role ${name} ${attributes}${secret}`);
+      if (!exists.has(name)) {
+        const secret = password ? ` password ${client.escapeLiteral(passwords[password])}` : '';
+        await client.query(`create role ${name} ${attributes}${secret}`);
+      }
       await client.query(`alter role ${name} set timezone = 'UTC'`);
     }
     const database = client.escapeIdentifier(rows[0]?.database ?? '');
