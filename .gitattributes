@@ -1,0 +1,5 @@
+# Generated files: review collapses them, and a merge conflict in one is resolved by running the
+# command that writes it (pnpm gen for these), never by hand.
+/schema/*.graphql linguist-generated=true
+/modules/*/schema.graphql linguist-generated=true
+*.gen.* linguist-generated=true

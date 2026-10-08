@@ -24,7 +24,11 @@ interface VitestConfig {
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const config = vitestConfig as VitestConfig;
-const globalSetupPath = resolve(root, 'packages/testing/src/global-setup.ts');
+// The harness starts the container first; the server's setup then prepares its database.
+const globalSetupPaths = [
+  resolve(root, 'packages/testing/src/global-setup.ts'),
+  resolve(root, 'apps/server/test/global-setup.ts'),
+];
 
 function findProject(name: string): ProjectConfig | undefined {
   return config.test?.projects?.find((project) => project.test?.name === name);
@@ -35,7 +39,7 @@ function resolved(globalSetup: string | string[] | undefined): string[] {
 }
 
 describe('vitest projects', () => {
-  it('the integration project includes **/*.int.test.ts and sets the global setup', () => {
+  it('the integration project includes **/*.int.test.ts and runs the harness global setup, then the server one', () => {
     const integration = findProject('integration');
 
     expect(integration, 'project named integration').toBeDefined();
@@ -48,8 +52,10 @@ describe('vitest projects', () => {
       ...resolved(config.test?.globalSetup),
       ...resolved(integration?.test?.globalSetup),
     ];
-    expect(effective).toEqual([globalSetupPath]);
-    expect(existsSync(globalSetupPath), globalSetupPath).toBe(true);
+    expect(effective).toEqual(globalSetupPaths);
+    for (const path of globalSetupPaths) {
+      expect(existsSync(path), path).toBe(true);
+    }
   });
 
   it('only the integration project runs a global setup', () => {
@@ -62,7 +68,7 @@ describe('vitest projects', () => {
     for (const project of others) {
       expect(project.test?.globalSetup, `project ${project.test?.name}`).toBeUndefined();
     }
-    expect(resolved(findProject('integration')?.test?.globalSetup)).toEqual([globalSetupPath]);
+    expect(resolved(findProject('integration')?.test?.globalSetup)).toEqual(globalSetupPaths);
   });
 });
 

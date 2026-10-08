@@ -10,21 +10,80 @@ packages:
 pmOnFail: ignore
 
 allowBuilds:
+  '@apollo/protobufjs': false
   cpu-features: false
   protobufjs: false
   ssh2: false
 
 catalogMode: strict
 
+# 14 days in minutes. Transitive ranges resolve only to versions outside Renovate's
+# minimumReleaseAge window, as the catalog pins do.
+minimumReleaseAge: 20160
+
 catalog:
+  '@apollo/client': 4.3.1
+  '@apollo/subgraph': 2.15.1
   '@biomejs/biome': 2.5.14
+  '@graphql-hive/gateway-runtime': 2.11.1
+  '@graphql-mesh/transport-common': 1.1.0
+  '@module-federation/runtime': 2.9.0
+  '@module-federation/vite': 1.22.1
+  '@nestjs/common': 12.1.0
+  '@nestjs/config': 12.0.1
+  '@nestjs/core': 12.1.0
+  '@nestjs/graphql': 14.0.2
+  '@nestjs/platform-express': 12.1.0
+  '@nestjs/terminus': 12.1.0
+  '@nestjs/testing': 12.1.0
+  '@playwright/test': 1.63.0
+  '@tanstack/react-router': 1.170.39
   '@testcontainers/postgresql': 12.1.0
+  '@testing-library/dom': 10.4.2
+  '@testing-library/react': 16.3.3
+  '@testing-library/user-event': 14.6.7
+  '@theguild/federation-composition': 0.27.0
+  '@types/express': 5.0.6
+  '@types/ms': 2.1.0
   '@types/node': 26.6.2
   '@types/pg': 8.23.1
+  '@types/react': 19.3.0
+  '@types/react-dom': 19.3.0
+  '@types/semver': 7.8.0
+  '@types/ws': 8.18.1
   '@vitejs/plugin-react': 6.1.1
+  fast-check: 4.10.2
+  graphql: 16.14.2
+  graphql-subscriptions: 3.0.0
+  graphql-ws: 6.2.2
   happy-dom: 20.14.5
+  kysely: 0.29.6
+  ms: 2.1.3
   pg: 8.23.0
+  react: 19.3.0
+  react-dom: 19.3.0
+  reflect-metadata: 0.2.2
+  rolldown: 1.2.10
+  rxjs: 7.8.2
+  semver: 7.8.5
+  temporal-polyfill: 1.0.5
   turbo: 2.11.2
   typescript: 6.0.3
+  vite: 8.3.0
   vitest: 5.0.1
+  ws: 8.21.3
   yaml: 2.9.1
+  zod: 4.6.5
+
+# The web singletons and graphql resolve to one copy each, also where a dependency's own range
+# would pick another version (ADR 0015, ADR 0019).
+overrides:
+  '@apollo/client': 'catalog:'
+  '@tanstack/react-router': 'catalog:'
+  graphql: 'catalog:'
+  react: 'catalog:'
+  react-dom: 'catalog:'
+  # @module-federation/dts-plugin pins adm-zip 0.6.0 and undici 7.29.0 exactly, and both carry high
+  # advisories. Drop these two once a mature @module-federation/vite brings a dts-plugin without them.
+  '@module-federation/dts-plugin>adm-zip': 0.6.1
+  '@module-federation/dts-plugin>undici': 7.29.1

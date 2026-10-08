@@ -1,12 +1,13 @@
 {
   "name": "northmes",
+  "version": "0.0.0",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "check": "node scripts/check-node.mjs && turbo run lint typecheck && pnpm gen --check && vitest run --project unit --project integration --project web --project types",
-    "check:full": "pnpm check && pnpm test:tz",
+    "check:full": "pnpm check && pnpm test:tz && pnpm e2e",
     "test:handoff": "pnpm check",
     "build": "turbo run build",
     "lint": "turbo run lint",
@@ -18,15 +19,33 @@
     "test:ai": "vitest run --project ai",
     "test:tz": "vitest run --project tz",
     "lint:customer-data": "node scripts/lint/no-customer-data.mjs",
-    "adr:next": "node scripts/adr/next-number.mjs"
+    "adr:next": "node scripts/adr/next-number.mjs",
+    "northmes": "turbo run build --filter=@northmes/server --output-logs=errors-only && node apps/server/dist/main.js",
+    "gen:migration": "node scripts/gen-migration.mjs",
+    "plugin:build": "node scripts/plugin-build.mjs",
+    "dev": "node scripts/stack/dev.mjs",
+    "demo": "node scripts/stack/demo.mjs",
+    "e2e": "pnpm build && playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@northmes/contracts": "workspace:*",
+    "@northmes/planning-contracts": "workspace:*",
+    "@northmes/sdk": "workspace:*",
+    "@northmes/server": "workspace:*",
+    "@northmes/testing": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@testcontainers/postgresql": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "graphql": "catalog:",
     "happy-dom": "catalog:",
+    "pg": "catalog:",
+    "rolldown": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:",
-    "yaml": "catalog:"
+    "yaml": "catalog:",
+    "zod": "catalog:"
   }
 }

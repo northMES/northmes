@@ -16,6 +16,12 @@ coverage/
 *.tsbuildinfo
 .env
 
+# Local stack state and dev secrets written by the stack script (ADR 0058).
+/.northmes/
+# Drop-in plugins that pnpm plugin:build copies to the root (ADR 0037). Anchored, because test
+# fixtures keep plugins in folders of the same name.
+/plugins/
+
 # Output of the to-questionnaire skill (may hold product owner material).
 /to-questionnaire-*.md
 

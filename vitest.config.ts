@@ -1,10 +1,19 @@
+import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 const ignored = ['**/node_modules/**', '**/dist/**', 'docs/sources/**'];
 
+// graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Node loads index.js for
+// packages in node_modules, while Vite resolves index.mjs for the code it transforms, and two
+// copies break instanceof checks (ADR 0015). Every import of graphql gets the copy Node loads.
+const graphql = fileURLToPath(import.meta.resolve('graphql'));
+
 export default defineConfig({
-  resolve: { conditions: ['@northmes/source'] },
+  resolve: {
+    conditions: ['@northmes/source'],
+    alias: [{ find: /^graphql$/, replacement: graphql }],
+  },
   ssr: { resolve: { conditions: ['@northmes/source'] } },
   test: {
     projects: [
@@ -22,7 +31,11 @@ export default defineConfig({
           name: 'integration',
           include: ['**/*.int.test.ts'],
           exclude: ignored,
-          globalSetup: ['./packages/testing/src/global-setup.ts'],
+          // The harness starts Postgres first; the server setup prepares its database after it.
+          globalSetup: [
+            './packages/testing/src/global-setup.ts',
+            './apps/server/test/global-setup.ts',
+          ],
         },
       },
       {
