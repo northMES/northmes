@@ -3,6 +3,7 @@ import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import { Client } from 'pg';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
 import { type MigrationFile, readMigrationFiles } from './files.ts';
+import { MigrationError } from './migration-error.ts';
 
 export interface MigrateOptions {
   /** Logs in as nm_owner, on a direct connection rather than through a pooler. */
@@ -23,11 +24,25 @@ export interface MigrateResult {
 const lockTimeout = '1min';
 
 /**
+ * A catalog module's migration files, and the sha256 that northmes_meta.migration holds for each
+ * file it applied.
+ */
+interface ModuleFiles {
+  readonly names: ModuleNames;
+  readonly files: readonly MigrationFile[];
+  /** The recorded sha256 by file name. */
+  readonly recorded: ReadonlyMap<string, string>;
+}
+
+/**
  * Applies the migration files of every catalog module in catalog order (ADR 0006). Each module's
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
  * are recorded in northmes_meta.migration. A run holds the migration advisory lock of the
  * database throughout, so concurrent runs apply each file once.
+ *
+ * The run checks the files of every module before it applies any, and throws a MigrationError
+ * that lists every problem when an applied file's sha256 changed.
  */
 export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<MigrateResult> {
   const client = new Client({ connectionString: ownerUrl });
@@ -35,11 +50,13 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   try {
     await takeMigrationLock(client);
     await createMigrationTable(client);
+    const modules = await readModuleFiles(client, catalog);
+    const problems = changedFiles(modules);
+    if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
-    for (const { manifest, migrationsDir } of catalog) {
-      const names = moduleNames(manifest.id);
+    for (const { names, files, recorded } of modules) {
       await createOwnerRoleAndSchema(client, names);
-      for (const file of await pendingFiles(client, names, migrationsDir)) {
+      for (const file of files.filter((file) => !recorded.has(file.name))) {
         await applyFile(client, names, file);
         applied.push(`${names.id}/${file.name}`);
       }
@@ -48,6 +65,35 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   } finally {
     await client.end();
   }
+}
+
+/** Reads every catalog module's files and the records northmes_meta.migration holds for them. */
+async function readModuleFiles(
+  client: Client,
+  catalog: readonly CatalogEntry[],
+): Promise<ModuleFiles[]> {
+  const { rows } = await client.query<{ module: string; name: string; sha256: string }>(
+    'select module, name, sha256 from northmes_meta.migration',
+  );
+  return catalog.map(({ manifest, migrationsDir }) => {
+    const names = moduleNames(manifest.id);
+    const recorded = new Map(
+      rows.filter((row) => row.module === names.id).map((row) => [row.name, row.sha256]),
+    );
+    return { names, files: readMigrationFiles(migrationsDir), recorded };
+  });
+}
+
+/** A problem for each applied file whose sha256 differs from the one recorded when it applied. */
+function changedFiles(modules: readonly ModuleFiles[]): string[] {
+  return modules.flatMap(({ names, files, recorded }) =>
+    files
+      .filter((file) => recorded.has(file.name) && recorded.get(file.name) !== file.sha256)
+      .map(
+        (file) =>
+          `${names.id}/${file.name} changed after it was applied; put the change in a new migration file`,
+      ),
+  );
 }
 
 /**
@@ -105,20 +151,6 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   // decides whether a key may point at it (ADR 0006).
   await client.query(`grant usage on schema ${schema} to nm_ext`);
   await client.query('commit');
-}
-
-/** The module's files that northmes_meta.migration has no record of, in lexical order. */
-async function pendingFiles(
-  client: Client,
-  names: ModuleNames,
-  migrationsDir: string | undefined,
-): Promise<MigrationFile[]> {
-  const recorded = await client.query<{ name: string }>(
-    'select name from northmes_meta.migration where module = $1',
-    [names.id],
-  );
-  const applied = new Set(recorded.rows.map((row) => row.name));
-  return readMigrationFiles(migrationsDir).filter((file) => !applied.has(file.name));
 }
 
 /**
