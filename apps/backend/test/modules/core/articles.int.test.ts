@@ -134,6 +134,22 @@ describe('coreArticles', () => {
     }
   }
 
+  /** The codes of each page, walking backward from the last page in pages of `last`. */
+  async function walkBackward(client: GqlClient, args: ListArgs & { last: number }) {
+    const pages: string[][] = [];
+    let before: string | undefined;
+    for (;;) {
+      const answer = await list(client, { ...args, before });
+      expect(answer.errors).toBeUndefined();
+      const connection = answer.data?.coreArticles;
+      if (!connection) throw new Error('coreArticles answered no data');
+      expect(connection.pageInfo.hasNextPage).toBe(before !== undefined);
+      pages.unshift(connection.edges.map(({ node }) => node.code));
+      if (!connection.pageInfo.hasPreviousPage) return pages;
+      before = connection.pageInfo.startCursor ?? undefined;
+    }
+  }
+
   /** The order of the catalog's codes under each orderBy, written out by hand. */
   const orders: { orderBy: NonNullable<ListArgs['orderBy']>; codes: string[] }[] = [
     {
@@ -194,5 +210,43 @@ describe('coreArticles', () => {
         inPagesOfThree(codes),
       );
     }
+  });
+
+  it('E06-S02 paging backward with last and before walks every article once in the order of each orderBy', async () => {
+    const client = await catalogPlant();
+
+    for (const { orderBy, codes } of orders) {
+      // The last page is full, so the first page holds the remainder.
+      expect(await walkBackward(client, { last: 3, orderBy }), JSON.stringify(orderBy)).toEqual([
+        codes.slice(0, 1),
+        codes.slice(1, 4),
+        codes.slice(4),
+      ]);
+    }
+  });
+
+  it('E06-S02 a cursor from a forward page pages backward from that article, and back again', async () => {
+    const client = await catalogPlant();
+    const firstPage = await list(client, { first: 4 });
+    const fourth = firstPage.data?.coreArticles.edges[3]?.cursor;
+
+    const before = await list(client, { last: 2, before: fourth });
+    const after = await list(client, {
+      first: 2,
+      after: before.data?.coreArticles.pageInfo.endCursor ?? undefined,
+    });
+
+    expect(before.data?.coreArticles.edges.map(({ node }) => node.code)).toEqual([
+      'BR-140',
+      'CW-220',
+    ]);
+    expect(before.data?.coreArticles.pageInfo).toMatchObject({
+      hasPreviousPage: true,
+      hasNextPage: true,
+    });
+    expect(after.data?.coreArticles.edges.map(({ node }) => node.code)).toEqual([
+      'HG-110',
+      'HG-120',
+    ]);
   });
 });
