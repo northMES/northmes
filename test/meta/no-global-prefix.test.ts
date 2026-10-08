@@ -59,4 +59,29 @@ describe('no global prefix', () => {
       rmSync(base, { recursive: true, force: true });
     }
   });
+
+  it('E02-S03 a fixture call split across lines fails the check at the line of the call', () => {
+    const base = mkdtempSync(join(tmpdir(), 'northmes-global-prefix-'));
+    try {
+      writeFixture(
+        base,
+        'apps/server/src/main.ts',
+        [
+          'const app = await NestFactory.create(AppModule);',
+          'app.setGlobalPrefix',
+          "  ('api');",
+          'app?.enableVersioning?.',
+          '  ({ type: VersioningType.URI });',
+          '',
+        ].join('\n'),
+      );
+
+      expect(globalPrefixCalls(base)).toEqual([
+        'apps/server/src/main.ts:2',
+        'apps/server/src/main.ts:4',
+      ]);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
 });
