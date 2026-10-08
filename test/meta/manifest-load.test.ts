@@ -51,6 +51,13 @@ const allowedImports = [
   /^import \w+ from '\.\/package\.json' with \{ type: 'json' \};$/,
 ];
 
+// The import lines of a manifest source that allowedImports does not permit.
+function disallowedImports(source: string): string[] {
+  return importLines(source).filter(
+    (line) => !allowedImports.some((allowed) => allowed.test(line)),
+  );
+}
+
 interface LoadResult {
   resolved: string[];
   manifests: { url: string; id: string }[];
@@ -86,10 +93,20 @@ describe('module manifests', () => {
 
     expect(paths).toContain('modules/core/northmes.module.ts');
     for (const path of paths) {
-      const lines = importLines(readFileSync(`${root}${path}`, 'utf8'));
-      const others = lines.filter((line) => !allowedImports.some((allowed) => allowed.test(line)));
-
-      expect(others, path).toEqual([]);
+      expect(disallowedImports(readFileSync(`${root}${path}`, 'utf8')), path).toEqual([]);
     }
+  });
+
+  it('E02-S01 the import-line check reports an import that has no semicolon', () => {
+    const body =
+      "export default defineModule({ id: 'core', version: readFileSync('x', 'utf8'), northmes: '*' })\n";
+    const oneWithout = `import { defineModule } from '@northmes/sdk';\nimport { readFileSync } from 'node:fs'\n${body}`;
+    const noneWith = `import { defineModule } from '@northmes/sdk'\nimport { readFileSync } from 'node:fs'\n${body}`;
+
+    expect(disallowedImports(oneWithout)).toEqual(["import { readFileSync } from 'node:fs'"]);
+    expect(disallowedImports(noneWith)).toEqual([
+      "import { defineModule } from '@northmes/sdk'",
+      "import { readFileSync } from 'node:fs'",
+    ]);
   });
 });
