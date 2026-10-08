@@ -10,6 +10,16 @@ export type DomainErrorKind =
   | 'precondition'
   | 'unavailable';
 
+/**
+ * A problem with one field of a command's input, in the shape of a Zod issue: the path from the
+ * input to the field, the message and the code, such as too_big or core.code_taken (ADR 0012).
+ */
+export interface FieldError {
+  readonly path: readonly (string | number)[];
+  readonly message: string;
+  readonly code: string;
+}
+
 export interface DomainErrorOptions {
   /** Stable and module-scoped, such as core.command_rejected. Never renamed after a release. */
   readonly code: string;
