@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { run, start } from './processes.mjs';
 
@@ -56,4 +58,39 @@ describe('run', () => {
       run({ name: 'exit', command: 'node', args: ['-e', 'process.exit(3)'], env: {} }),
     ).rejects.toThrow('node -e process.exit(3) exited with 3');
   });
+});
+
+describe('onStopSignal', () => {
+  // Ctrl+C sends SIGINT, a process manager SIGTERM, and a terminal that closes sends SIGHUP. The
+  // started processes run in process groups of their own, so none of these signals reaches them.
+  it.each(['SIGINT', 'SIGTERM', 'SIGHUP'] as const)(
+    'E02-S08 %s to pnpm dev or pnpm demo stops the processes it started',
+    async (signal) => {
+      const script = `
+        import { onStopSignal, start } from ${JSON.stringify(new URL('./processes.mjs', import.meta.url).href)};
+        const sleeper = start({ name: 'sleep', command: 'sh', args: ['-c', 'echo $$; exec sleep 30'], env: {} });
+        onStopSignal(async () => {
+          await sleeper.stop();
+          process.exit(0);
+        });
+      `;
+      const parent = spawn(process.execPath, ['--input-type=module', '-e', script], {
+        stdio: ['ignore', 'pipe', 'inherit'],
+      });
+      const exited = new Promise((resolve) => parent.once('exit', resolve));
+      const sleeper = await new Promise<number>((resolve, reject) => {
+        createInterface({ input: parent.stdout }).on('line', (line) => {
+          const pid = /^\[sleep\] (\d+)$/.exec(line)?.[1];
+          if (pid) resolve(Number(pid));
+        });
+        parent.once('exit', (code) => reject(new Error(`The parent exited with ${code}`)));
+      });
+      cleanUp(sleeper);
+
+      parent.kill(signal);
+      await exited;
+
+      expect(running(sleeper)).toBe(false);
+    },
+  );
 });
