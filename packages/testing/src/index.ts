@@ -14,6 +14,7 @@ export {
   type PgConnection,
   type RolePasswords,
   type TestDatabase,
+  type TestDatabaseOptions,
   useTestDatabase,
 } from './database.ts';
 export type {

@@ -64,14 +64,23 @@ function connectionStringFor(pg: PgConnection, databaseName: string): string {
   return `postgres://${credentials}@${pg.host}:${pg.port}/${encodeURIComponent(databaseName)}`;
 }
 
+export interface TestDatabaseOptions {
+  /**
+   * The template to clone. It defaults to the template that the server's global setup migrated. A
+   * test of migrate itself clones emptyTemplateDatabase, so the database holds only what that test
+   * applies.
+   */
+  readonly template?: string;
+}
+
 /**
  * Gives the calling test file a database of its own on the container that the global setup
  * started. The database exists from `beforeAll` to `afterAll`.
  */
-export function useTestDatabase(): TestDatabase {
+export function useTestDatabase(options: TestDatabaseOptions = {}): TestDatabase {
   const pg: PgConnection | undefined = inject('pg');
   const passwords: RolePasswords | undefined = inject('pgRolePasswords');
-  const template: string | undefined = inject('pgTemplate');
+  const template: string | undefined = options.template ?? inject('pgTemplate');
   if (!pg || !passwords || !template) {
     throw new Error(
       'useTestDatabase() needs the global setups of @northmes/testing and apps/server, which only the integration project runs. Name the file *.int.test.ts.',
