@@ -3,20 +3,25 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build, defaultClientConditions, mergeConfig } from 'vite';
+import { build, defaultClientConditions, mergeConfig, type Plugin } from 'vite';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { defineRemoteConfig } from '../remote.mjs';
 
 interface FixtureOptions {
   /** The version the module manifest declares, which defineRemoteConfig receives. */
   readonly version?: string;
+  /** Plugins that run before the plugins of defineRemoteConfig. */
+  readonly pluginsBefore?: Plugin[];
 }
 
 /**
  * Builds the fixture remote in test/fixtures/<name> through defineRemoteConfig, with the fixture
  * name as the module id, into a fresh folder, and returns that folder.
  */
-async function buildFixture(name: string, { version = '0.0.1' }: FixtureOptions = {}) {
+async function buildFixture(
+  name: string,
+  { version = '0.0.1', pluginsBefore = [] }: FixtureOptions = {},
+) {
   const outDir = mkdtempSync(join(tmpdir(), `northmes-${name}-`));
   onTestFinished(() => rmSync(outDir, { recursive: true, force: true }));
   // @module-federation/vite returns no plugins when it finds VITEST in the environment, unless
@@ -27,16 +32,36 @@ async function buildFixture(name: string, { version = '0.0.1' }: FixtureOptions 
   });
   const config = defineRemoteConfig({ id: name, version });
   await build(
-    mergeConfig(config({ command: 'build', mode: 'production' }), {
-      root: fileURLToPath(new URL(`./fixtures/${name}/`, import.meta.url)),
-      configFile: false,
-      logLevel: 'silent',
-      build: { outDir, emptyOutDir: true },
-      // Workspace packages resolve to their source, as in every test (ADR 0058).
-      resolve: { conditions: ['@northmes/source', ...defaultClientConditions] },
-    }),
+    mergeConfig(
+      mergeConfig({ plugins: pluginsBefore }, config({ command: 'build', mode: 'production' })),
+      {
+        root: fileURLToPath(new URL(`./fixtures/${name}/`, import.meta.url)),
+        configFile: false,
+        logLevel: 'silent',
+        build: { outDir, emptyOutDir: true },
+        // Workspace packages resolve to their source, as in every test (ADR 0058).
+        resolve: { conditions: ['@northmes/source', ...defaultClientConditions] },
+      },
+    ),
   );
   return outDir;
+}
+
+/**
+ * A plugin that holds back the load of every module whose path ends in `file` for `ms`
+ * milliseconds, as a busy machine can, before the plugins after it see the load.
+ */
+function loadLate(file: string, ms: number): Plugin {
+  return {
+    name: 'test:load-late',
+    enforce: 'pre',
+    async load(id) {
+      if (id.endsWith(file)) {
+        await new Promise((resolve) => setTimeout(resolve, ms));
+      }
+      return null;
+    },
+  };
 }
 
 // One entry of the shared list in mf-manifest.json.
@@ -144,5 +169,20 @@ describe('remote build guards', () => {
     await expect(buildFixture('remote-version-expression')).rejects.toThrow(
       /string literal .*defineWebModule in \.\/src\/module\.tsx/,
     );
+  });
+});
+
+describe('remote build', () => {
+  // @module-federation/vite writes a remote's wrapper of a singleton once every module of the
+  // remote has been parsed, with only the names those modules import from it. A module that loads
+  // more than 10 ms after the module importing it was parsed must still count.
+  it('a remote builds when a module that imports a name from a singleton loads late', async () => {
+    const outDir = await buildFixture('remote-late-import', {
+      pluginsBefore: [loadLate('/remote-late-import/src/missing-order.ts', 300)],
+    });
+
+    expect(manifestOf(outDir).exposes.map((expose: { path: string }) => expose.path)).toEqual([
+      './module',
+    ]);
   });
 });
