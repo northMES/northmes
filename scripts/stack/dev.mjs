@@ -114,6 +114,15 @@ export async function devPlan({ server, shell, remotes }) {
 }
 
 /**
+ * Whether a line of tsc -b --watch ends a build without errors. pnpm dev restarts the server after
+ * such a build, and keeps the server that runs after a build with errors.
+ * @param {string} line
+ */
+export function completedBuild(line) {
+  return / - Found 0 errors\. Watching for file changes\.$/.test(line);
+}
+
+/**
  * The Vite dev server of the package in dir on port.
  * @param {string} name
  * @param {string} dir
