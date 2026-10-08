@@ -18,6 +18,7 @@ function BoardScreen() {
 const planning: ShellModule = {
   label: 'Planning',
   order: 20,
+  links: [{ label: 'Planning board', link: ({ plant }) => ({ href: `/${plant}/planning/board` }) }],
   module: defineWebModule({
     id: 'planning',
     version: '0.4.0',
@@ -48,6 +49,10 @@ function PingScreen() {
 const quality: ShellModule = {
   label: 'Quality',
   order: 10,
+  links: [
+    { label: 'Inspections', link: ({ plant }) => ({ href: `/${plant}/quality` }) },
+    { label: 'Deviations', link: ({ plant }) => ({ href: `/${plant}/quality/deviations` }) },
+  ],
   module: defineWebModule({
     id: 'quality',
     version: '0.4.0',
@@ -79,6 +84,19 @@ function renderShellAt(
   render(<RouterProvider router={router} />);
 }
 
+/** The visible label of a menu group, which names its list of links. */
+function groupLabel(list: HTMLElement): string | null | undefined {
+  const id = list.getAttribute('aria-labelledby');
+  return id === null ? undefined : document.getElementById(id)?.textContent;
+}
+
+/** The text and href of each link in a menu group. */
+function linksIn(list: HTMLElement): (string | null)[][] {
+  return within(list)
+    .queryAllByRole('link')
+    .map((link) => [link.textContent, link.getAttribute('href')]);
+}
+
 describe('the shell', () => {
   it("E02-S05 the shell mounts each module's routes under $plant", async () => {
     renderShellAt('/plant-a/planning/board', [planning]);
@@ -86,15 +104,22 @@ describe('the shell', () => {
     expect(await screen.findByRole('heading', { name: 'Board of plant-a' })).toBeDefined();
   });
 
-  it('E02-S05 the menu lists the modules by their order', async () => {
+  it('E06-S06 the menu has a group per module by their order, each with its links to the plant in the URL', async () => {
     renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
 
     const menu = await screen.findByRole('navigation', { name: 'Modules' });
-    expect(
-      within(menu)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toEqual(['Quality', 'Planning', 'Maintenance']);
+    const groups = within(menu)
+      .getAllByRole('list')
+      .filter((list) => list.hasAttribute('aria-labelledby'));
+    expect(groups.map(groupLabel)).toEqual(['Quality', 'Planning', 'Maintenance']);
+    expect(groups.map(linksIn)).toEqual([
+      [
+        ['Inspections', '/plant-a/quality'],
+        ['Deviations', '/plant-a/quality/deviations'],
+      ],
+      [['Planning board', '/plant-a/planning/board']],
+      [],
+    ]);
   });
 
   it("E02-S05 a module's screen queries the API at apiUrl with the client for the plant in the URL", async () => {
