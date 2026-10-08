@@ -145,6 +145,30 @@ describe('the shell', () => {
     );
   });
 
+  it('E02-S05 a server path such as /api/v1/unknown answers 404 instead of the shell', async () => {
+    const url = await serve(['core', 'planning']);
+    const index = readFileSync(join(webFiles, 'shell', 'index.html'), 'utf8');
+    // Paths under first segments of the server's own routes (ADR 0064) that no route takes. The
+    // static mount and the gateway take /assets/ and /graphql before the shell's route.
+    const paths = ['/api/v1/unknown', '/health', '/mcp/unknown'];
+
+    const answers = await Promise.all(
+      paths.map(async (path) => {
+        const response = await fetch(`${url}${path}`);
+        return {
+          path,
+          status: response.status,
+          csp: response.headers.get('content-security-policy'),
+          isTheShell: (await response.text()) === index,
+        };
+      }),
+    );
+
+    expect(answers).toEqual(
+      paths.map((path) => ({ path, status: 404, csp: null, isTheShell: false })),
+    );
+  });
+
   it('E02-S05 hashed shell assets are immutable', async () => {
     const url = await serve(['core', 'planning']);
 
