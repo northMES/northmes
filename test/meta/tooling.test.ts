@@ -32,6 +32,9 @@ interface TsConfig {
     strict?: boolean;
     moduleResolution?: string;
     customConditions?: string[];
+    experimentalDecorators?: boolean;
+    emitDecoratorMetadata?: boolean;
+    useDefineForClassFields?: boolean;
   };
 }
 
@@ -157,6 +160,17 @@ describe('tooling', () => {
     expect(options?.customConditions).toEqual(['@northmes/source']);
     // TypeScript ignores customConditions unless the resolution mode is node16, nodenext or bundler.
     expect(options?.moduleResolution).toBe('nodenext');
+  });
+
+  it('E02-S01 tsconfig.base.json compiles Nest decorators with their metadata', () => {
+    const options = readJson<TsConfig>('tsconfig.base.json').compilerOptions;
+
+    // Nest reads constructor parameter types from design:paramtypes, which TypeScript emits only
+    // for legacy decorators with emitDecoratorMetadata. useDefineForClassFields false keeps the
+    // class field semantics those decorators assume.
+    expect(options?.experimentalDecorators).toBe(true);
+    expect(options?.emitDecoratorMetadata).toBe(true);
+    expect(options?.useDefineForClassFields).toBe(false);
   });
 
   it('vitest.config.ts resolves the @northmes/source condition for client and server code', () => {
