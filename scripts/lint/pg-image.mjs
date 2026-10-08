@@ -26,11 +26,12 @@ const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*
 const composeImagePattern =
   /^\s*image:\s*["']?(?<image>postgres:[A-Za-z0-9][^\s"']*)["']?(?:\s+#.*)?\s*$/;
 
-// PostgreSqlContainer('literal') with a quoted literal, or PostgreSqlContainer() with none. The
-// word boundary leaves a name such as MyPostgreSqlContainer alone. An identifier argument has no
-// quote, and a template literal with `${` stops the match at the `$`, so both are left alone.
+// PostgreSqlContainer('literal') with a quoted literal, or PostgreSqlContainer() with none, with
+// spaces or tabs allowed before the `(`. The word boundary leaves a name such as
+// MyPostgreSqlContainer alone. An identifier argument has no quote, and a template literal with
+// `${` stops the match at the `$`, so both are left alone.
 const containerCallPattern =
-  /\bPostgreSqlContainer\(\s*(?:(['"`])(?<literal>[^'"`$]+)\1|(?<noArgument>\)))/;
+  /\bPostgreSqlContainer[ \t]*\(\s*(?:(['"`])(?<literal>[^'"`$]+)\1|(?<noArgument>\)))/;
 
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
