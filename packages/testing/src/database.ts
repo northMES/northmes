@@ -80,6 +80,7 @@ export function useTestDatabase(): TestDatabase {
       'useTestDatabase() needs the global setup of @northmes/testing, which only the integration project runs. Name the file *.int.test.ts.',
     );
   }
+  // biome-ignore lint/style/noProcessEnv: Vitest sets VITEST_POOL_ID for each worker; it names no configuration.
   const databaseName = `t_${process.env.VITEST_POOL_ID ?? 0}_${randomBytes(6).toString('hex')}`;
 
   beforeAll(async () => {
