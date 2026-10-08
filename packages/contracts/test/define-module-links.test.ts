@@ -30,6 +30,14 @@ describe('defineModuleLinks', () => {
     }
   });
 
+  it('E02-S05 an entry named like a function property, such as name or call, throws', () => {
+    for (const name of ['name', 'call']) {
+      expect(() => defineModuleLinks('planning', { [name]: { path: 'x' } }), name).toThrow(
+        `Link entry ${name} under /$plant/planning has the name of a function property`,
+      );
+    }
+  });
+
   it('E02-S05 a builder returns its route pattern as to, with the params and search it was given', () => {
     expect(links.orders({ plant: 'plant-a' }, { q: '1001' })).toEqual({
       to: '/$plant/planning/orders',
