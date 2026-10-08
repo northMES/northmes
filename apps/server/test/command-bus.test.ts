@@ -3,11 +3,31 @@ import { defineCommandContract } from '@northmes/contracts';
 import { type Command, CommandValidator } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import type { Transaction } from 'kysely';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { CommandBusImpl } from '../src/commands/command-bus.ts';
+import { releaseJob } from './fixtures/commands/dispatch.ts';
+import {
+  BROKEN_CHECK_ERROR,
+  BrokenCheck,
+  SLOW_CHECK_ANSWERS_AFTER_MS,
+  SLOW_CHECK_LIMIT_MS,
+  SlowCheck,
+} from './fixtures/commands/failing-validators.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
+const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
+/** The fixture command dispatch.releaseJob, with `handle` as its handler. */
+function releaseJobWith(
+  handle: Command<{ id: string }, { id: string; status: string }>['handle'],
+): Command<{ id: string }, { id: string; status: string }> {
+  return {
+    contract: releaseJob,
+    buildPayload: async ({ id }) => ({ jobId: id, quantity: 1500 }),
+    handle,
+  };
+}
 
 /** A transaction of the fake, and how it ended once it has. */
 interface FakeTransaction {
@@ -53,6 +73,10 @@ const releaseProductionOrder = defineCommandContract({
 });
 
 describe('CommandBusImpl', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('E02-S04 a payload with quantity as an object is rejected with core.validator_contract_mismatch and the handler spy is not called', async () => {
     // The copy of planning's contract that a plugin bundled before quantity became measured.
     const bundledContract = defineCommandContract({
@@ -166,5 +190,86 @@ describe('CommandBusImpl', () => {
     });
     expect(handle).not.toHaveBeenCalled();
     expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it('E02-S04 a throwing validator returns Unexpected error. and the handler does not run', async () => {
+    const database = new FakeScopedDatabase();
+    const handle = vi.fn(async ({ id }: { id: string }) => ({ id, status: 'released' }));
+    const bus = new CommandBusImpl(database, {
+      modules: ['core', 'dispatch', 'broken-rules'],
+      validators: [{ module: 'broken-rules', validator: BrokenCheck.validator }],
+    });
+
+    const run = bus.run(releaseJobWith(handle), { id: JOB_ID });
+
+    // The validator's own error stays on the server, as the cause.
+    await expect(run).rejects.toMatchObject({
+      message: 'Unexpected error.',
+      cause: { message: BROKEN_CHECK_ERROR },
+    });
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it('E02-S04 a validator slower than its limit rejects the command and the handler does not run', async () => {
+    vi.useFakeTimers();
+    const database = new FakeScopedDatabase();
+    const handle = vi.fn(async ({ id }: { id: string }) => ({ id, status: 'released' }));
+    const bus = new CommandBusImpl(database, {
+      modules: ['core', 'dispatch', 'slow-rules'],
+      validators: [{ module: 'slow-rules', validator: SlowCheck.validator }],
+    });
+    let outcome: { result: unknown } | { error: unknown } | undefined;
+
+    void bus.run(releaseJobWith(handle), { id: JOB_ID }).then(
+      (result) => {
+        outcome = { result };
+      },
+      (error: unknown) => {
+        outcome = { error };
+      },
+    );
+    await vi.advanceTimersByTimeAsync(SLOW_CHECK_LIMIT_MS);
+
+    expect(outcome).toMatchObject({
+      error: {
+        message: 'Unexpected error.',
+        cause: {
+          message: `Validator slow-check of module slow-rules did not answer within ${SLOW_CHECK_LIMIT_MS} ms`,
+        },
+      },
+    });
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+    // The pass that SlowCheck answers after its limit changes nothing.
+    await vi.advanceTimersByTimeAsync(SLOW_CHECK_ANSWERS_AFTER_MS);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('E02-S04 a validator that changes its payload throws, because the payload is frozen', async () => {
+    const handle = vi.fn(async () => ({ released: true }));
+    const command: Command<{ id: string }, { released: boolean }> = {
+      contract: releaseProductionOrder,
+      buildPayload: async () => ({ quantity: { value: 1500, unit: 'pcs' } }),
+      handle,
+    };
+    const lowerQuantity = CommandValidator(releaseProductionOrder, {
+      name: 'lower-quantity',
+      check: async (payload) => {
+        payload.quantity.value = 1000;
+        return { verdict: 'pass' };
+      },
+    });
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), {
+      modules: ['core', 'planning', 'release-limits'],
+      validators: [{ module: 'release-limits', validator: lowerQuantity.validator }],
+    });
+
+    const run = bus.run(command, { id: ORDER_ID });
+
+    await expect(run).rejects.toMatchObject({
+      message: 'Unexpected error.',
+      cause: expect.any(TypeError),
+    });
+    expect(handle).not.toHaveBeenCalled();
   });
 });

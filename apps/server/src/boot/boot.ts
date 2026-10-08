@@ -24,9 +24,12 @@ import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
 import { checkPending, type MigrationCheckMode } from '../migrate/pending.ts';
 import { inRepoManifests } from '../modules.ts';
+import { pluginManifestUrl } from '../plugins/manifest-url.ts';
+import { installResolveHook } from '../plugins/resolve-hook.ts';
 import { builtShellDir, webDirOf } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
 import { BootError } from './boot-error.ts';
+import { defaultConfigFile, readConfigFile } from './config-file.ts';
 
 export interface BootOptions {
   /** The environment the server runs with. Without it, loadEnv reads process.env (ADR 0060). */
@@ -144,20 +147,22 @@ function packageJsonOf(specifier: string): string {
 }
 
 /**
- * Boot step 3: imports the manifest of every module. No Nest code of a module loads. A module's
- * migration files are in the migrations folder of its package, and its built remote in web/dist/.
+ * Boot step 3: imports the manifest of every module, or of every plugin when kind says so. No Nest
+ * code of a module loads. A module's migration files are in the migrations folder of its package,
+ * and its built remote in web/dist/.
  */
 async function importManifests(
   specifiers: readonly string[],
   importManifest: BootOptions['importManifest'],
   resolveManifest: ResolveManifest,
+  kind: CatalogEntry['kind'] = 'module',
 ): Promise<CatalogEntry[]> {
   const entries: CatalogEntry[] = [];
   for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
     const manifestUrl = resolveManifest(specifier);
     const migrationsDir = migrationsDirOf(manifestUrl);
-    entries.push({ manifest, kind: 'module', migrationsDir, webDir: webDirOf(manifestUrl) });
+    entries.push({ manifest, kind, migrationsDir, webDir: webDirOf(manifestUrl) });
   }
   return entries;
 }
@@ -186,12 +191,31 @@ export async function inRepoCatalog(
  */
 export async function importServers(catalog: readonly CatalogEntry[]): Promise<ServerEntry[]> {
   const servers: ServerEntry[] = [];
-  for (const { manifest } of catalog) {
+  for (const entry of catalog) {
+    const { manifest } = entry;
     if (!manifest.server) continue;
-    const { default: module } = await manifest.server();
-    servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module });
+    const { default: module } = await importServer(entry, manifest.server);
+    servers.push({ id: manifest.id, name: moduleNames(manifest.id).gql, module, manifest });
   }
   return servers;
+}
+
+/**
+ * Imports the server entry of one catalog entry. An entry that throws while it loads stops the
+ * boot with a BootError naming the module or plugin: boot never skips it, because a skipped server
+ * part would drop its validators and its subgraph (ADR 0002).
+ */
+async function importServer(
+  { manifest, kind }: CatalogEntry,
+  server: NonNullable<ModuleManifest['server']>,
+): ReturnType<typeof server> {
+  try {
+    return await server();
+  } catch (error) {
+    const name = kind === 'plugin' ? 'Plugin' : 'Module';
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new BootError([`${name} ${manifest.id} failed to load its server part: ${reason}`]);
+  }
 }
 
 /**
@@ -215,7 +239,8 @@ function migrationCheckUrl(
  * environment. pnpm northmes migrate runs the same steps before its first file.
  */
 async function bootSteps<
-  Env extends Readonly<Record<string, unknown>> & Pick<ServerEnv, 'NODE_ENV' | 'DATABASE_URL'>,
+  Env extends Readonly<Record<string, unknown>> &
+    Pick<ServerEnv, 'NODE_ENV' | 'DATABASE_URL' | 'NORTHMES_CONFIG'>,
 >(
   env: Env,
   {
@@ -228,7 +253,16 @@ async function bootSteps<
   mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const entries = await importManifests(manifests, importManifest, resolveManifest);
+  const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
+    imageVersion: imageVersion(),
+  });
+  installResolveHook(pluginRoots);
+  // A plugin's manifest is a file of its own, so its URL is a specifier and a file of its package.
+  const pluginManifests = pluginRoots.map(pluginManifestUrl);
+  const entries = [
+    ...(await importManifests(manifests, importManifest, resolveManifest)),
+    ...(await importManifests(pluginManifests, importManifest, (url) => url, 'plugin')),
+  ];
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const pending = await checkPending(migrationCheckUrl(env.DATABASE_URL, mode, secrets), catalog, {
     mode,
