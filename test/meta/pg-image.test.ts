@@ -35,6 +35,20 @@ describe('pg-image', () => {
     ]);
   });
 
+  it('scan reports a Compose image line with a trailing YAML comment', () => {
+    const findings = scan([
+      {
+        path: 'compose.yaml',
+        text: 'services:\n  a:\n    image: postgres:17 # pinned\n  b:\n    image: "postgres:16"  # old\n',
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path: 'compose.yaml', line: 3, reference: 'postgres:17' },
+      { path: 'compose.yaml', line: 5, reference: 'postgres:16' },
+    ]);
+  });
+
   it('scan ignores a reference with no name character after postgres:', () => {
     const findings = scan([
       {
