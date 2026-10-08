@@ -109,6 +109,9 @@ export async function bootForMigrate(options: BootOptions): Promise<Booted<Migra
   return bootSteps(loadEnv(migrateEnvSchema)(options.env), options);
 }
 
+/** Returns the file URL that a manifest specifier resolves to, or of another file in its package. */
+export type ResolveManifest = (specifier: string) => string;
+
 /**
  * Boot step 3: imports the manifest of every module. No Nest code of a module loads. A module's
  * migration files are in the migrations folder of its package.
@@ -116,14 +119,29 @@ export async function bootForMigrate(options: BootOptions): Promise<Booted<Migra
 async function importManifests(
   specifiers: readonly string[],
   importManifest: BootOptions['importManifest'],
+  resolveManifest: ResolveManifest,
 ): Promise<CatalogEntry[]> {
   const entries: CatalogEntry[] = [];
   for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
-    const migrationsDir = migrationsDirOf(import.meta.resolve(specifier));
+    const migrationsDir = migrationsDirOf(resolveManifest(specifier));
     entries.push({ manifest, kind: 'module', migrationsDir });
   }
   return entries;
+}
+
+/**
+ * Boot steps 3 and 4: the in-repo modules' manifests and migration folders, checked and in boot
+ * order. Boot resolves each manifest with import.meta.resolve. The integration tests' global setup
+ * runs in Vite's module runner, which has no import.meta.resolve, so it passes a resolver of its own.
+ */
+export async function inRepoCatalog(
+  importManifest: BootOptions['importManifest'],
+  resolveManifest: ResolveManifest = (specifier) => import.meta.resolve(specifier),
+): Promise<CatalogEntry[]> {
+  return checkCatalog(await importManifests(inRepoManifests, importManifest, resolveManifest), {
+    imageVersion: imageVersion(),
+  });
 }
 
 /**
@@ -155,7 +173,9 @@ async function bootSteps<
   }: Pick<BootOptions, 'manifests' | 'importManifest' | 'log'>,
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const entries = await importManifests(manifests, importManifest);
+  const entries = await importManifests(manifests, importManifest, (specifier) =>
+    import.meta.resolve(specifier),
+  );
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const subgraphs = await importServers(catalog);
   const app = await NestFactory.create(AppModule.forRoot(config, subgraphs), {

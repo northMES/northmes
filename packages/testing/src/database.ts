@@ -27,6 +27,8 @@ declare module 'vitest' {
     /** The image the container started from, as read from infra/pg-image.json. */
     pgImage: string;
     pgRolePasswords: RolePasswords;
+    /** The template that the server's global setup migrated, which useTestDatabase clones. */
+    pgTemplate: string;
   }
 }
 
@@ -93,7 +95,8 @@ export function query<Row = Record<string, unknown>>(
 export function useTestDatabase(): TestDatabase {
   const pg: PgConnection | undefined = inject('pg');
   const passwords: RolePasswords | undefined = inject('pgRolePasswords');
-  if (!pg || !passwords) {
+  const template: string | undefined = inject('pgTemplate');
+  if (!pg || !passwords || !template) {
     throw new Error(
       'useTestDatabase() needs the global setups of @northmes/testing and apps/server, which only the integration project runs. Name the file *.int.test.ts.',
     );
@@ -104,7 +107,7 @@ export function useTestDatabase(): TestDatabase {
   beforeAll(async () => {
     await withClient(pg, async (client) => {
       const name = client.escapeIdentifier(databaseName);
-      await client.query(`create database ${name} template ${templateDatabase}`);
+      await client.query(`create database ${name} template ${client.escapeIdentifier(template)}`);
       // A clone does not copy the database privileges of its template, so the CREATE that
       // bootstrap grants nm_owner on the template is granted again (ADR 0006).
       await client.query(`grant create on database ${name} to nm_owner`);

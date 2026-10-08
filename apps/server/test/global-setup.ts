@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash, randomBytes } from 'node:crypto';
+import { findPackageJSON } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { type PgConnection, templateDatabase } from '@northmes/testing';
 import { Client } from 'pg';
 import type { TestProject } from 'vitest/node';
+import { inRepoCatalog } from '../src/boot/boot.ts';
 import type { CatalogEntry } from '../src/catalog/check-catalog.ts';
 import { bootstrapRoles } from '../src/db/bootstrap.ts';
 import { readMigrationFiles } from '../src/migrate/files.ts';
@@ -87,8 +90,9 @@ export async function migrateTemplate({
 
 /**
  * The server's global setup in the integration project. It runs after the harness setup of
- * @northmes/testing has started Postgres and created the template. It bootstraps the database roles
- * as the container's superuser with passwords of this run, and gives the tests the passwords of
+ * @northmes/testing has started Postgres and created the empty template. It bootstraps the database
+ * roles as the container's superuser with passwords of this run, migrates the in-repo modules into
+ * the template that useTestDatabase clones, and gives the tests its name and the passwords of
  * nm_app and nm_owner, the roles that useTestDatabase hands out (ADR 0041).
  */
 export default async function setup(project: TestProject): Promise<void> {
@@ -99,5 +103,21 @@ export default async function setup(project: TestProject): Promise<void> {
     auth: randomBytes(32).toString('hex'),
   };
   await bootstrapRoles(templateUrl(pg), passwords);
+  const catalog = await inRepoCatalog(
+    (specifier) => import(specifier),
+    // The in-repo modules register no resolve hook, so Node's default resolver finds the package of
+    // each manifest, and the migrations folder sits next to its package.json.
+    (specifier) => {
+      const packageJson = findPackageJSON(specifier, import.meta.url);
+      if (!packageJson) throw new Error(`No package.json for ${specifier}`);
+      return pathToFileURL(packageJson).href;
+    },
+  );
+  const template = await migrateTemplate({
+    superuser: pg,
+    ownerPassword: passwords.owner,
+    catalog,
+  });
+  project.provide('pgTemplate', template.name);
   project.provide('pgRolePasswords', { owner: passwords.owner, app: passwords.app });
 }
