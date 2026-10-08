@@ -123,6 +123,32 @@ describe('BoardScreen', () => {
     expect(within(row).queryByRole('button')).toBeNull();
   });
 
+  it('E02-S05 a double click on Release sends one release, and the row shows released with no failure', async () => {
+    const user = userEvent.setup();
+    // One answer for one release: a second release would find no mock and fail.
+    renderBoard([
+      boardQuery(order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)),
+      releaseOf('order-7101', {
+        data: {
+          planningReleaseProductionOrder: {
+            __typename: 'ProductionOrder',
+            id: 'order-7101',
+            status: 'released',
+            version: 2,
+          },
+        },
+      }),
+    ]);
+
+    const row = await screen.findByTestId('order-7101');
+    await user.dblClick(within(row).getByRole('button', { name: 'Release order 7101' }));
+
+    await waitFor(() =>
+      expect(within(row).getByTestId('status-7101').textContent).toBe('released'),
+    );
+    expect(within(row).queryByRole('alert')).toBeNull();
+  });
+
   it('E02-S05 a rejected release shows the message and errorCode in the row', async () => {
     const user = userEvent.setup();
     renderBoard([
