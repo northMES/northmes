@@ -3,14 +3,21 @@ import type { INestApplication } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
 import type { ModuleManifest } from '@northmes/sdk';
 import { DomainErrorFilter } from '@northmes/sdk/errors';
+import { given, gqlClient, useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import { dispatch } from '../fixtures/commands/dispatch.ts';
+import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 import { alpha } from '../fixtures/subgraphs/alpha.ts';
 import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
 
+const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
 describe('the exception filter', () => {
-  const env = useServerEnv();
+  // The command bus opens a transaction for every command, so the server needs a database.
+  const db = useTestDatabase();
+  const env = useServerEnv({ database: db });
   let app: INestApplication | undefined;
 
   // ConfigModule writes the validated environment into process.env, as it does in the server. The
@@ -59,6 +66,37 @@ describe('the exception filter', () => {
     expect({ status: response.status, body: await response.json() }).toEqual({
       status: 404,
       body: { statusCode: 404, error: 'Not Found', message: 'Cannot GET /no-such-route' },
+    });
+  });
+
+  it('E02-S04 a veto reaches the client with code, errorCode core.command_rejected and details.rejectedBy', async () => {
+    const booted = await bootFixtures(dispatch, releaseLimits, auditRules);
+    const client = gqlClient(await booted.getUrl(), {
+      headers: { 'x-northmes-plant': given.plant() },
+    });
+
+    const answer = await client.send(
+      `mutation ($input: DispatchReleaseJobInput!) {
+        dispatchReleaseJob(input: $input) { id status }
+      }`,
+      { input: { id: JOB_ID } },
+    );
+
+    // Both modules veto. release-limits boots first, so its veto is the one the client gets.
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: 'Quantity 1500 is above the release limit of 1000',
+          path: ['dispatchReleaseJob'],
+          extensions: {
+            code: 'PRECONDITION',
+            errorCode: 'core.command_rejected',
+            details: { rejectedBy: 'release-limits' },
+          },
+        },
+      ],
     });
   });
 });
