@@ -89,7 +89,8 @@ function rootFieldPrefixProblems({ name, types }: ParsedSubgraph): CompositionPr
 
 /**
  * NORTHMES_TYPE_OWNERSHIP: a type that is not an entity is defined in one subgraph, the module
- * that owns it. An entity is defined in its owner and in every module that references it.
+ * that owns it. An entity is defined in its owner and in every module that references it, and
+ * entityOwners checks that it has one owner.
  */
 function typeOwnershipProblems(subgraphs: readonly ParsedSubgraph[]): CompositionProblem[] {
   const owners = new Map<string, string>();
@@ -146,9 +147,10 @@ function contributedFieldProblems(
 }
 
 /**
- * The subgraph that owns each entity: the one that defines it without referencing it.
- * NORTHMES_TYPE_OWNERSHIP for entities: a second subgraph that defines an entity without listing it
- * in entityRefs claims to own it as well, and is a problem.
+ * The subgraph that owns each entity: the first one that defines it without listing it in
+ * entityRefs. Every later subgraph that does the same claims the entity too, and breaks
+ * NORTHMES_TYPE_OWNERSHIP: a plain @key on another module's entity, or on a value type, is no way
+ * around the rule.
  */
 function entityOwners(subgraphs: readonly ParsedSubgraph[]): {
   readonly owners: ReadonlyMap<string, string>;
