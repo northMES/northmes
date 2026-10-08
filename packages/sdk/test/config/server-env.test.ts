@@ -123,4 +123,22 @@ describe('migrateEnvSchema and bootstrapEnvSchema', () => {
       Object.keys(bootstrapKeys).sort(),
     );
   });
+
+  it('E02-S01 a DATABASE_URL that is not a Postgres URL or carries a login fails without its value', () => {
+    for (const url of [
+      'mysql://db.internal:5432/northmes',
+      'postgres://nm_owner@db.internal:5432/northmes',
+      'postgres://nm_owner:s3cret-pw@db.internal:5432/northmes',
+      'postgresql://db.internal:5432/northmes?user=nm_owner&password=s3cret-pw',
+    ]) {
+      const error = configErrorOf(() =>
+        loadEnv(migrateEnvSchema)({ ...migrateKeys, DATABASE_URL: url }),
+      );
+
+      expect(error.problems, url).toHaveLength(1);
+      expect(error.problems[0], url).toMatch(/^DATABASE_URL: must be /);
+      expect(error.message, url).not.toContain('db.internal');
+      expect(error.message, url).not.toContain('s3cret-pw');
+    }
+  });
 });
