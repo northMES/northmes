@@ -42,6 +42,19 @@ describe('PageFrame', () => {
     expect(document.title).toBe('Article AX-500 · NorthMES');
   });
 
+  it('E06-S06 when the page frame goes away, the document title returns to NorthMES', () => {
+    const { unmount } = render(
+      <PageFrame title="Articles">
+        <p>Rows</p>
+      </PageFrame>,
+    );
+    expect(document.title).toBe('Articles · NorthMES');
+
+    unmount();
+
+    expect(document.title).toBe('NorthMES');
+  });
+
   it('E04-S07 a loading page frame keeps its h1 and toolbar and marks its content busy', () => {
     render(
       <PageFrame title="Articles" toolbar={toolbar} state={{ status: 'loading' }}>
