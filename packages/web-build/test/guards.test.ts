@@ -120,4 +120,11 @@ describe('remote build guards', () => {
   it('E02-S05 a remote under modules/*/web that emits CSS fails', async () => {
     await expect(buildFixture('remote-css')).rejects.toThrow(/this remote emits CSS/);
   });
+
+  it('E02-S05 a remote whose defineWebModule version differs from its manifest fails naming both versions', async () => {
+    const built = buildFixture('remote-version', { version: '0.4.0' });
+
+    await expect(built).rejects.toThrow(/defineWebModule .*version 0\.3\.0/);
+    await expect(built).rejects.toThrow(/manifest .*version 0\.4\.0/);
+  });
 });
