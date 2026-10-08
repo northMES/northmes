@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiPath } from '@northmes/contracts';
 import { type ModuleNames, moduleNames } from '@northmes/sdk';
+import { satisfies } from 'semver';
 import type { CatalogEntry } from './check-catalog.ts';
 
 /**
@@ -58,6 +59,19 @@ export function nameClashProblems(entries: readonly CatalogEntry[]): string[] {
       reported.add(pair);
       problems.push(
         `Modules ${owner} and ${manifest.id} derive the same name ${names[kind]}; give one of them another id`,
+      );
+    }
+  }
+  return problems;
+}
+
+/** A problem for every module whose NorthMES range does not hold the image's version (ADR 0038). */
+export function rangeProblems(entries: readonly CatalogEntry[], imageVersion: string): string[] {
+  const problems: string[] = [];
+  for (const { manifest } of entries) {
+    if (!satisfies(imageVersion, manifest.northmes)) {
+      problems.push(
+        `Module ${manifest.id} ${manifest.version} runs on NorthMES ${manifest.northmes}, and this image is ${imageVersion}`,
       );
     }
   }
