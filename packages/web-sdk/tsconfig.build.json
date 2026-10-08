@@ -5,7 +5,8 @@
     "rootDir": "src",
     "declaration": true,
     "types": [],
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "jsx": "react-jsx"
   },
   "include": ["src"]
 }

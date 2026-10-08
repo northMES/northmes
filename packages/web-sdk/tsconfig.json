@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": []
+    "types": [],
+    "jsx": "react-jsx"
   },
   "include": ["src", "test"]
 }
