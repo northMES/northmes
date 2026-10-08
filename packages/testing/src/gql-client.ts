@@ -111,14 +111,15 @@ async function* overGraphqlWs({
 
 /**
  * graphql-ws rejects with the socket's close or error event when the connection fails, which
- * reads badly in a test failure. This turns such an event into an Error that says what happened.
+ * reads badly in a test failure. This turns anything that is not an Error into one that names the
+ * URL and, for a close event, its code and reason.
  */
 function connectionError(url: URL, error: unknown): unknown {
   if (error instanceof Error) return error;
   const { code, reason } = error as { code?: number; reason?: string };
   const message = code
     ? `graphql-ws on ${url.href} closed with code ${code}${reason ? `: ${reason}` : ''}`
-    : `graphql-ws could not connect to ${url.href}`;
+    : `graphql-ws on ${url.href} failed`;
   return new Error(message, { cause: error });
 }
 
