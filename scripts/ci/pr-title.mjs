@@ -15,7 +15,7 @@ const types = [
   'build',
 ];
 
-const conventionalCommit = new RegExp(`^(?:${types.join('|')})(?:\\([^()\\s]+\\))?: \\S`);
+const conventionalCommit = new RegExp(`^(?:${types.join('|')})(?:\\([^()\\s]+\\))?!?: \\S`);
 
 export function checkTitle(title) {
   if (conventionalCommit.test(title)) {
@@ -23,6 +23,6 @@ export function checkTitle(title) {
   }
   return {
     ok: false,
-    message: `The pull request title ${JSON.stringify(title)} is not a Conventional Commit. Write it as type(scope): outcome or type: outcome, with one of the types ${types.join(', ')}.`,
+    message: `The pull request title ${JSON.stringify(title)} is not a Conventional Commit. Write it as type(scope): outcome or type: outcome, with ! before the colon for a breaking change and one of the types ${types.join(', ')}.`,
   };
 }
