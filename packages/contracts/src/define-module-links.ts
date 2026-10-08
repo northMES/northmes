@@ -41,26 +41,29 @@ export type LinkBuilder<Pattern extends string> = (
   search?: LinkSearch,
 ) => ModuleLink<Pattern>;
 
-/** What linkEntry reads from a link manifest entry. */
+/** What linkEntry reads from a link manifest or one of its entries. */
 export interface LinkEntry<Pattern extends string = string> {
-  /** The entry's path below its parent entry, as the manifest declares it. */
+  /**
+   * The entry's path below its parent entry, as the manifest declares it. A manifest's path is its
+   * module id, below /$plant.
+   */
   readonly path: string;
   /** The entry's route pattern, which starts with /$plant/<moduleId>. */
   readonly pattern: Pattern;
 }
 
-// The key of the entry a builder carries. Only this module holds it, so no entry name can take it,
-// and a builder's string keys stay the names of its child entries.
+// The key of the entry a manifest and each builder carry. Only this module holds it, so no entry
+// name can take it, and their string keys stay the names of their child entries.
 const entryKey: unique symbol = Symbol('link entry');
 
-/** A builder of a link manifest, which carries the entry that linkEntry reads. */
+/** A link manifest or one of its builders, which carries the entry that linkEntry reads. */
 export interface LinkNode<Pattern extends string> {
   readonly [entryKey]: LinkEntry<Pattern>;
 }
 
 /**
- * Reads the path and the route pattern of a link manifest entry from its builder, without calling
- * it. A route takes its path from here, so each path is written once (ADR 0062).
+ * Reads the path and the route pattern of a link manifest or of one of its entries, without calling
+ * the entry's builder. A route takes its path from here, so each path is written once (ADR 0062).
  */
 export function linkEntry<Pattern extends string>(node: LinkNode<Pattern>): LinkEntry<Pattern> {
   return node[entryKey];
@@ -94,8 +97,13 @@ export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefiniti
 export function defineModuleLinks<
   const ModuleId extends string,
   const Entries extends LinkEntryDefinitions,
->(moduleId: ModuleId, entries: Entries): ModuleLinks<`/$plant/${ModuleId}`, Entries> {
-  return builders(`/$plant/${moduleId}`, entries) as ModuleLinks<`/$plant/${ModuleId}`, Entries>;
+>(
+  moduleId: ModuleId,
+  entries: Entries,
+): ModuleLinks<`/$plant/${ModuleId}`, Entries> & LinkNode<`/$plant/${ModuleId}`> {
+  const pattern = `/$plant/${moduleId}` as const;
+  const links = builders(pattern, entries) as ModuleLinks<typeof pattern, Entries>;
+  return Object.assign(links, { [entryKey]: { path: moduleId, pattern } });
 }
 
 type Params = Readonly<Record<string, string>>;
