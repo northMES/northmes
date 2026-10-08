@@ -263,14 +263,31 @@ describe('the global setup', () => {
   });
 });
 
-describe('a test database that is dropped before the file ends', () => {
-  const { databaseName } = useTestDatabase();
+describe('a test database whose clone fails', () => {
+  afterEach(() => {
+    vi.doUnmock('vitest');
+    vi.resetModules();
+  });
 
-  // When the clone in beforeAll fails, the database never exists and afterAll runs the same drop.
-  // That drop must not fail with its own error and hide the cause.
-  it('afterAll does not fail when the database is already gone', async () => {
-    await withClient(inject('pg'), async (client) => {
-      await client.query(`drop database ${client.escapeIdentifier(databaseName)} with (force)`);
-    });
+  // When the clone in beforeAll fails, the database never exists and afterAll runs its drop. That
+  // drop must not fail with its own error and hide the cause.
+  it('afterAll does not fail when the database does not exist', async () => {
+    const hooks: { beforeAll?: () => Promise<void>; afterAll?: () => Promise<void> } = {};
+    vi.resetModules();
+    vi.doMock('vitest', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('vitest')>()),
+      beforeAll: (hook: () => Promise<void>) => {
+        hooks.beforeAll = hook;
+      },
+      afterAll: (hook: () => Promise<void>) => {
+        hooks.afterAll = hook;
+      },
+    }));
+    const { useTestDatabase: withHooks } = await import('../src/database.ts');
+
+    withHooks({ template: 'nm_no_such_template' });
+
+    await expect(hooks.beforeAll?.()).rejects.toThrow(/does not exist/);
+    await expect(hooks.afterAll?.()).resolves.toBeUndefined();
   });
 });
