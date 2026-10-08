@@ -93,6 +93,16 @@ describe('pg-image', () => {
     expect(findings).toEqual([{ path: 'a.int.test.ts', line: 1, reference: 'postgres:17' }]);
   });
 
+  it('scan reports PostgreSqlContainer () with a space before the parenthesis and no argument', () => {
+    const findings = scan([
+      { path: 'a.int.test.ts', text: 'await new PostgreSqlContainer ().start();\n' },
+    ]);
+
+    expect(findings).toEqual([
+      { path: 'a.int.test.ts', line: 1, reference: 'PostgreSqlContainer()' },
+    ]);
+  });
+
   it('scan ignores a call to a name that only ends in PostgreSqlContainer', () => {
     const findings = scan([
       {
