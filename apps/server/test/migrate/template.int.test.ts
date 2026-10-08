@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { useTestDatabase } from '@northmes/testing';
+import { query, useTestDatabase } from '@northmes/testing';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
@@ -126,5 +126,22 @@ describe('the table template', () => {
     );
 
     expect(updated).toEqual([{ version: 2 }]);
+  });
+
+  it('E02-S02 nm_app holds SELECT, INSERT, UPDATE and DELETE on a generated table and no other privilege', async () => {
+    const grants = await query(
+      db.appUrl,
+      `select privilege_type, is_grantable
+         from information_schema.role_table_grants
+        where grantee = 'nm_app' and table_schema = 'table_template' and table_name = 'work_note'
+        order by privilege_type`,
+    );
+
+    expect(grants).toEqual([
+      { privilege_type: 'DELETE', is_grantable: 'NO' },
+      { privilege_type: 'INSERT', is_grantable: 'NO' },
+      { privilege_type: 'SELECT', is_grantable: 'NO' },
+      { privilege_type: 'UPDATE', is_grantable: 'NO' },
+    ]);
   });
 });
