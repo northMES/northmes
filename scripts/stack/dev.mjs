@@ -1,5 +1,5 @@
-// pnpm dev (ADR 0058): the stack script's shared steps, then the server rebuilt by tsc -b --watch,
-// the shell's Vite dev server and one Vite dev server per remote, each on a port of its own.
+// pnpm dev (ADR 0058): the stack script's shared steps, then the server rebuilt by tsc -b --watch
+// and the web's Vite dev server, each on a port of its own.
 
 import { existsSync, globSync, readFileSync, realpathSync, watch } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -13,56 +13,19 @@ import { startStack } from './stack.mjs';
 /**
  * @typedef {object} DevPorts
  * @property {number} server The stack's PORT, which the server listens on.
- * @property {number} shell The port of the shell's dev server, which the browser opens.
- * @property {Readonly<Record<string, number>>} remotes The port of each remote's dev server, by
- *   module id.
+ * @property {number} web The port of the web's dev server, which the browser opens.
  */
-
-/** The ids of the modules with a web remote, each a modules/<id>/web package (ADR 0019). */
-export function webRemotes() {
-  return globSync('modules/*/web/package.json', { cwd: repositoryRoot })
-    .map((path) => path.split('/')[1] ?? '')
-    .sort();
-}
 
 /**
  * What pnpm dev starts on ports: tsc -b --watch over the server's projects, the built server, which
- * pnpm dev starts after each completed build, and the Vite dev servers of the shell and of each
- * remote; northmes migrate, which it runs when a file in one of the migrations folders changes; and
- * the URL of the seed plant's board on the shell's origin, which it prints.
+ * pnpm dev starts after each completed build, and the web's Vite dev server, which forwards the API
+ * paths to the server; northmes migrate, which it runs when a file in one of the migrations folders
+ * changes; and the URL of the seed plant's board on the web's origin, which it prints.
  * @param {DevPorts} ports
  */
-export async function devPlan({ server, shell, remotes }) {
+export async function devPlan({ server, web }) {
   const serverOrigin = loopbackOrigin(server);
-  const remoteOrigins = Object.entries(remotes).map(([id, port]) => [
-    `/modules/${id}/`,
-    loopbackOrigin(port),
-  ]);
-  // The shell's dev server forwards these paths in this order, so a remote's files come from its
-  // dev server and every other server path from the server.
-  const proxy = Object.fromEntries([
-    ...remoteOrigins,
-    ...['/api', '/graphql', '/health', '/modules'].map((path) => [path, serverOrigin]),
-  ]);
-  const webDirs = ['apps/web', ...Object.keys(remotes).map((id) => `modules/${id}/web`)];
   return {
-    // A remote resolves the workspace packages to their dist/, and @module-federation/vite reads
-    // the named exports of @northmes/web-sdk from its dist/, so turbo builds the packages that the
-    // shell and each remote depend on before their dev servers start.
-    /** @type {PlannedProcess} */
-    build: {
-      name: 'build',
-      command: 'pnpm',
-      args: [
-        'exec',
-        'turbo',
-        'run',
-        'build',
-        ...webDirs.map((dir) => `--filter=${packageName(dir)}^...`),
-        '--output-logs=errors-only',
-      ],
-      env: {},
-    },
     /** @type {PlannedProcess} */
     watch: {
       name: 'tsc',
@@ -85,14 +48,11 @@ export async function devPlan({ server, shell, remotes }) {
       env: {
         NORTHMES_ROLE: 'all',
         PORT: String(server),
-        NORTHMES_PUBLIC_ORIGIN: loopbackOrigin(shell),
+        NORTHMES_PUBLIC_ORIGIN: loopbackOrigin(web),
       },
     },
-    /** @type {PlannedProcess[]} */
-    web: [
-      viteDevServer('shell', 'apps/web', shell, { NORTHMES_DEV_PROXY: JSON.stringify(proxy) }),
-      ...Object.entries(remotes).map(([id, port]) => viteDevServer(id, `modules/${id}/web`, port)),
-    ],
+    /** @type {PlannedProcess} */
+    web: viteDevServer('web', 'apps/web', web, { NORTHMES_API_ORIGIN: serverOrigin }),
     // The built server runs migrate. pnpm northmes would build the server through turbo first,
     // over the files that tsc -b --watch writes.
     /** @type {PlannedProcess} */
@@ -104,7 +64,7 @@ export async function devPlan({ server, shell, remotes }) {
     },
     // Each in-repo module keeps its migrations in apps/backend/src/modules/<id>/migrations.
     migrations: globSync('apps/backend/src/modules/*/migrations', { cwd: repositoryRoot }).sort(),
-    boardUrl: await boardUrl(loopbackOrigin(shell)),
+    boardUrl: await boardUrl(loopbackOrigin(web)),
   };
 }
 
@@ -122,14 +82,13 @@ export function completedBuild(line) {
 
 /**
  * @typedef {object} DevSupervisor
- * @property {Promise<void>} failed Resolves once pnpm dev cannot go on: the build failed, or a dev
- *   server or tsc -b --watch exited on its own.
+ * @property {Promise<void>} failed Resolves once pnpm dev cannot go on: the web's dev server or
+ *   tsc -b --watch exited on its own.
  * @property {() => Promise<void>} stop Stops every process that pnpm dev started, then the stack.
  */
 
 /**
- * Runs the processes of plan on a started stack: builds what the dev servers import, starts the
- * dev servers and tsc -b --watch, restarts the server after each completed build, runs northmes
+ * Runs the processes of plan on a started stack: starts the web's dev server and tsc -b --watch, restarts the server after each completed build, runs northmes
  * migrate and then restarts the server when a migration file changes, and prints the board URL
  * once the server listens. A migrate that fails leaves the server running.
  * @param {{
@@ -197,7 +156,7 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
         },
       });
       server = started;
-      // A server that exits on its own, such as after a crash, leaves the shell without its API.
+      // A server that exits on its own, such as after a crash, leaves the web without its API.
       // The next completed build starts it again, so pnpm dev says so and runs on.
       started.exited.then(({ code, signal }) => {
         if (stopping || retired.has(started)) return;
@@ -224,10 +183,7 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
   let pending;
 
   const begin = async () => {
-    log('Building the workspace packages that the shell and the remotes import');
-    await run(plan.build);
-    if (stopping) return;
-    for (const planned of plan.web) startNeeded(planned);
+    startNeeded(plan.web);
     log('Building the server with tsc -b --watch; the server starts after each completed build');
     startNeeded(plan.watch, {
       onLine: (line) => {
@@ -282,15 +238,6 @@ function viteDevServer(name, dir, port, env = {}) {
   };
 }
 
-/**
- * The name in the package.json of the package in dir, relative to the repository root.
- * @param {string} dir
- * @returns {string}
- */
-function packageName(dir) {
-  return JSON.parse(readFileSync(join(repositoryRoot, dir, 'package.json'), 'utf8')).name;
-}
-
 /** @param {number} port */
 function loopbackOrigin(port) {
   return `http://127.0.0.1:${port}`;
@@ -333,8 +280,8 @@ function inServerPackages(path) {
 }
 
 /**
- * Runs pnpm dev until SIGINT, SIGTERM or SIGHUP: starts the stack, takes a port for the shell's
- * dev server and one for each remote's, and runs the processes of devPlan with superviseDev.
+ * Runs pnpm dev until SIGINT, SIGTERM or SIGHUP: starts the stack, takes a port for the web's
+ * dev server, and runs the processes of devPlan with superviseDev.
  * Stopping ends every process and the stack's container.
  */
 async function dev() {
@@ -355,16 +302,9 @@ async function dev() {
   onStopSignal(() => stop(0));
 
   try {
-    const remotes = webRemotes();
     const serverPort = Number(stack.env.PORT);
-    const [shell = 0, ...remotePorts] = await freePorts(1 + remotes.length, {
-      except: [serverPort],
-    });
-    const plan = await devPlan({
-      server: serverPort,
-      shell,
-      remotes: Object.fromEntries(remotes.map((id, index) => [id, remotePorts[index] ?? 0])),
-    });
+    const [web = 0] = await freePorts(1, { except: [serverPort] });
+    const plan = await devPlan({ server: serverPort, web });
     if (stopping) return;
     supervisor = superviseDev({
       plan,
