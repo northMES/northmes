@@ -13,6 +13,7 @@ export const articleList = defineList({
     NAME: { column: 'name', type: 'text' },
   },
   defaultOrderBy: [{ field: 'CODE' }],
+  search: ['code', 'name'],
 });
 
 /** The arguments of coreArticles. */
