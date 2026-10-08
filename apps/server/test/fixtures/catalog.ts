@@ -5,10 +5,10 @@ import type { CatalogEntry } from '../../src/catalog/check-catalog.ts';
 /** The NorthMES version the catalog tests run as. */
 export const imageVersion = '0.0.0';
 
-/**
- * The manifest fields a test sets. Without northmes, the range holds imageVersion.
- */
-export type ManifestOptions = Partial<Pick<ModuleManifest, 'northmes' | 'permissions' | 'commands' | 'events'>>;
+/** The manifest fields a test sets. Without northmes, the range holds imageVersion. */
+export type ManifestOptions = Partial<
+  Pick<ModuleManifest, 'northmes' | 'permissions' | 'commands' | 'events'>
+>;
 
 function manifest(id: string, dependsOn: readonly string[], options: ManifestOptions) {
   return defineModule({

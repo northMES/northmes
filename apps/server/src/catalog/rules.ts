@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiPath } from '@northmes/contracts';
-import { type ModuleNames, moduleNames } from '@northmes/sdk';
+import { type ModuleManifest, type ModuleNames, moduleNames } from '@northmes/sdk';
 import { satisfies } from 'semver';
 import type { CatalogEntry } from './check-catalog.ts';
 
@@ -82,34 +82,32 @@ export function rangeProblems(entries: readonly CatalogEntry[], imageVersion: st
 }
 
 /**
- * A problem for every permission or command key that does not start with its module's GraphQL
- * name, and every event key that does not start with its SQL name (ADR 0003).
+ * The derived name each kind of manifest key starts with (ADR 0003): permissions and commands the
+ * GraphQL name, events the SQL name.
  */
+const KEY_PREFIXES = [
+  { kind: 'permission', field: 'permissions', name: 'gql' },
+  { kind: 'command', field: 'commands', name: 'gql' },
+  { kind: 'event', field: 'events', name: 'sql' },
+] as const satisfies readonly {
+  kind: string;
+  field: keyof ModuleManifest;
+  name: keyof ModuleNames;
+}[];
+
+/** A problem for every permission, command or event key without its module's prefix, naming the key. */
 export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
   const problems: string[] = [];
   for (const { manifest } of entries) {
     const names = moduleNames(manifest.id);
-    const prefix = `${names.gql}.`;
-    for (const key of Object.keys(manifest.permissions ?? {})) {
-      if (!key.startsWith(prefix)) {
-        problems.push(
-          `Module ${manifest.id} declares permission "${key}", which must start with "${prefix}"`,
-        );
-      }
-    }
-    for (const key of Object.keys(manifest.commands ?? {})) {
-      if (!key.startsWith(prefix)) {
-        problems.push(
-          `Module ${manifest.id} declares command "${key}", which must start with "${prefix}"`,
-        );
-      }
-    }
-    const eventPrefix = `${names.sql}.`;
-    for (const key of Object.keys(manifest.events ?? {})) {
-      if (!key.startsWith(eventPrefix)) {
-        problems.push(
-          `Module ${manifest.id} declares event "${key}", which must start with "${eventPrefix}"`,
-        );
+    for (const { kind, field, name } of KEY_PREFIXES) {
+      const prefix = `${names[name]}.`;
+      for (const key of Object.keys(manifest[field] ?? {})) {
+        if (!key.startsWith(prefix)) {
+          problems.push(
+            `Module ${manifest.id} declares ${kind} "${key}", which must start with "${prefix}"`,
+          );
+        }
       }
     }
   }
