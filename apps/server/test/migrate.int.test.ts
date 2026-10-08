@@ -365,6 +365,29 @@ describe('migrate confines a plugin to its own schema', () => {
     ).toEqual([{ tablename: 'article' }]);
     expect(await recordsOf('core-schema')).toEqual([]);
   });
+
+  it('E02-S02 a plugin CREATE TABLE AS SELECT from planning.production_order is refused', async () => {
+    const run = migrate({
+      ownerUrl: db.ownerUrl,
+      catalog: catalogWithPlugin('reads-planning', ['planning']),
+    });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'reads-planning/20260113080000_production_order_copy.sql failed as nm_mod_reads_planning and was rolled back: permission denied for table production_order',
+      ],
+    });
+    // The plugin's own schema, which migrate creates before the plugin's files, holds no copy.
+    expect(
+      await query(
+        db.ownerUrl,
+        "select tablename from pg_tables where schemaname = 'reads_planning'",
+      ),
+    ).toEqual([]);
+    expect(await recordsOf('reads-planning')).toEqual([]);
+  });
 });
 
 describe('pnpm northmes migrate', () => {
