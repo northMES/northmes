@@ -46,6 +46,14 @@ function isTestFile(path) {
   return /\.test(-d)?\.[^.]+$/.test(basename(path));
 }
 
+/**
+ * Paths are repository-relative with forward slashes, as `git ls-files` prints them.
+ * @param {string} path
+ */
+function isSkipped(path) {
+  return path.startsWith('docs/');
+}
+
 /** @param {string} reference */
 function isPostgres(reference) {
   return reference.split(/[:@]/)[0] === 'postgres';
@@ -81,6 +89,9 @@ export function scan(files) {
   const findings = [];
 
   for (const { path, text } of files) {
+    if (isSkipped(path)) {
+      continue;
+    }
     text.split('\n').forEach((content, index) => {
       const reference = referenceOn(path, content);
       if (reference && reference !== configuredImage) {
