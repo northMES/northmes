@@ -15,12 +15,20 @@ function timestamp(now) {
   return now.toISOString().slice(0, 'yyyy-mm-ddTHH:MM:ss'.length).replace(/\D/g, '');
 }
 
+// A lower-case SQL name that needs no quotes, which the slug is because it names the table.
+const slugPattern = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
+
 /**
  * Renders the table template for a new table in a module's schema, and the path of its migration
- * file from the repository root.
+ * file from the repository root. Throws when the slug is not a lower-case SQL name.
  * @param {{ module: string, slug: string, now: Date }} options
  */
 export function render({ module, slug, now }) {
+  if (!slugPattern.test(slug)) {
+    throw new Error(
+      `Invalid slug "${slug}": the slug names the table, so use lower-case letters, digits and single underscores, starting with a letter`,
+    );
+  }
   const schema = module.replaceAll('-', '_');
   const sql = tableTemplate.replaceAll('{{schema}}', schema).replaceAll('{{table}}', slug);
   return { path: `modules/${module}/migrations/${timestamp(now)}_${slug}.sql`, sql };
@@ -43,7 +51,14 @@ export async function main(argv, io) {
     io.error(`No module folder ${moduleFolder}`);
     return 1;
   }
-  const { path, sql } = render({ module, slug, now: io.now() });
+  let rendered;
+  try {
+    rendered = render({ module, slug, now: io.now() });
+  } catch (error) {
+    io.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+  const { path, sql } = rendered;
   const file = join(io.root, path);
   await mkdir(dirname(file), { recursive: true });
   // wx refuses to replace a file that exists.
