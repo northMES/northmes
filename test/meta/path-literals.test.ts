@@ -135,6 +135,22 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 a path literal in the href option of navigate or redirect fails, as in the to option', () => {
+    const text = [
+      "router.navigate({ href: '/x' });",
+      "throw redirect({ href: '/y', replace: true });",
+      'router.navigate({ href: planningLinks.orders({ plant }).href });',
+      '',
+    ].join('\n');
+
+    const findings = scan([{ path: 'apps/web/src/moved.ts', text }], []);
+
+    expect(findings).toEqual([
+      { path: 'apps/web/src/moved.ts', line: 1, literal: '/x' },
+      { path: 'apps/web/src/moved.ts', line: 2, literal: '/y' },
+    ]);
+  });
+
   it('E02-S05 a path in a template literal, a concatenation, a conditional or an as expression fails', () => {
     const text = [
       "test('order', async ({ page }) => {",
