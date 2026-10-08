@@ -3141,7 +3141,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order"; "a child order in another plant fails with core.crossScopeReference"; "linking an order under itself or under one of its descendants fails with planning.production_order.link_cycle"; "of two concurrent opposite links, one succeeds and the other fails with planning.production_order.link_cycle".
+- `modules/planning/test/release.int.test.ts`: "release copies the routing with source operation id and version"; "nm_app cannot delete a job order"; "a child order in another plant fails with core.crossScopeReference"; "linking an order under itself or under one of its descendants fails with planning.production_order.link_cycle"; "of two concurrent opposite links, one succeeds and the other fails with planning.production_order.link_cycle and changes no row".
 - `modules/planning/test/status-transitions.test.ts`: "a finished job order cannot return to planned".
 - `modules/planning/web/test/commands.test-d.ts`: `z.output<typeof releaseProductionOrder.input>` is assignable to `PlanningReleaseProductionOrderInput`.
 
