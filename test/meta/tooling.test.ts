@@ -9,6 +9,7 @@ import { parse } from 'yaml';
 import vitestConfig from '../../vitest.config.ts';
 
 interface TurboConfig {
+  globalDependencies?: string[];
   tasks?: Record<string, { cache?: boolean }>;
 }
 
@@ -118,6 +119,14 @@ describe('tooling', () => {
     for (const key of Object.keys(readJson<TurboConfig>('turbo.json'))) {
       expect(known, key).toContain(key);
     }
+  });
+
+  it('E02-S01 turbo.json hashes the root biome.json and tsconfig.base.json into every task', () => {
+    // Each package lints and typechecks with these root files, which lie outside every package, so
+    // without them a changed rule replays a cached lint or typecheck result.
+    expect(readJson<TurboConfig>('turbo.json').globalDependencies).toEqual(
+      expect.arrayContaining(['biome.json', 'tsconfig.base.json']),
+    );
   });
 
   it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {
