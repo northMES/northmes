@@ -1,0 +1,106 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { bootBuilt } from '@northmes/testing';
+import pg from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { seedScopes } from './seed.mjs';
+import { startStack } from './stack.mjs';
+
+/** Runs a pnpm northmes command on the built server, which the test run builds once. */
+function northmes(args: readonly string[], env: Readonly<Record<string, string>>) {
+  return bootBuilt({ args, env });
+}
+
+// The stack creates the database roles, which belong to the server, so it starts a container of
+// its own instead of using the run's server (ADR 0005).
+let stateDir: string;
+let stack: Awaited<ReturnType<typeof startStack>> | undefined;
+
+beforeAll(async () => {
+  stateDir = mkdtempSync(join(tmpdir(), 'northmes-stack-'));
+  stack = await startStack({ stateDir, northmes });
+}, 240_000);
+
+afterAll(async () => {
+  await stack?.stop();
+  rmSync(stateDir, { recursive: true, force: true });
+});
+
+/** The stack's environment, once beforeAll has started it. */
+function stackEnv(): Readonly<Record<string, string>> {
+  if (!stack) throw new Error('the stack did not start');
+  return stack.env;
+}
+
+/** A URL to the stack's database that logs in as role with the password in the file at key. */
+function loginAs(role: string, key: string): string {
+  const env = stackEnv();
+  const path = env[key];
+  if (!path) throw new Error(`the stack's environment has no ${key}`);
+  const url = new URL(env.DATABASE_URL ?? '');
+  url.username = role;
+  url.password = encodeURIComponent(readFileSync(path, 'utf8').replace(/\n$/, ''));
+  return url.href;
+}
+
+/** Runs sql as nm_app with the seed plant as its read scope, as a request at that plant does. */
+async function readAtSeedPlant(sql: string): Promise<Record<string, unknown>[]> {
+  const client = new pg.Client({
+    connectionString: loginAs('nm_app', 'NORTHMES_DB_APP_PASSWORD_FILE'),
+  });
+  await client.connect();
+  try {
+    await client.query('begin');
+    await client.query("select set_config('northmes.read_scopes', $1::uuid[]::text, true)", [
+      [seedScopes.plant],
+    ]);
+    const { rows } = await client.query(sql);
+    await client.query('commit');
+    return rows;
+  } finally {
+    await client.end();
+  }
+}
+
+describe('the stack script', () => {
+  it('E02-S08 the stack bootstraps the roles, migrates and seeds fictional production orders with their articles at the seed plant', async () => {
+    const orders = await readAtSeedPlant(
+      `select o.number, o.quantity::text, o.status, a.code, a.name
+         from planning.production_order o
+         join core.article a on a.id = o.article_id
+        order by o.number`,
+    );
+
+    expect(orders).toEqual([
+      {
+        number: 'DEV-1001',
+        quantity: '500.000000',
+        status: 'planned',
+        code: 'BR-140',
+        name: 'Wall bracket',
+      },
+      {
+        number: 'DEV-1002',
+        quantity: '80.000000',
+        status: 'planned',
+        code: 'PN-305',
+        name: 'Side panel',
+      },
+      {
+        number: 'DEV-1003',
+        quantity: '1200.000000',
+        status: 'planned',
+        code: 'CW-220',
+        name: 'Caster wheel',
+      },
+      {
+        number: 'DEV-1004',
+        quantity: '150.000000',
+        status: 'planned',
+        code: 'BR-140',
+        name: 'Wall bracket',
+      },
+    ]);
+  });
+});
