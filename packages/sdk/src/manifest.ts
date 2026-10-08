@@ -41,7 +41,11 @@ export interface ModuleManifest {
   readonly server?: () => Promise<{ default: Type }>;
 }
 
-/** Declares a module manifest and keeps its literal type. */
+/**
+ * Declares a module manifest and keeps its literal type.
+ *
+ * @internal Release 1 ships defineModule as an internal contract (ADR 0003).
+ */
 export function defineModule<M extends ModuleManifest>(manifest: M): M {
   return manifest;
 }
