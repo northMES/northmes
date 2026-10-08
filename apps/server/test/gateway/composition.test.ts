@@ -2,6 +2,7 @@
 import { buildSubgraphSchema, printSubgraphSchema } from '@apollo/subgraph';
 import { parse } from 'graphql';
 import { describe, expect, it } from 'vitest';
+import { composeSupergraph } from '../../src/gateway/compose.ts';
 import { checkRules, type SubgraphSdl } from '../../src/gateway/rules.ts';
 
 /** The federation link of every subgraph, as defineSubgraph declares it. */
@@ -123,5 +124,30 @@ describe('the NorthMES composition rules', () => {
     );
 
     expect(checkRules([alpha, zeta])).toEqual([]);
+  });
+});
+
+describe('composeSupergraph', () => {
+  it('E02-S03 rule errors and composition errors throw one SupergraphCompositionError with a [code] message line each', () => {
+    const gamma = subgraph('gamma', 'type Query { ping: String }');
+    // Composition refuses a field that two subgraphs resolve without @shareable.
+    const delta = subgraph('delta', 'type Size { width: Int } type Query { deltaSize: Size }');
+    const epsilon = subgraph(
+      'epsilon',
+      'type Size { width: Int } type Query { epsilonSize: Size }',
+    );
+
+    expect(() => composeSupergraph([gamma, delta, epsilon])).toThrow(
+      expect.objectContaining({
+        name: 'SupergraphCompositionError',
+        problems: [
+          '[NORTHMES_ROOT_FIELD_PREFIX] Query.ping of subgraph "gamma" must start with "gamma" and an upper-case letter',
+          '[NORTHMES_TYPE_OWNERSHIP] Size is defined in subgraphs "delta" and "epsilon"; one module owns a type that is not an entity',
+          expect.stringMatching(
+            /^\[INVALID_FIELD_SHARING\] .*"Size\.width".*"delta" and "epsilon"/,
+          ),
+        ],
+      }),
+    );
   });
 });
