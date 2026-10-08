@@ -56,16 +56,18 @@ describe('the exception filter', () => {
     ]);
   });
 
-  it("E02-S04 a request to a route that does not exist still gets Nest's 404", async () => {
+  // Every path outside the server segments is an SPA path that the shell answers (ADR 0064), so
+  // the missing route is under /api/.
+  it("E02-S04 a request to a server path that does not exist still gets Nest's 404", async () => {
     const booted = await bootFixtures(alpha);
 
-    const response = await fetch(new URL('/no-such-route', await booted.getUrl()), {
+    const response = await fetch(new URL('/api/v1/no-such-route', await booted.getUrl()), {
       signal: AbortSignal.timeout(2000),
     });
 
     expect({ status: response.status, body: await response.json() }).toEqual({
       status: 404,
-      body: { statusCode: 404, error: 'Not Found', message: 'Cannot GET /no-such-route' },
+      body: { statusCode: 404, message: 'Not Found' },
     });
   });
 
