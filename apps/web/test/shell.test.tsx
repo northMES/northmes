@@ -16,6 +16,7 @@ import { createShellRouter } from '../src/shell.tsx';
 
 afterEach(cleanup);
 
+/** A screen whose h1 cannot take focus, as the board stub's. */
 function BoardScreen() {
   const { plantId } = useShell();
   return <h1>Board of {plantId}</h1>;
@@ -186,6 +187,17 @@ describe('the shell', () => {
     await user.click(button);
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(document.activeElement).toBe(button);
+  });
+
+  it('E06-S06 a path change to a page whose h1 cannot take focus moves focus to main', async () => {
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/settings', [planning, settings]);
+    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+
+    await user.click(screen.getByRole('link', { name: 'Planning board' }));
+
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('main')));
   });
 
   it("E02-S05 a module's screen queries the API at apiUrl with the client for the plant in the URL", async () => {
