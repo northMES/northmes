@@ -8,4 +8,5 @@ export default defineModule({
   northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['core'],
   commands: { 'planning.releaseProductionOrder': { validatable: true } },
+  web: { label: 'Planning', order: 20 },
 });
