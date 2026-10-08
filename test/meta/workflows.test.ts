@@ -24,6 +24,7 @@ type Permissions = string | Record<string, string>;
 
 interface Workflow {
   path: string;
+  on?: unknown;
   permissions?: Permissions;
   jobs: Record<string, Job>;
 }
@@ -219,6 +220,19 @@ describe('workflows', () => {
       expect(job?.if, name).toBe("github.event_name == 'pull_request'");
       expect(job?.steps, name).toContainEqual(expect.objectContaining(step));
     }
+  });
+
+  // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
+  // fix to the title or body.
+  it('ci / gate needs ci / pr title and ci / linked issue, and an edited pull request re-runs them', () => {
+    const { workflow, id } = jobNamed('ci / gate');
+    const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
+    const on = workflow.on as { pull_request?: { types?: string[] } };
+
+    expect(needed).toEqual(expect.arrayContaining(pullRequestChecks));
+    expect(on.pull_request?.types).toEqual(
+      expect.arrayContaining(['opened', 'synchronize', 'reopened', 'edited']),
+    );
   });
 
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
