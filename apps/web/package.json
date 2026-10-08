@@ -17,6 +17,7 @@
     "@fontsource/ibm-plex-sans": "catalog:",
     "@hookform/resolvers": "catalog:",
     "@northmes/contracts": "workspace:*",
+    "@northmes/core-contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/web-sdk": "workspace:*",
     "@tailwindcss/vite": "catalog:",
