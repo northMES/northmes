@@ -34,7 +34,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 
 ### Steps
 
-1. Take the number from the "Next free number" line under the index, and raise that line by one in the same change. Once `pnpm adr:next` (`scripts/adr/next-number.mjs`, task E00-S05-T01 in [14-roadmap.md](../plan/14-roadmap.md)) exists, take the number from it instead. Nobody takes a number by scanning this folder: two parallel sessions would take the same number, which is how an earlier attempt at this product ended up with two ADRs numbered 016.
+1. Take the number from `pnpm adr:next` (`scripts/adr/next-number.mjs`), which prints the number after the highest row in the index. Raise the "Next free number" line under the index by one in the same change. Nobody takes a number by scanning this folder: two parallel sessions would take the same number, which is how an earlier attempt at this product ended up with two ADRs numbered 016.
 2. Copy [template.md](template.md) to `docs/adr/NNNN-kebab-title.md`. The title names the problem and the chosen solution, and the file name is that title in kebab case.
 3. Fill in the front matter as the table below describes. A new ADR has status `proposed`.
 4. Write the sections in the template's order: context and problem statement, decision drivers, considered options, decision outcome (with consequences and confirmation), pros and cons of the options, and more information.
