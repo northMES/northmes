@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-06
+date: 2026-10-08
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: internal research notes 08, 13, 19, 20, 22, 23, 32 and 33
 informed: contributors and coding agents
@@ -47,6 +47,8 @@ Every module and plugin has one kebab-case id matching `[a-z][a-z0-9]*(-[a-z0-9]
 | gql | `productionStart` | subgraph name, root field prefix (`productionStartReportQuantity`), permission and command prefix |
 | sql | `production_start` | Postgres schema, owner role `nm_mod_production_start`, event prefix (`production_start.report.created`) |
 | remote | `productionStart` | Module Federation remote name, which allows no hyphens |
+
+An id is at most 56 characters. Postgres truncates identifiers longer than 63 bytes (`NAMEDATALEN` 64), so two ids that share their first 56 characters would otherwise get the same owner role after truncation, and a collision check that compares the full derived names would not see it. The cap comes from the longest Postgres identifier derived from an id, the owner role `nm_mod_<sql>` ([ADR 0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [ADR 0008](0008-row-level-security-with-transaction-local-scopes.md)): 7 bytes of prefix plus the sql name, which has one byte per id character because the id pattern admits ASCII only. The schema `<sql>` is shorter, and [ADR 0007](0007-tenancy-company-plants-and-the-scope-tree.md) and [ADR 0010](0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) build no Postgres identifier from the id. `moduleNames` rejects a longer id with a message that names the id and the 63-byte limit.
 
 ### Three packages per module folder
 
@@ -135,7 +137,7 @@ The `web` data is static because the remote is a separate build that the browser
 
 ### Confirmation
 
-* `moduleNames` unit tests: `production-start` yields `productionStart`, `production_start`, `nm_mod_production_start` and remote `productionStart`; ids such as `Planning`, `-a`, `a-` and `a--b` are rejected.
+* `moduleNames` unit tests: `production-start` yields `productionStart`, `production_start`, `nm_mod_production_start` and remote `productionStart`; ids such as `Planning`, `-a`, `a-` and `a--b` are rejected; an id whose owner role is exactly 63 bytes (56 characters) is accepted, and one character more is rejected naming the id.
 * Catalog test: two modules whose derived names collide make boot exit 1 naming both ids; a validator for an undeclared command and a slot contribution outside the `dependsOn` closure each exit 1; the module ids `web`, `station` and `auth` are each refused as reserved, and the message names the id.
 * Manifest load test: importing every in-repo manifest in a fresh process loads no `@nestjs/*` package.
 * Isolation contract suite with five fixtures: a sub-module of another module, an untyped `@Resolver()`, a global host module, an API module importing its own resolver module, and a typed control. Each failing fixture makes boot exit 1 with the named import path; the control boots.

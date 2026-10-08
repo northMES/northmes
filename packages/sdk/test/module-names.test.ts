@@ -23,4 +23,21 @@ describe('moduleNames', () => {
       expect(() => moduleNames(id), id).toThrow(`Invalid module id "${id}"`);
     }
   });
+
+  it('E02-S01 an id whose owner role is exactly 63 bytes is accepted', () => {
+    // 56 characters, so the owner role nm_mod_<sql> is 63 bytes.
+    const id = 'production-start-with-a-very-long-name-for-the-ownerrole';
+
+    expect(id).toHaveLength(56);
+    expect(new TextEncoder().encode(moduleNames(id).ownerRole)).toHaveLength(63);
+  });
+
+  it('E02-S01 an id whose owner role would exceed 63 bytes is rejected, naming the id', () => {
+    // 57 characters, so the owner role nm_mod_<sql> is 64 bytes.
+    const id = 'production-start-with-a-very-long-name-for-the-owner-role';
+
+    expect(id).toHaveLength(57);
+    expect(() => moduleNames(id)).toThrow(`Invalid module id "${id}"`);
+    expect(() => moduleNames(id)).toThrow('63 bytes');
+  });
 });
