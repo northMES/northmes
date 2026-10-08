@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { readSecret, writeDevConfig } from './config.mjs';
+import { freePort } from './ports.mjs';
 import { seed } from './seed.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -93,7 +94,9 @@ export async function prepareDatabase(env, { northmes = pnpmNorthmes } = {}) {
  * Starts the stack: writes the dev configuration into stateDir (writeDevConfig), starts Postgres
  * from the image in infra/pg-image.json with the superuser password of the dev secrets, and
  * prepares its database (prepareDatabase). Resolves with the environment for the processes the
- * caller starts, which adds DATABASE_URL to dev.env, and stop, which stops the container.
+ * caller starts and stop, which stops the container. The environment adds to dev.env the
+ * DATABASE_URL of the container, which changes from run to run, and a PORT that freePort took with
+ * the public origin on it.
  * @param {{ stateDir?: string, northmes?: Northmes }} [options] stateDir defaults to .northmes/ at
  *   the repository root.
  */
@@ -112,9 +115,12 @@ export async function startStack({
     await container.stop();
   };
   try {
+    const port = await freePort();
     const env = {
       ...devEnv,
       DATABASE_URL: `postgres://${container.getHost()}:${container.getPort()}/${database}`,
+      PORT: String(port),
+      NORTHMES_PUBLIC_ORIGIN: `http://127.0.0.1:${port}`,
     };
     await prepareDatabase(env, { northmes });
     return { env, stop };
