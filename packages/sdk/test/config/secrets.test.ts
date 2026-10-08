@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ConfigModule } from '@nestjs/config';
@@ -77,6 +77,19 @@ describe('readSecrets', () => {
     ]);
     expect(error.message).not.toContain(dir);
     expect(error.message).not.toContain('auth-secret-0d3e');
+  });
+
+  it('E02-S01 a secret path that is a directory fails naming its key', () => {
+    // 0750 passes the rule for others, so only the kind of file is wrong.
+    const path = join(dir, 'auth_secret');
+    mkdirSync(path, { mode: 0o750 });
+
+    const error = configErrorOf(() =>
+      readSecrets({ NORTHMES_AUTH_SECRET_FILE: path }, { nodeEnv: 'production' }),
+    );
+
+    expect(error.problems).toEqual(['NORTHMES_AUTH_SECRET_FILE: must point at a regular file']);
+    expect(error.message).not.toContain(dir);
   });
 
   it('E02-S01 a dev-marked secret fails with NODE_ENV production', () => {
