@@ -6,7 +6,7 @@ import {
   type GqlModuleOptions,
   GraphQLFederationFactory,
 } from '@nestjs/graphql';
-import type { GraphQLSchema } from 'graphql';
+import { type GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import { SubgraphRegistry } from './registry.ts';
 
 export interface InProcessSubgraphOptions extends GqlModuleOptions {
@@ -30,7 +30,10 @@ export class InProcessSubgraphDriver extends AbstractGraphQLDriver<InProcessSubg
 
   override async generateSchema(options: InProcessSubgraphOptions): Promise<GraphQLSchema> {
     const schema = await this.federationFactory.generateSchema(options);
-    this.registry.add({ name: options.subgraphName, sdl: printSubgraphSchema(schema), schema });
+    // Nest's sortSchema option only sorts a schema file written to disk, so the driver sorts the
+    // SDL it registers itself. The executable schema stays as built.
+    const sdl = printSubgraphSchema(lexicographicSortSchema(schema));
+    this.registry.add({ name: options.subgraphName, sdl, schema });
     return schema;
   }
 

@@ -6,7 +6,7 @@ import type { GraphQLSchema } from 'graphql';
 export interface SubgraphEntry {
   /** The module's GraphQL name, which is also its root field prefix. */
   readonly name: string;
-  /** The subgraph SDL with its federation link, as composition reads it. */
+  /** The subgraph SDL composition reads, with its federation link, in lexicographic order. */
   readonly sdl: string;
   /** The executable subgraph schema. */
   readonly schema: GraphQLSchema;
