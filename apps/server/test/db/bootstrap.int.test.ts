@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { type PostgresServer, query, startPostgres } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cli } from '../../src/cli.ts';
+import { bootstrapRoles } from '../../src/db/bootstrap.ts';
 
 // Roles are server-wide, and the run's server already holds them, so this file bootstraps a server
 // of its own (ADR 0005).
@@ -31,6 +32,36 @@ function writeSecret(name: string, value: string): string {
   const path = join(secretsDir, name);
   writeFileSync(path, `${value}\n`, { mode: 0o600 });
   return path;
+}
+
+/**
+ * What bootstrap writes, read as the superuser: each nm_ role with its password hash and settings,
+ * the memberships of those roles and the privileges on the database.
+ */
+async function bootstrapState() {
+  const [roles, memberships, database] = await Promise.all([
+    query(
+      superuserUrl,
+      `select a.*, s.setconfig
+         from pg_authid a
+         left join pg_db_role_setting s on s.setrole = a.oid and s.setdatabase = 0
+        where a.rolname like 'nm\\_%'
+        order by a.rolname`,
+    ),
+    query(
+      superuserUrl,
+      `select roleid::regrole::text as role, member::regrole::text as member, admin_option,
+              inherit_option, set_option
+         from pg_auth_members
+        where roleid::regrole::text like 'nm\\_%' or member::regrole::text like 'nm\\_%'
+        order by 1, 2`,
+    ),
+    query(
+      superuserUrl,
+      'select datacl::text[] from pg_database where datname = current_database()',
+    ),
+  ]);
+  return { roles, memberships, database };
 }
 
 /** Runs pnpm northmes db bootstrap with env and fails with its output when it exits. */
@@ -136,5 +167,13 @@ describe('pnpm northmes db bootstrap', () => {
       [{ current_user: 'nm_app' }],
       [{ current_user: 'nm_auth' }],
     ]);
+  });
+
+  it('E02-S02 a second bootstrap changes nothing', async () => {
+    const before = await bootstrapState();
+
+    await bootstrapRoles(superuserUrl, passwords);
+
+    expect(await bootstrapState()).toEqual(before);
   });
 });
