@@ -30,4 +30,24 @@ describe('discoverValidators', () => {
       ]),
     );
   });
+
+  it('E02-S04 a validator listed as a class provider with useClass is checked like the plain class', () => {
+    const discover = () =>
+      discoverValidators(
+        [dispatch, strayRules],
+        [
+          { module: 'dispatch', providers: [JobResolver, ReleaseJob] },
+          {
+            module: 'stray-rules',
+            providers: [{ provide: 'quantity-cap', useClass: QuantityCap }],
+          },
+        ],
+      );
+
+    expect(discover).toThrow(
+      new BootError([
+        'Validator quantity-cap of module stray-rules is on dispatch.releaseJob of module dispatch, which is not in the dependsOn of stray-rules',
+      ]),
+    );
+  });
 });
