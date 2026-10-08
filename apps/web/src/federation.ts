@@ -42,11 +42,11 @@ export interface ShareOptions {
  * Registers the shell's module for every share key with the runtime, once at boot. Remotes declare
  * each key with import: false and requiredVersion: false, so they bundle no copy.
  *
- * A remote still registers an entry of its own for each key, at the version it was built against,
- * whose getter throws. Each share therefore carries the version of the shell's package, which is the
- * remote's version too, because the catalog pins one version: the runtime prefers any other version
- * over an unknown one. Each share is also registered as loaded, and the runtime never replaces a
- * loaded share with an entry of the same version.
+ * A remote still registers an entry of its own for each key: the version it was built against and a
+ * getter that throws. The runtime prefers any version over a share registered without one, so each
+ * share carries the version of the shell's package, which equals the remote's because the catalog
+ * pins one version of each package. Each share is also registered as loaded, and the runtime never
+ * replaces a loaded share with an entry of the same version.
  */
 export function shareSingletons(
   runtime: Pick<ModuleFederation, 'registerShared'>,
