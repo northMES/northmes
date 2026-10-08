@@ -170,6 +170,15 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E02-S01 two modules whose derived names collide are refused naming both ids', () => {
+    // Both ids derive the GraphQL and remote name press2.
+    const error = refusal([core, inRepoModule('press-2', ['core']), plugin('press2', ['core'])]);
+
+    expect(error.problems).toEqual([
+      'Modules press-2 and press2 derive the same name press2; give one of them another id',
+    ]);
+  });
+
   it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
     const { locale, outcomes } = checkInCzechLocale([
       [
