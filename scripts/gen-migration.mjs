@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -33,7 +33,16 @@ export function render({ module, slug, now }) {
  * @param {{ log: (line: string) => void, error: (line: string) => void, root: string, now: () => Date }} io
  */
 export async function main(argv, io) {
+  if (argv.length !== 2) {
+    io.error('Usage: pnpm gen:migration <module> <slug>');
+    return 1;
+  }
   const [module, slug] = argv;
+  const moduleFolder = `modules/${module}`;
+  if (!existsSync(join(io.root, moduleFolder))) {
+    io.error(`No module folder ${moduleFolder}`);
+    return 1;
+  }
   const { path, sql } = render({ module, slug, now: io.now() });
   const file = join(io.root, path);
   await mkdir(dirname(file), { recursive: true });
