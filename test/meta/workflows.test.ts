@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface Step {
+  id?: string;
   if?: string;
   uses?: string;
   run?: string;
@@ -427,10 +428,20 @@ describe('workflows', () => {
   });
 
   // One check covers all tests in both time zones. TZ sets the time zone of the Node process and
-  // NM_TEST_PG_TZ the session zone of the test database, so each leg sets both.
+  // NM_TEST_PG_TZ the session zone of the test database, so each leg sets both. A step runs only
+  // after passed steps by default, so the Europe/Stockholm leg names its own condition: it runs
+  // after a failed UTC leg, so a failure that shows only in Stockholm reports in the same run, and
+  // not after a failed install, which skips the UTC leg.
   it('ci / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg', () => {
     const { job } = jobNamed('ci / test');
 
+    expect(job.steps).toContainEqual(expect.objectContaining({ id: 'utc', run: 'pnpm test' }));
+    expect(job.steps).toContainEqual(
+      expect.objectContaining({
+        if: "!cancelled() && steps.utc.outcome != 'skipped'",
+        run: 'pnpm test:tz',
+      }),
+    );
     expect(vitestRunsOf(job)).toEqual([
       {
         env: expect.objectContaining({ TZ: 'UTC', NM_TEST_PG_TZ: 'UTC' }),
