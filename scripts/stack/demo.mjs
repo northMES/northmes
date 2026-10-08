@@ -3,8 +3,10 @@
 // origin and one port.
 
 import { boardUrl } from './board.mjs';
+import { run, say, start } from './processes.mjs';
+import { startStack } from './stack.mjs';
 
-/** @typedef {import('./dev.mjs').DevProcess} DevProcess */
+/** @typedef {import('./processes.mjs').PlannedProcess} DevProcess */
 
 /**
  * What pnpm demo runs: pnpm build, which builds the server, the shell and every remote, then the
@@ -30,3 +32,53 @@ export async function demoPlan(stackEnv, env) {
     boardUrl: await boardUrl(origin),
   };
 }
+
+/**
+ * Runs pnpm demo until SIGINT, SIGTERM or the server's exit: starts the stack, builds every package
+ * with pnpm build, starts the built server and prints the board URL once it listens. Stopping ends
+ * the server and the stack's container.
+ */
+async function demo() {
+  /** @param {string} line */
+  const log = (line) => say('demo', line);
+  const stack = await startStack({ log });
+  /** @type {import('./processes.mjs').StartedProcess | undefined} */
+  let server;
+  let stopping = false;
+  /** @param {number} code */
+  const stop = async (code) => {
+    if (stopping) return;
+    stopping = true;
+    log('Stopping the server and the stack');
+    await server?.stop();
+    await stack.stop();
+    process.exit(code);
+  };
+  process.once('SIGINT', () => stop(0));
+  process.once('SIGTERM', () => stop(0));
+
+  try {
+    const plan = await demoPlan(stack.env, process.env);
+    // The build runs without the stack's environment: its NODE_ENV=development would make Vite
+    // build React for development.
+    log('Building the server, the shell and every remote: pnpm build');
+    await run(plan.build);
+    log(`Starting the built server in role all on PORT ${plan.server.env.PORT}`);
+    server = start(plan.server, {
+      env: stack.env,
+      onLine: (line) => {
+        if (line.includes('Listening on')) log(`The board of the seeded plant: ${plan.boardUrl}`);
+      },
+    });
+    const { code } = await server.exited;
+    if (!stopping) {
+      log(`The server exited with ${code}`);
+      await stop(code === 0 ? 0 : 1);
+    }
+  } catch (error) {
+    log(error instanceof Error ? error.message : String(error));
+    await stop(1);
+  }
+}
+
+if (import.meta.main) await demo();
