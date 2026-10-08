@@ -3,10 +3,10 @@ import { defineWebModule } from '@northmes/web-sdk';
 import { planningRoutes } from './routes.tsx';
 
 /**
- * The planning remote's ./module entry (ADR 0019). The version repeats the one in
- * modules/planning/package.json as a string literal, which the remote's build compares with it.
+ * The planning module's web part, its public api: the routes under /$plant/planning. The shell and
+ * other modules import it from this file only.
  */
-export default defineWebModule({
+export const planningModule = defineWebModule({
   id: 'planning',
   version: '0.0.0',
   routes: planningRoutes,

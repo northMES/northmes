@@ -1,24 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { MockedProvider } from '@apollo/client/testing/react';
 import { planningLinks } from '@northmes/planning-contracts';
-import { createShellRoutes, validateWebModule } from '@northmes/web-sdk';
+import { createShellRoutes } from '@northmes/web-sdk';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import planningPackage from '../package.json' with { type: 'json' };
-import { PlanningBoard } from '../src/board.graphql.ts';
-import planningModule from '../src/module.tsx';
+import { PlanningBoard } from '../../../src/modules/planning/board.graphql.ts';
+import { planningModule } from '../../../src/modules/planning/index.ts';
 
 afterEach(cleanup);
 
 describe('planning web module', () => {
-  it("E02-S05 the planning module passes validateWebModule for the planning entry at its package's version", () => {
-    // The entry carries the version of modules/planning/web/package.json.
-    const entry = { id: 'planning', version: planningPackage.version };
-
-    expect(validateWebModule(planningModule, entry)).toEqual([]);
-  });
-
   it("E02-S05 a plant's planningLinks.board href opens the board stub", async () => {
     const router = createRouter({
       routeTree: createShellRoutes({ modules: [planningModule] }),

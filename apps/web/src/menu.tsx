@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { LoadedModule } from './federation.ts';
+import type { ShellModule } from './modules.ts';
 
-/**
- * The E02 menu: a plain list with one entry per listed module, in the order of the modules'
- * manifests. A module whose remote failed to load keeps its position and reads "(unavailable)".
- */
-export function Menu({ modules }: { modules: readonly LoadedModule[] }) {
-  const ordered = [...modules].sort((a, b) => a.listed.order - b.listed.order);
+/** The E02 menu: a plain list with one entry per module, by the modules' order. */
+export function Menu({ modules }: { modules: readonly ShellModule[] }) {
+  const ordered = [...modules].sort((a, b) => a.order - b.order);
   return (
     <nav aria-label="Modules">
       <ul>
-        {ordered.map(({ listed, module }) => (
-          <li key={listed.id}>
-            {module === null ? `${listed.label} (unavailable)` : listed.label}
-          </li>
+        {ordered.map(({ module, label }) => (
+          <li key={module.id}>{label}</li>
         ))}
       </ul>
     </nav>

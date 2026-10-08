@@ -4,7 +4,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { createShellRoutes } from '@northmes/web-sdk';
 import { createRouter } from '@tanstack/react-router';
 import { describe, expect, it } from 'vitest';
-import planningModule from '../src/module.tsx';
+import { planningModule } from '../../../src/modules/planning/index.ts';
 
 /**
  * The route pattern of a link manifest or entry and of every entry below it. The string keys of a

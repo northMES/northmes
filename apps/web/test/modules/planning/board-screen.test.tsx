@@ -4,9 +4,9 @@ import { MockedProvider } from '@apollo/client/testing/react';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PlanningBoard } from '../src/board.graphql.ts';
-import { BoardScreen } from '../src/board-screen.tsx';
-import { PlanningReleaseProductionOrder } from '../src/release.graphql.ts';
+import { PlanningBoard } from '../../../src/modules/planning/board.graphql.ts';
+import { BoardScreen } from '../../../src/modules/planning/board-screen.tsx';
+import { PlanningReleaseProductionOrder } from '../../../src/modules/planning/release.graphql.ts';
 
 afterEach(cleanup);
 

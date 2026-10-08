@@ -21,9 +21,6 @@ catalogs:
     '@hookform/resolvers':
       specifier: 5.9.1
       version: 5.9.1
-    '@module-federation/runtime':
-      specifier: 2.9.0
-      version: 2.9.0
     '@module-federation/vite':
       specifier: 1.22.1
       version: 1.22.1
@@ -387,12 +384,12 @@ importers:
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv@8.20.0)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
-      '@module-federation/runtime':
-        specifier: 'catalog:'
-        version: 2.9.0
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@northmes/planning-contracts':
+        specifier: workspace:*
+        version: link:../../modules/planning/contracts
       '@northmes/web-sdk':
         specifier: workspace:*
         version: link:../../packages/web-sdk
@@ -451,15 +448,15 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.5.14
-      '@northmes/web-build':
-        specifier: workspace:*
-        version: link:../../packages/web-build
       '@testing-library/dom':
         specifier: 'catalog:'
         version: 10.4.2
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@testing-library/user-event':
+        specifier: 'catalog:'
+        version: 14.6.7(@testing-library/dom@10.4.2)
       '@types/culori':
         specifier: 'catalog:'
         version: 4.0.1
@@ -592,79 +589,6 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  modules/planning/web:
-    dependencies:
-      '@northmes/contracts':
-        specifier: workspace:*
-        version: link:../../../packages/contracts
-      '@northmes/planning-contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@northmes/planning-domain':
-        specifier: workspace:*
-        version: link:../domain
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
-    devDependencies:
-      '@apollo/client':
-        specifier: 4.3.1
-        version: 4.3.1(graphql-ws@6.2.2(graphql@16.14.2)(ws@8.21.3))(graphql@16.14.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rxjs@7.8.2)
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.5.14
-      '@northmes/web-build':
-        specifier: workspace:*
-        version: link:../../../packages/web-build
-      '@northmes/web-sdk':
-        specifier: workspace:*
-        version: link:../../../packages/web-sdk
-      '@tanstack/react-router':
-        specifier: 1.170.39
-        version: 1.170.39(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@testing-library/dom':
-        specifier: 'catalog:'
-        version: 10.4.2
-      '@testing-library/react':
-        specifier: 'catalog:'
-        version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@testing-library/user-event':
-        specifier: 'catalog:'
-        version: 14.6.7(@testing-library/dom@10.4.2)
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.2
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.3.0(@types/react@19.3.0)
-      graphql:
-        specifier: 16.14.2
-        version: 16.14.2
-      graphql-ws:
-        specifier: 'catalog:'
-        version: 6.2.2(graphql@16.14.2)(ws@8.21.3)
-      react:
-        specifier: 19.3.0
-        version: 19.3.0
-      react-dom:
-        specifier: 19.3.0
-        version: 19.3.0(react@19.3.0)
-      rxjs:
-        specifier: 'catalog:'
-        version: 7.8.2
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vite:
-        specifier: 'catalog:'
-        version: 8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1)
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
