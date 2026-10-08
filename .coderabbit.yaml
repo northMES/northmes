@@ -92,8 +92,28 @@ reviews:
     - '!**/__snapshots__/**'
     - '!apps/docs/reference/**'
     - '!**/CHANGELOG.md'
-    # Third-party agent skills, vendored from mattpocock/skills.
-    - '!.claude/skills/**'
+    # Third-party agent skills, one folder for each skill that skills-lock.json
+    # pins, and their licenses. The project skills, such as db-test, are
+    # NorthMES's own files and get reviewed.
+    - '!.claude/skills/THIRD_PARTY_LICENSE.md'
+    - '!.claude/skills/apollo-client/**'
+    - '!.claude/skills/codebase-design/**'
+    - '!.claude/skills/diagnosing-bugs/**'
+    - '!.claude/skills/domain-modeling/**'
+    - '!.claude/skills/grill-me/**'
+    - '!.claude/skills/grill-with-docs/**'
+    - '!.claude/skills/grilling/**'
+    - '!.claude/skills/improve-codebase-architecture/**'
+    - '!.claude/skills/playwright-cli/**'
+    - '!.claude/skills/pnpm/**'
+    - '!.claude/skills/secret-serialization/**'
+    - '!.claude/skills/tdd/**'
+    - '!.claude/skills/to-questionnaire/**'
+    - '!.claude/skills/turborepo/**'
+    - '!.claude/skills/vitest/**'
+    - '!.claude/skills/wait-what/**'
+    - '!.claude/skills/wrdn-authz/**'
+    - '!.claude/skills/writing-for-agents/**'
     # Internal research notes (gitignored, listed in case one is committed).
     - '!docs/research/**'
     - '!docs/project-brief.md'

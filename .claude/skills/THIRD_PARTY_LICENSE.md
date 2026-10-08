@@ -1,6 +1,6 @@
 # Third-party licenses: agent skills
 
-The skill folders in this directory are copied from the repositories below at the commits recorded in /skills-lock.json. Each keeps the license of its source repository, reproduced here. NorthMES's own license does not apply to them.
+The skill folders in this directory that /skills-lock.json pins are copied from the repositories below at the commits recorded there. Each keeps the license of its source repository, reproduced here. NorthMES's own license does not apply to them. The project skills in this directory, such as db-test, are NorthMES's own files under its license.
 
 ## mattpocock/skills (MIT)
 
