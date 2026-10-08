@@ -3,6 +3,7 @@ import type { ServerResponse } from 'node:http';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 import { packageDirOf } from '../catalog/package-dir.ts';
 import type { WebFiles } from './served-web.ts';
 
@@ -28,7 +29,7 @@ const FIXED_NAMES = new Set(['mf-manifest.json', 'mf-stats.json', 'remoteEntry.j
 
 /**
  * Serves the shell's hashed assets at /assets/ and the built remote of each catalog module with a
- * web block at /modules/<id>/<version>/. A file missing under a mount is a 404.
+ * web block at /modules/<id>/<version>/. A file missing under a mount is a 404 with an empty body.
  */
 export function mountStatic(
   app: NestExpressApplication,
@@ -40,6 +41,7 @@ export function mountStatic(
     fallthrough: false,
     setHeaders: (response: ServerResponse) => response.setHeader('Cache-Control', IMMUTABLE),
   });
+  app.use('/assets/', answerWithStatus);
   for (const { manifest, webDir } of catalog) {
     if (!manifest.web || webDir === undefined) continue;
     app.useStaticAssets(webDir, {
@@ -53,5 +55,20 @@ export function mountStatic(
         );
       },
     });
+    app.use(`/modules/${manifest.id}/${manifest.version}/`, answerWithStatus);
   }
+}
+
+/**
+ * Answers the error of a static mount with its status alone. Nest's exception filter would put the
+ * error's message, which names the file's absolute path, in the body and log it with a stack.
+ * Express takes a handler with four parameters as an error handler.
+ */
+function answerWithStatus(
+  error: { status?: number },
+  _request: Request,
+  response: Response,
+  _next: NextFunction,
+): void {
+  response.status(error.status ?? 404).end();
 }
