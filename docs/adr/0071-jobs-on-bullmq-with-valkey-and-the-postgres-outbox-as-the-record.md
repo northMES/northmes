@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson; the planning session's design study of main at 4cb2429
 informed: NorthMES contributors and coding agents
 release: "1"
-needs-confirmation: ""
+needs-confirmation: "maintainer (the decision outcome)"
 ---
 
 # Jobs on BullMQ with Valkey and the Postgres outbox as the record

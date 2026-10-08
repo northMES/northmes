@@ -122,6 +122,7 @@ The plant's presentation values leave the module list; their carrier is open.
 * Boundary fixtures: an import of another module's internal file fails `pnpm check` in both apps; the same import through the public api passes.
 * `pnpm gen --check` covers `schema/api.graphql`.
 * The four graphql-ws and SSE subscription tests pass on `/graphql`.
+* The guard test of plan 05 that refuses a document over `maxCost` stays and runs against the cost limit the maintainer picks; until then the depth and alias limits of graphql-armor are the only document limits.
 
 ## Pros and cons of the options
 
