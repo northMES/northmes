@@ -32,6 +32,13 @@ function readPackageJson(path: string): PackageJson {
   return JSON.parse(readText(path)) as PackageJson;
 }
 
+// Every workspace package.json that the globs in pnpm-workspace.yaml match.
+function workspaceManifests(): string[] {
+  return (readWorkspace().packages ?? [])
+    .flatMap((pattern) => globSync(`${pattern}/package.json`, { cwd: root }))
+    .filter((path) => !path.split('/').includes('node_modules'));
+}
+
 function git(...args: string[]): string {
   return spawnSync('git', args, { cwd: root, encoding: 'utf8' }).stdout;
 }
@@ -50,16 +57,24 @@ describe('workspace', () => {
     const patterns = readWorkspace().packages ?? [];
     expect(patterns, 'packages globs in pnpm-workspace.yaml').not.toHaveLength(0);
 
-    // Only the root package.json exists for now; the globs match nothing yet.
-    const manifests = patterns
-      .flatMap((pattern) => globSync(`${pattern}/package.json`, { cwd: root }))
-      .filter((path) => !path.split('/').includes('node_modules'));
+    const manifests = workspaceManifests();
 
     expect(readPackageJson('package.json').license).toBe('AGPL-3.0-or-later');
     for (const path of manifests) {
       const { license } = readPackageJson(path);
       expect(license, path).toEqual(expect.any(String));
       expect(license, path).not.toBe('');
+    }
+  });
+
+  it('E02-S01 packages/* and modules/*/contracts are MIT and every other workspace package is AGPL-3.0-or-later', () => {
+    const mit = /^(packages\/[^/]+|modules\/[^/]+\/contracts)\/package\.json$/;
+    const manifests = workspaceManifests();
+
+    expect(manifests, 'workspace manifests').toContain('apps/server/package.json');
+    for (const path of manifests) {
+      const expected = mit.test(path) ? 'MIT' : 'AGPL-3.0-or-later';
+      expect(readPackageJson(path).license, path).toBe(expected);
     }
   });
 
