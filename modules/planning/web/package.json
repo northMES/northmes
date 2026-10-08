@@ -4,7 +4,13 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
+    "@northmes/contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/planning-domain": "workspace:*",
     "zod": "catalog:"

@@ -621,6 +621,9 @@ importers:
 
   modules/planning/web:
     dependencies:
+      '@northmes/contracts':
+        specifier: workspace:*
+        version: link:../../../packages/contracts
       '@northmes/planning-contracts':
         specifier: workspace:*
         version: link:../contracts

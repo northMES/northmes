@@ -41,6 +41,36 @@ export type LinkBuilder<Pattern extends string> = (
   search?: LinkSearch,
 ) => ModuleLink<Pattern>;
 
+/** What linkEntry reads from a link manifest or one of its entries. */
+export interface LinkEntry<Pattern extends string = string> {
+  /**
+   * The entry's path below its parent entry, as the manifest declares it. A manifest's path is its
+   * module id, below /$plant.
+   */
+  readonly path: string;
+  /** The entry's route pattern, which starts with /$plant/<moduleId>. */
+  readonly pattern: Pattern;
+}
+
+// The key of the entry a manifest and each builder carry. A symbol key cannot collide with an entry
+// name, and Object.keys skips it, so their string keys stay the names of their child entries. The
+// key comes from the global symbol registry, because every remote bundles its own copy of this
+// package (ADR 0062), and the shell's copy must read the entries a remote's copy built.
+const entryKey: unique symbol = Symbol.for('@northmes/contracts/link-entry');
+
+/** A link manifest or one of its builders, which carries the entry that linkEntry reads. */
+export interface LinkNode<Pattern extends string> {
+  readonly [entryKey]: LinkEntry<Pattern>;
+}
+
+/**
+ * Reads the path and the route pattern of a link manifest or of one of its entries, without calling
+ * the entry's builder. A route takes its path from here, so each path is written once (ADR 0062).
+ */
+export function linkEntry<Pattern extends string>(node: LinkNode<Pattern>): LinkEntry<Pattern> {
+  return node[entryKey];
+}
+
 type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
   readonly children: infer Children extends LinkEntryDefinitions;
 }
@@ -49,6 +79,7 @@ type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
 
 // The builder of the entry at the route pattern Pattern, carrying its children's builders.
 type EntryLinks<Pattern extends string, Entry extends LinkEntryDefinition> = LinkBuilder<Pattern> &
+  LinkNode<Pattern> &
   ModuleLinks<Pattern, ChildEntries<Entry>>;
 
 /** The builders of the entries below the route pattern Parent. */
@@ -68,8 +99,13 @@ export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefiniti
 export function defineModuleLinks<
   const ModuleId extends string,
   const Entries extends LinkEntryDefinitions,
->(moduleId: ModuleId, entries: Entries): ModuleLinks<`/$plant/${ModuleId}`, Entries> {
-  return builders(`/$plant/${moduleId}`, entries) as ModuleLinks<`/$plant/${ModuleId}`, Entries>;
+>(
+  moduleId: ModuleId,
+  entries: Entries,
+): ModuleLinks<`/$plant/${ModuleId}`, Entries> & LinkNode<`/$plant/${ModuleId}`> {
+  const pattern = `/$plant/${moduleId}` as const;
+  const links = builders(pattern, entries) as ModuleLinks<typeof pattern, Entries>;
+  return Object.assign(links, { [entryKey]: { path: moduleId, pattern } });
 }
 
 type Params = Readonly<Record<string, string>>;
@@ -89,7 +125,8 @@ function builders(parent: string, entries: LinkEntryDefinitions): Record<string,
         search,
         href: href(pattern, params, search),
       });
-      return [name, Object.assign(build, builders(pattern, entry.children ?? {}))];
+      const node = { [entryKey]: { path: entry.path, pattern } };
+      return [name, Object.assign(build, node, builders(pattern, entry.children ?? {}))];
     }),
   );
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { defineModuleLinks } from '@northmes/contracts';
+import { defineModuleLinks, linkEntry } from '@northmes/contracts';
 import { describe, expect, it } from 'vitest';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -76,6 +76,36 @@ describe('defineModuleLinks', () => {
 
     expect(link.href).toBe('/plant-a/planning/orders?q=a%26b%20c%23d&x%3Dy=1');
     expect(new URL(link.href, 'http://localhost').searchParams.get('q')).toBe('a&b c#d');
+  });
+
+  it("E02-S05 linkEntry reads an entry's path below its parent and its route pattern, and the entry's keys stay its children", () => {
+    expect(linkEntry(links.orders.order)).toEqual({
+      path: '$orderId',
+      pattern: '/$plant/planning/orders/$orderId',
+    });
+    expect(linkEntry(links.orders)).toEqual({ path: 'orders', pattern: '/$plant/planning/orders' });
+    expect(Object.keys(links.orders)).toEqual(['order']);
+  });
+
+  it("E02-S05 linkEntry reads the module id as the manifest's path below /$plant, and the manifest's keys stay its entries", () => {
+    expect(linkEntry(links)).toEqual({ path: 'planning', pattern: '/$plant/planning' });
+    expect(Object.keys(links)).toEqual(['orders']);
+  });
+
+  it("E02-S05 linkEntry of a second copy of @northmes/contracts reads the entries the first copy's defineModuleLinks built", async () => {
+    // Every remote bundles its own copy of @northmes/contracts, and the shell's @northmes/web-sdk
+    // reads the remote's manifest with the shell's copy (ADR 0062). The query gives a second
+    // instance of the module.
+    const copyPath: string = '../src/define-module-links.ts?copy';
+    const copy: typeof import('../src/define-module-links.ts') = await import(
+      /* @vite-ignore */ copyPath
+    );
+
+    expect(copy.linkEntry).not.toBe(linkEntry);
+    expect(copy.linkEntry(links.orders.order)).toEqual({
+      path: '$orderId',
+      pattern: '/$plant/planning/orders/$orderId',
+    });
   });
 
   it('E02-S05 packages/contracts declares and imports no router package', () => {

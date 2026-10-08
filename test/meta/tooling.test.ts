@@ -82,6 +82,30 @@ function readDevDependencies(): Record<string, string> {
   return readJson<PackageJson>('package.json').devDependencies ?? {};
 }
 
+/** The part of a turbo dry run that the tests read: each task with the files it hashes. */
+interface TurboDryRun {
+  tasks: { task: string; directory: string; inputs: Record<string, string> }[];
+}
+
+const turboBin = createRequire(import.meta.url).resolve('turbo/bin/turbo');
+
+// The build tasks of every remote under modules/*/web, as `turbo run build --dry=json` plans them.
+function remoteBuilds(): TurboDryRun['tasks'] {
+  const result = spawnSync(
+    process.execPath,
+    [turboBin, 'run', 'build', '--filter=./modules/*/web', '--dry=json'],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (result.status !== 0) {
+    throw new Error(`turbo run build --dry=json exited ${result.status}: ${result.stderr}`);
+  }
+  const tasks = (JSON.parse(result.stdout) as TurboDryRun).tasks;
+
+  return tasks.filter(
+    (task) => task.task === 'build' && /^modules\/[^/]+\/web$/.test(task.directory),
+  );
+}
+
 interface RdjsonReport {
   diagnostics?: { code?: { value?: string }; location?: { path?: string }; severity?: string }[];
 }
@@ -143,6 +167,17 @@ describe('tooling', () => {
     expect(readJson<TurboConfig>('turbo.json').globalDependencies).toEqual(
       expect.arrayContaining(['biome.json', 'tsconfig.base.json']),
     );
+  });
+
+  it("E02-S05 turbo hashes the module's package.json into each remote's build, whose vite.config.ts reads the version from it", () => {
+    // The file lies outside the remote's package, so without it a version bump replays a cached
+    // dist/ with the old publicPath and the northmes:web-module-version guard never runs.
+    const builds = remoteBuilds();
+
+    expect(builds.map((build) => build.directory)).toContain('modules/planning/web');
+    for (const build of builds) {
+      expect(Object.keys(build.inputs), build.directory).toContain('../package.json');
+    }
   });
 
   it('biome.json is a Biome 2.5 root config with a11y recommended, noFocusedTests and noSkippedTests as errors, and the generated paths excluded', () => {

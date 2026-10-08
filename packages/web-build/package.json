@@ -13,6 +13,10 @@
       "default": "./remote.mjs"
     }
   },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@module-federation/vite": "catalog:",
     "@vitejs/plugin-react": "catalog:"
