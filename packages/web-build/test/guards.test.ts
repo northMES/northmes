@@ -112,4 +112,8 @@ describe('remote build guards', () => {
       /this remote bundles .*@apollo\/client/,
     );
   });
+
+  it('E02-S05 a remote bundling graphql fails naming the package', async () => {
+    await expect(buildFixture('remote-graphql')).rejects.toThrow(/this remote bundles .*graphql/);
+  });
 });
