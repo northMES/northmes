@@ -40,6 +40,23 @@ describe('article contracts', () => {
     ).toBe(true);
   });
 
+  it('E06-S06 the article fields word each message as the rule and the fix, with the length typed', () => {
+    const messages = (value: { code: string; name: string }) =>
+      createArticle.fields.safeParse(value).error?.issues.map(({ path, message }) => ({
+        path,
+        message,
+      }));
+
+    expect(messages({ code: '  ', name: '' })).toEqual([
+      { path: ['code'], message: 'Enter an article number.' },
+      { path: ['name'], message: 'Enter a name.' },
+    ]);
+    expect(messages({ code: ` ${'C'.repeat(34)} `, name: 'N'.repeat(201) })).toEqual([
+      { path: ['code'], message: 'Article number can be 1 to 32 characters. It has 34.' },
+      { path: ['name'], message: 'Name can be 1 to 200 characters. It has 201.' },
+    ]);
+  });
+
   it('E06-S06 createArticle takes the new id and updateArticle the id and expectedVersion', () => {
     const fields = { code: 'BR-140', name: 'Wall bracket' };
 
