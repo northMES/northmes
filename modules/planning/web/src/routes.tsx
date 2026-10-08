@@ -10,8 +10,13 @@ import { createRoute } from '@tanstack/react-router';
  * route's path is the manifest's own, the module id.
  */
 export function planningRoutes(plantRoute: PlantRoute) {
-  return createRoute({
+  const planningRoute = createRoute({
     getParentRoute: () => plantRoute,
     path: linkEntry(planningLinks).path,
   });
+  const boardRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.board).path,
+  });
+  return planningRoute.addChildren([boardRoute]);
 }
