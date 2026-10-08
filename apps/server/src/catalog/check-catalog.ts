@@ -6,6 +6,7 @@ import {
   nameClashProblems,
   rangeProblems,
   reservedIdProblems,
+  slotProblems,
 } from './rules.ts';
 
 /** An installed module: its manifest, and whether it ships in the repository or as a plugin. */
@@ -36,6 +37,7 @@ export function checkCatalog(
     ...nameClashProblems(entries),
     ...rangeProblems(entries, imageVersion),
     ...keyPrefixProblems(entries),
+    ...slotProblems(entries),
   ];
   const byId = new Map(entries.map((entry) => [entry.manifest.id, entry]));
   for (const { manifest, kind } of entries) {

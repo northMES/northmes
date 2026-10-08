@@ -113,3 +113,44 @@ export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
   }
   return problems;
 }
+
+/**
+ * A problem for every contribution to a slot whose owner is outside the contributor's dependsOn
+ * closure (ADR 0037). A module may contribute to its own slots. A contribution to a slot that no
+ * installed module owns is not checked here.
+ */
+export function slotProblems(entries: readonly CatalogEntry[]): string[] {
+  const owners = new Map<string, string>();
+  for (const { manifest } of entries) {
+    for (const slot of Object.keys(manifest.web?.slots ?? {})) owners.set(slot, manifest.id);
+  }
+  const problems: string[] = [];
+  for (const { manifest } of entries) {
+    const reach = dependsOnClosure(manifest.id, entries);
+    for (const { id, slot } of manifest.web?.contributes ?? []) {
+      const owner = owners.get(slot);
+      if (owner !== undefined && !reach.has(owner)) {
+        problems.push(
+          `Module ${manifest.id} contributes "${id}" to slot "${slot}" of ${owner}, which ${manifest.id} does not depend on`,
+        );
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * The module itself and every installed module it depends on, directly or through others. The walk
+ * stops at a module it has reached, so a dependency cycle ends it.
+ */
+function dependsOnClosure(id: string, entries: readonly CatalogEntry[]): Set<string> {
+  const byId = new Map(entries.map(({ manifest }) => [manifest.id, manifest]));
+  const reached = new Set<string>();
+  const pending = [id];
+  for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+    if (reached.has(next)) continue;
+    reached.add(next);
+    pending.push(...(byId.get(next)?.dependsOn ?? []));
+  }
+  return reached;
+}
