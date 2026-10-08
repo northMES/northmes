@@ -15,15 +15,25 @@ function timestamp(now) {
   return now.toISOString().slice(0, 'yyyy-mm-ddTHH:MM:ss'.length).replace(/\D/g, '');
 }
 
+// The module id rule, MODULE_ID in packages/sdk/src/module-names.ts. This script runs under plain
+// node, where @northmes/sdk resolves to its build output, so it keeps its own copy.
+const modulePattern = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
+
 // A lower-case SQL name that needs no quotes, which the slug is because it names the table.
 const slugPattern = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 
 /**
  * Renders the table template for a new table in a module's schema, and the path of its migration
- * file from the repository root. Throws when the slug is not a lower-case SQL name.
+ * file from the repository root. Throws when the module is not a module id or the slug is not a
+ * lower-case SQL name.
  * @param {{ module: string, slug: string, now: Date }} options
  */
 export function render({ module, slug, now }) {
+  if (!modulePattern.test(module)) {
+    throw new Error(
+      `Invalid module "${module}": the module id names the folder and the schema, so use lower-case letters, digits and single hyphens, starting with a letter`,
+    );
+  }
   if (!slugPattern.test(slug)) {
     throw new Error(
       `Invalid slug "${slug}": the slug names the table, so use lower-case letters, digits and single underscores, starting with a letter`,
