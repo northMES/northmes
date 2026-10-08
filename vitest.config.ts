@@ -27,6 +27,14 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'web',
+          include: ['**/*.test.tsx'],
+          exclude: ignored,
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'types',
           exclude: ignored,
           typecheck: {
