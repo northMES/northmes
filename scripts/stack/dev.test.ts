@@ -1,6 +1,6 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it } from 'vitest';
-import { devPlan, webRemotes } from './dev.mjs';
+import { completedBuild, devPlan, webRemotes } from './dev.mjs';
 import { seedScopes } from './seed.mjs';
 
 // The ports the stack hands pnpm dev: the server's PORT and one port each for the shell and the
@@ -131,5 +131,19 @@ describe('devPlan', () => {
       ],
       env: {},
     });
+  });
+});
+
+describe('completedBuild', () => {
+  it('E02-S08 pnpm dev restarts the server after each build that tsc -b --watch completes without errors', () => {
+    // The lines tsc -b --watch --preserveWatchOutput prints, with the time in the locale's format.
+    expect(completedBuild('6:29:00 PM - Found 0 errors. Watching for file changes.')).toBe(true);
+    expect(completedBuild('18:29:00 - Found 0 errors. Watching for file changes.')).toBe(true);
+    // A build with errors leaves the server that runs as it is.
+    expect(completedBuild('6:29:00 PM - Found 1 error. Watching for file changes.')).toBe(false);
+    expect(completedBuild('6:29:00 PM - Found 12 errors. Watching for file changes.')).toBe(false);
+    expect(
+      completedBuild('6:29:00 PM - File change detected. Starting incremental compilation...'),
+    ).toBe(false);
   });
 });
