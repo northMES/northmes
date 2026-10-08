@@ -34,6 +34,22 @@ export interface ModuleManifest {
     readonly permission?: string;
     /** Sidebar position, kept when the remote fails to load. */
     readonly order: number;
+    /** Slots this module owns, by slot id `<owner>/<area>/<name>/v<N>` (ADR 0068). */
+    readonly slots?: Readonly<
+      Record<string, { readonly kind: 'region' | 'tab' | 'field' | 'item' | 'banner' | 'action' }>
+    >;
+    /**
+     * Contributions to slots this module owns or slots of modules in its dependsOn closure. The
+     * remote supplies each implementation under the same id (ADR 0068).
+     */
+    readonly contributes?: readonly {
+      /** Starts with the module id. */
+      readonly id: string;
+      readonly slot: string;
+      readonly label: string;
+      readonly order: number;
+      readonly permission: string;
+    }[];
   };
   /** Whether the module serves GraphQL subscriptions. */
   readonly subscriptions?: boolean;

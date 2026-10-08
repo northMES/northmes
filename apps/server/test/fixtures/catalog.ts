@@ -7,7 +7,7 @@ export const imageVersion = '0.0.0';
 
 /** The manifest fields a test sets. Without northmes, the range holds imageVersion. */
 export type ManifestOptions = Partial<
-  Pick<ModuleManifest, 'northmes' | 'permissions' | 'commands' | 'events'>
+  Pick<ModuleManifest, 'northmes' | 'permissions' | 'commands' | 'events' | 'web'>
 >;
 
 function manifest(id: string, dependsOn: readonly string[], options: ManifestOptions) {
@@ -39,3 +39,24 @@ export function plugin(
 }
 
 export const core = inRepoModule('core');
+
+type WebPart = NonNullable<ModuleManifest['web']>;
+type Contribution = NonNullable<WebPart['contributes']>[number];
+
+/** A contribution to a slot, with a placeholder label, order and permission. */
+export function contribution(id: string, slot: string): Contribution {
+  return { id, slot, label: id, order: 10, permission: `${id}:read` };
+}
+
+/** A web part that owns the given slots, each a region, and makes the given contributions. */
+export function webPart(
+  slots: readonly string[],
+  contributes: readonly Contribution[] = [],
+): WebPart {
+  return {
+    label: 'Module',
+    order: 10,
+    slots: Object.fromEntries(slots.map((slot) => [slot, { kind: 'region' }])),
+    contributes,
+  };
+}

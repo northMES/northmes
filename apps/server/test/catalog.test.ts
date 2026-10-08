@@ -7,7 +7,14 @@ import {
   type CatalogOptions,
   checkCatalog,
 } from '../src/catalog/check-catalog.ts';
-import { core, imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
+import {
+  contribution,
+  core,
+  imageVersion,
+  inRepoModule,
+  plugin,
+  webPart,
+} from './fixtures/catalog.ts';
 
 // The BootError that checkCatalog throws for a catalog it refuses.
 function refusal(
@@ -248,6 +255,32 @@ describe('checkCatalog', () => {
 
     expect(error.problems).toEqual([
       'Module production-start declares event "productionStart.report.corrected", which must start with "production_start."',
+    ]);
+  });
+
+  it('E02-S01 a slot contribution outside the dependsOn closure is refused naming the contributor and the slot', () => {
+    const side = 'planning/board/side/v1';
+    const panels = 'planning/order/panels/v1';
+    // planning contributes to a slot it owns, production-start depends on planning, and acme-panel
+    // reaches planning through production-start. quality depends on core only.
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core'], {
+        web: webPart([side, panels], [contribution('planning.load-summary', side)]),
+      }),
+      inRepoModule('production-start', ['planning'], {
+        web: webPart([], [contribution('production-start.reported-quantities', panels)]),
+      }),
+      plugin('acme-panel', ['production-start'], {
+        web: webPart([], [contribution('acme-panel.notes', panels)]),
+      }),
+      inRepoModule('quality', ['core'], {
+        web: webPart([], [contribution('quality.inspections', side)]),
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module quality contributes "quality.inspections" to slot "planning/board/side/v1" of planning, which quality does not depend on',
     ]);
   });
 
