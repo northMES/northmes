@@ -124,4 +124,34 @@ describe('no-truncate', () => {
 
     expect(findings).toEqual([]);
   });
+
+  it('E02-S02 comment markers inside quotes or dollar quotes do not hide the TRUNCATE grant after them', () => {
+    const path = 'modules/core/migrations/20261008120500_article.sql';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "select '--'; grant truncate on core.article to nm_app;",
+          "comment on table core.article is 'see /* notes'; grant all on core.article to nm_app; -- */",
+          'create table "a--b" (id int); grant truncate on core.article to nm_app;',
+          "select E'it\\'s -- here'; grant truncate on core.article to nm_app;",
+          'select $$--$$; grant truncate on core.article to nm_app;',
+          "do $body$ begin execute 'select ''--'''; execute 'grant truncate on core.article to nm_app'; end $body$;",
+          "-- the owner's grant",
+          'grant truncate on core.article to nm_app;',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 1 },
+      { path, line: 2 },
+      { path, line: 3 },
+      { path, line: 4 },
+      { path, line: 5 },
+      { path, line: 6 },
+      { path, line: 8 },
+    ]);
+  });
 });
