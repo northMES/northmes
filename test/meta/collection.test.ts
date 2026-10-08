@@ -15,6 +15,12 @@ interface Misfiled {
   projects: string[];
 }
 
+interface Resolved {
+  name: string;
+  environment: string;
+  plugins: string[];
+}
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const config = join(root, 'vitest.config.ts');
 const vitestBin = join(root, 'node_modules/vitest/vitest.mjs');
@@ -50,6 +56,33 @@ function collected(directory: string, flags: string[] = []): Map<string, string[
     byFile.set(path, [...(byFile.get(path) ?? []), projectName]);
   }
   return byFile;
+}
+
+// The projects Vitest resolves from the repository's config, each with its test environment and the
+// names of the plugins in its Vite config. A script in a child process loads them through Vitest's
+// Node API, so the answer comes from the same config a test run reads.
+function resolved(): Resolved[] {
+  const script = `
+    import { createVitest } from 'vitest/node';
+    const vitest = await createVitest({ config: ${JSON.stringify(config)}, root: ${JSON.stringify(root)}, watch: false });
+    try {
+      console.log(JSON.stringify(vitest.projects.map((project) => ({
+        name: project.name,
+        environment: project.config.environment,
+        plugins: (project.vite.config.plugins ?? []).map((plugin) => plugin.name),
+      }))));
+    } finally {
+      await vitest.close();
+    }
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
+    cwd: root,
+    encoding: 'utf8',
+    env: environment(),
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(result.stdout) as Resolved[];
 }
 
 function tracked(): string[] {
@@ -99,8 +132,27 @@ describe('collection', () => {
     }, 60_000);
   });
 
+  describe('the web project', () => {
+    it('the web project uses the React plugin and the happy-dom environment', () => {
+      const projects = resolved();
+      const web = projects.find((project) => project.name === 'web');
+      const unit = projects.find((project) => project.name === 'unit');
+
+      expect(web?.environment).toBe('happy-dom');
+      expect(web?.plugins).toContain('vite:react-babel');
+      expect(unit?.plugins.filter((name) => name.startsWith('vite:react'))).toEqual([]);
+    }, 60_000);
+  });
+
   describe('in a synthetic tree', () => {
-    const suffixed = ['x.test.ts', 'x.int.test.ts', 'x.ai.test.ts', 'x.ops.test.ts', 'x.test-d.ts'];
+    const suffixed = [
+      'x.test.ts',
+      'x.test.tsx',
+      'x.int.test.ts',
+      'x.ai.test.ts',
+      'x.ops.test.ts',
+      'x.test-d.ts',
+    ];
     const ignoredFolderFixtures = [
       'dist',
       'packages/a/dist',
@@ -109,7 +161,6 @@ describe('collection', () => {
     ];
     const written = [
       ...suffixed,
-      'orphan.test.tsx',
       'e2e/x.spec.ts',
       ...suffixed.map((file) => `docs/sources/spike/${file}`),
       ...ignoredFolderFixtures.flatMap((folder) => suffixed.map((file) => `${folder}/${file}`)),
@@ -138,6 +189,10 @@ describe('collection', () => {
       expect(listed.get('x.test.ts')).toEqual(['unit']);
     });
 
+    it('a file named x.test.tsx lands in web only', () => {
+      expect(listed.get('x.test.tsx')).toEqual(['web']);
+    });
+
     it.each([
       { file: 'x.ai.test.ts', project: 'ai' },
       { file: 'x.ops.test.ts', project: 'ops' },
@@ -156,10 +211,11 @@ describe('collection', () => {
         projects.flatMap((project) => ['--project', project]),
       );
 
-      expect(projects).toEqual(expect.arrayContaining(['unit', 'integration', 'types']));
+      expect(projects).toEqual(expect.arrayContaining(['unit', 'integration', 'web', 'types']));
       expect(projects).not.toContain('ai');
       expect(projects).not.toContain('ops');
       expect(run.get('x.test.ts')).toEqual(['unit']);
+      expect(run.get('x.test.tsx')).toEqual(['web']);
       expect(run.get('x.int.test.ts')).toEqual(['integration']);
       expect(run.get('x.test-d.ts')).toEqual(['types']);
       expect(run.has('x.ai.test.ts')).toBe(false);
@@ -186,13 +242,6 @@ describe('collection', () => {
     it('a Playwright spec under e2e lands in no project and is not a test file one must collect', () => {
       expect(listed.has('e2e/x.spec.ts')).toBe(false);
       expect(isCollectable('e2e/x.spec.ts')).toBe(false);
-    });
-
-    // No web project collects .test.tsx files until #301 adds it. That change swaps this fixture.
-    it('a test file that matches no project is reported', () => {
-      expect(misfiled(written.filter(isCollectable), listed)).toEqual([
-        { path: 'orphan.test.tsx', projects: [] },
-      ]);
     });
   });
 });

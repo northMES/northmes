@@ -29,6 +29,11 @@ function workspaceManifests(): string[] {
   return ['package.json', ...new Set(matches)];
 }
 
+// The projects that a vitest command names with `--project`, in order.
+function projectsOf(command = ''): string[] {
+  return [...command.matchAll(/--project[= ](\S+)/g)].map((match) => match[1] ?? '');
+}
+
 const rootScripts = readJson<PackageJson>('package.json').scripts ?? {};
 
 describe('gates', () => {
@@ -38,7 +43,6 @@ describe('gates', () => {
 
   it('the other root scripts exist', () => {
     expect(rootScripts.gen).toBe('node scripts/gen.mjs');
-    expect(rootScripts.test).toBe('vitest run');
     expect(rootScripts['test:unit']).toBe('vitest run --project unit');
     expect(rootScripts['test:int']).toBe('vitest run --project integration');
     expect(rootScripts['test:ai']).toBe('vitest run --project ai');
@@ -56,9 +60,17 @@ describe('gates', () => {
       'node scripts/check-node.mjs',
       'turbo run lint typecheck',
       'pnpm gen --check',
-      // The web project is absent on purpose until #301 adds it.
-      'vitest run --project unit --project integration --project types',
+      'vitest run --project unit --project integration --project web --project types',
     ]);
+  });
+
+  // An unfiltered `vitest run` would also run the ai and ops projects, and *.ai.test.ts runs only
+  // through `pnpm test:ai` (AGENTS.md).
+  it('pnpm test runs the unit, integration, web and types projects and never ai or ops', () => {
+    const checkVitest = rootScripts.check?.split(' && ').find((c) => c.startsWith('vitest run'));
+
+    expect(projectsOf(rootScripts.test)).toEqual(['unit', 'integration', 'web', 'types']);
+    expect(projectsOf(rootScripts.test)).toEqual(projectsOf(checkVitest));
   });
 
   it('check:full runs check and test:tz', () => {
