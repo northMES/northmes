@@ -134,6 +134,36 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 only source files under modules/*/web, examples/*/web, apps/web and e2e are scanned', () => {
+    const link = '<Link to="/x">X</Link>;\n';
+    const paths = [
+      'examples/plugin-validator/web/src/panel.tsx',
+      'packages/web-sdk/test/module-link.test.tsx',
+      'modules/planning/contracts/src/links.tsx',
+      'modules/planning/web-extra/src/a.tsx',
+      'modules/planning/src/web/a.tsx',
+      'apps/website/src/a.tsx',
+      'apps/server/src/a.tsx',
+      'e2e-tools/a.tsx',
+      'test/e2e/a.tsx',
+    ];
+    const files = [
+      ...paths.map((path) => ({ path, text: link })),
+      { path: 'e2e/README.md', text: "```ts\nawait page.goto('/x');\n```\n" },
+      { path: 'apps/web/src/notes.txt', text: "await page.goto('/x');\n" },
+      { path: 'apps/web/src/main.mts', text: "await router.navigate({ to: '/x' });\n" },
+      { path: 'e2e/fixtures/server.cjs', text: "page.goto('/x');\n" },
+    ];
+
+    const findings = scan(files, []);
+
+    expect(findings).toEqual([
+      { path: 'examples/plugin-validator/web/src/panel.tsx', line: 1, literal: '/x' },
+      { path: 'apps/web/src/main.mts', line: 1, literal: '/x' },
+      { path: 'e2e/fixtures/server.cjs', line: 1, literal: '/x' },
+    ]);
+  });
+
   it('E02-S05 an allowlist entry without a reason fails', () => {
     const files = [{ path: 'e2e/board.spec.ts', text: "await page.goto('/x');\n" }];
     const withReason = { path: 'e2e/board.spec.ts', literal: '/y', reason: 'A reason.' };
