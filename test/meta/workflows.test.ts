@@ -13,6 +13,7 @@ interface Step {
 interface Job {
   name?: string;
   needs?: string | string[];
+  'runs-on'?: unknown;
   steps?: Step[];
 }
 
@@ -97,6 +98,20 @@ function turboTasks(command: string): string[] {
   return match?.[1] === undefined ? [command] : match[1].split(' ').map((t) => `turbo run ${t}`);
 }
 
+// The runner of the test jobs (docs/plan/13-delivery-and-github.md): a pull request from a fork
+// always runs on a GitHub-hosted runner, and an unset NM_RUNNER_X64 falls back to one, so deleting
+// the variable moves the test jobs off Blacksmith without a commit.
+const testRunner =
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a template.
+  "${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'ubuntu-24.04' || vars.NM_RUNNER_X64 || 'ubuntu-24.04' }}";
+
+// A test job runs a root script that runs Vitest.
+function isTestJob(job: Job): boolean {
+  return (job.steps ?? []).some(
+    ({ run }) => run !== undefined && commandsOf(run.trim()).some((c) => /\bvitest\b/.test(c)),
+  );
+}
+
 describe('workflows', () => {
   // A tag can move to other code; a commit SHA cannot. Renovate keeps the version comment next to
   // the SHA current (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md).
@@ -122,6 +137,19 @@ describe('workflows', () => {
     expect(all, 'workflows').not.toHaveLength(0);
     for (const { path, permissions } of all) {
       expect(permissions, path).toBeDefined();
+    }
+  });
+
+  it('test jobs take runs-on from a repository variable', () => {
+    const testJobs = workflows().flatMap(({ path, jobs }) =>
+      Object.entries(jobs ?? {})
+        .filter(([, job]) => isTestJob(job))
+        .map(([id, job]) => ({ where: `${path} job ${id}`, runsOn: job['runs-on'] })),
+    );
+
+    expect(testJobs, 'test jobs').not.toHaveLength(0);
+    for (const { where, runsOn } of testJobs) {
+      expect(String(runsOn).replace(/\s+/g, ' ').trim(), where).toBe(testRunner);
     }
   });
 
