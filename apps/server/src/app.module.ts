@@ -6,6 +6,7 @@ import {
   SubgraphRegistryModule,
 } from '@northmes/sdk/graphql';
 import { GatewayModule } from './gateway/gateway.module.ts';
+import { WebModule } from './web/web.module.ts';
 
 /** The root module of the server. */
 @Module({})
@@ -28,6 +29,7 @@ export class AppModule {
         ...subgraphs.map((subgraph) => subgraph.module),
         ...subgraphs.map((subgraph) => defineSubgraph(subgraph)),
         GatewayModule,
+        WebModule,
       ],
     };
   }

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { type ModuleManifest, moduleNames } from '@northmes/sdk';
 import {
   ConfigError,
@@ -21,6 +22,8 @@ import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
 import { inRepoManifests } from '../modules.ts';
+import { builtShellDir, webDirOf } from '../web/static-mounts.ts';
+import { serveWeb } from '../web/web.module.ts';
 import { BootError } from './boot-error.ts';
 
 export interface BootOptions {
@@ -42,7 +45,7 @@ export interface BootOptions {
 }
 
 /** The NorthMES version of this build, from the server's package.json. */
-function imageVersion(): string {
+export function imageVersion(): string {
   const packageJson = new URL('../../package.json', import.meta.url);
   return (JSON.parse(readFileSync(packageJson, 'utf8')) as { version: string }).version;
 }
@@ -102,7 +105,7 @@ export interface Booted<Env> {
   /** The checked catalog in boot order. */
   readonly catalog: readonly CatalogEntry[];
   /** The created app, which listens on nothing. */
-  readonly app: INestApplication;
+  readonly app: NestExpressApplication;
 }
 
 /**
@@ -119,7 +122,7 @@ export type ResolveManifest = (specifier: string) => string;
 
 /**
  * Boot step 3: imports the manifest of every module. No Nest code of a module loads. A module's
- * migration files are in the migrations folder of its package.
+ * migration files are in the migrations folder of its package, and its built remote in web/dist/.
  */
 async function importManifests(
   specifiers: readonly string[],
@@ -129,8 +132,9 @@ async function importManifests(
   const entries: CatalogEntry[] = [];
   for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
-    const migrationsDir = migrationsDirOf(resolveManifest(specifier));
-    entries.push({ manifest, kind: 'module', migrationsDir });
+    const manifestUrl = resolveManifest(specifier);
+    const migrationsDir = migrationsDirOf(manifestUrl);
+    entries.push({ manifest, kind: 'module', migrationsDir, webDir: webDirOf(manifestUrl) });
   }
   return entries;
 }
@@ -194,17 +198,18 @@ async function bootSteps<
   const entries = await importManifests(manifests, importManifest, resolveManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const subgraphs = await importServers(catalog);
-  const app = await NestFactory.create(AppModule.forRoot(config, subgraphs), {
-    logger: ['error', 'warn'],
-  });
+  const root = AppModule.forRoot(config, subgraphs);
+  const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
   return { env, secrets, catalog, app };
 }
 
 async function serve(options: BootOptions): Promise<INestApplication> {
   const { log } = options;
-  const { env: serverEnv, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
-  await app.listen(serverEnv.PORT, '127.0.0.1');
+  const { env, catalog, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
+  // The static mounts go in before listen initialises the app and adds the routes after them.
+  serveWeb(app, { northmes: imageVersion(), shellDir: builtShellDir, catalog });
+  await app.listen(env.PORT, '127.0.0.1');
   const { supergraphHash } = app.get(GatewayService);
   if (supergraphHash) log.info(`Serving ${GATEWAY_PATH} with supergraph=${supergraphHash}`);
   log.info(`Listening on ${await app.getUrl()}`);

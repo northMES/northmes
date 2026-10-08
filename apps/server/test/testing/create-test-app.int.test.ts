@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { hostFactory } from '@northmes/server/testing';
+import planning from '@northmes/module-planning/manifest';
+import { hostFactory, hostFactoryWithWebFiles } from '@northmes/server/testing';
 import { createTestApp, type TestApp } from '@northmes/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 let testApp: TestApp | undefined;
 
@@ -44,5 +48,28 @@ describe('hostFactory', () => {
     });
 
     await expect(built).rejects.toThrow('broken provider');
+  });
+});
+
+describe('hostFactoryWithWebFiles', () => {
+  it('E02-S05 hostFactoryWithWebFiles serves a module remote from the folder it is given', async () => {
+    const webDir = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    onTestFinished(() => rmSync(webDir, { recursive: true, force: true }));
+    mkdirSync(join(webDir, 'modules', 'planning'), { recursive: true });
+    writeFileSync(
+      join(webDir, 'modules', 'planning', 'remoteEntry.js'),
+      'export const entry = 1;\n',
+    );
+    testApp = await createTestApp({
+      modules: ['core', 'planning'],
+      hostFactory: hostFactoryWithWebFiles(webDir),
+    });
+    await testApp.app.listen(0, '127.0.0.1');
+
+    const url = `${await testApp.app.getUrl()}/modules/planning/${planning.version}/remoteEntry.js`;
+    const response = await fetch(url);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('export const entry = 1;\n');
   });
 });

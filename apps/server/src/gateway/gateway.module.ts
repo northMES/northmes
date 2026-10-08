@@ -66,7 +66,7 @@ export class GatewayService implements OnApplicationBootstrap {
   }
 }
 
-@Module({ providers: [GatewayService] })
+@Module({ providers: [GatewayService], exports: [GatewayService] })
 export class GatewayModule implements NestModule {
   constructor(@Inject(GatewayService) private readonly gateway: GatewayService) {}
 

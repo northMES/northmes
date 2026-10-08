@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { packageDirOf } from '../catalog/package-dir.ts';
 
 /** One migration file of a module: <UTC yyyymmddHHMMss>_<slug>.sql (ADR 0006). */
 export interface MigrationFile {
@@ -13,19 +13,9 @@ export interface MigrationFile {
   readonly sha256: string;
 }
 
-/**
- * The migrations folder of the package that holds a manifest, which manifestUrl names (ADR 0006).
- * The manifest is the package's source file or its build in dist/, so the folder is found next to
- * the package.json above it.
- */
+/** The migrations folder of the package that holds a manifest, which manifestUrl names (ADR 0006). */
 export function migrationsDirOf(manifestUrl: string): string {
-  let dir = dirname(fileURLToPath(manifestUrl));
-  while (!existsSync(join(dir, 'package.json'))) {
-    const parent = dirname(dir);
-    if (parent === dir) throw new Error(`No package.json above the manifest ${manifestUrl}`);
-    dir = parent;
-  }
-  return join(dir, 'migrations');
+  return join(packageDirOf(manifestUrl), 'migrations');
 }
 
 /**
