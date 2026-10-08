@@ -106,9 +106,10 @@ Root scripts:
 | `pnpm test:tz` | Unit and integration with `TZ=Europe/Stockholm` and `NM_TEST_PG_TZ=Europe/Stockholm` | The Stockholm leg |
 | `pnpm e2e` | Build, then `playwright test` | Local end-to-end runs |
 | `pnpm test:ai`, `pnpm test:e2e:ai` | The live AI suites | A person, or the scheduled live workflow |
+| `pnpm react-doctor` | react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk` | `CI / react doctor` only, under the license exception of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report.
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report.
 
 ## Testcontainers harness
 
@@ -380,6 +381,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `typecheck` | turbo `typecheck` |
 | `build` | turbo `build` |
 | `test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
+| `react doctor` | `pnpm react-doctor`: react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk`; an error fails it and warnings show in the log. CI only, under the license exception of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists), `cla` (before the first outside pull request) and `openapi diff` (with the first public route). |
