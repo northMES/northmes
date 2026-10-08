@@ -1,9 +1,14 @@
 // Keeps every Postgres image reference on infra/pg-image.json (docs/adr/0041-test-strategy-tdd-
-// vitest-projects-testcontainers-and-playwright.md). A Dockerfile whose FROM line names the image
-// `postgres` with any reference other than the configured one is a finding, so `postgres:17` and
-// `postgres:18` without the digest both fail.
+// vitest-projects-testcontainers-and-playwright.md). A reference other than the configured one is a
+// finding, so `postgres:17` and `postgres:18` without the digest both fail. Three matchers read
+// one line at a time:
 //
-// This first slice reads Dockerfiles only: files named Dockerfile, Dockerfile.* or *.Dockerfile.
+// - Dockerfiles (Dockerfile, Dockerfile.* or *.Dockerfile): a FROM line that names `postgres`.
+// - Compose files (compose*.y(a)ml, docker-compose*.y(a)ml): an `image: postgres:...` line.
+// - Test files (*.test.* and *.test-d.*): a PostgreSqlContainer call with a literal other than the
+//   configured image, or with no argument.
+//
+// A call split over several lines is not seen. docs/** and the pg-image test file are skipped.
 
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -47,11 +52,14 @@ function isTestFile(path) {
 }
 
 /**
- * Paths are repository-relative with forward slashes, as `git ls-files` prints them.
+ * docs/** holds the spike sources and quotes images on purpose. The pg-image test file quotes the
+ * calls it checks for. scripts/lint/pg-image.mjs and infra/pg-image.json need no entry because no
+ * matcher reads them. Paths are repository-relative with forward slashes, as `git ls-files` prints
+ * them.
  * @param {string} path
  */
 function isSkipped(path) {
-  return path.startsWith('docs/');
+  return path.startsWith('docs/') || path === 'test/meta/pg-image.test.ts';
 }
 
 /** @param {string} reference */

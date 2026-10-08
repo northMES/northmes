@@ -39,7 +39,7 @@ describe('pg-image', () => {
     const findings = scan([
       {
         path: 'compose.yaml',
-        text: 'services:\n  a:\n    image: postgres:(\\d+)\n  b:\n    image: postgres:${TAG}\n',
+        text: `services:\n  a:\n    image: postgres:(\\d+)\n  b:\n    image: postgres:\${TAG}\n`,
       },
     ]);
 
@@ -66,12 +66,17 @@ describe('pg-image', () => {
       { path: 'a.int.test.ts', text: 'const a = 1;\nawait new PostgreSqlContainer().start();\n' },
     ]);
 
-    expect(findings).toEqual([{ path: 'a.int.test.ts', line: 2, reference: 'PostgreSqlContainer()' }]);
+    expect(findings).toEqual([
+      { path: 'a.int.test.ts', line: 2, reference: 'PostgreSqlContainer()' },
+    ]);
   });
 
   it('scan skips docs/**', () => {
     const findings = scan([
-      { path: 'docs/sources/spike/compose.yaml', text: 'services:\n  db:\n    image: postgres:17\n' },
+      {
+        path: 'docs/sources/spike/compose.yaml',
+        text: 'services:\n  db:\n    image: postgres:17\n',
+      },
       {
         path: 'docs/sources/spike/test/pg.test.mjs',
         text: "new PostgreSqlContainer('postgres:18.4-alpine');\n",
