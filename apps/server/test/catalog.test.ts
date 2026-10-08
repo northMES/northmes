@@ -155,6 +155,21 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E02-S01 module ids web, station and auth are each refused as reserved, and the message names the id', () => {
+    const error = refusal([
+      core,
+      inRepoModule('web', ['core']),
+      plugin('station', ['core']),
+      inRepoModule('auth', ['core']),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module id "web" is reserved: /api/v1/web is a first-party path segment',
+      'Module id "station" is reserved: /api/v1/station is a first-party path segment',
+      'Module id "auth" is reserved: /api/v1/auth is a library path segment',
+    ]);
+  });
+
   it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
     const { locale, outcomes } = checkInCzechLocale([
       [
