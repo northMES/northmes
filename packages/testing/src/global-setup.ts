@@ -39,6 +39,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const container = await new PostgreSqlContainer(image)
     .withPassword(password)
     .withDatabase(database)
+    // biome-ignore lint/style/noProcessEnv: NM_TEST_PG_TZ picks the time zone leg of a test run, not app configuration.
     .withCommand(serverArgs(process.env))
     .withTmpFs({ '/var/lib/postgresql': 'rw' })
     .start();

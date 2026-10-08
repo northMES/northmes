@@ -1,0 +1,33 @@
+{
+  "name": "@northmes/planning-web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "dependencies": {
+    "@northmes/planning-contracts": "workspace:*",
+    "@northmes/planning-domain": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@apollo/client": "catalog:",
+    "@biomejs/biome": "catalog:",
+    "@northmes/web-build": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
+    "@tanstack/react-router": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "graphql": "catalog:",
+    "graphql-ws": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rxjs": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

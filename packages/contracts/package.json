@@ -1,0 +1,25 @@
+{
+  "name": "@northmes/contracts",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "@northmes/source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "peerDependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "fast-check": "catalog:",
+    "temporal-polyfill": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  }
+}

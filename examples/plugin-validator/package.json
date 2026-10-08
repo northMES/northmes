@@ -1,0 +1,41 @@
+{
+  "name": "@northmes/example-validator",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "exports": {
+    "./manifest": {
+      "@northmes/source": "./src/manifest.ts",
+      "default": "./dist/manifest.js"
+    }
+  },
+  "dependencies": {
+    "@northmes/planning-contracts": "workspace:*",
+    "ms": "catalog:"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@northmes/sdk": "workspace:*",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@northmes/sdk": "workspace:*",
+    "@northmes/testing": "workspace:*",
+    "@types/ms": "catalog:",
+    "@types/node": "catalog:",
+    "graphql": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  }
+}

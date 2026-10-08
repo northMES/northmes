@@ -14,14 +14,41 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@northmes/sdk": "workspace:*",
     "@testcontainers/postgresql": "catalog:",
+    "fast-check": "catalog:",
+    "graphql-ws": "catalog:",
     "pg": "catalog:"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "graphql": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/config": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/config": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@nestjs/testing": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "graphql": "catalog:",
+    "reflect-metadata": "catalog:",
+    "rxjs": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "zod": "catalog:"
   }
 }

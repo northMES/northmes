@@ -73,8 +73,20 @@ describe('gates', () => {
     expect(projectsOf(rootScripts.test)).toEqual(projectsOf(checkVitest));
   });
 
-  it('check:full runs check and test:tz', () => {
-    expect(rootScripts['check:full']).toBe('pnpm check && pnpm test:tz');
+  it('check:full runs check, test:tz and e2e', () => {
+    expect(rootScripts['check:full']).toBe('pnpm check && pnpm test:tz && pnpm e2e');
+  });
+
+  it('E02-S01 the root scripts northmes, gen:migration, plugin:build, dev, demo and e2e exist', () => {
+    // pnpm appends the arguments of `pnpm northmes db bootstrap` after dist/main.js.
+    expect(rootScripts.northmes).toBe(
+      'turbo run build --filter=@northmes/server --output-logs=errors-only && node apps/server/dist/main.js',
+    );
+    expect(rootScripts['gen:migration']).toBe('node scripts/gen-migration.mjs');
+    expect(rootScripts['plugin:build']).toBe('node scripts/plugin-build.mjs');
+    expect(rootScripts.dev).toBe('node scripts/stack/dev.mjs');
+    expect(rootScripts.demo).toBe('node scripts/stack/demo.mjs');
+    expect(rootScripts.e2e).toBe('pnpm build && playwright test');
   });
 
   it('the Tester command in every graph under docs/agents/handoff/graphs is pnpm check, and its coder instruction names pnpm check', () => {

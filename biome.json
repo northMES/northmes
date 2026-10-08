@@ -28,10 +28,36 @@
       "a11y": {
         "preset": "recommended"
       },
+      "style": {
+        "noProcessEnv": "error"
+      },
       "suspicious": {
         "noFocusedTests": "error",
         "noSkippedTests": "error"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/sdk/src/config/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test-d.ts",
+        "**/test/**",
+        "e2e/**",
+        "scripts/**",
+        "vitest.config.ts",
+        "playwright.config.ts",
+        "**/vite.config.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    }
+  ]
 }
