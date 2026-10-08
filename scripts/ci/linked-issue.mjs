@@ -1,6 +1,8 @@
 // The check behind ci / linked issue. Every pull request finishes an issue, which its body names
 // with Closes #N, so the issue closes when the pull request merges.
 
+import { errorAnnotation } from './annotation.mjs';
+
 // GitHub's closing keywords, with an optional colon, before #N or owner/repository#N.
 const closesIssue =
   /(?:^|\W)(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):? +(?:[\w.-]+\/[\w.-]+)?#\d+/i;
@@ -23,12 +25,6 @@ export function checkLinkedIssue({ body, author, headRef, fromFork }) {
     message:
       'The pull request body links no issue. Add Closes #N for the issue this pull request finishes.',
   };
-}
-
-// A workflow command for an error annotation. GitHub decodes %25, %0D and %0A in its message.
-function errorAnnotation(message) {
-  const encoded = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
-  return `::error::${encoded}`;
 }
 
 // The job passes the pull request through the environment, never inside the run script, so a body

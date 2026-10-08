@@ -1,6 +1,8 @@
 // The check behind ci / pr title. The pull request title becomes the squash commit subject and the
 // changelog line, so it must be a Conventional Commit with a type release-please knows.
 
+import { errorAnnotation } from './annotation.mjs';
+
 const types = [
   'feat',
   'fix',
@@ -25,12 +27,6 @@ export function checkTitle(title) {
     ok: false,
     message: `The pull request title ${JSON.stringify(title)} is not a Conventional Commit. Write it as type(scope): outcome or type: outcome, with ! before the colon for a breaking change and one of the types ${types.join(', ')}.`,
   };
-}
-
-// A workflow command for an error annotation. GitHub decodes %25, %0D and %0A in its message.
-function errorAnnotation(message) {
-  const encoded = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
-  return `::error::${encoded}`;
 }
 
 // The job passes the title through the environment, never inside the run script, so a title cannot
