@@ -1,7 +1,9 @@
 // Keeps TRUNCATE away from every role, so nm_app holds SELECT, INSERT, UPDATE and DELETE only
 // (docs/adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md). A GRANT
 // statement whose privilege list names TRUNCATE is a finding, wherever it sits in a migration
-// file: on its own, split over several lines, or inside ALTER DEFAULT PRIVILEGES.
+// file: on its own, split over several lines, or inside ALTER DEFAULT PRIVILEGES. So is GRANT ALL
+// on tables, which includes TRUNCATE; GRANT ALL on another kind of object, such as a schema or a
+// sequence, is not.
 //
 // test/meta/no-truncate.test.ts scans every .sql file under a migrations folder outside docs/, so
 // pnpm check fails on a finding.
@@ -12,7 +14,24 @@
  */
 
 // GRANT <privileges> ON <object> TO, within one statement. The privilege list ends at the first ON.
-const grantPattern = /\bgrant\s+(?<privileges>[^;]*?)\s+on\s+[^;]*?\s+to\b/gi;
+const grantPattern = /\bgrant\s+(?<privileges>[^;]*?)\s+on\s+(?<object>[^;]*?)\s+to\b/gi;
+
+// ALL or ALL PRIVILEGES without a column list, which on a table includes TRUNCATE.
+const allPattern = /^all(?:\s+privileges)?$/i;
+
+// The object kinds of GRANT ... ON other than tables. An object without a kind is a table.
+const otherKindPattern =
+  /^(?:all\s+)?(?:sequences?|database|domain|foreign\s+(?:data\s+wrapper|server)|functions?|procedures?|routines?|language|large\s+object|parameter|schemas?|tablespace|types?)\b/i;
+
+/**
+ * Whether a GRANT with this privilege list on this object grants TRUNCATE.
+ * @param {string} privileges
+ * @param {string} object
+ */
+function grantsTruncate(privileges, object) {
+  if (/\btruncate\b/i.test(privileges)) return true;
+  return allPattern.test(privileges.trim()) && !otherKindPattern.test(object.trim());
+}
 
 /**
  * The 1-based line of an offset in text.
@@ -34,7 +53,7 @@ export function scan(files) {
 
   for (const { path, text } of files) {
     for (const grant of text.matchAll(grantPattern)) {
-      if (/\btruncate\b/i.test(grant.groups?.privileges ?? '')) {
+      if (grantsTruncate(grant.groups?.privileges ?? '', grant.groups?.object ?? '')) {
         findings.push({ path, line: lineAt(text, grant.index) });
       }
     }
