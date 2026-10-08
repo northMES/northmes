@@ -37,3 +37,29 @@ export function readMigrationFiles(dir: string | undefined): MigrationFile[] {
     };
   });
 }
+
+/** The first line of a migration file, which says whether it expands or contracts the schema. */
+const markers = ['-- migration: expand', '-- migration: contract'];
+
+/**
+ * The problems with a module's files that refuse a migrate run before it applies any file (ADR
+ * 0006): two or more files that share a timestamp prefix, the part of the name before its first
+ * underscore, and a file whose first line is not its expand or contract marker (ADR 0045). Each
+ * problem names its files as <module id>/<file name>.
+ */
+export function fileProblems(moduleId: string, files: readonly MigrationFile[]): string[] {
+  const shared = [...Map.groupBy(files, (file) => file.name.split('_', 1)[0])]
+    .filter(([, sharing]) => sharing.length > 1)
+    .map(([prefix, sharing]) => {
+      const paths = sharing.map((file) => `${moduleId}/${file.name}`);
+      const listed = `${paths.slice(0, -1).join(', ')} and ${paths.at(-1)}`;
+      return `${listed} share the timestamp prefix ${prefix}; give each file a timestamp of its own`;
+    });
+  const unmarked = files
+    .filter((file) => !markers.includes(file.sql.split('\n', 1)[0]?.trimEnd() ?? ''))
+    .map(
+      (file) =>
+        `${moduleId}/${file.name} has no expand or contract marker; start the file with "-- migration: expand" or "-- migration: contract"`,
+    );
+  return [...shared, ...unmarked];
+}

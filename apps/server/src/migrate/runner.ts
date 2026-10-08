@@ -2,7 +2,7 @@
 import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import { Client } from 'pg';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
-import { type MigrationFile, readMigrationFiles } from './files.ts';
+import { fileProblems, type MigrationFile, readMigrationFiles } from './files.ts';
 import { MigrationError } from './migration-error.ts';
 
 export interface MigrateOptions {
@@ -52,11 +52,10 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     await takeMigrationLock(client);
     await createMigrationTable(client);
     const modules = await readModuleFiles(client, catalog);
-    const problems = [
-      ...changedFiles(modules),
-      ...sharedPrefixes(modules),
-      ...unmarkedFiles(modules),
-    ];
+    const problems = modules.flatMap((module) => [
+      ...changedFiles(module),
+      ...fileProblems(module.names.id, module.files),
+    ]);
     if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
     for (const { names, files, recorded } of modules) {
@@ -90,46 +89,13 @@ async function readModuleFiles(
 }
 
 /** A problem for each applied file whose sha256 differs from the one recorded when it applied. */
-function changedFiles(modules: readonly ModuleFiles[]): string[] {
-  return modules.flatMap(({ names, files, recorded }) =>
-    files
-      .filter((file) => recorded.has(file.name) && recorded.get(file.name) !== file.sha256)
-      .map(
-        (file) =>
-          `${names.id}/${file.name} changed after it was applied; put the change in a new migration file`,
-      ),
-  );
-}
-
-/**
- * A problem for each timestamp prefix that two or more files of one module share. The prefix is the
- * part of the name before its first underscore.
- */
-function sharedPrefixes(modules: readonly ModuleFiles[]): string[] {
-  return modules.flatMap(({ names, files }) =>
-    [...Map.groupBy(files, (file) => file.name.split('_', 1)[0])]
-      .filter(([, shared]) => shared.length > 1)
-      .map(([prefix, shared]) => {
-        const paths = shared.map((file) => `${names.id}/${file.name}`);
-        const listed = `${paths.slice(0, -1).join(', ')} and ${paths.at(-1)}`;
-        return `${listed} share the timestamp prefix ${prefix}; give each file a timestamp of its own`;
-      }),
-  );
-}
-
-/** The first line of a migration file, which states whether the file expands or contracts. */
-const markers = ['-- migration: expand', '-- migration: contract'];
-
-/** A problem for each file whose first line is not its expand or contract marker (ADR 0045). */
-function unmarkedFiles(modules: readonly ModuleFiles[]): string[] {
-  return modules.flatMap(({ names, files }) =>
-    files
-      .filter((file) => !markers.includes(file.sql.split('\n', 1)[0]?.trimEnd() ?? ''))
-      .map(
-        (file) =>
-          `${names.id}/${file.name} has no expand or contract marker; start the file with "-- migration: expand" or "-- migration: contract"`,
-      ),
-  );
+function changedFiles({ names, files, recorded }: ModuleFiles): string[] {
+  return files
+    .filter((file) => recorded.has(file.name) && recorded.get(file.name) !== file.sha256)
+    .map(
+      (file) =>
+        `${names.id}/${file.name} changed after it was applied; put the change in a new migration file`,
+    );
 }
 
 /**
