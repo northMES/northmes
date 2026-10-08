@@ -44,6 +44,15 @@ describe('validateWebModule', () => {
     ]);
   });
 
+  it('E02-S05 validateWebModule names routes that return something other than a route', () => {
+    expect(validateWebModule({ ...planning, routes: () => undefined }, entry)).toEqual([
+      'routes did not return a route',
+    ]);
+    expect(validateWebModule({ ...planning, routes: () => ({}) }, entry)).toEqual([
+      'routes did not return a route',
+    ]);
+  });
+
   it('E02-S05 validateWebModule names a remote whose module is not an object', () => {
     expect(validateWebModule(undefined, entry)).toEqual([
       'the module is missing, expected an object',
