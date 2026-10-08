@@ -110,6 +110,35 @@ describe('mit-imports', () => {
     ]);
   });
 
+  it('E02-S01 an MIT file that imports code of the AGPL root package fails', () => {
+    const root = {
+      path: 'package.json',
+      manifest: { name: 'northmes', license: 'AGPL-3.0-or-later' },
+    };
+
+    const findings = scan(
+      [root, ...workspacePackages],
+      [
+        {
+          path: 'packages/sdk/src/x.ts',
+          text: [
+            "import { render } from '../../../scripts/x.mjs';",
+            "import northmes from 'northmes';",
+            "import { contract } from '../../contracts/src/index.ts';",
+            "import { boot } from '../../../apps/server/src/boot/boot.ts';",
+            '',
+          ].join('\n'),
+        },
+      ],
+    );
+
+    expect(findings).toEqual([
+      { kind: 'import', path: 'packages/sdk/src/x.ts', line: 1, imported: 'northmes' },
+      { kind: 'import', path: 'packages/sdk/src/x.ts', line: 2, imported: 'northmes' },
+      { kind: 'import', path: 'packages/sdk/src/x.ts', line: 4, imported: '@northmes/server' },
+    ]);
+  });
+
   it('E02-S01 an examples plugin that imports an AGPL package fails', () => {
     const plugin = {
       path: 'examples/plugin-validator/package.json',
