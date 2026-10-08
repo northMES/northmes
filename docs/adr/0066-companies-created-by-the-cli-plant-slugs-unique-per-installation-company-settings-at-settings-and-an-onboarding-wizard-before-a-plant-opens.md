@@ -1,6 +1,6 @@
 ---
 status: "proposed"
-date: 2026-10-07
+date: 2026-10-08
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT, hosting partners
@@ -215,7 +215,7 @@ Krister Johansson decided on 2026-10-06 to wait with the onboarding wizard until
 | Field | Meaning |
 |---|---|
 | `companies` | `[{ id, name, onboardingState, plants: [{ id, slug, name, onboardingState }] }]`: every plant the user can open, grouped under its company, with `onboardingState` `inProgress` or `open`. A plant that is not open is listed only for a holder of `core.onboarding:manage` there. A company where the user holds a company role but which has no plant yet appears with an empty `plants` list. Companies and plants are sorted by name. |
-| `admin` | `true` when company settings hold a page for the user: the user holds an admin permission at a company node, in release 1 `core.plant:create` or `core.onboarding:manage`. Later company settings pages add their permissions to this rule. |
+| `admin` | `true` when company settings hold a page for the user: the user holds an admin permission at a company node, in release 1 `core.company:update`, `core.plant:create` or `core.onboarding:manage`. Later company settings pages add their permissions to this rule. |
 
 * Called with `plant`, the response keeps every field it has today, adds the two above, and adds `plant.onboardingState`. For a plant in onboarding, a user who holds a role there without `core.onboarding:manage` gets 200 with the `plant` object, no modules and no permissions, so the shell renders the page with the plant's name, for example "Plant D is not open yet", instead of an error.
 * Called by a user session without `plant`, it answers 200 with `plant: null`, `companies`, `admin`, no presentation values, and the permissions the user holds at each company node, keyed by company id, which company settings use. A user who is a company admin in one company and a planner in another sees the plant form only for the first. When `admin` is true, the module list holds the modules with company settings routes, which in release 1 is core alone; otherwise the list is empty.
