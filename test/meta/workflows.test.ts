@@ -575,6 +575,28 @@ describe('workflows', () => {
     expect(between.map((step) => step.if)).toEqual([undefined, undefined]);
   });
 
+  // A setup step skips the containment check below, so a step that chains another command after
+  // git worktree add goes through that check.
+  it('only the install and a git worktree add of one directory with nothing chained count as setup steps', () => {
+    const steps = {
+      'pnpm install --frozen-lockfile': true,
+      'git worktree add --detach ../fresh-worktree': true,
+      'git worktree add --detach "$RUNNER_TEMP/fresh-worktree"': true,
+      'pnpm install': false,
+      'git worktree add ../x && node -e "process.exit(0)"': false,
+      'git worktree add --detach ../x && pnpm build': false,
+      'git worktree add --detach ../x; pnpm build': false,
+      'git worktree add --detach ../x || pnpm build': false,
+      'git worktree add --detach ../x | tee log': false,
+      'git worktree add --detach $(pnpm${IFS}build)': false,
+      'git worktree add --detach `pnpm build`': false,
+    };
+
+    expect(Object.fromEntries(Object.keys(steps).map((run) => [run, isSetupStep(run)]))).toEqual(
+      steps,
+    );
+  });
+
   it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
