@@ -149,4 +149,23 @@ describe('loaderFor', () => {
     expect(first.data?._entities).toEqual([{ id: 'a-1', name: 'Hex bolt M8' }]);
     expect(second.data?._entities).toEqual([{ id: 'a-1', name: 'Hex bolt M8 zinc plated' }]);
   });
+
+  it('E02-S03 a NOT_FOUND for one key rejects only that key', async () => {
+    const { registry } = await buildSubgraphs({ catalog: CatalogModule });
+
+    const result = await resolveArticles(subgraph(registry, 'catalog'), requestContext(), [
+      'a-1',
+      'a-9',
+      'a-2',
+    ]);
+
+    expect(result.data?._entities).toEqual([
+      { id: 'a-1', name: 'Hex bolt M8' },
+      null,
+      { id: 'a-2', name: 'Flat washer 8' },
+    ]);
+    expect(
+      result.errors?.map((error) => ({ code: error.extensions.code, path: error.path })),
+    ).toEqual([{ code: 'NOT_FOUND', path: ['_entities', 1] }]);
+  });
 });

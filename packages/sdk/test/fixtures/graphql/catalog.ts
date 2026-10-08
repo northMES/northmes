@@ -14,6 +14,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { type EntityReference, loaderFor, type SubgraphContext } from '@northmes/sdk/graphql';
+import { GraphQLError } from 'graphql';
 
 @ObjectType('Article', { registerIn: () => CatalogModule })
 @Directive('@key(fields: "id")')
@@ -41,9 +42,16 @@ export class CatalogArticles {
     return this.#rows.get(id);
   }
 
-  async byIds(ids: readonly string[]): Promise<(Article | undefined)[]> {
+  /** One entry per id: the article, or a NOT_FOUND error for an id the catalog does not hold. */
+  async byIds(ids: readonly string[]): Promise<(Article | GraphQLError)[]> {
     this.batches.push([...ids]);
-    return ids.map((id) => this.#rows.get(id));
+    return ids.map(
+      (id) =>
+        this.#rows.get(id) ??
+        new GraphQLError(`Article ${id} was not found`, {
+          extensions: { code: 'NOT_FOUND', errorCode: 'catalog.article.not_found' },
+        }),
+    );
   }
 }
 
@@ -60,7 +68,7 @@ export class ArticleResolver {
   resolveReference(
     @Parent() reference: EntityReference,
     @Context() context: SubgraphContext,
-  ): Promise<Article | undefined> {
+  ): Promise<Article> {
     return loaderFor(context, 'catalog.article', (ids: readonly string[]) =>
       this.articles.byIds(ids),
     ).load(reference.id);
