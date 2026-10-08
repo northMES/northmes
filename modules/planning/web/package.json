@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@northmes/contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/planning-domain": "workspace:*",
     "zod": "catalog:"
