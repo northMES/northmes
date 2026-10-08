@@ -5,7 +5,7 @@ import { checkLinkedIssue } from './linked-issue.mjs';
 
 const script = fileURLToPath(new URL('./linked-issue.mjs', import.meta.url));
 
-// Runs the script as the ci / linked issue job does, with the pull request in the environment.
+// Runs the script as the CI / linked issue job does, with the pull request in the environment.
 function run(pullRequestEnv: Record<string, string>) {
   return spawnSync(process.execPath, [script], {
     env: { PATH: process.env.PATH, ...pullRequestEnv },
@@ -18,7 +18,7 @@ function pullRequest(body: string) {
   return { body, author: 'a-contributor', headRef: 'ci/gate-on-pull-requests', fromFork: false };
 }
 
-describe('ci / linked issue', () => {
+describe('CI / linked issue', () => {
   it('passes a pull request whose body has Closes #N', () => {
     expect(checkLinkedIssue(pullRequest('Closes #196')).ok).toBe(true);
     expect(checkLinkedIssue(pullRequest('Runs the gate.\n\ncloses #7\n')).ok).toBe(true);

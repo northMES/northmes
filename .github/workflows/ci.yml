@@ -1,9 +1,10 @@
-# The CI checks for pull requests and pushes to main. The main ruleset requires each job here as a
-# status check, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a
-# renamed, added or removed job needs a ruleset edit: an added name after the merge, a removed or
-# old name just before it. test/meta/workflows.test.ts lists the job names. Every job that ci / gate
-# needs, except the two pull request checks, runs root pnpm scripts that pnpm check or pnpm
-# check:full contains.
+# The CI checks for pull requests and pushes to main. GitHub shows each job as CI / <job name>, so
+# the job names do not repeat "ci". The main ruleset requires each job here as a status check by its
+# job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a renamed,
+# added or removed job needs a ruleset edit: an added name after the merge, a removed or old name
+# just before it. test/meta/workflows.test.ts lists the job names. Every job that CI / gate needs,
+# except the two pull request checks, runs root pnpm scripts that pnpm check or pnpm check:full
+# contains.
 name: CI
 
 on:
@@ -19,7 +20,7 @@ permissions:
 
 jobs:
   lint:
-    name: ci / lint
+    name: lint
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -38,7 +39,7 @@ jobs:
       - run: pnpm gen --check
 
   typecheck:
-    name: ci / typecheck
+    name: typecheck
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -56,7 +57,7 @@ jobs:
       - run: pnpm typecheck
 
   build:
-    name: ci / build
+    name: build
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -77,7 +78,7 @@ jobs:
   # Stockholm leg also runs after a failed UTC leg, so a failure that shows only in Stockholm reports
   # in the same run; it does not run when a failed install skipped the UTC leg.
   test:
-    name: ci / test
+    name: test
     permissions:
       contents: read
     # Blacksmith through NM_RUNNER_X64 for branches in this repository and main; a GitHub-hosted
@@ -109,7 +110,7 @@ jobs:
   # the event values from environment variables: interpolated into a run script, a title or body
   # could inject shell code.
   pr-title:
-    name: ci / pr title
+    name: pr title
     permissions:
       contents: read
     if: github.event_name == 'pull_request'
@@ -127,7 +128,7 @@ jobs:
 
   # Renovate and release pull requests finish no issue and are exempt.
   linked-issue:
-    name: ci / linked issue
+    name: linked issue
     permissions:
       contents: read
     if: github.event_name == 'pull_request'
@@ -147,17 +148,17 @@ jobs:
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
-  # so ci / gate always runs and fails itself instead. On a pull request every job it needs runs,
+  # so CI / gate always runs and fails itself instead. On a pull request every job it needs runs,
   # so a skipped one fails it too; a push to main skips only the pull request checks.
   gate:
-    name: ci / gate
+    name: gate
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
     needs: [lint, typecheck, build, test, pr-title, linked-issue]
     runs-on: ubuntu-24.04
     steps:
-      - name: Fail when a job that ci / gate needs did not pass
+      - name: Fail when a job that CI / gate needs did not pass
         if: >-
           contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
           || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))
