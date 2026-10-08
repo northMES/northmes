@@ -175,7 +175,7 @@ sequenceDiagram
   S->>R: registerRemotes, loadRemote(id/module) in parallel, timeout
   R-->>S: mf-manifest.json (SHA-384 checked), entry, ./module
   S->>S: validateWebModule, id and version equal the server entry
-  S->>S: routes(plantRoute) per module, placeholder per failure
+  S->>S: routes(plantRoute) and settingsRoutes(settingsRoute) per module, placeholder per failure
   S->>S: createRouter once, defaultErrorComponent, render
 ```
 
@@ -185,7 +185,7 @@ sequenceDiagram
 4. On a plant route the shell fetches `/api/v1/web/modules?plant=<slug>`; on `/` and in company settings it fetches the same endpoint without `plant` ([0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md)). It registers every listed remote.
 5. It loads all remotes in parallel. The load timeout is 10 s for the planner layout and 30 s for the station layout, with a loading indicator per remote after 2 s.
 6. It validates each module object with `validateWebModule` and checks that its id and version equal the server's entry. The shell does no range check of its own; the server already filtered on the range ([0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)).
-7. It calls `routes(plantRoute)` for each valid module and checks that the returned route's path equals the module id. Each failed module gets a placeholder route and an "(unavailable)" menu entry at its usual position.
+7. It calls `routes(plantRoute)` for each valid module, and `settingsRoutes(settingsRoute)` for a module that declares it, before it creates the router, so a deep link into company settings resolves on the first render. It checks that each returned route's path equals the module id. Each failed module gets a placeholder route and an "(unavailable)" menu entry at its usual position.
 8. It creates the router once with `defaultErrorComponent`, then renders.
 
 ### Plant switch
