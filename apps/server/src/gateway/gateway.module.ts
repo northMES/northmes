@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { SubgraphRegistry } from '@northmes/sdk/graphql';
 import { composeSupergraph, supergraphHash } from './compose.ts';
+import { tracerPrincipalPlugin } from './tracer-principal.ts';
 import { inProcessTransport } from './transport.ts';
 
 /** The one GraphQL endpoint of the server. */
@@ -40,6 +41,8 @@ export class GatewayService implements OnApplicationBootstrap {
       // Every subgraph URL is inproc://<name>, and the gateway hands a subgraph without a
       // transport directive to the transport of kind http.
       transports: { http: inProcessTransport(subgraphs) },
+      // Resolves the principal once per client request, until E05 replaces the tracer principal.
+      plugins: () => [tracerPrincipalPlugin],
       maskedErrors: true,
       landingPage: false,
       graphiql: false,
