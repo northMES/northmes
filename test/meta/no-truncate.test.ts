@@ -38,4 +38,29 @@ describe('no-truncate', () => {
       { path: 'modules/planning/migrations/20261008120100_production_order.sql', line: 3 },
     ]);
   });
+
+  it('E02-S02 GRANT ALL on a table counts as a TRUNCATE grant, and on a schema or a sequence does not', () => {
+    const path = 'examples/plugin-validator/migrations/20261008120200_rejection.sql';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          'grant all on example_validator.rejection to nm_app;',
+          'GRANT ALL PRIVILEGES ON TABLE example_validator.rejection TO nm_app;',
+          'grant all on all tables in schema example_validator to nm_app;',
+          'alter default privileges in schema example_validator grant all on tables to nm_app;',
+          'grant all on schema example_validator to nm_mod_example_validator;',
+          'grant all on sequence example_validator.rejection_seq to nm_app;',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 1 },
+      { path, line: 2 },
+      { path, line: 3 },
+      { path, line: 4 },
+    ]);
+  });
 });
