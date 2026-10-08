@@ -12,7 +12,9 @@ import { type Principal, runAs } from '../principal.ts';
  * Executes every subgraph call in this process against the subgraph's own schema, with no HTTP
  * hop (ADR 0015).
  */
-export function inProcessTransport(subgraphs: readonly SubgraphEntry[]): Transport {
+export function inProcessTransport(
+  subgraphs: readonly Pick<SubgraphEntry, 'name' | 'schema'>[],
+): Transport {
   const byName = new Map(subgraphs.map((subgraph) => [subgraph.name, subgraph]));
   return {
     getSubgraphExecutor({ subgraphName }) {

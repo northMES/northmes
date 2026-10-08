@@ -12,6 +12,8 @@ import { SubgraphRegistry } from './registry.ts';
 export interface InProcessSubgraphOptions extends GqlModuleOptions {
   /** The module's GraphQL name. */
   readonly subgraphName: string;
+  /** The entities of other modules that the module references through entityRef. */
+  readonly entityRefs: readonly string[];
 }
 
 /**
@@ -33,7 +35,7 @@ export class InProcessSubgraphDriver extends AbstractGraphQLDriver<InProcessSubg
     // Nest's sortSchema option only sorts a schema file written to disk, so the driver sorts the
     // SDL it registers itself. The executable schema stays as built.
     const sdl = printSubgraphSchema(lexicographicSortSchema(schema));
-    this.registry.add({ name: options.subgraphName, sdl, schema });
+    this.registry.add({ name: options.subgraphName, sdl, schema, entityRefs: options.entityRefs });
     return schema;
   }
 

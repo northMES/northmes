@@ -38,16 +38,19 @@ export interface DefineSubgraphOptions {
  * GraphQLModule.
  */
 export function defineSubgraph({ name, module }: DefineSubgraphOptions): DynamicModule {
+  const stubs = entityStubsOf(module);
   const buildSchemaOptions: BuildSchemaOptions & { includeModules: Type[] } = {
     // @nestjs/graphql 14 filters types by registerIn only when it receives includeModules, and on
     // the federation path it passes include on to the resolvers but not to the type filter. This
     // internal key reaches the filter, so each module's types stay in its own subgraph.
     includeModules: [module],
-    orphanedTypes: entityStubsOf(module),
+    orphanedTypes: stubs,
   };
   return GraphQLModule.forRoot<InProcessSubgraphOptions>({
     driver: InProcessSubgraphDriver,
     subgraphName: name,
+    // entityRef names each stub class after its GraphQL type.
+    entityRefs: stubs.map((stub) => stub.name),
     include: [module],
     autoSchemaFile: { federation: FEDERATION_LINK },
     // Guards, interceptors and filters also run on fields reached through _entities.
