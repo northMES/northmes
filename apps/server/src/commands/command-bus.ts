@@ -35,8 +35,9 @@ export class CommandRejected extends DomainError {
 export const DEFAULT_VALIDATOR_TIMEOUT_MS = 2_000;
 
 /**
- * A validator that failed instead of answering (ADR 0037). The command fails closed, and the client
- * reads only "Unexpected error.". What the validator threw is the cause, for the server's log.
+ * A validator that threw or did not answer within its time limit (ADR 0037). The command fails
+ * closed, and the client reads only "Unexpected error.". The cause is what the validator threw, or
+ * an error that names the validator and the limit it missed, for the server's log.
  */
 export class ValidatorFailed extends Error {
   constructor(cause: unknown) {
@@ -120,8 +121,9 @@ function validatorsByCommand({
 /**
  * The command bus of the host. It runs each command in one ScopedDatabase transaction: for a
  * command with validators it builds the payload, parses it with each validator's copy of the
- * owner's contract and runs the validators, then it runs the handler (ADR 0012, ADR 0037). The
- * first veto rejects the command, and the transaction rolls back.
+ * owner's contract and runs the validators, each on its own frozen copy and within its time limit,
+ * then it runs the handler (ADR 0012, ADR 0037). The first veto, throw or missed limit rejects the
+ * command, and the transaction rolls back.
  */
 export class CommandBusImpl implements CommandBus {
   readonly #database: ScopedDatabase<unknown>;

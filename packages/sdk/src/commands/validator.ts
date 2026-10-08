@@ -31,7 +31,11 @@ export interface Validator<Contract extends ValidatableContract = ValidatableCon
    * command (ADR 0037). Without it, the host's default limit applies.
    */
   readonly timeoutMs?: number;
-  /** Answers for the payload the owner built for this run of the command. */
+  /**
+   * Answers for the payload the owner built for this run of the command. The payload is frozen, so
+   * an assignment to it throws. A throw rejects the command, and the client reads "Unexpected
+   * error." (ADR 0037).
+   */
   check(payload: z.output<Contract['payload']>): Promise<ValidatorVerdict>;
 }
 
