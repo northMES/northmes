@@ -115,6 +115,16 @@ A person is involved in a lean run only when:
 - Reading the `human` label inside a graph. Conditions cannot test whether a list contains a value, so the operating session reads the label before it starts a run and passes the guided graph.
 - Library skills and MCP servers. The planner and coder nodes name the skills `tdd` and `codebase-design` and the MCP server `context7` under `library`; the coder also names `vitest`, `pnpm`, `turborepo`, `apollo-client` and `playwright-cli`; the plan reviewer names `context7`; the code review node names `wrdn-authz` and `secret-serialization`. Runs pass `--strict-mcp-config`, so a node gets no other MCP server. A node that names something the library does not have fails, so a new skill is imported first (Settings, Library, or `pnpm handoff library import-repo northMES/northmes --group northmes` from the handoff checkout) and the graphs are imported again afterwards, with `northmes-guided` last so it stays the default.
 
+## Allowed tools
+
+handoff starts each agent step with `--allowedTools` from the node's `allowedTools`, or from its own defaults for the node type when the node sets none. A tool call outside the list waits for a person, and handoff never reads this repository's `.claude/settings.json` for the list. The planner, plan review, coder and code review nodes of all three graphs set their list in full: handoff's defaults for the node type, plus the commands that runs on these graphs asked for most often.
+
+- Every agent node: `sed -n`, `node`, `diff`, `tr`, `printf`, `basename`, `dirname`, `realpath`, `pwd`, `true`, `test`, `date` and `which`, and the git reads `merge-base`, `rev-parse`, `grep`, `blame` and `cat-file`. `node` runs any script, as `pnpm` already does in these nodes, so it adds no reach the nodes did not have.
+- The coder also gets `sed`, `sort`, `uniq`, `mkdir`, `cp`, `mv`, `touch` and `mktemp`, which can write files, as Edit and Write already do. Its list has no `npm` or `npx`, which handoff's default coder list holds and `.claude/settings.json` denies here.
+- Everything else still asks: `rm`, `find`, `python3`, `timeout`, `docker`, WebFetch and any other command.
+
+handoff checks each part of a compound command on its own. It cannot read a `for` loop, `$(...)`, backticks, a here-doc or a redirect into a file, so a command with one of them always asks. Each agent node's instructions say so, and the coder's tell it to write files with Write and Edit.
+
 ## Review comments
 
 The pull request step in all three graphs answers review comments on GitHub and resolves their threads, with handoff's review comment loop (see "Review comments" in handoff's README). The PR node sets:
