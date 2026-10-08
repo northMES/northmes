@@ -235,6 +235,16 @@ describe('workflows', () => {
     }
   });
 
+  // GitHub substitutes an expression into the script text before the shell runs it, so a title,
+  // body or branch name in a run script can inject shell code. Steps read them from env instead.
+  it('no run step interpolates an event value', () => {
+    for (const { where, job } of allJobs()) {
+      for (const { run } of job.steps ?? []) {
+        expect(run ?? '', where).not.toMatch(/\$\{\{[^}]*\bgithub\.(?:event|head_ref)\b/);
+      }
+    }
+  });
+
   // Without top-level permissions a job gets the repository's default token permissions; with
   // them, a job that needs more raises its own.
   it('every workflow sets top-level permissions', () => {
