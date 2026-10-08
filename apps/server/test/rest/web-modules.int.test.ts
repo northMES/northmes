@@ -130,6 +130,24 @@ describe('the web module list', () => {
     },
   );
 
+  it('E02-S05 a remote whose manifest lists a folder instead of a file is listed with integrity null', async () => {
+    const files = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+    onTestFinished(() => rmSync(files, { recursive: true, force: true }));
+    const remote = join(files, 'modules', 'planning');
+    cpSync(join(webFiles, 'modules', 'planning'), remote, { recursive: true });
+    const manifest = JSON.parse(readFileSync(join(remote, 'mf-manifest.json'), 'utf8'));
+    const [assets] = Object.values(manifest.exposes[0].assets) as { sync: string[] }[];
+    assets?.sync.push('assets');
+    writeFileSync(join(remote, 'mf-manifest.json'), JSON.stringify(manifest));
+    const url = await serve(['core', 'planning'], files);
+
+    const response = await fetch(`${url}${apiPath('web', 'modules')}`);
+
+    expect((await response.json()).modules).toEqual([
+      expect.objectContaining({ id: 'planning', integrity: null }),
+    ]);
+  });
+
   it('E02-S05 a remote whose mf-manifest.json does not parse is listed with integrity null', async () => {
     const files = mkdtempSync(join(tmpdir(), 'northmes-web-'));
     onTestFinished(() => rmSync(files, { recursive: true, force: true }));
