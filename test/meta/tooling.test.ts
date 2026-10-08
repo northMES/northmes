@@ -1,4 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -59,6 +63,38 @@ function readWorkspace(): WorkspaceConfig {
 
 function readDevDependencies(): Record<string, string> {
   return readJson<PackageJson>('package.json').devDependencies ?? {};
+}
+
+interface RdjsonReport {
+  diagnostics?: { code?: { value?: string }; location?: { path?: string }; severity?: string }[];
+}
+
+const biomeBin = createRequire(import.meta.url).resolve('@biomejs/biome/bin/biome');
+
+// Biome's stdin mode prints no diagnostics, so the sources go into a temporary folder under their
+// repository paths, next to a copy of the root biome.json, and Biome lints that folder.
+function processEnvErrors(sources: Record<string, string>): string[] {
+  const dir = mkdtempSync(join(tmpdir(), 'northmes-biome-'));
+  try {
+    writeFileSync(join(dir, 'biome.json'), readText('biome.json'));
+    for (const [path, source] of Object.entries(sources)) {
+      mkdirSync(dirname(join(dir, path)), { recursive: true });
+      writeFileSync(join(dir, path), source);
+    }
+    const result = spawnSync(
+      process.execPath,
+      [biomeBin, 'lint', '--reporter=rdjson', ...Object.keys(sources)],
+      { cwd: dir, encoding: 'utf8' },
+    );
+    const report = JSON.parse(result.stdout) as RdjsonReport;
+
+    return (report.diagnostics ?? [])
+      .filter((d) => d.code?.value === 'lint/style/noProcessEnv' && d.severity === 'ERROR')
+      .map((d) => d.location?.path ?? '')
+      .sort();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 describe('tooling', () => {
@@ -128,5 +164,25 @@ describe('tooling', () => {
   it('@biomejs/biome is a Biome 2.5 catalog entry that the root devDependencies take from the catalog', () => {
     expect(readWorkspace().catalog?.['@biomejs/biome']).toMatch(/^2\.5\.\d+$/);
     expect(readDevDependencies()['@biomejs/biome']).toBe('catalog:');
+  });
+
+  it('E02-S01 style/noProcessEnv fails in apps/server/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
+    const read = 'export const port = process.env.PORT;\n';
+    const failing = [
+      'apps/server/src/main.ts',
+      'modules/core/server/core.module.ts',
+      'packages/contracts/src/index.ts',
+    ];
+    const passing = [
+      'packages/sdk/src/config/load-env.ts',
+      'apps/server/src/main.test.ts',
+      'apps/server/test/global-setup.ts',
+      'scripts/stack/dev.mjs',
+      'vitest.config.ts',
+      'playwright.config.ts',
+    ];
+    const sources = Object.fromEntries([...failing, ...passing].map((path) => [path, read]));
+
+    expect(processEnvErrors(sources)).toEqual([...failing].sort());
   });
 });
