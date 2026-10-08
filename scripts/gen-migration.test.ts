@@ -29,7 +29,9 @@ describe('gen:migration', () => {
   it("E02-S02 the file is named with the UTC timestamp and the slug in the module's migrations folder", () => {
     const { path } = render({ module: 'production-start', slug: 'work_note', now });
 
-    expect(path).toBe('modules/production-start/migrations/20261008190405_work_note.sql');
+    expect(path).toBe(
+      'apps/backend/src/modules/production-start/migrations/20261008190405_work_note.sql',
+    );
   });
 });
 
@@ -46,7 +48,7 @@ describe('pnpm gen:migration', () => {
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'gen-migration-'));
-    mkdirSync(join(root, 'modules/production-start'), { recursive: true });
+    mkdirSync(join(root, 'apps/backend/src/modules/production-start'), { recursive: true });
     lines.length = 0;
     errors.length = 0;
   });
@@ -58,7 +60,8 @@ describe('pnpm gen:migration', () => {
   it("E02-S02 pnpm gen:migration writes the rendered file into the module's migrations folder", async () => {
     const exitCode = await main(['production-start', 'work_note'], io());
 
-    const path = 'modules/production-start/migrations/20261008190405_work_note.sql';
+    const path =
+      'apps/backend/src/modules/production-start/migrations/20261008190405_work_note.sql';
     expect(exitCode).toBe(0);
     expect(readFileSync(join(root, path), 'utf8')).toBe(
       render({ module: 'production-start', slug: 'work_note', now }).sql,
@@ -76,10 +79,10 @@ describe('pnpm gen:migration', () => {
     expect(exitCodes).toEqual([1, 1]);
     expect(errors).toEqual([
       'Usage: pnpm gen:migration <module> <slug>',
-      'No module folder modules/production-stat',
+      'No module folder apps/backend/src/modules/production-stat',
     ]);
     expect(readdirSync(join(root, 'modules'))).toEqual(['production-start']);
-    expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
+    expect(readdirSync(join(root, 'apps/backend/src/modules/production-start'))).toEqual([]);
     expect(lines).toEqual([]);
   });
 
@@ -96,7 +99,7 @@ describe('pnpm gen:migration', () => {
           `Invalid slug "${slug}": the slug names the table, so use lower-case letters, digits and single underscores, starting with a letter`,
       ),
     );
-    expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
+    expect(readdirSync(join(root, 'apps/backend/src/modules/production-start'))).toEqual([]);
   });
 
   it('E02-S02 pnpm gen:migration refuses a module that is not a module id and writes nothing', async () => {
@@ -104,7 +107,7 @@ describe('pnpm gen:migration', () => {
     // outside modules/, and the quote would end the schema name in the SQL.
     const modules = ['../scripts', "production-start'"];
     mkdirSync(join(root, 'scripts'));
-    mkdirSync(join(root, "modules/production-start'"));
+    mkdirSync(join(root, "apps/backend/src/modules/production-start'"));
 
     const exitCodes: number[] = [];
     for (const module of modules) exitCodes.push(await main([module, 'work_note'], io()));
@@ -117,7 +120,7 @@ describe('pnpm gen:migration', () => {
       ),
     );
     expect(readdirSync(join(root, 'scripts'))).toEqual([]);
-    expect(readdirSync(join(root, "modules/production-start'"))).toEqual([]);
+    expect(readdirSync(join(root, "apps/backend/src/modules/production-start'"))).toEqual([]);
     expect(lines).toEqual([]);
   });
 });

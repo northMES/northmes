@@ -57,12 +57,18 @@ describe('the shell', () => {
     );
   });
 
-  it('E02-S05 a server path such as /api/v1/unknown answers 404 instead of the shell', async () => {
+  it('E02-S05 a server path such as /api/v1/unknown or a removed remote file answers 404 instead of the shell', async () => {
     const url = await serve(['core', 'planning']);
     const index = readFileSync(join(shellDir, 'index.html'), 'utf8');
     // Paths under first segments of the server's own routes (ADR 0064) that no route takes. The
-    // static mount and GraphQL take /assets/ and /graphql before the shell's route.
-    const paths = ['/api/v1/unknown', '/health', '/mcp/unknown'];
+    // static mount and GraphQL take /assets/ and /graphql before the shell's route. /modules/ held
+    // the module remotes, so a stale client that asks for a remote file gets 404, not the shell.
+    const paths = [
+      '/api/v1/unknown',
+      '/health',
+      '/mcp/unknown',
+      '/modules/planning/0.1.0/remoteEntry.js',
+    ];
 
     const answers = await Promise.all(
       paths.map(async (path) => {
