@@ -44,6 +44,10 @@ const packagesWithExports = [
 ];
 const packagesWithoutExports = ['apps/web/package.json', 'modules/planning/web/package.json'];
 
+// web-build ships its plain .mjs files with no build step (plan 06), so both of its conditions point
+// at the same file instead of a .ts entry and a dist/ build.
+const packagesWithoutBuild = ['packages/web-build/package.json'];
+
 // The subpath entries of an exports field. A field whose keys are conditions, or a plain string,
 // stands for the single entry ".".
 function exportEntries(exports: unknown): [string, unknown][] {
@@ -76,6 +80,26 @@ describe('source exports', () => {
 
         expect(conditions[0], `${path} ${subpath}`).toBe('@northmes/source');
         expect(conditions.indexOf('default'), `${path} ${subpath}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('E02-S01 the @northmes/source condition points at a .ts entry and default under dist/', () => {
+    // Production resolves "default" (ADR 0058), so a default that points at a source file would
+    // make Node run TypeScript.
+    const manifests = workspaceManifests().filter((path) => !packagesWithoutBuild.includes(path));
+
+    expect(manifests).toContain('apps/server/package.json');
+    for (const path of manifests) {
+      const { exports } = readJson<PackageJson>(path);
+      if (exports === undefined) {
+        continue;
+      }
+      for (const [subpath, target] of exportEntries(exports)) {
+        const conditions = (target ?? {}) as Record<string, unknown>;
+
+        expect(conditions['@northmes/source'], `${path} ${subpath}`).toMatch(/^\.\/.+\.tsx?$/);
+        expect(conditions.default, `${path} ${subpath}`).toMatch(/^\.\/dist\/.+\.js$/);
       }
     }
   });
