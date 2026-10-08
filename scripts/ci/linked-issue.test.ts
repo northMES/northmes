@@ -12,6 +12,24 @@ describe('ci / linked issue', () => {
     expect(checkLinkedIssue(pullRequest('Runs the gate.\n\ncloses #7\n')).ok).toBe(true);
   });
 
+  // GitHub links and closes the issue for each of its closing keywords, also across repositories.
+  it('passes the other GitHub closing keywords and an issue in another repository', () => {
+    const bodies = [
+      'close #3',
+      'Closed #3',
+      'Fix #12',
+      'Fixes #12',
+      'fixed: #12',
+      'Resolve #4',
+      'resolves #4',
+      'Resolved northMES/northmes#196',
+    ];
+
+    for (const body of bodies) {
+      expect(checkLinkedIssue(pullRequest(body)).ok, body).toBe(true);
+    }
+  });
+
   it('fails a pull request whose body has no Closes #N, saying how to link one', () => {
     for (const body of ['', 'Adds the gate.', 'Closes #N', 'Part of #196.', 'This encloses #12.']) {
       const result = checkLinkedIssue(pullRequest(body));
