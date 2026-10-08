@@ -2,7 +2,10 @@
 import { createRootRoute, createRoute } from '@tanstack/react-router';
 import type { WebModule } from './web-module.ts';
 
-/** Creates the shell's root route and, under it, the $plant route that every module mounts under. */
+/**
+ * Creates a root route and, under it, the $plant route that every module mounts under. Internal:
+ * createShellRoutes and validateWebModule each call it for routes of their own.
+ */
 export function createMountRoutes() {
   const rootRoute = createRootRoute();
   const plantRoute = createRoute({ getParentRoute: () => rootRoute, path: '$plant' });

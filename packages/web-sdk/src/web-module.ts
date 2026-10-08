@@ -22,7 +22,12 @@ export function defineWebModule(module: WebModule): WebModule {
   return module;
 }
 
-/** Returns one problem for each way the value a remote exported differs from its server entry. */
+/**
+ * Returns one problem for each way the value a remote's ./module exported differs from the
+ * module's entry in the server's web module list, or an empty list. To read the top route's path,
+ * it calls the module's routes function with a $plant route of its own, which the shell's route
+ * tree never sees.
+ */
 export function validateWebModule(value: unknown, entry: WebModuleEntry): string[] {
   if (typeof value !== 'object' || value === null) {
     return [`the module is ${shown(value)}, expected an object`];
@@ -57,6 +62,7 @@ function routePath(route: AnyRoute): string | undefined {
     : undefined;
 }
 
+// How a problem shows a value: undefined reads as missing.
 function shown(field: unknown): string {
   return field === undefined ? 'missing' : String(field);
 }
