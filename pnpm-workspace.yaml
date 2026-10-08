@@ -68,6 +68,7 @@ catalog:
   graphql: 16.14.2
   graphql-subscriptions: 3.0.0
   graphql-ws: 6.2.2
+  graphql-yoga: 5.24.1
   happy-dom: 20.14.5
   kysely: 0.29.6
   lucide-react: 1.48.0

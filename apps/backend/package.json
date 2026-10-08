@@ -32,6 +32,7 @@
     "graphql": "catalog:",
     "graphql-subscriptions": "catalog:",
     "graphql-ws": "catalog:",
+    "graphql-yoga": "catalog:",
     "kysely": "catalog:",
     "pg": "catalog:",
     "reflect-metadata": "catalog:",
