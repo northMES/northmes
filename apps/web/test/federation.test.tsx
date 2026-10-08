@@ -3,7 +3,7 @@ import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule, useShell } from '@northmes/web-sdk';
 import { createMemoryHistory, createRoute, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   type FederationRuntime,
@@ -73,9 +73,26 @@ const qualityModule = defineWebModule({
     createRoute({ getParentRoute: () => plantRoute, path: 'quality', component: PingScreen }),
 });
 
+const maintenance: ListedModule = {
+  id: 'maintenance',
+  version: '0.4.0',
+  remoteName: 'maintenance',
+  label: 'Maintenance',
+  order: 30,
+  manifestUrl: '/modules/maintenance/0.4.0/mf-manifest.json',
+  integrity: 'sha384-maintenance',
+};
+
+const maintenanceModule = defineWebModule({
+  id: 'maintenance',
+  version: '0.4.0',
+  routes: (plantRoute) => createRoute({ getParentRoute: () => plantRoute, path: 'maintenance' }),
+});
+
 /**
  * A federation runtime that stands in for @module-federation/runtime. The ./module entry of each
- * registered remote exports the value that exposed holds under the remote's name as its default.
+ * registered remote exports the value that exposed holds under the remote's name as its default,
+ * and loading it throws when that value is an error.
  */
 function fakeRuntime(exposed: Readonly<Record<string, unknown>>) {
   const registered: { name: string; entry: string }[] = [];
@@ -91,7 +108,9 @@ function fakeRuntime(exposed: Readonly<Record<string, unknown>>) {
       if (entry !== 'module' || name === undefined) {
         throw new Error(`the remote ${name} exposes no ${entry}`);
       }
-      return { default: exposed[name] } as T;
+      const value = exposed[name];
+      if (value instanceof Error) throw value;
+      return { default: value } as T;
     },
   };
   return { runtime, registered };
@@ -120,6 +139,28 @@ describe('the shell', () => {
       { name: 'planning', entry: '/modules/planning/0.4.0/mf-manifest.json' },
     ]);
     expect(await screen.findByRole('heading', { name: 'Board of plant-a' })).toBeDefined();
+  });
+
+  it('E02-S05 a remote that fails to load gets a placeholder route and an (unavailable) entry in its usual position', async () => {
+    const { runtime } = fakeRuntime({
+      quality: qualityModule,
+      planning: new Error('Failed to fetch /modules/planning/0.4.0/mf-manifest.json'),
+      maintenance: maintenanceModule,
+    });
+
+    // The server lists the modules in boot order, and the menu orders them by their order.
+    renderShellAt(
+      '/plant-a/planning/board',
+      await loadModules([maintenance, planning, quality], runtime),
+    );
+
+    expect(await screen.findByText('The Planning module could not be loaded.')).toBeDefined();
+    const menu = screen.getByRole('navigation', { name: 'Modules' });
+    expect(
+      within(menu)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Quality', 'Planning (unavailable)', 'Maintenance']);
   });
 
   it("E02-S05 a module's screen queries the gateway with the client for the plant in the URL", async () => {
