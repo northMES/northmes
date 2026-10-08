@@ -72,7 +72,7 @@ Option C at 1440, light, for the Holders tab: who holds Shift lead at Acme AB an
 
 ![Option C, the Holders tab of Shift lead with one section for Acme AB and one for Plant A, at 1440 in light](core-304-access-variations-c2-by-role-holders-light.png)
 
-Option A at 1440, light: Alex Lund opens Roles by URL without the permission, and the EmptyState names `core.role:read`. The decision replaces A's title "Roles" with B's "No access to Roles":
+Option A at 1440, light: Alex Lund opens Roles by URL without the permission, and the EmptyState names `core.role:read`. The chosen page title is "No access to Roles", the wording of option B; this frame shows A's title "Roles":
 
 ![Option A, the Roles page opened without the permission, with an EmptyState naming core.role:read, at 1440 in light](core-304-access-variations-n1a-no-permission-url.png)
 
