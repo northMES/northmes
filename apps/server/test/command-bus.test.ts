@@ -6,8 +6,22 @@ import type { Transaction } from 'kysely';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { CommandBusImpl } from '../src/commands/command-bus.ts';
+import { releaseJob } from './fixtures/commands/dispatch.ts';
+import { BROKEN_CHECK_ERROR, BrokenCheck } from './fixtures/commands/failing-validators.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
+const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
+/** The fixture command dispatch.releaseJob, with `handle` as its handler. */
+function releaseJobWith(
+  handle: Command<{ id: string }, { id: string; status: string }>['handle'],
+): Command<{ id: string }, { id: string; status: string }> {
+  return {
+    contract: releaseJob,
+    buildPayload: async ({ id }) => ({ jobId: id, quantity: 1500 }),
+    handle,
+  };
+}
 
 /** A transaction of the fake, and how it ended once it has. */
 interface FakeTransaction {
@@ -163,6 +177,25 @@ describe('CommandBusImpl', () => {
       kind: 'precondition',
       message: '1500 pcs is above the release limit of 1000 pcs',
       details: { rejectedBy: 'release-limits' },
+    });
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it('E02-S04 a throwing validator returns Unexpected error. and the handler does not run', async () => {
+    const database = new FakeScopedDatabase();
+    const handle = vi.fn(async ({ id }: { id: string }) => ({ id, status: 'released' }));
+    const bus = new CommandBusImpl(database, {
+      modules: ['core', 'dispatch', 'broken-rules'],
+      validators: [{ module: 'broken-rules', validator: BrokenCheck.validator }],
+    });
+
+    const run = bus.run(releaseJobWith(handle), { id: JOB_ID });
+
+    // The validator's own error stays on the server, as the cause.
+    await expect(run).rejects.toMatchObject({
+      message: 'Unexpected error.',
+      cause: { message: BROKEN_CHECK_ERROR },
     });
     expect(handle).not.toHaveBeenCalled();
     expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
