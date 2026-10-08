@@ -7,16 +7,10 @@ import type { Command } from './command-bus.ts';
 import { mutationResolver } from './mutation-field.ts';
 
 /** The server code of a command, in the owning module's AGPL server code. */
-export interface CommandDefinition<Input, Result> {
+export interface CommandDefinition<Input, Result>
+  extends Pick<Command<Input, Result>, 'buildPayload' | 'handle'> {
   /** The GraphQL type of the handler's result, which the mutation returns. */
   readonly returns: ReturnTypeFunc;
-  /**
-   * Builds the payload that the command validators get. A validatable contract needs it
-   * (ADR 0037).
-   */
-  buildPayload?(input: Input): Promise<unknown>;
-  /** Makes the change with an input the contract parsed, and returns the mutation's result. */
-  handle(input: Input): Promise<Result>;
 }
 
 /** What defineCommand returns: a provider for the module's Nest module. */
@@ -25,15 +19,18 @@ export type CommandProvider<Input, Result> = Type & {
   readonly command: Command<Input, Result>;
 };
 
+/** The input of a command once its contract parsed it. */
+type ParsedInput<Contract extends CommandContract> = z.output<Contract['input']>;
+
 /**
  * Registers a command's server code. Listed in the providers of the module's Nest module, it adds
  * the command's prefixed Mutation field to the module's subgraph, so the module writes no
- * resolver for it (ADR 0012).
+ * resolver for it (ADR 0012). A contract field the generated input cannot carry throws here.
  */
 export function defineCommand<Contract extends CommandContract, Result>(
   contract: Contract,
-  { returns, buildPayload, handle }: CommandDefinition<z.output<Contract['input']>, Result>,
-): CommandProvider<z.output<Contract['input']>, Result> {
-  const command: Command<z.output<Contract['input']>, Result> = { contract, buildPayload, handle };
+  { returns, buildPayload, handle }: CommandDefinition<ParsedInput<Contract>, Result>,
+): CommandProvider<ParsedInput<Contract>, Result> {
+  const command: Command<ParsedInput<Contract>, Result> = { contract, buildPayload, handle };
   return Object.assign(mutationResolver(command, returns), { command });
 }

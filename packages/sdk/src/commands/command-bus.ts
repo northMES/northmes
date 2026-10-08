@@ -12,7 +12,7 @@ export interface Command<Input = unknown, Result = unknown> {
    * command and parses its result with contract.payload (ADR 0037).
    */
   buildPayload?(input: Input): Promise<unknown>;
-  /** Makes the change and returns what the mutation returns. */
+  /** Makes the change with an input the contract parsed, and returns the mutation's result. */
   handle(input: Input): Promise<Result>;
 }
 
