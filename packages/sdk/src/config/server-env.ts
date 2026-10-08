@@ -23,7 +23,7 @@ function isPublicOrigin(value: string, env: z.infer<typeof nodeEnv>): boolean {
   );
 }
 
-/** The environment of apps/server in every role (ADR 0060). */
+/** The environment of apps/backend in every role (ADR 0060). */
 export const serverEnvSchema = z
   .object({
     NODE_ENV: nodeEnv,

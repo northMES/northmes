@@ -221,6 +221,9 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.5.14
+      '@northmes/backend':
+        specifier: workspace:*
+        version: link:apps/backend
       '@northmes/contracts':
         specifier: workspace:*
         version: link:packages/contracts
@@ -230,9 +233,6 @@ importers:
       '@northmes/sdk':
         specifier: workspace:*
         version: link:packages/sdk
-      '@northmes/server':
-        specifier: workspace:*
-        version: link:apps/server
       '@northmes/testing':
         specifier: workspace:*
         version: link:packages/testing
@@ -282,7 +282,7 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
 
-  apps/server:
+  apps/backend:
     dependencies:
       '@apollo/subgraph':
         specifier: 'catalog:'
@@ -314,12 +314,9 @@ importers:
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@northmes/module-core':
+      '@northmes/planning-contracts':
         specifier: workspace:*
-        version: link:../../modules/core
-      '@northmes/module-planning':
-        specifier: workspace:*
-        version: link:../../modules/planning
+        version: link:../../modules/planning/contracts
       '@northmes/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -560,113 +557,6 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.6.5
-
-  modules/core:
-    dependencies:
-      '@apollo/subgraph':
-        specifier: 'catalog:'
-        version: 2.15.1(graphql@16.14.2)
-      '@nestjs/common':
-        specifier: 'catalog:'
-        version: 12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core':
-        specifier: 'catalog:'
-        version: 12.1.0(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.1.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/graphql':
-        specifier: 'catalog:'
-        version: 14.0.2(@apollo/subgraph@2.15.1(graphql@16.14.2))(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.1.0)(graphql@16.14.2)(reflect-metadata@0.2.2)(typescript@6.0.3)
-      '@northmes/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      graphql:
-        specifier: 16.14.2
-        version: 16.14.2
-      kysely:
-        specifier: 'catalog:'
-        version: 0.29.6
-      reflect-metadata:
-        specifier: 'catalog:'
-        version: 0.2.2
-      rxjs:
-        specifier: 'catalog:'
-        version: 7.8.2
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.5.14
-      '@northmes/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.2
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  modules/planning:
-    dependencies:
-      '@apollo/subgraph':
-        specifier: 'catalog:'
-        version: 2.15.1(graphql@16.14.2)
-      '@nestjs/common':
-        specifier: 'catalog:'
-        version: 12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core':
-        specifier: 'catalog:'
-        version: 12.1.0(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.1.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/graphql':
-        specifier: 'catalog:'
-        version: 14.0.2(@apollo/subgraph@2.15.1(graphql@16.14.2))(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.1.0)(graphql@16.14.2)(reflect-metadata@0.2.2)(typescript@6.0.3)
-      '@northmes/module-core':
-        specifier: workspace:*
-        version: link:../core
-      '@northmes/planning-contracts':
-        specifier: workspace:*
-        version: link:contracts
-      '@northmes/planning-domain':
-        specifier: workspace:*
-        version: link:domain
-      '@northmes/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      graphql:
-        specifier: 16.14.2
-        version: 16.14.2
-      kysely:
-        specifier: 'catalog:'
-        version: 0.29.6
-      reflect-metadata:
-        specifier: 'catalog:'
-        version: 0.2.2
-      rxjs:
-        specifier: 'catalog:'
-        version: 7.8.2
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.5.14
-      '@northmes/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.2
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
 
   modules/planning/contracts:
     dependencies:

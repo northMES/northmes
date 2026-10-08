@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, defaultClientConditions, mergeConfig } from 'vite';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
-import planningPackage from '../../package.json' with { type: 'json' };
+import planningPackage from '../package.json' with { type: 'json' };
 import config from '../vite.config.ts';
 
 /**
@@ -44,8 +44,7 @@ describe('planning remote build', () => {
     const manifest = JSON.parse(readFileSync(join(outDir, 'mf-manifest.json'), 'utf8'));
 
     expect(manifest.exposes.map((expose: { path: string }) => expose.path)).toEqual(['./module']);
-    // The server mounts the remote at the version of the module manifest, which reads it from
-    // modules/planning/package.json.
+    // The remote's public path carries the version of modules/planning/web/package.json.
     expect(manifest.metaData.publicPath).toBe(`/modules/planning/${planningPackage.version}/`);
     expect(
       readdirSync(outDir, { recursive: true, encoding: 'utf8' }).filter((path) =>

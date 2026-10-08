@@ -83,7 +83,7 @@ describe('workspace', () => {
     const mit = /^(packages\/[^/]+|modules\/[^/]+\/contracts)\/package\.json$/;
     const manifests = workspaceManifests();
 
-    expect(manifests, 'workspace manifests').toContain('apps/server/package.json');
+    expect(manifests, 'workspace manifests').toContain('apps/backend/package.json');
     for (const path of manifests) {
       const expected = mit.test(path) ? 'MIT' : 'AGPL-3.0-or-later';
       expect(readPackageJson(path).license, path).toBe(expected);
@@ -102,7 +102,7 @@ describe('workspace', () => {
     );
 
     expect(required).toEqual(expect.arrayContaining(['graphql', 'vitest', 'zod']));
-    expect(users).toContain('apps/server/package.json');
+    expect(users).toContain('apps/backend/package.json');
     for (const path of users) {
       const missing = required.filter((name) => !declared(readPackageJson(path)).includes(name));
       expect(missing, path).toEqual([]);
@@ -165,7 +165,7 @@ describe.skipIf(!existsSync(`${root}.git`))('repository', () => {
 
     expect(git('check-ignore', ...ignored).split('\n').filter(Boolean)).toEqual(ignored);
     // Test fixtures hold plugins as well, and they are committed.
-    expect(git('check-ignore', 'apps/server/test/fixtures/plugins/x/package.json')).toBe('');
+    expect(git('check-ignore', 'apps/backend/test/fixtures/plugins/x/package.json')).toBe('');
   });
 
   it('E02-S01 .gitattributes marks the schema snapshots and the *.gen.* files as generated', () => {

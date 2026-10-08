@@ -221,7 +221,7 @@ describe('path-literals', () => {
       'modules/planning/web-extra/src/a.tsx',
       'modules/planning/src/web/a.tsx',
       'apps/website/src/a.tsx',
-      'apps/server/src/a.tsx',
+      'apps/backend/src/a.tsx',
       'e2e-tools/a.tsx',
       'test/e2e/a.tsx',
     ];

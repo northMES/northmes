@@ -81,7 +81,7 @@ export async function devPlan({ server, shell, remotes }) {
     server: {
       name: 'server',
       command: 'node',
-      args: ['apps/server/dist/main.js'],
+      args: ['apps/backend/dist/main.js'],
       env: {
         NORTHMES_ROLE: 'all',
         PORT: String(server),
@@ -99,10 +99,11 @@ export async function devPlan({ server, shell, remotes }) {
     migrate: {
       name: 'migrate',
       command: 'node',
-      args: ['apps/server/dist/main.js', 'migrate'],
+      args: ['apps/backend/dist/main.js', 'migrate'],
       env: {},
     },
-    migrations: inServerPackages('migrations'),
+    // Each in-repo module keeps its migrations in apps/backend/src/modules/<id>/migrations.
+    migrations: globSync('apps/backend/src/modules/*/migrations', { cwd: repositoryRoot }).sort(),
     boardUrl: await boardUrl(loopbackOrigin(shell)),
   };
 }
@@ -296,7 +297,7 @@ function loopbackOrigin(port) {
 }
 
 /**
- * The folder of apps/server and of every workspace package it depends on, which the built server
+ * The folder of apps/backend and of every workspace package it depends on, which the built server
  * loads from their dist/, relative to the repository root and each package before the packages
  * that depend on it.
  * @returns {string[]}
@@ -317,7 +318,7 @@ function serverPackages() {
     }
     dirs.push(relative(repositoryRoot, dir));
   };
-  visit(join(repositoryRoot, 'apps/server'));
+  visit(join(repositoryRoot, 'apps/backend'));
   return dirs;
 }
 

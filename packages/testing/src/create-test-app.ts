@@ -20,7 +20,7 @@ export interface TestApp {
 }
 
 /**
- * Builds the host app of apps/server, which exports it at @northmes/server/testing. The caller
+ * Builds the host app of apps/backend, which exports it at @northmes/backend/testing. The caller
  * passes it in, so this MIT package imports no AGPL code (ADR 0056).
  */
 export type HostFactory = (options: HostOptions) => Promise<TestApp>;

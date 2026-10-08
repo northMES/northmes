@@ -19,8 +19,8 @@ function describeFinding(finding: Finding): string {
 
 const workspacePackages = [
   {
-    path: 'apps/server/package.json',
-    manifest: { name: '@northmes/server', license: 'AGPL-3.0-or-later' },
+    path: 'apps/backend/package.json',
+    manifest: { name: '@northmes/backend', license: 'AGPL-3.0-or-later' },
   },
   {
     path: 'modules/core/package.json',
@@ -78,11 +78,11 @@ describe('mit-imports', () => {
       {
         path: 'packages/sdk/test/host.int.test.ts',
         text: [
-          "import { createHostApp } from '@northmes/server/testing';",
+          "import { createHostApp } from '@northmes/backend/testing';",
           "const { loadCatalog } = await import('@northmes/module-planning');",
-          "import { boot } from '../../../apps/server/src/boot/boot.ts';",
+          "import { boot } from '../../../apps/backend/src/boot/boot.ts';",
           "import { contract } from '../../contracts/src/index.ts';",
-          "const main = new URL('../../../apps/server/dist/main.js', import.meta.url);",
+          "const main = new URL('../../../apps/backend/dist/main.js', import.meta.url);",
           '',
         ].join('\n'),
       },
@@ -93,7 +93,7 @@ describe('mit-imports', () => {
         kind: 'import',
         path: 'packages/sdk/test/host.int.test.ts',
         line: 1,
-        imported: '@northmes/server',
+        imported: '@northmes/backend',
       },
       {
         kind: 'import',
@@ -105,7 +105,7 @@ describe('mit-imports', () => {
         kind: 'import',
         path: 'packages/sdk/test/host.int.test.ts',
         line: 3,
-        imported: '@northmes/server',
+        imported: '@northmes/backend',
       },
     ]);
   });
@@ -125,7 +125,7 @@ describe('mit-imports', () => {
             "import { render } from '../../../scripts/x.mjs';",
             "import northmes from 'northmes';",
             "import { contract } from '../../contracts/src/index.ts';",
-            "import { boot } from '../../../apps/server/src/boot/boot.ts';",
+            "import { boot } from '../../../apps/backend/src/boot/boot.ts';",
             '',
           ].join('\n'),
         },
@@ -135,7 +135,7 @@ describe('mit-imports', () => {
     expect(findings).toEqual([
       { kind: 'import', path: 'packages/sdk/src/x.ts', line: 1, imported: 'northmes' },
       { kind: 'import', path: 'packages/sdk/src/x.ts', line: 2, imported: 'northmes' },
-      { kind: 'import', path: 'packages/sdk/src/x.ts', line: 4, imported: '@northmes/server' },
+      { kind: 'import', path: 'packages/sdk/src/x.ts', line: 4, imported: '@northmes/backend' },
     ]);
   });
 
@@ -207,7 +207,7 @@ describe('mit-imports', () => {
     expect(packages.map(({ path }) => path)).toEqual(
       expect.arrayContaining([
         'package.json',
-        'apps/server/package.json',
+        'apps/backend/package.json',
         'examples/plugin-validator/package.json',
         'modules/planning/contracts/package.json',
         'packages/sdk/package.json',

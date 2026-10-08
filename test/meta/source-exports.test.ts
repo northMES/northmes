@@ -30,10 +30,8 @@ function workspaceManifests(): string[] {
 // apps/web and modules/planning/web have no exports: nothing imports the shell, and the shell
 // loads a remote by URL.
 const packagesWithExports = [
-  'apps/server/package.json',
+  'apps/backend/package.json',
   'examples/plugin-validator/package.json',
-  'modules/core/package.json',
-  'modules/planning/package.json',
   'modules/planning/contracts/package.json',
   'modules/planning/domain/package.json',
   'packages/contracts/package.json',
@@ -89,7 +87,7 @@ describe('source exports', () => {
     // make Node run TypeScript.
     const manifests = workspaceManifests().filter((path) => !packagesWithoutBuild.includes(path));
 
-    expect(manifests).toContain('apps/server/package.json');
+    expect(manifests).toContain('apps/backend/package.json');
     for (const path of manifests) {
       const { exports } = readJson<PackageJson>(path);
       if (exports === undefined) {
@@ -110,7 +108,7 @@ describe('source exports', () => {
     // them, and production must never see it (ADR 0058).
     const manifests = ['package.json', ...workspaceManifests()];
 
-    expect(manifests).toContain('apps/server/package.json');
+    expect(manifests).toContain('apps/backend/package.json');
     for (const path of manifests) {
       for (const [name, command] of Object.entries(readJson<PackageJson>(path).scripts ?? {})) {
         expect(command, `${path} script ${name}`).not.toContain('@northmes/source');

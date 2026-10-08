@@ -5,7 +5,7 @@ import { createShellRoutes, validateWebModule } from '@northmes/web-sdk';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import planningPackage from '../../package.json' with { type: 'json' };
+import planningPackage from '../package.json' with { type: 'json' };
 import { PlanningBoard } from '../src/board.graphql.ts';
 import planningModule from '../src/module.tsx';
 
@@ -13,8 +13,7 @@ afterEach(cleanup);
 
 describe('planning web module', () => {
   it("E02-S05 the planning module passes validateWebModule for the planning entry at its package's version", () => {
-    // The server lists the module with the id and version of its manifest, which takes its version
-    // from modules/planning/package.json.
+    // The entry carries the version of modules/planning/web/package.json.
     const entry = { id: 'planning', version: planningPackage.version };
 
     expect(validateWebModule(planningModule, entry)).toEqual([]);
