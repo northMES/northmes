@@ -14,4 +14,13 @@ describe('apiPath', () => {
     expect(path).toBe('/api/v1/web/item%3Fdraft%3Dtrue/a%23b');
     expect(new URL(path, 'http://localhost').pathname).toBe(path);
   });
+
+  it('E02-S03 apiPath refuses an empty, . or .. segment, which URL parsing would drop or climb', () => {
+    expect(new URL(`/api/v1/web/../modules`, 'http://localhost').pathname).toBe('/api/v1/modules');
+    for (const segment of ['', '.', '..']) {
+      expect(() => apiPath('web', segment, 'modules'), JSON.stringify(segment)).toThrow(
+        `apiPath segment ${JSON.stringify(segment)} is not a path segment`,
+      );
+    }
+  });
 });
