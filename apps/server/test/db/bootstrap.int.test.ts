@@ -203,4 +203,20 @@ describe('pnpm northmes db bootstrap', () => {
 
     expect(await bootstrapState()).toEqual(before);
   });
+
+  it('E02-S02 bootstrap takes SUPERUSER, CREATEROLE and BYPASSRLS from an nm_app that exists and keeps its password', async () => {
+    await query(superuserUrl, 'alter role nm_app superuser createrole bypassrls');
+
+    await bootstrapRoles(superuserUrl, { ...passwords, app: randomBytes(16).toString('hex') });
+
+    expect(
+      await query(
+        superuserUrl,
+        "select rolsuper, rolcreaterole, rolbypassrls from pg_roles where rolname = 'nm_app'",
+      ),
+    ).toEqual([{ rolsuper: false, rolcreaterole: false, rolbypassrls: false }]);
+    expect(await query(urlFor('nm_app', passwords.app), 'select current_user')).toEqual([
+      { current_user: 'nm_app' },
+    ]);
+  });
 });
