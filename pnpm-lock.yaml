@@ -90,6 +90,9 @@ catalogs:
     '@vitejs/plugin-react':
       specifier: 6.1.1
       version: 6.1.1
+    dataloader:
+      specifier: 2.2.3
+      version: 2.2.3
     fast-check:
       specifier: 4.10.2
       version: 4.10.2
@@ -715,6 +718,9 @@ importers:
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../contracts
+      dataloader:
+        specifier: 'catalog:'
+        version: 2.2.3
     devDependencies:
       '@apollo/subgraph':
         specifier: 'catalog:'

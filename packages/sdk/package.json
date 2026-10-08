@@ -39,7 +39,8 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
-    "@northmes/contracts": "workspace:*"
+    "@northmes/contracts": "workspace:*",
+    "dataloader": "catalog:"
   },
   "peerDependencies": {
     "@apollo/subgraph": "catalog:",

@@ -209,6 +209,15 @@ describe('tooling', () => {
     expect(readDevDependencies()['@biomejs/biome']).toBe('catalog:');
   });
 
+  it('E02-S03 dataloader 2.2 is in the strict catalog and packages/sdk takes it from the catalog', () => {
+    const sdk = JSON.parse(readText('packages/sdk/package.json')) as {
+      dependencies?: Record<string, string>;
+    };
+
+    expect(readWorkspace().catalog?.dataloader).toMatch(/^2\.2\.\d+$/);
+    expect(sdk.dependencies?.dataloader).toBe('catalog:');
+  });
+
   it('E02-S01 style/noProcessEnv fails in apps/server/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
     const read = 'export const port = process.env.PORT;\n';
     const failing = [

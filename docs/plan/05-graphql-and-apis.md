@@ -168,7 +168,7 @@ export class PlanningArticleResolver {
 // ProductionOrder.article returns { __typename: "Article", id: row.articleId }
 ```
 
-The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `entityRef`, `connectionOf`, `PageInfo`, `RequirePermission`, `Public`, `SubgraphContext`, `loaderFor`, `inputFromZod` and `objectFromZod`. The exception filter is exported from the server-only subpath `@northmes/sdk/errors` ([The exception filter](#the-exception-filter)). The AGPL core gateway module owns composition, the NorthMES rules, the transport and the principal plugin ([0022][adr-0022]).
+The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `entityRef`, `connectionOf`, `PageInfo`, `RequirePermission`, `Public`, `SubgraphContext`, `loaderFor`, `inputFromZod` and `objectFromZod`. `loaderFor` wraps dataloader: a loader lives only in the request's subgraph context, returns `{ load, loadMany }`, and module code never imports dataloader. The exception filter is exported from the server-only subpath `@northmes/sdk/errors` ([The exception filter](#the-exception-filter)). The AGPL core gateway module owns composition, the NorthMES rules, the transport and the principal plugin ([0022][adr-0022]).
 
 ## Principal, guards and mutations
 
