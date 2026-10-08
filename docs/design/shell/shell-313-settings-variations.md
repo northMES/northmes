@@ -15,7 +15,7 @@ Krister Johansson chose option C, settings in the page, on 2026-10-08, from fram
 - At 320 a landing page lists the entries and an entry drills in, with a link back to the landing above its h1 (C5, C6).
 - The Administration section of the plant sidebar goes. The machines, equipment groups and calendars registers move to plant settings; articles, routings, customers and production orders stay in the main sidebar.
 
-On the same day he added that the main sidebar collapses on its own when a page with a settings navigation opens, to D2's collapsed state, the 64 px rail of icons, so the page gets more space. The spec page draws every settings page with the main sidebar collapsed, at every width.
+On the same day he added that the main sidebar collapses on its own when a page with a settings navigation opens, to D2's collapsed state, the 64 px rail of icons, so the page gets more space. The spec page draws every settings page with the main sidebar collapsed to the rail at every width that has the rail (1280 and wider); at 320 the main sidebar is the navigation sheet and does not change.
 
 ## Costs the spec page resolves
 
