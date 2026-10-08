@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -65,5 +65,21 @@ describe('pnpm gen:migration', () => {
     );
     expect(lines).toEqual([`Wrote ${path}`]);
     expect(errors).toEqual([]);
+  });
+
+  it("E02-S02 pnpm gen:migration without both arguments or without the module's folder exits 1 and writes nothing", async () => {
+    const exitCodes = [
+      await main(['production-start'], io()),
+      await main(['production-stat', 'work_note'], io()),
+    ];
+
+    expect(exitCodes).toEqual([1, 1]);
+    expect(errors).toEqual([
+      'Usage: pnpm gen:migration <module> <slug>',
+      'No module folder modules/production-stat',
+    ]);
+    expect(readdirSync(join(root, 'modules'))).toEqual(['production-start']);
+    expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
+    expect(lines).toEqual([]);
   });
 });
