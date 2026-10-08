@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { createGatewayRuntime, type GatewayRuntime } from '@graphql-hive/gateway-runtime';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import {
+  createGatewayRuntime,
+  type GatewayRuntime,
+  getGraphQLWSOptions,
+} from '@graphql-hive/gateway-runtime';
 import {
   Inject,
   Injectable,
@@ -9,7 +13,10 @@ import {
   type NestModule,
   type OnApplicationBootstrap,
 } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
 import { SubgraphRegistry } from '@northmes/sdk/graphql';
+import { type Extra, useServer } from 'graphql-ws/use/ws';
+import { WebSocketServer } from 'ws';
 import { composeSupergraph, supergraphHash } from './compose.ts';
 import { tracerPrincipalPlugin } from './tracer-principal.ts';
 import { inProcessTransport } from './transport.ts';
@@ -28,7 +35,10 @@ export class GatewayService implements OnApplicationBootstrap {
   #runtime?: GatewayRuntime;
   #supergraphHash?: string;
 
-  constructor(@Inject(SubgraphRegistry) private readonly registry: SubgraphRegistry) {}
+  constructor(
+    @Inject(SubgraphRegistry) private readonly registry: SubgraphRegistry,
+    @Inject(HttpAdapterHost) private readonly adapterHost: HttpAdapterHost,
+  ) {}
 
   /** Runs after every subgraph schema exists. A catalog without subgraphs has no supergraph. */
   async onApplicationBootstrap(): Promise<void> {
@@ -52,6 +62,27 @@ export class GatewayService implements OnApplicationBootstrap {
     await runtime.getSchema();
     this.#runtime = runtime;
     this.#supergraphHash = supergraphHash(supergraph);
+    this.#serveGraphqlWs(runtime);
+  }
+
+  /** Serves graphql-ws on the upgrade of GATEWAY_PATH, through the same runtime as HTTP. */
+  #serveGraphqlWs(runtime: GatewayRuntime): void {
+    const sockets = new WebSocketServer({ noServer: true });
+    useServer(
+      // A plugin reads a socket's request headers from the handshake, as it reads them from an
+      // HTTP request. connectionParams are left to the gateway, and no NorthMES code reads them.
+      getGraphQLWSOptions<Record<string, unknown>, Extra>(runtime, ({ extra }) => ({
+        request: handshakeRequest(extra.request),
+      })),
+      sockets,
+    );
+    const server: Server = this.adapterHost.httpAdapter.getHttpServer();
+    server.on('upgrade', (request, socket, head) => {
+      if (new URL(request.url ?? '/', 'http://localhost').pathname !== GATEWAY_PATH) return;
+      sockets.handleUpgrade(request, socket, head, (webSocket) => {
+        sockets.emit('connection', webSocket, request);
+      });
+    });
   }
 
   /** The hash of the supergraph the gateway serves, or undefined while it serves none. */
@@ -67,6 +98,15 @@ export class GatewayService implements OnApplicationBootstrap {
     }
     void this.#runtime(request, response);
   }
+}
+
+/** The handshake of a WebSocket as a fetch Request, the shape gateway plugins read headers from. */
+function handshakeRequest(message: IncomingMessage): Request {
+  const headers = new Headers();
+  for (const [name, value] of Object.entries(message.headers)) {
+    for (const one of [value ?? []].flat()) headers.append(name, one);
+  }
+  return new Request(new URL(message.url ?? GATEWAY_PATH, 'http://localhost'), { headers });
 }
 
 @Module({ providers: [GatewayService], exports: [GatewayService] })
