@@ -52,6 +52,7 @@ catalog:
   '@types/semver': 7.8.0
   '@types/ws': 8.18.1
   '@vitejs/plugin-react': 6.1.1
+  '@vitest/coverage-v8': 5.0.1
   dataloader: 2.2.3
   fast-check: 4.10.2
   graphql: 16.14.2

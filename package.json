@@ -37,6 +37,7 @@
     "@playwright/test": "catalog:",
     "@testcontainers/postgresql": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "graphql": "catalog:",
     "happy-dom": "catalog:",
     "pg": "catalog:",
