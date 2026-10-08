@@ -4,14 +4,15 @@ import { PlanningBoard } from './board.graphql.ts';
 
 /**
  * The E02 board stub: the plant's production orders, each with its number, article name, quantity
- * and status. The data-testid hooks name each row and cell by the order number for the end-to-end
- * specs. The real board comes with E08.
+ * and status, or the error when the query fails. The data-testid hooks name each row and cell by
+ * the order number for the end-to-end specs. The real board comes with E08.
  */
 export function BoardScreen() {
-  const { data } = useQuery(PlanningBoard);
+  const { data, error } = useQuery(PlanningBoard);
   return (
     <section data-testid="board-screen">
       <h1>Planning board</h1>
+      {error && <p role="alert">The production orders could not be loaded: {error.message}</p>}
       <table>
         <thead>
           <tr>
