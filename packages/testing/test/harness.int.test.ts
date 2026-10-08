@@ -132,6 +132,29 @@ describe('the test database', () => {
   });
 });
 
+describe('the connections of a test database', () => {
+  const database = useTestDatabase();
+
+  it('E02-S02 useTestDatabase hands out nm_app and nm_owner connections and never the superuser', async () => {
+    const { password } = inject('pg');
+
+    // No connection string of the superuser is handed out, under any key.
+    expect(Object.keys(database).sort()).toEqual(['appUrl', 'databaseName', 'ownerUrl']);
+    expect(JSON.stringify(database)).not.toContain(encodeURIComponent(password));
+
+    const sessions = await Promise.all(
+      [database.appUrl, database.ownerUrl].map((url) =>
+        query(url, 'select current_user, current_database()'),
+      ),
+    );
+
+    expect(sessions).toEqual([
+      [{ current_user: 'nm_app', current_database: database.databaseName }],
+      [{ current_user: 'nm_owner', current_database: database.databaseName }],
+    ]);
+  });
+});
+
 describe('a project without the global setup', () => {
   afterEach(() => {
     vi.doUnmock('vitest');
