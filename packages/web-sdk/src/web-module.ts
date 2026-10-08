@@ -34,11 +34,13 @@ export function validateWebModule(value: unknown, entry: WebModuleEntry): string
       `version is ${shown(module.version)}, expected ${entry.version} from the server entry`,
     );
   }
-  if (typeof module.routes === 'function') {
-    const path = routePath(module.routes(createMountRoutes().plantRoute));
-    if (path !== entry.id) {
-      problems.push(`the top route path is ${shown(path)}, expected the module id ${entry.id}`);
-    }
+  if (typeof module.routes !== 'function') {
+    problems.push(`routes is ${shown(module.routes)}, expected a function`);
+    return problems;
+  }
+  const path = routePath(module.routes(createMountRoutes().plantRoute));
+  if (path !== entry.id) {
+    problems.push(`the top route path is ${shown(path)}, expected the module id ${entry.id}`);
   }
   return problems;
 }
