@@ -41,6 +41,7 @@
     "graphql": "catalog:",
     "happy-dom": "catalog:",
     "pg": "catalog:",
+    "react-doctor": "catalog:",
     "rolldown": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",

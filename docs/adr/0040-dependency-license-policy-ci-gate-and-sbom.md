@@ -72,6 +72,10 @@ An `OR` expression passes when one branch passes; an `AND` expression passes whe
 
 react-doctor is a dev tool under a modified MIT license that restricts some AI-related uses. It runs in CI only, as a reviewed exception, and the project asks its vendor for written confirmation that running it in agent workflows is allowed.
 
+The exception covers `react-doctor` and `oxlint-plugin-react-doctor`, which ships the same license text; both declare "SEE LICENSE IN LICENSE". The license file of version 0.9.14 was read on 2026-10-08. It is the MIT text plus two uses that need the copyright holder's prior written permission: using the software or its source as training, fine-tuning or evaluation data, or as input to an automated pipeline that trains or improves a machine learning model or AI system; and selling it, or offering it to third parties as a paid, hosted or managed product whose value derives entirely or substantially from it.
+
+The catalog pins one exact version, and only the private root package takes it, as a dev dependency. No published `@northmes/*` package lists it ([ADR 0020](0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md)), so it never enters an image or the browser bundle. A new version needs its license file read again, because the exception covers the text a person read.
+
 ### The database image
 
 The class table has no row for the database image `ghcr.io/northmes/postgres` ([ADR 0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md)). It is a separate image whose Postgres process loads extensions and talks to NorthMES over SQL, and in release 1 it holds Postgres (PostgreSQL License), pgBackRest (MIT) and their OS packages. Two rules hold until a class is recorded:
