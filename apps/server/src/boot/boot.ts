@@ -234,7 +234,9 @@ async function bootSteps<
   mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile);
+  const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
+    imageVersion: imageVersion(),
+  });
   installResolveHook(pluginRoots);
   // A plugin's manifest is a file of its own, so its URL is a specifier and a file of its package.
   const pluginManifests = pluginRoots.map(pluginManifestUrl);
