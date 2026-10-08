@@ -118,6 +118,51 @@ describe('coreArticles', () => {
     return client.send<ArticlesAnswer>(articlesQuery, { ...args });
   }
 
+  /** The codes of each page, walking forward from the first page in pages of `first`. */
+  async function walkForward(client: GqlClient, args: ListArgs & { first: number }) {
+    const pages: string[][] = [];
+    let after: string | undefined;
+    for (;;) {
+      const answer = await list(client, { ...args, after });
+      expect(answer.errors).toBeUndefined();
+      const connection = answer.data?.coreArticles;
+      if (!connection) throw new Error('coreArticles answered no data');
+      expect(connection.pageInfo.hasPreviousPage).toBe(after !== undefined);
+      pages.push(connection.edges.map(({ node }) => node.code));
+      if (!connection.pageInfo.hasNextPage) return pages;
+      after = connection.pageInfo.endCursor ?? undefined;
+    }
+  }
+
+  /** The order of the catalog's codes under each orderBy, written out by hand. */
+  const orders: { orderBy: NonNullable<ListArgs['orderBy']>; codes: string[] }[] = [
+    {
+      orderBy: [{ field: 'CODE' }],
+      codes: ['AX-300', 'BR-140', 'CW-220', 'HG-110', 'HG-120', 'PN-305', 'ZZ-001'],
+    },
+    {
+      orderBy: [{ field: 'CODE', direction: 'DESC' }],
+      codes: ['ZZ-001', 'PN-305', 'HG-120', 'HG-110', 'CW-220', 'BR-140', 'AX-300'],
+    },
+    {
+      orderBy: [{ field: 'NAME' }],
+      codes: ['ZZ-001', 'HG-110', 'HG-120', 'CW-220', 'AX-300', 'PN-305', 'BR-140'],
+    },
+    {
+      orderBy: [{ field: 'NAME', direction: 'DESC' }],
+      codes: ['BR-140', 'PN-305', 'AX-300', 'CW-220', 'HG-120', 'HG-110', 'ZZ-001'],
+    },
+    {
+      orderBy: [{ field: 'NAME' }, { field: 'CODE', direction: 'DESC' }],
+      codes: ['ZZ-001', 'HG-120', 'HG-110', 'CW-220', 'AX-300', 'PN-305', 'BR-140'],
+    },
+  ];
+
+  /** The codes in pages of three. */
+  function inPagesOfThree(codes: readonly string[]): string[][] {
+    return [codes.slice(0, 3), codes.slice(3, 6), codes.slice(6)];
+  }
+
   it("E06-S02 coreArticles returns the first page of the plant's articles by code with the total count", async () => {
     const client = await catalogPlant();
     // Articles at another plant stay out of the list and its count.
@@ -139,5 +184,15 @@ describe('coreArticles', () => {
       startCursor: connection?.edges[0]?.cursor,
       endCursor: connection?.edges[2]?.cursor,
     });
+  });
+
+  it('E06-S02 paging forward walks every article once in the order of each orderBy', async () => {
+    const client = await catalogPlant();
+
+    for (const { orderBy, codes } of orders) {
+      expect(await walkForward(client, { first: 3, orderBy }), JSON.stringify(orderBy)).toEqual(
+        inPagesOfThree(codes),
+      );
+    }
   });
 });
