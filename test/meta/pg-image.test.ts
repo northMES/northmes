@@ -85,6 +85,17 @@ describe('pg-image', () => {
     ]);
   });
 
+  it('scan ignores a call to a name that only ends in PostgreSqlContainer', () => {
+    const findings = scan([
+      {
+        path: 'a.int.test.ts',
+        text: "new MyPostgreSqlContainer().start();\nnew MyPostgreSqlContainer('postgres:17');\n",
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
   it('scan skips docs/**', () => {
     const findings = scan([
       {
