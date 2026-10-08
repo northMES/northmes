@@ -10,11 +10,12 @@ const link =
 
 /**
  * A subgraph named after its module's GraphQL name, whose SDL is printed the way defineSubgraph
- * prints it: with federation's own root fields, directives and types.
+ * prints it: with federation's own root fields, directives and types. `entityRefs` names the
+ * entities of other modules that the module references through entityRef.
  */
-function subgraph(name: string, typeDefs: string): SubgraphSdl {
+function subgraph(name: string, typeDefs: string, entityRefs: readonly string[] = []): SubgraphSdl {
   const schema = buildSubgraphSchema(parse(`${link}\n${typeDefs}`));
-  return { name, sdl: printSubgraphSchema(schema) };
+  return { name, sdl: printSubgraphSchema(schema), entityRefs };
 }
 
 describe('the NorthMES composition rules', () => {
@@ -86,5 +87,26 @@ describe('the NorthMES composition rules', () => {
     );
 
     expect(checkRules([delta, epsilon])).toEqual([]);
+  });
+
+  it('E02-S03 a non-nullable contributed field fails with NORTHMES_CONTRIBUTED_FIELD_NULLABLE naming the field', () => {
+    const alpha = subgraph(
+      'alpha',
+      'type Thing @key(fields: "id") { id: ID! name: String! } type Query { alphaThing(id: ID!): Thing }',
+    );
+    // Zeta references alpha's Thing and adds two fields to it, one of them non-null.
+    const zeta = subgraph(
+      'zeta',
+      'type Thing @key(fields: "id") { id: ID! zetaWeight: Int! zetaColour: String } type Query { zetaPing: String }',
+      ['Thing'],
+    );
+
+    expect(checkRules([alpha, zeta])).toEqual([
+      {
+        code: 'NORTHMES_CONTRIBUTED_FIELD_NULLABLE',
+        message:
+          'Thing.zetaWeight must be nullable: subgraph "zeta" adds it to an entity that subgraph "alpha" owns',
+      },
+    ]);
   });
 });
