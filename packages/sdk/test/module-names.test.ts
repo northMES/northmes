@@ -23,4 +23,18 @@ describe('moduleNames', () => {
       expect(() => moduleNames(id), id).toThrow(`Invalid module id "${id}"`);
     }
   });
+
+  it('E02-S01 an id of 56 characters gives an owner role of 63 bytes, the Postgres identifier limit', () => {
+    const id = 'a'.repeat(56);
+
+    expect(moduleNames(id).ownerRole).toBe(`nm_mod_${id}`);
+    expect(moduleNames(id).ownerRole).toHaveLength(63);
+  });
+
+  it('E02-S01 an id of 57 characters is rejected because Postgres would truncate its owner role', () => {
+    const id = 'a'.repeat(57);
+
+    expect(() => moduleNames(id)).toThrow(`Invalid module id "${id}"`);
+    expect(() => moduleNames(id)).toThrow('63');
+  });
 });
