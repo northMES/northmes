@@ -13,6 +13,8 @@ dist/
 !/docs/sources/spike-integration/apps/server/test/fixtures/*/dist/
 .turbo/
 coverage/
+# The JSON report of pnpm react-doctor, which CI / react doctor copies into its job summary.
+/react-doctor-report.json
 *.tsbuildinfo
 .env
 

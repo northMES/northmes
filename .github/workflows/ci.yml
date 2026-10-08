@@ -3,8 +3,9 @@
 # job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a renamed,
 # added or removed job needs a ruleset edit: an added name after the merge, a removed or old name
 # just before it. test/meta/workflows.test.ts lists the job names. Every job that CI / gate needs,
-# except the two pull request checks, runs root pnpm scripts that pnpm check or pnpm check:full
-# contains; the coverage summary step of CI / test only copies a report into the job summary.
+# except the two pull request checks and react doctor, runs root pnpm scripts that pnpm check or
+# pnpm check:full contains; the coverage summary step of CI / test only copies a report into the
+# job summary.
 name: CI
 
 on:
@@ -117,6 +118,36 @@ jobs:
       - if: "!cancelled() && steps.utc.outcome != 'skipped'"
         run: pnpm test:tz
 
+  # react-doctor runs in CI only, under the reviewed license exception in
+  # docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md, so neither pnpm check nor pnpm
+  # check:full runs it. The root script scans apps/web, every modules/*/web and packages/web-sdk.
+  # --no-telemetry skips react-doctor's score API, share URL and crash reports, and
+  # --no-supply-chain skips its Socket.dev lookup of each dependency, which the supply-chain checks
+  # of docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md cover. An error
+  # fails the scan. With --json, react-doctor writes only its report, react-doctor-report.json, so
+  # the next step copies the findings into the job summary and the log; it also runs after a failed
+  # scan, and not when a failed install skipped the scan.
+  react-doctor:
+    name: react doctor
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - id: scan
+        run: pnpm react-doctor
+      - if: "!cancelled() && steps.scan.outcome != 'skipped'"
+        run: pnpm react-doctor:summary
+
   # The pull request checks read the event, so they run only for pull requests. Their scripts take
   # the event values from environment variables: interpolated into a run script, a title or body
   # could inject shell code.
@@ -166,7 +197,7 @@ jobs:
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [lint, typecheck, build, test, pr-title, linked-issue]
+    needs: [lint, typecheck, build, test, react-doctor, pr-title, linked-issue]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that CI / gate needs did not pass
