@@ -34,6 +34,8 @@ export class JobResolver {
 
 export const ReleaseJob = defineCommand(releaseJob, {
   returns: () => Job,
+  // The fixture reads no table: every job it is asked for exists at version 1.
+  target: { entity: 'Job', load: async (id) => ({ id, version: 1 }) },
   async buildPayload({ id }) {
     return { jobId: id, quantity: 1500 };
   },
