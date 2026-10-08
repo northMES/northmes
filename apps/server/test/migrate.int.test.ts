@@ -205,12 +205,17 @@ describe('pnpm northmes migrate', () => {
         where n.nspname in ('core', 'planning')
         order by n.nspname`,
     );
+    const records = await query<{ module: string; name: string }>(
+      db.ownerUrl,
+      'select module, name from northmes_meta.migration order by applied_at',
+    );
 
     expect(exit).not.toHaveBeenCalled();
     expect(log.error).not.toHaveBeenCalled();
-    // The in-repo modules have no migration files yet, and nothing listens.
+    // Each file of the in-repo modules is logged as migrate applies it, and nothing listens.
     expect(log.info.mock.calls).toEqual([
       ['Modules in boot order: core, planning'],
+      ...records.map(({ module, name }) => [`Applied ${module}/${name}`]),
       ['Migrations up to date'],
     ]);
     expect(schemas).toEqual([
