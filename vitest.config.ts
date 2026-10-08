@@ -53,11 +53,14 @@ export default defineConfig({
         test: {
           name: 'types',
           exclude: ignored,
+          // Vitest runs tsc on one tsconfig for the whole project, and the repository root has no
+          // tsconfig.json, so the types project names the one that includes every *.test-d.ts file.
           typecheck: {
             enabled: true,
             only: true,
             include: ['**/*.test-d.ts'],
             exclude: ignored,
+            tsconfig: './tsconfig.types.json',
           },
         },
       },
