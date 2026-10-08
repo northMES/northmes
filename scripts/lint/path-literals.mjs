@@ -1,5 +1,23 @@
-// Keeps app paths out of string literals (docs/adr/0062-web-form-contracts-url-view-state-and-
-// module-link-manifests.md): paths come from link builders and apiPath.
+// Keeps app paths out of string literals in the web code and the end-to-end specs
+// (docs/adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md): a path comes from
+// a link builder's `to` or `href`, or from apiPath. The check parses the TypeScript and JavaScript
+// sources under modules/*/web, examples/*/web, apps/web and e2e with the TypeScript parser, so a
+// call split over several lines is found, and reports an app path written as a literal in:
+//
+// - the value of a `to` or `href` JSX attribute, written directly or in braces;
+// - the `to` or `href` option of a `navigate` or `redirect` call, such as
+//   `router.navigate({ to })`;
+// - the first argument of a `goto` method call, such as `page.goto(url)`.
+//
+// An app path starts with a single `/`. A URL with a scheme or a host, a fragment and a relative
+// path are not app paths. Besides a plain string, the check reads a template literal, the left end
+// of a `+` concatenation and both branches of a conditional, through parentheses, `as`,
+// `satisfies` and `!`. It does not follow a path held in a variable.
+//
+// scripts/lint/path-literals.allow.json lists the exceptions as entries of the form
+// { "path": "<file>", "literal": "<literal as the finding names it>", "reason": "<why>" }, and an
+// entry without a reason fails the check. test/meta/path-literals.test.ts runs the check over the
+// files `git ls-files` lists, and pnpm check runs that test.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
@@ -13,8 +31,8 @@ import ts from 'typescript';
  */
 
 /**
- * The folders the rule covers. Paths are repository-relative with forward slashes, as `git ls-files`
- * prints them.
+ * The folders the rule covers. Paths are repository-relative with forward slashes, as
+ * `git ls-files` prints them.
  */
 const scannedFolders = [
   /^modules\/[^/]+\/web\//,
