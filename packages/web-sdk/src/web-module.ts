@@ -29,6 +29,11 @@ export function validateWebModule(value: unknown, entry: WebModuleEntry): string
   if (module.id !== entry.id) {
     problems.push(`id is ${shown(module.id)}, expected ${entry.id} from the server entry`);
   }
+  if (module.version !== entry.version) {
+    problems.push(
+      `version is ${shown(module.version)}, expected ${entry.version} from the server entry`,
+    );
+  }
   return problems;
 }
 
