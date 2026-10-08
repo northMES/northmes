@@ -1,10 +1,18 @@
-import { appendFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  appendFileSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { parseEnv } from 'node:util';
 import { DEV_SECRET_MARKER } from '@northmes/sdk/config';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { writeDevConfig } from './config.mjs';
+import { publishIfMissing, writeDevConfig } from './config.mjs';
 
 // The secret files of ADR 0060 that the database steps read: the superuser's for db bootstrap and
 // one for each login role it creates.
@@ -38,8 +46,9 @@ describe('writeDevConfig', () => {
 
     expect(files.map(([key]) => key).sort()).toEqual(secretKeys);
     for (const [key, path] of files) {
-      expect(path, key).toMatch(new RegExp(`^${join(dir, 'secrets')}/`));
-      expect(statSync(path).mode & 0o777, key).toBe(0o600);
+      expect(dirname(path), key).toBe(join(dir, 'secrets'));
+      // Windows has no POSIX mode bits to check.
+      if (process.platform !== 'win32') expect(statSync(path).mode & 0o777, key).toBe(0o600);
     }
     for (const value of values) expect(value.startsWith(DEV_SECRET_MARKER)).toBe(true);
     // Each secret is random, so no two roles share a password.
@@ -74,5 +83,26 @@ describe('writeDevConfig', () => {
 
     expect(written()).toEqual(before);
     expect(second).toEqual({ ...first, NORTHMES_ROLE: 'api' });
+  });
+});
+
+describe('publishIfMissing', () => {
+  it('E02-S08 publishIfMissing writes a missing file whole and leaves no temporary file', () => {
+    const path = join(dir, 'dev.env');
+
+    expect(publishIfMissing(path, 'NODE_ENV=development\n', 0o600)).toBe(true);
+
+    expect(readFileSync(path, 'utf8')).toBe('NODE_ENV=development\n');
+    expect(readdirSync(dir)).toEqual(['dev.env']);
+  });
+
+  it('E02-S08 publishIfMissing keeps a file that exists and leaves no temporary file', () => {
+    const path = join(dir, 'dev.env');
+    writeFileSync(path, 'NODE_ENV=production\n');
+
+    expect(publishIfMissing(path, 'NODE_ENV=development\n', 0o600)).toBe(false);
+
+    expect(readFileSync(path, 'utf8')).toBe('NODE_ENV=production\n');
+    expect(readdirSync(dir)).toEqual(['dev.env']);
   });
 });
