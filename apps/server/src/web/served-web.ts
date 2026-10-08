@@ -25,7 +25,10 @@ export interface WebModuleEntry {
   readonly label: string;
   readonly order: number;
   readonly manifestUrl: string;
-  /** sha384- and the base64 SHA-384 of the remote's mf-manifest.json, or null without the file. */
+  /**
+   * sha384- and the base64 SHA-384 of the remote's mf-manifest.json, or null when that file or a
+   * file it lists is missing: the module is degraded.
+   */
   readonly integrity: string | null;
 }
 
@@ -39,8 +42,9 @@ export class ServedWeb {
   };
 
   /**
-   * Takes the web files over and hashes the remote manifest of each catalog module with a web
-   * block, once: the files of a build do not change while the server runs.
+   * Takes the web files over, checks the files that the remote manifest of each catalog module with
+   * a web block lists and hashes the manifest, once: the files of a build do not change while the
+   * server runs.
    */
   serve({ northmes, shellDir, catalog }: WebFiles): void {
     const modules = catalog.flatMap(({ manifest, webDir }) => {
@@ -54,7 +58,7 @@ export class ServedWeb {
           label: manifest.web.label,
           order: manifest.web.order,
           manifestUrl: `/modules/${id}/${version}/mf-manifest.json`,
-          integrity: webDir === undefined ? null : integrityOf(join(webDir, 'mf-manifest.json')),
+          integrity: webDir === undefined ? null : integrityOf(webDir),
         },
       ];
     });
@@ -79,7 +83,32 @@ export class ServedWeb {
   }
 }
 
-function integrityOf(file: string): string | null {
+/** The part of a Module Federation mf-manifest.json that names the files of the remote. */
+interface RemoteManifest {
+  readonly metaData: { readonly remoteEntry: { readonly name: string; readonly path: string } };
+  readonly exposes: readonly {
+    readonly assets: Readonly<
+      Record<string, { readonly sync: readonly string[]; readonly async: readonly string[] }>
+    >;
+  }[];
+}
+
+/** The integrity of the remote in webDir, or null when its manifest or a file it lists is missing. */
+function integrityOf(webDir: string): string | null {
+  const file = join(webDir, 'mf-manifest.json');
   if (!existsSync(file)) return null;
-  return `sha384-${createHash('sha384').update(readFileSync(file)).digest('base64')}`;
+  const manifest = readFileSync(file);
+  const listed = filesListedIn(JSON.parse(manifest.toString('utf8')));
+  if (listed.some((path) => !existsSync(join(webDir, path)))) return null;
+  return `sha384-${createHash('sha384').update(manifest).digest('base64')}`;
+}
+
+/** The remote entry and the JS and CSS of every exposed module, relative to the remote's folder. */
+function filesListedIn({ metaData, exposes }: RemoteManifest): string[] {
+  return [
+    join(metaData.remoteEntry.path, metaData.remoteEntry.name),
+    ...exposes.flatMap(({ assets }) =>
+      Object.values(assets).flatMap(({ sync, async }) => [...sync, ...async]),
+    ),
+  ];
 }
