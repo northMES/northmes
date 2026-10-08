@@ -1,13 +1,88 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { type PgConnection, templateDatabase } from '@northmes/testing';
+import { Client } from 'pg';
 import type { TestProject } from 'vitest/node';
+import type { CatalogEntry } from '../src/catalog/check-catalog.ts';
 import { bootstrapRoles } from '../src/db/bootstrap.ts';
+import { readMigrationFiles } from '../src/migrate/files.ts';
+import { migrate } from '../src/migrate/runner.ts';
+
+/** Logs in to a database of the container as a role. */
+function urlFor(
+  { host, port }: PgConnection,
+  user: string,
+  password: string,
+  database: string,
+): string {
+  const credentials = `${encodeURIComponent(user)}:${encodeURIComponent(password)}`;
+  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
+}
 
 /** Logs in to the template database as the container's superuser. */
-function templateUrl({ user, password, host, port }: PgConnection): string {
-  const credentials = `${encodeURIComponent(user)}:${encodeURIComponent(password)}`;
-  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(templateDatabase)}`;
+function templateUrl(pg: PgConnection): string {
+  return urlFor(pg, pg.user, pg.password, templateDatabase);
+}
+
+export interface TemplateOptions {
+  /** The container's superuser, who creates the template database. */
+  readonly superuser: PgConnection;
+  /** The password of nm_owner, as which migrate runs. */
+  readonly ownerPassword: string;
+  /** The checked catalog whose migration files the template holds. */
+  readonly catalog: readonly CatalogEntry[];
+}
+
+export interface MigratedTemplate {
+  /** nm_template_ and the start of a sha256 over the catalog's migration files. */
+  readonly name: string;
+  /** True when a template of that name was in place, so nothing was migrated. */
+  readonly reused: boolean;
+}
+
+/** The name of the template that holds the catalog's migration files as they are now. */
+function templateName(catalog: readonly CatalogEntry[]): string {
+  const hash = createHash('sha256');
+  for (const { manifest, migrationsDir } of catalog) {
+    for (const file of readMigrationFiles(migrationsDir)) {
+      hash.update(`${manifest.id}/${file.name} ${file.sha256}\n`);
+    }
+  }
+  return `nm_template_${hash.digest('hex').slice(0, 16)}`;
+}
+
+/**
+ * Migrates the catalog into a template database named after a hash of its migration files, unless
+ * that template is in place (ADR 0041). The template is built under a name of its own and renamed
+ * once migrate is done, so a template of the final name always holds every file. migrate closes
+ * its connection, because Postgres refuses to clone or rename a database in use.
+ */
+export async function migrateTemplate({
+  superuser,
+  ownerPassword,
+  catalog,
+}: TemplateOptions): Promise<MigratedTemplate> {
+  const name = templateName(catalog);
+  const client = new Client(superuser);
+  await client.connect();
+  try {
+    const existing = await client.query('select 1 from pg_database where datname = $1', [name]);
+    if (existing.rowCount !== 0) return { name, reused: true };
+    const building = `${name}_${randomBytes(4).toString('hex')}`;
+    await client.query(
+      `create database ${client.escapeIdentifier(building)} template ${client.escapeIdentifier(templateDatabase)}`,
+    );
+    // A clone does not copy the database privileges of its template (ADR 0006).
+    await client.query(`grant create on database ${client.escapeIdentifier(building)} to nm_owner`);
+    await migrate({ ownerUrl: urlFor(superuser, 'nm_owner', ownerPassword, building), catalog });
+    await client.query(
+      `alter database ${client.escapeIdentifier(building)} rename to ${client.escapeIdentifier(name)}`,
+    );
+    await client.query(`alter database ${client.escapeIdentifier(name)} is_template true`);
+    return { name, reused: false };
+  } finally {
+    await client.end();
+  }
 }
 
 /**
