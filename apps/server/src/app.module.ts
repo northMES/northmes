@@ -5,6 +5,7 @@ import {
   defineSubgraph,
   SubgraphRegistryModule,
 } from '@northmes/sdk/graphql';
+import { DatabaseModule } from './db/database.module.ts';
 import { GatewayModule } from './gateway/gateway.module.ts';
 import { WebModule } from './web/web.module.ts';
 
@@ -14,8 +15,8 @@ import { WebModule } from './web/web.module.ts';
 export class AppModule {
   /**
    * Imports config first: the ConfigModule that boot created before it imported any manifest
-   * (ADR 0060). Then every module's Nest module, one subgraph per module and the gateway that
-   * serves them on /graphql (ADR 0015).
+   * (ADR 0060). Then the nm_app pool and the ScopedDatabase on it, every module's Nest module, one
+   * subgraph per module and the gateway that serves them on /graphql (ADR 0015).
    */
   static forRoot(
     config: DynamicModule,
@@ -25,6 +26,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         config,
+        DatabaseModule,
         SubgraphRegistryModule,
         ...subgraphs.map((subgraph) => subgraph.module),
         ...subgraphs.map((subgraph) => defineSubgraph(subgraph)),
