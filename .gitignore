@@ -11,6 +11,8 @@ node_modules/
 dist/
 # The integration spike's test plugins are hand-written files in dist folders.
 !/docs/sources/spike-integration/apps/server/test/fixtures/*/dist/
+# So are the server's fixture plugins, laid out as pnpm plugin:build installs a plugin.
+!/apps/server/test/fixtures/plugins/*/dist/
 .turbo/
 coverage/
 # The JSON report of pnpm react-doctor, which CI / react doctor copies into its job summary.

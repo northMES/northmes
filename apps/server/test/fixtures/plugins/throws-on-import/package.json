@@ -1,0 +1,10 @@
+{
+  "name": "@northmes/fixture-throws-on-import",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "exports": {
+    "./manifest": "./dist/manifest.js"
+  }
+}

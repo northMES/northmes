@@ -7,11 +7,17 @@ import { bootBuilt, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BootError } from '../../src/boot/boot-error.ts';
 import { readConfigFile } from '../../src/boot/config-file.ts';
+import { useServerEnv } from '../fixtures/server-env.ts';
 
 const repositoryRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
 /** The example validator as pnpm plugin:build installs it. bootBuilt builds it for the run. */
 const exampleValidator = join(repositoryRoot, 'plugins/example-validator');
+
+/** A built plugin whose dist/server.js throws when it is imported. */
+const throwsOnImport = fileURLToPath(
+  new URL('../fixtures/plugins/throws-on-import', import.meta.url),
+);
 
 // Preloaded into the built server to record the file each import resolves to.
 const recordResolutions = new URL('./record-resolutions.mjs', import.meta.url).href;
@@ -33,6 +39,7 @@ function filesBySpecifier(resolutions: readonly Resolution[], prefix: string) {
 
 describe('plugins listed in northmes.config.json', () => {
   const db = useTestDatabase();
+  const serverEnv = useServerEnv({ database: db });
   let dir: string;
 
   beforeAll(() => {
@@ -89,6 +96,21 @@ describe('plugins listed in northmes.config.json', () => {
     // @nestjs/core.
     expect(nestFiles['@nestjs/common']).toHaveLength(1);
     expect(nestFiles['@nestjs/core']).toHaveLength(1);
+  });
+
+  it('E02-S04 a listed plugin whose dist/server.js throws on import stops boot naming the plugin id', {
+    timeout: 120_000,
+  }, async () => {
+    const { exitCode, stderr } = await bootBuilt({
+      env: serverEnv,
+      config: { plugins: [throwsOnImport] },
+    });
+
+    expect({ exitCode, stderr }).toEqual({
+      exitCode: 1,
+      stderr:
+        'refused to start (1 problem)\n- Plugin throws-on-import failed to load its server part: the server part of the fixture throws on import\n',
+    });
   });
 });
 
