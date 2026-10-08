@@ -2,7 +2,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { query } from '@northmes/testing';
+import { query, useTestDatabase } from '@northmes/testing';
 import { afterAll, describe, expect, inject, it } from 'vitest';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
 import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';
@@ -75,5 +75,26 @@ describe('the template of a test run', () => {
     expect(changed.name).not.toBe(first.name);
     // The template that the new name points at holds the changed file.
     expect(columns).toEqual([{ column_name: 'id' }, { column_name: 'body' }]);
+  });
+});
+
+describe('a test database', () => {
+  const db = useTestDatabase();
+
+  it('E02-S02 a test database is cloned from the template that holds the in-repo modules', async () => {
+    const schemas = await query(
+      db.appUrl,
+      `select n.nspname as schema, r.rolname as owner
+         from pg_namespace n
+         join pg_roles r on r.oid = n.nspowner
+        where n.nspname in ('core', 'planning', 'northmes_meta')
+        order by n.nspname`,
+    );
+
+    expect(schemas).toEqual([
+      { schema: 'core', owner: 'nm_mod_core' },
+      { schema: 'northmes_meta', owner: 'nm_owner' },
+      { schema: 'planning', owner: 'nm_mod_planning' },
+    ]);
   });
 });
