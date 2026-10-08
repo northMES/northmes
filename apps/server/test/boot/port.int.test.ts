@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createServer, type Server } from 'node:net';
-import { bootBuilt } from '@northmes/testing';
+import { bootBuilt, useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useServerEnv } from '../fixtures/server-env.ts';
 
-const env = useServerEnv();
+// Boot step 5 reads the migration records of the in-repo modules as nm_app before the server
+// listens, so the server needs a migrated database.
+const db = useTestDatabase();
+const env = useServerEnv({ database: db });
 
 // Another process's socket on the port the server is told to take.
 let holder: Server;

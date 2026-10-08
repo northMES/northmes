@@ -2,7 +2,8 @@
 import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import { Client } from 'pg';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
-import { type MigrationFile, readMigrationFiles } from './files.ts';
+import { fileProblems, type MigrationFile, readMigrationFiles } from './files.ts';
+import { MigrationError } from './migration-error.ts';
 
 export interface MigrateOptions {
   /** Logs in as nm_owner, on a direct connection rather than through a pooler. */
@@ -23,11 +24,26 @@ export interface MigrateResult {
 const lockTimeout = '1min';
 
 /**
+ * A catalog module's migration files, and the sha256 that northmes_meta.migration holds for each
+ * file it applied.
+ */
+interface ModuleFiles {
+  readonly names: ModuleNames;
+  readonly files: readonly MigrationFile[];
+  /** The recorded sha256 by file name. */
+  readonly recorded: ReadonlyMap<string, string>;
+}
+
+/**
  * Applies the migration files of every catalog module in catalog order (ADR 0006). Each module's
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
  * are recorded in northmes_meta.migration. A run holds the migration advisory lock of the
  * database throughout, so concurrent runs apply each file once.
+ *
+ * The run checks the files of every module before it applies any, and throws a MigrationError
+ * that lists every problem when an applied file's sha256 changed, two files of a module share a
+ * timestamp prefix or a file lacks its expand or contract marker.
  */
 export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<MigrateResult> {
   const client = new Client({ connectionString: ownerUrl });
@@ -35,12 +51,17 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   try {
     await takeMigrationLock(client);
     await createMigrationTable(client);
+    const modules = await readModuleFiles(client, catalog);
+    const problems = modules.flatMap((module) => [
+      ...changedFiles(module),
+      ...fileProblems(module.names.id, module.files),
+    ]);
+    if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
-    for (const { manifest, migrationsDir } of catalog) {
-      const names = moduleNames(manifest.id);
-      await createOwnerRoleAndSchema(client, names);
-      for (const file of await pendingFiles(client, names, migrationsDir)) {
-        await applyFile(client, names, file);
+    for (const { names, files, recorded } of modules) {
+      const pending = files.filter((file) => !recorded.has(file.name));
+      for (const [index, file] of pending.entries()) {
+        await applyFile(client, names, file, { createOwner: index === 0 });
         applied.push(`${names.id}/${file.name}`);
       }
     }
@@ -48,6 +69,33 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   } finally {
     await client.end();
   }
+}
+
+/** Reads every catalog module's files and the records northmes_meta.migration holds for them. */
+async function readModuleFiles(
+  client: Client,
+  catalog: readonly CatalogEntry[],
+): Promise<ModuleFiles[]> {
+  const { rows } = await client.query<{ module: string; name: string; sha256: string }>(
+    'select module, name, sha256 from northmes_meta.migration',
+  );
+  return catalog.map(({ manifest, migrationsDir }) => {
+    const names = moduleNames(manifest.id);
+    const recorded = new Map(
+      rows.filter((row) => row.module === names.id).map((row) => [row.name, row.sha256]),
+    );
+    return { names, files: readMigrationFiles(migrationsDir), recorded };
+  });
+}
+
+/** A problem for each applied file whose sha256 differs from the one recorded when it applied. */
+function changedFiles({ names, files, recorded }: ModuleFiles): string[] {
+  return files
+    .filter((file) => recorded.has(file.name) && recorded.get(file.name) !== file.sha256)
+    .map(
+      (file) =>
+        `${names.id}/${file.name} changed after it was applied; put the change in a new migration file`,
+    );
 }
 
 /**
@@ -64,7 +112,7 @@ async function takeMigrationLock(client: Client): Promise<void> {
   );
 }
 
-/** Creates northmes_meta.migration, which nm_owner owns, unless it exists. */
+/** Creates northmes_meta.migration, which nm_owner owns, unless it exists, and lets nm_app read it. */
 async function createMigrationTable(client: Client): Promise<void> {
   await client.query('create schema if not exists northmes_meta');
   await client.query(
@@ -76,12 +124,16 @@ async function createMigrationTable(client: Client): Promise<void> {
        primary key (module, name)
      )`,
   );
+  // Boot step 5 reads the records as nm_app (ADR 0002).
+  await client.query('grant usage on schema northmes_meta to nm_app');
+  await client.query('grant select on northmes_meta.migration to nm_app');
 }
 
 /**
  * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app and
- * nm_ext use the schema. Roles belong to the server, so the role may come from a run on another database; the
- * grants are given again either way.
+ * nm_ext use the schema. It runs in the transaction of the module's first pending file, and
+ * leaves that transaction under SET LOCAL ROLE of the owner role. Roles belong to the server, so
+ * the role may come from a run on another database; the grants are given again either way.
  */
 async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Promise<void> {
   const role = client.escapeIdentifier(names.ownerRole);
@@ -98,41 +150,41 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   await client.query(`create schema if not exists ${schema} authorization ${role}`);
   // Only the schema's owner may grant on it, since nm_owner inherits none of its rights. The
   // module's migration files grant nm_app its rights on each table.
-  await client.query('begin');
   await client.query(`set local role ${role}`);
   await client.query(`grant usage on schema ${schema} to nm_app`);
   // A foreign key into the schema also needs USAGE on it. The table's own REFERENCES grant still
   // decides whether a key may point at it (ADR 0006).
   await client.query(`grant usage on schema ${schema} to nm_ext`);
-  await client.query('commit');
-}
-
-/** The module's files that northmes_meta.migration has no record of, in lexical order. */
-async function pendingFiles(
-  client: Client,
-  names: ModuleNames,
-  migrationsDir: string | undefined,
-): Promise<MigrationFile[]> {
-  const recorded = await client.query<{ name: string }>(
-    'select name from northmes_meta.migration where module = $1',
-    [names.id],
-  );
-  const applied = new Set(recorded.rows.map((row) => row.name));
-  return readMigrationFiles(migrationsDir).filter((file) => !applied.has(file.name));
 }
 
 /**
  * Applies one file and records it in one transaction. The record is written as nm_owner, and the
- * file runs under SET LOCAL ROLE of the module's owner role. A file that fails leaves its
- * transaction open, and closing the connection rolls it back with its record.
+ * file runs under SET LOCAL ROLE of the module's owner role. With createOwner, which the module's
+ * first pending file sets, the same transaction first creates the owner role and the schema, so a
+ * refused first file leaves neither behind. A file that fails leaves its transaction open, and
+ * closing the connection rolls it back with its record. The failure is a MigrationError that names
+ * the module, the file and the owner role it ran as, because Postgres refuses a statement on
+ * another module's schema with the role's rights.
  */
-async function applyFile(client: Client, names: ModuleNames, file: MigrationFile): Promise<void> {
-  await client.query('begin');
-  await client.query(
-    'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
-    [names.id, file.name, file.sha256],
-  );
-  await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
-  await client.query(file.sql);
-  await client.query('commit');
+async function applyFile(
+  client: Client,
+  names: ModuleNames,
+  file: MigrationFile,
+  { createOwner }: { readonly createOwner: boolean },
+): Promise<void> {
+  try {
+    await client.query('begin');
+    await client.query(
+      'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
+      [names.id, file.name, file.sha256],
+    );
+    if (createOwner) await createOwnerRoleAndSchema(client, names);
+    await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
+    await client.query(file.sql);
+    await client.query('commit');
+  } catch (error) {
+    throw new MigrationError([
+      `${names.id}/${file.name} failed as ${names.ownerRole} and was rolled back: ${(error as Error).message}`,
+    ]);
+  }
 }

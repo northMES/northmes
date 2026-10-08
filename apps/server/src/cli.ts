@@ -4,6 +4,7 @@ import { type BootOptions, boot } from './boot/boot.ts';
 import { BootError } from './boot/boot-error.ts';
 import { dbBootstrap } from './db/bootstrap.ts';
 import { migrateCommand } from './migrate/command.ts';
+import { MigrationError } from './migrate/migration-error.ts';
 
 /** What main.ts hands a command: process.exit and console. A test also passes an environment. */
 export type CliContext = Omit<BootOptions, 'importManifest'>;
@@ -21,7 +22,7 @@ const commands: Readonly<Record<string, (context: CliContext) => Promise<void>>>
 
 /**
  * Runs the command that the arguments name, or serve when there are none. A command that stops on
- * a ConfigError or a BootError writes its message to log.error and exits 1.
+ * a ConfigError, a BootError or a MigrationError writes its message to log.error and exits 1.
  */
 export async function cli(argv: readonly string[], context: CliContext): Promise<void> {
   const name = argv.join(' ') || 'serve';
@@ -34,7 +35,9 @@ export async function cli(argv: readonly string[], context: CliContext): Promise
   try {
     await command(context);
   } catch (error) {
-    if (!(error instanceof ConfigError || error instanceof BootError)) throw error;
+    const known =
+      error instanceof ConfigError || error instanceof BootError || error instanceof MigrationError;
+    if (!known) throw error;
     context.log.error(error.message);
     context.exit(1);
   }

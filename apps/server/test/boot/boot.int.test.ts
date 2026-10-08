@@ -8,13 +8,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ModulesContainer } from '@nestjs/core';
 import type { ModuleManifest } from '@northmes/sdk';
 import { secretsConfig } from '@northmes/sdk/config';
+import { useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { AppModule } from '../../src/app.module.ts';
 import { boot } from '../../src/boot/boot.ts';
 import { core, inRepoModule } from '../fixtures/catalog.ts';
-import { appPassword, serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
+import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
-const env = useServerEnv();
+// Boot step 5 reads the migration records of the in-repo modules as nm_app, so the server needs a
+// migrated database.
+const db = useTestDatabase();
+const env = useServerEnv({ database: db });
 
 // Collects the lines boot writes.
 function recordingLog() {
@@ -95,7 +99,9 @@ describe('boot', () => {
     expect(config?.get('PORT')).toBe(0);
     expect(config?.get('NORTHMES_ROLE')).toBe('all');
     // The secrets namespace holds the value of each secret file the environment names.
-    expect(app?.get(secretsConfig.KEY)).toEqual({ NORTHMES_DB_APP_PASSWORD: appPassword });
+    expect(app?.get(secretsConfig.KEY)).toEqual({
+      NORTHMES_DB_APP_PASSWORD: decodeURIComponent(new URL(db.appUrl).password),
+    });
   });
 
   it('E02-S02 boot resolves each manifest it was given through resolveManifest', async () => {

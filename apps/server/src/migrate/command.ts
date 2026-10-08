@@ -6,13 +6,14 @@ import { migrate } from './runner.ts';
 const owner = 'nm_owner';
 
 /**
- * pnpm northmes migrate: runs the boot steps without listening (bootForMigrate), then applies the
- * catalog's migration files as nm_owner on DATABASE_URL, with the password from the owner's secret
- * file. The app closes afterwards.
+ * pnpm northmes migrate: runs the boot steps without listening (bootForMigrate) and logs the files
+ * that its migration check found pending, then applies the catalog's migration files as nm_owner
+ * on DATABASE_URL, with the password from the owner's secret file. The app closes afterwards.
  */
 export async function migrateCommand(options: BootOptions): Promise<void> {
-  const { env, secrets, catalog, app } = await bootForMigrate(options);
+  const { env, secrets, catalog, pending, app } = await bootForMigrate(options);
   try {
+    for (const file of pending) options.log.info(`Pending ${file}`);
     const ownerUrl = new URL(env.DATABASE_URL);
     ownerUrl.username = owner;
     ownerUrl.password = secrets.NORTHMES_DB_OWNER_PASSWORD;
