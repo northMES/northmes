@@ -34,5 +34,35 @@ export function checkCatalog(
     }
   }
   if (problems.length > 0) throw new BootError(problems);
-  return [...entries];
+  return dependencyOrder(entries, byId);
+}
+
+/**
+ * Orders the catalog so that every module comes after the modules it depends on: core first, then
+ * a depth-first walk over in-repo modules before plugins, each by id, so the order is stable.
+ */
+function dependencyOrder(
+  entries: readonly CatalogEntry[],
+  byId: ReadonlyMap<string, CatalogEntry>,
+): CatalogEntry[] {
+  const ordered: CatalogEntry[] = [];
+  const state = new Map<string, 'visiting' | 'done'>();
+  const visit = (entry: CatalogEntry): void => {
+    const id = entry.manifest.id;
+    if (state.has(id)) return;
+    state.set(id, 'visiting');
+    for (const dependency of [...(entry.manifest.dependsOn ?? [])].sort()) {
+      const target = byId.get(dependency);
+      if (target) visit(target);
+    }
+    state.set(id, 'done');
+    ordered.push(entry);
+  };
+  const sorted = [...entries].sort((a, b) =>
+    a.kind === b.kind ? a.manifest.id.localeCompare(b.manifest.id) : a.kind === 'module' ? -1 : 1,
+  );
+  const core = byId.get('core');
+  if (core) visit(core);
+  for (const entry of sorted) visit(entry);
+  return ordered;
 }
