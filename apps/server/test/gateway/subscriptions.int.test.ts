@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { connect } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import type { ModuleManifest } from '@northmes/sdk';
 import { type GqlEvent, given, gqlClient } from '@northmes/testing';
@@ -42,6 +43,38 @@ async function firstEvent<TData>(events: AsyncGenerator<GqlEvent<TData>, void>) 
   } finally {
     await events.return();
   }
+}
+
+/**
+ * Sends a WebSocket upgrade request to the path and returns what the server writes before it
+ * closes the socket. A server that has not closed the socket after two seconds gets it destroyed,
+ * and the answer is then what it wrote until that moment.
+ */
+function upgradeAnswer(url: string, path: string): Promise<string> {
+  const { hostname, port } = new URL(url);
+  return new Promise((resolve, reject) => {
+    const socket = connect({ host: hostname, port: Number(port) });
+    let answer = '';
+    socket.setEncoding('utf8');
+    socket.setTimeout(2000, () => socket.destroy());
+    socket.on('data', (chunk: string) => {
+      answer += chunk;
+    });
+    socket.on('close', () => resolve(answer));
+    socket.on('error', reject);
+    socket.write(
+      [
+        `GET ${path} HTTP/1.1`,
+        `Host: ${hostname}:${port}`,
+        'Connection: Upgrade',
+        'Upgrade: websocket',
+        'Sec-WebSocket-Version: 13',
+        'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+        '',
+        '',
+      ].join('\r\n'),
+    );
+  });
 }
 
 /** beta's subscription, with a field of alpha's Thing that the gateway joins through _entities. */
@@ -93,5 +126,13 @@ describe('subscriptions on /graphql', () => {
     );
 
     expect(event).toEqual(crateOneArrived(plantId));
+  });
+
+  it('E02-S03 an upgrade request to another path gets 404 and its socket closes', async () => {
+    const url = await bootFixtures(alpha, beta);
+
+    const answer = await upgradeAnswer(url, '/api/v1/web/modules');
+
+    expect(answer).toMatch(/^HTTP\/1\.1 404 Not Found\r\n/);
   });
 });
