@@ -100,7 +100,14 @@ describe('collection', () => {
   });
 
   describe('in a synthetic tree', () => {
-    const suffixed = ['x.test.ts', 'x.int.test.ts', 'x.ai.test.ts', 'x.ops.test.ts', 'x.test-d.ts'];
+    const suffixed = [
+      'x.test.ts',
+      'x.test.tsx',
+      'x.int.test.ts',
+      'x.ai.test.ts',
+      'x.ops.test.ts',
+      'x.test-d.ts',
+    ];
     const ignoredFolderFixtures = [
       'dist',
       'packages/a/dist',
@@ -109,7 +116,6 @@ describe('collection', () => {
     ];
     const written = [
       ...suffixed,
-      'orphan.test.tsx',
       'e2e/x.spec.ts',
       ...suffixed.map((file) => `docs/sources/spike/${file}`),
       ...ignoredFolderFixtures.flatMap((folder) => suffixed.map((file) => `${folder}/${file}`)),
@@ -136,6 +142,10 @@ describe('collection', () => {
 
     it('a file named x.test.ts lands in unit only', () => {
       expect(listed.get('x.test.ts')).toEqual(['unit']);
+    });
+
+    it('a file named x.test.tsx lands in web only', () => {
+      expect(listed.get('x.test.tsx')).toEqual(['web']);
     });
 
     it.each([
@@ -186,13 +196,6 @@ describe('collection', () => {
     it('a Playwright spec under e2e lands in no project and is not a test file one must collect', () => {
       expect(listed.has('e2e/x.spec.ts')).toBe(false);
       expect(isCollectable('e2e/x.spec.ts')).toBe(false);
-    });
-
-    // No web project collects .test.tsx files until #301 adds it. That change swaps this fixture.
-    it('a test file that matches no project is reported', () => {
-      expect(misfiled(written.filter(isCollectable), listed)).toEqual([
-        { path: 'orphan.test.tsx', projects: [] },
-      ]);
     });
   });
 });
