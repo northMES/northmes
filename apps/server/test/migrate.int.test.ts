@@ -12,7 +12,7 @@ import { bootForMigrate } from '../src/boot/boot.ts';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
 import { cli } from '../src/cli.ts';
 import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
-import { imageVersion, inRepoModule } from './fixtures/catalog.ts';
+import { imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
 
 /** The folder of a fixture module's migration files. */
 function fixtureMigrations(id: string): string {
@@ -281,6 +281,70 @@ describe('migrate refuses a module whose files break a naming rule', () => {
     expect(await query(db.ownerUrl, 'select module, name from northmes_meta.migration')).toEqual(
       [],
     );
+  });
+});
+
+// Each plugin's fixture folder holds one file that reaches into a schema the plugin does not own.
+// The plugin's owner role may use core and planning through nm_ext, so Postgres refuses the
+// statement itself, as it would for a plugin that tried.
+describe('migrate confines a plugin to its own schema', () => {
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
+
+  beforeAll(async () => {
+    await migrate({ ownerUrl: db.ownerUrl, catalog });
+  });
+
+  /** The fixture modules and the plugin whose fixture folder has the plugin's id. */
+  function catalogWithPlugin(id: string, dependsOn: readonly string[]) {
+    return checkCatalog(
+      [
+        { ...inRepoModule('planning', ['core']), migrationsDir: fixtureMigrations('planning') },
+        { ...inRepoModule('core'), migrationsDir: fixtureMigrations('core') },
+        { ...plugin(id, dependsOn), migrationsDir: fixtureMigrations(id) },
+      ],
+      { imageVersion },
+    );
+  }
+
+  /** The files northmes_meta.migration records for a module. */
+  function recordsOf(module: string) {
+    return query(
+      db.ownerUrl,
+      `select name from northmes_meta.migration where module = '${module}' order by name`,
+    );
+  }
+
+  it('E02-S02 a plugin ALTER on core.article is refused', async () => {
+    // information_schema lists only the columns that the role may use, and nm_owner holds no
+    // rights on core's tables, so the columns come from the catalog.
+    const columns = () =>
+      query(
+        db.ownerUrl,
+        `select a.attname as column
+           from pg_attribute a
+           join pg_class c on c.oid = a.attrelid
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'core' and c.relname = 'article' and a.attnum > 0
+            and not a.attisdropped
+          order by a.attnum`,
+      );
+    const before = await columns();
+
+    const run = migrate({
+      ownerUrl: db.ownerUrl,
+      catalog: catalogWithPlugin('alter-core', ['core']),
+    });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'alter-core/20260111080000_article_secret.sql failed as nm_mod_alter_core and was rolled back: must be owner of table article',
+      ],
+    });
+    expect(before).toEqual([{ column: 'id' }, { column: 'code' }, { column: 'name' }]);
+    expect(await columns()).toEqual(before);
+    expect(await recordsOf('alter-core')).toEqual([]);
   });
 });
 
