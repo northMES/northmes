@@ -92,6 +92,25 @@ describe('boot', () => {
     expect(app?.get(secretsConfig.KEY)).toEqual({});
   });
 
+  it('E02-S02 boot resolves each manifest it was given through resolveManifest', async () => {
+    const exit = vi.fn<(code: number) => void>();
+    const specifier = '@northmes/fixture-core/manifest';
+    // A fixture specifier names no package, so import.meta.resolve could not resolve it.
+    const resolveManifest = vi.fn<(specifier: string) => string>(() => import.meta.url);
+
+    app = await boot({
+      env,
+      manifests: [specifier],
+      importManifest: importFixtures({ [specifier]: core.manifest }),
+      resolveManifest,
+      exit,
+      log: recordingLog(),
+    });
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(resolveManifest.mock.calls).toEqual([[specifier]]);
+  });
+
   it('E02-S01 a catalog BootError exits 1 with its message', async () => {
     const log = recordingLog();
     const exit = vi.fn<(code: number) => void>();
