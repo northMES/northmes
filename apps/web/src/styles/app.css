@@ -3,7 +3,7 @@
 /*
  * The web's one stylesheet: Tailwind 4 through @tailwindcss/vite, the D1 tokens and their theme,
  * and IBM Plex Sans and Mono from Fontsource, bundled so the app makes no CDN calls. Tailwind reads
- * class names from src only.
+ * class names from src and index.html only.
  */
 @import "tailwindcss" source(none);
 @import "./theme.css";

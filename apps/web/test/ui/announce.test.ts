@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // @vitest-environment happy-dom
-import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import indexHtml from '../../index.html?raw';
 import { announce } from '../../src/ui/announce.ts';
 
-/** The body of the web's index.html, as the browser loads it before the app renders. */
+/** The body of the web's index.html before the app renders, without the app's script. */
 function indexBody(): string {
-  const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
-  return /<body>([\s\S]*)<\/body>/.exec(html)?.[1] ?? '';
+  const body = /<body>([\s\S]*)<\/body>/.exec(indexHtml)?.[1] ?? '';
+  return body.replace(/<script[\s\S]*?<\/script>/g, '');
 }
 
 /** The text of the polite region after each timer, with repeats in a row folded into one. */
