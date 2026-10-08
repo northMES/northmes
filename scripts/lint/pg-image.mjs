@@ -15,8 +15,9 @@ const configuredImage = JSON.parse(
 // FROM [--flag=value ...] image [AS name], with the instruction and AS in any case.
 const fromPattern = /^FROM\s+(?:--\S+\s+)*(?<image>[^\s-]\S*)(?:\s+AS\s+\S+)?\s*$/i;
 
-// A Compose `image: postgres:...` line, with the value optionally quoted.
-const composeImagePattern = /^\s*image:\s*["']?(?<image>postgres:\S+?)["']?\s*$/;
+// A Compose `image: postgres:...` line, with the value optionally quoted. A name character must
+// follow the colon, so `postgres:(\d+)` and `postgres:${TAG}` are not references.
+const composeImagePattern = /^\s*image:\s*["']?(?<image>postgres:[A-Za-z0-9][^\s"']*)["']?\s*$/;
 
 /**
  * @typedef {{ path: string, text: string }} RepositoryFile
