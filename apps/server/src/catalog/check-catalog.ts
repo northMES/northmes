@@ -14,8 +14,8 @@ export interface CatalogOptions {
 }
 
 /**
- * The catalog checks of boot step 4 (ADR 0002). Throws one BootError that lists every problem
- * found.
+ * The catalog checks of boot step 4 (ADR 0002). Returns the catalog in boot order, or throws one
+ * BootError that lists every problem found.
  */
 export function checkCatalog(
   entries: readonly CatalogEntry[],
@@ -66,13 +66,16 @@ function dependencyOrder(
     state.set(id, 'done');
     ordered.push(entry);
   };
-  const sorted = [...entries].sort((a, b) =>
-    a.kind === b.kind ? compareIds(a.manifest.id, b.manifest.id) : a.kind === 'module' ? -1 : 1,
-  );
   const core = byId.get('core');
   if (core) visit(core, []);
-  for (const entry of sorted) visit(entry, []);
+  for (const entry of [...entries].sort(compareEntries)) visit(entry, []);
   return ordered;
+}
+
+/** In-repo modules before plugins, then by id. */
+function compareEntries(a: CatalogEntry, b: CatalogEntry): number {
+  if (a.kind !== b.kind) return a.kind === 'module' ? -1 : 1;
+  return compareIds(a.manifest.id, b.manifest.id);
 }
 
 /**
@@ -89,7 +92,7 @@ function compareIds(a: string, b: string): number {
  * reads the same whichever module the walk entered it at.
  */
 function cycleProblem(cycle: readonly string[]): string {
-  const smallest = cycle.reduce((least, id) => (id < least ? id : least));
+  const smallest = cycle.reduce((least, id) => (compareIds(id, least) < 0 ? id : least));
   const start = cycle.indexOf(smallest);
   const rotated = [...cycle.slice(start), ...cycle.slice(0, start), smallest];
   return `Module dependency cycle: ${rotated.join(' -> ')}`;
