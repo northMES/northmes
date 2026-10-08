@@ -17,6 +17,7 @@ interface Job {
   needs?: string | string[];
   permissions?: Permissions;
   'runs-on'?: unknown;
+  env?: Record<string, string>;
   steps?: Step[];
 }
 
@@ -172,6 +173,34 @@ const testRunner = expression(
 function isTestJob(job: Job): boolean {
   return (job.steps ?? []).some(
     ({ run }) => run !== undefined && commandsOf(run.trim()).some((c) => /\bvitest\b/.test(c)),
+  );
+}
+
+// A Vitest run in a job, with the environment it sees: the job's, the step's and the variables the
+// command sets in front of vitest.
+interface VitestRun {
+  env: Record<string, string>;
+  projects: string[];
+}
+
+function vitestRunsOf(job: Job): VitestRun[] {
+  return (job.steps ?? []).flatMap((step) =>
+    commandsOf((step.run ?? '').trim()).flatMap((command) => {
+      const match = /^((?:\w+=\S+ )*)vitest run\b(.*)$/.exec(command);
+      if (match === null) {
+        return [];
+      }
+      const inline = Object.fromEntries(
+        (match[1] ?? '')
+          .split(' ')
+          .filter((assignment) => assignment !== '')
+          .map((assignment) => assignment.split('=')),
+      );
+      const projects = [...(match[2] ?? '').matchAll(/--project (\S+)/g)].map(
+        ([, project]) => project ?? '',
+      );
+      return [{ env: { ...job.env, ...step.env, ...inline }, projects }];
+    }),
   );
 }
 
@@ -334,6 +363,22 @@ describe('workflows', () => {
         .filter((job) => job !== id)
         .sort(),
     );
+  });
+
+  // TZ sets the time zone of the Node process and NM_TEST_PG_TZ the session zone of the test
+  // database, so each leg sets both.
+  it('ci / gate runs the unit and integration projects in the UTC and the Europe/Stockholm legs', () => {
+    const { workflow, id } = jobNamed('ci / gate');
+    const runs = allNeedsOf(workflow.jobs, id).flatMap((need) =>
+      vitestRunsOf(workflow.jobs[need] ?? {}),
+    );
+
+    for (const zone of ['UTC', 'Europe/Stockholm']) {
+      expect(runs, zone).toContainEqual({
+        env: expect.objectContaining({ TZ: zone, NM_TEST_PG_TZ: zone }),
+        projects: expect.arrayContaining(['unit', 'integration']),
+      });
+    }
   });
 
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
