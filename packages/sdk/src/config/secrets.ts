@@ -48,22 +48,22 @@ export function readSecrets<Key extends `${string}_FILE`>(
 ): Secrets<Key> {
   const secrets: Record<string, string> = {};
   const problems: string[] = [];
+  const devSecretKeys: string[] = [];
   for (const [key, path] of Object.entries<string>(files)) {
     const file = readSecretFile(path);
-    if ('problem' in file) problems.push(`${key}: ${file.problem}`);
-    else secrets[key.replace(/_FILE$/, '')] = file.value;
+    if ('problem' in file) {
+      problems.push(`${key}: ${file.problem}`);
+      continue;
+    }
+    secrets[key.replace(/_FILE$/, '')] = file.value;
+    if (file.value.startsWith(DEV_SECRET_MARKER)) devSecretKeys.push(key);
   }
   if (problems.length > 0) throw new ConfigError(problems);
-  if (options.nodeEnv === 'production') {
-    const devSecrets = Object.keys(files).filter((key) =>
-      secrets[key.replace(/_FILE$/, '')]?.startsWith(DEV_SECRET_MARKER),
+  if (options.nodeEnv === 'production' && devSecretKeys.length > 0) {
+    throw new ConfigError(
+      devSecretKeys.map((key) => `${key}: holds a dev secret, which NODE_ENV production refuses`),
+      { code: 'CONFIG_DEV_SECRET_IN_PRODUCTION' },
     );
-    if (devSecrets.length > 0) {
-      throw new ConfigError(
-        devSecrets.map((key) => `${key}: holds a dev secret, which NODE_ENV production refuses`),
-        { code: 'CONFIG_DEV_SECRET_IN_PRODUCTION' },
-      );
-    }
   }
   secretsRead = secrets;
   return secrets as Secrets<Key>;
