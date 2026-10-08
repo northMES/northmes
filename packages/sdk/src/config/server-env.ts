@@ -11,7 +11,9 @@ const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1']);
 
 function isPublicOrigin(value: string, env: z.infer<typeof nodeEnv>): boolean {
   const url = URL.parse(value);
-  if (url === null) return false;
+  // The same-origin check compares the Origin header with this value as a string, so a path, a
+  // trailing slash or credentials would never match.
+  if (url === null || url.origin !== value) return false;
   if (url.protocol === 'https:') return true;
   return (
     env !== 'production' &&
