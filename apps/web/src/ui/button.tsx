@@ -9,7 +9,7 @@ import { cn } from './cn.ts';
  * The D1 button variants and sizes (docs/design/ui/ui-189-tokens.md, Components). Default is the
  * one main action of a region, outline the rest; ghost and link carry no border.
  */
-export const buttonVariants = cva(
+const buttonVariants = cva(
   [
     'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium',
     'transition-colors motion-reduce:transition-none disabled:opacity-50 aria-busy:cursor-progress',
