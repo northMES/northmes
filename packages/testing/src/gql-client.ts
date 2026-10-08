@@ -13,7 +13,7 @@ export interface GqlAnswer<TData = Record<string, unknown>> {
 export type GqlEvent<TData = Record<string, unknown>> = Omit<GqlAnswer<TData>, 'status'>;
 
 /** How a subscription reaches /graphql: graphql-ws on its upgrade, or SSE. */
-export type SubscriptionTransport = 'graphql-ws';
+export type SubscriptionTransport = 'graphql-ws' | 'sse';
 
 export interface SubscribeOptions {
   readonly transport: SubscriptionTransport;
@@ -39,7 +39,8 @@ export interface GqlClient {
 export interface GqlClientOptions {
   /**
    * Headers sent with every operation, such as x-northmes-plant, which names the request's plant
-   * until sign-in arrives (E05). A graphql-ws subscription sends them with its handshake.
+   * until sign-in arrives (E05). A graphql-ws subscription sends them with its handshake, and an
+   * SSE subscription with its request.
    */
   readonly headers?: Readonly<Record<string, string>>;
 }
@@ -139,4 +140,55 @@ function webSocketWith(headers: Readonly<Record<string, string>>): typeof WebSoc
   } as typeof WebSocket;
 }
 
-const subscribers: Record<SubscriptionTransport, Subscriber> = { 'graphql-ws': overGraphqlWs };
+/**
+ * One subscription as a POST to /graphql that accepts text/event-stream, in the distinct
+ * connections mode of GraphQL over SSE. Ending the subscription cancels the response body, which
+ * closes the connection.
+ */
+async function* overSse({
+  endpoint,
+  headers,
+  query,
+  variables,
+}: SubscriptionRequest): AsyncGenerator<GqlEvent, void, undefined> {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { ...headers, accept: 'text/event-stream', 'content-type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!response.ok || !response.body) {
+    throw new Error(`SSE on ${endpoint.href} answered ${response.status}`);
+  }
+  for await (const { event, data } of sseMessages(response.body)) {
+    if (event === 'complete') return;
+    yield JSON.parse(data) as GqlEvent;
+  }
+}
+
+/** The messages of an event stream, without its comments. */
+async function* sseMessages(
+  body: ReadableStream<Uint8Array>,
+): AsyncGenerator<{ event: string; data: string }, void, undefined> {
+  const decoder = new TextDecoder();
+  let buffered = '';
+  for await (const chunk of body) {
+    buffered = (buffered + decoder.decode(chunk, { stream: true })).replaceAll('\r\n', '\n');
+    const blocks = buffered.split('\n\n');
+    buffered = blocks.pop() ?? '';
+    for (const block of blocks) {
+      const fields = block.split('\n').filter((line) => line && !line.startsWith(':'));
+      if (fields.length === 0) continue;
+      const value = (name: string) =>
+        fields
+          .filter((line) => line.startsWith(`${name}:`))
+          .map((line) => line.slice(name.length + 1).trimStart())
+          .join('\n');
+      yield { event: value('event') || 'message', data: value('data') };
+    }
+  }
+}
+
+const subscribers: Record<SubscriptionTransport, Subscriber> = {
+  'graphql-ws': overGraphqlWs,
+  sse: overSse,
+};
