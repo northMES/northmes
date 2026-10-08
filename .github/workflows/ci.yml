@@ -113,6 +113,7 @@ jobs:
             coverage/lcov.info
             coverage/lcov-report/
           if-no-files-found: error
+          overwrite: true
       - if: "!cancelled() && steps.utc.outcome != 'skipped'"
         run: pnpm test:tz
 
