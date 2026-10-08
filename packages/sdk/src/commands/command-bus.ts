@@ -12,6 +12,11 @@ export const COMMAND_BUS = 'northmes:command-bus';
  */
 export interface HandlerContext<Target = unknown> {
   readonly tx: Transaction<unknown>;
+  /**
+   * The scope id of the plant the principal works at, where a command that creates an entity
+   * writes its row (ADR 0012 step 3). undefined for a run without a principal.
+   */
+  readonly plantId: string | undefined;
   /** The row that target.load returned, or undefined for a command without a target. */
   readonly target: Target;
 }
@@ -35,7 +40,7 @@ export interface CommandTarget<Target> {
    * check, the validators and the handler judge the same row. undefined when no row with the id
    * is at the principal's scopes.
    */
-  load(id: string, context: Pick<HandlerContext, 'tx'>): Promise<Target | undefined>;
+  load(id: string, context: Pick<HandlerContext, 'tx' | 'plantId'>): Promise<Target | undefined>;
 }
 
 /** A command as the bus runs it: the owner's contract and the module's server code for it. */

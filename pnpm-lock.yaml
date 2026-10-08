@@ -285,6 +285,9 @@ importers:
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@northmes/core-contracts':
+        specifier: workspace:*
+        version: link:../../modules/core/contracts
       '@northmes/planning-contracts':
         specifier: workspace:*
         version: link:../../modules/planning/contracts

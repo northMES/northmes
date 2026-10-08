@@ -9,6 +9,7 @@ import type {
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
+import { currentPrincipal } from '../principal.ts';
 
 /** A command validator, with the id of the module whose server code registered it. */
 export interface RegisteredValidator {
@@ -114,12 +115,12 @@ interface ExistingInput {
 async function loadTarget<Input, Result, Target extends Versioned | undefined>(
   command: Command<Input, Result, Target>,
   input: Input,
-  tx: Transaction<unknown>,
+  context: { readonly tx: Transaction<unknown>; readonly plantId: string | undefined },
 ): Promise<Target | undefined> {
   if (!command.target) return undefined;
   const { entity, load } = command.target;
   const { id, expectedVersion } = input as ExistingInput;
-  const row = await load(id, { tx });
+  const row = await load(id, context);
   if (!row) {
     throw new DomainError({
       code: 'core.not_found',
@@ -191,8 +192,10 @@ export class CommandBusImpl implements CommandBus {
     const { name } = command.contract;
     const validators = this.#validators.get(name) ?? [];
     return this.#database.transaction(async (tx) => {
+      const plantId = currentPrincipal()?.plantId;
       // A command without a target gets undefined, which its Target type then is.
-      const context = { tx, target: (await loadTarget(command, input, tx)) as Target };
+      const target = (await loadTarget(command, input, { tx, plantId })) as Target;
+      const context = { tx, plantId, target };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);
         for (const registered of validators) {
