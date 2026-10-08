@@ -134,4 +134,55 @@ describe('BoardScreen', () => {
     expect(within(row).getByTestId('version-7101').textContent).toBe('2');
     expect(within(row).queryByRole('button')).toBeNull();
   });
+
+  it('E02-S05 a rejected release shows the message and errorCode in the row', async () => {
+    const user = userEvent.setup();
+    const mocks = [
+      {
+        request: { query: PlanningBoard },
+        result: {
+          data: {
+            planningProductionOrders: [order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)],
+          },
+        },
+      },
+      {
+        request: {
+          query: PlanningReleaseProductionOrder,
+          variables: { input: { id: 'order-7101' } },
+        },
+        // The answer of a validator's veto: no data, and one error with the validator's message.
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'Order 7101 asks for 40, above the release limit of 25',
+              path: ['planningReleaseProductionOrder'],
+              extensions: {
+                code: 'PRECONDITION',
+                errorCode: 'core.command_rejected',
+                details: { rejectedBy: 'example-validator' },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    render(
+      <MockedProvider mocks={mocks}>
+        <BoardScreen />
+      </MockedProvider>,
+    );
+
+    const row = await screen.findByTestId('order-7101');
+    await user.click(within(row).getByRole('button', { name: 'Release order 7101' }));
+
+    expect((await within(row).findByRole('alert')).textContent).toBe(
+      'Order 7101 asks for 40, above the release limit of 25 (core.command_rejected)',
+    );
+    expect(within(row).getByTestId('status-7101').textContent).toBe('planned');
+    expect(within(row).getByTestId('version-7101').textContent).toBe('1');
+    expect(within(row).getByRole('button', { name: 'Release order 7101' })).toBeTruthy();
+  });
 });
