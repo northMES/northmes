@@ -27,9 +27,9 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   await client.connect();
   const applied: string[] = [];
   try {
-    await client.query('create schema northmes_meta');
+    await client.query('create schema if not exists northmes_meta');
     await client.query(
-      `create table northmes_meta.migration (
+      `create table if not exists northmes_meta.migration (
          module text not null,
          name text not null,
          sha256 text not null,
@@ -40,15 +40,24 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     for (const { manifest, migrationsDir } of catalog) {
       const { sql, ownerRole } = moduleNames(manifest.id);
       const role = client.escapeIdentifier(ownerRole);
-      await client.query(`create role ${role} nologin`);
+      const existing = await client.query('select 1 from pg_roles where rolname = $1', [ownerRole]);
+      if (existing.rowCount === 0) await client.query(`create role ${role} nologin`);
       // A CREATEROLE creator gets ADMIN on the role it creates, but neither SET nor INHERIT.
       // SET lets nm_owner give the role a schema and run files as it; nm_owner keeps none of
       // its rights.
       await client.query(`grant ${role} to current_user with set true, inherit false`);
       // The module role uses the REFERENCES grants that other modules give nm_ext (ADR 0006).
       await client.query(`grant nm_ext to ${role} with inherit true, set false`);
-      await client.query(`create schema ${client.escapeIdentifier(sql)} authorization ${role}`);
+      await client.query(
+        `create schema if not exists ${client.escapeIdentifier(sql)} authorization ${role}`,
+      );
+      const recorded = await client.query<{ name: string }>(
+        'select name from northmes_meta.migration where module = $1',
+        [manifest.id],
+      );
+      const done = new Set(recorded.rows.map((row) => row.name));
       for (const file of readMigrationFiles(migrationsDir)) {
+        if (done.has(file.name)) continue;
         // A file that fails leaves its transaction open, and closing the connection rolls it
         // back with its record.
         await client.query('begin');
