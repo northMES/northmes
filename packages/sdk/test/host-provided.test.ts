@@ -31,4 +31,10 @@ describe('isHostProvided', () => {
     expect(isHostProvided('@nestjs/graphql/dist/index.js')).toBe(true);
     expect(isHostProvided('graphqlx')).toBe(false);
   });
+
+  it('E02-S01 isHostProvided matches every @nestjs package such as @nestjs/config and @nestjs/swagger', () => {
+    expect(isHostProvided('@nestjs/config')).toBe(true);
+    expect(isHostProvided('@nestjs/swagger/dist/x.js')).toBe(true);
+    expect(isHostProvided('@nestjsx/crud')).toBe(false);
+  });
 });
