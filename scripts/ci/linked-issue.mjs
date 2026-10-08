@@ -24,3 +24,24 @@ export function checkLinkedIssue({ body, author, headRef, fromFork }) {
       'The pull request body links no issue. Add Closes #N for the issue this pull request finishes.',
   };
 }
+
+// A workflow command for an error annotation. GitHub decodes %25, %0D and %0A in its message.
+function errorAnnotation(message) {
+  const encoded = message.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+  return `::error::${encoded}`;
+}
+
+// The job passes the pull request through the environment, never inside the run script, so a body
+// cannot inject shell code. A missing PR_FROM_FORK counts as a fork, which grants no exemption.
+if (import.meta.main) {
+  const { ok, message } = checkLinkedIssue({
+    body: process.env.PR_BODY ?? '',
+    author: process.env.PR_AUTHOR ?? '',
+    headRef: process.env.PR_HEAD_REF ?? '',
+    fromFork: process.env.PR_FROM_FORK !== 'false',
+  });
+  if (!ok) {
+    console.log(errorAnnotation(message));
+    process.exitCode = 1;
+  }
+}
