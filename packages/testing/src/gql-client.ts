@@ -63,18 +63,35 @@ export function gqlClient(url: string, { headers = {} }: GqlClientOptions = {}):
       const { data, errors } = (await response.json()) as Omit<GqlAnswer<TData>, 'status'>;
       return { ...answer, data, errors };
     },
-    subscribe<TData>(document: string, variables?: Readonly<Record<string, unknown>>) {
-      return overGraphqlWs<TData>(endpoint, headers, { query: document, variables });
+    subscribe<TData>(
+      document: string,
+      variables: Readonly<Record<string, unknown>> | undefined,
+      { transport }: SubscribeOptions,
+    ) {
+      const events = subscribers[transport]({ endpoint, headers, query: document, variables });
+      return events as AsyncGenerator<GqlEvent<TData>, void, undefined>;
     },
   };
 }
 
+/** One subscription as a transport sends it to /graphql. */
+interface SubscriptionRequest {
+  readonly endpoint: URL;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly query: string;
+  readonly variables: Readonly<Record<string, unknown>> | undefined;
+}
+
+/** Starts one subscription over a transport and yields its events. */
+type Subscriber = (request: SubscriptionRequest) => AsyncGenerator<GqlEvent, void, undefined>;
+
 /** One subscription on its own graphql-ws connection, which it closes when it ends. */
-async function* overGraphqlWs<TData>(
-  endpoint: URL,
-  headers: Readonly<Record<string, string>>,
-  payload: { query: string; variables?: Readonly<Record<string, unknown>> | undefined },
-): AsyncGenerator<GqlEvent<TData>, void, undefined> {
+async function* overGraphqlWs({
+  endpoint,
+  headers,
+  query,
+  variables,
+}: SubscriptionRequest): AsyncGenerator<GqlEvent, void, undefined> {
   const url = new URL(endpoint);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   const client = createClient({
@@ -83,7 +100,7 @@ async function* overGraphqlWs<TData>(
     retryAttempts: 0,
   });
   try {
-    yield* client.iterate<TData>({ ...payload, variables: { ...payload.variables } });
+    yield* client.iterate({ query, variables: { ...variables } });
   } catch (error) {
     throw connectionError(url, error);
   } finally {
@@ -121,3 +138,5 @@ function webSocketWith(headers: Readonly<Record<string, string>>): typeof WebSoc
     }
   } as typeof WebSocket;
 }
+
+const subscribers: Record<SubscriptionTransport, Subscriber> = { 'graphql-ws': overGraphqlWs };
