@@ -160,10 +160,13 @@ function settle() {
 /**
  * The stack, the processes and the file watcher of pnpm dev as fakes. events lists what pnpm dev
  * did, in order: "start <name>" and "stop <name>" for a process, "run <name>" for a process it ran
- * to its end, and "stop stack". A process counts as stopped once its stop resolved.
+ * to its end, and "stop stack". A process counts as stopped once its stop resolved. logs lists the
+ * lines pnpm dev printed itself. A process that pnpm dev runs to its end fails when its name is in
+ * failing.
  */
-function fakeDev() {
+function fakeDev({ failing = [] }: { failing?: string[] } = {}) {
   const events: string[] = [];
+  const logs: string[] = [];
   const env = new Map<string, Readonly<Record<string, string>> | undefined>();
   const printers = new Map<string, (line: string) => void>();
   const watchers = new Map<string, () => void>();
@@ -194,9 +197,11 @@ function fakeDev() {
   const runFake: typeof run = async (planned, options = {}) => {
     events.push(`run ${planned.name}`);
     env.set(planned.name, options.env);
+    if (failing.includes(planned.name)) throw new Error(`${planned.command} exited with 1`);
   };
   return {
     events,
+    logs,
     stack,
     /** The environment that pnpm dev gave the process with this name on top of its own. */
     envOf: (name: string) => env.get(name),
@@ -212,6 +217,9 @@ function fakeDev() {
       run: runFake,
       watch: (dir: string, changed: () => void) => {
         watchers.set(dir, changed);
+      },
+      log: (line: string) => {
+        logs.push(line);
       },
     },
   };
@@ -256,5 +264,27 @@ describe('superviseDev', () => {
     expect(dev.events).toEqual(['run migrate', 'stop server', 'start server']);
     // migrate reads the owner's password file that the stack's environment names.
     expect(dev.envOf('migrate')).toEqual(dev.stack.env);
+  });
+
+  it('E02-S08 pnpm dev keeps the running server when northmes migrate fails, and says why', async () => {
+    const dev = fakeDev({ failing: ['migrate'] });
+    superviseDev({ plan: await devPlan(ports), ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+    dev.events.length = 0;
+
+    dev.change('modules/planning/migrations');
+    await vi.waitFor(() => expect(dev.events).toContain('run migrate'));
+    await settle();
+
+    expect(dev.events).toEqual(['run migrate']);
+    expect(dev.logs).toContain('node exited with 1; the server runs on');
+
+    // The next completed build restarts the server as before.
+    dev.print('tsc', completed);
+    await settle();
+
+    expect(dev.events).toEqual(['run migrate', 'stop server', 'start server']);
   });
 });
