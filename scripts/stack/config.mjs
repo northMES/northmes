@@ -2,8 +2,9 @@
 // secret files under .northmes/secrets/, which every process the stack starts reads.
 
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseEnv } from 'node:util';
 
 // DEV_SECRET_MARKER in packages/sdk/src/config/secrets.ts. This script runs under plain node,
 // where @northmes/sdk resolves to its build output, so it keeps its own copy; config.test.ts checks
@@ -26,9 +27,27 @@ const devEnvHeader = `# Written by the stack script (ADR 0058). The processes it
 `;
 
 /**
+ * Writes a file unless it exists, and returns true when it wrote it.
+ * @param {string} path
+ * @param {string} content
+ * @param {number} [mode]
+ */
+function writeIfMissing(path, content, mode) {
+  try {
+    writeFileSync(path, content, { flag: 'wx', mode });
+    return true;
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === 'EEXIST') return false;
+    throw error;
+  }
+}
+
+/**
  * Writes the dev secret files under dir/secrets/, each with a random value that starts with the
  * dev marker and with mode 0600, and dir/dev.env, which sets NODE_ENV to development and points the
- * _FILE keys at the secret files. Returns the environment dev.env holds.
+ * _FILE keys at the secret files. A file that exists is kept as it is, so the database roles keep
+ * the passwords they were created with and an edit to dev.env stays. Returns the environment that
+ * dev.env holds.
  * @param {string} dir The stack's state directory, .northmes/ at the repository root.
  * @returns {Record<string, string>}
  */
@@ -39,10 +58,11 @@ export function writeDevConfig(dir) {
   const env = { NODE_ENV: 'development' };
   for (const [key, name] of Object.entries(secretFiles)) {
     const path = join(secretsDir, name);
-    writeFileSync(path, `${devSecretMarker}${randomBytes(32).toString('hex')}\n`, { mode: 0o600 });
+    writeIfMissing(path, `${devSecretMarker}${randomBytes(32).toString('hex')}\n`, 0o600);
     env[key] = path;
   }
+  const devEnvFile = join(dir, 'dev.env');
   const lines = Object.entries(env).map(([key, value]) => `${key}=${value}\n`);
-  writeFileSync(join(dir, 'dev.env'), `${devEnvHeader}${lines.join('')}`);
-  return env;
+  if (writeIfMissing(devEnvFile, `${devEnvHeader}${lines.join('')}`)) return env;
+  return /** @type {Record<string, string>} */ (parseEnv(readFileSync(devEnvFile, 'utf8')));
 }
