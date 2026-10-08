@@ -7,4 +7,5 @@ export default defineModule({
   version: packageJson.version,
   northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['core'],
+  commands: { 'planning.releaseProductionOrder': { validatable: true } },
 });
