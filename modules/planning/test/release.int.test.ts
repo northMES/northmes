@@ -105,4 +105,28 @@ describe('planningReleaseProductionOrder', () => {
       data: { planningProductionOrders: [{ id, status: 'released', version: 2 }] },
     });
   });
+
+  it('E02-S04 releasing an order at another plant returns core.not_found and leaves it planned', async () => {
+    const plant = given.plant();
+    const otherPlant = given.plant();
+    const id = await writeOrder(otherPlant, '6503');
+
+    const answer = await (await clientAt(plant)).send(releaseMutation, { input: { id } });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `Production order ${id} was not found`,
+          path: ['planningReleaseProductionOrder'],
+          extensions: { code: 'NOT_FOUND', errorCode: 'core.not_found' },
+        },
+      ],
+    });
+    expect(await (await clientAt(otherPlant)).send(ordersQuery)).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },
+    });
+  });
 });
