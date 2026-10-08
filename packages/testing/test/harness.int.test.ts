@@ -161,6 +161,18 @@ describe('the connections of a test database', () => {
       [{ current_user: 'nm_owner', current_database: database.databaseName }],
     ]);
   });
+
+  // Bootstrap grants nm_owner CREATE on the database, and a clone does not copy that grant.
+  it('E02-S02 nm_owner may create a schema in its test database', async () => {
+    await query(database.ownerUrl, 'create schema owner_only');
+
+    const rows = await query(
+      database.appUrl,
+      "select pg_get_userbyid(nspowner) as owner from pg_namespace where nspname = 'owner_only'",
+    );
+
+    expect(rows).toEqual([{ owner: 'nm_owner' }]);
+  });
 });
 
 describe('a project without the global setup', () => {
