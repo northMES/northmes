@@ -50,7 +50,25 @@ export async function devPlan({ server, shell, remotes }) {
     ...remoteOrigins,
     ...['/api', '/graphql', '/health', '/modules'].map((path) => [path, serverOrigin]),
   ]);
+  const webDirs = ['apps/web', ...Object.keys(remotes).map((id) => `modules/${id}/web`)];
   return {
+    // A remote resolves the workspace packages to their dist/, and @module-federation/vite reads
+    // the named exports of @northmes/web-sdk from its dist/, so turbo builds the packages that the
+    // shell and each remote depend on before their dev servers start.
+    /** @type {DevProcess} */
+    build: {
+      name: 'build',
+      command: 'pnpm',
+      args: [
+        'exec',
+        'turbo',
+        'run',
+        'build',
+        ...webDirs.map((dir) => `--filter=${packageName(dir)}^...`),
+        '--output-logs=errors-only',
+      ],
+      env: {},
+    },
     /** @type {DevProcess} */
     watch: {
       name: 'tsc',
@@ -120,6 +138,15 @@ function viteDevServer(name, dir, port, env = {}) {
     ],
     env,
   };
+}
+
+/**
+ * The name in the package.json of the package in dir, relative to the repository root.
+ * @param {string} dir
+ * @returns {string}
+ */
+function packageName(dir) {
+  return JSON.parse(readFileSync(join(repositoryRoot, dir, 'package.json'), 'utf8')).name;
 }
 
 /** @param {number} port */
