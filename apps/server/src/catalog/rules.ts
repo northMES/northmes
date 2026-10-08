@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiPath } from '@northmes/contracts';
+import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import type { CatalogEntry } from './check-catalog.ts';
 
 /**
@@ -21,6 +22,42 @@ export function reservedIdProblems(entries: readonly CatalogEntry[]): string[] {
     if (family) {
       problems.push(
         `Module id "${manifest.id}" is reserved: ${apiPath(manifest.id)} is a ${family} path segment`,
+      );
+    }
+  }
+  return problems;
+}
+
+/** The names moduleNames derives from an id, each its own namespace. */
+const DERIVED_NAMES = [
+  'gql',
+  'sql',
+  'ownerRole',
+  'remote',
+] as const satisfies readonly (keyof ModuleNames)[];
+
+/**
+ * A problem for every two modules that derive the same name of one kind, such as press-2 and
+ * press2, which both derive the GraphQL name press2. Each pair is named once.
+ */
+export function nameClashProblems(entries: readonly CatalogEntry[]): string[] {
+  const problems: string[] = [];
+  const owners = new Map<string, string>();
+  const reported = new Set<string>();
+  for (const { manifest } of entries) {
+    const names = moduleNames(manifest.id);
+    for (const kind of DERIVED_NAMES) {
+      const key = `${kind} ${names[kind]}`;
+      const owner = owners.get(key);
+      if (owner === undefined) {
+        owners.set(key, manifest.id);
+        continue;
+      }
+      const pair = `${owner} ${manifest.id}`;
+      if (owner === manifest.id || reported.has(pair)) continue;
+      reported.add(pair);
+      problems.push(
+        `Modules ${owner} and ${manifest.id} derive the same name ${names[kind]}; give one of them another id`,
       );
     }
   }
