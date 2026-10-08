@@ -206,6 +206,7 @@ describe('mit-imports', () => {
 
     expect(packages.map(({ path }) => path)).toEqual(
       expect.arrayContaining([
+        'package.json',
         'apps/server/package.json',
         'examples/plugin-validator/package.json',
         'modules/planning/contracts/package.json',
