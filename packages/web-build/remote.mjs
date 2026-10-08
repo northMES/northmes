@@ -16,8 +16,10 @@ import react from '@vitejs/plugin-react';
  * @param {RemoteOptions} options
  * @returns {import('vite').UserConfigFnObject}
  */
-export function defineRemoteConfig({ id, entry = './src/module.tsx' }) {
+export function defineRemoteConfig({ id, version, entry = './src/module.tsx' }) {
   return () => ({
+    // The server serves each remote's files at this path (ADR 0019).
+    base: `/modules/${id}/${version}/`,
     plugins: [
       react(),
       federation({
