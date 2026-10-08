@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Vite plugins that fail a remote's build when it breaks a rule of ADR 0003 or ADR 0019.
-import { readFileSync } from 'node:fs';
-import { extname, resolve } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { extname, join, resolve } from 'node:path';
 import { singletons } from './shared.mjs';
 
 /**
@@ -32,8 +33,33 @@ function installedPackageOf(moduleId) {
 }
 
 /**
+ * The real directory of each package in `names` that a bare import from a file in `root` finds,
+ * with forward slashes. A workspace package's directory is its folder in the repository, which
+ * holds its source files.
+ *
+ * @param {string} root
+ * @param {Iterable<string>} names
+ * @returns {Map<string, string>}
+ */
+function packageDirectories(root, names) {
+  const { resolve: lookup } = createRequire(join(root, 'package.json'));
+  /** @type {Map<string, string>} */
+  const directories = new Map();
+  for (const name of names) {
+    const directory = (lookup.paths(name) ?? [])
+      .map((nodeModules) => join(nodeModules, name))
+      .find((candidate) => existsSync(join(candidate, 'package.json')));
+    if (directory) {
+      directories.set(name, realpathSync(directory).replaceAll('\\', '/'));
+    }
+  }
+  return directories;
+}
+
+/**
  * Fails the build when a chunk holds code from a package the shell shares as a singleton, for
- * example through a subpath outside the share keys, such as @apollo/client/cache. That code would
+ * example through a subpath outside the share keys, such as @apollo/client/cache, or through a
+ * path into a workspace package's source, such as @northmes/web-sdk's src folder. That code would
  * run as a second copy beside the shell's, with its own React context or Apollo cache. graphql
  * has no share key, because a remote reaches it only through Apollo Client, so code from graphql
  * in a chunk is a second copy too.
@@ -42,9 +68,35 @@ function installedPackageOf(moduleId) {
  */
 export function noBundledSingletons() {
   const forbidden = new Set([...singletons().map(packageOfKey), 'graphql']);
+  /** @type {Map<string, string>} */
+  let directories = new Map();
+
+  /**
+   * The forbidden package a module id lies in, with the file's path from the package's parent
+   * folder: any copy inside node_modules, or the directory the remote resolves the package to.
+   *
+   * @param {string} moduleId
+   */
+  function forbiddenPackageOf(moduleId) {
+    const installed = installedPackageOf(moduleId);
+    if (installed && forbidden.has(installed.name)) {
+      return installed;
+    }
+    const path = moduleId.replaceAll('\\', '/');
+    for (const [name, directory] of directories) {
+      if (path.startsWith(`${directory}/`)) {
+        return { name, file: `${name}/${path.slice(directory.length + 1)}` };
+      }
+    }
+    return undefined;
+  }
+
   return {
     name: 'northmes:no-bundled-singletons',
     apply: 'build',
+    configResolved(config) {
+      directories = packageDirectories(config.root, forbidden);
+    },
     generateBundle(_options, bundle) {
       /** @type {Map<string, string>} */
       const offenders = new Map();
@@ -53,9 +105,9 @@ export function noBundledSingletons() {
           continue;
         }
         for (const moduleId of chunk.moduleIds) {
-          const installed = installedPackageOf(moduleId);
-          if (installed && forbidden.has(installed.name) && !offenders.has(installed.name)) {
-            offenders.set(installed.name, `${installed.file} in ${chunk.fileName}`);
+          const owner = forbiddenPackageOf(moduleId);
+          if (owner && !offenders.has(owner.name)) {
+            offenders.set(owner.name, `${owner.file} in ${chunk.fileName}`);
           }
         }
       }
