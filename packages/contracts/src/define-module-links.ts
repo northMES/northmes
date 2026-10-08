@@ -46,7 +46,16 @@ function href(pattern: string, params: Readonly<Record<string, string>>): string
   return pattern
     .split('/')
     .map((segment) =>
-      segment.startsWith('$') ? encodeURIComponent(params[segment.slice(1)] ?? '') : segment,
+      segment.startsWith('$') ? param(pattern, segment.slice(1), params) : segment,
     )
     .join('/');
+}
+
+// The encoded value of one param. An empty value throws, because the href would lose the segment.
+function param(pattern: string, name: string, params: Readonly<Record<string, string>>): string {
+  const value = params[name];
+  if (!value) {
+    throw new Error(`Link ${pattern} has an empty value for ${name}`);
+  }
+  return encodeURIComponent(value);
 }
