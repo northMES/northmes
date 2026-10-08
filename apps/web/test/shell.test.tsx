@@ -61,7 +61,11 @@ const settings: ShellModule = {
     id: 'settings',
     version: '0.4.0',
     routes: (plantRoute) =>
-      createRoute({ getParentRoute: () => plantRoute, path: 'settings', component: SettingsScreen }),
+      createRoute({
+        getParentRoute: () => plantRoute,
+        path: 'settings',
+        component: SettingsScreen,
+      }),
   }),
 };
 

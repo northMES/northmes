@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { WebModule } from '@northmes/web-sdk';
 import { planningLinks } from '@northmes/planning-contracts';
+import type { WebModule } from '@northmes/web-sdk';
 import { planningModule } from './modules/planning/index.ts';
 
 /** One link of a module's menu group. */
