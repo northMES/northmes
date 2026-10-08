@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { readFileSync } from 'node:fs';
 import core from '@northmes/module-core/manifest';
+import planning from '@northmes/module-planning/manifest';
 import { satisfies } from 'semver';
 import { describe, expect, it } from 'vitest';
 
@@ -16,5 +17,11 @@ describe('core manifest', () => {
 
   it('E02-S01 core manifest version comes from its package.json', () => {
     expect(core.version).toBe(packageVersion('modules/core/package.json'));
+  });
+});
+
+describe('planning manifest', () => {
+  it('E02-S01 planning depends on core', () => {
+    expect(planning.dependsOn).toEqual(['core']);
   });
 });
