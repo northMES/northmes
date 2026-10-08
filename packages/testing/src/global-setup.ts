@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { TestProject } from 'vitest/node';
 import { newRunCredentials } from './credentials.ts';
@@ -31,7 +33,8 @@ async function createTemplate(connection: PgConnection): Promise<void> {
  * the image keeps it in /var/lib/postgresql/<major>/docker, under the image's volume at
  * /var/lib/postgresql, so the mount covers it and the data lives in memory and goes with the
  * container. The server runs without durability (see serverArgs). The superuser password and the
- * database name are random for each run, so no run shares a credential with another.
+ * database name are random for each run, so no run shares a credential with another. The run also
+ * gets a temporary directory for state its test files share, such as the server build of bootBuilt.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
   const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
@@ -62,8 +65,13 @@ export default async function setup(project: TestProject): Promise<() => Promise
     await stop().catch(() => {});
     throw error;
   }
+  const runDir = mkdtempSync(join(tmpdir(), 'northmes-run-'));
   project.provide('pg', connection);
   project.provide('pgImage', image);
+  project.provide('runDir', runDir);
 
-  return stop;
+  return async () => {
+    rmSync(runDir, { recursive: true, force: true });
+    await stop();
+  };
 }

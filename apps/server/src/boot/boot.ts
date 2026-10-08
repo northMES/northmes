@@ -4,7 +4,13 @@ import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { ModuleManifest } from '@northmes/sdk';
-import { loadEnv, readSecrets, secretsConfig, serverEnvSchema } from '@northmes/sdk/config';
+import {
+  ConfigError,
+  loadEnv,
+  readSecrets,
+  secretsConfig,
+  serverEnvSchema,
+} from '@northmes/sdk/config';
 import { AppModule } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { inRepoManifests } from '../modules.ts';
@@ -57,16 +63,17 @@ async function loadConfig(env: BootOptions['env']) {
 }
 
 /**
- * Boots the server in the order of ADR 0002 and returns the listening app. A BootError is written
- * to log.error and ends the process with its exit code; boot then returns undefined.
+ * Boots the server in the order of ADR 0002 and returns the listening app. A ConfigError or a
+ * BootError is written to log.error and ends the process with exit code 1; boot then returns
+ * undefined.
  */
 export async function boot(options: BootOptions): Promise<INestApplication | undefined> {
   try {
     return await bootSteps(options);
   } catch (error) {
-    if (!(error instanceof BootError)) throw error;
+    if (!(error instanceof ConfigError || error instanceof BootError)) throw error;
     options.log.error(error.message);
-    options.exit(error.exitCode);
+    options.exit(1);
     return undefined;
   }
 }
