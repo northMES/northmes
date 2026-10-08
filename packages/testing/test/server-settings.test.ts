@@ -27,4 +27,15 @@ describe('serverArgs', () => {
       'timezone=Europe/Stockholm',
     );
   });
+
+  it('E02-S02 serverArgs appends each setting a test server starts with as a -c flag', () => {
+    const args = serverArgs({}, { log_statement: 'all', log_min_duration_statement: '0' });
+
+    expect(args.slice(-4)).toEqual([
+      '-c',
+      'log_statement=all',
+      '-c',
+      'log_min_duration_statement=0',
+    ]);
+  });
 });

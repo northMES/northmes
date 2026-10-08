@@ -13,7 +13,11 @@ details.
 
 Third-party files
 
-The agent skills in .claude/skills are copied from the repositories named in
+The third-party agent skills in .claude/skills, the ones that skills-lock.json
+pins, are copied from the repositories named in
 .claude/skills/THIRD_PARTY_LICENSE.md at the commits pinned in
 skills-lock.json. Each keeps its source's license (MIT or Apache-2.0), and that
-file reproduces each license and copyright notice.
+file reproduces each license and copyright notice. The project skills in
+.claude/skills (db-test, and the vertical-slice, graphql-subgraph, web-remote
+and dst-test skills that later tasks add) are NorthMES's own files under the
+license above.

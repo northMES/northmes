@@ -1,26 +1,23 @@
 // SPDX-License-Identifier: MIT
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, inject, it, vi } from 'vitest';
-import { templateDatabase, withClient } from '../src/database.ts';
-import { query, useTestDatabase } from '../src/index.ts';
+import { withClient } from '../src/client.ts';
+import { emptyTemplateDatabase, query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
 describe('the test database', () => {
-  const { connectionString, databaseName } = useTestDatabase();
+  const { appUrl, ownerUrl, databaseName } = useTestDatabase();
 
   it('the connection string points at the database named databaseName', async () => {
-    const rows = await query<{ current_database: string }>(
-      connectionString,
-      'select current_database()',
-    );
+    const rows = await query<{ current_database: string }>(appUrl, 'select current_database()');
 
     expect(rows).toEqual([{ current_database: databaseName }]);
   });
 
   it('the database is cloned from the template', async () => {
     const rows = await query<{ marker: string | null }>(
-      connectionString,
+      appUrl,
       "select to_regclass('public.nm_marker')::text as marker",
     );
 
@@ -28,37 +25,28 @@ describe('the test database', () => {
   });
 
   it('the template database is flagged as a template', async () => {
-    const name = templateDatabase.replaceAll("'", "''");
+    const name = inject('pgTemplate').replaceAll("'", "''");
 
     const rows = await query<{ datistemplate: boolean }>(
-      connectionString,
+      appUrl,
       `select datistemplate from pg_database where datname = '${name}'`,
     );
 
     expect(rows).toEqual([{ datistemplate: true }]);
   });
 
-  it('the server time zone follows NM_TEST_PG_TZ', async () => {
-    const rows = await query<{ TimeZone: string }>(connectionString, 'show timezone');
-
+  // nm_app sees neither the server's own time zone, which its role setting replaces, nor the data
+  // directory, so the global setup reads both as the superuser.
+  it('the server time zone follows NM_TEST_PG_TZ', () => {
     // An unset, empty or blank NM_TEST_PG_TZ means UTC.
-    expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ?.trim() || 'UTC' }]);
+    expect(inject('pgServer').timeZone).toBe(process.env.NM_TEST_PG_TZ?.trim() || 'UTC');
   });
 
-  it('the data directory is a tmpfs mount', async () => {
-    const dataDirectories = await query<{ data_directory: string }>(
-      connectionString,
-      'show data_directory',
-    );
-    // pg_read_file needs the superuser that the container creates.
-    const mountTables = await query<{ mounts: string }>(
-      connectionString,
-      "select pg_read_file('/proc/mounts') as mounts",
-    );
-    const dataDirectory = dataDirectories[0]?.data_directory ?? '';
+  it('the data directory is a tmpfs mount', () => {
+    const { dataDirectory, mounts: mountTable } = inject('pgServer');
 
     // Each line of /proc/mounts reads: device, mount point, file system type, options.
-    const mounts = (mountTables[0]?.mounts ?? '')
+    const mounts = mountTable
       .split('\n')
       .filter((line) => line !== '')
       .map((line) => {
@@ -80,7 +68,7 @@ describe('the test database', () => {
   it('durability is off', async () => {
     const settings = await Promise.all(
       ['fsync', 'synchronous_commit', 'full_page_writes'].map(async (setting) => {
-        const rows = await query<Record<string, string>>(connectionString, `show ${setting}`);
+        const rows = await query<Record<string, string>>(appUrl, `show ${setting}`);
         return [setting, rows[0]?.[setting]];
       }),
     );
@@ -93,7 +81,7 @@ describe('the test database', () => {
   });
 
   it('the server allows 300 connections', async () => {
-    const rows = await query<{ max_connections: string }>(connectionString, 'show max_connections');
+    const rows = await query<{ max_connections: string }>(appUrl, 'show max_connections');
 
     expect(rows).toEqual([{ max_connections: '300' }]);
   });
@@ -114,21 +102,71 @@ describe('the test database', () => {
     // The server must report the major version that the image names, so a wrong image fails here.
     const major = /^postgres:(\d+)[@-]/.exec(image)?.[1];
     expect(major).toBeDefined();
-    const rows = await query<{ version: string }>(connectionString, 'select version()');
+    const rows = await query<{ version: string }>(appUrl, 'select version()');
     expect(rows[0]?.version).toMatch(new RegExp(`^PostgreSQL ${major}\\.`));
   });
 
-  // harness-sibling.int.test.ts runs the same test with a table of its own, in parallel.
+  // harness-sibling.int.test.ts runs the same test with a schema of its own, in parallel.
   it('each test file gets its own database', async () => {
     expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
-    await query(connectionString, 'create table harness_only (id integer)');
+    await query(ownerUrl, 'create schema harness_only');
 
-    const rows = await query<{ tablename: string }>(
-      connectionString,
-      "select tablename from pg_tables where schemaname = 'public' order by tablename",
+    const rows = await query<{ nspname: string }>(
+      appUrl,
+      "select nspname from pg_namespace where nspname in ('harness_only', 'sibling_only')",
     );
 
-    expect(rows.map((row) => row.tablename)).toEqual(['harness_only', 'nm_marker']);
+    expect(rows).toEqual([{ nspname: 'harness_only' }]);
+  });
+});
+
+describe('the connections of a test database', () => {
+  const database = useTestDatabase();
+
+  it('E02-S02 useTestDatabase hands out nm_app and nm_owner connections and never the superuser', async () => {
+    const { password } = inject('pg');
+
+    // No connection string of the superuser is handed out, under any key.
+    expect(Object.keys(database).sort()).toEqual(['appUrl', 'command', 'databaseName', 'ownerUrl']);
+    expect(JSON.stringify(database)).not.toContain(encodeURIComponent(password));
+
+    const sessions = await Promise.all(
+      [database.appUrl, database.ownerUrl].map((url) =>
+        query(url, 'select current_user, current_database()'),
+      ),
+    );
+
+    expect(sessions).toEqual([
+      [{ current_user: 'nm_app', current_database: database.databaseName }],
+      [{ current_user: 'nm_owner', current_database: database.databaseName }],
+    ]);
+  });
+
+  // Bootstrap grants nm_owner CREATE on the database, and a clone does not copy that grant.
+  it('E02-S02 nm_owner may create a schema in its test database', async () => {
+    await query(database.ownerUrl, 'create schema owner_only');
+
+    const rows = await query(
+      database.appUrl,
+      "select pg_get_userbyid(nspowner) as owner from pg_namespace where nspname = 'owner_only'",
+    );
+
+    expect(rows).toEqual([{ owner: 'nm_owner' }]);
+  });
+});
+
+describe('a test database cloned from the empty template', () => {
+  const { appUrl } = useTestDatabase({ template: emptyTemplateDatabase });
+
+  // The migrated template holds northmes_meta, which the empty template lacks.
+  it('E02-S02 useTestDatabase clones the template that its options name', async () => {
+    const rows = await query<{ marker: string | null; meta: string | null }>(
+      appUrl,
+      `select to_regclass('public.nm_marker')::text as marker,
+              to_regnamespace('northmes_meta')::text as meta`,
+    );
+
+    expect(rows).toEqual([{ marker: 'nm_marker', meta: null }]);
   });
 });
 
@@ -151,14 +189,17 @@ describe('a project without the global setup', () => {
 });
 
 describe('withClient', () => {
-  it('rethrows why the connection dropped, not that the client is not queryable', async () => {
-    const pg = inject('pg');
+  const { appUrl } = useTestDatabase();
 
-    const failure = withClient(pg, async (client) => {
+  it('rethrows why the connection dropped, not that the client is not queryable', async () => {
+    const app = { connectionString: appUrl };
+
+    const failure = withClient(app, async (client) => {
       const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
       const dropped = new Promise((resolve) => client.once('error', resolve));
-      await withClient(pg, (admin) =>
-        admin.query('select pg_terminate_backend($1)', [rows[0]?.pid]),
+      // A role may terminate its own backends, so a second nm_app session ends the first.
+      await withClient(app, (other) =>
+        other.query('select pg_terminate_backend($1)', [rows[0]?.pid]),
       );
       await dropped;
       await client.query('select 1');
@@ -176,8 +217,14 @@ describe('the global setup', () => {
   // Vitest only runs the teardown that setup returns, so a setup that rejects must stop the container itself.
   it('stops the container when preparing the template fails', async () => {
     const stop = vi.fn(async () => {});
+    // The index imports the container module, so the mock applies only to modules loaded afresh.
+    vi.resetModules();
     vi.doMock('@testcontainers/postgresql', () => ({
       PostgreSqlContainer: class {
+        withUsername() {
+          return this;
+        }
+
         withCommand() {
           return this;
         }
@@ -216,14 +263,31 @@ describe('the global setup', () => {
   });
 });
 
-describe('a test database that is dropped before the file ends', () => {
-  const { databaseName } = useTestDatabase();
+describe('a test database whose clone fails', () => {
+  afterEach(() => {
+    vi.doUnmock('vitest');
+    vi.resetModules();
+  });
 
-  // When the clone in beforeAll fails, the database never exists and afterAll runs the same drop.
-  // That drop must not fail with its own error and hide the cause.
-  it('afterAll does not fail when the database is already gone', async () => {
-    await withClient(inject('pg'), async (client) => {
-      await client.query(`drop database ${client.escapeIdentifier(databaseName)} with (force)`);
-    });
+  // When the clone in beforeAll fails, the database never exists and afterAll runs its drop. That
+  // drop must not fail with its own error and hide the cause.
+  it('afterAll does not fail when the database does not exist', async () => {
+    const hooks: { beforeAll?: () => Promise<void>; afterAll?: () => Promise<void> } = {};
+    vi.resetModules();
+    vi.doMock('vitest', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('vitest')>()),
+      beforeAll: (hook: () => Promise<void>) => {
+        hooks.beforeAll = hook;
+      },
+      afterAll: (hook: () => Promise<void>) => {
+        hooks.afterAll = hook;
+      },
+    }));
+    const { useTestDatabase: withHooks } = await import('../src/database.ts');
+
+    withHooks({ template: 'nm_no_such_template' });
+
+    await expect(hooks.beforeAll?.()).rejects.toThrow(/does not exist/);
+    await expect(hooks.afterAll?.()).resolves.toBeUndefined();
   });
 });
