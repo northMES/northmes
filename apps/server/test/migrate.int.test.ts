@@ -3,8 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ModuleRef } from '@nestjs/core';
+import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
+import { Pool } from 'pg';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { bootForMigrate } from '../src/boot/boot.ts';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
 import { cli } from '../src/cli.ts';
 import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
@@ -192,7 +196,11 @@ describe('pnpm northmes migrate', () => {
     vi.unstubAllEnvs();
   });
 
-  it('E02-S02 pnpm northmes migrate boots the catalog without listening and migrates it as nm_owner', async () => {
+  /**
+   * The environment of migrate: DATABASE_URL without a login and the owner's password in a secret
+   * file. The keys are stubbed, so ConfigModule's writes to process.env end with the test.
+   */
+  function migrateEnv(): Record<string, string> {
     for (const key of ['DATABASE_URL', 'NORTHMES_DB_OWNER_PASSWORD_FILE'])
       vi.stubEnv(key, undefined);
     const databaseUrl = new URL(db.ownerUrl);
@@ -200,18 +208,18 @@ describe('pnpm northmes migrate', () => {
     writeFileSync(passwordFile, `${decodeURIComponent(databaseUrl.password)}\n`, { mode: 0o600 });
     databaseUrl.username = '';
     databaseUrl.password = '';
+    return {
+      NODE_ENV: 'test',
+      DATABASE_URL: databaseUrl.href,
+      NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
+    };
+  }
+
+  it('E02-S02 pnpm northmes migrate boots the catalog without listening and migrates it as nm_owner', async () => {
     const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
     const exit = vi.fn<(code: number) => void>();
 
-    await cli(['migrate'], {
-      env: {
-        NODE_ENV: 'test',
-        DATABASE_URL: databaseUrl.href,
-        NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
-      },
-      exit,
-      log,
-    });
+    await cli(['migrate'], { env: migrateEnv(), exit, log });
     const schemas = await query(
       db.ownerUrl,
       `select n.nspname as schema, r.rolname as owner
@@ -237,5 +245,28 @@ describe('pnpm northmes migrate', () => {
       { schema: 'core', owner: 'nm_mod_core' },
       { schema: 'planning', owner: 'nm_mod_planning' },
     ]);
+  });
+
+  it('E02-S04 the boot of pnpm northmes migrate constructs no nm_app pool, and its ScopedDatabase refuses a transaction', async () => {
+    // The migrate environment holds no nm_app password (ADR 0060).
+    const { app } = await bootForMigrate({
+      env: migrateEnv(),
+      importManifest: (specifier) => import(specifier),
+      exit: vi.fn<(code: number) => void>(),
+      log: { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() },
+    });
+    try {
+      const database = app.get<string, ScopedDatabase<unknown>>(DATABASE);
+      // The app's own get ends the process when a provider is missing, as boot does not pass
+      // abortOnError: false. Its ModuleRef throws instead.
+      const moduleRef = app.get(ModuleRef);
+
+      expect(() => moduleRef.get(Pool, { strict: false })).toThrow('this provider does not exist');
+      await expect(database.transaction(async () => 'ran')).rejects.toThrow(
+        'pnpm northmes migrate has no nm_app pool',
+      );
+    } finally {
+      await app.close();
+    }
   });
 });
