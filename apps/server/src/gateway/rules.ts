@@ -101,7 +101,8 @@ function rootFieldPrefixProblems({ name, sdl }: SubgraphSdl): CompositionProblem
 /**
  * NORTHMES_CONTRIBUTED_FIELD_NULLABLE: a field that a module adds to an entity it references is
  * nullable, so a caller who may not read the field still gets the entity. The key fields are the
- * reference itself, not a contribution.
+ * reference itself, and an @external field repeats the owner's field for @requires; neither is a
+ * contribution.
  */
 function contributedFieldProblems(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
   const owners = entityOwners(subgraphs);
@@ -115,7 +116,8 @@ function contributedFieldProblems(subgraphs: readonly SubgraphSdl[]): Compositio
       const owner = owners.get(entity);
       const ownedBy = owner === undefined ? 'another module' : `subgraph "${owner}"`;
       for (const field of definition.fields ?? []) {
-        if (keyFields.has(field.name.value) || field.type.kind !== Kind.NON_NULL_TYPE) continue;
+        if (keyFields.has(field.name.value) || isExternal(field)) continue;
+        if (field.type.kind !== Kind.NON_NULL_TYPE) continue;
         problems.push({
           code: 'NORTHMES_CONTRIBUTED_FIELD_NULLABLE',
           message: `${entity}.${field.name.value} must be nullable: subgraph "${name}" adds it to an entity that ${ownedBy} owns`,
@@ -136,6 +138,11 @@ function entityOwners(subgraphs: readonly SubgraphSdl[]): Map<string, string> {
     }
   }
   return owners;
+}
+
+/** Whether a field carries @external: the owner resolves it, and its type repeats the owner's. */
+function isExternal(field: { readonly directives?: readonly ConstDirectiveNode[] }): boolean {
+  return (field.directives ?? []).some((directive) => directive.name.value === 'external');
 }
 
 /** Whether a type definition carries @key, which makes it an entity. */
