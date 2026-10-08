@@ -1,15 +1,23 @@
 // pnpm plugin:build <id>: builds a drop-in plugin (ADR 0037). Rolldown bundles src/manifest.ts and
 // src/server.ts into dist/, keeps every HOST_PROVIDED package external, so one copy of each exists
-// per process, and bundles everything else.
+// per process, and bundles everything else. The installable package (package.json, dist/ and
+// migrations/) is then copied to plugins/<id>/, where the host loads it from.
 //
 // The script imports HOST_PROVIDED from @northmes/sdk. Under plain node that resolves to the SDK's
 // build output, so the SDK must be built first (pnpm build does it).
 
-import { rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync, realpathSync } from 'node:fs';
+import { cp, readdir, readFile, rm } from 'node:fs/promises';
+import { join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isHostProvided } from '@northmes/sdk';
 import { rolldown } from 'rolldown';
 import { parseSync } from 'rolldown/utils';
+
+const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
+
+/** The parts of a plugin folder that make up the installable package. */
+const packageParts = ['package.json', 'dist', 'migrations'];
 
 /**
  * The package specifiers a built file imports, read from its code. Relative specifiers point at
@@ -34,12 +42,13 @@ function packageImports(fileName, code) {
 }
 
 /**
- * Builds the plugin package in `dir` into its dist/ folder.
+ * Builds the plugin package in `dir` into its dist/ folder and copies the installable package to
+ * `outDir`, which it empties first.
  * @param {string} dir
- * @param {string} _outDir
+ * @param {string} outDir
  * @returns {Promise<import('./plugin-build.d.mts').BuiltPlugin>}
  */
-export async function buildPlugin(dir, _outDir) {
+export async function buildPlugin(dir, outDir) {
   const dist = join(dir, 'dist');
   await rm(dist, { recursive: true, force: true });
   const bundle = await rolldown({
@@ -60,5 +69,63 @@ export async function buildPlugin(dir, _outDir) {
       imports[`dist/${file.fileName}`] = packageImports(file.fileName, file.code);
     }
   }
+  await rm(outDir, { recursive: true, force: true });
+  for (const part of packageParts) {
+    if (existsSync(join(dir, part))) {
+      await cp(join(dir, part), join(outDir, part), { recursive: true });
+    }
+  }
   return { files: output.map((file) => `dist/${file.fileName}`).sort(), imports };
+}
+
+/**
+ * The folder under examples/ whose package name, without its scope, is the plugin id.
+ * @param {string} root
+ * @param {string} id
+ */
+async function findPlugin(root, id) {
+  const examples = join(root, 'examples');
+  const folders = existsSync(examples) ? await readdir(examples, { withFileTypes: true }) : [];
+  for (const folder of folders.filter((entry) => entry.isDirectory())) {
+    const packageJson = join(examples, folder.name, 'package.json');
+    if (!existsSync(packageJson)) continue;
+    const { name } = JSON.parse(await readFile(packageJson, 'utf8'));
+    if (typeof name === 'string' && name.split('/').at(-1) === id) {
+      return join(examples, folder.name);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * pnpm plugin:build <id>
+ * @param {readonly string[]} argv
+ * @param {import('./plugin-build.d.mts').MainIo} io
+ */
+export async function main(argv, io) {
+  const [id] = argv;
+  const dir = await findPlugin(io.root, id);
+  const outDir = join(io.root, 'plugins', id);
+  await buildPlugin(dir, outDir);
+  io.log(`Built ${relative(io.root, dir)} into ${relative(io.root, outDir)}`);
+  return 0;
+}
+
+function isEntryPoint() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    // Under --eval, argv[1] is a positional argument, not a script path.
+    return false;
+  }
+}
+
+if (isEntryPoint()) {
+  process.exitCode = await main(process.argv.slice(2), {
+    log: console.log,
+    error: console.error,
+    root: repositoryRoot,
+  });
 }
