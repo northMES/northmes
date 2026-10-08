@@ -53,7 +53,8 @@ function inputType(contract: CommandContract, typeName: string): Type {
 
 /**
  * A resolver class with the command's Mutation field. Its one argument, input, has the input type
- * built from the contract, and the field sends the input to the command bus.
+ * built from the contract, and the field parses the input with the contract and sends the result
+ * to the command bus.
  */
 export function mutationResolver(command: Command, returns: ReturnTypeFunc): Type {
   const fieldName = mutationFieldName(command.contract.name);
@@ -65,7 +66,7 @@ export function mutationResolver(command: Command, returns: ReturnTypeFunc): Typ
 
     @Mutation(returns, { name: fieldName })
     run(@Args('input', { type: () => Input }) input: unknown): Promise<unknown> {
-      return this.bus.run(command, input);
+      return this.bus.run(command, command.contract.input.parse(input));
     }
   }
   // Nest's messages name the class, so it carries the field's name.
