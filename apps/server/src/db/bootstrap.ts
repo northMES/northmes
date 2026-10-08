@@ -26,7 +26,13 @@ const roles: readonly { name: string; attributes: string; password?: keyof RoleP
  * of the server log, whatever logging the server runs with. Postgres samples a transaction when it
  * starts, so they apply to the session and come before BEGIN.
  */
-const unloggedSession: readonly string[] = [];
+const unloggedSession = [
+  "log_statement = 'none'",
+  'log_min_duration_statement = -1',
+  'log_min_duration_sample = -1',
+  'log_transaction_sample_rate = 0',
+  "log_min_error_statement = 'panic'",
+];
 
 /**
  * Creates the database roles as the superuser that superuserUrl logs in as (ADR 0005, ADR 0006):
