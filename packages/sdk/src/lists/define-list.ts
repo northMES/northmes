@@ -79,6 +79,8 @@ export interface Connection<Node> {
 /** The page size of a call without first or last. */
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
+const MAX_ORDER_BY_ENTRIES = 3;
+const MAX_SEARCH_LENGTH = 100;
 
 /** A sort key of a page's order: a column with its type and direction. */
 interface Key extends SortColumn {
@@ -112,6 +114,12 @@ function keysOf<SortField extends string>(
   args: ListArgs<SortField>,
 ): Key[] {
   const orderBy = args.orderBy?.length ? args.orderBy : declaration.defaultOrderBy;
+  if (orderBy.length > MAX_ORDER_BY_ENTRIES) {
+    throw badArgument(`orderBy takes at most ${MAX_ORDER_BY_ENTRIES} entries`);
+  }
+  const fields = orderBy.map(({ field }) => field);
+  const repeated = fields.find((field, index) => fields.indexOf(field) !== index);
+  if (repeated) throw badArgument(`orderBy names ${repeated} more than once`);
   const keys = orderBy.map(({ field, direction }) => ({
     ...declaration.sortFields[field],
     direction: direction ?? SortDirection.ASC,
@@ -175,6 +183,9 @@ function planOf<SortField extends string>(
   const cursor = backward ? args.before : args.after;
   const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
   const search = args.search?.trim() || undefined;
+  if (search && search.length > MAX_SEARCH_LENGTH) {
+    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
+  }
   return { backward, size, keys, signature, from, search };
 }
 
