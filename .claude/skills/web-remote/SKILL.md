@@ -20,11 +20,12 @@ The remote, in the order a new one builds them:
 7. `modules/planning/web/src/board-screen.tsx`, `board.graphql.ts` and `release.graphql.ts`: the screen and its typed documents, `gql` from `@apollo/client` as a `TypedDocumentNode` with hand-written types until GraphQL codegen arrives. Hooks come from `@apollo/client/react`. Each row, and each cell the end-to-end specs read, carries a `data-testid` named after the order number. The screen imports no stylesheet.
 8. `modules/planning/northmes.module.ts`: `web: { label: 'Planning', order: 20 }` puts the module in the web module list and the menu.
 
-The tests of the remote, all in the `web` project:
+The tests of the remote, the `.tsx` files in the `web` project and `remote-build.test.ts` in the `unit` project:
 
 - `modules/planning/web/test/module.test.tsx`: the module passes `validateWebModule` for the entry the server lists (id `planning`, the version of `modules/planning/package.json`), and `planningLinks.board({ plant }).href` opens the board stub in a router built with `createShellRoutes` inside a `MockedProvider`.
 - `modules/planning/web/test/routes.links.test.tsx`: the fullPath of every route in the shell's tree equals `/`, `/$plant` or the pattern of a `planningLinks` entry, and every entry has its route.
 - `modules/planning/web/test/board-screen.test.tsx`: the screen with a `MockedProvider` that answers each document once.
+- `modules/planning/web/test/remote-build.test.ts`: builds the remote with its own `vite.config.ts` into a temporary folder, so the three guards run on the real sources in `pnpm check`, and checks that `mf-manifest.json` exposes `./module` with the publicPath `/modules/planning/<version>/` and that the build emits no CSS.
 
 What every remote shares:
 
@@ -40,10 +41,10 @@ What every remote shares:
 
 - `pnpm exec turbo run build --filter=@northmes/planning-web`: the remote and the packages it builds against. It writes `modules/planning/web/dist/` with `mf-manifest.json`, `remoteEntry.js` and `assets/`. A plain `vite build` in the package resolves the contracts packages to their `dist/`, so build through turbo, which builds them first.
 - `pnpm build`: every package, the shell and every remote.
-- `pnpm exec vitest run --project web modules/planning/web/test`: the remote's tests.
+- `pnpm exec vitest run --project web --project unit modules/planning/web/test`: the remote's tests.
 - `pnpm exec vitest run --project unit packages/web-build/test/guards.test.ts`: the guard tests.
 - `pnpm --filter @northmes/planning-web run typecheck`; `lint` runs the same way.
-- `pnpm check`: the gate before the work is handed over. It does not build the remotes.
+- `pnpm check`: the gate before the work is handed over. It writes no `dist/`, but `remote-build.test.ts` builds the planning remote, so a guard error fails the gate.
 
 ## Building a remote
 
@@ -54,10 +55,10 @@ What every remote shares:
 5. Write `module.tsx` with `defineWebModule({ id, version, routes })`. Repeat the module's version as a string literal.
 6. Write the screens. Import singleton packages through their share keys only: `react`, `react-dom`, `react/jsx-runtime`, `@tanstack/react-router`, `@apollo/client`, `@apollo/client/react` and `@northmes/web-sdk`. Test files may import other subpaths, such as `@apollo/client/testing/react`, because the build never sees them. Read the plant with `useShell()` and build links with the link manifest's builders.
 7. Add `web: { label, order }` to the module manifest.
-8. Test the module with `validateWebModule`, the routes against the link manifest, and each screen with `MockedProvider`. Start each test name with the story id, such as `E02-S05`.
+8. Test the module with `validateWebModule`, the routes against the link manifest, each screen with `MockedProvider`, and the build through the remote's `vite.config.ts` as `remote-build.test.ts` does. Start each test name with the story id, such as `E02-S05`.
 9. Build through turbo and check that `dist/` holds `mf-manifest.json` and `remoteEntry.js`.
 
-A test that runs `vite build` on a remote stubs `MFE_VITE_NO_TEST_ENV_CHECK` to `true`: `@module-federation/vite` returns no plugins when it finds `VITEST` in the environment.
+A test that runs `vite build` on a remote stubs `MFE_VITE_NO_TEST_ENV_CHECK` to `true`: `@module-federation/vite` returns no plugins when it finds `VITEST` in the environment. A remote with JSX also stubs `NODE_ENV` to `production`: Vite keeps the `test` that Vitest sets, and outside production JSX compiles to `react/jsx-dev-runtime`, which is no share key in a build, so `northmes:no-bundled-singletons` fails on `react`.
 
 ## Errors and their meaning
 
