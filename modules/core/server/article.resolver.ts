@@ -2,6 +2,7 @@
 import { Inject } from '@nestjs/common';
 import {
   Args,
+  Context,
   Directive,
   Field,
   ID,
@@ -11,7 +12,7 @@ import {
   ResolveReference,
   Resolver,
 } from '@nestjs/graphql';
-import type { EntityReference } from '@northmes/sdk/graphql';
+import { type EntityReference, loaderFor, type SubgraphContext } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from './api/article.service.ts';
 import { CoreModule } from './core.module.ts';
 
@@ -34,9 +35,18 @@ export class ArticleResolver {
     return this.articles.byId(id);
   }
 
-  /** The article that another subgraph references by id, or null when none is at its scopes. */
+  /**
+   * The article that another subgraph references by id, or null when none is at the request's
+   * scopes. The request's loader reads the references that one _entities call resolves in one
+   * query, so the articles of every order in a list cost one read.
+   */
   @ResolveReference()
-  resolveReference(@Parent() reference: EntityReference): Promise<ArticleRecord | null> {
-    return this.articles.byId(reference.id);
+  resolveReference(
+    @Parent() reference: EntityReference,
+    @Context() context: SubgraphContext,
+  ): Promise<ArticleRecord | null> {
+    return loaderFor(context, 'core.article', (ids: readonly string[]) =>
+      this.articles.byIds(ids),
+    ).load(reference.id);
   }
 }

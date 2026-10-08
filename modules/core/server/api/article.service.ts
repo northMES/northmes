@@ -29,4 +29,17 @@ export class ArticleService {
     );
     return article ?? null;
   }
+
+  /**
+   * The articles with these ids in one query, one entry per id in the order of the ids: the
+   * article, or null when none exists at the principal's read scopes.
+   */
+  async byIds(ids: readonly string[]): Promise<(ArticleRecord | null)[]> {
+    if (ids.length === 0) return [];
+    const articles = await this.db.transaction((tx) =>
+      tx.selectFrom('core.article').select(['id', 'code', 'name']).where('id', 'in', ids).execute(),
+    );
+    const byId = new Map(articles.map((article) => [article.id, article]));
+    return ids.map((id) => byId.get(id) ?? null);
+  }
 }
