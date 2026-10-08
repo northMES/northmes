@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { parseEnv } from 'node:util';
 import { DEV_SECRET_MARKER } from '@northmes/sdk/config';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { writeDevConfig } from './config.mjs';
@@ -43,5 +44,19 @@ describe('writeDevConfig', () => {
     for (const value of values) expect(value.startsWith(DEV_SECRET_MARKER)).toBe(true);
     // Each secret is random, so no two roles share a password.
     expect(new Set(values).size).toBe(secretKeys.length);
+  });
+
+  it('E02-S08 dev.env sets NODE_ENV to development and points each _FILE key at its secret file', () => {
+    const env = writeDevConfig(dir);
+    const devEnv = parseEnv(readFileSync(join(dir, 'dev.env'), 'utf8'));
+
+    expect(devEnv).toEqual({
+      NODE_ENV: 'development',
+      POSTGRES_PASSWORD_FILE: join(dir, 'secrets/postgres_password'),
+      NORTHMES_DB_OWNER_PASSWORD_FILE: join(dir, 'secrets/db_owner_password'),
+      NORTHMES_DB_APP_PASSWORD_FILE: join(dir, 'secrets/db_app_password'),
+      NORTHMES_DB_AUTH_PASSWORD_FILE: join(dir, 'secrets/db_auth_password'),
+    });
+    expect(env).toEqual(devEnv);
   });
 });
