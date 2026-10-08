@@ -174,6 +174,12 @@ export function webModuleVersion({ entry, version }) {
         lang: languages[extname(entryFile)] ?? 'js',
       });
       const declared = declaredVersion(program);
+      if (declared === undefined) {
+        this.error(
+          `the build reads the version as a string literal from defineWebModule in ${entry}, and ` +
+            'finds none, so it cannot compare it with the module manifest (ADR 0003).',
+        );
+      }
       if (declared !== version) {
         this.error(
           `defineWebModule in ${entry} declares version ${declared}, but the module manifest ` +
