@@ -78,8 +78,15 @@ export class GatewayService implements OnApplicationBootstrap {
       sockets,
     );
     const server: Server = this.adapterHost.httpAdapter.getHttpServer();
+    // With an upgrade listener, Node hands every upgrade request to it and no longer to Express, so
+    // the listener answers each other path itself. It closes the socket once the answer is written,
+    // as ws does when it refuses a handshake.
     server.on('upgrade', (request, socket, head) => {
-      if (new URL(request.url ?? '/', 'http://localhost').pathname !== GATEWAY_PATH) return;
+      if (new URL(request.url ?? '/', 'http://localhost').pathname !== GATEWAY_PATH) {
+        socket.once('finish', () => socket.destroy());
+        socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n');
+        return;
+      }
       sockets.handleUpgrade(request, socket, head, (webSocket) => {
         sockets.emit('connection', webSocket, request);
       });
