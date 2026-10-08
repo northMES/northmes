@@ -37,4 +37,21 @@ describe('the NorthMES composition rules', () => {
       },
     ]);
   });
+
+  it('E02-S03 a type owned by two modules fails with NORTHMES_TYPE_OWNERSHIP naming both subgraphs', () => {
+    // Used only in outputs, composition would merge the two value sets without an error.
+    const delta = subgraph('delta', 'enum Shift { EARLY LATE } type Query { deltaShift: Shift }');
+    const epsilon = subgraph(
+      'epsilon',
+      'enum Shift { DAY NIGHT } type Query { epsilonShift: Shift }',
+    );
+
+    expect(checkRules([delta, epsilon])).toEqual([
+      {
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message:
+          'Shift is defined in subgraphs "delta" and "epsilon"; one module owns a type that is not an entity',
+      },
+    ]);
+  });
 });
