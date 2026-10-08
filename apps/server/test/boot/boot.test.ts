@@ -55,8 +55,10 @@ describe('boot', () => {
 
     expect(exit).not.toHaveBeenCalled();
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    // Core's server entry gives the gateway a supergraph to serve.
     expect(log.info.mock.calls).toEqual([
       ['Modules in boot order: core, planning'],
+      [expect.stringMatching(/^Serving \/graphql with supergraph=[0-9a-f]{12}$/)],
       [`Listening on ${url}`],
     ]);
     expect(log.error).not.toHaveBeenCalled();
