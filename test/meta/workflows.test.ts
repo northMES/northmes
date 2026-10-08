@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface Step {
-  name?: string;
   if?: string;
   uses?: string;
   run?: string;
@@ -115,11 +114,11 @@ function allJobs(): { where: string; job: Job }[] {
   );
 }
 
-function jobNamed(name: string): { workflow: Workflow; id: string } {
+function jobNamed(name: string): { workflow: Workflow; id: string; job: Job } {
   for (const workflow of workflows()) {
     for (const [id, job] of Object.entries(workflow.jobs ?? {})) {
       if (job.name === name) {
-        return { workflow, id };
+        return { workflow, id, job };
       }
     }
   }
@@ -157,15 +156,17 @@ function commandsOf(command: string): string[] {
 // `turbo run typecheck` run one each. A turbo command with flags stays whole.
 function turboTasks(command: string): string[] {
   const match = /^turbo run ([\w:-]+(?: [\w:-]+)*)$/.exec(command);
-  return match?.[1] === undefined ? [command] : match[1].split(' ').map((t) => `turbo run ${t}`);
+  return match?.[1] === undefined
+    ? [command]
+    : match[1].split(' ').map((task) => `turbo run ${task}`);
 }
 
 // The runner of the test jobs (docs/plan/13-delivery-and-github.md): a pull request from a fork
 // always runs on a GitHub-hosted runner, and an unset NM_RUNNER_X64 falls back to one, so deleting
 // the variable moves the test jobs off Blacksmith without a commit.
-const testRunner =
-  // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a template.
-  "${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'ubuntu-24.04' || vars.NM_RUNNER_X64 || 'ubuntu-24.04' }}";
+const testRunner = expression(
+  "(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'ubuntu-24.04' || vars.NM_RUNNER_X64 || 'ubuntu-24.04'",
+);
 
 // A test job runs a root script that runs Vitest.
 function isTestJob(job: Job): boolean {
@@ -281,11 +282,10 @@ describe('workflows', () => {
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
   it('ci / gate runs after a failed or cancelled job and then fails', () => {
-    const { workflow, id } = jobNamed('ci / gate');
-    const gate = workflow.jobs[id];
+    const { job: gate } = jobNamed('ci / gate');
 
-    expect(gate?.if).toBe('always()');
-    expect(gate?.steps).toContainEqual(
+    expect(gate.if).toBe('always()');
+    expect(gate.steps).toContainEqual(
       expect.objectContaining({
         if: "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')",
         run: 'exit 1',
@@ -297,11 +297,10 @@ describe('workflows', () => {
   // could inject shell code, so the scripts read the pull request from environment variables.
   it('ci / pr title and ci / linked issue run on pull requests only and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
-      const { workflow, id } = jobNamed(name);
-      const job = workflow.jobs[id];
+      const { job } = jobNamed(name);
 
-      expect(job?.if, name).toBe("github.event_name == 'pull_request'");
-      expect(job?.steps, name).toContainEqual(expect.objectContaining(step));
+      expect(job.if, name).toBe("github.event_name == 'pull_request'");
+      expect(job.steps, name).toContainEqual(expect.objectContaining(step));
     }
   });
 
