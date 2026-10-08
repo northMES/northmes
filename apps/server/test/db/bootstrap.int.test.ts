@@ -204,19 +204,54 @@ describe('pnpm northmes db bootstrap', () => {
     expect(await bootstrapState()).toEqual(before);
   });
 
-  it('E02-S02 bootstrap takes SUPERUSER, CREATEROLE and BYPASSRLS from an nm_app that exists and keeps its password', async () => {
-    await query(superuserUrl, 'alter role nm_app superuser createrole bypassrls');
+  it('E02-S02 bootstrap takes SUPERUSER, CREATEDB, REPLICATION and BYPASSRLS from roles that exist, and CREATEROLE from all but nm_owner, and keeps their passwords', async () => {
+    await query(
+      superuserUrl,
+      'alter role nm_app superuser createrole createdb replication bypassrls',
+    );
+    await query(
+      superuserUrl,
+      'alter role nm_auth superuser createrole createdb replication bypassrls',
+    );
+    await query(
+      superuserUrl,
+      'alter role nm_ext superuser createrole createdb replication bypassrls',
+    );
+    await query(superuserUrl, 'alter role nm_owner superuser createdb replication bypassrls');
 
-    await bootstrapRoles(superuserUrl, { ...passwords, app: randomBytes(16).toString('hex') });
+    await bootstrapRoles(superuserUrl, {
+      owner: randomBytes(16).toString('hex'),
+      app: randomBytes(16).toString('hex'),
+      auth: randomBytes(16).toString('hex'),
+    });
 
     expect(
       await query(
         superuserUrl,
-        "select rolsuper, rolcreaterole, rolbypassrls from pg_roles where rolname = 'nm_app'",
+        `select rolname, rolsuper, rolcreaterole, rolcreatedb, rolreplication, rolbypassrls
+           from pg_roles
+          where rolname like 'nm\\_%'
+          order by rolname`,
       ),
-    ).toEqual([{ rolsuper: false, rolcreaterole: false, rolbypassrls: false }]);
-    expect(await query(urlFor('nm_app', passwords.app), 'select current_user')).toEqual([
-      { current_user: 'nm_app' },
+    ).toEqual(
+      ['nm_app', 'nm_auth', 'nm_ext', 'nm_owner'].map((rolname) => ({
+        rolname,
+        rolsuper: false,
+        rolcreaterole: rolname === 'nm_owner',
+        rolcreatedb: false,
+        rolreplication: false,
+        rolbypassrls: false,
+      })),
+    );
+    const users = await Promise.all([
+      query(urlFor('nm_owner', passwords.owner), 'select current_user'),
+      query(urlFor('nm_app', passwords.app), 'select current_user'),
+      query(urlFor('nm_auth', passwords.auth), 'select current_user'),
+    ]);
+    expect(users).toEqual([
+      [{ current_user: 'nm_owner' }],
+      [{ current_user: 'nm_app' }],
+      [{ current_user: 'nm_auth' }],
     ]);
   });
 });
