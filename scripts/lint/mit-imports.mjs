@@ -10,8 +10,11 @@
 // calls all count. A path built with new URL(..., import.meta.url) is not an import, so a test can
 // still spawn AGPL code by path.
 //
-// test/meta/mit-imports.test.ts runs the scan over the workspace packages that pnpm-workspace.yaml
-// names and the files `git ls-files` lists, so pnpm check fails on a finding.
+// The root package is AGPL and its folder holds every path that no workspace package holds, so an
+// import of scripts/ or of the package by its name counts as well.
+//
+// test/meta/mit-imports.test.ts runs the scan over the root package, the workspace packages that
+// pnpm-workspace.yaml names and the files `git ls-files` lists, so pnpm check fails on a finding.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, statSync } from 'node:fs';
@@ -141,11 +144,11 @@ export function scan(packages, files) {
 }
 
 /**
- * Reads the workspace packages that pnpm-workspace.yaml names and their source files, among the
- * files `git ls-files` lists in the repository that holds `cwd`, with paths relative to its top
- * level. The repository root is not one of the packages. Untracked files and tracked files missing
- * from the working tree are not read. git runs without the GIT_* variables of a hook, so it reads
- * the repository that holds `cwd`.
+ * Reads the root package and the workspace packages that pnpm-workspace.yaml names, and their
+ * source files, among the files `git ls-files` lists in the repository that holds `cwd`, with paths
+ * relative to its top level. Untracked files and tracked files missing from the working tree are
+ * not read. git runs without the GIT_* variables of a hook, so it reads the repository that holds
+ * `cwd`.
  * @param {string} cwd
  * @returns {{ packages: WorkspacePackage[], files: SourceFile[] }}
  */
@@ -178,8 +181,9 @@ export function trackedWorkspace(cwd) {
   const packages = tracked
     .filter(
       (path) =>
-        posix.basename(path) === 'package.json' &&
-        globs.some((glob) => posix.matchesGlob(posix.dirname(path), glob)) &&
+        (path === 'package.json' ||
+          (posix.basename(path) === 'package.json' &&
+            globs.some((glob) => posix.matchesGlob(posix.dirname(path), glob)))) &&
         exists(path),
     )
     .map((path) => ({ path, manifest: JSON.parse(read(path)) }));
