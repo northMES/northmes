@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { moduleNames } from '@northmes/sdk';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
@@ -95,7 +95,7 @@ interface RemoteManifest {
 
 /**
  * The integrity of the remote in webDir, or null when its manifest is missing or does not parse, or
- * a file it lists is missing.
+ * a file it lists is missing or lies outside webDir, where the static mount never serves it.
  */
 function integrityOf(webDir: string): string | null {
   const file = join(webDir, 'mf-manifest.json');
@@ -103,12 +103,20 @@ function integrityOf(webDir: string): string | null {
   const manifest = readFileSync(file);
   try {
     const listed = filesListedIn(JSON.parse(manifest.toString('utf8')));
-    if (listed.some((path) => !existsSync(join(webDir, path)))) return null;
+    if (listed.some((path) => !servedFrom(webDir, path))) return null;
   } catch {
     // A manifest that is not JSON in the shape of RemoteManifest names no remote the shell can load.
     return null;
   }
   return `sha384-${createHash('sha384').update(manifest).digest('base64')}`;
+}
+
+/** Whether path, resolved against webDir, names a file inside webDir that exists. */
+function servedFrom(webDir: string, path: string): boolean {
+  const file = resolve(webDir, path);
+  const inside = relative(webDir, file);
+  const climbs = inside === '..' || inside.startsWith(`..${sep}`);
+  return inside !== '' && !climbs && !isAbsolute(inside) && existsSync(file);
 }
 
 /** The remote entry and the JS and CSS of every exposed module, relative to the remote's folder. */
