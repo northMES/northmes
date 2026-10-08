@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { fileURLToPath } from 'node:url';
 import { query, useTestDatabase } from '@northmes/testing';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
-import { migrate } from '../src/migrate/runner.ts';
+import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
 import { imageVersion, inRepoModule } from './fixtures/catalog.ts';
 
 /** The folder of a fixture module's migration files. */
@@ -47,9 +47,13 @@ const fixtureFiles = [
 
 describe('migrate', () => {
   const db = useTestDatabase();
+  let first: MigrateResult;
+
+  beforeAll(async () => {
+    first = await migrate({ ownerUrl: db.ownerUrl, catalog });
+  });
 
   it("E02-S02 core then planning apply in catalog order, each file under SET LOCAL ROLE of its module's owner role", async () => {
-    const { applied } = await migrate({ ownerUrl: db.ownerUrl, catalog });
     const tables = await query(
       db.ownerUrl,
       `select schemaname, tablename, tableowner
@@ -62,7 +66,7 @@ describe('migrate', () => {
       'select module, name, sha256, xmin::text from northmes_meta.migration order by module, name',
     );
 
-    expect(applied).toEqual(fixtureFiles.map(({ module, name }) => `${module}/${name}`));
+    expect(first.applied).toEqual(fixtureFiles.map(({ module, name }) => `${module}/${name}`));
     // The second file of each module alters the table its first file created, which only the
     // table's owner may do.
     expect(tables).toEqual([
@@ -72,5 +76,43 @@ describe('migrate', () => {
     expect(records.map(({ xmin, ...record }) => record)).toEqual(fixtureFiles);
     // xmin is the transaction that wrote the record: one per file.
     expect(new Set(records.map((record) => record.xmin)).size).toBe(fixtureFiles.length);
+  });
+
+  it('E02-S02 each module schema is owned by its module role', async () => {
+    const schemas = await query(
+      db.ownerUrl,
+      `select n.nspname as schema, r.rolname as owner, r.rolcanlogin as can_login
+         from pg_namespace n
+         join pg_roles r on r.oid = n.nspowner
+        where n.nspname in ('core', 'planning')
+        order by n.nspname`,
+    );
+    // Roles belong to the server, which other test files share, so only these two are read.
+    // Postgres keeps one row per grantor, so the options are combined over the rows.
+    const memberships = await query(
+      db.ownerUrl,
+      `select r.rolname as role, m.rolname as member, bool_or(a.admin_option) as admin,
+              bool_or(a.inherit_option) as inherit, bool_or(a.set_option) as set
+         from pg_auth_members a
+         join pg_roles r on r.oid = a.roleid
+         join pg_roles m on m.oid = a.member
+        where r.rolname in ('nm_mod_core', 'nm_mod_planning')
+           or m.rolname in ('nm_mod_core', 'nm_mod_planning')
+        group by r.rolname, m.rolname
+        order by r.rolname, m.rolname`,
+    );
+
+    expect(schemas).toEqual([
+      { schema: 'core', owner: 'nm_mod_core', can_login: false },
+      { schema: 'planning', owner: 'nm_mod_planning', can_login: false },
+    ]);
+    // Each module role uses the REFERENCES grants of nm_ext. nm_owner may run as a module role
+    // and administer it, and holds none of its rights.
+    expect(memberships).toEqual([
+      { role: 'nm_ext', member: 'nm_mod_core', admin: false, inherit: true, set: false },
+      { role: 'nm_ext', member: 'nm_mod_planning', admin: false, inherit: true, set: false },
+      { role: 'nm_mod_core', member: 'nm_owner', admin: true, inherit: false, set: true },
+      { role: 'nm_mod_planning', member: 'nm_owner', admin: true, inherit: false, set: true },
+    ]);
   });
 });
