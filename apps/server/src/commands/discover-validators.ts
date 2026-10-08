@@ -24,7 +24,7 @@ export function discoverValidators(
 ): RegisteredValidator[] {
   const validators = providers.flatMap(({ module, providers: listed }) =>
     listed.flatMap((provider) => {
-      const { validator } = (provider ?? {}) as Partial<CommandValidatorProvider>;
+      const { validator } = (classOf(provider) ?? {}) as Partial<CommandValidatorProvider>;
       return validator ? [{ module, validator }] : [];
     }),
   );
@@ -43,6 +43,17 @@ export function discoverValidators(
   }
   if (problems.length > 0) throw new BootError(problems);
   return validators;
+}
+
+/**
+ * The class that Nest instantiates for a listed provider: useClass of a class provider, or the
+ * entry itself. A validator listed either way is found, so none is skipped (ADR 0037).
+ */
+function classOf(provider: unknown): unknown {
+  if (typeof provider === 'object' && provider !== null && 'useClass' in provider) {
+    return provider.useClass;
+  }
+  return provider;
 }
 
 /** The id of the module that declares each validatable command, by command name. */
