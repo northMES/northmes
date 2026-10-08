@@ -94,4 +94,40 @@ describe('mit-imports', () => {
       },
     ]);
   });
+
+  it('E02-S01 an examples plugin that imports an AGPL package fails', () => {
+    const plugin = {
+      path: 'examples/plugin-validator/package.json',
+      manifest: { name: '@northmes/example-validator', license: 'AGPL-3.0-or-later' },
+    };
+
+    const findings = scan(
+      [...workspacePackages, plugin],
+      [
+        {
+          path: 'examples/plugin-validator/src/manifest.ts',
+          text: [
+            "import { defineModule } from '@northmes/sdk';",
+            "import { planningContracts } from '@northmes/planning-contracts';",
+            "import { validator } from './validator.ts';",
+            "export type { Manifest } from '@northmes/example-validator/manifest';",
+            '',
+          ].join('\n'),
+        },
+        {
+          path: 'examples/plugin-validator/test/validator.test.ts',
+          text: "import { CommandBus } from '@northmes/module-core';\n",
+        },
+      ],
+    );
+
+    expect(findings).toEqual([
+      {
+        kind: 'import',
+        path: 'examples/plugin-validator/test/validator.test.ts',
+        line: 1,
+        imported: '@northmes/module-core',
+      },
+    ]);
+  });
 });
