@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -175,6 +175,61 @@ describe('concurrent migrate runs', () => {
       fixtureFiles.length,
     ]);
     expect(records).toEqual(fixtureFiles.map(({ module, name }) => ({ module, name })));
+  });
+});
+
+describe('migrate checks every module before it applies a file', () => {
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
+  let copies: string;
+
+  beforeAll(() => {
+    copies = mkdtempSync(join(tmpdir(), 'northmes-migrate-checks-'));
+  });
+
+  afterAll(() => {
+    if (copies) rmSync(copies, { recursive: true, force: true });
+  });
+
+  it('E02-S02 checksum drift stops the run naming the file', async () => {
+    // Copies of the fixture modules, which the test edits after the first run.
+    const coreDir = join(copies, 'core');
+    const planningDir = join(copies, 'planning');
+    cpSync(fixtureMigrations('core'), coreDir, { recursive: true });
+    cpSync(fixtureMigrations('planning'), planningDir, { recursive: true });
+    const copied = checkCatalog(
+      [
+        { ...inRepoModule('planning', ['core']), migrationsDir: planningDir },
+        { ...inRepoModule('core'), migrationsDir: coreDir },
+      ],
+      { imageVersion },
+    );
+    await migrate({ ownerUrl: db.ownerUrl, catalog: copied });
+    // An applied planning file is edited, and core, which comes first, gains a pending file.
+    appendFileSync(
+      join(planningDir, '20260106080000_production_order.sql'),
+      'alter table planning.production_order add column note text;\n',
+    );
+    writeFileSync(
+      join(coreDir, '20260109080000_article_unit.sql'),
+      '-- migration: expand\nalter table core.article add column unit text;\n',
+    );
+
+    const run = migrate({ ownerUrl: db.ownerUrl, catalog: copied });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'planning/20260106080000_production_order.sql changed after it was applied; put the change in a new migration file',
+      ],
+    });
+    // The pending core file was not applied either.
+    expect(
+      await query(
+        db.ownerUrl,
+        'select module, name from northmes_meta.migration order by module, name',
+      ),
+    ).toEqual(fixtureFiles.map(({ module, name }) => ({ module, name })));
   });
 });
 
