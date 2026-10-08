@@ -315,6 +315,23 @@ describe('migrate confines a plugin to its own schema', () => {
     );
   }
 
+  /**
+   * The schema and the owner role nm_mod_<sql> that the database holds for a plugin's sql name.
+   * Roles belong to the server, so pg_roles would also show a role that a refused file left behind.
+   */
+  async function schemaAndRoleOf(sql: string) {
+    return {
+      schemas: await query(
+        db.ownerUrl,
+        `select nspname from pg_namespace where nspname = '${sql}'`,
+      ),
+      roles: await query(
+        db.ownerUrl,
+        `select rolname from pg_roles where rolname = 'nm_mod_${sql}'`,
+      ),
+    };
+  }
+
   it('E02-S02 a plugin ALTER on core.article is refused', async () => {
     // information_schema lists only the columns that the role may use, and nm_owner holds no
     // rights on core's tables, so the columns come from the catalog.
@@ -346,6 +363,7 @@ describe('migrate confines a plugin to its own schema', () => {
     expect(before).toEqual([{ column: 'id' }, { column: 'code' }, { column: 'name' }]);
     expect(await columns()).toEqual(before);
     expect(await recordsOf('alter-core')).toEqual([]);
+    expect(await schemaAndRoleOf('alter_core')).toEqual({ schemas: [], roles: [] });
   });
 
   it('E02-S02 a plugin CREATE TABLE in the core schema is refused and changes nothing', async () => {
@@ -365,6 +383,7 @@ describe('migrate confines a plugin to its own schema', () => {
       await query(db.ownerUrl, "select tablename from pg_tables where schemaname = 'core'"),
     ).toEqual([{ tablename: 'article' }]);
     expect(await recordsOf('core-schema')).toEqual([]);
+    expect(await schemaAndRoleOf('core_schema')).toEqual({ schemas: [], roles: [] });
   });
 
   it('E02-S02 a plugin CREATE TABLE AS SELECT from planning.production_order is refused', async () => {
@@ -380,14 +399,10 @@ describe('migrate confines a plugin to its own schema', () => {
         'reads-planning/20260113080000_production_order_copy.sql failed as nm_mod_reads_planning and was rolled back: permission denied for table production_order',
       ],
     });
-    // The plugin's own schema, which migrate creates before the plugin's files, holds no copy.
-    expect(
-      await query(
-        db.ownerUrl,
-        "select tablename from pg_tables where schemaname = 'reads_planning'",
-      ),
-    ).toEqual([]);
     expect(await recordsOf('reads-planning')).toEqual([]);
+    // migrate creates the plugin's schema in the transaction of its first file, so no schema is
+    // left to hold a copy.
+    expect(await schemaAndRoleOf('reads_planning')).toEqual({ schemas: [], roles: [] });
   });
 });
 
