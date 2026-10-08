@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ModuleManifest } from '@northmes/sdk';
 import { BootError } from '../boot/boot-error.ts';
+import { reservedIdProblems } from './rules.ts';
 
 /** An installed module: its manifest, and whether it ships in the repository or as a plugin. */
 export interface CatalogEntry {
@@ -25,7 +26,7 @@ export function checkCatalog(
   entries: readonly CatalogEntry[],
   _options: CatalogOptions,
 ): CatalogEntry[] {
-  const problems: string[] = [];
+  const problems: string[] = [...reservedIdProblems(entries)];
   const byId = new Map(entries.map((entry) => [entry.manifest.id, entry]));
   for (const { manifest, kind } of entries) {
     for (const dependency of manifest.dependsOn ?? []) {
