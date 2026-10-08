@@ -6,17 +6,6 @@ import { emptyTemplateDatabase, query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
-/**
- * Logs in to database as the container's superuser. Only the checks of the container itself use
- * it: nm_app sees neither the server's own time zone, which its role setting replaces, nor the data
- * directory.
- */
-function superuserUrl(database: string): string {
-  const { user, password, host, port } = inject('pg');
-  const credentials = `${encodeURIComponent(user)}:${encodeURIComponent(password)}`;
-  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
-}
-
 describe('the test database', () => {
   const { appUrl, ownerUrl, databaseName } = useTestDatabase();
 
@@ -46,27 +35,18 @@ describe('the test database', () => {
     expect(rows).toEqual([{ datistemplate: true }]);
   });
 
-  it('the server time zone follows NM_TEST_PG_TZ', async () => {
-    const rows = await query<{ TimeZone: string }>(superuserUrl(databaseName), 'show timezone');
-
+  // nm_app sees neither the server's own time zone, which its role setting replaces, nor the data
+  // directory, so the global setup reads both as the superuser.
+  it('the server time zone follows NM_TEST_PG_TZ', () => {
     // An unset, empty or blank NM_TEST_PG_TZ means UTC.
-    expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ?.trim() || 'UTC' }]);
+    expect(inject('pgServer').timeZone).toBe(process.env.NM_TEST_PG_TZ?.trim() || 'UTC');
   });
 
-  it('the data directory is a tmpfs mount', async () => {
-    const dataDirectories = await query<{ data_directory: string }>(
-      superuserUrl(databaseName),
-      'show data_directory',
-    );
-    // pg_read_file needs the superuser that the container creates.
-    const mountTables = await query<{ mounts: string }>(
-      superuserUrl(databaseName),
-      "select pg_read_file('/proc/mounts') as mounts",
-    );
-    const dataDirectory = dataDirectories[0]?.data_directory ?? '';
+  it('the data directory is a tmpfs mount', () => {
+    const { dataDirectory, mounts: mountTable } = inject('pgServer');
 
     // Each line of /proc/mounts reads: device, mount point, file system type, options.
-    const mounts = (mountTables[0]?.mounts ?? '')
+    const mounts = mountTable
       .split('\n')
       .filter((line) => line !== '')
       .map((line) => {
