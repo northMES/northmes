@@ -15,17 +15,17 @@ let secretsDir: string;
 // Logs in as the server's superuser, which bootstrap needs and the checks of the role catalog use.
 let superuserUrl: string;
 
-/** A URL to the bootstrapped server's database that logs in as role with password. */
-function urlFor(role: string, password: string): string {
-  const { host, port, database } = server.connection;
-  return `postgres://${role}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
-}
-
 const passwords = {
   owner: randomBytes(16).toString('hex'),
   app: randomBytes(16).toString('hex'),
   auth: randomBytes(16).toString('hex'),
 };
+
+/** A URL to the bootstrapped server's database that logs in as role with password. */
+function urlFor(role: string, password: string): string {
+  const { host, port, database } = server.connection;
+  return `postgres://${role}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+}
 
 /** Writes a secret file that only its owner can read, as install.sh writes them. */
 function writeSecret(name: string, value: string): string {
@@ -80,7 +80,7 @@ beforeAll(async () => {
   server = await startPostgres();
   secretsDir = mkdtempSync(join(tmpdir(), 'northmes-bootstrap-'));
   const { host, port, user, password, database } = server.connection;
-  superuserUrl = `postgres://${user}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+  superuserUrl = urlFor(user, password);
 
   await dbBootstrap({
     NODE_ENV: 'test',
