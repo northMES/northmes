@@ -52,6 +52,17 @@ describe('ci / linked issue', () => {
     }
   });
 
+  // Anyone can name a branch in a fork after release-please's branch.
+  it('fails a pull request from a fork branch named like the release branch without Closes #N', () => {
+    const fromFork = {
+      ...pullRequest('Releases 0.2.0.'),
+      headRef: 'release-please--branches--main',
+      fromFork: true,
+    };
+
+    expect(checkLinkedIssue(fromFork).ok).toBe(false);
+  });
+
   it('fails a pull request whose body has no Closes #N, saying how to link one', () => {
     for (const body of ['', 'Adds the gate.', 'Closes #N', 'Part of #196.', 'This encloses #12.']) {
       const result = checkLinkedIssue(pullRequest(body));
