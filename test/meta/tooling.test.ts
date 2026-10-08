@@ -244,4 +244,12 @@ describe('tooling', () => {
     expect(resolutions('@apollo/client')).toHaveLength(1);
     expect(resolutions('graphql-ws')).toHaveLength(1);
   });
+
+  it('E02-S01 pnpm-lock.yaml holds neither the adm-zip 0.6.0 nor the undici 7.29.0 that @module-federation/dts-plugin pins', () => {
+    // Both carry high advisories (adm-zip: GHSA-7q85-xj36-vmfc, GHSA-rcw4-f5rp-g42v,
+    // GHSA-j5f4-cc29-5x44, GHSA-8238-w5pm-2374; undici: GHSA-rfgv-xxqx-mfg5, GHSA-w293-vg96-wgc3)
+    // in the production tree that `pnpm audit --prod --audit-level high` checks (plan 13).
+    expect(resolutions('adm-zip')).not.toContain('adm-zip@0.6.0');
+    expect(resolutions('undici')).not.toContain('undici@7.29.0');
+  });
 });
