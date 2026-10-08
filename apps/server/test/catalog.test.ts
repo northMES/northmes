@@ -2,13 +2,27 @@
 import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { BootError } from '../src/boot/boot-error.ts';
-import { type CatalogEntry, checkCatalog } from '../src/catalog/check-catalog.ts';
-import { core, imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
+import {
+  type CatalogEntry,
+  type CatalogOptions,
+  checkCatalog,
+} from '../src/catalog/check-catalog.ts';
+import {
+  contribution,
+  core,
+  imageVersion,
+  inRepoModule,
+  plugin,
+  webPart,
+} from './fixtures/catalog.ts';
 
 // The BootError that checkCatalog throws for a catalog it refuses.
-function refusal(entries: readonly CatalogEntry[]): BootError {
+function refusal(
+  entries: readonly CatalogEntry[],
+  options: CatalogOptions = { imageVersion },
+): BootError {
   try {
-    checkCatalog(entries, { imageVersion });
+    checkCatalog(entries, options);
   } catch (error) {
     if (error instanceof BootError) return error;
     throw error;
@@ -152,6 +166,139 @@ describe('checkCatalog', () => {
       'planning',
       'acme-validator',
       'acme-audit',
+    ]);
+  });
+
+  it('E02-S01 module ids web, station and auth are each refused as reserved, and the message names the id', () => {
+    const error = refusal([
+      core,
+      inRepoModule('web', ['core']),
+      plugin('station', ['core']),
+      inRepoModule('auth', ['core']),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module id "web" is reserved: /api/v1/web is a first-party path segment',
+      'Module id "station" is reserved: /api/v1/station is a first-party path segment',
+      'Module id "auth" is reserved: /api/v1/auth is a library path segment',
+    ]);
+  });
+
+  it('E02-S01 two modules whose derived names collide are refused naming both ids', () => {
+    // Both ids derive the GraphQL and remote name press2.
+    const error = refusal([core, inRepoModule('press-2', ['core']), plugin('press2', ['core'])]);
+
+    expect(error.problems).toEqual([
+      'Modules press-2 and press2 derive the same name press2; give one of them another id',
+    ]);
+  });
+
+  it('E02-S01 image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0', () => {
+    const range = { northmes: '>=0.3.0 <0.5.0' };
+    const catalog = checkCatalog(
+      [inRepoModule('core', [], range), inRepoModule('planning', ['core'], range)],
+      { imageVersion: '0.4.0-rc.1' },
+    );
+
+    expect(catalog.map((entry) => entry.manifest.id)).toEqual(['core', 'planning']);
+  });
+
+  it('E02-S01 image 0.5.0 outside range >=0.3.0 <0.5.0 is refused naming both versions', () => {
+    const error = refusal(
+      [inRepoModule('planning', [], { northmes: '>=0.3.0 <0.5.0' }), plugin('acme-audit')],
+      { imageVersion: '0.5.0' },
+    );
+
+    expect(error.problems).toEqual([
+      'Module planning 0.0.0 runs on NorthMES >=0.3.0 <0.5.0, and this image is 0.5.0',
+      'Module acme-audit 0.0.0 runs on NorthMES >=0.0.0-0 <0.1.0-0, and this image is 0.5.0',
+    ]);
+  });
+
+  it("E02-S01 a command key without its module's GraphQL prefix is refused naming the key", () => {
+    // production-start derives the GraphQL name productionStart and the SQL name production_start.
+    const error = refusal([
+      core,
+      inRepoModule('production-start', ['core'], {
+        commands: { 'productionStart.reportQuantity': {}, 'production_start.startJob': {} },
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module production-start declares command "production_start.startJob", which must start with "productionStart."',
+    ]);
+  });
+
+  it("E02-S01 a permission key without its module's GraphQL prefix is refused naming the key", () => {
+    const error = refusal([
+      core,
+      inRepoModule('production-start', ['core'], {
+        permissions: { 'productionStart.report': ['read'], 'production_start.job': ['read'] },
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module production-start declares permission "production_start.job", which must start with "productionStart."',
+    ]);
+  });
+
+  it("E02-S01 an event key without its module's SQL prefix is refused naming the key", () => {
+    const error = refusal([
+      core,
+      inRepoModule('production-start', ['core'], {
+        events: {
+          'production_start.report.created': { version: 1 },
+          'productionStart.report.corrected': { version: 1 },
+        },
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module production-start declares event "productionStart.report.corrected", which must start with "production_start."',
+    ]);
+  });
+
+  it('E02-S01 a slot contribution outside the dependsOn closure is refused naming the contributor and the slot', () => {
+    const side = 'planning/board/side/v1';
+    const panels = 'planning/order/panels/v1';
+    // planning contributes to a slot it owns, production-start depends on planning, and acme-panel
+    // reaches planning through production-start. quality depends on core only.
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core'], {
+        web: webPart([side, panels], [contribution('planning.load-summary', side)]),
+      }),
+      inRepoModule('production-start', ['planning'], {
+        web: webPart([], [contribution('production-start.reported-quantities', panels)]),
+      }),
+      plugin('acme-panel', ['production-start'], {
+        web: webPart([], [contribution('acme-panel.notes', panels)]),
+      }),
+      inRepoModule('quality', ['core'], {
+        web: webPart([], [contribution('quality.inspections', side)]),
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module quality contributes "quality.inspections" to slot "planning/board/side/v1" of planning, which quality does not depend on',
+    ]);
+  });
+
+  it("E02-S01 a module that declares another module's slot is refused naming the module and the slot", () => {
+    const panels = 'planning/order/panels/v1';
+    // acme-panel copies planning's slot into its own slots, so its contribution would otherwise
+    // count as one to its own slot and pass without a dependency on planning.
+    const error = refusal([
+      core,
+      inRepoModule('planning', ['core'], { web: webPart([panels]) }),
+      plugin('acme-panel', ['core'], {
+        web: webPart([panels], [contribution('acme-panel.notes', panels)]),
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module acme-panel declares slot "planning/order/panels/v1", which must start with "acme-panel/"',
+      'Module acme-panel contributes "acme-panel.notes" to slot "planning/order/panels/v1" of planning, which acme-panel does not depend on',
     ]);
   });
 

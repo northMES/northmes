@@ -1,10 +1,36 @@
 // SPDX-License-Identifier: MIT
+import { spawnSync } from 'node:child_process';
 import { randomUUIDv7 } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { render } from '../../../scripts/gen-migration.mjs';
 import { given, query, useTestDatabase } from '../src/index.ts';
 
 const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+// Runs in a fresh Node process: renders the table template through the script given on the command
+// line and prints the SQL.
+const renderTable = `
+const [url, options] = process.argv.slice(1);
+const { render } = await import(url);
+const { module, slug, now } = JSON.parse(options);
+process.stdout.write(render({ module, slug, now: new Date(now) }).sql);
+`;
+
+/**
+ * The SQL that pnpm gen:migration writes for a new table. scripts/gen-migration.mjs is AGPL, so this
+ * MIT package runs it by path in a child process instead of importing it (ADR 0056).
+ */
+function tableSql(module: string, slug: string): string {
+  const script = new URL('../../../scripts/gen-migration.mjs', import.meta.url).href;
+  const options = JSON.stringify({ module, slug, now: '2026-10-08T12:00:00Z' });
+  const child = spawnSync(
+    process.execPath,
+    ['--input-type=module', '--eval', renderTable, script, options],
+    { encoding: 'utf8' },
+  );
+
+  expect(child.status, child.stderr).toBe(0);
+  return child.stdout;
+}
 
 describe('given', () => {
   it('E02-S02 given.plant() returns a fresh scope id on each call', () => {
@@ -31,11 +57,7 @@ describe('db.command', () => {
   } as const;
 
   beforeAll(async () => {
-    const { sql } = render({
-      module: 'db-command',
-      slug: 'note',
-      now: new Date('2026-10-08T12:00:00Z'),
-    });
+    const sql = tableSql('db-command', 'note');
     // nm_owner stands in for the module's owner role, which migrate would create. The table's
     // owner bypasses the policies, which apply to nm_app (ADR 0008).
     await query(
