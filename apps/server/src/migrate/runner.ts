@@ -112,7 +112,7 @@ async function takeMigrationLock(client: Client): Promise<void> {
   );
 }
 
-/** Creates northmes_meta.migration, which nm_owner owns, unless it exists. */
+/** Creates northmes_meta.migration, which nm_owner owns, unless it exists, and lets nm_app read it. */
 async function createMigrationTable(client: Client): Promise<void> {
   await client.query('create schema if not exists northmes_meta');
   await client.query(
@@ -124,6 +124,9 @@ async function createMigrationTable(client: Client): Promise<void> {
        primary key (module, name)
      )`,
   );
+  // Boot step 5 reads the records as nm_app (ADR 0002).
+  await client.query('grant usage on schema northmes_meta to nm_app');
+  await client.query('grant select on northmes_meta.migration to nm_app');
 }
 
 /**

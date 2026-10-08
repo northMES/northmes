@@ -22,6 +22,7 @@ import { AppModule, type AppOptions, type ServerEntry } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
+import { checkPending } from '../migrate/pending.ts';
 import { inRepoManifests } from '../modules.ts';
 import { builtShellDir, webDirOf } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
@@ -115,7 +116,12 @@ export interface Booted<Env> {
  * throws a ConfigError or a BootError, and the caller closes the app.
  */
 export async function bootForMigrate(options: BootOptions): Promise<Booted<MigrateEnv>> {
-  return bootSteps(loadEnv(migrateEnvSchema)(options.env), options, { database: 'none' });
+  return bootSteps(
+    loadEnv(migrateEnvSchema)(options.env),
+    options,
+    { database: 'none' },
+    'migrate',
+  );
 }
 
 /** Returns the file URL that a manifest specifier resolves to, or of another file in its package. */
@@ -183,12 +189,23 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
   return servers;
 }
 
+/** What boot runs for: the server, or pnpm northmes migrate before its first file. */
+type BootMode = 'serve' | 'migrate';
+
+/** DATABASE_URL, which carries no login (ADR 0060), with the login of a role. */
+function loginUrl(databaseUrl: string, role: string, password: string): string {
+  const url = new URL(databaseUrl);
+  url.username = role;
+  url.password = password;
+  return url.href;
+}
+
 /**
  * The boot steps of ADR 0002 that run before the server listens, for an entry point's validated
  * environment. pnpm northmes migrate runs the same steps before its first file.
  */
 async function bootSteps<
-  Env extends Readonly<Record<string, unknown>> & Pick<ServerEnv, 'NODE_ENV'>,
+  Env extends Readonly<Record<string, unknown>> & Pick<ServerEnv, 'NODE_ENV' | 'DATABASE_URL'>,
 >(
   env: Env,
   {
@@ -198,10 +215,15 @@ async function bootSteps<
     log,
   }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
   appOptions: AppOptions = {},
+  mode: BootMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
   const entries = await importManifests(manifests, importManifest, resolveManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
+  if (mode === 'serve') {
+    const appUrl = loginUrl(env.DATABASE_URL, 'nm_app', secrets.NORTHMES_DB_APP_PASSWORD);
+    await checkPending(appUrl, catalog);
+  }
   const servers = await importServers(catalog);
   const root = AppModule.forRoot(config, servers, appOptions);
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
