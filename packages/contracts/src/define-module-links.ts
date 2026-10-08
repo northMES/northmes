@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-/** One entry of a module's link manifest: its path below the parent entry, and its child entries. */
+/**
+ * One entry of a module's link manifest: its path below the parent entry, in the router's syntax
+ * (each segment a literal or exactly one $param), and its child entries.
+ */
 export interface LinkEntryDefinition {
   readonly path: string;
   readonly children?: LinkEntryDefinitions;
@@ -44,10 +47,16 @@ type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
   ? Children
   : Record<never, never>;
 
-/** The builders of the entries below the route pattern Parent, each with its children's builders. */
+// The builder of the entry at the route pattern Pattern, carrying its children's builders.
+type EntryLinks<Pattern extends string, Entry extends LinkEntryDefinition> = LinkBuilder<Pattern> &
+  ModuleLinks<Pattern, ChildEntries<Entry>>;
+
+/** The builders of the entries below the route pattern Parent. */
 export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefinitions> = {
-  readonly [Name in keyof Entries & string]: LinkBuilder<`${Parent}/${Entries[Name]['path']}`> &
-    ModuleLinks<`${Parent}/${Entries[Name]['path']}`, ChildEntries<Entries[Name]>>;
+  readonly [Name in keyof Entries & string]: EntryLinks<
+    `${Parent}/${Entries[Name]['path']}`,
+    Entries[Name]
+  >;
 };
 
 /**
