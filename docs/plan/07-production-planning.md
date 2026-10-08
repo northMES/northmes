@@ -157,7 +157,7 @@ Core builds the code registers (equipment groups, tools, warehouses, customers, 
 
 | Table | Planning-relevant columns | Notes |
 |---|---|---|
-| `core.plant` | `slug`, `name`, `time_zone` (IANA id), `production_day_start` (`time`) | The slug is unique per installation and appears in the URL ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)). |
+| `core.plant` | `slug`, `name`, `time_zone` (IANA id), `production_day_start` (`time`) | The slug is unique per installation and appears in the URL ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md)). |
 | `core.equipment_group` | `code`, `name`, `color` | Color rule on import: an existing color wins, else the import color, else one of the 20 palette colors. Decided as a product owner rule ([ADR 0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md)). |
 | `core.equipment` | `code`, `name`, `equipment_group_id`, `is_plannable`, `is_oee`, `external_code`, `color`, `calendar_id` | Equipment with `is_plannable` or `is_oee` appears on the board. Equipment can be a machine or another resource (building, lift, truck). |
 | `core.tool` | `code`, `name` | Unknown tools from an import are created automatically. |
@@ -1049,7 +1049,7 @@ The production day start is not a planning setting. It is the `core.plant` colum
 
 A product owner answer still missing on 2026-10-30 becomes a setting whose default is recorded in the ADR that owns the rule ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md), [ADR 0028](../adr/0028-autoplan-as-a-pure-deterministic-function.md), [ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md)). Until a default is recorded, tests set these settings explicitly.
 
-The planning rules step of the onboarding wizard shows these settings, each default with the ADR that records it. A plant cannot open while a setting without a recorded default has no value at the company or the plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md)).
+The planning rules step of the onboarding wizard shows these settings, each default with the ADR that records it. A plant cannot open while a setting without a recorded default has no value at the company or the plant ([ADR 0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md)).
 
 ## Tests
 

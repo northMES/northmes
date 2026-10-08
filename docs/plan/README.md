@@ -337,6 +337,6 @@ From [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-doc
 [adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md
 [adr-0065]: ../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md
-[adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-admin-pages-at-admin-and-an-onboarding-wizard-before-a-plant-opens.md
+[adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md
 [adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md
 [adr-0068]: ../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md
