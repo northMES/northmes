@@ -287,4 +287,29 @@ describe('superviseDev', () => {
 
     expect(dev.events).toEqual(['run migrate', 'stop server', 'start server']);
   });
+
+  it('E02-S08 stopping pnpm dev stops every process it started before the stack', async () => {
+    const dev = fakeDev();
+    const supervisor = superviseDev({ plan: await devPlan(ports), ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+
+    await supervisor.stop();
+
+    // The dev servers start after the build of the packages they import. The container stops
+    // last, so no process loses its database while it runs.
+    expect(dev.events).toEqual([
+      'run build',
+      'start shell',
+      'start planning',
+      'start tsc',
+      'start server',
+      'stop shell',
+      'stop planning',
+      'stop tsc',
+      'stop server',
+      'stop stack',
+    ]);
+  });
 });
