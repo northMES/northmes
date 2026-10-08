@@ -186,6 +186,16 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E02-S01 image 0.4.0-rc.1 satisfies range >=0.3.0 <0.5.0', () => {
+    const range = { northmes: '>=0.3.0 <0.5.0' };
+    const catalog = checkCatalog(
+      [inRepoModule('core', [], range), inRepoModule('planning', ['core'], range)],
+      { imageVersion: '0.4.0-rc.1' },
+    );
+
+    expect(catalog.map((entry) => entry.manifest.id)).toEqual(['core', 'planning']);
+  });
+
   it('E02-S01 image 0.5.0 outside range >=0.3.0 <0.5.0 is refused naming both versions', () => {
     const error = refusal(
       [inRepoModule('planning', [], { northmes: '>=0.3.0 <0.5.0' }), plugin('acme-audit')],
