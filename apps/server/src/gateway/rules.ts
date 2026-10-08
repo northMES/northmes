@@ -58,12 +58,11 @@ export function checkRules(subgraphs: readonly SubgraphSdl[]): CompositionProble
     entityRefs,
     types: parse(sdl).definitions.filter(isTypeDefinitionNode),
   }));
-  const entities = entityOwners(parsed);
+  const ownership = typeOwners(parsed);
   return [
     ...parsed.flatMap(rootFieldPrefixProblems),
-    ...typeOwnershipProblems(parsed),
-    ...entities.problems,
-    ...contributedFieldProblems(parsed, entities.owners),
+    ...ownership.problems,
+    ...contributedFieldProblems(parsed, ownership.owners),
   ];
 }
 
@@ -87,31 +86,49 @@ function rootFieldPrefixProblems({ name, types }: ParsedSubgraph): CompositionPr
   return problems;
 }
 
+/** The subgraph that owns a type, and whether it defines the type as an entity. */
+interface TypeOwner {
+  readonly subgraph: string;
+  readonly entity: boolean;
+}
+
 /**
- * NORTHMES_TYPE_OWNERSHIP: a type that is not an entity is defined in one subgraph, the module
- * that owns it. An entity is defined in its owner and in every module that references it, and
- * entityOwners checks that it has one owner.
+ * NORTHMES_TYPE_OWNERSHIP: one module owns each type, and the first subgraph that defines a type
+ * without listing it in entityRefs is its owner. A type that is not an entity is defined in its
+ * owner only. An entity is defined in its owner and in every module that references it through
+ * entityRef. Every later subgraph that defines a type without listing it in entityRefs claims the
+ * type too: a plain @key on another module's entity, or on another module's value type, is no way
+ * around the rule. Root types, federation's types and the SDK shared types have no owner.
  */
-function typeOwnershipProblems(subgraphs: readonly ParsedSubgraph[]): CompositionProblem[] {
-  const owners = new Map<string, string>();
+function typeOwners(subgraphs: readonly ParsedSubgraph[]): {
+  readonly owners: ReadonlyMap<string, TypeOwner>;
+  readonly problems: CompositionProblem[];
+} {
+  const owners = new Map<string, TypeOwner>();
   const problems: CompositionProblem[] = [];
-  for (const { name, types } of subgraphs) {
+  for (const { name, types, entityRefs } of subgraphs) {
     for (const type of types) {
       const typeName = type.name.value;
-      if (hasDirective(type, 'key') || rootTypes.has(typeName)) continue;
-      if (isFederationType(typeName) || sharedTypes.has(typeName)) continue;
+      if (rootTypes.has(typeName) || isFederationType(typeName) || sharedTypes.has(typeName)) {
+        continue;
+      }
+      if (entityRefs.includes(typeName)) continue;
+      const entity = hasDirective(type, 'key');
       const owner = owners.get(typeName);
       if (owner === undefined) {
-        owners.set(typeName, name);
+        owners.set(typeName, { subgraph: name, entity });
         continue;
       }
       problems.push({
         code: 'NORTHMES_TYPE_OWNERSHIP',
-        message: `${typeName} is defined in subgraphs "${owner}" and "${name}"; one module owns a type that is not an entity`,
+        message:
+          owner.entity && entity
+            ? `${typeName} is defined as an entity in subgraphs "${owner.subgraph}" and "${name}"; one module owns an entity and other modules reference it through entityRef`
+            : `${typeName} is defined in subgraphs "${owner.subgraph}" and "${name}"; one module owns a type that is not an entity`,
       });
     }
   }
-  return problems;
+  return { owners, problems };
 }
 
 /**
@@ -122,7 +139,7 @@ function typeOwnershipProblems(subgraphs: readonly ParsedSubgraph[]): Compositio
  */
 function contributedFieldProblems(
   subgraphs: readonly ParsedSubgraph[],
-  owners: ReadonlyMap<string, string>,
+  owners: ReadonlyMap<string, TypeOwner>,
 ): CompositionProblem[] {
   const problems: CompositionProblem[] = [];
   for (const { name, types, entityRefs } of subgraphs) {
@@ -132,7 +149,7 @@ function contributedFieldProblems(
       }
       const keyFields = keyFieldsOf(type);
       const owner = owners.get(type.name.value);
-      const ownedBy = owner === undefined ? 'another module' : `subgraph "${owner}"`;
+      const ownedBy = owner === undefined ? 'another module' : `subgraph "${owner.subgraph}"`;
       for (const field of type.fields ?? []) {
         if (keyFields.has(field.name.value) || hasDirective(field, 'external')) continue;
         if (field.type.kind !== Kind.NON_NULL_TYPE) continue;
@@ -144,36 +161,6 @@ function contributedFieldProblems(
     }
   }
   return problems;
-}
-
-/**
- * The subgraph that owns each entity: the first one that defines it without listing it in
- * entityRefs. Every later subgraph that does the same claims the entity too, and breaks
- * NORTHMES_TYPE_OWNERSHIP: a plain @key on another module's entity, or on a value type, is no way
- * around the rule.
- */
-function entityOwners(subgraphs: readonly ParsedSubgraph[]): {
-  readonly owners: ReadonlyMap<string, string>;
-  readonly problems: CompositionProblem[];
-} {
-  const owners = new Map<string, string>();
-  const problems: CompositionProblem[] = [];
-  for (const { name, types, entityRefs } of subgraphs) {
-    for (const type of types) {
-      const typeName = type.name.value;
-      if (!hasDirective(type, 'key') || entityRefs.includes(typeName)) continue;
-      const owner = owners.get(typeName);
-      if (owner === undefined) {
-        owners.set(typeName, name);
-        continue;
-      }
-      problems.push({
-        code: 'NORTHMES_TYPE_OWNERSHIP',
-        message: `${typeName} is defined as an entity in subgraphs "${owner}" and "${name}"; one module owns an entity and other modules reference it through entityRef`,
-      });
-    }
-  }
-  return { owners, problems };
 }
 
 /**
