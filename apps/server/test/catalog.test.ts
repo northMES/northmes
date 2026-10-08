@@ -37,4 +37,27 @@ describe('checkCatalog', () => {
       'Core module scheduling must not depend on plugin overtime-validator',
     ]);
   });
+
+  it('E02-S01 modules come back core first, in dependency order, plugins last', () => {
+    const catalog = checkCatalog(
+      [
+        plugin('acme-audit', ['acme-validator']),
+        inRepoModule('planning', ['core']),
+        plugin('acme-validator', ['planning']),
+        inRepoModule('assembly', ['core', 'quality']),
+        inRepoModule('quality', ['core']),
+        core,
+      ],
+      { imageVersion },
+    );
+
+    expect(catalog.map((entry) => entry.manifest.id)).toEqual([
+      'core',
+      'quality',
+      'assembly',
+      'planning',
+      'acme-validator',
+      'acme-audit',
+    ]);
+  });
 });
