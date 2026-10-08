@@ -46,6 +46,21 @@ describe('pg-image', () => {
     expect(findings).toEqual([]);
   });
 
+  it('scan reports a literal other than the configured image in a test file', () => {
+    const findings = scan([
+      {
+        path: 'packages/x/db.int.test.ts',
+        text: "const a = 1;\nawait new PostgreSqlContainer('postgres:17').start();\n",
+      },
+      { path: 'types/db.test-d.ts', text: 'new PostgreSqlContainer("postgres:16");\n' },
+    ]);
+
+    expect(findings).toEqual([
+      { path: 'packages/x/db.int.test.ts', line: 2, reference: 'postgres:17' },
+      { path: 'types/db.test-d.ts', line: 1, reference: 'postgres:16' },
+    ]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
