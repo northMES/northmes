@@ -97,16 +97,18 @@ export interface FederationRuntime {
   loadRemote<T>(id: string): Promise<T | null>;
 }
 
-/** A listed module after the shell loaded its remote. */
-export interface LoadedModule {
-  readonly listed: ListedModule;
-  /** The default export of the remote's ./module entry. */
-  readonly module: WebModule;
-}
+/**
+ * A listed module after the shell tried to load its remote: the default export of the remote's
+ * ./module entry, or null and the problem when the remote failed to load.
+ */
+export type LoadedModule =
+  | { readonly listed: ListedModule; readonly module: WebModule }
+  | { readonly listed: ListedModule; readonly module: null; readonly problem: string };
 
 /**
  * Registers the remote of each listed module with the runtime and loads each remote's ./module
- * entry, all in parallel. The result keeps the list's order.
+ * entry, all in parallel. A remote that fails to load leaves the others loading. The result keeps
+ * the list's order.
  */
 export async function loadModules(
   list: readonly ListedModule[],
@@ -116,9 +118,19 @@ export async function loadModules(
     list.map(({ remoteName, manifestUrl }) => ({ name: remoteName, entry: manifestUrl })),
   );
   return Promise.all(
-    list.map(async (listed) => {
-      const entry = await runtime.loadRemote<{ default: WebModule }>(`${listed.remoteName}/module`);
-      return { listed, module: entry?.default as WebModule };
+    list.map(async (listed): Promise<LoadedModule> => {
+      try {
+        const entry = await runtime.loadRemote<{ default: WebModule }>(
+          `${listed.remoteName}/module`,
+        );
+        return { listed, module: entry?.default as WebModule };
+      } catch (error) {
+        return { listed, module: null, problem: messageOf(error) };
+      }
     }),
   );
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
