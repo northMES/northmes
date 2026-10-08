@@ -14,6 +14,11 @@
       "default": "./dist/server/api/index.js"
     }
   },
+  "scripts": {
+    "lint": "biome check northmes.module.ts package.json tsconfig.json tsconfig.build.json server test",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
   "dependencies": {
     "@apollo/subgraph": "catalog:",
     "@nestjs/common": "catalog:",

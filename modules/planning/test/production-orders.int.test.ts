@@ -78,6 +78,9 @@ describe('planningProductionOrders', () => {
 
     const answer = await (await clientAt(plant)).send('{ planningProductionOrders { number } }');
 
-    expect(answer).toEqual({ status: 200, data: { planningProductionOrders: [{ number: '6301' }] } });
+    expect(answer).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ number: '6301' }] },
+    });
   });
 });
