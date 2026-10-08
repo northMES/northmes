@@ -100,6 +100,21 @@ describe('the remote files', () => {
     expect(existsSync(join(webFiles, 'modules', 'example-widget', 'mf-manifest.json'))).toBe(true);
     expect(response.status).toBe(404);
   });
+
+  it("E02-S05 a missing remote file answers 404 without the server's file path", async () => {
+    const url = await serve(['core', 'planning']);
+    const paths = [`/modules/planning/${planning.version}/assets/missing.js`, '/assets/missing.js'];
+
+    const answers = await Promise.all(
+      paths.map(async (path) => {
+        const response = await fetch(`${url}${path}`);
+        const body = await response.text();
+        return { path, status: response.status, namesAFilePath: body.includes(webFiles) };
+      }),
+    );
+
+    expect(answers).toEqual(paths.map((path) => ({ path, status: 404, namesAFilePath: false })));
+  });
 });
 
 describe('the shell', () => {
