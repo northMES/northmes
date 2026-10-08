@@ -22,11 +22,14 @@ export function checkCatalog(
   _options: CatalogOptions,
 ): CatalogEntry[] {
   const problems: string[] = [];
-  const ids = new Set(entries.map((entry) => entry.manifest.id));
-  for (const { manifest } of entries) {
+  const byId = new Map(entries.map((entry) => [entry.manifest.id, entry]));
+  for (const { manifest, kind } of entries) {
     for (const dependency of manifest.dependsOn ?? []) {
-      if (!ids.has(dependency)) {
+      const target = byId.get(dependency);
+      if (!target) {
         problems.push(`Module ${manifest.id} depends on "${dependency}", which is not installed`);
+      } else if (kind === 'module' && target.kind === 'plugin') {
+        problems.push(`Core module ${manifest.id} must not depend on plugin ${dependency}`);
       }
     }
   }
