@@ -62,14 +62,14 @@ function release(schema: GraphQLSchema, input: Record<string, unknown>) {
 }
 
 describe('defineCommand', () => {
-  it("E02-S04 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input", async () => {
+  it("E05-S01 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input and expectedVersion as Int", async () => {
     const { sdl } = await buildPlanningSchema();
 
     expect(sdl).toContain(
       'type Mutation {\n  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!\n}',
     );
     expect(sdl).toContain(
-      'input PlanningReleaseProductionOrderInput {\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
+      'input PlanningReleaseProductionOrderInput {\n  expectedVersion: Int!\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
     );
   });
 
@@ -78,6 +78,7 @@ describe('defineCommand', () => {
 
     const result = await release(schema, {
       id: ORDER_ID,
+      expectedVersion: 1,
       note: '  Rush order  ',
       quantity: 120,
     });
@@ -90,7 +91,7 @@ describe('defineCommand', () => {
     expect(bus.calls).toEqual([
       {
         command: ReleaseProductionOrder.command,
-        input: { id: ORDER_ID, note: 'Rush order', quantity: 120 },
+        input: { id: ORDER_ID, expectedVersion: 1, note: 'Rush order', quantity: 120 },
       },
     ]);
   });
@@ -101,6 +102,7 @@ describe('defineCommand', () => {
     // GraphQL accepts any string as an ID; the contract wants a uuid.
     const result = await release(schema, {
       id: 'po-1',
+      expectedVersion: 1,
       note: 'Rush order',
       quantity: 120,
     });
@@ -110,10 +112,11 @@ describe('defineCommand', () => {
     expect(bus.calls).toEqual([]);
   });
 
-  it('E02-S04 defineCommand refuses a contract field that is not a required ID, string or number, naming it', () => {
+  it('E05-S01 defineCommand refuses a contract field that is not a required ID, string, number or 32-bit integer, naming it', () => {
     const fieldsWith = {
       urgent: z.object({ urgent: z.boolean() }),
       note: z.object({ note: z.string().optional() }),
+      count: z.object({ count: z.int() }),
     };
 
     for (const [field, fields] of Object.entries(fieldsWith)) {
@@ -126,7 +129,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrder: input field ${field} is not a required ID, string or number, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrder: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
       );
     }
   });
