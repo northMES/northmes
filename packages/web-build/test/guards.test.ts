@@ -22,7 +22,9 @@ async function buildFixture(name: string, { version = '0.0.1' }: FixtureOptions 
   // @module-federation/vite returns no plugins when it finds VITEST in the environment, unless
   // this variable is set.
   vi.stubEnv('MFE_VITE_NO_TEST_ENV_CHECK', 'true');
-  onTestFinished(() => vi.unstubAllEnvs());
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
   const config = defineRemoteConfig({ id: name, version });
   await build(
     mergeConfig(config({ command: 'build', mode: 'production' }), {
