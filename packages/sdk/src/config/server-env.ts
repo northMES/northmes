@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
-import { databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';
+import { configFile, databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';
 
 const PORT_RULE = 'an integer from 0 to 65535';
 const ORIGIN_RULE =
@@ -36,6 +36,7 @@ export const serverEnvSchema = z
     // The server logs in to DATABASE_URL as nm_app with the password in this file (ADR 0060).
     DATABASE_URL: databaseUrl,
     NORTHMES_DB_APP_PASSWORD_FILE: secretFile,
+    NORTHMES_CONFIG: configFile,
   })
   .refine((env) => isPublicOrigin(env.NORTHMES_PUBLIC_ORIGIN, env.NODE_ENV), {
     ...rule(ORIGIN_RULE),

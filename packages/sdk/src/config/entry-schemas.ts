@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
-import { databaseUrl, nodeEnv, secretFile } from './keys.ts';
+import { configFile, databaseUrl, nodeEnv, secretFile } from './keys.ts';
 
 /** The environment of northmes migrate, which also serves northmes admin (ADR 0060). */
 export const migrateEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   DATABASE_URL: databaseUrl,
   NORTHMES_DB_OWNER_PASSWORD_FILE: secretFile,
+  // migrate runs the boot steps, which read northmes.config.json, before its first file.
+  NORTHMES_CONFIG: configFile,
 });
 
 export type MigrateEnv = z.infer<typeof migrateEnvSchema>;

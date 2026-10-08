@@ -39,3 +39,9 @@ export const databaseUrl = z
 
 /** The path of a secret file. The value is read from the file, never from the environment. */
 export const secretFile = z.string(rule('the path of a secret file'));
+
+/**
+ * The path of the installation's northmes.config.json, which lists the plugins to load (ADR 0002,
+ * ADR 0037). Without it, boot reads the file at the root of the installation, next to plugins/.
+ */
+export const configFile = z.string(rule('the path of northmes.config.json')).optional();
