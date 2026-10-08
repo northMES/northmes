@@ -43,4 +43,19 @@ describe('readSecrets', () => {
     expect(Object.values(process.env).filter((env) => env?.includes(value))).toEqual([]);
     await app.close();
   });
+
+  it('E02-S01 one trailing newline is trimmed', () => {
+    const secrets = readSecrets(
+      {
+        NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-81c4\n'),
+        NORTHMES_DB_AUTH_PASSWORD_FILE: secretFile('db_auth_password', 'auth-pw-27e9\n\n'),
+      },
+      { nodeEnv: 'production' },
+    );
+
+    expect(secrets).toEqual({
+      NORTHMES_DB_APP_PASSWORD: 'app-pw-81c4',
+      NORTHMES_DB_AUTH_PASSWORD: 'auth-pw-27e9\n',
+    });
+  });
 });
