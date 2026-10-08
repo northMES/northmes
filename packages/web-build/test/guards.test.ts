@@ -37,6 +37,18 @@ async function buildFixture(name: string, { version = '0.0.1' }: FixtureOptions 
   return outDir;
 }
 
+// One entry of the shared list in mf-manifest.json.
+interface SharedEntry {
+  readonly name: string;
+  readonly singleton: boolean;
+  readonly requiredVersion: string | false;
+  readonly assets: { readonly js: { readonly sync: string[]; readonly async: string[] } };
+}
+
+function byName(a: { name: string }, b: { name: string }): number {
+  return a.name.localeCompare(b.name);
+}
+
 // The mf-manifest.json the build wrote, which the server lists and the shell loads (ADR 0019).
 function manifestOf(outDir: string) {
   return JSON.parse(readFileSync(join(outDir, 'mf-manifest.json'), 'utf8'));
@@ -65,5 +77,31 @@ describe('remote build guards', () => {
     expect(manifest.metaData.publicPath).toBe('/modules/remote-zod-contracts/0.0.1/');
     expect(manifest.metaData.remoteEntry.name).toBe('remoteEntry.js');
     expect(manifest.exposes.map((expose: { path: string }) => expose.path)).toEqual(['./module']);
+  });
+
+  it('E02-S05 a remote shares each singleton of ADR 0019 except @northmes/ui, each subpath as its own key, with no copy of its own', async () => {
+    const manifest = manifestOf(await buildFixture('remote-zod-contracts'));
+
+    // A shared entry lists the remote's own copy of the package under assets, and import: false
+    // leaves those lists empty.
+    const shared = manifest.shared.map((entry: SharedEntry) => ({
+      name: entry.name,
+      singleton: entry.singleton,
+      requiredVersion: entry.requiredVersion,
+      ownCopy: [...entry.assets.js.sync, ...entry.assets.js.async],
+    }));
+    expect(shared.sort(byName)).toEqual(
+      [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        '@tanstack/react-router',
+        '@apollo/client',
+        '@apollo/client/react',
+        '@northmes/web-sdk',
+      ]
+        .map((name) => ({ name, singleton: true, requiredVersion: false, ownCopy: [] }))
+        .sort(byName),
+    );
   });
 });
