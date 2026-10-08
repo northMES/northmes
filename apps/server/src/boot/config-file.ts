@@ -32,18 +32,45 @@ export interface ConfigFileOptions {
 }
 
 /**
- * Boot step 1 for the installation (ADR 0002): reads northmes.config.json from file. A version in
- * the file that differs from the image's throws a BootError naming both.
+ * Boot step 1 for the installation (ADR 0002): reads northmes.config.json from file. A file that
+ * cannot be read, is not JSON or does not match the config's shape, and a version in the file that
+ * differs from the image's, throw a BootError whose problems each start with the file's path.
  */
 export function readConfigFile(
   file: string,
   { imageVersion }: ConfigFileOptions,
 ): InstallationConfig {
-  const { northmes, plugins } = configSchema.parse(JSON.parse(readFileSync(file, 'utf8')));
+  const { northmes, plugins } = parseConfig(file);
   if (northmes !== undefined && northmes !== imageVersion) {
     throw new BootError([
       `${file}: config names ${northmes}, this image is ${imageVersion}. Set northmes to ${imageVersion} or remove it`,
     ]);
   }
   return { pluginRoots: plugins.map((plugin) => resolve(dirname(file), plugin)) };
+}
+
+/** Reads and parses the file, or throws a BootError naming it. */
+function parseConfig(file: string): z.output<typeof configSchema> {
+  let text: string;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (error) {
+    // The fs message repeats the path, so only its code is kept.
+    throw new BootError([`${file}: cannot be read (${(error as NodeJS.ErrnoException).code})`]);
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch (error) {
+    throw new BootError([`${file}: is not JSON: ${(error as SyntaxError).message}`]);
+  }
+  const result = configSchema.safeParse(json);
+  if (!result.success) {
+    throw new BootError(
+      result.error.issues.map(({ path, message }) =>
+        path.length > 0 ? `${file}: ${path.join('.')}: ${message}` : `${file}: ${message}`,
+      ),
+    );
+  }
+  return result.data;
 }
