@@ -2,10 +2,12 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { COMMAND_BUS, type Command, type CommandBus } from '@northmes/sdk/commands';
+import { defineCommandContract } from '@northmes/contracts';
+import { COMMAND_BUS, type Command, type CommandBus, defineCommand } from '@northmes/sdk/commands';
 import { defineSubgraph, SubgraphRegistry, SubgraphRegistryModule } from '@northmes/sdk/graphql';
 import { execute, type GraphQLSchema, parse } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { PlanningModule, ReleaseProductionOrder } from '../fixtures/commands/planning.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
@@ -109,5 +111,26 @@ describe('defineCommand', () => {
     expect(result.data).toBeNull();
     expect(result.errors?.map((error) => error.extensions.code)).toEqual(['BAD_USER_INPUT']);
     expect(bus.calls).toEqual([]);
+  });
+
+  it('E02-S04 defineCommand refuses a contract field that is not a required ID, string or number, naming it', () => {
+    const fieldsWith = {
+      urgent: z.object({ urgent: z.boolean() }),
+      note: z.object({ note: z.string().optional() }),
+    };
+
+    for (const [field, fields] of Object.entries(fieldsWith)) {
+      const contract = defineCommandContract({
+        name: 'planning.flagProductionOrder',
+        target: 'existing',
+        fields,
+      });
+      expect(
+        () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
+        field,
+      ).toThrow(
+        `Command planning.flagProductionOrder: input field ${field} is not a required ID, string or number, the kinds a generated mutation input supports so far`,
+      );
+    }
   });
 });
