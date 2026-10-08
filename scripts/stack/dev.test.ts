@@ -97,4 +97,18 @@ describe('devPlan', () => {
       planningLinks.board({ plant: seedScopes.plant }).href,
     );
   });
+
+  it('E02-S08 a changed migration file makes pnpm dev run northmes migrate on the built server', async () => {
+    const plan = await devPlan(ports);
+
+    // pnpm dev watches each module's migrations folder, and the stack's environment holds the
+    // owner's password file that migrate reads.
+    expect(plan.migrations).toEqual(['modules/core/migrations', 'modules/planning/migrations']);
+    expect(plan.migrate).toEqual({
+      name: 'migrate',
+      command: 'node',
+      args: ['apps/server/dist/main.js', 'migrate'],
+      env: {},
+    });
+  });
 });
