@@ -3,7 +3,7 @@ import { Search, X } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { IconButton } from './button.tsx';
 import { cn } from './cn.ts';
-import { inputClassName } from './text-field.tsx';
+import { inputClassName } from './field.ts';
 
 /** The pause in typing after which the field searches. */
 const searchDelay = 300;

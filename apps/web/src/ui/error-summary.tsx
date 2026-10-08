@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert } from 'lucide-react';
 import { useEffect, useId, useRef } from 'react';
-import { fieldId } from './text-field.tsx';
+import { fieldId } from './field.ts';
 
 /** One entry of the summary: a message, and the form field it belongs to when there is one. */
 export interface SummaryError {
