@@ -17,6 +17,21 @@ export interface CommandBusOptions {
 }
 
 /**
+ * A validator's veto (ADR 0012): core.command_rejected, whose details name the module that vetoed
+ * in rejectedBy, with the message the validator gave.
+ */
+export class CommandRejected extends DomainError {
+  constructor(rejectedBy: string, message: string) {
+    super({
+      code: 'core.command_rejected',
+      kind: 'precondition',
+      message,
+      details: { rejectedBy },
+    });
+  }
+}
+
+/**
  * The validators of each command by command name, in catalog order of their modules and then by
  * name (ADR 0012). Names compare by code point, so the order is the same on every machine.
  */
@@ -41,7 +56,8 @@ function validatorsByCommand({
 /**
  * The command bus of the host. It runs each command in one ScopedDatabase transaction: for a
  * command with validators it builds the payload, parses it with each validator's copy of the
- * owner's contract and runs the validators, then it runs the handler (ADR 0012, ADR 0037).
+ * owner's contract and runs the validators, then it runs the handler (ADR 0012, ADR 0037). The
+ * first veto rejects the command, and the transaction rolls back.
  */
 export class CommandBusImpl implements CommandBus {
   readonly #database: ScopedDatabase<unknown>;
@@ -68,7 +84,8 @@ export class CommandBusImpl implements CommandBus {
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }
-          await validator.check(parsed.data);
+          const verdict = await validator.check(parsed.data);
+          if (verdict.verdict === 'veto') throw new CommandRejected(module, verdict.message);
         }
       }
       return command.handle(input, context);
