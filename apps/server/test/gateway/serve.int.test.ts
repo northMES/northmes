@@ -7,6 +7,7 @@ import { boot } from '../../src/boot/boot.ts';
 import { alpha } from '../fixtures/subgraphs/alpha.ts';
 import { beta } from '../fixtures/subgraphs/beta.ts';
 import { fixtureCatalog } from '../fixtures/subgraphs/catalog.ts';
+import { EarlyQuery, probe } from '../fixtures/subgraphs/probe.ts';
 
 // A valid server environment. PORT 0 lets the operating system pick a free port.
 const env = { NODE_ENV: 'test', PORT: '0', NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4100' };
@@ -49,5 +50,20 @@ describe('the gateway on /graphql', () => {
         ],
       },
     });
+  });
+
+  it('E02-S03 /graphql answers 503 until the gateway has its schema', async () => {
+    const { url } = await bootFixtures(alpha, beta, probe);
+
+    const early = app?.get(EarlyQuery).answers;
+    const ready = await gqlClient(url).send('{ __typename }');
+
+    expect(early).toEqual([
+      {
+        status: 503,
+        errors: [expect.objectContaining({ extensions: { code: 'UNAVAILABLE' } })],
+      },
+    ]);
+    expect(ready).toEqual({ status: 200, data: { __typename: 'Query' } });
   });
 });
