@@ -109,4 +109,19 @@ describe('the NorthMES composition rules', () => {
       },
     ]);
   });
+
+  it("E02-S03 an @external field that repeats the owner's non-null field is not a contributed field", () => {
+    const alpha = subgraph(
+      'alpha',
+      'type Thing @key(fields: "id") { id: ID! name: String! } type Query { alphaThing(id: ID!): Thing }',
+    );
+    // An @external field repeats the owner's type exactly, non-null included.
+    const zeta = subgraph(
+      'zeta',
+      'type Thing @key(fields: "id") { id: ID! name: String! @external zetaLabel: String @requires(fields: "name") } type Query { zetaPing: String }',
+      ['Thing'],
+    );
+
+    expect(checkRules([alpha, zeta])).toEqual([]);
+  });
 });
