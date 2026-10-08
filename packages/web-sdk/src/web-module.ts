@@ -24,6 +24,9 @@ export function defineWebModule(module: WebModule): WebModule {
 
 /** Returns one problem for each way the value a remote exported differs from its server entry. */
 export function validateWebModule(value: unknown, entry: WebModuleEntry): string[] {
+  if (typeof value !== 'object' || value === null) {
+    return [`the module is ${shown(value)}, expected an object`];
+  }
   const module = value as Partial<Record<keyof WebModule, unknown>>;
   const problems: string[] = [];
   if (module.id !== entry.id) {
