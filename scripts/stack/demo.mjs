@@ -10,12 +10,12 @@ import { boardUrl } from './board.mjs';
  * What pnpm demo runs: pnpm build, which builds the server, the shell and every remote, then the
  * built server in role all, which serves the shell and the remotes itself; and the URL of the seed
  * plant's board, which it prints. The server listens on the PORT of env, which handoff and the
- * desktop preview set.
+ * desktop preview set, and else on the PORT that the stack took.
  * @param {Readonly<Record<string, string | undefined>>} stackEnv The stack's environment.
  * @param {Readonly<Record<string, string | undefined>>} env pnpm demo's own environment.
  */
 export async function demoPlan(stackEnv, env) {
-  const port = env.PORT ?? '';
+  const port = env.PORT || stackEnv.PORT || '';
   const origin = `http://127.0.0.1:${port}`;
   return {
     /** @type {DevProcess} */
