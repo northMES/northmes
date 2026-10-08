@@ -56,6 +56,13 @@ function cells(row: HTMLElement): (string | null)[] {
 }
 
 describe('BoardScreen', () => {
+  it('E02-S05 the board stub says it is loading the production orders until they arrive', async () => {
+    renderBoard([{ ...boardQuery(order('PO-1', '40.000000', 'planned', 'Hinge', 1)), delay: 50 }]);
+
+    expect(screen.getByText('Loading the production orders')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Loading the production orders')).toBeNull());
+  });
+
   it('E02-S05 the board stub lists production orders with their article names', async () => {
     renderBoard([
       boardQuery(

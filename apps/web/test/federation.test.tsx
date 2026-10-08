@@ -207,4 +207,15 @@ describe('the shell', () => {
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch.mock.calls[0]?.[0]).toBe('/api/v1/web/modules');
   });
+
+  it('E02-S05 a module list request that fails names its HTTP status', async () => {
+    const fetch = vi.fn(
+      async (_url: string) =>
+        new Response('<html>Bad gateway</html>', { status: 502, statusText: 'Bad Gateway' }),
+    );
+
+    await expect(fetchModuleList(fetch)).rejects.toThrow(
+      'The module list answered 502 Bad Gateway',
+    );
+  });
 });
