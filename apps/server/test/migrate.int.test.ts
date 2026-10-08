@@ -346,6 +346,25 @@ describe('migrate confines a plugin to its own schema', () => {
     expect(await columns()).toEqual(before);
     expect(await recordsOf('alter-core')).toEqual([]);
   });
+
+  it('E02-S02 a plugin CREATE TABLE in the core schema is refused and changes nothing', async () => {
+    const run = migrate({
+      ownerUrl: db.ownerUrl,
+      catalog: catalogWithPlugin('core-schema', ['core']),
+    });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'core-schema/20260112080000_sneaky.sql failed as nm_mod_core_schema and was rolled back: permission denied for schema core',
+      ],
+    });
+    expect(
+      await query(db.ownerUrl, "select tablename from pg_tables where schemaname = 'core'"),
+    ).toEqual([{ tablename: 'article' }]);
+    expect(await recordsOf('core-schema')).toEqual([]);
+  });
 });
 
 describe('pnpm northmes migrate', () => {
