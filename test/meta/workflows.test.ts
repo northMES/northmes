@@ -9,6 +9,7 @@ interface Step {
   uses?: string;
   run?: string;
   with?: Record<string, unknown>;
+  env?: Record<string, string>;
 }
 
 interface Job {
@@ -43,6 +44,28 @@ function rootScript(name: string | undefined): string | undefined {
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
 const pullRequestChecks = ['ci / pr title', 'ci / linked issue'];
+
+// A GitHub Actions expression as a workflow writes it.
+function expression(source: string): string {
+  return `\${{ ${source} }}`;
+}
+
+// What each pull request check runs, and the pull request fields it reads from the environment.
+const pullRequestCheckSteps = {
+  'ci / pr title': {
+    run: 'node scripts/ci/pr-title.mjs',
+    env: { PR_TITLE: expression('github.event.pull_request.title') },
+  },
+  'ci / linked issue': {
+    run: 'node scripts/ci/linked-issue.mjs',
+    env: {
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
+};
 
 function workflowPaths(): string[] {
   return globSync('.github/workflows/*.{yml,yaml}', { cwd: root }).sort();
@@ -184,6 +207,18 @@ describe('workflows', () => {
         run: 'exit 1',
       }),
     );
+  });
+
+  // A push to main has no pull request to check. An event value interpolated into a run script
+  // could inject shell code, so the scripts read the pull request from environment variables.
+  it('ci / pr title and ci / linked issue run on pull requests only and read the pull request from environment variables', () => {
+    for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
+      const { workflow, id } = jobNamed(name);
+      const job = workflow.jobs[id];
+
+      expect(job?.if, name).toBe("github.event_name == 'pull_request'");
+      expect(job?.steps, name).toContainEqual(expect.objectContaining(step));
+    }
   });
 
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
