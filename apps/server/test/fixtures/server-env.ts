@@ -53,3 +53,34 @@ export function useServerEnv({
     NORTHMES_DB_APP_PASSWORD_FILE: passwordFile,
   };
 }
+
+/** The keys of the environment of pnpm northmes migrate, which a test stubs away as serverEnvKeys. */
+export const migrateEnvKeys = ['DATABASE_URL', 'NORTHMES_DB_OWNER_PASSWORD_FILE'] as const;
+
+export interface MigrateEnvOptions {
+  /** The database from useTestDatabase() that migrate logs in to as nm_owner. */
+  readonly database: Pick<TestDatabase, 'ownerUrl'>;
+}
+
+/**
+ * The environment of pnpm northmes migrate for the calling test file: DATABASE_URL names the
+ * database without a login, and nm_owner's password is in a secret file of the file's own, which
+ * afterAll removes (ADR 0060).
+ */
+export function useMigrateEnv({ database }: MigrateEnvOptions): Readonly<Record<string, string>> {
+  const databaseUrl = new URL(database.ownerUrl);
+  const password = decodeURIComponent(databaseUrl.password);
+  databaseUrl.username = '';
+  databaseUrl.password = '';
+  const dir = mkdtempSync(join(tmpdir(), 'northmes-env-'));
+  const passwordFile = join(dir, 'db_owner_password');
+  writeFileSync(passwordFile, `${password}\n`, { mode: 0o600 });
+  afterAll(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+  return {
+    NODE_ENV: 'test',
+    DATABASE_URL: databaseUrl.href,
+    NORTHMES_DB_OWNER_PASSWORD_FILE: passwordFile,
+  };
+}
