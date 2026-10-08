@@ -96,6 +96,9 @@ function remoteBuilds(): TurboDryRun['tasks'] {
     [turboBin, 'run', 'build', '--filter=./modules/*/web', '--dry=json'],
     { cwd: root, encoding: 'utf8' },
   );
+  if (result.status !== 0) {
+    throw new Error(`turbo run build --dry=json exited ${result.status}: ${result.stderr}`);
+  }
   const tasks = (JSON.parse(result.stdout) as TurboDryRun).tasks;
 
   return tasks.filter(
