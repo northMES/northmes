@@ -5,13 +5,16 @@ import { DEFAULT_VALIDATOR_TIMEOUT_MS } from '../../src/commands/command-bus.ts'
 import { discoverValidators } from '../../src/commands/discover-validators.ts';
 import { dispatch, JobResolver, ReleaseJob } from '../fixtures/commands/dispatch.ts';
 import {
+  FlagCheck,
   HoldCheck,
   holdRules,
   InstantCheck,
+  looseRules,
   PatientCheck,
   patientRules,
   QuantityCap,
   strayRules,
+  TextCheck,
 } from '../fixtures/commands/misplaced-validators.ts';
 
 describe('discoverValidators', () => {
@@ -71,6 +74,26 @@ describe('discoverValidators', () => {
       new BootError([
         `Validator patient-check of module patient-rules sets timeoutMs to 60000. Set it above 0 and at most ${limit}, the limit of dispatch.releaseJob, or remove it`,
         `Validator instant-check of module patient-rules sets timeoutMs to 0. Set it above 0 and at most ${limit}, the limit of dispatch.releaseJob, or remove it`,
+      ]),
+    );
+  });
+
+  it('E02-S04 a validator whose timeoutMs is not a number stops boot', () => {
+    const discover = () =>
+      discoverValidators(
+        [dispatch, looseRules],
+        [
+          { module: 'dispatch', providers: [JobResolver, ReleaseJob] },
+          { module: 'loose-rules', providers: [TextCheck, FlagCheck] },
+        ],
+      );
+
+    // Compared with 0 and the limit, '500' and true would pass, and true would wait 1 ms.
+    const limit = DEFAULT_VALIDATOR_TIMEOUT_MS;
+    expect(discover).toThrow(
+      new BootError([
+        `Validator text-check of module loose-rules sets timeoutMs to '500'. Set it above 0 and at most ${limit}, the limit of dispatch.releaseJob, or remove it`,
+        `Validator flag-check of module loose-rules sets timeoutMs to true. Set it above 0 and at most ${limit}, the limit of dispatch.releaseJob, or remove it`,
       ]),
     );
   });

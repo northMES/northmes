@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixture modules whose validators the host refuses at boot (ADR 0037): hold-rules validates a
 // command that dispatch does not declare validatable, stray-rules validates dispatch.releaseJob
-// without depending on dispatch, and patient-rules gives its validators time limits that the host
-// does not allow.
+// without depending on dispatch, patient-rules gives its validators time limits that the host
+// does not allow, and loose-rules gives its validators time limits that are not numbers.
 import { Module } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
 import { defineModule } from '@northmes/sdk';
@@ -84,4 +84,33 @@ export const patientRules = defineModule({
   northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
   server: async () => ({ default: PatientRulesModule }),
+});
+
+// A plugin is plain JavaScript, so nothing but boot stops a time limit that is not a number.
+export const TextCheck = CommandValidator(releaseJob, {
+  name: 'text-check',
+  timeoutMs: '500' as unknown as number,
+  async check() {
+    return { verdict: 'pass' };
+  },
+});
+
+export const FlagCheck = CommandValidator(releaseJob, {
+  name: 'flag-check',
+  timeoutMs: true as unknown as number,
+  async check() {
+    return { verdict: 'pass' };
+  },
+});
+
+@Module({ providers: [TextCheck, FlagCheck] })
+export class LooseRulesModule {}
+
+/** Depends on dispatch, but its validators set timeoutMs to a string and to a boolean. */
+export const looseRules = defineModule({
+  id: 'loose-rules',
+  version: '0.0.0',
+  northmes: '>=0.0.0-0 <0.1.0-0',
+  dependsOn: ['dispatch'],
+  server: async () => ({ default: LooseRulesModule }),
 });
