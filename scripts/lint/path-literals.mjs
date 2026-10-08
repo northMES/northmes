@@ -9,10 +9,12 @@
 //   `router.navigate({ to })`;
 // - the first argument of a `goto` method call, such as `page.goto(url)`.
 //
-// An app path starts with a single `/`. A URL with a scheme or a host, a fragment and a relative
-// path are not app paths. Besides a plain string, the check reads a template literal, the left end
-// of a `+` concatenation and both branches of a conditional, through parentheses, `as`,
-// `satisfies` and `!`. It does not follow a path held in a variable.
+// An app path starts with a single `/`. In a `to`, a relative path that names a segment, such as
+// `./history`, `../orders` or `history`, is one as well, while `.` and `..` pass. A URL with a scheme
+// or a host, a fragment, a query and a relative `href` or `goto` URL are not app paths. Besides a
+// plain string, the check reads a template literal, the left end of a `+` concatenation and both
+// branches of a conditional, through parentheses, `as`, `satisfies` and `!`. It does not follow a
+// path held in a variable.
 //
 // scripts/lint/path-literals.allow.json lists the exceptions as entries of the form
 // { "path": "<file>", "literal": "<literal as the finding names it>", "reason": "<why>" }, and an
@@ -28,6 +30,7 @@ import ts from 'typescript';
  * @typedef {{ path: string, text: string }} RepositoryFile
  * @typedef {{ path: string, literal: string, reason?: string }} AllowlistEntry
  * @typedef {{ path: string, line: number, literal: string }} Finding
+ * @typedef {{ name: string, expression: ts.Expression }} PathExpression
  */
 
 /**
@@ -64,6 +67,20 @@ function isAppPath(value) {
 }
 
 /**
+ * A relative path that names a segment: no scheme and no leading `/`, `#` or `?`, and a segment
+ * other than `.` and `..` before any query or fragment. `.` and `..` name the current route and its
+ * parent.
+ * @param {string} value
+ */
+function isNamedRelativePath(value) {
+  if (/^([a-z][a-z\d+.-]*:|[/#?])/i.test(value)) {
+    return false;
+  }
+  const [path] = value.split(/[?#]/);
+  return path.split('/').some((segment) => !['', '.', '..'].includes(segment));
+}
+
+/**
  * The name of the function a call calls: `navigate` for both `navigate()` and `router.navigate()`.
  * @param {ts.CallExpression} call
  */
@@ -76,40 +93,41 @@ function calleeName(call) {
 }
 
 /**
- * The values of the properties written as `name: value` or `'name': value` in an object literal
- * whose name is one of `names`.
+ * The properties written as `name: value` or `'name': value` in an object literal whose name is one
+ * of `names`, each as its name and value.
  * @param {ts.ObjectLiteralExpression} object
  * @param {readonly string[]} names
- * @returns {ts.Expression[]}
+ * @returns {PathExpression[]}
  */
 function propertyValues(object, names) {
   return object.properties.flatMap((property) =>
     ts.isPropertyAssignment(property) &&
     (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
     names.includes(property.name.text)
-      ? [property.initializer]
+      ? [{ name: property.name.text, expression: property.initializer }]
       : [],
   );
 }
 
 /**
- * The expressions in a node that take an app path: the value of a `to` or `href` JSX attribute, the
- * `to` or `href` option of a navigate or redirect call and the URL of a `goto` call such as
- * `page.goto(url)`.
+ * The expressions in a node that take an app path, each with the name of the attribute, option or
+ * call that takes it: the value of a `to` or `href` JSX attribute, the `to` or `href` option of a
+ * navigate or redirect call and the URL of a `goto` call such as `page.goto(url)`.
  * @param {ts.Node} node
  * @param {ts.SourceFile} source
- * @returns {ts.Expression[]}
+ * @returns {PathExpression[]}
  */
 function pathExpressions(node, source) {
   if (ts.isJsxAttribute(node)) {
+    const name = node.name.getText(source);
     const value = node.initializer;
-    if (!value || !pathNames.includes(node.name.getText(source))) {
+    if (!value || !pathNames.includes(name)) {
       return [];
     }
     if (ts.isJsxExpression(value)) {
-      return value.expression ? [value.expression] : [];
+      return value.expression ? [{ name, expression: value.expression }] : [];
     }
-    return ts.isStringLiteral(value) ? [value] : [];
+    return ts.isStringLiteral(value) ? [{ name, expression: value }] : [];
   }
   if (ts.isCallExpression(node)) {
     const name = calleeName(node);
@@ -118,7 +136,7 @@ function pathExpressions(node, source) {
       return [];
     }
     if (name === 'goto' && ts.isPropertyAccessExpression(node.expression)) {
-      return [first];
+      return [{ name, expression: first }];
     }
     if (name && navigationCalls.has(name) && ts.isObjectLiteralExpression(first)) {
       return propertyValues(first, pathNames);
@@ -196,11 +214,13 @@ export function scan(files, allowlist) {
   for (const { path, text } of files.filter((file) => isScanned(file.path))) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
     const visit = (node) => {
-      const literals = pathExpressions(node, source).flatMap((expression) =>
-        leadingLiterals(expression, source),
+      const literals = pathExpressions(node, source).flatMap(({ name, expression }) =>
+        leadingLiterals(expression, source).map((literal) => ({ name, ...literal })),
       );
       for (const literal of literals) {
-        if (isAppPath(literal.text) && !isAllowed(path, literal.text)) {
+        const reported =
+          isAppPath(literal.text) || (literal.name === 'to' && isNamedRelativePath(literal.text));
+        if (reported && !isAllowed(path, literal.text)) {
           const start = literal.node.getStart(source);
           findings.push({
             path,
