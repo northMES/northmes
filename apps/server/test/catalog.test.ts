@@ -126,6 +126,12 @@ describe('checkCatalog', () => {
     );
   });
 
+  it('E02-S01 one problem is listed as 1 problem', () => {
+    const error = refusal([core, inRepoModule('planning', ['core', 'quality'])]);
+
+    expect(error.message).toMatch(/^refused to start \(1 problem\)\n/);
+  });
+
   it('E02-S01 modules come back core first, in dependency order, plugins last', () => {
     const catalog = checkCatalog(
       [
