@@ -53,6 +53,13 @@ function workflows(): Workflow[] {
   }));
 }
 
+// Every job of every workflow, with the place to name in an assertion.
+function allJobs(): { where: string; job: Job }[] {
+  return workflows().flatMap(({ path, jobs }) =>
+    Object.entries(jobs ?? {}).map(([id, job]) => ({ where: `${path} job ${id}`, job })),
+  );
+}
+
 function jobNamed(name: string): { workflow: Workflow; id: string } {
   for (const workflow of workflows()) {
     for (const [id, job] of Object.entries(workflow.jobs ?? {})) {
@@ -141,15 +148,25 @@ describe('workflows', () => {
   });
 
   it('test jobs take runs-on from a repository variable', () => {
-    const testJobs = workflows().flatMap(({ path, jobs }) =>
-      Object.entries(jobs ?? {})
-        .filter(([, job]) => isTestJob(job))
-        .map(([id, job]) => ({ where: `${path} job ${id}`, runsOn: job['runs-on'] })),
-    );
+    const testJobs = allJobs().filter(({ job }) => isTestJob(job));
 
     expect(testJobs, 'test jobs').not.toHaveLength(0);
-    for (const { where, runsOn } of testJobs) {
-      expect(String(runsOn).replace(/\s+/g, ' ').trim(), where).toBe(testRunner);
+    for (const { where, job } of testJobs) {
+      expect(String(job['runs-on']).replace(/\s+/g, ' ').trim(), where).toBe(testRunner);
+    }
+  });
+
+  // A checkout that persists the token leaves it in .git/config for every later step to read.
+  it('every checkout sets persist-credentials: false', () => {
+    const checkouts = allJobs().flatMap(({ where, job }) =>
+      (job.steps ?? [])
+        .filter(({ uses }) => uses?.startsWith('actions/checkout@'))
+        .map((step) => ({ where, step })),
+    );
+
+    expect(checkouts, 'checkout steps').not.toHaveLength(0);
+    for (const { where, step } of checkouts) {
+      expect(step.with?.['persist-credentials'], where).toBe(false);
     }
   });
 
