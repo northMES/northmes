@@ -26,3 +26,13 @@ export function checkTitle(title) {
     message: `The pull request title ${JSON.stringify(title)} is not a Conventional Commit. Write it as type(scope): outcome or type: outcome, with ! before the colon for a breaking change and one of the types ${types.join(', ')}.`,
   };
 }
+
+// The job passes the title through the environment, never inside the run script, so a title cannot
+// inject shell code.
+if (import.meta.main) {
+  const { ok, message } = checkTitle(process.env.PR_TITLE ?? '');
+  if (!ok) {
+    console.log(`::error::${message}`);
+    process.exitCode = 1;
+  }
+}
