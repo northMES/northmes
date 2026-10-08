@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 export { type BootBuiltOptions, type BootBuiltResult, bootBuilt } from './boot-built.ts';
+export { query } from './client.ts';
 export {
   emptyTemplateDatabase,
   type PgConnection,
-  query,
   type RolePasswords,
   type TestDatabase,
   useTestDatabase,

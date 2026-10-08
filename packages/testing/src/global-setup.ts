@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { TestProject } from 'vitest/node';
-import { emptyTemplateDatabase, type PgConnection, withClient } from './database.ts';
+import { withClient } from './client.ts';
+import { emptyTemplateDatabase, type PgConnection } from './database.ts';
 import { startPostgres } from './postgres-server.ts';
 
 /** Creates the empty template, which carries a marker table into every clone. */

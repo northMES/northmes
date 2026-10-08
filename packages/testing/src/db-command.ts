@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { Client } from 'pg';
-import { withClient } from './database.ts';
+import { withClient } from './client.ts';
 
 /** Who runs a command: the principal type and id that the audit context records (ADR 0013). */
 export interface CommandPrincipal {
