@@ -2,7 +2,7 @@
 // secret files under .northmes/secrets/, which every process the stack starts reads.
 
 import { randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 
@@ -46,18 +46,25 @@ export function containerReuse(env) {
 }
 
 /**
- * Writes a file unless it exists, and returns true when it wrote it.
+ * Publishes a file unless it exists, and returns true when it did. The content is written to a
+ * temporary file in the same folder first and then hard-linked into place, so another stack process
+ * sees either no file or the whole file, and a file that exists is never replaced (link refuses
+ * with EEXIST).
  * @param {string} path
  * @param {string} content
  * @param {number} [mode]
  */
-function writeIfMissing(path, content, mode) {
+export function publishIfMissing(path, content, mode) {
+  const temporary = `${path}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`;
+  writeFileSync(temporary, content, { flag: 'wx', mode });
   try {
-    writeFileSync(path, content, { flag: 'wx', mode });
+    linkSync(temporary, path);
     return true;
   } catch (error) {
     if (/** @type {NodeJS.ErrnoException} */ (error).code === 'EEXIST') return false;
     throw error;
+  } finally {
+    rmSync(temporary, { force: true });
   }
 }
 
@@ -77,11 +84,11 @@ export function writeDevConfig(dir) {
   const env = { NODE_ENV: 'development' };
   for (const [key, name] of Object.entries(secretFiles)) {
     const path = join(secretsDir, name);
-    writeIfMissing(path, `${devSecretMarker}${randomBytes(32).toString('hex')}\n`, 0o600);
+    publishIfMissing(path, `${devSecretMarker}${randomBytes(32).toString('hex')}\n`, 0o600);
     env[key] = path;
   }
   const devEnvFile = join(dir, 'dev.env');
   const lines = Object.entries(env).map(([key, value]) => `${key}=${value}\n`);
-  if (writeIfMissing(devEnvFile, `${devEnvHeader}${lines.join('')}`)) return env;
+  if (publishIfMissing(devEnvFile, `${devEnvHeader}${lines.join('')}`)) return env;
   return /** @type {Record<string, string>} */ (parseEnv(readFileSync(devEnvFile, 'utf8')));
 }
