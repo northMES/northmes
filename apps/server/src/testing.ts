@@ -71,6 +71,12 @@ export interface StatementsDuring<Result> {
   readonly statements: readonly string[];
 }
 
+/**
+ * The pools a statementsDuring call is recording. Two overlapping recordings of one pool would wrap
+ * the same clients, count a statement twice and unwrap each other's clients, so the second refuses.
+ */
+const recording = new WeakSet<Pool>();
+
 /** The SQL text of the first argument of a pg query call: a string or a query config. */
 function statementText(query: unknown): string {
   if (typeof query === 'string') return query;
@@ -89,6 +95,10 @@ export async function statementsDuring<Result>(
   fn: () => Promise<Result>,
 ): Promise<StatementsDuring<Result>> {
   const pool = app.get(Pool);
+  if (recording.has(pool)) {
+    throw new Error('statementsDuring is already recording this pool; await the first call first');
+  }
+  recording.add(pool);
   const statements: string[] = [];
   const wrapped = new Set<PoolClient>();
   // The pool emits acquire before it hands a client out, also an idle one it reuses.
@@ -105,6 +115,7 @@ export async function statementsDuring<Result>(
   try {
     return { result: await fn(), statements };
   } finally {
+    recording.delete(pool);
     pool.off('acquire', wrap);
     // Each client reads query from pg's Client prototype again.
     for (const client of wrapped) Reflect.deleteProperty(client, 'query');
