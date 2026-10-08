@@ -177,11 +177,16 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
   let listened = false;
   // Restarts and migrate runs go one after the other, in the order they were asked for.
   let queue = Promise.resolve();
+  // The servers pnpm dev stopped on purpose, whose exit it does not report.
+  const retired = new WeakSet();
   const restartServer = () => {
     queue = queue.then(async () => {
-      await server?.stop();
+      if (server) {
+        retired.add(server);
+        await server.stop();
+      }
       if (stopping) return;
-      server = start(plan.server, {
+      const started = start(plan.server, {
         env: stack.env,
         onLine: (line) => {
           if (listened || !line.includes('Listening on')) return;
@@ -189,6 +194,15 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
           log(`The board of the seeded plant: ${plan.boardUrl}`);
           log('Ctrl+C stops pnpm dev and its Postgres container.');
         },
+      });
+      server = started;
+      // A server that exits on its own, such as after a crash, leaves the shell without its API.
+      // The next completed build starts it again, so pnpm dev says so and runs on.
+      started.exited.then(({ code, signal }) => {
+        if (stopping || retired.has(started)) return;
+        log(
+          `The server exited with ${code ?? signal}; the next build that tsc -b --watch completes starts it again`,
+        );
       });
     });
   };
