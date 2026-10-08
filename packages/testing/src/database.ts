@@ -12,16 +12,33 @@ export interface PgConnection {
   database: string;
 }
 
+/**
+ * The passwords of the login roles that the server's global setup bootstraps into the container
+ * (ADR 0006), for the roles a test database hands out.
+ */
+export interface RolePasswords {
+  owner: string;
+  app: string;
+}
+
 declare module 'vitest' {
   export interface ProvidedContext {
     pg: PgConnection;
     /** The image the container started from, as read from infra/pg-image.json. */
     pgImage: string;
+    pgRolePasswords: RolePasswords;
   }
 }
 
+/**
+ * A database of one test file. Tests never connect as the superuser, which bypasses row-level
+ * security (ADR 0041).
+ */
 export interface TestDatabase {
-  connectionString: string;
+  /** Logs in as nm_app, the runtime role with DML rights only. */
+  appUrl: string;
+  /** Logs in as nm_owner, the migration role, for tests at the database seam. */
+  ownerUrl: string;
   databaseName: string;
 }
 
@@ -75,9 +92,10 @@ export function query<Row = Record<string, unknown>>(
  */
 export function useTestDatabase(): TestDatabase {
   const pg: PgConnection | undefined = inject('pg');
-  if (!pg) {
+  const passwords: RolePasswords | undefined = inject('pgRolePasswords');
+  if (!pg || !passwords) {
     throw new Error(
-      'useTestDatabase() needs the global setup of @northmes/testing, which only the integration project runs. Name the file *.int.test.ts.',
+      'useTestDatabase() needs the global setups of @northmes/testing and apps/server, which only the integration project runs. Name the file *.int.test.ts.',
     );
   }
   // biome-ignore lint/style/noProcessEnv: Vitest sets VITEST_POOL_ID for each worker; it names no configuration.
@@ -97,8 +115,12 @@ export function useTestDatabase(): TestDatabase {
     });
   });
 
-  // The connection string is for the container's superuser. Database roles arrive with the
-  // migration runner (E02-S02), which switches this to the app role; until then a test database
-  // is reachable as a superuser.
-  return { connectionString: connectionStringFor(pg, databaseName), databaseName };
+  return {
+    appUrl: connectionStringFor({ ...pg, user: 'nm_app', password: passwords.app }, databaseName),
+    ownerUrl: connectionStringFor(
+      { ...pg, user: 'nm_owner', password: passwords.owner },
+      databaseName,
+    ),
+    databaseName,
+  };
 }

@@ -6,21 +6,29 @@ import { query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
+/**
+ * Logs in to database as the container's superuser. Only the checks of the container itself use
+ * it: nm_app sees neither the server's own time zone, which its role setting replaces, nor the data
+ * directory.
+ */
+function superuserUrl(database: string): string {
+  const { user, password, host, port } = inject('pg');
+  const credentials = `${encodeURIComponent(user)}:${encodeURIComponent(password)}`;
+  return `postgres://${credentials}@${host}:${port}/${encodeURIComponent(database)}`;
+}
+
 describe('the test database', () => {
-  const { connectionString, databaseName } = useTestDatabase();
+  const { appUrl, databaseName } = useTestDatabase();
 
   it('the connection string points at the database named databaseName', async () => {
-    const rows = await query<{ current_database: string }>(
-      connectionString,
-      'select current_database()',
-    );
+    const rows = await query<{ current_database: string }>(appUrl, 'select current_database()');
 
     expect(rows).toEqual([{ current_database: databaseName }]);
   });
 
   it('the database is cloned from the template', async () => {
     const rows = await query<{ marker: string | null }>(
-      connectionString,
+      appUrl,
       "select to_regclass('public.nm_marker')::text as marker",
     );
 
@@ -31,7 +39,7 @@ describe('the test database', () => {
     const name = templateDatabase.replaceAll("'", "''");
 
     const rows = await query<{ datistemplate: boolean }>(
-      connectionString,
+      appUrl,
       `select datistemplate from pg_database where datname = '${name}'`,
     );
 
@@ -39,7 +47,7 @@ describe('the test database', () => {
   });
 
   it('the server time zone follows NM_TEST_PG_TZ', async () => {
-    const rows = await query<{ TimeZone: string }>(connectionString, 'show timezone');
+    const rows = await query<{ TimeZone: string }>(superuserUrl(databaseName), 'show timezone');
 
     // An unset, empty or blank NM_TEST_PG_TZ means UTC.
     expect(rows).toEqual([{ TimeZone: process.env.NM_TEST_PG_TZ?.trim() || 'UTC' }]);
@@ -47,12 +55,12 @@ describe('the test database', () => {
 
   it('the data directory is a tmpfs mount', async () => {
     const dataDirectories = await query<{ data_directory: string }>(
-      connectionString,
+      superuserUrl(databaseName),
       'show data_directory',
     );
     // pg_read_file needs the superuser that the container creates.
     const mountTables = await query<{ mounts: string }>(
-      connectionString,
+      superuserUrl(databaseName),
       "select pg_read_file('/proc/mounts') as mounts",
     );
     const dataDirectory = dataDirectories[0]?.data_directory ?? '';
@@ -80,7 +88,7 @@ describe('the test database', () => {
   it('durability is off', async () => {
     const settings = await Promise.all(
       ['fsync', 'synchronous_commit', 'full_page_writes'].map(async (setting) => {
-        const rows = await query<Record<string, string>>(connectionString, `show ${setting}`);
+        const rows = await query<Record<string, string>>(appUrl, `show ${setting}`);
         return [setting, rows[0]?.[setting]];
       }),
     );
@@ -93,7 +101,7 @@ describe('the test database', () => {
   });
 
   it('the server allows 300 connections', async () => {
-    const rows = await query<{ max_connections: string }>(connectionString, 'show max_connections');
+    const rows = await query<{ max_connections: string }>(appUrl, 'show max_connections');
 
     expect(rows).toEqual([{ max_connections: '300' }]);
   });
@@ -114,17 +122,17 @@ describe('the test database', () => {
     // The server must report the major version that the image names, so a wrong image fails here.
     const major = /^postgres:(\d+)[@-]/.exec(image)?.[1];
     expect(major).toBeDefined();
-    const rows = await query<{ version: string }>(connectionString, 'select version()');
+    const rows = await query<{ version: string }>(appUrl, 'select version()');
     expect(rows[0]?.version).toMatch(new RegExp(`^PostgreSQL ${major}\\.`));
   });
 
   // harness-sibling.int.test.ts runs the same test with a table of its own, in parallel.
   it('each test file gets its own database', async () => {
     expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
-    await query(connectionString, 'create table harness_only (id integer)');
+    await query(superuserUrl(databaseName), 'create table harness_only (id integer)');
 
     const rows = await query<{ tablename: string }>(
-      connectionString,
+      appUrl,
       "select tablename from pg_tables where schemaname = 'public' order by tablename",
     );
 
