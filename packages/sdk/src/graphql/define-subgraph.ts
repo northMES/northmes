@@ -3,6 +3,28 @@ import type { DynamicModule, Type } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { InProcessSubgraphDriver, type InProcessSubgraphOptions } from './driver.ts';
 
+/**
+ * @nestjs/graphql 14 links federation v2.14 by default, and the composition library accepts v2.0
+ * to v2.9, so every subgraph pins v2.9 and imports only the directives NorthMES uses (ADR 0015).
+ */
+const FEDERATION_LINK = {
+  version: 2,
+  importUrl: 'https://specs.apollo.dev/federation/v2.9',
+  directives: [
+    '@key',
+    '@shareable',
+    '@external',
+    '@requires',
+    '@provides',
+    '@inaccessible',
+    '@tag',
+    '@override',
+    '@interfaceObject',
+    '@cost',
+    '@listSize',
+  ],
+} as const;
+
 export interface DefineSubgraphOptions {
   /** The module's GraphQL name from moduleNames, so the root field prefix has one source. */
   readonly name: string;
@@ -14,10 +36,13 @@ export interface DefineSubgraphOptions {
  * The host calls this for every module with a server entry; module authors never configure
  * GraphQLModule.
  */
-export function defineSubgraph({ name }: DefineSubgraphOptions): DynamicModule {
+export function defineSubgraph({ name, module }: DefineSubgraphOptions): DynamicModule {
   return GraphQLModule.forRoot<InProcessSubgraphOptions>({
     driver: InProcessSubgraphDriver,
     subgraphName: name,
-    autoSchemaFile: { federation: 2 },
+    include: [module],
+    autoSchemaFile: { federation: { ...FEDERATION_LINK, directives: [...FEDERATION_LINK.directives] } },
+    // Guards, interceptors and filters also run on fields reached through _entities.
+    fieldResolverEnhancers: ['guards', 'interceptors', 'filters'],
   });
 }
