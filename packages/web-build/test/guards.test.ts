@@ -119,6 +119,12 @@ describe('remote build guards', () => {
     );
   });
 
+  it('E02-S05 a remote bundling @northmes/web-sdk source fails naming the package', async () => {
+    await expect(buildFixture('remote-web-sdk-source')).rejects.toThrow(
+      /this remote bundles .*@northmes\/web-sdk/,
+    );
+  });
+
   it('E02-S05 a remote bundling graphql fails naming the package', async () => {
     await expect(buildFixture('remote-graphql')).rejects.toThrow(/this remote bundles .*graphql/);
   });
