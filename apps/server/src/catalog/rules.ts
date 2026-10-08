@@ -120,13 +120,14 @@ export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
  * installed module owns is not checked here.
  */
 export function slotProblems(entries: readonly CatalogEntry[]): string[] {
+  const byId = new Map(entries.map(({ manifest }) => [manifest.id, manifest]));
   const owners = new Map<string, string>();
   for (const { manifest } of entries) {
     for (const slot of Object.keys(manifest.web?.slots ?? {})) owners.set(slot, manifest.id);
   }
   const problems: string[] = [];
   for (const { manifest } of entries) {
-    const reach = dependsOnClosure(manifest.id, entries);
+    const reach = dependsOnClosure(manifest.id, byId);
     for (const { id, slot } of manifest.web?.contributes ?? []) {
       const owner = owners.get(slot);
       if (owner !== undefined && !reach.has(owner)) {
@@ -143,8 +144,7 @@ export function slotProblems(entries: readonly CatalogEntry[]): string[] {
  * The module itself and every installed module it depends on, directly or through others. The walk
  * stops at a module it has reached, so a dependency cycle ends it.
  */
-function dependsOnClosure(id: string, entries: readonly CatalogEntry[]): Set<string> {
-  const byId = new Map(entries.map(({ manifest }) => [manifest.id, manifest]));
+function dependsOnClosure(id: string, byId: ReadonlyMap<string, ModuleManifest>): Set<string> {
   const reached = new Set<string>();
   const pending = [id];
   for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
