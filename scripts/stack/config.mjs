@@ -27,6 +27,15 @@ const devEnvHeader = `# Written by the stack script (ADR 0058). The processes it
 `;
 
 /**
+ * Reads the secret in a file that writeDevConfig wrote, without the trailing newline, as readSecrets
+ * in @northmes/sdk/config reads it.
+ * @param {string} path
+ */
+export function readSecret(path) {
+  return readFileSync(path, 'utf8').replace(/\n$/, '');
+}
+
+/**
  * True when the stack should reuse its Postgres container (Testcontainers' withReuse), which then
  * outlives the run. A person opts in on a laptop with NORTHMES_STACK_REUSE=1. CI never reuses one,
  * so any CI value turns it off (ADR 0058).
