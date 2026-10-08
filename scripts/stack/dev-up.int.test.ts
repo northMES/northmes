@@ -5,7 +5,7 @@ import { bootBuilt } from '@northmes/testing';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { seedScopes } from './seed.mjs';
-import { startStack } from './stack.mjs';
+import { prepareDatabase, startStack } from './stack.mjs';
 
 /** Runs a pnpm northmes command on the built server, which the test run builds once. */
 function northmes(args: readonly string[], env: Readonly<Record<string, string>>) {
@@ -63,6 +63,29 @@ async function readAtSeedPlant(sql: string): Promise<Record<string, unknown>[]> 
   }
 }
 
+/**
+ * What the database steps leave behind: the migration records, read as nm_owner, and the ids of the
+ * seed plant's articles and orders.
+ */
+async function databaseState() {
+  const owner = new pg.Client({
+    connectionString: loginAs('nm_owner', 'NORTHMES_DB_OWNER_PASSWORD_FILE'),
+  });
+  await owner.connect();
+  try {
+    const migrations = await owner.query(
+      'select module, name, applied_at from northmes_meta.migration order by module, name',
+    );
+    return {
+      migrations: migrations.rows,
+      articles: await readAtSeedPlant('select id from core.article order by id'),
+      orders: await readAtSeedPlant('select id from planning.production_order order by id'),
+    };
+  } finally {
+    await owner.end();
+  }
+}
+
 describe('the stack script', () => {
   it('E02-S08 the stack bootstraps the roles, migrates and seeds fictional production orders with their articles at the seed plant', async () => {
     const orders = await readAtSeedPlant(
@@ -102,5 +125,15 @@ describe('the stack script', () => {
         name: 'Wall bracket',
       },
     ]);
+  });
+
+  it('E02-S08 a second run applies no migration and adds no seed rows', {
+    timeout: 120_000,
+  }, async () => {
+    const before = await databaseState();
+
+    await prepareDatabase(stackEnv(), { northmes });
+
+    expect(await databaseState()).toEqual(before);
   });
 });
