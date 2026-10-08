@@ -2,6 +2,7 @@
 import { ConfigError } from '@northmes/sdk/config';
 import { type BootOptions, boot } from './boot/boot.ts';
 import { dbBootstrap } from './db/bootstrap.ts';
+import { migrateCommand } from './migrate/command.ts';
 
 /** What main.ts hands a command: process.exit and console. A test also passes an environment. */
 export type CliContext = Omit<BootOptions, 'importManifest'>;
@@ -12,6 +13,9 @@ const commands: Readonly<Record<string, (context: CliContext) => Promise<void>>>
     await boot({ ...context, importManifest: (specifier) => import(specifier) });
   },
   'db bootstrap': dbBootstrap,
+  migrate: async (context) => {
+    await migrateCommand({ ...context, importManifest: (specifier) => import(specifier) });
+  },
 };
 
 /**
