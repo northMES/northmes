@@ -26,6 +26,11 @@ export interface Validator<Contract extends ValidatableContract = ValidatableCon
   readonly contract: Contract;
   /** Orders the validators of one module, after the catalog order of the modules (ADR 0012). */
   readonly name: string;
+  /**
+   * How long check may take, in milliseconds. A check that has not answered by then rejects the
+   * command (ADR 0037). Without it, the host's default limit applies.
+   */
+  readonly timeoutMs?: number;
   /** Answers for the payload the owner built for this run of the command. */
   check(payload: z.output<Contract['payload']>): Promise<ValidatorVerdict>;
 }
@@ -44,8 +49,8 @@ export type CommandValidatorProvider<Contract extends ValidatableContract = Vali
  */
 export function CommandValidator<Contract extends ValidatableContract>(
   contract: Contract,
-  { name, check }: Omit<Validator<Contract>, 'contract'>,
+  options: Omit<Validator<Contract>, 'contract'>,
 ): CommandValidatorProvider<Contract> {
-  const validator: Validator<Contract> = { contract, name, check };
+  const validator: Validator<Contract> = { contract, ...options };
   return Object.assign(class {}, { validator });
 }

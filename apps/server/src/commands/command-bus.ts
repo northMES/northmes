@@ -31,6 +31,9 @@ export class CommandRejected extends DomainError {
   }
 }
 
+/** The time limit of a validator that declares none, in milliseconds. */
+export const DEFAULT_VALIDATOR_TIMEOUT_MS = 2_000;
+
 /**
  * A validator that failed instead of answering (ADR 0037). The command fails closed, and the client
  * reads only "Unexpected error.". What the validator threw is the cause, for the server's log.
@@ -39,6 +42,36 @@ export class ValidatorFailed extends Error {
   constructor(cause: unknown) {
     super('Unexpected error.', { cause });
     this.name = 'ValidatorFailed';
+  }
+}
+
+/**
+ * Runs a validator's check within its time limit. A check that throws or has not answered by then
+ * throws ValidatorFailed.
+ */
+async function checkWithinLimit(
+  { module, validator }: RegisteredValidator,
+  payload: unknown,
+): Promise<ValidatorVerdict> {
+  const limit = validator.timeoutMs ?? DEFAULT_VALIDATOR_TIMEOUT_MS;
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new Error(
+            `Validator ${validator.name} of module ${module} did not answer within ${limit} ms`,
+          ),
+        ),
+      limit,
+    );
+  });
+  try {
+    return await Promise.race([validator.check(payload), timeout]);
+  } catch (error) {
+    throw new ValidatorFailed(error);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -94,7 +127,8 @@ export class CommandBusImpl implements CommandBus {
       const context = { tx };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);
-        for (const { module, validator } of validators) {
+        for (const registered of validators) {
+          const { module, validator } = registered;
           const parsed = validator.contract.payload.safeParse(payload);
           if (!parsed.success) {
             throw new DomainError({
@@ -103,12 +137,7 @@ export class CommandBusImpl implements CommandBus {
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }
-          let verdict: ValidatorVerdict;
-          try {
-            verdict = await validator.check(parsed.data);
-          } catch (error) {
-            throw new ValidatorFailed(error);
-          }
+          const verdict = await checkWithinLimit(registered, parsed.data);
           if (verdict.verdict === 'veto') throw new CommandRejected(module, verdict.message);
         }
       }
