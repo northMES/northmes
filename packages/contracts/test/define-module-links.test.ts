@@ -12,4 +12,10 @@ describe('defineModuleLinks', () => {
       '/plant-a/planning/orders/a%2Fb',
     );
   });
+
+  it('E02-S05 an empty orderId throws', () => {
+    expect(() => links.orders.order({ plant: 'plant-a', orderId: '' })).toThrow(
+      'Link /$plant/planning/orders/$orderId has an empty value for orderId',
+    );
+  });
 });
