@@ -98,4 +98,26 @@ describe('pnpm gen:migration', () => {
     );
     expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
   });
+
+  it('E02-S02 pnpm gen:migration refuses a module that is not a module id and writes nothing', async () => {
+    // Both folders exist, so only the module id rule stops them: ../scripts would put the file
+    // outside modules/, and the quote would end the schema name in the SQL.
+    const modules = ['../scripts', "production-start'"];
+    mkdirSync(join(root, 'scripts'));
+    mkdirSync(join(root, "modules/production-start'"));
+
+    const exitCodes: number[] = [];
+    for (const module of modules) exitCodes.push(await main([module, 'work_note'], io()));
+
+    expect(exitCodes).toEqual([1, 1]);
+    expect(errors).toEqual(
+      modules.map(
+        (module) =>
+          `Invalid module "${module}": the module id names the folder and the schema, so use lower-case letters, digits and single hyphens, starting with a letter`,
+      ),
+    );
+    expect(readdirSync(join(root, 'scripts'))).toEqual([]);
+    expect(readdirSync(join(root, "modules/production-start'"))).toEqual([]);
+    expect(lines).toEqual([]);
+  });
 });
