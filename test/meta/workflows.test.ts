@@ -25,6 +25,7 @@ type Permissions = string | Record<string, string>;
 
 interface Workflow {
   path: string;
+  name?: string;
   on?: unknown;
   permissions?: Permissions;
   jobs: Record<string, Job>;
@@ -69,10 +70,24 @@ const pullRequestCheckSteps = {
   },
 };
 
+// The jobs of the CI workflow. The main ruleset requires each of them as a status check
+// (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list needs a
+// ruleset edit in the same change.
+const ciJobs = [
+  'ci / lint',
+  'ci / typecheck',
+  'ci / build',
+  'ci / test',
+  'ci / pr title',
+  'ci / linked issue',
+  'ci / gate',
+];
+
 // The checks the main ruleset requires from workflow files
-// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). CodeQL runs as
-// GitHub's default setup, outside the workflow files.
-const requiredChecks = ['ci / gate', 'license gate', 'dependency audit'];
+// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
+// docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). CodeQL runs as GitHub's default
+// setup, outside the workflow files.
+const requiredChecks = [...ciJobs, 'license gate', 'dependency audit'];
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -386,7 +401,8 @@ describe('workflows', () => {
     );
   });
 
-  // The main ruleset requires only ci / gate, so a job it does not need never blocks a merge.
+  // GitHub counts a skipped required check as passed, so ci / gate needs every job to fail a pull
+  // request on which one of them did not run.
   it('ci / gate needs every other job in its workflow', () => {
     const { workflow, id } = jobNamed('ci / gate');
 
@@ -397,20 +413,34 @@ describe('workflows', () => {
     );
   });
 
-  // TZ sets the time zone of the Node process and NM_TEST_PG_TZ the session zone of the test
-  // database, so each leg sets both.
-  it('ci / gate runs the unit and integration projects in the UTC and the Europe/Stockholm legs', () => {
-    const { workflow, id } = jobNamed('ci / gate');
-    const runs = allNeedsOf(workflow.jobs, id).flatMap((need) =>
-      vitestRunsOf(workflow.jobs[need] ?? {}),
-    );
+  // The main ruleset names each CI job, so a renamed, added or removed job must come with a ruleset
+  // edit (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  it('the CI workflow has exactly the jobs ci / lint, ci / typecheck, ci / build, ci / test, ci / pr title, ci / linked issue and ci / gate', () => {
+    const ci = workflows().find(({ name }) => name === 'CI');
 
-    for (const zone of ['UTC', 'Europe/Stockholm']) {
-      expect(runs, zone).toContainEqual({
-        env: expect.objectContaining({ TZ: zone, NM_TEST_PG_TZ: zone }),
+    expect(ci, 'a workflow named CI').toBeDefined();
+    expect(
+      Object.values(ci?.jobs ?? {})
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...ciJobs].sort());
+  });
+
+  // One check covers all tests in both time zones. TZ sets the time zone of the Node process and
+  // NM_TEST_PG_TZ the session zone of the test database, so each leg sets both.
+  it('ci / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg', () => {
+    const { job } = jobNamed('ci / test');
+
+    expect(vitestRunsOf(job)).toEqual([
+      {
+        env: expect.objectContaining({ TZ: 'UTC', NM_TEST_PG_TZ: 'UTC' }),
+        projects: expect.arrayContaining(['unit', 'integration', 'web', 'types']),
+      },
+      {
+        env: expect.objectContaining({ TZ: 'Europe/Stockholm', NM_TEST_PG_TZ: 'Europe/Stockholm' }),
         projects: expect.arrayContaining(['unit', 'integration']),
-      });
-    }
+      },
+    ]);
   });
 
   it('every run step in ci / gate calls a script that pnpm check or check:full contains', () => {
