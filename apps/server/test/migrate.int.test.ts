@@ -123,6 +123,21 @@ describe('migrate', () => {
     ]);
   });
 
+  it('E02-S04 nm_ext may use each module schema, so a module role can reach a table it references', async () => {
+    const usage = await query(
+      db.ownerUrl,
+      `select n.nspname as schema, has_schema_privilege('nm_ext', n.oid, 'USAGE') as usage
+         from pg_namespace n
+        where n.nspname in ('core', 'planning')
+        order by n.nspname`,
+    );
+
+    expect(usage).toEqual([
+      { schema: 'core', usage: true },
+      { schema: 'planning', usage: true },
+    ]);
+  });
+
   it('E02-S02 a second run is a no-op', async () => {
     const records = () =>
       query(
