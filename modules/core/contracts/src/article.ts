@@ -2,14 +2,29 @@
 import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 
+/** The message of a text over its limit: the field, the allowed range and the length typed. */
+function tooLong(label: string, max: number) {
+  return (issue: { readonly input?: unknown }) =>
+    `${label} can be 1 to ${max} characters. It has ${String(issue.input).length}.`;
+}
+
 /**
  * The fields a person edits on an article: its code, the article number that is unique at its
  * scope, and its name. Both are trimmed and required. 32 characters is the code limit of every
- * register (ADR 0009).
+ * register (ADR 0009). Each message states the rule and the fix (design ui-222, Copy), and the
+ * server and the web form give the same one (ADR 0017).
  */
 const articleFields = z.object({
-  code: z.string().trim().min(1).max(32),
-  name: z.string().trim().min(1).max(200),
+  code: z
+    .string()
+    .trim()
+    .min(1, 'Enter an article number.')
+    .max(32, { error: tooLong('Article number', 32) }),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Enter a name.')
+    .max(200, { error: tooLong('Name', 200) }),
 });
 
 /**
