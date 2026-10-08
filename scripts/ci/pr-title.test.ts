@@ -59,4 +59,13 @@ describe('ci / pr title', () => {
     expect(passed.status).toBe(0);
     expect(passed.stdout).toBe('');
   });
+
+  // GitHub decodes %25, %0D and %0A in an annotation, so a title that holds %0A would otherwise show
+  // a line break that the title does not have.
+  it('the error annotation shows a title with % and a line break as typed, on one line', () => {
+    const result = run('Fix 100%0A of it\n::warning::second line');
+
+    expect(result.stdout.trimEnd().split('\n')).toHaveLength(1);
+    expect(result.stdout).toContain('"Fix 100%250A of it\\n::warning::second line"');
+  });
 });
