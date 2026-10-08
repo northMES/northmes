@@ -8,5 +8,6 @@ export {
   type TestDatabase,
   useTestDatabase,
 } from './database.ts';
+export { given } from './given.ts';
 export { type GqlAnswer, type GqlClient, gqlClient } from './gql-client.ts';
 export { type PostgresServer, startPostgres } from './postgres-server.ts';
