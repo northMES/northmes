@@ -90,7 +90,8 @@ function referenceOn(path, content) {
 }
 
 /**
- * Finds Postgres image references in Dockerfiles that differ from infra/pg-image.json.
+ * Finds Postgres image references in Dockerfiles, Compose files and test files that differ from
+ * infra/pg-image.json.
  * @param {readonly RepositoryFile[]} files
  * @returns {Finding[]}
  */
