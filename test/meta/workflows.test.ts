@@ -68,6 +68,17 @@ const pullRequestCheckSteps = {
   },
 };
 
+// The events a workflow's `on` names, in any of its three forms.
+function triggersOf(on: unknown): string[] {
+  if (typeof on === 'string') {
+    return [on];
+  }
+  if (Array.isArray(on)) {
+    return on.map(String);
+  }
+  return on !== null && typeof on === 'object' ? Object.keys(on) : [];
+}
+
 function workflowPaths(): string[] {
   return globSync('.github/workflows/*.{yml,yaml}', { cwd: root }).sort();
 }
@@ -159,6 +170,17 @@ describe('workflows', () => {
     expect(uses, 'uses: lines').not.toHaveLength(0);
     for (const { where, line } of uses) {
       expect(line, where).toMatch(/uses: [\w.-]+\/[\w./-]+@[0-9a-f]{40} # v\d+(?:\.\d+)*$/);
+    }
+  });
+
+  // pull_request_target runs with a write token and secrets in the context of the base repository,
+  // also for a pull request from a fork.
+  it('no workflow uses pull_request_target', () => {
+    const all = workflows();
+
+    expect(all, 'workflows').not.toHaveLength(0);
+    for (const { path, on } of all) {
+      expect(triggersOf(on), path).not.toContain('pull_request_target');
     }
   });
 
