@@ -63,8 +63,8 @@ describe('the web build', () => {
     const css = readFileSync(join(outDir, sheets[0] as string), 'utf8');
     // Light on :root; dark when the system asks for it unless the page forces light, or when the
     // page forces dark.
-    expect(css).toMatch(/--background:\s*oklch\(\s*0?\.985 0?\.002 250\)/);
-    expect(css).toMatch(/--background:\s*oklch\(\s*0?\.205 0?\.005 250\)/);
+    expect(css).toMatch(/--background:\s*oklch\((?:98\.5%|0?\.985) 0?\.002 250\)/);
+    expect(css).toMatch(/--background:\s*oklch\((?:20\.5%|0?\.205) 0?\.005 250\)/);
     expect(css).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
     expect(css).toMatch(/data-theme=["']?light/);
     expect(css).toMatch(/data-theme=["']?dark/);
