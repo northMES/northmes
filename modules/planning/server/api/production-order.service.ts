@@ -3,10 +3,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import type { PlanningDatabase } from '../db.ts';
 
+/** Where a production order stands. */
+export type ProductionOrderStatus = 'planned' | 'released';
+
 /** A production order as planning's API hands it out. */
 export interface ProductionOrderRecord {
   readonly id: string;
   readonly number: string;
+  /** The id of core's article the order makes. */
+  readonly articleId: string;
+  /** The numeric(18,6) quantity as decimal text, such as 12.500000. */
+  readonly quantity: string;
+  readonly status: ProductionOrderStatus;
 }
 
 /**
@@ -22,7 +30,7 @@ export class ProductionOrderService {
     return this.db.transaction((tx) =>
       tx
         .selectFrom('planning.production_order')
-        .select(['id', 'number'])
+        .select(['id', 'number', 'article_id as articleId', 'quantity', 'status'])
         .orderBy('number')
         .orderBy('id')
         .execute(),

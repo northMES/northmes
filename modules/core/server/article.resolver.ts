@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject } from '@nestjs/common';
-import { Args, Directive, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Directive,
+  Field,
+  ID,
+  ObjectType,
+  Parent,
+  Query,
+  ResolveReference,
+  Resolver,
+} from '@nestjs/graphql';
+import type { EntityReference } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from './api/article.service.ts';
 import { CoreModule } from './core.module.ts';
 
@@ -21,5 +32,11 @@ export class ArticleResolver {
   @Query(() => Article, { nullable: true })
   coreArticle(@Args('id', { type: () => ID }) id: string): Promise<ArticleRecord | null> {
     return this.articles.byId(id);
+  }
+
+  /** The article that another subgraph references by id, or null when none is at its scopes. */
+  @ResolveReference()
+  resolveReference(@Parent() reference: EntityReference): Promise<ArticleRecord | null> {
+    return this.articles.byId(reference.id);
   }
 }
