@@ -6,7 +6,8 @@ export const API_MAJOR = 1;
 /**
  * The path of a REST route, built from the value the server uses, so the shell, the stations and
  * the remotes never write the version by hand. apiPath('web', 'modules') is /api/v1/web/modules.
+ * Each segment is percent-encoded, so an id with / ? or # stays one path segment.
  */
 export function apiPath(...segments: string[]): string {
-  return `/api/v${API_MAJOR}/${segments.join('/')}`;
+  return `/api/v${API_MAJOR}/${segments.map(encodeURIComponent).join('/')}`;
 }
