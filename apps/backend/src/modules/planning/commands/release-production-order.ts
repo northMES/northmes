@@ -9,36 +9,12 @@ import { ProductionOrder } from '../production-order.resolver.ts';
 import { releasePayload } from './release-payload.ts';
 
 /**
- * What the command bus hands the command: the transaction it opened for this run of the command
- * (ADR 0012), here with planning's table types.
+ * What the command bus hands the command (ADR 0012): the transaction it opened for this run of the
+ * command, here with planning's table types, and the order it loaded and locked.
  */
-interface PlanningContext {
+interface ReleaseContext {
   readonly tx: Transaction<PlanningDatabase>;
-}
-
-/**
- * Reads the order and locks its row until the command's transaction ends, so the validators and
- * the handler see the same order and a second release waits for the first. An order outside the
- * principal's scopes is not found, like one that does not exist.
- */
-async function lockOrder(
-  tx: Transaction<PlanningDatabase>,
-  id: string,
-): Promise<Selectable<ProductionOrderTable>> {
-  const order = await tx
-    .selectFrom('planning.production_order')
-    .selectAll()
-    .where('id', '=', id)
-    .forUpdate()
-    .executeTakeFirst();
-  if (!order) {
-    throw new DomainError({
-      code: 'core.not_found',
-      kind: 'not_found',
-      message: `Production order ${id} was not found`,
-    });
-  }
-  return order;
+  readonly target: Selectable<ProductionOrderTable>;
 }
 
 /**
@@ -47,11 +23,23 @@ async function lockOrder(
  */
 export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   returns: () => ProductionOrder,
-  async buildPayload({ id }, { tx }: PlanningContext) {
-    return releasePayload(await lockOrder(tx, id));
+  // The bus reads the order and locks its row until the command's transaction ends, so the version
+  // check, the validators and the handler see the same order and a second release waits for the
+  // first. An order outside the principal's scopes is not found, like one that does not exist.
+  target: {
+    entity: 'Production order',
+    load: (id, { tx }: Pick<ReleaseContext, 'tx'>) =>
+      tx
+        .selectFrom('planning.production_order')
+        .selectAll()
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst(),
   },
-  async handle({ id }, { tx }: PlanningContext): Promise<ProductionOrderRecord> {
-    const order = await lockOrder(tx, id);
+  async buildPayload(_input, { target }: ReleaseContext) {
+    return releasePayload(target);
+  },
+  async handle({ id }, { tx, target: order }: ReleaseContext): Promise<ProductionOrderRecord> {
     if (order.status !== 'planned') {
       throw new DomainError({
         code: 'planning.production_order.not_planned',

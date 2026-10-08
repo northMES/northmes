@@ -57,19 +57,22 @@ function withIdAndVersion<Shape extends z.core.$ZodShape, Config extends z.core.
   return fields.extend({ id: z.uuid(), expectedVersion: version });
 }
 
-type Fields<Options extends CommandContractOptions> = Options['fields'];
-
 /**
- * A command's input schema: the fields, plus the new entity's id for target new, or the entity's
- * id and expectedVersion for target existing (ADR 0017).
+ * The input schema for `Target`: the fields, plus the new entity's id for target new, or the
+ * entity's id and expectedVersion for target existing (ADR 0017). It distributes over a union of
+ * targets, so the input of a contract whose target is not known is any of the three.
  */
-type CommandInput<Options extends CommandContractOptions> = Options['target'] extends 'none'
-  ? Fields<Options>
-  : Options['target'] extends 'new'
-    ? ReturnType<typeof withId<Fields<Options>['shape'], Fields<Options>['_zod']['config']>>
-    : ReturnType<
-        typeof withIdAndVersion<Fields<Options>['shape'], Fields<Options>['_zod']['config']>
-      >;
+type InputFor<Target extends CommandTarget, Fields extends ObjectSchema> = Target extends 'none'
+  ? Fields
+  : Target extends 'new'
+    ? ReturnType<typeof withId<Fields['shape'], Fields['_zod']['config']>>
+    : ReturnType<typeof withIdAndVersion<Fields['shape'], Fields['_zod']['config']>>;
+
+/** A command's input schema, from its target and its fields. */
+type CommandInput<Options extends CommandContractOptions> = InputFor<
+  Options['target'],
+  Options['fields']
+>;
 
 /**
  * A command's contract, plain data in the owning module's MIT contracts package, so manifests,

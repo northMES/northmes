@@ -3,7 +3,13 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import { defineCommandContract } from '@northmes/contracts';
-import { COMMAND_BUS, type Command, type CommandBus, defineCommand } from '@northmes/sdk/commands';
+import {
+  COMMAND_BUS,
+  type Command,
+  type CommandBus,
+  defineCommand,
+  type Versioned,
+} from '@northmes/sdk/commands';
 import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -15,14 +21,19 @@ const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 
 /**
  * Records every command it gets and runs its handler, as the bus does after its own steps. The
- * fixture's handler reads no table, so it gets a stand-in for the transaction.
+ * fixture's target and handler read no table, so they get a stand-in for the transaction.
  */
 class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
-  async run<Input, Result>(command: Command<Input, Result>, input: Input): Promise<Result> {
+  async run<Input, Result, Target extends Versioned | undefined>(
+    command: Command<Input, Result, Target>,
+    input: Input,
+  ): Promise<Result> {
     this.calls.push({ command, input });
-    return command.handle(input, { tx: {} as Transaction<unknown> });
+    const tx = {} as Transaction<unknown>;
+    const target = (await command.target?.load((input as { id: string }).id, { tx })) as Target;
+    return command.handle(input, { tx, target });
   }
 }
 
