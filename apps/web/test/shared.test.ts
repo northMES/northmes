@@ -5,9 +5,9 @@ import { singletons } from '@northmes/web-build';
 import * as WebSdk from '@northmes/web-sdk';
 import * as TanstackRouter from '@tanstack/react-router';
 import * as React from 'react';
-import * as ReactDOM from 'react-dom';
 import * as JsxDevRuntime from 'react/jsx-dev-runtime';
 import * as JsxRuntime from 'react/jsx-runtime';
+import * as ReactDOM from 'react-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { shareSingletons } from '../src/federation.ts';
 
