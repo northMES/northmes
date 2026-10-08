@@ -58,10 +58,12 @@ export function checkRules(subgraphs: readonly SubgraphSdl[]): CompositionProble
     entityRefs,
     types: parse(sdl).definitions.filter(isTypeDefinitionNode),
   }));
+  const entities = entityOwners(parsed);
   return [
     ...parsed.flatMap(rootFieldPrefixProblems),
     ...typeOwnershipProblems(parsed),
-    ...contributedFieldProblems(parsed),
+    ...entities.problems,
+    ...contributedFieldProblems(parsed, entities.owners),
   ];
 }
 
@@ -117,8 +119,10 @@ function typeOwnershipProblems(subgraphs: readonly ParsedSubgraph[]): Compositio
  * reference itself, and an @external field repeats the owner's field for @requires; neither is a
  * contribution.
  */
-function contributedFieldProblems(subgraphs: readonly ParsedSubgraph[]): CompositionProblem[] {
-  const owners = entityOwners(subgraphs);
+function contributedFieldProblems(
+  subgraphs: readonly ParsedSubgraph[],
+  owners: ReadonlyMap<string, string>,
+): CompositionProblem[] {
   const problems: CompositionProblem[] = [];
   for (const { name, types, entityRefs } of subgraphs) {
     for (const type of types) {
@@ -141,17 +145,33 @@ function contributedFieldProblems(subgraphs: readonly ParsedSubgraph[]): Composi
   return problems;
 }
 
-/** The subgraph that owns each entity: the one that defines it without referencing it. */
-function entityOwners(subgraphs: readonly ParsedSubgraph[]): Map<string, string> {
+/**
+ * The subgraph that owns each entity: the one that defines it without referencing it.
+ * NORTHMES_TYPE_OWNERSHIP for entities: a second subgraph that defines an entity without listing it
+ * in entityRefs claims to own it as well, and is a problem.
+ */
+function entityOwners(subgraphs: readonly ParsedSubgraph[]): {
+  readonly owners: ReadonlyMap<string, string>;
+  readonly problems: CompositionProblem[];
+} {
   const owners = new Map<string, string>();
+  const problems: CompositionProblem[] = [];
   for (const { name, types, entityRefs } of subgraphs) {
     for (const type of types) {
-      if (hasDirective(type, 'key') && !entityRefs.includes(type.name.value)) {
-        owners.set(type.name.value, name);
+      const typeName = type.name.value;
+      if (!hasDirective(type, 'key') || entityRefs.includes(typeName)) continue;
+      const owner = owners.get(typeName);
+      if (owner === undefined) {
+        owners.set(typeName, name);
+        continue;
       }
+      problems.push({
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message: `${typeName} is defined as an entity in subgraphs "${owner}" and "${name}"; one module owns an entity and other modules reference it through entityRef`,
+      });
     }
   }
-  return owners;
+  return { owners, problems };
 }
 
 /**
