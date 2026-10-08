@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixture modules whose validators the host refuses at boot (ADR 0037): hold-rules validates a
-// command that dispatch does not declare validatable, and stray-rules validates dispatch.releaseJob
-// without depending on dispatch.
+// command that dispatch does not declare validatable, stray-rules validates dispatch.releaseJob
+// without depending on dispatch, and patient-rules gives its validators time limits that the host
+// does not allow.
 import { Module } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
 import { defineModule } from '@northmes/sdk';
@@ -55,4 +56,32 @@ export const strayRules = defineModule({
   version: '0.0.0',
   northmes: '>=0.0.0-0 <0.1.0-0',
   server: async () => ({ default: StrayRulesModule }),
+});
+
+export const PatientCheck = CommandValidator(releaseJob, {
+  name: 'patient-check',
+  timeoutMs: 60_000,
+  async check() {
+    return { verdict: 'pass' };
+  },
+});
+
+export const InstantCheck = CommandValidator(releaseJob, {
+  name: 'instant-check',
+  timeoutMs: 0,
+  async check() {
+    return { verdict: 'pass' };
+  },
+});
+
+@Module({ providers: [PatientCheck, InstantCheck] })
+export class PatientRulesModule {}
+
+/** Depends on dispatch, but one validator's limit is longer than the host allows, one's is 0. */
+export const patientRules = defineModule({
+  id: 'patient-rules',
+  version: '0.0.0',
+  northmes: '>=0.0.0-0 <0.1.0-0',
+  dependsOn: ['dispatch'],
+  server: async () => ({ default: PatientRulesModule }),
 });
