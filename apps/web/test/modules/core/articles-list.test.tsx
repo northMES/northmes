@@ -8,22 +8,13 @@ import {
   articleRange,
   articlesPage,
   articlesQuery,
+  bodyRows,
   firstPage,
   plant,
   renderCoreAt,
 } from './core-app.tsx';
 
 afterEach(cleanup);
-
-/** The text of each cell of each body row of the table. */
-function bodyRows(table: HTMLElement): (string | null)[][] {
-  const [, ...rows] = within(table).getAllByRole('row');
-  return rows.map((row) =>
-    within(row)
-      .getAllByRole('cell')
-      .map((cell) => cell.textContent),
-  );
-}
 
 describe('articles list', () => {
   it('E06-S06 the articles list shows the first 25 articles by article number with the row range, each number a link to its article', async () => {

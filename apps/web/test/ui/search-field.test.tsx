@@ -76,4 +76,12 @@ describe('SearchField', () => {
     ).toBe('');
     expect(onSearch).not.toHaveBeenCalled();
   });
+
+  it('E06-S06 the field gives its input the id it takes, so a page can move focus to it', () => {
+    render(
+      <SearchField id="articles-search" label="Search articles" value="" onSearch={vi.fn()} />,
+    );
+
+    expect(screen.getByRole('searchbox', { name: 'Search articles' }).id).toBe('articles-search');
+  });
 });

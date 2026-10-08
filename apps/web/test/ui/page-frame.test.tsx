@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Button } from '../../src/ui/button.tsx';
-import { PageFrame } from '../../src/ui/page-frame.tsx';
+import { PageFrame, type PageState } from '../../src/ui/page-frame.tsx';
 
 afterEach(cleanup);
 
@@ -138,5 +139,69 @@ describe('PageFrame', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('heading', { level: 1, name: 'Articles' }),
     );
+  });
+
+  it('E06-S06 when the action of an empty state takes the state and the focus away, focus moves to the h1', async () => {
+    const user = userEvent.setup();
+    function OutOfDate() {
+      const [state, setState] = useState<PageState>({
+        status: 'empty',
+        title: 'This page of results is out of date',
+        description: 'The rows changed since this link was made.',
+        action: (
+          <Button onClick={() => setState({ status: 'loading' })}>Go to the first page</Button>
+        ),
+      });
+      return (
+        <PageFrame title="Articles" state={state}>
+          <p>Rows</p>
+        </PageFrame>
+      );
+    }
+    render(<OutOfDate />);
+
+    await user.click(screen.getByRole('button', { name: 'Go to the first page' }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { level: 1, name: 'Articles' }),
+      ),
+    );
+  });
+
+  it('E06-S06 when the action of an empty state moves focus itself, the focus stays there', async () => {
+    const user = userEvent.setup();
+    function FilteredEmpty() {
+      const [state, setState] = useState<PageState>({
+        status: 'empty',
+        title: 'No articles match these filters',
+        description: 'Change or clear the filters to see articles again.',
+        action: (
+          <Button
+            onClick={() => {
+              setState({ status: 'loading' });
+              document.getElementById('search')?.focus();
+            }}
+          >
+            Clear filters
+          </Button>
+        ),
+      });
+      return (
+        <PageFrame
+          title="Articles"
+          toolbar={<input id="search" aria-label="Search" />}
+          state={state}
+        >
+          <p>Rows</p>
+        </PageFrame>
+      );
+    }
+    render(<FilteredEmpty />);
+
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Search' }));
   });
 });
