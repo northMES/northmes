@@ -22,4 +22,10 @@ describe('gen:migration', () => {
     );
     expect(sql).not.toMatch(/\bfor\s+all\b/i);
   });
+
+  it("E02-S02 the file is named with the UTC timestamp and the slug in the module's migrations folder", () => {
+    const { path } = render({ module: 'production-start', slug: 'work_note', now });
+
+    expect(path).toBe('modules/production-start/migrations/20261008190405_work_note.sql');
+  });
 });
