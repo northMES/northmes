@@ -19,6 +19,17 @@ describe('defineModuleLinks', () => {
     );
   });
 
+  it('E02-S05 a . or .. param value throws, because URL parsing would drop it or climb out', () => {
+    expect(new URL('/plant-a/planning/orders/..', 'http://localhost').pathname).toBe(
+      '/plant-a/planning/',
+    );
+    for (const orderId of ['.', '..']) {
+      expect(() => links.orders.order({ plant: 'plant-a', orderId }), orderId).toThrow(
+        `Link /$plant/planning/orders/$orderId has the value ${JSON.stringify(orderId)} for orderId, which is not a path segment`,
+      );
+    }
+  });
+
   it('E02-S05 a builder returns its route pattern as to, with the params and search it was given', () => {
     expect(links.orders({ plant: 'plant-a' }, { q: '1001' })).toEqual({
       to: '/$plant/planning/orders',
