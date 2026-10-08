@@ -37,9 +37,9 @@ export function hostFactoryWithWebFiles(webDir: string): HostFactory {
 function createHostFactory(webDir?: string): HostFactory {
   return async ({ modules, config }) => {
     const catalog = await inRepoCatalog((specifier) => import(specifier), { modules });
-    const subgraphs = await importServers(catalog);
+    const servers = await importServers(catalog);
     const app = await NestFactory.create<NestExpressApplication>(
-      AppModule.forRoot(config, subgraphs),
+      AppModule.forRoot(config, servers),
       {
         logger: ['error', 'warn'],
         abortOnError: false,
