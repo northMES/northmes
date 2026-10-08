@@ -41,6 +41,31 @@ export type LinkBuilder<Pattern extends string> = (
   search?: LinkSearch,
 ) => ModuleLink<Pattern>;
 
+/** What linkEntry reads from a link manifest entry. */
+export interface LinkEntry<Pattern extends string = string> {
+  /** The entry's path below its parent entry, as the manifest declares it. */
+  readonly path: string;
+  /** The entry's route pattern, which starts with /$plant/<moduleId>. */
+  readonly pattern: Pattern;
+}
+
+// The key of the entry a builder carries. Only this module holds it, so no entry name can take it,
+// and a builder's string keys stay the names of its child entries.
+const entryKey: unique symbol = Symbol('link entry');
+
+/** A builder of a link manifest, which carries the entry that linkEntry reads. */
+export interface LinkNode<Pattern extends string> {
+  readonly [entryKey]: LinkEntry<Pattern>;
+}
+
+/**
+ * Reads the path and the route pattern of a link manifest entry from its builder, without calling
+ * it. A route takes its path from here, so each path is written once (ADR 0062).
+ */
+export function linkEntry<Pattern extends string>(node: LinkNode<Pattern>): LinkEntry<Pattern> {
+  return node[entryKey];
+}
+
 type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
   readonly children: infer Children extends LinkEntryDefinitions;
 }
@@ -49,6 +74,7 @@ type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
 
 // The builder of the entry at the route pattern Pattern, carrying its children's builders.
 type EntryLinks<Pattern extends string, Entry extends LinkEntryDefinition> = LinkBuilder<Pattern> &
+  LinkNode<Pattern> &
   ModuleLinks<Pattern, ChildEntries<Entry>>;
 
 /** The builders of the entries below the route pattern Parent. */
@@ -89,7 +115,8 @@ function builders(parent: string, entries: LinkEntryDefinitions): Record<string,
         search,
         href: href(pattern, params, search),
       });
-      return [name, Object.assign(build, builders(pattern, entry.children ?? {}))];
+      const node = { [entryKey]: { path: entry.path, pattern } };
+      return [name, Object.assign(build, node, builders(pattern, entry.children ?? {}))];
     }),
   );
 }
