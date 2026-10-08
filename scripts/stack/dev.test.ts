@@ -1,5 +1,7 @@
+import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it } from 'vitest';
 import { devPlan, webRemotes } from './dev.mjs';
+import { seedScopes } from './seed.mjs';
 
 // The ports the stack hands pnpm dev: the server's PORT and one port each for the shell and the
 // planning remote, which freePorts takes apart from the server's.
@@ -82,5 +84,17 @@ describe('devPlan', () => {
       ['/health', 'http://127.0.0.1:41001'],
       ['/modules', 'http://127.0.0.1:41001'],
     ]);
+  });
+
+  it('E02-S08 the printed board URL is planningLinks.board for the seeded plant', async () => {
+    const plan = await devPlan(ports);
+
+    // The seed plant's board on the shell's origin, which the browser opens.
+    expect(plan.boardUrl).toBe(
+      'http://127.0.0.1:41002/019a0000-0000-7000-8000-00000000a001/planning/board',
+    );
+    expect(new URL(plan.boardUrl).pathname).toBe(
+      planningLinks.board({ plant: seedScopes.plant }).href,
+    );
   });
 });
