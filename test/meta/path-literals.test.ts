@@ -24,4 +24,25 @@ describe('path-literals', () => {
       { path: 'modules/planning/web/src/board.tsx', line: 6, literal: '/x' },
     ]);
   });
+
+  it('E02-S05 a path literal in href= or inside a JSX expression fails', () => {
+    const text = [
+      'export const menu = (',
+      '  <nav>',
+      '    <a href="/">Home</a>',
+      "    <ModuleLink href={'/plant-a/planning'}>Planning</ModuleLink>",
+      '    <Navigate to={"/x"} />',
+      '  </nav>',
+      ');',
+      '',
+    ].join('\n');
+
+    const findings = scan([{ path: 'apps/web/src/menu.tsx', text }], []);
+
+    expect(findings).toEqual([
+      { path: 'apps/web/src/menu.tsx', line: 3, literal: '/' },
+      { path: 'apps/web/src/menu.tsx', line: 4, literal: '/plant-a/planning' },
+      { path: 'apps/web/src/menu.tsx', line: 5, literal: '/x' },
+    ]);
+  });
 });
