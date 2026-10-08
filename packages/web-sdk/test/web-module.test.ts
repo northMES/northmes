@@ -29,5 +29,8 @@ describe('validateWebModule', () => {
     expect(validateWebModule({ ...planning, version: '0.3.0' }, entry)).toEqual([
       'version is 0.3.0, expected 0.4.0 from the server entry',
     ]);
+    expect(validateWebModule({ ...planning, routes: routesAt('board') }, entry)).toEqual([
+      'the top route path is board, expected the module id planning',
+    ]);
   });
 });
