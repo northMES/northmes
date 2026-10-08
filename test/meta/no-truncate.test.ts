@@ -63,4 +63,44 @@ describe('no-truncate', () => {
       { path, line: 4 },
     ]);
   });
+
+  it('E02-S02 a comment that names grant does not hide the TRUNCATE grant after it', () => {
+    const path = 'modules/core/migrations/20261008120300_article.sql';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          '-- grant read access on the table',
+          'grant all on core.article to nm_app;',
+          '/* grant the owner',
+          '   on its own */',
+          'grant select, truncate on core.article to nm_app;',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 2 },
+      { path, line: 5 },
+    ]);
+  });
+
+  it('E02-S02 a TRUNCATE grant inside a line or block comment is not a finding', () => {
+    const findings = scan([
+      {
+        path: 'modules/core/migrations/20261008120400_article.sql',
+        text: [
+          '-- grant truncate on core.article to nm_app;',
+          '/* grant all on core.article to nm_app; */',
+          '/*',
+          '  grant select, truncate on core.article to nm_app;',
+          '*/',
+          'grant select on core.article to nm_app;',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
 });
