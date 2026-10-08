@@ -131,6 +131,14 @@ describe('the stack script', () => {
     ]);
   });
 
+  it('E06-S02 the seed holds 60 articles with distinct codes at the seed plant, so the article list pages', async () => {
+    const [counts] = await readAtSeedPlant(
+      'select count(*)::int as articles, count(distinct code_key)::int as codes from core.article',
+    );
+
+    expect(counts).toEqual({ articles: 60, codes: 60 });
+  });
+
   it('E02-S08 a second run applies no migration and adds no seed rows', {
     timeout: 120_000,
   }, async () => {
