@@ -154,4 +154,20 @@ describe('no-truncate', () => {
       { path, line: 8 },
     ]);
   });
+
+  it('E02-S02 a nested block comment ends at its last closing marker, as in Postgres', () => {
+    const path = 'modules/core/migrations/20261008120600_article.sql';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          '/* outer /* inner */ -- outer tail */ grant truncate on core.article to nm_app;',
+          '/* outer /* grant truncate on core.article to nm_app; */ still a comment */',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([{ path, line: 1 }]);
+  });
 });
