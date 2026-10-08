@@ -77,7 +77,15 @@ async function dbBootstrap(env: Record<string, string>): Promise<void> {
 }
 
 beforeAll(async () => {
-  server = await startPostgres();
+  // The server logs every statement, with its duration and on any error, so a role statement that
+  // reaches the log carries its password there.
+  server = await startPostgres({
+    settings: {
+      log_statement: 'all',
+      log_min_duration_statement: '0',
+      log_min_error_statement: 'debug5',
+    },
+  });
   secretsDir = mkdtempSync(join(tmpdir(), 'northmes-bootstrap-'));
   const { host, port, user, password, database } = server.connection;
   superuserUrl = urlFor(user, password);
@@ -167,6 +175,25 @@ describe('pnpm northmes db bootstrap', () => {
       [{ current_user: 'nm_app' }],
       [{ current_user: 'nm_auth' }],
     ]);
+  });
+
+  it('E02-S02 bootstrap writes no role password to the server log', async () => {
+    const probe = `nm_log_probe_${randomBytes(4).toString('hex')}`;
+    // The probe runs after bootstrap, so once it is in the log, every line bootstrap caused is too.
+    await query(superuserUrl, `select '${probe}'`);
+    await vi.waitFor(
+      async () => {
+        expect(await server.logs()).toContain(probe);
+      },
+      { timeout: 5_000 },
+    );
+
+    const log = await server.logs();
+    const logged = Object.entries(passwords)
+      .filter(([, password]) => log.includes(password))
+      .map(([role]) => role);
+
+    expect(logged).toEqual([]);
   });
 
   it('E02-S02 a second bootstrap changes nothing', async () => {
