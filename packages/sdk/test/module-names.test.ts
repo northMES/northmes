@@ -13,4 +13,8 @@ describe('moduleNames', () => {
   it('E02-S01 the owner role of production-start is nm_mod_production_start', () => {
     expect(moduleNames('production-start').ownerRole).toBe('nm_mod_production_start');
   });
+
+  it('E02-S01 the remote name of production-start is productionStart', () => {
+    expect(moduleNames('production-start').remote).toBe('productionStart');
+  });
 });
