@@ -1,6 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';
 import { bootBuilt } from '@northmes/testing';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -135,5 +137,20 @@ describe('the stack script', () => {
     await prepareDatabase(stackEnv(), { northmes });
 
     expect(await databaseState()).toEqual(before);
+  });
+
+  it('E02-S08 the stack hands the server an environment it accepts, with a free PORT and its origin', async () => {
+    const env = stackEnv();
+    const { PORT, NORTHMES_PUBLIC_ORIGIN } = loadEnv(serverEnvSchema)(env);
+
+    expect(NORTHMES_PUBLIC_ORIGIN).toBe(`http://127.0.0.1:${PORT}`);
+    // The server listens on PORT at 127.0.0.1, so the port must be free there.
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(PORT, '127.0.0.1', resolve);
+    });
+    await new Promise((resolve) => server.close(resolve));
+    expect(PORT).toBeGreaterThan(0);
   });
 });
