@@ -50,7 +50,7 @@ function PlantLayout({ modules, clientFor }: PlantLayoutProps) {
   return (
     <ApolloProvider client={clientFor(plant)}>
       <ShellProvider value={{ plantId: plant }}>
-        <Menu modules={modules} />
+        <Menu modules={modules} plant={plant} />
         <main>
           <Outlet />
         </main>
