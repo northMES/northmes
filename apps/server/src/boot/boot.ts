@@ -25,6 +25,7 @@ import { migrationsDirOf } from '../migrate/files.ts';
 import { checkPending, type MigrationCheckMode } from '../migrate/pending.ts';
 import { inRepoManifests } from '../modules.ts';
 import { pluginManifestUrl } from '../plugins/manifest-url.ts';
+import { installResolveHook } from '../plugins/resolve-hook.ts';
 import { builtShellDir, webDirOf } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
 import { BootError } from './boot-error.ts';
@@ -234,6 +235,7 @@ async function bootSteps<
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
   const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile);
+  installResolveHook(pluginRoots);
   // A plugin's manifest is a file of its own, so its URL is a specifier and a file of its package.
   const pluginManifests = pluginRoots.map(pluginManifestUrl);
   const entries = [
