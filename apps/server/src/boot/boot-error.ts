@@ -16,6 +16,7 @@ export class BootError extends Error {
 }
 
 function listProblems(problems: readonly string[]): string {
-  const header = `refused to start (${problems.length} problems)`;
+  const count = problems.length === 1 ? '1 problem' : `${problems.length} problems`;
+  const header = `refused to start (${count})`;
   return [header, ...problems.map((problem) => `- ${problem}`)].join('\n');
 }
