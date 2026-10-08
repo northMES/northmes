@@ -46,6 +46,18 @@ export class ValidatorFailed extends Error {
 }
 
 /**
+ * Freezes a value and every object and array in it, so a validator that assigns to its payload
+ * throws instead of changing it (ADR 0037).
+ */
+function deepFreeze<Value>(value: Value): Value {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const property of Object.values(value)) deepFreeze(property);
+  }
+  return value;
+}
+
+/**
  * Runs a validator's check within its time limit. A check that throws or has not answered by then
  * throws ValidatorFailed.
  */
@@ -137,7 +149,7 @@ export class CommandBusImpl implements CommandBus {
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }
-          const verdict = await checkWithinLimit(registered, parsed.data);
+          const verdict = await checkWithinLimit(registered, deepFreeze(parsed.data));
           if (verdict.verdict === 'veto') throw new CommandRejected(module, verdict.message);
         }
       }
