@@ -5,6 +5,7 @@ import {
   Kind,
   type ObjectTypeDefinitionNode,
   parse,
+  type TypeDefinitionNode,
 } from 'graphql';
 
 /** What the NorthMES rules read of a subgraph. */
@@ -39,38 +40,45 @@ function isFederationType(type: string): boolean {
   return ['_Service', '_Any', '_Entity'].includes(type) || /^(link|federation)__/.test(type);
 }
 
+/** A subgraph with the type definitions of its SDL, which every rule reads. */
+interface ParsedSubgraph {
+  readonly name: string;
+  readonly entityRefs: readonly string[];
+  readonly types: readonly TypeDefinitionNode[];
+}
+
 /**
  * The NorthMES rules that composition runs before composeServices (ADR 0015). Returns every
- * problem, in subgraph order, and an empty list when the subgraphs keep every rule.
+ * problem, rule by rule and in subgraph order, and an empty list when the subgraphs keep every
+ * rule.
  */
 export function checkRules(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
+  const parsed = subgraphs.map(({ name, sdl, entityRefs }) => ({
+    name,
+    entityRefs,
+    types: parse(sdl).definitions.filter(isTypeDefinitionNode),
+  }));
   return [
-    ...subgraphs.flatMap(rootFieldPrefixProblems),
-    ...typeOwnershipProblems(subgraphs),
-    ...contributedFieldProblems(subgraphs),
+    ...parsed.flatMap(rootFieldPrefixProblems),
+    ...typeOwnershipProblems(parsed),
+    ...contributedFieldProblems(parsed),
   ];
 }
 
 /**
- * NORTHMES_TYPE_OWNERSHIP: a type that is not an entity is defined in one subgraph, the module
- * that owns it. An entity is defined in its owner and in every module that references it.
+ * NORTHMES_ROOT_FIELD_PREFIX: every Query, Mutation and Subscription field starts with the
+ * subgraph's GraphQL name and an upper-case letter, as planningReleaseProductionOrder does.
  */
-function typeOwnershipProblems(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
-  const owners = new Map<string, string>();
+function rootFieldPrefixProblems({ name, types }: ParsedSubgraph): CompositionProblem[] {
+  const prefixed = new RegExp(`^${name}[A-Z]`);
   const problems: CompositionProblem[] = [];
-  for (const { name, sdl } of subgraphs) {
-    for (const definition of parse(sdl).definitions) {
-      if (!isTypeDefinitionNode(definition) || isEntity(definition)) continue;
-      const type = definition.name.value;
-      if (rootTypes.has(type) || isFederationType(type) || sharedTypes.has(type)) continue;
-      const owner = owners.get(type);
-      if (owner === undefined) {
-        owners.set(type, name);
-        continue;
-      }
+  for (const type of types) {
+    if (type.kind !== Kind.OBJECT_TYPE_DEFINITION || !rootTypes.has(type.name.value)) continue;
+    for (const field of type.fields ?? []) {
+      if (prefixed.test(field.name.value) || federationRootFields.has(field.name.value)) continue;
       problems.push({
-        code: 'NORTHMES_TYPE_OWNERSHIP',
-        message: `${type} is defined in subgraphs "${owner}" and "${name}"; one module owns a type that is not an entity`,
+        code: 'NORTHMES_ROOT_FIELD_PREFIX',
+        message: `${type.name.value}.${field.name.value} of subgraph "${name}" must start with "${name}" and an upper-case letter`,
       });
     }
   }
@@ -78,20 +86,25 @@ function typeOwnershipProblems(subgraphs: readonly SubgraphSdl[]): CompositionPr
 }
 
 /**
- * NORTHMES_ROOT_FIELD_PREFIX: every Query, Mutation and Subscription field starts with the
- * subgraph's GraphQL name and an upper-case letter, as planningReleaseProductionOrder does.
+ * NORTHMES_TYPE_OWNERSHIP: a type that is not an entity is defined in one subgraph, the module
+ * that owns it. An entity is defined in its owner and in every module that references it.
  */
-function rootFieldPrefixProblems({ name, sdl }: SubgraphSdl): CompositionProblem[] {
-  const prefixed = new RegExp(`^${name}[A-Z]`);
+function typeOwnershipProblems(subgraphs: readonly ParsedSubgraph[]): CompositionProblem[] {
+  const owners = new Map<string, string>();
   const problems: CompositionProblem[] = [];
-  for (const definition of parse(sdl).definitions) {
-    if (definition.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
-    if (!rootTypes.has(definition.name.value)) continue;
-    for (const field of definition.fields ?? []) {
-      if (prefixed.test(field.name.value) || federationRootFields.has(field.name.value)) continue;
+  for (const { name, types } of subgraphs) {
+    for (const type of types) {
+      const typeName = type.name.value;
+      if (hasDirective(type, 'key') || rootTypes.has(typeName)) continue;
+      if (isFederationType(typeName) || sharedTypes.has(typeName)) continue;
+      const owner = owners.get(typeName);
+      if (owner === undefined) {
+        owners.set(typeName, name);
+        continue;
+      }
       problems.push({
-        code: 'NORTHMES_ROOT_FIELD_PREFIX',
-        message: `${definition.name.value}.${field.name.value} of subgraph "${name}" must start with "${name}" and an upper-case letter`,
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message: `${typeName} is defined in subgraphs "${owner}" and "${name}"; one module owns a type that is not an entity`,
       });
     }
   }
@@ -104,23 +117,23 @@ function rootFieldPrefixProblems({ name, sdl }: SubgraphSdl): CompositionProblem
  * reference itself, and an @external field repeats the owner's field for @requires; neither is a
  * contribution.
  */
-function contributedFieldProblems(subgraphs: readonly SubgraphSdl[]): CompositionProblem[] {
+function contributedFieldProblems(subgraphs: readonly ParsedSubgraph[]): CompositionProblem[] {
   const owners = entityOwners(subgraphs);
   const problems: CompositionProblem[] = [];
-  for (const { name, sdl, entityRefs } of subgraphs) {
-    for (const definition of parse(sdl).definitions) {
-      if (definition.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
-      const entity = definition.name.value;
-      if (!entityRefs.includes(entity)) continue;
-      const keyFields = keyFieldsOf(definition);
-      const owner = owners.get(entity);
+  for (const { name, types, entityRefs } of subgraphs) {
+    for (const type of types) {
+      if (type.kind !== Kind.OBJECT_TYPE_DEFINITION || !entityRefs.includes(type.name.value)) {
+        continue;
+      }
+      const keyFields = keyFieldsOf(type);
+      const owner = owners.get(type.name.value);
       const ownedBy = owner === undefined ? 'another module' : `subgraph "${owner}"`;
-      for (const field of definition.fields ?? []) {
-        if (keyFields.has(field.name.value) || isExternal(field)) continue;
+      for (const field of type.fields ?? []) {
+        if (keyFields.has(field.name.value) || hasDirective(field, 'external')) continue;
         if (field.type.kind !== Kind.NON_NULL_TYPE) continue;
         problems.push({
           code: 'NORTHMES_CONTRIBUTED_FIELD_NULLABLE',
-          message: `${entity}.${field.name.value} must be nullable: subgraph "${name}" adds it to an entity that ${ownedBy} owns`,
+          message: `${type.name.value}.${field.name.value} must be nullable: subgraph "${name}" adds it to an entity that ${ownedBy} owns`,
         });
       }
     }
@@ -129,31 +142,33 @@ function contributedFieldProblems(subgraphs: readonly SubgraphSdl[]): Compositio
 }
 
 /** The subgraph that owns each entity: the one that defines it without referencing it. */
-function entityOwners(subgraphs: readonly SubgraphSdl[]): Map<string, string> {
+function entityOwners(subgraphs: readonly ParsedSubgraph[]): Map<string, string> {
   const owners = new Map<string, string>();
-  for (const { name, sdl, entityRefs } of subgraphs) {
-    for (const definition of parse(sdl).definitions) {
-      if (definition.kind !== Kind.OBJECT_TYPE_DEFINITION || !isEntity(definition)) continue;
-      if (!entityRefs.includes(definition.name.value)) owners.set(definition.name.value, name);
+  for (const { name, types, entityRefs } of subgraphs) {
+    for (const type of types) {
+      if (hasDirective(type, 'key') && !entityRefs.includes(type.name.value)) {
+        owners.set(type.name.value, name);
+      }
     }
   }
   return owners;
 }
 
-/** Whether a field carries @external: the owner resolves it, and its type repeats the owner's. */
-function isExternal(field: { readonly directives?: readonly ConstDirectiveNode[] }): boolean {
-  return (field.directives ?? []).some((directive) => directive.name.value === 'external');
-}
-
-/** Whether a type definition carries @key, which makes it an entity. */
-function isEntity(definition: { readonly directives?: readonly ConstDirectiveNode[] }): boolean {
-  return (definition.directives ?? []).some((directive) => directive.name.value === 'key');
+/**
+ * Whether a type or field carries the directive. @key makes a type an entity, and @external marks
+ * a field that the entity's owner resolves.
+ */
+function hasDirective(
+  node: { readonly directives?: readonly ConstDirectiveNode[] },
+  directive: 'key' | 'external',
+): boolean {
+  return (node.directives ?? []).some((candidate) => candidate.name.value === directive);
 }
 
 /** The top-level fields of every @key of an entity, such as id for @key(fields: "id"). */
-function keyFieldsOf(definition: ObjectTypeDefinitionNode): Set<string> {
+function keyFieldsOf(entity: ObjectTypeDefinitionNode): Set<string> {
   const fields = new Set<string>();
-  for (const directive of definition.directives ?? []) {
+  for (const directive of entity.directives ?? []) {
     if (directive.name.value !== 'key') continue;
     const fieldSet = directive.arguments?.find((argument) => argument.name.value === 'fields');
     if (fieldSet?.value.kind !== Kind.STRING) continue;
