@@ -57,12 +57,16 @@ describe('BoardScreen', () => {
       'Bracket 40 mm',
       '40.000000',
       'planned',
+      '1',
+      'Release',
     ]);
     expect(cells(within(board).getByTestId('order-7102'))).toEqual([
       '7102',
       'Hinge pin',
       '12.500000',
       'released',
+      '2',
+      '',
     ]);
     expect(within(board).getByTestId('article-7102').textContent).toBe('Hinge pin');
     expect(within(board).getByTestId('status-7102').textContent).toBe('released');

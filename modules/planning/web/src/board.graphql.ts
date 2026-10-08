@@ -11,6 +11,8 @@ export interface BoardOrder {
   /** Decimal text with six decimals. */
   readonly quantity: string;
   readonly status: string;
+  /** Starts at 1 and grows by 1 with every change of the order. */
+  readonly version: number;
   /** Null when core holds no article for the order's article id. */
   readonly article: {
     readonly __typename: 'Article';
@@ -30,6 +32,7 @@ export const PlanningBoard: TypedDocumentNode<
       number
       quantity
       status
+      version
       article {
         id
         name
