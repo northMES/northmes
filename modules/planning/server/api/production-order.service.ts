@@ -15,6 +15,8 @@ export interface ProductionOrderRecord {
   /** The numeric(18,6) quantity as decimal text, such as 12.500000. */
   readonly quantity: string;
   readonly status: ProductionOrderStatus;
+  /** Grows by one with every change to the order. */
+  readonly version: number;
 }
 
 /**
@@ -30,7 +32,7 @@ export class ProductionOrderService {
     return this.db.transaction((tx) =>
       tx
         .selectFrom('planning.production_order')
-        .select(['id', 'number', 'article_id as articleId', 'quantity', 'status'])
+        .select(['id', 'number', 'article_id as articleId', 'quantity', 'status', 'version'])
         .orderBy('number')
         .orderBy('id')
         .execute(),

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject } from '@nestjs/common';
-import { Field, ID, ObjectType, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
+import { Field, ID, Int, ObjectType, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { graphqlKit } from '@northmes/sdk/graphql';
 import {
   type ProductionOrderRecord,
@@ -22,6 +22,8 @@ export class ProductionOrder {
   @Field(() => String) quantity!: string;
   /** planned or released. */
   @Field(() => String) status!: string;
+  /** Grows by one with every change to the order. */
+  @Field(() => Int) version!: number;
 }
 
 @Resolver(() => ProductionOrder)
