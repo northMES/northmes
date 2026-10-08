@@ -25,6 +25,7 @@ let secretsRead: Secrets | undefined;
 function readSecretFile(path: string): { value: string } | { problem: string } {
   const stats = statSync(path, { throwIfNoEntry: false });
   if (stats === undefined) return { problem: 'must point at an existing file' };
+  if (!stats.isFile()) return { problem: 'must point at a regular file' };
   // install.sh writes each secret 0440 for root and the app's group, so group read passes and
   // only read by others is refused (ADR 0047).
   if ((stats.mode & 0o004) !== 0) {
