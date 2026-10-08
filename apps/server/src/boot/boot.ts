@@ -17,8 +17,8 @@ import { inRepoManifests } from '../modules.ts';
 import { BootError } from './boot-error.ts';
 
 export interface BootOptions {
-  /** The environment the server runs with. main.ts passes process.env. */
-  readonly env: Readonly<Record<string, string | undefined>>;
+  /** The environment the server runs with. Without it, loadEnv reads process.env (ADR 0060). */
+  readonly env?: Readonly<Record<string, string | undefined>>;
   /** Imports the manifest module that a specifier names. main.ts passes a dynamic import. */
   readonly importManifest: (specifier: string) => Promise<{ default: ModuleManifest }>;
   /** Ends the process with an exit code. main.ts passes process.exit. */
@@ -55,7 +55,7 @@ async function loadConfig(env: BootOptions['env']) {
     ignoreEnvFile: true,
     cache: true,
     // forRoot would validate process.env. Boot validates the environment it was given instead,
-    // which is process.env in main.ts and a record of its own in a test.
+    // which is process.env when main.ts runs it and a record of its own in a test.
     validate: () => serverEnv,
     load: [secretsConfig],
   });
