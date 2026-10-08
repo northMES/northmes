@@ -1777,7 +1777,7 @@ Acceptance criteria:
 - The config loader refuses dev secrets when `NODE_ENV` is production ([ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)).
 - Ports come from binding `127.0.0.1:0`; the server's default port is not 3000, and EADDRINUSE names `PORT`.
 - `.claude/launch.json` has a `handoff-demo` configuration that runs the built `all` process through the stack script.
-- `e2e/skeleton.spec.ts` runs on the built `all` process and covers boot, the remote, the validator veto and the live update; `ci / e2e` runs it.
+- `e2e/skeleton.spec.ts` runs on the built `all` process and covers boot, the remote, the validator veto and the live update; `CI / e2e` runs it.
 - A CI job `fresh-worktree` runs `git worktree add`, `pnpm install --frozen-lockfile` and `pnpm test:int` with no build step.
 
 Tests first:
