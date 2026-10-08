@@ -19,12 +19,13 @@ function failureText(error: ErrorLike): string {
 }
 
 /**
- * One order of the board stub. A planned order has a Release button. The normalized cache merges
- * a release's answer into this order, so the row shows the new status and version without another
- * run of the board's query; a failed release leaves the order as it was and shows the failure.
+ * One order of the board stub. A planned order has a Release button, disabled while its release is
+ * in flight, so a double click sends one release. The normalized cache merges a release's answer
+ * into this order, so the row shows the new status and version without another run of the board's
+ * query; a failed release leaves the order as it was and shows the failure.
  */
 function OrderRow({ order }: { readonly order: BoardOrder }) {
-  const [release, { error }] = useMutation(PlanningReleaseProductionOrder);
+  const [release, { error, loading }] = useMutation(PlanningReleaseProductionOrder);
   return (
     <tr data-testid={`order-${order.number}`}>
       <td>{order.number}</td>
@@ -37,6 +38,7 @@ function OrderRow({ order }: { readonly order: BoardOrder }) {
           <button
             type="button"
             aria-label={`Release order ${order.number}`}
+            disabled={loading}
             onClick={() => release({ variables: { input: { id: order.id } } })}
           >
             Release
