@@ -1,0 +1,146 @@
+# The CI gate for pull requests and pushes to main, as
+# docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md decides it. The main
+# ruleset requires only the check run of the job named "ci / gate", so jobs join or leave the gate
+# without a ruleset edit. Every job that ci / gate needs, except the two pull request checks, runs
+# root pnpm scripts that pnpm check or pnpm check:full contains.
+name: CI
+
+on:
+  # edited re-runs the pull request checks after a fix to the title or body.
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+# No job here needs more than reading the repository.
+permissions:
+  contents: read
+
+jobs:
+  static:
+    name: ci / lint + typecheck + build
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm gen --check
+      - run: pnpm build
+
+  test-utc:
+    name: ci / test (TZ=UTC)
+    permissions:
+      contents: read
+    # Blacksmith through NM_RUNNER_X64 for branches in this repository and main; a GitHub-hosted
+    # runner for pull requests from forks and while the variable is unset.
+    runs-on: >-
+      ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+          && 'ubuntu-24.04'
+          || vars.NM_RUNNER_X64 || 'ubuntu-24.04' }}
+    env:
+      TZ: UTC
+      NM_TEST_PG_TZ: UTC
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  test-stockholm:
+    name: ci / test (TZ=Europe/Stockholm)
+    permissions:
+      contents: read
+    # Blacksmith through NM_RUNNER_X64 for branches in this repository and main; a GitHub-hosted
+    # runner for pull requests from forks and while the variable is unset.
+    runs-on: >-
+      ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+          && 'ubuntu-24.04'
+          || vars.NM_RUNNER_X64 || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:tz
+
+  # The pull request checks read the event, so they run only for pull requests. Their scripts take
+  # the event values from environment variables: interpolated into a run script, a title or body
+  # could inject shell code.
+  pr-title:
+    name: ci / pr title
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-title.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+
+  # Renovate and release pull requests finish no issue and are exempt.
+  linked-issue:
+    name: ci / linked issue
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/linked-issue.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+  # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
+  # so ci / gate always runs and fails itself instead. On a pull request every job it needs runs,
+  # so a skipped one fails it too; a push to main skips only the pull request checks.
+  gate:
+    name: ci / gate
+    # The gate reads only the results of the jobs it needs, so its token gets no permissions.
+    permissions: {}
+    if: always()
+    needs: [static, test-utc, test-stockholm, pr-title, linked-issue]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail when a job that ci / gate needs did not pass
+        if: >-
+          contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+          || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))
+        run: exit 1

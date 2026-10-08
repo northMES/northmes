@@ -46,7 +46,15 @@ describe('gates', () => {
     expect(rootScripts['test:unit']).toBe('vitest run --project unit');
     expect(rootScripts['test:int']).toBe('vitest run --project integration');
     expect(rootScripts['test:ai']).toBe('vitest run --project ai');
-    expect(rootScripts['test:tz']).toBe('vitest run --project tz');
+  });
+
+  // The Stockholm leg runs the unit and integration projects with Node and the test Postgres in
+  // Europe/Stockholm. TZ goes on the command line, because set through Vitest's env option or a
+  // setup file it has no effect on Date (docs/plan/11-quality-and-testing.md).
+  it('pnpm test:tz runs the unit and integration projects with TZ and NM_TEST_PG_TZ set to Europe/Stockholm', () => {
+    expect(rootScripts['test:tz']).toBe(
+      'TZ=Europe/Stockholm NM_TEST_PG_TZ=Europe/Stockholm vitest run --project unit --project integration',
+    );
   });
 
   it('lint, typecheck and build go through turbo', () => {
