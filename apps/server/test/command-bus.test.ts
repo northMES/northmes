@@ -135,4 +135,36 @@ describe('CommandBusImpl', () => {
       ['handle', tx],
     ]);
   });
+
+  it('E02-S04 a veto rejects the command with core.command_rejected naming the vetoing module, rolls back, and the handler does not run', async () => {
+    const database = new FakeScopedDatabase();
+    const handle = vi.fn(async () => ({ released: true }));
+    const command: Command<{ id: string }, { released: boolean }> = {
+      contract: releaseProductionOrder,
+      buildPayload: async () => ({ quantity: { value: 1500, unit: 'pcs' } }),
+      handle,
+    };
+    const quantityLimit = CommandValidator(releaseProductionOrder, {
+      name: 'quantity-limit',
+      check: async ({ quantity }) => ({
+        verdict: 'veto',
+        message: `${quantity.value} ${quantity.unit} is above the release limit of 1000 pcs`,
+      }),
+    });
+    const bus = new CommandBusImpl(database, {
+      modules: ['core', 'planning', 'release-limits'],
+      validators: [{ module: 'release-limits', validator: quantityLimit.validator }],
+    });
+
+    const run = bus.run(command, { id: ORDER_ID });
+
+    await expect(run).rejects.toMatchObject({
+      code: 'core.command_rejected',
+      kind: 'precondition',
+      message: '1500 pcs is above the release limit of 1000 pcs',
+      details: { rejectedBy: 'release-limits' },
+    });
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
 });
