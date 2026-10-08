@@ -8,6 +8,8 @@ export interface CatalogEntry {
   readonly kind: 'module' | 'plugin';
   /** The folder that holds the module's migration files. Without one, the module has none. */
   readonly migrationsDir?: string;
+  /** The folder that holds the module's built web remote. Without one, it serves no remote files. */
+  readonly webDir?: string;
 }
 
 export interface CatalogOptions {
