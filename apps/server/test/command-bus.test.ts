@@ -244,4 +244,32 @@ describe('CommandBusImpl', () => {
     await vi.advanceTimersByTimeAsync(SLOW_CHECK_ANSWERS_AFTER_MS);
     expect(handle).not.toHaveBeenCalled();
   });
+
+  it('E02-S04 a validator that changes its payload throws, because the payload is frozen', async () => {
+    const handle = vi.fn(async () => ({ released: true }));
+    const command: Command<{ id: string }, { released: boolean }> = {
+      contract: releaseProductionOrder,
+      buildPayload: async () => ({ quantity: { value: 1500, unit: 'pcs' } }),
+      handle,
+    };
+    const lowerQuantity = CommandValidator(releaseProductionOrder, {
+      name: 'lower-quantity',
+      check: async (payload) => {
+        payload.quantity.value = 1000;
+        return { verdict: 'pass' };
+      },
+    });
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), {
+      modules: ['core', 'planning', 'release-limits'],
+      validators: [{ module: 'release-limits', validator: lowerQuantity.validator }],
+    });
+
+    const run = bus.run(command, { id: ORDER_ID });
+
+    await expect(run).rejects.toMatchObject({
+      message: 'Unexpected error.',
+      cause: expect.any(TypeError),
+    });
+    expect(handle).not.toHaveBeenCalled();
+  });
 });
