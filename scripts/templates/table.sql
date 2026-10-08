@@ -31,4 +31,4 @@ create policy scope_update on {{schema}}.{{table}} for update to nm_app
 create policy scope_delete on {{schema}}.{{table}} for delete to nm_app
   using (scope_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
 
-grant select, update on {{schema}}.{{table}} to nm_app;
+grant select, insert, update, delete on {{schema}}.{{table}} to nm_app;
