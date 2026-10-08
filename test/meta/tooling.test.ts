@@ -255,6 +255,15 @@ describe('tooling', () => {
     expect(readDevDependencies()['@biomejs/biome']).toBe('catalog:');
   });
 
+  it('@vitest/coverage-v8 is in the strict catalog at the vitest version', () => {
+    // The provider declares a peer dependency on the exact vitest version, so the two catalog pins
+    // move together.
+    const catalog = readWorkspace().catalog ?? {};
+
+    expect(catalog['@vitest/coverage-v8']).toBe(catalog.vitest);
+    expect(readDevDependencies()['@vitest/coverage-v8']).toBe('catalog:');
+  });
+
   it('E02-S03 dataloader 2.2 is in the strict catalog and packages/sdk takes it from the catalog', () => {
     const sdk = JSON.parse(readText('packages/sdk/package.json')) as {
       dependencies?: Record<string, string>;
