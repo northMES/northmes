@@ -45,7 +45,7 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 
 ### Web
 
-* `apps/web` is one Vite React app built to static files. `src/modules.ts` imports each module into one TanStack Router tree with lazy routes, one chunk per module. A runtime `config.json` holds the API URL; the pilot app serves the build.
+* `apps/web` is one Vite React app built to static files. `src/modules.ts` imports each module into one TanStack Router tree with lazy routes, one chunk per module. A runtime `config.json` holds the API URL. Any static host serves the build, and the backend serves no web files; in the pilot's Compose stack Caddy serves it and proxies `/graphql`, `/api` and `/health` to the backend.
 * Kept from ADR 0019: mount points `/$plant` and `/station/$stationId`, no SSR, one Tailwind sheet from `@source` lines, the browser floor and the strict CSP.
 * The module list and `/modules/<id>/<version>/` go. Plant permissions, presentation values and the station mount need another carrier.
 
@@ -68,7 +68,7 @@ ADRs 0010, 0017, 0021, 0022, 0023, 0038, 0039, 0043, 0051, 0052 and 0064 change 
 
 #### Changes to ADR 0002
 
-Role `api` serves the one schema and the built web. Boot runs the root-field check instead of the isolation check and composition, and the degrade rules for remote files go.
+Role `api` serves the one schema and no web files. Boot runs the root-field check instead of the isolation check and composition, and the degrade rules for remote files go.
 
 #### Changes to ADR 0003
 
@@ -89,6 +89,10 @@ Module routes join the one router at build time. Code-based routes and the one A
 #### Changes to ADR 0037
 
 A plugin ships no `web/dist`, and `HOST_PROVIDED` drops `@apollo/subgraph`. The `@requires` field of `example-validator`, which has no story, and the composition in `plugin:check` go.
+
+#### Changes to ADR 0044
+
+Caddy serves the web build with its `config.json` and the strict CSP, and proxies `/graphql`, `/api` and `/health` to `app`. While `app` is down the maintenance page answers the proxied paths, so the stack test checks it on `/health/ready` instead of `GET /`.
 
 #### Changes to ADR 0056
 
