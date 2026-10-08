@@ -1,5 +1,5 @@
 import { planningLinks } from '@northmes/planning-contracts';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { completedBuild, devPlan, superviseDev, webRemotes } from './dev.mjs';
 import type { run, start } from './processes.mjs';
 import { seedScopes } from './seed.mjs';
@@ -166,6 +166,7 @@ function fakeDev() {
   const events: string[] = [];
   const env = new Map<string, Readonly<Record<string, string>> | undefined>();
   const printers = new Map<string, (line: string) => void>();
+  const watchers = new Map<string, () => void>();
   const stack = {
     env: { DATABASE_URL: 'postgres://127.0.0.1:41000/northmes', PORT: '41001' },
     stop: async () => {
@@ -201,7 +202,18 @@ function fakeDev() {
     envOf: (name: string) => env.get(name),
     /** Prints line as the process with this name. */
     print: (name: string, line: string) => printers.get(name)?.(line),
-    options: { stack, start: startFake, run: runFake },
+    /** The folders that pnpm dev watches. */
+    watched: () => [...watchers.keys()],
+    /** Changes a file in dir, a folder that pnpm dev watches. */
+    change: (dir: string) => watchers.get(dir)?.(),
+    options: {
+      stack,
+      start: startFake,
+      run: runFake,
+      watch: (dir: string, changed: () => void) => {
+        watchers.set(dir, changed);
+      },
+    },
   };
 }
 
@@ -223,5 +235,26 @@ describe('superviseDev', () => {
     ]);
     // The server connects to the stack's database and listens on the stack's PORT.
     expect(dev.envOf('server')).toEqual(dev.stack.env);
+  });
+
+  it('E02-S08 a changed migration file makes pnpm dev run northmes migrate once and then restart the server', async () => {
+    const dev = fakeDev();
+    superviseDev({ plan: await devPlan(ports), ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+    dev.events.length = 0;
+
+    // An editor writes a file in several steps, and each step is a change.
+    dev.change('modules/planning/migrations');
+    dev.change('modules/planning/migrations');
+    dev.change('modules/planning/migrations');
+    await vi.waitFor(() => expect(dev.events).toContain('run migrate'));
+    await settle();
+
+    expect(dev.watched()).toEqual(['modules/core/migrations', 'modules/planning/migrations']);
+    expect(dev.events).toEqual(['run migrate', 'stop server', 'start server']);
+    // migrate reads the owner's password file that the stack's environment names.
+    expect(dev.envOf('migrate')).toEqual(dev.stack.env);
   });
 });
