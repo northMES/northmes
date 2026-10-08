@@ -10,15 +10,29 @@ interface SkillsLock {
 }
 
 /**
+ * The project skills that plan 13 names. Each is NorthMES's own file, so it gets no skills-lock.json
+ * entry and no section in THIRD_PARTY_LICENSE.md, which pin and license third-party skills only.
+ */
+const projectSkills: readonly string[] = [
+  'db-test',
+  'vertical-slice',
+  'graphql-subgraph',
+  'web-remote',
+  'dst-test',
+];
+
+/**
  * The skills check (ADR 0063): every folder in .claude/skills is a skill that skills-lock.json
- * pins, and every pinned skill has a folder. Returns one problem per folder or pinned skill that
- * breaks the rule.
+ * pins or a project skill, and every pinned skill has a folder. Returns one problem per folder or
+ * pinned skill that breaks the rule.
  */
 function skillsCheck(folders: readonly string[], lock: SkillsLock): string[] {
   const pinned = Object.keys(lock.skills);
   const unlisted = folders
-    .filter((folder) => !pinned.includes(folder))
-    .map((folder) => `.claude/skills/${folder} is not in skills-lock.json`);
+    .filter((folder) => !pinned.includes(folder) && !projectSkills.includes(folder))
+    .map(
+      (folder) => `.claude/skills/${folder} is not in skills-lock.json and is not a project skill`,
+    );
   const missing = pinned
     .filter((skill) => !folders.includes(skill))
     .map((skill) => `skills-lock.json pins ${skill}, which has no folder in .claude/skills`);
