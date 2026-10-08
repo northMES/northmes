@@ -115,17 +115,26 @@ export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
 }
 
 /**
- * A problem for every contribution to a slot whose owner is outside the contributor's dependsOn
- * closure (ADR 0037). A module may contribute to its own slots. A contribution to a slot that no
- * installed module owns is not checked here.
+ * A problem for every slot a module declares outside its own id, and for every contribution to a
+ * slot whose owner is outside the contributor's dependsOn closure (ADR 0037). A slot id starts with
+ * its owner's id (ADR 0068), so each slot has one owner. A module may contribute to its own slots.
+ * A contribution to a slot that no installed module owns is not checked here.
  */
 export function slotProblems(entries: readonly CatalogEntry[]): string[] {
   const byId = new Map(entries.map(({ manifest }) => [manifest.id, manifest]));
   const owners = new Map<string, string>();
-  for (const { manifest } of entries) {
-    for (const slot of Object.keys(manifest.web?.slots ?? {})) owners.set(slot, manifest.id);
-  }
   const problems: string[] = [];
+  for (const { manifest } of entries) {
+    for (const slot of Object.keys(manifest.web?.slots ?? {})) {
+      if (slot.split('/')[0] === manifest.id) {
+        owners.set(slot, manifest.id);
+      } else {
+        problems.push(
+          `Module ${manifest.id} declares slot "${slot}", which must start with "${manifest.id}/"`,
+        );
+      }
+    }
+  }
   for (const { manifest } of entries) {
     const reach = dependsOnClosure(manifest.id, byId);
     for (const { id, slot } of manifest.web?.contributes ?? []) {
