@@ -81,6 +81,12 @@ describe('remote build guards', () => {
     expect(manifest.exposes.map((expose: { path: string }) => expose.path)).toEqual(['./module']);
   });
 
+  it('E02-S05 a remote is named after its module id in camel case, since a remote name allows no hyphens', async () => {
+    const manifest = manifestOf(await buildFixture('remote-zod-contracts'));
+
+    expect(manifest.name).toBe('remoteZodContracts');
+  });
+
   it('E02-S05 a remote shares each singleton of ADR 0019 except @northmes/ui, each subpath as its own key, with no copy of its own', async () => {
     const manifest = manifestOf(await buildFixture('remote-zod-contracts'));
 
