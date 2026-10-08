@@ -14,6 +14,14 @@ export const inputClassName = cn(
   'data-invalid:focus-visible:shadow-[0_0_0_2px_var(--focus-ring),inset_0_0_0_1px_var(--destructive)]',
 );
 
+/**
+ * The id of the input that edits the form field `name` (a schema path joined with dots), so the
+ * error summary can link to it.
+ */
+export function fieldId(name: string): string {
+  return `field-${name}`;
+}
+
 export interface TextFieldProps extends Omit<ComponentProps<'input'>, 'className' | 'type'> {
   /** The visible label, which is also the accessible name. */
   readonly label: string;
@@ -30,7 +38,8 @@ export interface TextFieldProps extends Omit<ComponentProps<'input'>, 'className
 /**
  * A single-line text input with its label, hint and error on Base UI's Field: the label names the
  * input, the error and then the hint describe it, and aria-invalid follows the error. It takes the
- * props of react-hook-form's register, ref included.
+ * props of react-hook-form's register, ref included; with a name and no id, the input's id is
+ * fieldId(name).
  */
 export function TextField({
   label,
@@ -39,6 +48,7 @@ export function TextField({
   optional = false,
   className,
   type = 'text',
+  id,
   ...inputProps
 }: TextFieldProps) {
   return (
@@ -47,7 +57,12 @@ export function TextField({
         {label}
         {optional && <span className="font-normal text-muted-foreground"> (optional)</span>}
       </Field.Label>
-      <Field.Control {...inputProps} type={type} className={inputClassName} />
+      <Field.Control
+        {...inputProps}
+        id={id ?? (inputProps.name === undefined ? undefined : fieldId(inputProps.name))}
+        type={type}
+        className={inputClassName}
+      />
       <Field.Error
         match={error !== undefined}
         className="flex items-start gap-1 text-xs text-destructive"

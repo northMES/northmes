@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import {
+  type FieldErrors,
   type FieldPath,
   type FieldValues,
   type UseFormProps,
@@ -9,6 +10,7 @@ import {
   useForm,
 } from 'react-hook-form';
 import type { z } from 'zod';
+import type { SummaryError } from './error-summary.tsx';
 
 /** A form whose values are the input of a Zod schema and whose submit receives its output. */
 export type ZodForm<TSchema extends z.ZodType<unknown, FieldValues>> = UseFormReturn<
@@ -77,4 +79,41 @@ export function setServerErrors<TValues extends FieldValues>(
   if (unplaced.length > 0) {
     form.setError('root.server', { type: 'server', message: unplaced.join('\n') });
   }
+}
+
+/** A leaf of react-hook-form's errors: the error of one field, with its type and message. */
+function isFieldError(value: object): value is { message?: unknown } {
+  return 'type' in value && typeof value.type === 'string';
+}
+
+/**
+ * The entries of the error summary from react-hook-form's errors: each field's message under its
+ * dotted name, in the order of the errors, then the messages under root (from the schema's root
+ * issues and from setServerErrors), one entry per line and without a field.
+ */
+export function summaryErrors(errors: FieldErrors): SummaryError[] {
+  const entries: SummaryError[] = [];
+  const visit = (value: unknown, path: readonly string[]) => {
+    if (value === null || typeof value !== 'object') return;
+    if (isFieldError(value)) {
+      if (typeof value.message === 'string' && value.message !== '') {
+        entries.push({ name: path.join('.'), message: value.message });
+      }
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) visit(child, [...path, key]);
+  };
+  for (const [key, value] of Object.entries(errors)) {
+    if (key !== 'root') visit(value, [key]);
+  }
+  const { root } = errors;
+  const rootMessages = root === undefined ? [] : [root, ...Object.values(root)];
+  for (const error of rootMessages) {
+    if (error !== null && typeof error === 'object' && typeof error.message === 'string') {
+      for (const message of error.message.split('\n')) {
+        if (message !== '') entries.push({ message });
+      }
+    }
+  }
+  return entries;
 }
