@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
 
+# No job here needs more than reading the repository.
+permissions:
+  contents: read
+
 jobs:
   static:
     name: ci / lint + typecheck + build
