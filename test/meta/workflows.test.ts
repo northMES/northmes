@@ -67,6 +67,12 @@ function withoutCoverage(command: string): string {
   return command.replace(coverageFlag, '');
 }
 
+// react-doctor runs in CI only, under a reviewed license exception that waits for the vendor's
+// written confirmation on agent workflows
+// (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md), so neither pnpm check, which
+// handoff's agents run, nor pnpm check:full runs it.
+const ciOnlyChecks = ['react doctor'];
+
 // A GitHub Actions expression as a workflow writes it.
 function expression(source: string): string {
   return `\${{ ${source} }}`;
@@ -93,7 +99,16 @@ const pullRequestCheckSteps = {
 // each of them as a status check by its job name
 // (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list
 // needs a ruleset edit: an added name after the merge, a removed or old name just before it.
-const ciJobs = ['lint', 'typecheck', 'build', 'test', 'pr title', 'linked issue', 'gate'];
+const ciJobs = [
+  'lint',
+  'typecheck',
+  'build',
+  'test',
+  'react doctor',
+  'pr title',
+  'linked issue',
+  'gate',
+];
 
 // The checks the main ruleset requires from workflow files
 // (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
@@ -178,6 +193,15 @@ function commandsOf(command: string): string[] {
     const script = rootScript(match?.[1]);
     return script === undefined ? [part] : commandsOf(`${script}${match?.[2] ?? ''}`);
   });
+}
+
+// The react-doctor commands that a job runs, with each root script expanded.
+function reactDoctorCommandsOf(job: Job): string[] {
+  return (job.steps ?? []).flatMap(({ run }) =>
+    run === undefined
+      ? []
+      : commandsOf(run.trim()).filter((command) => /^react-doctor\b/.test(command)),
+  );
 }
 
 // `turbo run lint typecheck` runs the lint and the typecheck tasks, which `turbo run lint` and
@@ -429,7 +453,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, pr title, linked issue and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, pr title, linked issue and gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -532,7 +556,7 @@ describe('workflows', () => {
   it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
-      (need) => !pullRequestChecks.includes(workflow.jobs[need]?.name ?? ''),
+      (need) => ![...pullRequestChecks, ...ciOnlyChecks].includes(workflow.jobs[need]?.name ?? ''),
     );
     const contained = new Set(
       ['pnpm check', 'pnpm check:full'].flatMap(commandsOf).flatMap(turboTasks),
@@ -562,6 +586,57 @@ describe('workflows', () => {
           expect([...contained], where).toContain(withoutCoverage(command));
         }
       }
+    }
+  });
+
+  // react-doctor runs in CI only (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md), and
+  // handoff's agents run pnpm check as their gate.
+  it('neither pnpm check nor pnpm check:full runs react-doctor', () => {
+    const commands = ['pnpm check', 'pnpm check:full'].flatMap(commandsOf);
+
+    expect(commands, 'the commands of pnpm check and check:full').not.toHaveLength(0);
+    for (const command of commands) {
+      expect(command).not.toMatch(/\breact-doctor\b/);
+    }
+  });
+
+  // Without --no-telemetry react-doctor sends the scan to its score API, prints a share URL and
+  // reports crashes to Sentry
+  // (docs/adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md). The
+  // job runs a root script, so pnpm react-doctor runs the same scan on a developer's machine.
+  it('the react doctor job runs with --no-telemetry', () => {
+    const { workflow, id, job } = jobNamed('react doctor');
+    const runs = (job.steps ?? [])
+      .map(({ run }) => run?.trim())
+      .filter((run) => run !== undefined && run !== 'pnpm install --frozen-lockfile');
+    const commands = reactDoctorCommandsOf(job);
+
+    expect(runs, 'run steps after the install').not.toHaveLength(0);
+    for (const run of runs) {
+      const where = `${workflow.path} job ${id} step ${JSON.stringify(run)}`;
+      expect(
+        rootScript(/^pnpm (\S+)/.exec(run ?? '')?.[1]),
+        `${where} calls a root script`,
+      ).toBeDefined();
+    }
+    expect(commands, 'react-doctor commands').not.toHaveLength(0);
+    for (const command of commands) {
+      expect(command.split(' '), command).toContain('--no-telemetry');
+    }
+  });
+
+  // The web code is apps/web, the web remote of every module and packages/web-sdk, so a module that
+  // gains a web remote joins the scan in the same change.
+  it('the react doctor job scans apps/web, every modules/*/web and packages/web-sdk', () => {
+    const { job } = jobNamed('react doctor');
+    const web = ['apps/web', ...globSync('modules/*/web', { cwd: root }), 'packages/web-sdk'];
+    const commands = reactDoctorCommandsOf(job);
+
+    expect(web, 'web code').toContain('modules/planning/web');
+    expect(commands, 'react-doctor commands').not.toHaveLength(0);
+    for (const command of commands) {
+      const projects = /--project (\S+)/.exec(command)?.[1]?.split(',') ?? [];
+      expect(projects.sort(), command).toEqual(web.sort());
     }
   });
 });
