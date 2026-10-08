@@ -1,0 +1,66 @@
+# The CI gate for pull requests and pushes to main (docs/adr/0050-github-organization-rulesets-ci-
+# runners-and-supply-chain.md). The main ruleset requires only the check run of the job named
+# "ci / gate", so jobs join or leave the gate without a ruleset edit. Every job that ci / gate needs
+# runs root pnpm scripts that pnpm check or pnpm check:full contains.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  static:
+    name: ci / lint + typecheck + build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm gen --check
+      - run: pnpm build
+
+  test-utc:
+    name: ci / test (TZ=UTC)
+    runs-on: ubuntu-24.04
+    env:
+      TZ: UTC
+      NM_TEST_PG_TZ: UTC
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  test-stockholm:
+    name: ci / test (TZ=Europe/Stockholm)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:tz
+
+  gate:
+    name: ci / gate
+    needs: [static, test-utc, test-stockholm]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Every job that ci / gate needs passed."
