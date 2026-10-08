@@ -11,7 +11,11 @@ function routesAt(path: string) {
   return (plantRoute: PlantRoute) => createRoute({ getParentRoute: () => plantRoute, path });
 }
 
-const planning = defineWebModule({ id: 'planning', version: '0.4.0', routes: routesAt('planning') });
+const planning = defineWebModule({
+  id: 'planning',
+  version: '0.4.0',
+  routes: routesAt('planning'),
+});
 
 describe('validateWebModule', () => {
   it('E02-S05 validateWebModule finds no problem in a module that matches its server entry', () => {
