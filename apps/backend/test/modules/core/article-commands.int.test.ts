@@ -123,4 +123,44 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
     expect(other.errors).toBeUndefined();
   });
+
+  it('E06-S06 coreCreateArticle with a blank code and a name over 200 characters returns BAD_USER_INPUT with fieldErrors on both', async () => {
+    const client = await clientAt(given.plant());
+
+    const answer = await client.send(createMutation, {
+      input: { id: randomUUIDv7(), code: '   ', name: 'N'.repeat(201) },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          path: ['coreCreateArticle'],
+          extensions: {
+            code: 'BAD_USER_INPUT',
+            fieldErrors: [
+              { path: ['code'], code: 'too_small', message: expect.any(String) },
+              { path: ['name'], code: 'too_big', message: expect.any(String) },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  it('E06-S06 coreCreateArticle without x-northmes-plant returns core.plant_forbidden', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const client = gqlClient(await testApp.app.getUrl());
+
+    const answer = await client.send(createMutation, {
+      input: { id: randomUUIDv7(), code: 'PN-305', name: 'Side panel' },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' } }],
+    });
+  });
 });
