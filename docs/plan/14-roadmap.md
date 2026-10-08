@@ -468,7 +468,7 @@ docs(repo): add license, contributor, security and agent files
 
 Issue: northMES/northmes#7.
 
-As a maintainer, I want CI, the license gate and the ruleset in place before the first run, so that nothing merges that `ci / gate` and the supply-chain checks have not passed.
+As a maintainer, I want CI, the license gate and the ruleset in place before the first run, so that nothing merges that `CI / gate` and the supply-chain checks have not passed.
 
 Module: ci. Blocked by: E00-S01, E00-S02. Design: none.
 
@@ -477,14 +477,14 @@ ADRs: [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chai
 Acceptance criteria:
 
 - Every pull request and every push to `main` runs the jobs of `ci.yml`, `license gate`, `dependency audit` and CodeQL, and each of them is a strict required check ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
-- `ci / gate` runs the unit and integration projects in both the UTC and the Europe/Stockholm legs.
+- `CI / gate` runs the unit and integration projects in both the UTC and the Europe/Stockholm legs.
 - A pull request title that is not a Conventional Commit, or a pull request without `Closes #N`, fails its check.
 - A third-party GPL-3.0, AGPL or LGPL dependency fails the license gate by name.
 - `main` accepts only squash merges with the PR title as subject and an empty body, with resolved threads and no bypass.
 
 Tests first:
 
-- `test/meta/workflows.test.ts`: "every uses: line pins a full commit SHA"; "no workflow uses pull_request_target"; "required workflows have no paths filter"; "every ci / gate step runs a script that pnpm check or check:full contains".
+- `test/meta/workflows.test.ts`: "every uses: line pins a full commit SHA"; "no workflow uses pull_request_target"; "required workflows have no paths filter"; "every run step in CI / gate calls a script that pnpm check or check:full contains".
 - `scripts/license-gate.test.ts`: "a GPL-3.0 package fails naming it"; "a package with an ee/ folder fails".
 - `test/meta/github-files.test.ts`: "the issue forms offer the persona list from docs/plan/README.md".
 
@@ -599,7 +599,7 @@ Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T02, 
 Plan: E00-S04-T03
 
 ## Goal
-Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / lint, ci / typecheck, ci / build, ci / test, ci / pr title, ci / linked issue and ci / gate from the GitHub Actions app (ADR 0069), license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed Copilot pull requests left at GitHub's default, on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
+Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks lint, typecheck, build, test, pr title, linked issue and gate (the jobs of ci.yml, shown as CI / lint and so on) from the GitHub Actions app (ADR 0069), license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed Copilot pull requests left at GitHub's default, on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
 
 ## Where in the code
 scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility, area: core, area: planning, area: sdk, area: web, area: docs, area: deploy, area: ci
@@ -618,7 +618,7 @@ Seam: the test parses the YAML and Markdown files.
 - github-files.test.ts: "scripts/labels.sh creates epic, story, task, human, design and spike"
 - github-files.test.ts: ".bestpractices.json names the project id"
 - check-ruleset.test.ts: "a ruleset with 0 required approvals fails naming required_approving_review_count"
-- check-ruleset.test.ts: "a ruleset without ci / test fails naming ci / test"
+- check-ruleset.test.ts: "a ruleset that does not require test fails naming test"
 
 ## Design
 none
@@ -654,13 +654,13 @@ Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions). B
 Plan: E00-S04-T04
 
 ## Goal
-Add the review and supply-chain services that report on pull requests without being required checks. Socket checks new dependencies, Codecov shows coverage as information only, and OpenSSF Scorecard scores the repository. Coverage from the UTC leg of ci / test reaches Codecov once through OIDC without a token.
+Add the review and supply-chain services that report on pull requests without being required checks. Socket checks new dependencies, Codecov shows coverage as information only, and OpenSSF Scorecard scores the repository. Coverage from the UTC leg of CI / test reaches Codecov once through OIDC without a token.
 
 ## Where in the code
 socket.yml (new): triggers on package.json files, pnpm-lock.yaml and pnpm-workspace.yaml
 codecov.yml (new): informational, no pull request comment, one component per module from paths
 .github/workflows/scorecard.yml (new): the read-only token that can read rulesets (docs/plan/13-delivery-and-github.md)
-.github/workflows/ci.yml: ci / test saves the coverage of its UTC leg as an artifact; a separate upload job that runs no pnpm install holds id-token: write, so the rule tested in E00-S04-T01 holds
+.github/workflows/ci.yml: the test job saves the coverage of its UTC leg as an artifact; a separate upload job that runs no pnpm install holds id-token: write, so the rule tested in E00-S04-T01 holds
 test/meta/services.test.ts (new), test/meta/workflows.test.ts
 Seam: the tests parse the YAML files.
 
@@ -685,7 +685,7 @@ ci: add Socket, Codecov and Scorecard
 ## Acceptance criteria
 - [ ] scorecard.yml runs on a schedule and on push to main with top-level permissions read-all
 - [ ] codecov.yml marks Codecov informational with no pull request comment
-- [ ] The coverage of the UTC leg of ci / test reaches Codecov once through OIDC without a token
+- [ ] The coverage of the UTC leg of CI / test reaches Codecov once through OIDC without a token
 - [ ] services.test.ts and workflows.test.ts pass
 ```
 
@@ -5362,7 +5362,7 @@ ADRs: [0051](../adr/0051-regulated-readiness-no-regret-rules.md), [0041](../adr/
 Acceptance criteria:
 
 - Test names carry a requirement id. Until Krister fixes the format (M-22), a test name starts with the plan case id when one exists (TC1, CAL8) and otherwise with the story's plan id, for example `describe("E07-S05 ...")`.
-- `ci / pr title` also fails a pull request whose body has no validation impact (none, UI only, records, security, calculation, data migration).
+- `CI / pr title` also fails a pull request whose body has no validation impact (none, UI only, records, security, calculation, data migration).
 - A meta test lists the release 1 rules (2, 4, 5, 8, 10, 11, 13, 14, 15, 17, 18 and 19) with the test file that proves each and fails when one is missing.
 
 Tests first:

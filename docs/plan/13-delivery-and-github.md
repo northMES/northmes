@@ -267,7 +267,7 @@ Two weekly records exist:
 
 - Epics are `E00`, `E01` and upward; stories `E02-S03`; tasks `E02-S03-T01`. Blockers name identifiers until the issues exist. The epic order and the first weeks are in [14-roadmap.md](14-roadmap.md).
 - Each epic from E02 on gets one shaping file, `docs/plan/Enn-<slug>.md` (for example `E02-<slug>.md` or `E14-<slug>.md`), with its stories and tasks; the E00 and E01 tasks live in [14-roadmap.md](14-roadmap.md). After the issues exist, the issue number is written next to each identifier (`E02-S03-T01, #42`). From then on the issue is the source of truth for scope, and the shaping file is not edited again.
-- Each epic has a task "docs: record the Enn plan and ADRs", labelled `human`, closed by the docs pull request that adds the shaping file and the epic's ADRs (`ci / linked issue` needs `Closes #N`).
+- Each epic has a task "docs: record the Enn plan and ADRs", labelled `human`, closed by the docs pull request that adds the shaping file and the epic's ADRs (`CI / linked issue` needs `Closes #N`).
 
 ### Conversion sequence
 
@@ -635,7 +635,7 @@ Branch ruleset on `main`:
 
 - Pull request required, 1 approving review, stale approvals dismissed on push, review threads must be resolved ([ADR 0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)). CodeRabbit gives the approval on pull requests that handoff or a session opens with Krister's token, since GitHub does not let Krister approve them; `@coderabbitai approve` is the fallback. Krister approves Renovate's pull requests and the release pull request, which CodeRabbit skips.
 - Squash merge only; linear history.
-- Required status checks, strict (branch up to date): `ci / lint`, `ci / typecheck`, `ci / build`, `ci / test`, `ci / pr title`, `ci / linked issue` and `ci / gate` from the GitHub Actions app ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), `license gate`, `dependency audit`, `CodeQL`.
+- Required status checks, strict (branch up to date): `lint`, `typecheck`, `build`, `test`, `pr title`, `linked issue` and `gate` from the GitHub Actions app, the jobs of `ci.yml` that GitHub shows as `CI / lint` and so on ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), `license gate`, `dependency audit`, `CodeQL`.
 - Block force pushes and deletion.
 - No bypass actors.
 
@@ -659,19 +659,19 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 
 | Workflow and job | Trigger | Runs |
 |---|---|---|
-| `ci.yml` `ci / lint` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint (Biome in CI mode, the import rules that keep MIT packages free of AGPL code); `pnpm gen --check` |
-| `ci.yml` `ci / typecheck` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo typecheck (`tsc`) |
-| `ci.yml` `ci / build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo build |
-| `ci.yml` `ci / test` | pull request, push to `main` | The UTC leg: Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload. Then, in the same job and also after a failed UTC leg, the Europe/Stockholm leg: the unit and integration projects with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
-| `ci.yml` `ci / e2e` | pull request, push to `main` | Build, `playwright install --with-deps chromium`, Playwright against the built `all` process; traces on failure. Includes `e2e/skeleton.spec.ts` |
-| `ci.yml` `ci / a11y` | pull request, push to `main` | axe over the board states; a separate job from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
-| `ci.yml` `ci / docs` | pull request, push to `main` | `pnpm docs:generate`, then `git diff --exit-code -- apps/docs` and `git status --porcelain apps/docs` |
-| `ci.yml` `ci / linked issue` | pull request | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
-| `ci.yml` `ci / pr title` | pull request | The title is a Conventional Commit with an allowed type |
-| `ci.yml` `ci / cla` | pull request | The contributor license agreement check, before the first outside pull request |
+| `ci.yml` `lint` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint (Biome in CI mode, the import rules that keep MIT packages free of AGPL code); `pnpm gen --check` |
+| `ci.yml` `typecheck` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo typecheck (`tsc`) |
+| `ci.yml` `build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo build |
+| `ci.yml` `test` | pull request, push to `main` | The UTC leg: Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload. Then, in the same job and also after a failed UTC leg, the Europe/Stockholm leg: the unit and integration projects with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
+| `ci.yml` `e2e` | pull request, push to `main` | Build, `playwright install --with-deps chromium`, Playwright against the built `all` process; traces on failure. Includes `e2e/skeleton.spec.ts` |
+| `ci.yml` `a11y` | pull request, push to `main` | axe over the board states; a separate job from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
+| `ci.yml` `docs` | pull request, push to `main` | `pnpm docs:generate`, then `git diff --exit-code -- apps/docs` and `git status --porcelain apps/docs` |
+| `ci.yml` `linked issue` | pull request | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
+| `ci.yml` `pr title` | pull request | The title is a Conventional Commit with an allowed type |
+| `ci.yml` `cla` | pull request | The contributor license agreement check, before the first outside pull request |
 | `ci.yml` `fresh-worktree` | pull request | `git worktree add`, `pnpm install --frozen-lockfile`, `pnpm test:int` with no build step |
 | `ci.yml` `plugin-outside` | pull request, push to `main` | Packs the MIT packages, installs an example plugin from the tarballs outside the repository, builds it, drops it into a plugins directory, boots and runs its e2e spec |
-| `ci.yml` `ci / gate` | pull request, push to `main` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request |
+| `ci.yml` `gate` | pull request, push to `main` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request |
 | `supply-chain.yml` `license gate` | pull request, push to `main` | `pnpm sbom` per package and `scripts/license-gate.mjs` with the policy of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `supply-chain.yml` `dependency audit` | pull request | `pnpm audit --prod --audit-level high`, with assessed exceptions recorded |
 | `supply-chain.yml` `dependency review` | pull request | `actions/dependency-review-action`, once the dependency graph reads the lockfile |
@@ -686,7 +686,7 @@ The Pyramid live test runs only against a test company with `NORTHMES_PYRAMID_LI
 
 ### Required checks
 
-The ruleset names each job of `ci.yml` as a required check from the GitHub Actions app ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)): `ci / lint`, `ci / typecheck`, `ci / build`, `ci / test`, `ci / pr title`, `ci / linked issue` and `ci / gate`. It also names `license gate`, `dependency audit` and `CodeQL`. `ci / gate` needs every other job in `ci.yml`; from M1 (2026-11-20) also `e2e/skeleton.spec.ts` and the resolve-hook test; `ci / docs` once `apps/docs` exists; `ci / cla` before the first outside pull request; `ci / a11y` from the first board pull request; `ci / e2e` from the change that adds it ([#281](https://github.com/northMES/northmes/issues/281)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. Every gate step runs a script that `pnpm check` or `pnpm check:full` contains.
+The ruleset names each job of `ci.yml` by its job name as a required check from the GitHub Actions app ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)): `lint`, `typecheck`, `build`, `test`, `pr title`, `linked issue` and `gate`. GitHub shows them as `CI / lint` and so on, so the job names do not start with `ci / `. It also names `license gate`, `dependency audit` and `CodeQL`. `CI / gate` needs every other job in `ci.yml`; from M1 (2026-11-20) also `e2e/skeleton.spec.ts` and the resolve-hook test; `docs` once `apps/docs` exists; `cla` before the first outside pull request; `a11y` from the first board pull request; `e2e` from the change that adds it ([#281](https://github.com/northMES/northmes/issues/281)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so a job of the same name in another workflow would satisfy it too; `test/meta/workflows.test.ts` fails when two workflows share a job name. Every gate step runs a script that `pnpm check` or `pnpm check:full` contains.
 
 ### Runners: Blacksmith with a fallback
 
@@ -721,7 +721,7 @@ Blacksmith runs only for GitHub organizations, so until the repository moves eve
 | Service | Setup |
 |---|---|
 | CodeRabbit | Installed on the `northMES` organization (2026-10-05). `.coderabbit.yaml` exists and passes CodeRabbit's validation (profile `chill`, path instructions per area, generated files filtered, a check run on the head commit and no commit status, finishing touches that commit code off). It reviews a pull request when it opens and again after every push (`auto_incremental_review: true`, no pause after a number of reviewed commits). A public repository with fewer than 10 stars gets a review only after an `@coderabbitai review` comment, which the pull request step posts through `reviewRequest` when the pull request opens and after each later push, and a session posts on the pull requests it opens. In a handoff run the coder checks each finding against the issue and the ADRs and answers it as fixed, declined, unclear or a duplicate; the pull request step replies in the thread and resolves it after CodeRabbit's next review. `request_changes_workflow` is on, so CodeRabbit resolves the threads a later commit addressed and a clean review approves the head commit, which is the approval the `main` ruleset requires; `@coderabbitai approve` resolves its threads and approves. Details: [docs/agents/coderabbit.md](../agents/coderabbit.md) |
-| Renovate | The Mend Renovate app with `config:best-practices`, `helpers:pinGitHubActionDigests`, digest pinning for Compose files and Dockerfiles, a custom manager for the database image digest in `infra/pg-image.json`, `minimumReleaseAge` (stricter for the Module Federation packages), a weekly schedule, grouped GitHub Actions and dev dependency updates, label `dependencies`. Renovate pull requests skip `ci / linked issue` and CodeRabbit, so Krister approves them. If Renovate cannot update the pnpm lockfile in its first week, Dependabot version updates take over |
+| Renovate | The Mend Renovate app with `config:best-practices`, `helpers:pinGitHubActionDigests`, digest pinning for Compose files and Dockerfiles, a custom manager for the database image digest in `infra/pg-image.json`, `minimumReleaseAge` (stricter for the Module Federation packages), a weekly schedule, grouped GitHub Actions and dev dependency updates, label `dependencies`. Renovate pull requests skip `CI / linked issue` and CodeRabbit, so Krister approves them. If Renovate cannot update the pnpm lockfile in its first week, Dependabot version updates take over |
 | Codecov | Informational, no pull request comment; one component per module from paths; one upload from the UTC leg with OIDC instead of a token. The coverage threshold for the scheduling domain lives in `vitest.config.ts` |
 | Socket | The GitHub app with `socket.yml` triggering on `package.json` files, `pnpm-lock.yaml` and `pnpm-workspace.yaml`; checks new dependencies on pull requests |
 | CodeQL | Default setup, a required check |
@@ -737,7 +737,7 @@ Every `@northmes/*` package, every module package, the example plugins and the i
 
 ### Changelog from pull request titles
 
-- Pull requests merge by squash only, with the pull request title as the commit subject and an empty body. The title is a Conventional Commit written for users: `type(module): outcome`, for example `feat(planning): show late orders on the board`, with `!` before the colon for a breaking change. `ci / pr title` checks it.
+- Pull requests merge by squash only, with the pull request title as the commit subject and an empty body. The title is a Conventional Commit written for users: `type(module): outcome`, for example `feat(planning): show late orders on the board`, with `!` before the colon for a breaking change. `CI / pr title` checks it.
 - Commits on a branch are free form, except that red commits start with `test:`. The squash keeps only the title.
 - release-please builds `CHANGELOG.md` and the GitHub release from the titles: `feat`, `fix`, `security`, `perf` and `revert` are visible; `docs`, `refactor`, `test`, `build`, `ci` and `chore` are hidden.
 - A wrong line is fixed with a `BEGIN_COMMIT_OVERRIDE` block in the merged pull request's body.
@@ -819,7 +819,7 @@ Epic E00 is worked in interactive sessions; its tasks carry `human`. On `main`:
 - The pnpm workspace: root `package.json` with `check`, `check:full`, `test:handoff`, `test`, `test:unit`, `test:int`, `test:tz`, `lint`, `typecheck`, `build` and `gen` (E00-S01-T02), while `gen:migration` arrives with E02-S02, `dev` with E02-S08, and `test:ai` and `test:e2e:ai` with the AI epics (E13 and E14); `pnpm-workspace.yaml` with the catalog, `pmOnFail: ignore` and cpu-features, protobufjs and ssh2 not allowed to build; the lockfile; `.node-version` and `.nvmrc`; `biome.json`; the base tsconfig with the `@northmes/source` condition; `turbo.json`.
 - `packages/testing` with the Testcontainers global setup and one unit and one integration test that pass, so the first Tester run starts green.
 - `scripts/handoff/setup.sh`, `scripts/handoff/tests-changed.mjs`, `.claude/launch.json` with `handoff-demo` before the first UI task, `.claude/settings.json` with the session hooks.
-- `.github/` with `ci.yml` (including `ci / gate`), `supply-chain.yml`, the issue forms, the pull request template; `scripts/labels.sh`; `.coderabbit.yaml`; `renovate.json`; `release-please-config.json` and `.release-please-manifest.json` on 0.x; `scorecard.yml`; the community files; `LICENSE` and `NOTICE`.
+- `.github/` with `ci.yml` (including `gate`), `supply-chain.yml`, the issue forms, the pull request template; `scripts/labels.sh`; `.coderabbit.yaml`; `renovate.json`; `release-please-config.json` and `.release-please-manifest.json` on 0.x; `scorecard.yml`; the community files; `LICENSE` and `NOTICE`.
 - The meta tests `test/meta/gates.test.ts`, `test/meta/doc-links.test.ts` and `test/meta/collection.test.ts`.
 
 On GitHub: the `main` and tag rulesets, the repository settings above, the labels, one milestone per release, and the repository selected in CodeRabbit's installation (CodeRabbit is installed on the `northMES` organization since 2026-10-05).
