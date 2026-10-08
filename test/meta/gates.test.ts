@@ -56,8 +56,7 @@ describe('gates', () => {
       'node scripts/check-node.mjs',
       'turbo run lint typecheck',
       'pnpm gen --check',
-      // The web project is absent on purpose until #301 adds it.
-      'vitest run --project unit --project integration --project types',
+      'vitest run --project unit --project integration --project web --project types',
     ]);
   });
 

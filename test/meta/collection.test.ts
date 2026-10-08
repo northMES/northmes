@@ -211,10 +211,11 @@ describe('collection', () => {
         projects.flatMap((project) => ['--project', project]),
       );
 
-      expect(projects).toEqual(expect.arrayContaining(['unit', 'integration', 'types']));
+      expect(projects).toEqual(expect.arrayContaining(['unit', 'integration', 'web', 'types']));
       expect(projects).not.toContain('ai');
       expect(projects).not.toContain('ops');
       expect(run.get('x.test.ts')).toEqual(['unit']);
+      expect(run.get('x.test.tsx')).toEqual(['web']);
       expect(run.get('x.int.test.ts')).toEqual(['integration']);
       expect(run.get('x.test-d.ts')).toEqual(['types']);
       expect(run.has('x.ai.test.ts')).toBe(false);
