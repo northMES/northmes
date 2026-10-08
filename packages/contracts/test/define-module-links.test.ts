@@ -18,4 +18,13 @@ describe('defineModuleLinks', () => {
       'Link /$plant/planning/orders/$orderId has an empty value for orderId',
     );
   });
+
+  it('E02-S05 a builder returns its route pattern as to, with the params and search it was given', () => {
+    expect(links.orders({ plant: 'plant-a' }, { q: '1001' })).toEqual({
+      to: '/$plant/planning/orders',
+      params: { plant: 'plant-a' },
+      search: { q: '1001' },
+      href: '/plant-a/planning/orders?q=1001',
+    });
+  });
 });
