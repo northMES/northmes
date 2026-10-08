@@ -1,5 +1,6 @@
 // The tracer seed of the stack script (E02-S08): fictional articles and production orders at one
-// plant, so the board has orders to list. Every code, name, number and quantity here is made up.
+// plant, so the board has orders to list and the article list has pages. Every code, name, number
+// and quantity here is made up.
 // The planner and the operator, with their dev-only credentials, join the seed with Better Auth
 // (E05-S05).
 
@@ -14,14 +15,53 @@ export const seedScopes = {
   plant: '019a0000-0000-7000-8000-00000000a001',
 };
 
-// Each record has a fixed id, so a second run finds it and writes nothing.
-const articles = [
-  { id: '019a0000-0000-7000-8000-0000000a0001', code: 'BR-140', name: 'Wall bracket' },
-  { id: '019a0000-0000-7000-8000-0000000a0002', code: 'PN-305', name: 'Side panel' },
-  { id: '019a0000-0000-7000-8000-0000000a0003', code: 'CW-220', name: 'Caster wheel' },
+/** The fixed id of seed article number `n`, so a second run finds it and writes nothing. */
+function articleId(n) {
+  return `019a0000-0000-7000-8000-0000000a${n.toString(16).padStart(4, '0')}`;
+}
+
+/** The three articles the orders make. */
+const orderArticles = [
+  { id: articleId(1), code: 'BR-140', name: 'Wall bracket' },
+  { id: articleId(2), code: 'PN-305', name: 'Side panel' },
+  { id: articleId(3), code: 'CW-220', name: 'Caster wheel' },
 ];
 
-const [bracket, panel, caster] = articles.map(({ id }) => id);
+/** Families of further articles, three sizes each, so the article list has pages to walk. */
+const families = [
+  ['AX', 'Axle', ['20 mm', '25 mm', '30 mm']],
+  ['BL', 'Hex bolt', ['M6', 'M8', 'M10']],
+  ['CB', 'Corner block', ['small', 'medium', 'large']],
+  ['CL', 'Clamp', ['40 mm', '60 mm', '80 mm']],
+  ['DF', 'Drawer front', ['300 mm', '450 mm', '600 mm']],
+  ['DS', 'Drawer slide', ['350 mm', '450 mm', '550 mm']],
+  ['FT', 'Levelling foot', ['M6', 'M8', 'M10']],
+  ['GS', 'Gas spring', ['60 N', '100 N', '150 N']],
+  ['HD', 'Bow handle', ['96 mm', '128 mm', '160 mm']],
+  ['HG', 'Cabinet hinge', ['90 degrees', '110 degrees', '165 degrees']],
+  ['KN', 'Round knob', ['25 mm', '30 mm', '35 mm']],
+  ['LG', 'Table leg', ['400 mm', '720 mm', '900 mm']],
+  ['NT', 'Lock nut', ['M6', 'M8', 'M10']],
+  ['RL', 'Hanging rail', ['600 mm', '800 mm', '1000 mm']],
+  ['SB', 'Shelf board', ['600 mm', '800 mm', '1000 mm']],
+  ['SC', 'Wood screw', ['3.5 x 16', '4 x 30', '5 x 50']],
+  ['SP', 'Spacer', ['5 mm', '10 mm', '15 mm']],
+  ['TT', 'Tabletop', ['800 mm', '1200 mm', '1600 mm']],
+  ['WS', 'Washer', ['M6', 'M8', 'M10']],
+];
+
+const articles = [
+  ...orderArticles,
+  ...families.flatMap(([prefix, name, sizes], family) =>
+    sizes.map((size, index) => ({
+      id: articleId(4 + family * sizes.length + index),
+      code: `${prefix}-${500 + index * 10}`,
+      name: `${name} ${size}`,
+    })),
+  ),
+];
+
+const [bracket, panel, caster] = orderArticles.map(({ id }) => id);
 
 const orders = [
   {
