@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, inject, it, vi } from 'vitest';
 import { withClient } from '../src/client.ts';
-import { query, useTestDatabase } from '../src/index.ts';
+import { emptyTemplateDatabase, query, useTestDatabase } from '../src/index.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
@@ -172,6 +172,21 @@ describe('the connections of a test database', () => {
     );
 
     expect(rows).toEqual([{ owner: 'nm_owner' }]);
+  });
+});
+
+describe('a test database cloned from the empty template', () => {
+  const { appUrl } = useTestDatabase({ template: emptyTemplateDatabase });
+
+  // The migrated template holds northmes_meta, which the empty template lacks.
+  it('E02-S02 useTestDatabase clones the template that its options name', async () => {
+    const rows = await query<{ marker: string | null; meta: string | null }>(
+      appUrl,
+      `select to_regclass('public.nm_marker')::text as marker,
+              to_regnamespace('northmes_meta')::text as meta`,
+    );
+
+    expect(rows).toEqual([{ marker: 'nm_marker', meta: null }]);
   });
 });
 
