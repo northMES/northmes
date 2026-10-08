@@ -116,6 +116,35 @@ export function completedBuild(line) {
   return / - Found 0 errors\. Watching for file changes\.$/.test(line);
 }
 
+/** @typedef {Awaited<ReturnType<typeof devPlan>>} DevPlan */
+
+/**
+ * Runs the processes of plan on a started stack: starts tsc -b --watch and restarts the server
+ * after each completed build.
+ * @param {{
+ *   plan: DevPlan,
+ *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
+ *   start: typeof import('./processes.mjs').start,
+ * }} options start starts a process, as processes.mjs does.
+ */
+export function superviseDev({ plan, stack, start }) {
+  /** @type {import('./processes.mjs').StartedProcess | undefined} */
+  let server;
+  // Restarts go one after the other, in the order they were asked for.
+  let queue = Promise.resolve();
+  const restartServer = () => {
+    queue = queue.then(async () => {
+      await server?.stop();
+      server = start(plan.server, { env: stack.env });
+    });
+  };
+  start(plan.watch, {
+    onLine: (line) => {
+      if (completedBuild(line)) restartServer();
+    },
+  });
+}
+
 /**
  * The Vite dev server of the package in dir on port.
  * @param {string} name
