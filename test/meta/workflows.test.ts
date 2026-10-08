@@ -61,9 +61,13 @@ const reportSteps = ['node scripts/ci/coverage-summary.mjs'];
 
 // The steps that prepare a job: installing the dependencies, which every pnpm script needs, and
 // adding the worktree that CI / fresh worktree installs and tests in. They check nothing, so no
-// root script runs them.
+// root script runs them. The worktree step names one directory, optionally quoted, made of path
+// characters and variables only, so no other command can run in it.
 function isSetupStep(run: string): boolean {
-  return run === 'pnpm install --frozen-lockfile' || /^git worktree add /.test(run);
+  return (
+    run === 'pnpm install --frozen-lockfile' ||
+    /^git worktree add --detach (?:[\w$./-]+|"[\w$./-]+")$/.test(run)
+  );
 }
 
 // Collecting coverage adds a report to a Vitest run and changes neither the tests it runs nor, while
