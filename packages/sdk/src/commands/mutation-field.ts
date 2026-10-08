@@ -6,6 +6,7 @@ import {
   Float,
   ID,
   InputType,
+  Int,
   Mutation,
   Resolver,
   type ReturnTypeFunc,
@@ -13,6 +14,7 @@ import {
 import type { CommandContract } from '@northmes/contracts';
 import { GraphQLError } from 'graphql';
 import { z } from 'zod';
+import type { FieldError } from '../errors/domain-error.ts';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
 
 function capitalize(name: string): string {
@@ -28,19 +30,35 @@ function mutationFieldName(commandName: string): string {
   return `${prefix}${capitalize(name)}`;
 }
 
-/** The GraphQL scalar of a required input field, from its JSON Schema, or undefined. */
+/** The bounds of GraphQL's Int, a signed 32-bit integer. */
+const INT_MIN = -(2 ** 31);
+const INT_MAX = 2 ** 31 - 1;
+
+/**
+ * The GraphQL scalar of a required input field, from its JSON Schema, or undefined. An integer is
+ * an Int only when its schema bounds it to 32 bits, as z.int32() does (ADR 0017).
+ */
 function scalarOf(property: z.core.JSONSchema._JSONSchema): ReturnTypeFunc | undefined {
   if (typeof property !== 'object') return undefined;
   if (property.type === 'string' && property.format === 'uuid') return () => ID;
   if (property.type === 'string') return () => String;
   if (property.type === 'number') return () => Float;
+  if (
+    property.type === 'integer' &&
+    property.minimum !== undefined &&
+    property.minimum >= INT_MIN &&
+    property.maximum !== undefined &&
+    property.maximum <= INT_MAX
+  ) {
+    return () => Int;
+  }
   return undefined;
 }
 
 /**
  * The input type of a command's mutation, built from contract.input. It covers the field kinds the
- * skeleton uses: required ID, string and number fields. Any other field throws, naming it, before
- * a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
+ * skeleton uses: required ID, string, number and 32-bit integer fields. Any other field throws,
+ * naming it, before a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
  */
 function inputType(contract: CommandContract, typeName: string): Type {
   const schema = z.toJSONSchema(contract.input, { io: 'input' });
@@ -49,7 +67,7 @@ function inputType(contract: CommandContract, typeName: string): Type {
     const scalar = required.has(field) ? scalarOf(property) : undefined;
     if (!scalar) {
       throw new Error(
-        `Command ${contract.name}: input field ${field} is not a required ID, string or number, the kinds a generated mutation input supports so far`,
+        `Command ${contract.name}: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
       );
     }
     return { field, scalar };
@@ -61,17 +79,21 @@ function inputType(contract: CommandContract, typeName: string): Type {
 }
 
 /**
- * Parses a command's input with its contract. A failure is BAD_USER_INPUT (ADR 0012); the
- * fieldErrors extension arrives with the error model (E05-S01).
+ * Parses a command's input with its contract. A failure is BAD_USER_INPUT with one fieldErrors
+ * entry per Zod issue, whose path is relative to the input (ADR 0012, ADR 0017).
  */
 function parseInput(contract: CommandContract, input: unknown): unknown {
   const parsed = contract.input.safeParse(input);
   if (parsed.success) return parsed.data;
-  const problems = parsed.error.issues.map(
-    (issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`,
-  );
+  const { issues } = parsed.error;
+  const problems = issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`);
+  const fieldErrors: FieldError[] = issues.map(({ path, message, code }) => ({
+    path: path.map((segment) => (typeof segment === 'symbol' ? String(segment) : segment)),
+    message,
+    code,
+  }));
   throw new GraphQLError(`Invalid input for ${contract.name}: ${problems.join('; ')}`, {
-    extensions: { code: 'BAD_USER_INPUT' },
+    extensions: { code: 'BAD_USER_INPUT', fieldErrors },
   });
 }
 

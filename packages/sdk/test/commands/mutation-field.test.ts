@@ -3,7 +3,13 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import { defineCommandContract } from '@northmes/contracts';
-import { COMMAND_BUS, type Command, type CommandBus, defineCommand } from '@northmes/sdk/commands';
+import {
+  COMMAND_BUS,
+  type Command,
+  type CommandBus,
+  defineCommand,
+  type Versioned,
+} from '@northmes/sdk/commands';
 import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -15,14 +21,20 @@ const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 
 /**
  * Records every command it gets and runs its handler, as the bus does after its own steps. The
- * fixture's handler reads no table, so it gets a stand-in for the transaction.
+ * fixture's target and handler read no table, so they get a stand-in for the transaction.
  */
 class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
-  async run<Input, Result>(command: Command<Input, Result>, input: Input): Promise<Result> {
+  async run<Input, Result, Target extends Versioned | undefined>(
+    command: Command<Input, Result, Target>,
+    input: Input,
+  ): Promise<Result> {
     this.calls.push({ command, input });
-    return command.handle(input, { tx: {} as Transaction<unknown> });
+    const tx = {} as Transaction<unknown>;
+    const context = { tx, plantId: undefined };
+    const target = (await command.target?.load((input as { id: string }).id, context)) as Target;
+    return command.handle(input, { ...context, target });
   }
 }
 
@@ -62,14 +74,14 @@ function release(schema: GraphQLSchema, input: Record<string, unknown>) {
 }
 
 describe('defineCommand', () => {
-  it("E02-S04 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input", async () => {
+  it("E05-S01 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input and expectedVersion as Int", async () => {
     const { sdl } = await buildPlanningSchema();
 
     expect(sdl).toContain(
       'type Mutation {\n  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!\n}',
     );
     expect(sdl).toContain(
-      'input PlanningReleaseProductionOrderInput {\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
+      'input PlanningReleaseProductionOrderInput {\n  expectedVersion: Int!\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
     );
   });
 
@@ -78,6 +90,7 @@ describe('defineCommand', () => {
 
     const result = await release(schema, {
       id: ORDER_ID,
+      expectedVersion: 1,
       note: '  Rush order  ',
       quantity: 120,
     });
@@ -90,7 +103,7 @@ describe('defineCommand', () => {
     expect(bus.calls).toEqual([
       {
         command: ReleaseProductionOrder.command,
-        input: { id: ORDER_ID, note: 'Rush order', quantity: 120 },
+        input: { id: ORDER_ID, expectedVersion: 1, note: 'Rush order', quantity: 120 },
       },
     ]);
   });
@@ -101,6 +114,7 @@ describe('defineCommand', () => {
     // GraphQL accepts any string as an ID; the contract wants a uuid.
     const result = await release(schema, {
       id: 'po-1',
+      expectedVersion: 1,
       note: 'Rush order',
       quantity: 120,
     });
@@ -110,24 +124,64 @@ describe('defineCommand', () => {
     expect(bus.calls).toEqual([]);
   });
 
-  it('E02-S04 defineCommand refuses a contract field that is not a required ID, string or number, naming it', () => {
+  it('E05-S01 an input that fails the contract returns BAD_USER_INPUT with a fieldErrors entry per Zod issue', async () => {
+    const { schema } = await buildPlanningSchema();
+
+    const result = await release(schema, {
+      id: 'po-1',
+      expectedVersion: 0,
+      note: 'Rush order',
+      quantity: 120,
+    });
+
+    expect(result.errors?.map(({ extensions }) => extensions)).toEqual([
+      {
+        code: 'BAD_USER_INPUT',
+        fieldErrors: [
+          { path: ['id'], message: 'Invalid UUID', code: 'invalid_format' },
+          {
+            path: ['expectedVersion'],
+            message: 'Too small: expected number to be >=1',
+            code: 'too_small',
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('E05-S01 defineCommand refuses a contract field that is not a required ID, string, number or 32-bit integer, naming it', () => {
     const fieldsWith = {
       urgent: z.object({ urgent: z.boolean() }),
       note: z.object({ note: z.string().optional() }),
+      count: z.object({ count: z.int() }),
     };
 
     for (const [field, fields] of Object.entries(fieldsWith)) {
       const contract = defineCommandContract({
-        name: 'planning.flagProductionOrder',
-        target: 'existing',
+        name: 'planning.flagProductionOrders',
+        target: 'none',
         fields,
       });
       expect(
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrder: input field ${field} is not a required ID, string or number, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
       );
     }
+  });
+
+  it('E05-S01 defineCommand refuses a command on an existing entity without the target that the bus checks expectedVersion on', () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrder',
+      target: 'existing',
+      fields: z.object({}),
+    });
+
+    expect(() =>
+      defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
+    ).toThrow(
+      'Command planning.flagProductionOrder changes an existing entity, so its definition needs target, which the command bus loads to check expectedVersion (ADR 0012)',
+    );
   });
 });

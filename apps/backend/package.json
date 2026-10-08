@@ -23,6 +23,7 @@
     "@nestjs/platform-express": "catalog:",
     "@nestjs/terminus": "catalog:",
     "@northmes/contracts": "workspace:*",
+    "@northmes/core-contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/sdk": "workspace:*",
     "graphql": "catalog:",

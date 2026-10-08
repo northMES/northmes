@@ -5,7 +5,9 @@ export {
   COMMAND_BUS,
   type Command,
   type CommandBus,
+  type CommandTarget,
   type HandlerContext,
+  type Versioned,
 } from './command-bus.ts';
 export { type CommandDefinition, type CommandProvider, defineCommand } from './define-command.ts';
 export {
