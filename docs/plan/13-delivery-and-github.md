@@ -635,7 +635,7 @@ Branch ruleset on `main`:
 
 - Pull request required, 1 approving review, stale approvals dismissed on push, review threads must be resolved ([ADR 0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)). CodeRabbit gives the approval on pull requests that handoff or a session opens with Krister's token, since GitHub does not let Krister approve them; `@coderabbitai approve` is the fallback. Krister approves Renovate's pull requests and the release pull request, which CodeRabbit skips.
 - Squash merge only; linear history.
-- Required status checks, strict (branch up to date): `ci / gate`, `license gate`, `dependency audit`, `CodeQL`.
+- Required status checks, strict (branch up to date): `ci / lint`, `ci / typecheck`, `ci / build`, `ci / test`, `ci / pr title`, `ci / linked issue` and `ci / gate` from the GitHub Actions app ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), `license gate`, `dependency audit`, `CodeQL`.
 - Block force pushes and deletion.
 - No bypass actors.
 
@@ -659,9 +659,10 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 
 | Workflow and job | Trigger | Runs |
 |---|---|---|
-| `ci.yml` `ci / lint + typecheck + build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint, typecheck and build (Biome in CI mode, `tsc`, the import rules that keep MIT packages free of AGPL code) |
-| `ci.yml` `ci / test (TZ=UTC)` | pull request, push to `main` | Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload |
-| `ci.yml` `ci / test (TZ=Europe/Stockholm)` | pull request, push to `main` | The same with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
+| `ci.yml` `ci / lint` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint (Biome in CI mode, the import rules that keep MIT packages free of AGPL code); `pnpm gen --check` |
+| `ci.yml` `ci / typecheck` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo typecheck (`tsc`) |
+| `ci.yml` `ci / build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo build |
+| `ci.yml` `ci / test` | pull request, push to `main` | The UTC leg: Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload. Then, in the same job, the Europe/Stockholm leg: the unit and integration projects with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
 | `ci.yml` `ci / e2e` | pull request, push to `main` | Build, `playwright install --with-deps chromium`, Playwright against the built `all` process; traces on failure. Includes `e2e/skeleton.spec.ts` |
 | `ci.yml` `ci / a11y` | pull request, push to `main` | axe over the board states; a separate job from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |
 | `ci.yml` `ci / docs` | pull request, push to `main` | `pnpm docs:generate`, then `git diff --exit-code -- apps/docs` and `git status --porcelain apps/docs` |
@@ -670,7 +671,7 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 | `ci.yml` `ci / cla` | pull request | The contributor license agreement check, before the first outside pull request |
 | `ci.yml` `fresh-worktree` | pull request | `git worktree add`, `pnpm install --frozen-lockfile`, `pnpm test:int` with no build step |
 | `ci.yml` `plugin-outside` | pull request, push to `main` | Packs the MIT packages, installs an example plugin from the tarballs outside the repository, builds it, drops it into a plugins directory, boots and runs its e2e spec |
-| `ci.yml` `ci / gate` | pull request, push to `main` | Needs the required jobs above; the one check the ruleset names for CI |
+| `ci.yml` `ci / gate` | pull request, push to `main` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request |
 | `supply-chain.yml` `license gate` | pull request, push to `main` | `pnpm sbom` per package and `scripts/license-gate.mjs` with the policy of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `supply-chain.yml` `dependency audit` | pull request | `pnpm audit --prod --audit-level high`, with assessed exceptions recorded |
 | `supply-chain.yml` `dependency review` | pull request | `actions/dependency-review-action`, once the dependency graph reads the lockfile |
@@ -685,7 +686,7 @@ The Pyramid live test runs only against a test company with `NORTHMES_PYRAMID_LI
 
 ### Required checks
 
-The ruleset names four checks: `ci / gate`, `license gate`, `dependency audit` and `CodeQL`. `ci / gate` needs lint, typecheck and build, both test legs, `ci / linked issue` and `ci / pr title`; from M1 (2026-11-20) also `e2e/skeleton.spec.ts` and the resolve-hook test; `ci / docs` once `apps/docs` exists; `ci / cla` before the first outside pull request; `ci / a11y` from the first board pull request; `ci / e2e` once it is stable, and at the latest before the lean graph. Jobs join `ci / gate` without a ruleset edit. Every gate step runs a script that `pnpm check` or `pnpm check:full` contains.
+The ruleset names each job of `ci.yml` as a required check from the GitHub Actions app ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)): `ci / lint`, `ci / typecheck`, `ci / build`, `ci / test`, `ci / pr title`, `ci / linked issue` and `ci / gate`. It also names `license gate`, `dependency audit` and `CodeQL`. `ci / gate` needs every other job in `ci.yml`; from M1 (2026-11-20) also `e2e/skeleton.spec.ts` and the resolve-hook test; `ci / docs` once `apps/docs` exists; `ci / cla` before the first outside pull request; `ci / a11y` from the first board pull request; `ci / e2e` once it is stable, and at the latest before the lean graph. A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit in the same change, and `test/meta/workflows.test.ts` lists the job names. Every gate step runs a script that `pnpm check` or `pnpm check:full` contains.
 
 ### Runners: Blacksmith with a fallback
 

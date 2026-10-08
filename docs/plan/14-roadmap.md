@@ -476,7 +476,7 @@ ADRs: [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chai
 
 Acceptance criteria:
 
-- Every pull request and every push to `main` runs `ci / gate`, `license gate`, `dependency audit` and CodeQL, and all four are strict required checks.
+- Every pull request and every push to `main` runs the jobs of `ci.yml`, `license gate`, `dependency audit` and CodeQL, and each of them is a strict required check ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
 - `ci / gate` runs the unit and integration projects in both the UTC and the Europe/Stockholm legs.
 - A pull request title that is not a Conventional Commit, or a pull request without `Closes #N`, fails its check.
 - A third-party GPL-3.0, AGPL or LGPL dependency fails the license gate by name.
@@ -599,7 +599,7 @@ Labels: `task`, `human`, `area: ci` (GitHub settings). Blocked by: E00-S04-T02, 
 Plan: E00-S04-T03
 
 ## Goal
-Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / gate, license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed Copilot pull requests left at GitHub's default, on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
+Configure the repository so main only changes through checked squash merges. A session applies the GitHub settings and opens one pull request with the files. Settings: a ruleset on main with squash only, PR title as commit subject and a blank body, linear history, strict required checks ci / lint, ci / typecheck, ci / build, ci / test, ci / pr title, ci / linked issue and ci / gate from the GitHub Actions app (ADR 0069), license gate, dependency audit and CodeQL, required thread resolution, 1 approving review with stale approvals dismissed on push and the extra approval for unattributed Copilot pull requests left at GitHub's default, on (ADR 0065), no bypass actors, no force push or deletion; a tag ruleset on v* that blocks deletion and update; private vulnerability reporting; secret scanning with push protection; Dependabot alerts on and Dependabot security updates off; CodeQL default setup for actions and javascript-typescript; Actions pinned to full SHAs; approval for all outside contributors; auto-merge off; GitHub's merge queue off; the setting SP2 (E01-S03-T01) chooses for release-please pull requests (Actions may create pull requests, or a GitHub App token); once the repository is in the northMES organization (Blacksmith runs only for organizations), the Blacksmith App installed on the NorthMES repository only, sticky-disk branch protection on, branch-scoped caches, SSH access off, AI features off, a spending alert set, an EU region requested from support. Register NorthMES at bestpractices.dev, commit .bestpractices.json with the project id, and add the badge to README.md.
 
 ## Where in the code
 scripts/labels.sh (new): epic, story, task, human, design, spike, accessibility, area: core, area: planning, area: sdk, area: web, area: docs, area: deploy, area: ci
@@ -626,6 +626,7 @@ none
 docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md
 docs/adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md
 docs/adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md
+docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md
 
 ## Out of scope
 Release environment and immutable releases (E18), the CLA check (E19-S06).
@@ -637,7 +638,7 @@ chore(repo): add issue forms, PR template and labels
 - [ ] A direct push to main is refused
 - [ ] A pull request with an unresolved review thread cannot merge
 - [ ] Only squash merge is offered, with the PR title as subject and an empty body
-- [ ] The four required checks are strict
+- [ ] Every required check is strict
 - [ ] .bestpractices.json is on main
 - [ ] github-files.test.ts passes
 ```
@@ -652,13 +653,13 @@ Labels: `task`, `human`, `area: ci` (E00 and E01 run in interactive sessions). B
 Plan: E00-S04-T04
 
 ## Goal
-Add the review and supply-chain services that report on pull requests without being required checks. Socket checks new dependencies, Codecov shows coverage as information only, and OpenSSF Scorecard scores the repository. Coverage from ci / test (TZ=UTC) reaches Codecov once through OIDC without a token.
+Add the review and supply-chain services that report on pull requests without being required checks. Socket checks new dependencies, Codecov shows coverage as information only, and OpenSSF Scorecard scores the repository. Coverage from the UTC leg of ci / test reaches Codecov once through OIDC without a token.
 
 ## Where in the code
 socket.yml (new): triggers on package.json files, pnpm-lock.yaml and pnpm-workspace.yaml
 codecov.yml (new): informational, no pull request comment, one component per module from paths
 .github/workflows/scorecard.yml (new): the read-only token that can read rulesets (docs/plan/13-delivery-and-github.md)
-.github/workflows/ci.yml: ci / test (TZ=UTC) saves coverage as an artifact; a separate upload job that runs no pnpm install holds id-token: write, so the rule tested in E00-S04-T01 holds
+.github/workflows/ci.yml: ci / test saves the coverage of its UTC leg as an artifact; a separate upload job that runs no pnpm install holds id-token: write, so the rule tested in E00-S04-T01 holds
 test/meta/services.test.ts (new), test/meta/workflows.test.ts
 Seam: the tests parse the YAML files.
 
@@ -683,7 +684,7 @@ ci: add Socket, Codecov and Scorecard
 ## Acceptance criteria
 - [ ] scorecard.yml runs on a schedule and on push to main with top-level permissions read-all
 - [ ] codecov.yml marks Codecov informational with no pull request comment
-- [ ] ci / test (TZ=UTC) uploads coverage once through OIDC without a token
+- [ ] The coverage of the UTC leg of ci / test reaches Codecov once through OIDC without a token
 - [ ] services.test.ts and workflows.test.ts pass
 ```
 

@@ -375,13 +375,19 @@ The ruleset on `main` requires these checks, strict (the branch must be up to da
 
 | Check | Runs |
 |---|---|
-| `ci / gate` | Needs lint, typecheck and build; `pnpm gen --check`; the unit, integration, web and types projects in the UTC leg and in the Europe/Stockholm leg; `ci / linked issue`; `ci / pr title`. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists), `ci / cla` (before the first outside pull request) and `ci / openapi diff` (with the first public route). |
+| `ci / lint` | turbo `lint`, then `pnpm gen --check` |
+| `ci / typecheck` | turbo `typecheck` |
+| `ci / build` | turbo `build` |
+| `ci / test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job |
+| `ci / pr title` | The title is a Conventional Commit with an allowed type |
+| `ci / linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
+| `ci / gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `ci / docs` (once `apps/docs` exists), `ci / cla` (before the first outside pull request) and `ci / openapi diff` (with the first public route). |
 | `ci / a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
 | `CodeQL` | GitHub's default setup for `actions` and `javascript-typescript` |
 
-`ci / gate` is the one aggregate check, so jobs inside `ci.yml` change without a ruleset edit. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
+Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit in the same change, and `test/meta/workflows.test.ts` lists the job names. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 
 `ci / openapi diff` is a job inside `ci / gate` that ships with the first public route; release 1 has none ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
 
@@ -394,7 +400,7 @@ The ruleset on `main` requires these checks, strict (the branch must be up to da
 
 ### Other checks on pull requests
 
-Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there; whether one of them joins `ci / gate` is decided by the task that adds it. `ci / e2e` becomes required before the project moves to the lean handoff graph.
+Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `ci / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `ci / e2e` becomes required before the project moves to the lean handoff graph.
 
 | Check | Runs | When |
 |---|---|---|
