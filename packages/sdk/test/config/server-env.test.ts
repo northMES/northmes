@@ -47,4 +47,14 @@ describe('serverEnvSchema', () => {
     expect(error.message).not.toContain('70000');
     expect(error.message).not.toContain('web');
   });
+
+  it('E02-S01 NODE_ENV defaults to production and NORTHMES_ROLE to all', () => {
+    const env = loadEnv(serverEnvSchema)({
+      PORT: '8080',
+      NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+    });
+
+    expect(env.NODE_ENV).toBe('production');
+    expect(env.NORTHMES_ROLE).toBe('all');
+  });
 });
