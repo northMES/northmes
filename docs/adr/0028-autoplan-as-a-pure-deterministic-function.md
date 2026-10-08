@@ -102,7 +102,7 @@ Invariants for `plan()` and any later `Scheduler`: no free row overlaps any row;
 
 The connector emits canonical movements of kind consumption or output with `productionOrderId` and `articleId` and keeps the ERP date as a fallback; NorthMES-created orders get the same links from their materials. One pure function, `projectMaterial(placements, movements, now)`, derives dates when read: consumption at the earliest setup start among the consuming operation's job orders, output at the latest end of the last operation, the ERP date for an unplaced order, and now when overdue. It sorts by (instant, incoming before outgoing, id), sums per article over the plant's mapped warehouses and returns warnings per job order. `plan()`, the board read model and the board's draft overlay call it. Pyramid's consumption and output stock rows (T and R) are re-dated, never ignored. A material warning is a warning, not a conflict.
 
-The Pyramid order file has no parent reference, so imported orders plan independently by their ERP deadlines. A planner may link a child to a parent by hand; linked children leave the top-level sort. A child production order is always in its parent's plant. NorthMES does not explode BOMs into new child orders in release 1.
+The Pyramid order file has no parent reference, so imported orders plan independently by their ERP deadlines. A planner may link a child to a parent by hand; linked children leave the top-level sort. A child production order is always in its parent's plant. Linking refuses a cycle: an order cannot be linked under itself or under one of its own descendants (`planning.production_order.link_cycle`). NorthMES does not explode BOMs into new child orders in release 1.
 
 ### Working defaults until the product owner answers
 
@@ -111,7 +111,7 @@ The Pyramid order file has no parent reference, so imported orders plan independ
 | Frozen window basis: elapsed hours, working hours or through the end of the next production day | elapsed hours; `frozenHours` has no default and is required when a plant is created |
 | May overdue rows jump the frozen window | no: `notBefore = now + frozenHours` |
 | Apply directly, or write a proposal into the requester's draft | direct apply; the proposal path would commit through the same `commitScheduleChanges` |
-| Child orders | planned independently; links by hand only |
+| Child orders | planned independently; links by hand only; a linked child may have children of its own |
 | Purchase requisitions (Pyramid A rows) in the material warning | open; planning setting `countPurchaseRequisitions` with no default |
 | Where `isLocked` lives | on the production order operation, as in Pyramid |
 | Operation priority | breaks ties between operations competing for one machine; defaults to the order priority |
@@ -138,7 +138,7 @@ The earlier attempt's placement, calendar, lock, operation and readiness rules a
 * `domain-imports.test.ts` fails on Nest, Kysely, `pg` or `process.env` imports, and a Biome rule bans `localeCompare` and `Intl.Collator` in domain code.
 * `project-material.test.ts`: with stock 5, a parent consuming 8 at op 20's start and a child output of 10, there is no warning when the child ends first and a warning on the job order when op 20 starts first.
 * `autoplan-job.int.test.ts` with two Nest instances on Testcontainers Postgres: 10 concurrent requests during a run give one queued run and two executed runs; a throwing worker ends its run `failed`; a killed worker lets a new run start within 30 s; a revoked role fails the run with one security event and no change; an import that adds an overlapping job order during compute makes the apply re-snapshot once and leaves no overlap; a calendar deviation added during compute forces a recompute; 20 operator reports during compute do not stop the first apply; a 1 600-row apply issues one `UPDATE` in 1 s or less; planner A's draft on order 1001 stays current while planner C runs autoplan.
-* `release.int.test.ts`: a child order in another plant fails with `core.crossScopeReference`.
+* `release.int.test.ts`: a child order in another plant fails with `core.crossScopeReference`; linking an order under itself or under one of its descendants fails with `planning.production_order.link_cycle`.
 * `plan.bench.ts` runs nightly on the CI runner against the budget table and records fallback and late counts; a counter allows at most about 3 400 `resolveWallClock` calls on the seeded fixture.
 
 ## Pros and cons of the options
