@@ -95,4 +95,19 @@ describe('defineCommand', () => {
       },
     ]);
   });
+
+  it('E02-S04 an input that fails the contract never reaches the bus', async () => {
+    const { planning, bus } = await buildPlanningSubgraph();
+
+    // GraphQL accepts any string as an ID; the contract wants a uuid.
+    const result = await release(planning.schema, {
+      id: 'po-1',
+      note: 'Rush order',
+      quantity: 120,
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.errors?.map((error) => error.extensions.code)).toEqual(['BAD_USER_INPUT']);
+    expect(bus.calls).toEqual([]);
+  });
 });
