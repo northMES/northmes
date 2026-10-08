@@ -7,4 +7,11 @@ describe('apiPath', () => {
     expect(API_MAJOR).toBe(1);
     expect(apiPath('web', 'modules')).toBe('/api/v1/web/modules');
   });
+
+  it('E02-S03 apiPath keeps a segment with ? or # as one literal path segment', () => {
+    const path = apiPath('web', 'item?draft=true', 'a#b');
+
+    expect(path).toBe('/api/v1/web/item%3Fdraft%3Dtrue/a%23b');
+    expect(new URL(path, 'http://localhost').pathname).toBe(path);
+  });
 });
