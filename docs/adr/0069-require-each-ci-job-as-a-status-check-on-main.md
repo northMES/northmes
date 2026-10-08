@@ -38,7 +38,7 @@ The workflow keeps the name `CI`, and its job names do not start with `ci / `, s
 | `lint` | `CI / lint` | `pnpm lint`, then `pnpm gen --check` |
 | `typecheck` | `CI / typecheck` | `pnpm typecheck` |
 | `build` | `CI / build` | `pnpm build` |
-| `test` | `CI / test` | `pnpm test` (the `unit`, `integration`, `web` and `types` projects) with `TZ` and `NM_TEST_PG_TZ` set to `UTC`, then `pnpm test:tz` (the `unit` and `integration` projects in `Europe/Stockholm`) as a second step, which also runs when the UTC step failed and does not run when a failed install skipped it |
+| `test` | `CI / test` | `pnpm test:coverage` (the `unit`, `integration`, `web` and `types` projects with coverage) with `TZ` and `NM_TEST_PG_TZ` set to `UTC`; after a passed UTC step, a step that copies the coverage summary into the job summary and an upload of the lcov report; then `pnpm test:tz` (the `unit` and `integration` projects in `Europe/Stockholm`), which also runs when the UTC step failed and does not run when a failed install skipped it |
 | `pr title` | `CI / pr title` | As `ci / pr title` did, on pull requests only |
 | `linked issue` | `CI / linked issue` | As `ci / linked issue` did, on pull requests only |
 | `gate` | `CI / gate` | Needs every other job, and fails when one of them failed or was cancelled, or was skipped on a pull request |
