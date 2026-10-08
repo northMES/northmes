@@ -10,6 +10,11 @@ export interface SubgraphEntry {
   readonly sdl: string;
   /** The executable subgraph schema. */
   readonly schema: GraphQLSchema;
+  /**
+   * The entities of other modules that the module references through entityRef, which the
+   * composition rules tell apart from the entities it owns.
+   */
+  readonly entityRefs: readonly string[];
 }
 
 /** Collects the subgraph of every module that defineSubgraph built in this process. */

@@ -24,7 +24,15 @@ export type {
   CommandTransaction,
 } from './db-command.ts';
 export { given } from './given.ts';
-export { type GqlAnswer, type GqlClient, type GqlClientOptions, gqlClient } from './gql-client.ts';
+export {
+  type GqlAnswer,
+  type GqlClient,
+  type GqlClientOptions,
+  type GqlEvent,
+  gqlClient,
+  type SubscribeOptions,
+  type SubscriptionTransport,
+} from './gql-client.ts';
 export {
   type PostgresServer,
   type StartPostgresOptions,

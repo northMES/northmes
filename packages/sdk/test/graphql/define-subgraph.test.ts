@@ -147,6 +147,16 @@ describe('defineSubgraph', () => {
       'type Article @key(fields: "id") {\n  id: ID!\n  qualityInspectionRequired: Boolean\n}',
     );
   });
+
+  it('E02-S03 a subgraph entry names the entities its module references through entityRef', async () => {
+    const { registry } = await buildSubgraphs({
+      catalog: CatalogModule,
+      'production-start': ProductionStartModule,
+    });
+
+    expect(subgraph(registry, 'catalog').entityRefs).toEqual([]);
+    expect(subgraph(registry, 'productionStart').entityRefs).toEqual(['Article']);
+  });
 });
 
 describe('loaderFor', () => {
