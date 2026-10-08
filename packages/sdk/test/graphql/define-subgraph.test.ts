@@ -10,7 +10,7 @@ import {
   SubgraphRegistry,
   SubgraphRegistryModule,
 } from '@northmes/sdk/graphql';
-import { execute, parse } from 'graphql';
+import { execute, isTypeDefinitionNode, Kind, parse } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CatalogArticles, CatalogModule } from '../fixtures/graphql/catalog.ts';
 import { ProductionStartModule } from '../fixtures/graphql/production-start.ts';
@@ -105,6 +105,24 @@ describe('defineSubgraph', () => {
     });
 
     expect(registry.all().map((entry) => entry.name)).toEqual(['catalog', 'productionStart']);
+  });
+
+  it('E02-S03 a subgraph SDL lists its definitions in lexicographic order', async () => {
+    const { registry } = await buildSubgraphs({
+      catalog: CatalogModule,
+      'production-start': ProductionStartModule,
+    });
+    const { definitions } = parse(subgraph(registry, 'productionStart').sdl);
+
+    const typeNames = definitions.filter(isTypeDefinitionNode).map((node) => node.name.value);
+    const directiveNames = definitions
+      .filter((node) => node.kind === Kind.DIRECTIVE_DEFINITION)
+      .map((node) => node.name.value);
+
+    expect(typeNames).toContain('ProductionOrder');
+    expect(directiveNames).toContain('key');
+    expect(typeNames).toEqual([...typeNames].sort());
+    expect(directiveNames).toEqual([...directiveNames].sort());
   });
 
   it('E02-S03 entityRef(Article) adds a key-only Article stub to the referencing subgraph', async () => {
