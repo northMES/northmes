@@ -20,11 +20,13 @@ export function tracerPrincipal(plantId: string): Principal {
 
 /**
  * Resolves the principal once per client request from the plant in its x-northmes-plant header,
- * and adds it to the gateway context as `principal`.
+ * and adds it to the gateway context as `principal`. A request without the header gets null, so it
+ * reads nothing. The plant comes from the HTTP request alone: the gateway also spreads a socket's
+ * connectionParams over `context.headers`, which this plugin never reads (ADR 0011, ADR 0018).
  */
-export const tracerPrincipalPlugin: GatewayPlugin<{ principal: Principal }> = {
+export const tracerPrincipalPlugin: GatewayPlugin<{ principal: Principal | null }> = {
   onContextBuilding({ context, extendContext }) {
-    const plantId = context.request.headers.get(PLANT_HEADER) as string;
-    extendContext({ principal: tracerPrincipal(plantId) });
+    const plantId = context.request.headers.get(PLANT_HEADER);
+    extendContext({ principal: plantId ? tracerPrincipal(plantId) : null });
   },
 };
