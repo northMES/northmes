@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Controller, Get, Inject, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Get, Inject, NotFoundException, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ServedWeb } from './served-web.ts';
 
 /** The content security policy of the shell: every resource from the server's origin (ADR 0019). */
@@ -17,13 +17,21 @@ export const CSP = [
   "frame-ancestors 'none'",
 ].join('; ');
 
+/**
+ * The first path segments of the server's own routes (ADR 0064). A path that starts with one is not
+ * an SPA path, and a plant slug is never one of them.
+ */
+const SERVER_SEGMENTS = new Set(['api', 'assets', 'graphql', 'health', 'mcp', 'modules']);
+
 /** Answers the SPA paths with the shell's index.html (ADR 0064). */
 @Controller()
 export class ShellController {
   constructor(@Inject(ServedWeb) private readonly web: ServedWeb) {}
 
   @Get('{*path}')
-  index(@Res() response: Response): void {
+  index(@Req() request: Request, @Res() response: Response): void {
+    // A file under /modules/ whose module the catalog did not load is a 404, never the shell.
+    if (SERVER_SEGMENTS.has(request.path.split('/')[1] ?? '')) throw new NotFoundException();
     response.setHeader('Content-Security-Policy', CSP);
     const index = join(this.web.shellDir, 'index.html');
     if (!existsSync(index)) {
