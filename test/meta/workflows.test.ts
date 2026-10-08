@@ -303,7 +303,7 @@ describe('workflows', () => {
 
     expect(testJobs, 'test jobs').not.toHaveLength(0);
     for (const { where, job } of testJobs) {
-      expect(String(job['runs-on']).replace(/\s+/g, ' ').trim(), where).toBe(testRunner);
+      expect(runsOnOf(job), where).toBe(testRunner);
     }
   });
 
