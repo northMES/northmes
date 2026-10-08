@@ -233,6 +233,41 @@ describe('migrate checks every module before it applies a file', () => {
   });
 });
 
+// Planning's folder is a fixture with a problem, and core's fixture files are fine. core comes
+// first in catalog order, so a run that applied files before it checked them would apply core's.
+describe('migrate refuses a module whose files break a naming rule', () => {
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
+
+  /** The catalog of core's fixture files and planning with the files of the fixture folder. */
+  function catalogWithPlanning(folder: string) {
+    return checkCatalog(
+      [
+        { ...inRepoModule('planning', ['core']), migrationsDir: fixtureMigrations(folder) },
+        { ...inRepoModule('core'), migrationsDir: fixtureMigrations('core') },
+      ],
+      { imageVersion },
+    );
+  }
+
+  it('E02-S02 two files with the same timestamp prefix in one module are refused', async () => {
+    const run = migrate({
+      ownerUrl: db.ownerUrl,
+      catalog: catalogWithPlanning('duplicate-prefix'),
+    });
+
+    await expect(run).rejects.toMatchObject({
+      name: 'MigrationError',
+      exitCode: 1,
+      problems: [
+        'planning/20260110080000_shift.sql and planning/20260110080000_work_center.sql share the timestamp prefix 20260110080000; give each file a timestamp of its own',
+      ],
+    });
+    expect(await query(db.ownerUrl, 'select module, name from northmes_meta.migration')).toEqual(
+      [],
+    );
+  });
+});
+
 describe('pnpm northmes migrate', () => {
   const db = useTestDatabase({ template: emptyTemplateDatabase });
   let secretsDir: string;
