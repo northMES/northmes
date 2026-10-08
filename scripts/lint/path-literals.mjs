@@ -86,6 +86,45 @@ function pathExpressions(node, source) {
 }
 
 /**
+ * The literals that start the value of an expression: a string or template literal, the left end of
+ * a `+` concatenation and both branches of a conditional, read through parentheses, `as`,
+ * `satisfies` and `!`. A template literal's text is its source between the backticks.
+ * @param {ts.Expression} expression
+ * @param {ts.SourceFile} source
+ * @returns {{ node: ts.Node, text: string }[]}
+ */
+function leadingLiterals(expression, source) {
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression) ||
+    ts.isTypeAssertionExpression(expression) ||
+    ts.isNonNullExpression(expression)
+  ) {
+    return leadingLiterals(expression.expression, source);
+  }
+  if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
+    return [{ node: expression, text: expression.text }];
+  }
+  if (ts.isTemplateExpression(expression)) {
+    return [{ node: expression, text: expression.getText(source).slice(1, -1) }];
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    return leadingLiterals(expression.left, source);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return [
+      ...leadingLiterals(expression.whenTrue, source),
+      ...leadingLiterals(expression.whenFalse, source),
+    ];
+  }
+  return [];
+}
+
+/**
  * Throws on the first allowlist entry whose reason is missing or blank.
  * @param {readonly AllowlistEntry[]} allowlist
  */
@@ -115,17 +154,16 @@ export function scan(files, allowlist) {
   for (const { path, text } of files) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
     const visit = (node) => {
-      for (const expression of pathExpressions(node, source)) {
-        if (
-          ts.isStringLiteral(expression) &&
-          isAppPath(expression.text) &&
-          !isAllowed(path, expression.text)
-        ) {
-          const start = expression.getStart(source);
+      const literals = pathExpressions(node, source).flatMap((expression) =>
+        leadingLiterals(expression, source),
+      );
+      for (const literal of literals) {
+        if (isAppPath(literal.text) && !isAllowed(path, literal.text)) {
+          const start = literal.node.getStart(source);
           findings.push({
             path,
             line: source.getLineAndCharacterOfPosition(start).line + 1,
-            literal: expression.text,
+            literal: literal.text,
           });
         }
       }
