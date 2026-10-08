@@ -1,4 +1,13 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,26 +15,48 @@ import { isHostProvided } from '@northmes/sdk';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildPlugin, main } from './plugin-build.mjs';
 
-const exampleValidator = fileURLToPath(new URL('../examples/plugin-validator', import.meta.url));
+const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
+const exampleValidator = join(repositoryRoot, 'examples/plugin-validator');
 
 function write(path: string, text: string) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, text);
 }
 
+/**
+ * Copies the example validator into root, laid out as in the repository with its node_modules
+ * linked, and returns the copy's folder. A build of the copy writes a dist/ that nothing else
+ * writes: bootBuilt runs pnpm plugin:build example-validator in the same test run, which empties
+ * the example's own dist/.
+ */
+function copyOfExampleValidator(root: string): string {
+  const copy = join(root, 'examples/plugin-validator');
+  cpSync(join(repositoryRoot, 'tsconfig.base.json'), join(root, 'tsconfig.base.json'));
+  for (const part of ['package.json', 'tsconfig.json', 'src']) {
+    cpSync(join(exampleValidator, part), join(copy, part), { recursive: true });
+  }
+  symlinkSync(join(exampleValidator, 'node_modules'), join(copy, 'node_modules'));
+  return copy;
+}
+
 describe('buildPlugin', () => {
   let outDir: string;
+  let copyRoot: string;
 
   beforeEach(() => {
     outDir = mkdtempSync(join(tmpdir(), 'plugin-build-'));
+    copyRoot = mkdtempSync(join(tmpdir(), 'plugin-build-copy-'));
   });
 
   afterEach(() => {
     rmSync(outDir, { recursive: true, force: true });
+    rmSync(copyRoot, { recursive: true, force: true });
   });
 
   it('E02-S04 plugin:build keeps every HOST_PROVIDED import external and bundles ms', async () => {
-    const { files, imports } = await buildPlugin(exampleValidator, outDir);
+    const example = copyOfExampleValidator(copyRoot);
+
+    const { files, imports } = await buildPlugin(example, outDir);
 
     expect(files).toEqual(['dist/manifest.js', 'dist/server.js']);
     // The manifest imports defineModule and the server part imports Nest; both stay imports, and
@@ -38,7 +69,7 @@ describe('buildPlugin', () => {
       expect(isHostProvided(specifier), specifier).toBe(true);
     }
     // ms throws this message for a value it cannot parse, so its code is inside the bundle.
-    expect(readFileSync(join(exampleValidator, 'dist/server.js'), 'utf8')).toContain(
+    expect(readFileSync(join(example, 'dist/server.js'), 'utf8')).toContain(
       'val is not a non-empty string or a valid number',
     );
   });
