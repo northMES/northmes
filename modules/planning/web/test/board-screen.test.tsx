@@ -64,4 +64,20 @@ describe('BoardScreen', () => {
     expect(within(board).getByTestId('article-7102').textContent).toBe('Hinge pin');
     expect(within(board).getByTestId('status-7102').textContent).toBe('released');
   });
+
+  it('E02-S05 the board stub shows the error when its query fails', async () => {
+    const mocks = [
+      { request: { query: PlanningBoard }, error: new Error('The GraphQL gateway is not ready.') },
+    ];
+
+    render(
+      <MockedProvider mocks={mocks}>
+        <BoardScreen />
+      </MockedProvider>,
+    );
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'The production orders could not be loaded: The GraphQL gateway is not ready.',
+    );
+  });
 });
