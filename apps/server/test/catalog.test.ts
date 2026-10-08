@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { BootError } from '../src/boot/boot-error.ts';
 import { type CatalogEntry, checkCatalog } from '../src/catalog/check-catalog.ts';
@@ -13,6 +14,49 @@ function refusal(entries: readonly CatalogEntry[]): BootError {
     throw error;
   }
   throw new Error('checkCatalog accepted the catalog');
+}
+
+// Runs in a fresh Node process: checks each catalog given as JSON on the command line and prints
+// its boot order or its problems, with the locale that Intl collates in by default.
+const checkCatalogs = `
+const [url, catalogs, imageVersion] = process.argv.slice(1);
+const { checkCatalog } = await import(url);
+const outcomes = JSON.parse(catalogs).map((entries) => {
+  try {
+    return { order: checkCatalog(entries, { imageVersion }).map((entry) => entry.manifest.id) };
+  } catch (error) {
+    return { problems: error.problems };
+  }
+});
+const locale = new Intl.Collator().resolvedOptions().locale;
+process.stdout.write(JSON.stringify({ locale, outcomes }));
+`;
+
+interface LocaleRun {
+  locale: string;
+  outcomes: ({ order: string[] } | { problems: string[] })[];
+}
+
+// Checks the catalogs in a Node process whose default locale is Czech, where "ch" sorts after "h".
+// Node takes its default locale from the environment when it starts, so this needs a new process.
+function checkInCzechLocale(catalogs: readonly (readonly CatalogEntry[])[]): LocaleRun {
+  const url = new URL('../src/catalog/check-catalog.ts', import.meta.url).href;
+  const child = spawnSync(
+    process.execPath,
+    [
+      '--conditions=@northmes/source',
+      '--input-type=module',
+      '--eval',
+      checkCatalogs,
+      url,
+      JSON.stringify(catalogs),
+      imageVersion,
+    ],
+    { env: { ...process.env, LANG: 'cs_CZ.UTF-8', LC_ALL: 'cs_CZ.UTF-8' }, encoding: 'utf8' },
+  );
+
+  expect(child.status, child.stderr).toBe(0);
+  return JSON.parse(child.stdout) as LocaleRun;
 }
 
 describe('checkCatalog', () => {
@@ -83,6 +127,24 @@ describe('checkCatalog', () => {
       'planning',
       'acme-validator',
       'acme-audit',
+    ]);
+  });
+
+  it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
+    const { locale, outcomes } = checkInCzechLocale([
+      [
+        inRepoModule('heat-treatment', ['core']),
+        inRepoModule('cleaning', ['core']),
+        inRepoModule('changeover', ['core']),
+        core,
+      ],
+      [core, inRepoModule('cleaning', ['changeover']), inRepoModule('changeover', ['cleaning'])],
+    ]);
+
+    expect(locale).toBe('cs-CZ');
+    expect(outcomes).toEqual([
+      { order: ['core', 'changeover', 'cleaning', 'heat-treatment'] },
+      { problems: ['Module dependency cycle: changeover -> cleaning -> changeover'] },
     ]);
   });
 });
