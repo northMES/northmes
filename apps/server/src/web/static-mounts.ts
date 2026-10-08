@@ -3,7 +3,16 @@ import type { ServerResponse } from 'node:http';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { packageDirOf } from '../catalog/package-dir.ts';
 import type { WebFiles } from './served-web.ts';
+
+/**
+ * The folder of a module's built remote: web/dist/ of the package that holds its manifest, which
+ * manifestUrl names, for an in-repo module and a plugin alike (ADR 0037).
+ */
+export function webDirOf(manifestUrl: string): string {
+  return join(packageDirOf(manifestUrl), 'web', 'dist');
+}
 
 /** The folder of the shell that apps/web builds. */
 export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
