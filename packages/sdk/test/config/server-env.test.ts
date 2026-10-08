@@ -5,10 +5,24 @@ import {
   migrateEnvSchema,
   serverEnvSchema,
 } from '@northmes/sdk/config';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { configErrorOf, keysOf } from './config-error.ts';
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe('serverEnvSchema', () => {
+  it('E02-S01 loadEnv(serverEnvSchema)() reads PORT and NORTHMES_PUBLIC_ORIGIN from process.env', () => {
+    vi.stubEnv('PORT', '8080');
+    vi.stubEnv('NORTHMES_PUBLIC_ORIGIN', 'https://mes.example.com');
+
+    const env = loadEnv(serverEnvSchema)();
+
+    expect(env.PORT).toBe(8080);
+    expect(env.NORTHMES_PUBLIC_ORIGIN).toBe('https://mes.example.com');
+  });
+
   it('E02-S01 a record without PORT fails naming PORT', () => {
     const error = configErrorOf(() =>
       loadEnv(serverEnvSchema)({ NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com' }),
