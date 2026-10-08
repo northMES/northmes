@@ -2,6 +2,7 @@
 import { randomBytes } from 'node:crypto';
 import { Client, type ClientConfig } from 'pg';
 import { afterAll, beforeAll, inject } from 'vitest';
+import { type CommandContext, type CommandTransaction, runCommand } from './db-command.ts';
 
 /** Where the container started by the global setup listens, as the superuser. */
 export interface PgConnection {
@@ -42,6 +43,14 @@ export interface TestDatabase {
   /** Logs in as nm_owner, the migration role, for tests at the database seam. */
   ownerUrl: string;
   databaseName: string;
+  /**
+   * Writes fixtures: runs fn in one transaction as nm_app with the context's scopes as both scope
+   * sets, and commits it (ADR 0041).
+   */
+  command<Result>(
+    context: CommandContext,
+    fn: (tx: CommandTransaction) => Promise<Result>,
+  ): Promise<Result>;
 }
 
 /**
@@ -124,12 +133,17 @@ export function useTestDatabase(): TestDatabase {
     });
   });
 
+  const appUrl = connectionStringFor(
+    { ...pg, user: 'nm_app', password: passwords.app },
+    databaseName,
+  );
   return {
-    appUrl: connectionStringFor({ ...pg, user: 'nm_app', password: passwords.app }, databaseName),
+    appUrl,
     ownerUrl: connectionStringFor(
       { ...pg, user: 'nm_owner', password: passwords.owner },
       databaseName,
     ),
     databaseName,
+    command: (context, fn) => runCommand(appUrl, context, fn),
   };
 }

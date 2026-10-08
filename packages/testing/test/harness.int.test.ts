@@ -147,7 +147,7 @@ describe('the connections of a test database', () => {
     const { password } = inject('pg');
 
     // No connection string of the superuser is handed out, under any key.
-    expect(Object.keys(database).sort()).toEqual(['appUrl', 'databaseName', 'ownerUrl']);
+    expect(Object.keys(database).sort()).toEqual(['appUrl', 'command', 'databaseName', 'ownerUrl']);
     expect(JSON.stringify(database)).not.toContain(encodeURIComponent(password));
 
     const sessions = await Promise.all(
