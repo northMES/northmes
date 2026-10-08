@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { apiPath } from '@northmes/contracts';
 import planning from '@northmes/module-planning/manifest';
 import { API_CONTROLLER_METADATA } from '@northmes/sdk/rest';
 import { hostFactoryWithWebFiles } from '@northmes/server/testing';
 import { createTestApp, type TestApp } from '@northmes/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 import serverPackage from '../../package.json' with { type: 'json' };
 import { GatewayService } from '../../src/gateway/gateway.module.ts';
 import { WebModulesController } from '../../src/web/web-modules.controller.ts';
@@ -29,9 +30,12 @@ async function cachingOf(url: string) {
   return { status: response.status, cacheControl: response.headers.get('cache-control') };
 }
 
-/** Boots the in-repo modules that `modules` names with the fixture web files, and returns its URL. */
-async function serve(modules: readonly string[]): Promise<string> {
-  testApp = await createTestApp({ modules, hostFactory: hostFactoryWithWebFiles(webFiles) });
+/**
+ * Boots the in-repo modules that `modules` names with the web files under `files`, the fixture web
+ * files by default, and returns its URL.
+ */
+async function serve(modules: readonly string[], files = webFiles): Promise<string> {
+  testApp = await createTestApp({ modules, hostFactory: hostFactoryWithWebFiles(files) });
   await testApp.app.listen(0, '127.0.0.1');
   return testApp.app.getUrl();
 }
@@ -75,6 +79,29 @@ describe('the web module list', () => {
       ],
     });
   });
+
+  // The planning fixture's mf-manifest.json lists remoteEntry.js and one chunk of ./module.
+  it.each(['remoteEntry.js', 'assets/module-5e8c1f2a.js'])(
+    'E02-S05 a remote missing a file its manifest lists (%s) is listed with integrity null',
+    async (missing) => {
+      const files = mkdtempSync(join(tmpdir(), 'northmes-web-'));
+      onTestFinished(() => rmSync(files, { recursive: true, force: true }));
+      const remote = join(webFiles, 'modules', 'planning');
+      cpSync(remote, join(files, 'modules', 'planning'), {
+        recursive: true,
+        filter: (source) => relative(remote, source) !== missing,
+      });
+      const url = await serve(['core', 'planning'], files);
+
+      const response = await fetch(`${url}${apiPath('web', 'modules')}`);
+
+      expect(existsSync(join(files, 'modules', 'planning', 'mf-manifest.json'))).toBe(true);
+      expect(existsSync(join(files, 'modules', 'planning', missing))).toBe(false);
+      expect((await response.json()).modules).toEqual([
+        expect.objectContaining({ id: 'planning', integrity: null }),
+      ]);
+    },
+  );
 });
 
 describe('the remote files', () => {
