@@ -169,6 +169,14 @@ const testRunner = expression(
   "(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) && 'ubuntu-24.04' || vars.NM_RUNNER_X64 || 'ubuntu-24.04'",
 );
 
+// A job's runs-on on one line, whether it is a label, an expression, a list or a group.
+function runsOnOf(job: Job): string {
+  const runsOn = job['runs-on'];
+  return (typeof runsOn === 'string' ? runsOn : JSON.stringify(runsOn ?? null))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // A test job runs a root script that runs Vitest.
 function isTestJob(job: Job): boolean {
   return (job.steps ?? []).some(
@@ -296,6 +304,20 @@ describe('workflows', () => {
     expect(testJobs, 'test jobs').not.toHaveLength(0);
     for (const { where, job } of testJobs) {
       expect(String(job['runs-on']).replace(/\s+/g, ' ').trim(), where).toBe(testRunner);
+    }
+  });
+
+  // Only the runner variable may send a job to Blacksmith, behind the fork fallback. Any other
+  // expression in runs-on, a matrix value or another variable, could hold a Blacksmith label.
+  it('no job names a Blacksmith label outside the runner variable expression', () => {
+    const runners = allJobs().map(({ where, job }) => ({ where, runsOn: runsOnOf(job) }));
+
+    expect(runners, 'jobs').not.toHaveLength(0);
+    for (const { where, runsOn } of runners) {
+      expect(runsOn, where).not.toMatch(/blacksmith/i);
+    }
+    for (const { where, runsOn } of runners.filter(({ runsOn }) => runsOn.includes('${{'))) {
+      expect(runsOn, where).toBe(testRunner);
     }
   });
 
