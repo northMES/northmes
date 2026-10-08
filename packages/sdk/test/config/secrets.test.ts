@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: MIT
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { ConfigModule } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { DEV_SECRET_MARKER, readSecrets, secretsConfig } from '@northmes/sdk/config';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { configErrorOf, keysOf } from './config-error.ts';
+
+let dir: string;
+
+beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), 'northmes-secrets-'));
+});
+
+afterEach(() => {
+  rmSync(dir, { recursive: true, force: true });
+});
+
+/** Writes a secret file and returns its path. chmod sets the mode, so the umask cannot change it. */
+function secretFile(name: string, content: string, mode = 0o440): string {
+  const path = join(dir, name);
+  writeFileSync(path, content);
+  chmodSync(path, mode);
+  return path;
+}
+
+describe('readSecrets', () => {
+  it('E02-S01 a 0440 secret file passes and its value stays out of process.env', async () => {
+    const value = 'auth-secret-5f2c9a71';
+
+    const secrets = readSecrets(
+      { NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', value) },
+      { nodeEnv: 'production' },
+    );
+    const app = await NestFactory.createApplicationContext(
+      ConfigModule.forRoot({ ignoreEnvFile: true, load: [secretsConfig] }),
+      { logger: false },
+    );
+
+    expect(secrets).toEqual({ NORTHMES_AUTH_SECRET: value });
+    expect(app.get(secretsConfig.KEY)).toEqual({ NORTHMES_AUTH_SECRET: value });
+    expect(Object.values(process.env).filter((env) => env?.includes(value))).toEqual([]);
+    await app.close();
+  });
+
+  it('E02-S01 one trailing newline is trimmed', () => {
+    const secrets = readSecrets(
+      {
+        NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-81c4\n'),
+        NORTHMES_DB_AUTH_PASSWORD_FILE: secretFile('db_auth_password', 'auth-pw-27e9\n\n'),
+      },
+      { nodeEnv: 'production' },
+    );
+
+    expect(secrets).toEqual({
+      NORTHMES_DB_APP_PASSWORD: 'app-pw-81c4',
+      NORTHMES_DB_AUTH_PASSWORD: 'auth-pw-27e9\n',
+    });
+  });
+
+  it('E02-S01 a missing, empty or world-readable secret file fails naming its key', () => {
+    const files = {
+      NORTHMES_DB_APP_PASSWORD_FILE: join(dir, 'db_app_password'),
+      NORTHMES_DB_AUTH_PASSWORD_FILE: secretFile('db_auth_password', ''),
+      NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', 'auth-secret-0d3e', 0o444),
+      NORTHMES_INSTALLATION_KEY_FILE: secretFile('installation_key', 'install-key-6b18', 0o640),
+    };
+
+    const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'production' }));
+
+    expect(keysOf(error)).toEqual([
+      'NORTHMES_AUTH_SECRET_FILE',
+      'NORTHMES_DB_APP_PASSWORD_FILE',
+      'NORTHMES_DB_AUTH_PASSWORD_FILE',
+    ]);
+    expect(error.message).not.toContain(dir);
+    expect(error.message).not.toContain('auth-secret-0d3e');
+  });
+
+  it('E02-S01 a secret path that is a directory fails naming its key', () => {
+    // 0750 passes the rule for others, so only the kind of file is wrong.
+    const path = join(dir, 'auth_secret');
+    mkdirSync(path, { mode: 0o750 });
+
+    const error = configErrorOf(() =>
+      readSecrets({ NORTHMES_AUTH_SECRET_FILE: path }, { nodeEnv: 'production' }),
+    );
+
+    expect(error.problems).toEqual(['NORTHMES_AUTH_SECRET_FILE: must point at a regular file']);
+    expect(error.message).not.toContain(dir);
+  });
+
+  // Root reads every file whatever its mode, so only another user sees the read fail.
+  it.skipIf(process.getuid?.() === 0)(
+    'E02-S01 a secret file this process cannot read fails naming its key',
+    () => {
+      const locked = join(dir, 'locked');
+      mkdirSync(locked);
+      const files = {
+        NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', 'auth-secret-7a42', 0o200),
+        NORTHMES_INSTALLATION_KEY_FILE: secretFile('locked/installation_key', 'install-key-3c71'),
+      };
+      // Without search permission on its directory, the file cannot even be looked up.
+      chmodSync(locked, 0o600);
+
+      try {
+        const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'production' }));
+
+        expect(error.problems).toEqual([
+          'NORTHMES_AUTH_SECRET_FILE: must point at a file this process can read',
+          'NORTHMES_INSTALLATION_KEY_FILE: must point at a file this process can read',
+        ]);
+        expect(error.message).not.toContain(dir);
+      } finally {
+        // afterEach removes the directory, which needs search permission on it again.
+        chmodSync(locked, 0o700);
+      }
+    },
+  );
+
+  it('E02-S01 a dev-marked secret fails with NODE_ENV production', () => {
+    const devSecret = `${DEV_SECRET_MARKER}9c1f07e2`;
+    // The stack script writes the dev secret files with mode 0600 (ADR 0058).
+    const files = {
+      NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-4a90', 0o600),
+      NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', devSecret, 0o600),
+    };
+
+    const secrets = readSecrets(files, { nodeEnv: 'development' });
+    const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'production' }));
+
+    expect(secrets.NORTHMES_AUTH_SECRET).toBe(devSecret);
+    expect(error.code).toBe('CONFIG_DEV_SECRET_IN_PRODUCTION');
+    expect(keysOf(error)).toEqual(['NORTHMES_AUTH_SECRET_FILE']);
+    expect(error.message).not.toContain('9c1f07e2');
+  });
+});
