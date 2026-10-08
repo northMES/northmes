@@ -41,6 +41,7 @@ interface TsConfig {
 interface VitestConfig {
   resolve?: { conditions?: string[] };
   ssr?: { resolve?: { conditions?: string[] } };
+  environments?: Record<string, { resolve?: { conditions?: string[] } }>;
   test?: { projects?: { extends?: boolean; test?: { name?: string } }[] };
 }
 
@@ -189,6 +190,16 @@ describe('tooling', () => {
     // Vitest 5 lets an inline project inherit the root options by default; saying so keeps the
     // conditions in the unit project if that default changes.
     expect(unit?.extends).toBe(true);
+  });
+
+  it('E02-S02 vitest.config.ts resolves the @northmes/source condition for the global setup files', () => {
+    const config = vitestConfig as VitestConfig;
+
+    // Vitest imports global setup files in its __vitest__ environment, so without the condition
+    // apps/server's setup would load a stale dist/ build of the workspace packages.
+    expect(config.environments?.__vitest__?.resolve?.conditions).toEqual(
+      expect.arrayContaining(['@northmes/source']),
+    );
   });
 
   it('E02-S01 Vitest gives transformed code the graphql copy that Node loads for dependencies', () => {
