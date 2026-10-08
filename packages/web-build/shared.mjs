@@ -14,19 +14,29 @@ const SINGLETONS = [
   '@northmes/web-sdk',
 ];
 
-/** @returns {string[]} The share key of each singleton. */
-export function singletons() {
-  return [...SINGLETONS];
+/**
+ * The share key of each singleton. In dev, React's JSX transform imports react/jsx-dev-runtime,
+ * which is then a singleton too.
+ *
+ * @param {{ dev?: boolean }} [options]
+ * @returns {string[]}
+ */
+export function singletons({ dev = false } = {}) {
+  return dev ? [...SINGLETONS, 'react/jsx-dev-runtime'] : [...SINGLETONS];
 }
 
 /**
  * The shared config of a remote. A remote requires no version and bundles no fallback, so it
  * fails loudly when the shell does not provide a share.
  *
+ * @param {{ dev?: boolean }} [options]
  * @returns {Record<string, { singleton: true, import: false, requiredVersion: false }>}
  */
-export function remoteShared() {
+export function remoteShared({ dev = false } = {}) {
   return Object.fromEntries(
-    singletons().map((key) => [key, { singleton: true, import: false, requiredVersion: false }]),
+    singletons({ dev }).map((key) => [
+      key,
+      { singleton: true, import: false, requiredVersion: false },
+    ]),
   );
 }

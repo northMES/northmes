@@ -18,7 +18,7 @@ import { remoteShared } from './shared.mjs';
  * @returns {import('vite').UserConfigFnObject}
  */
 export function defineRemoteConfig({ id, version, entry = './src/module.tsx' }) {
-  return () => ({
+  return ({ command }) => ({
     // The server serves each remote's files at this path (ADR 0019).
     base: `/modules/${id}/${version}/`,
     plugins: [
@@ -29,7 +29,7 @@ export function defineRemoteConfig({ id, version, entry = './src/module.tsx' }) 
         filename: 'remoteEntry.js',
         manifest: true,
         exposes: { './module': entry },
-        shared: remoteShared(),
+        shared: remoteShared({ dev: command === 'serve' }),
         dts: false,
       }),
     ],
