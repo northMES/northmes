@@ -16,7 +16,10 @@ const PORT_RULE = 'an integer from 0 to 65535';
 
 /** The environment of apps/server in every role (ADR 0060). */
 export const serverEnvSchema = z.object({
-  NORTHMES_ROLE: z.enum(['all', 'api', 'worker'], rule('all, api or worker')).optional(),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'], rule('development, test or production'))
+    .default('production'),
+  NORTHMES_ROLE: z.enum(['all', 'api', 'worker'], rule('all, api or worker')).default('all'),
   PORT: z
     .string(rule(PORT_RULE))
     .refine((value) => /^\d+$/.test(value) && Number(value) <= 65535, rule(PORT_RULE))
