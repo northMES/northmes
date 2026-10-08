@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
-import type { Transaction } from 'kysely';
+import { DomainError } from '@northmes/sdk/errors';
+import type { Selectable, Transaction } from 'kysely';
 import type { ProductionOrderRecord } from '../api/production-order.service.ts';
-import type { PlanningDatabase } from '../db.ts';
+import type { PlanningDatabase, ProductionOrderTable } from '../db.ts';
 import { ProductionOrder } from '../production-order.resolver.ts';
 import { releasePayload } from './release-payload.ts';
 
@@ -13,21 +14,40 @@ interface PlanningContext {
 }
 
 /**
+ * Reads the order and locks its row until the command's transaction ends, so the validators and
+ * the handler see the same order and a second release waits for the first.
+ */
+function lockOrder(
+  tx: Transaction<PlanningDatabase>,
+  id: string,
+): Promise<Selectable<ProductionOrderTable>> {
+  return tx
+    .selectFrom('planning.production_order')
+    .selectAll()
+    .where('id', '=', id)
+    .forUpdate()
+    .executeTakeFirstOrThrow();
+}
+
+/**
  * planning.releaseProductionOrder, whose mutation planningReleaseProductionOrder the SDK generates
  * from the contract. It returns the released order with its new version.
  */
 export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   returns: () => ProductionOrder,
   async buildPayload({ id }, { tx }: PlanningContext) {
-    const order = await tx
-      .selectFrom('planning.production_order')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirstOrThrow();
-    return releasePayload(order);
+    return releasePayload(await lockOrder(tx, id));
   },
-  // The version trigger of planning.production_order bumps version with the update.
-  handle({ id }, { tx }: PlanningContext): Promise<ProductionOrderRecord> {
+  async handle({ id }, { tx }: PlanningContext): Promise<ProductionOrderRecord> {
+    const order = await lockOrder(tx, id);
+    if (order.status !== 'planned') {
+      throw new DomainError({
+        code: 'planning.production_order.not_planned',
+        kind: 'precondition',
+        message: `Production order ${order.number} is ${order.status}, and only a planned order can be released`,
+      });
+    }
+    // The version trigger of planning.production_order bumps version with the update.
     return tx
       .updateTable('planning.production_order')
       .set({ status: 'released' })
