@@ -37,9 +37,9 @@ const unloggedSession = [
 /**
  * Creates the database roles as the superuser that superuserUrl logs in as (ADR 0005, ADR 0006):
  * nm_owner may create roles and gets CREATE on the URL's database, nm_app and nm_auth log in, and
- * nm_ext is a group that cannot log in, which nm_owner administers. Every role's time zone is pinned to UTC, per role because a
- * database cloned from a template loses its database settings. A role that exists keeps its
- * attributes and password, so a second run changes nothing.
+ * nm_ext is a group that cannot log in, which nm_owner administers. Every role's time zone is
+ * pinned to UTC, per role because a database cloned from a template loses its database settings.
+ * A role that exists keeps its attributes and password, so a second run changes nothing.
  */
 export async function bootstrapRoles(
   superuserUrl: string,
