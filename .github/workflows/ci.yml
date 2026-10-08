@@ -19,6 +19,8 @@ permissions:
 jobs:
   static:
     name: ci / lint + typecheck + build
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,6 +40,8 @@ jobs:
 
   test-utc:
     name: ci / test (TZ=UTC)
+    permissions:
+      contents: read
     # Blacksmith through NM_RUNNER_X64 for branches in this repository and main; a GitHub-hosted
     # runner for pull requests from forks and while the variable is unset.
     runs-on: >-
@@ -62,6 +66,8 @@ jobs:
 
   test-stockholm:
     name: ci / test (TZ=Europe/Stockholm)
+    permissions:
+      contents: read
     # Blacksmith through NM_RUNNER_X64 for branches in this repository and main; a GitHub-hosted
     # runner for pull requests from forks and while the variable is unset.
     runs-on: >-
@@ -86,6 +92,8 @@ jobs:
   # could inject shell code.
   pr-title:
     name: ci / pr title
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
@@ -102,6 +110,8 @@ jobs:
   # Renovate and release pull requests finish no issue and are exempt.
   linked-issue:
     name: ci / linked issue
+    permissions:
+      contents: read
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
@@ -123,6 +133,8 @@ jobs:
   # so a skipped one fails it too; a push to main skips only the pull request checks.
   gate:
     name: ci / gate
+    permissions:
+      contents: read
     if: always()
     needs: [static, test-utc, test-stockholm, pr-title, linked-issue]
     runs-on: ubuntu-24.04
