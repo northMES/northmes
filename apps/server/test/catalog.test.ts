@@ -235,6 +235,22 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it("E02-S01 an event key without its module's SQL prefix is refused naming the key", () => {
+    const error = refusal([
+      core,
+      inRepoModule('production-start', ['core'], {
+        events: {
+          'production_start.report.created': { version: 1 },
+          'productionStart.report.corrected': { version: 1 },
+        },
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module production-start declares event "productionStart.report.corrected", which must start with "production_start."',
+    ]);
+  });
+
   it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
     const { locale, outcomes } = checkInCzechLocale([
       [
