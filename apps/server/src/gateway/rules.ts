@@ -17,6 +17,12 @@ export interface CompositionProblem {
 
 const rootTypes = new Set(['Query', 'Mutation', 'Subscription']);
 
+/**
+ * The SDK shared types, which every subgraph may define (ADR 0015). A new shared type enters only
+ * through @northmes/sdk.
+ */
+const sharedTypes = new Set(['PageInfo']);
+
 /** The fields federation adds to the Query type of every subgraph. */
 const federationRootFields = new Set(['_service', '_entities']);
 
@@ -41,7 +47,7 @@ function typeOwnershipProblems(subgraphs: readonly SubgraphSdl[]): CompositionPr
     for (const definition of parse(sdl).definitions) {
       if (!isTypeDefinitionNode(definition)) continue;
       const type = definition.name.value;
-      if (rootTypes.has(type) || isFederationType(type)) continue;
+      if (rootTypes.has(type) || isFederationType(type) || sharedTypes.has(type)) continue;
       const owner = owners.get(type);
       if (owner === undefined) {
         owners.set(type, name);
