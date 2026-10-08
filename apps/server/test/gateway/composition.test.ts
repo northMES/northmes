@@ -76,6 +76,27 @@ describe('the NorthMES composition rules', () => {
     ]);
   });
 
+  it('E02-S03 an entity that two subgraphs define without entityRef fails with NORTHMES_TYPE_OWNERSHIP naming both subgraphs', () => {
+    const alpha = subgraph(
+      'alpha',
+      'type Thing @key(fields: "id") { id: ID! name: String! } type Query { alphaThing(id: ID!): Thing }',
+    );
+    // The plugin declares alpha's Thing with a plain @key, the way a Nest subgraph extends an
+    // entity, instead of referencing it through entityRef.
+    const plugin = subgraph(
+      'plugin',
+      'type Thing @key(fields: "id") { id: ID! pluginWeight: Int! } type Query { pluginPing: String }',
+    );
+
+    expect(checkRules([alpha, plugin])).toEqual([
+      {
+        code: 'NORTHMES_TYPE_OWNERSHIP',
+        message:
+          'Thing is defined as an entity in subgraphs "alpha" and "plugin"; one module owns an entity and other modules reference it through entityRef',
+      },
+    ]);
+  });
+
   it('E02-S03 PageInfo in two subgraphs breaks no rule, as an SDK shared type', () => {
     const pageInfo = 'type PageInfo @shareable { hasNextPage: Boolean! endCursor: String }';
     const delta = subgraph(
