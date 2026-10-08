@@ -20,7 +20,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 - `apps/server/src/db/database.module.ts`: the app's one `nm_app` pool (the `Pool` provider) and the `ScopedDatabase` under `DATABASE` from `@northmes/sdk/data`. `apps/server/src/principal.ts`: `runAs(principal, fn)`, which names the principal whose scope sets each transaction in `fn` sets.
 - `packages/testing/src/boot-built.ts`: `bootBuilt`, which starts the built server in a child process. With `args: ['migrate']` or `args: ['db', 'bootstrap']` it runs that `pnpm northmes` command on the built server instead.
 - `scripts/templates/table.sql`, rendered by `scripts/gen-migration.mjs`: the table template with its four policies.
-- `apps/server/src/migrate/runner.ts`: `migrate`, which the template setup and `pnpm northmes migrate` run.
+- `apps/server/src/migrate/runner.ts`: `migrate`, which the template setup and `pnpm northmes migrate` run. `apps/server/src/migrate/files.ts` reads a module's files and holds their timestamp prefix and marker rules.
 - `scripts/lint/no-truncate.mjs`, run by `test/meta/no-truncate.test.ts`: refuses a migration that grants TRUNCATE.
 
 ## Commands
@@ -51,6 +51,10 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 
 - `refused to start (N problems)` with `Module planning depends on "core", which is not installed`: a BootError from the catalog check. With `createTestApp`, name every module that the listed ones depend on. The same check reports `Core module <id> must not depend on plugin <id>` and `Module dependency cycle: a -> b -> a`.
 - `invalid configuration (N problems)`: a ConfigError. Each line names a key and its rule, never the value. `configForTest` throws it for a bad override, and boot, `pnpm northmes migrate` and `pnpm northmes db bootstrap` exit 1 with it. A secret file line says the file must exist, be a regular file, be readable by this process, not be empty, or not be readable by others.
+- `refused to migrate (N problems)`: a MigrationError. migrate checks the files of every catalog module before it applies any, lists every problem it finds and applies nothing. `pnpm northmes migrate` exits 1 with it. Its lines:
+  - `<module>/<file> changed after it was applied; put the change in a new migration file`: the file's sha256 differs from the one `northmes_meta.migration` recorded when the file applied. Restore the file and make the change in a new file from `pnpm gen:migration`.
+  - `<module>/<file> and <module>/<file> share the timestamp prefix <prefix>; give each file a timestamp of its own`: two files of one module start with the same `yyyymmddHHMMss`, so their order would depend on the slug. Give the file that has not been applied a later timestamp.
+  - `<module>/<file> has no expand or contract marker; start the file with "-- migration: expand" or "-- migration: contract"`: the file's first line is not its marker (ADR 0045). `pnpm gen:migration` writes `-- migration: expand`; a file that a test writes by hand needs the line too.
 - `permission denied for schema <schema>` (42501) while migrate applies a file: the file touches a schema its module does not own, such as another module's or `public`. Each file runs under `SET LOCAL ROLE` of its module's owner role, `nm_mod_<module>`, which holds rights in its own schema only. Move the change into the migrations of the module that owns the schema.
 - `permission denied for table <table>` (42501) while migrate applies a file with a foreign key into another module's table: that module has not granted `references (id)` on the table to `nm_ext`. Store the id without a foreign key, or add the grant in the migrations of the module that owns the table.
 - An SQL error from a file, such as `syntax error at or near "tabel"`: the file's transaction rolls back together with its row in `northmes_meta.migration`, so the file stays pending and the next run applies it again. Files that ran before it stay applied.
