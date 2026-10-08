@@ -39,9 +39,10 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 4. Write fixtures with `db.command({ principal, scopes: [plant], reason }, async (tx) => ...)`. It runs `fn` in one transaction as `nm_app`, with `northmes.read_scopes` and `northmes.write_scopes` both set to the scopes, and commits.
 5. Read through the same path: `db.command` with the scopes of the rows you expect, so the policies apply as they do in the server. Use `db.ownerUrl` only for tests at the database seam, such as migrate. A test of migrate itself calls `useTestDatabase({ template: emptyTemplateDatabase })`, so its database holds only what the test applies.
 6. For a test through the host app, call `createTestApp({ modules: ['core', 'planning'], hostFactory, database: db })` with `hostFactory` from `@northmes/server/testing`, and close `testApp.app` in `afterEach` or `afterAll`, before `useTestDatabase` drops the database. `database` points the app's `nm_app` pool at the file's database. It takes in-repo modules only; a test of a built plugin uses `bootBuilt` (ADR 0037). A test that builds a Nest app of its own imports `await configForTest({ KEY: 'value' })`, which never reads or writes `process.env`; its second argument holds the secret values by name, such as `NORTHMES_DB_APP_PASSWORD`, in place of the files the server reads.
-7. For server-wide state (the database roles, a server setting, the server log) or code that needs the superuser, start a server of the file's own: `server = await startPostgres({ settings: { log_statement: 'all' } })` in `beforeAll`, `await server.stop()` in `afterAll`. `server.connection` logs in as that server's superuser. `server.logs()` returns the log so far, which lags: run a probe statement and wait for it with `vi.waitFor` before checking what the log lacks.
-8. Make a new table with `pnpm gen:migration` and keep its four policies, one per command.
-9. Start each test name with the story id, such as `E02-S02`.
+7. To query the host app through the gateway, call `await testApp.app.listen(0, '127.0.0.1')` and send with `gqlClient(await testApp.app.getUrl(), { headers: { 'x-northmes-plant': plant } })`. The app builds a subgraph from the server entry of each module it boots, and a request reads at the plant its header names, as a tracer principal with every permission, until sign-in arrives (E05).
+8. For server-wide state (the database roles, a server setting, the server log) or code that needs the superuser, start a server of the file's own: `server = await startPostgres({ settings: { log_statement: 'all' } })` in `beforeAll`, `await server.stop()` in `afterAll`. `server.connection` logs in as that server's superuser. `server.logs()` returns the log so far, which lags: run a probe statement and wait for it with `vi.waitFor` before checking what the log lacks.
+9. Make a new table with `pnpm gen:migration` and keep its four policies, one per command. Add the table's own columns after `version`. A table that other modules may point at by foreign key also gets `grant references (id) on <schema>.<table> to nm_ext` (ADR 0006).
+10. Start each test name with the story id, such as `E02-S02`.
 
 ## Errors and their meaning
 
@@ -57,6 +58,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 ### Row-level security and grants
 
 - A select returns no rows, or an update or delete changes none, with no error: the transaction set no scopes, or scopes that hold none of the rows. Policies filter rows silently.
+- A query through `gqlClient` answers `null` or an empty list with no error: the request named no plant in `x-northmes-plant`, or a plant that holds none of the rows.
 - `new row violates row-level security policy for table "<table>"` (42501): an insert or update as `nm_app` wrote a `scope_id` outside `northmes.write_scopes`, or the transaction set no scopes, as a raw insert outside `db.command` does.
 - `invalid input syntax for type uuid: "<value>"` (22P02): a scope passed to `db.command` is not a uuid. Use `given.plant()`.
 - `permission denied for table <table>` (42501) as `nm_app`: the role holds no grant for that command on the table. A generated migration grants SELECT, INSERT, UPDATE and DELETE. TRUNCATE always gives this error, because `nm_app` never gets TRUNCATE.
@@ -67,5 +69,6 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 ### Harness
 
 - `connect ECONNREFUSED 127.0.0.1:1`: the app's pool reached for the database, but `createTestApp` got no `database`. Pass `database: db`.
+- Status 503 with `The GraphQL gateway is not ready.` from `gqlClient`: none of the modules that `createTestApp` boots has a server entry in its manifest, so the gateway has no supergraph to serve.
 - `useTestDatabase() needs the global setups of @northmes/testing and apps/server`: the file is not a `*.int.test.ts`. `bootBuilt()` says the same about its global setup.
 - `terminating connection due to administrator command`: a client was still connected when `afterAll` dropped the file's database. Close every client the test opens.
