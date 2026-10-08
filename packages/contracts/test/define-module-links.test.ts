@@ -87,6 +87,11 @@ describe('defineModuleLinks', () => {
     expect(Object.keys(links.orders)).toEqual(['order']);
   });
 
+  it("E02-S05 linkEntry reads the module id as the manifest's path below /$plant, and the manifest's keys stay its entries", () => {
+    expect(linkEntry(links)).toEqual({ path: 'planning', pattern: '/$plant/planning' });
+    expect(Object.keys(links)).toEqual(['orders']);
+  });
+
   it('E02-S05 packages/contracts declares and imports no router package', () => {
     const imports = sourceImports();
 
