@@ -9,8 +9,13 @@ export class BootError extends Error {
   readonly problems: readonly string[];
 
   constructor(problems: readonly string[]) {
-    super(problems.join('\n'));
+    super(listProblems(problems));
     this.name = 'BootError';
     this.problems = problems;
   }
+}
+
+function listProblems(problems: readonly string[]): string {
+  const header = `refused to start (${problems.length} problems)`;
+  return [header, ...problems.map((problem) => `- ${problem}`)].join('\n');
 }
