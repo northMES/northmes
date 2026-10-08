@@ -16,7 +16,7 @@ import {
   secretsConfig,
   serverEnvSchema,
 } from '@northmes/sdk/config';
-import { AppModule, type ServerEntry } from '../app.module.ts';
+import { AppModule, type AppOptions, type ServerEntry } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { GATEWAY_PATH, GatewayService } from '../gateway/gateway.module.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
@@ -109,11 +109,11 @@ export interface Booted<Env> {
 
 /**
  * The boot of pnpm northmes migrate (ADR 0006, ADR 0060): the boot steps with migrateEnvSchema, so
- * the secrets hold only the owner password, and without listening. It throws a ConfigError or a
- * BootError, and the caller closes the app.
+ * the secrets hold only the owner password, without the nm_app pool and without listening. It
+ * throws a ConfigError or a BootError, and the caller closes the app.
  */
 export async function bootForMigrate(options: BootOptions): Promise<Booted<MigrateEnv>> {
-  return bootSteps(loadEnv(migrateEnvSchema)(options.env), options);
+  return bootSteps(loadEnv(migrateEnvSchema)(options.env), options, { database: 'none' });
 }
 
 /** Returns the file URL that a manifest specifier resolves to, or of another file in its package. */
@@ -192,12 +192,13 @@ async function bootSteps<
     resolveManifest = (specifier) => import.meta.resolve(specifier),
     log,
   }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
+  appOptions: AppOptions = {},
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
   const entries = await importManifests(manifests, importManifest, resolveManifest);
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const servers = await importServers(catalog);
-  const root = AppModule.forRoot(config, servers);
+  const root = AppModule.forRoot(config, servers, appOptions);
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
   return { env, secrets, catalog, app };

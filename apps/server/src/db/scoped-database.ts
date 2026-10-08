@@ -27,3 +27,16 @@ export function scopedDatabase<DB>(db: Kysely<DB>): ScopedDatabase<DB> {
     },
   };
 }
+
+/**
+ * The ScopedDatabase of pnpm northmes migrate, which constructs no nm_app pool (ADR 0060). Every
+ * transaction rejects without sending anything.
+ */
+export const noPoolDatabase: ScopedDatabase<never> = {
+  transaction: () =>
+    Promise.reject(
+      new Error(
+        'pnpm northmes migrate has no nm_app pool, so a ScopedDatabase transaction cannot run',
+      ),
+    ),
+};

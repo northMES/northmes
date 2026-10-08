@@ -8,7 +8,7 @@ import {
   SubgraphRegistryModule,
 } from '@northmes/sdk/graphql';
 import { CommandsModule } from './commands/commands.module.ts';
-import { DatabaseModule } from './db/database.module.ts';
+import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
 import { GatewayModule } from './gateway/gateway.module.ts';
 import { WebModule } from './web/web.module.ts';
 
@@ -18,23 +18,34 @@ export interface ServerEntry extends DefineSubgraphOptions {
   readonly id: string;
 }
 
+/** How AppModule.forRoot builds the app beyond its config and server entries. */
+export interface AppOptions {
+  /** What the app connects to. It defaults to 'app'; pnpm northmes migrate passes 'none'. */
+  readonly database?: DatabaseMode;
+}
+
 /** The root module of the server. */
 @Module({})
 // biome-ignore lint/complexity/noStaticOnlyClass: Nest knows a module by its decorated class.
 export class AppModule {
   /**
    * Imports config first: the ConfigModule that boot created before it imported any manifest
-   * (ADR 0060). Then the nm_app pool and the ScopedDatabase on it, the command bus, every module's
+   * (ADR 0060). Then the database that `options.database` names (the nm_app pool and the
+   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, every module's
    * Nest module, one subgraph per module and the gateway that serves them on /graphql (ADR 0015).
    * `servers` are in boot order. The SDK's exception filter is registered here and nowhere else
    * (ADR 0012).
    */
-  static forRoot(config: DynamicModule, servers: readonly ServerEntry[] = []): DynamicModule {
+  static forRoot(
+    config: DynamicModule,
+    servers: readonly ServerEntry[] = [],
+    { database = 'app' }: AppOptions = {},
+  ): DynamicModule {
     return {
       module: AppModule,
       imports: [
         config,
-        DatabaseModule,
+        DatabaseModule.forRoot(database),
         CommandsModule.forRoot(servers),
         SubgraphRegistryModule,
         ...servers.map((server) => server.module),
