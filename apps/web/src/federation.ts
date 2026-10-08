@@ -3,8 +3,8 @@ import * as ApolloClient from '@apollo/client';
 import * as ApolloReact from '@apollo/client/react';
 import type { ModuleFederation } from '@module-federation/runtime';
 import { apiPath } from '@northmes/contracts';
-import type { WebModule, WebModuleEntry } from '@northmes/web-sdk';
 import * as WebSdk from '@northmes/web-sdk';
+import { validateWebModule, type WebModule, type WebModuleEntry } from '@northmes/web-sdk';
 import * as TanstackRouter from '@tanstack/react-router';
 import * as React from 'react';
 import * as JsxDevRuntime from 'react/jsx-dev-runtime';
@@ -99,16 +99,17 @@ export interface FederationRuntime {
 
 /**
  * A listed module after the shell tried to load its remote: the default export of the remote's
- * ./module entry, or null and the problem when the remote failed to load.
+ * ./module entry, or null and the problem when the remote failed to load or exported a module that
+ * differs from its list entry.
  */
 export type LoadedModule =
   | { readonly listed: ListedModule; readonly module: WebModule }
   | { readonly listed: ListedModule; readonly module: null; readonly problem: string };
 
 /**
- * Registers the remote of each listed module with the runtime and loads each remote's ./module
- * entry, all in parallel. A remote that fails to load leaves the others loading. The result keeps
- * the list's order.
+ * Registers the remote of each listed module with the runtime, loads each remote's ./module entry,
+ * all in parallel, and checks its default export against the list entry with validateWebModule. A
+ * remote that fails leaves the others loading. The result keeps the list's order.
  */
 export async function loadModules(
   list: readonly ListedModule[],
@@ -120,10 +121,13 @@ export async function loadModules(
   return Promise.all(
     list.map(async (listed): Promise<LoadedModule> => {
       try {
-        const entry = await runtime.loadRemote<{ default: WebModule }>(
+        const entry = await runtime.loadRemote<{ default?: unknown }>(
           `${listed.remoteName}/module`,
         );
-        return { listed, module: entry?.default as WebModule };
+        const module = entry?.default;
+        const problems = validateWebModule(module, listed);
+        if (problems.length > 0) return { listed, module: null, problem: problems.join('; ') };
+        return { listed, module: module as WebModule };
       } catch (error) {
         return { listed, module: null, problem: messageOf(error) };
       }
