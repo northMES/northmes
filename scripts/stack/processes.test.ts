@@ -3,13 +3,19 @@ import { createInterface } from 'node:readline';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { run, start } from './processes.mjs';
 
-/** Whether a process or process group with this id runs; a negative pid names a group. */
+/**
+ * Whether a process or process group with this id runs; a negative pid names a group. macOS answers
+ * EPERM for a group whose remaining members have exited and wait to be reaped, so the group still
+ * exists.
+ */
 function running(pid: number) {
   try {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false;
+    const { code } = error as NodeJS.ErrnoException;
+    if (code === 'ESRCH') return false;
+    if (code === 'EPERM') return true;
     throw error;
   }
 }
@@ -46,8 +52,8 @@ describe('start', () => {
 
     await started.stop();
 
-    expect(running(-parent)).toBe(false);
-    // The child is gone once its new parent has reaped it.
+    // The group and the child are gone once their exited processes are reaped.
+    await vi.waitFor(() => expect(running(-parent)).toBe(false));
     await vi.waitFor(() => expect(running(child)).toBe(false));
   });
 });
