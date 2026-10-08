@@ -8,41 +8,66 @@ export interface LinkEntryDefinition {
 
 export type LinkEntryDefinitions = Readonly<Record<string, LinkEntryDefinition>>;
 
+// The names of the $params in a route pattern: /$plant/planning/orders/$orderId has plant and
+// orderId.
+type ParamNames<Pattern extends string> = Pattern extends `${infer Head}/${infer Rest}`
+  ? ParamNames<Head> | ParamNames<Rest>
+  : Pattern extends `$${infer Name}`
+    ? Name
+    : never;
+
+/** The params of a route pattern, one string value for each $param. */
+export type LinkParams<Pattern extends string> = { readonly [Name in ParamNames<Pattern>]: string };
+
 /** What a link builder returns: the route pattern and params for the router, and the finished href. */
-export interface ModuleLink {
-  readonly to: string;
-  readonly params: Readonly<Record<string, string>>;
+export interface ModuleLink<Pattern extends string> {
+  readonly to: Pattern;
+  readonly params: LinkParams<Pattern>;
   readonly href: string;
 }
 
-export type LinkBuilder = (params: Readonly<Record<string, string>>) => ModuleLink;
+export type LinkBuilder<Pattern extends string> = (
+  params: LinkParams<Pattern>,
+) => ModuleLink<Pattern>;
 
-export type ModuleLinks = { readonly [name: string]: LinkBuilder & ModuleLinks };
+type ChildEntries<Entry extends LinkEntryDefinition> = Entry extends {
+  readonly children: infer Children extends LinkEntryDefinitions;
+}
+  ? Children
+  : Record<never, never>;
+
+/** The builders of the entries below the route pattern Parent, each with its children's builders. */
+export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefinitions> = {
+  readonly [Name in keyof Entries & string]: LinkBuilder<`${Parent}/${Entries[Name]['path']}`> &
+    ModuleLinks<`${Parent}/${Entries[Name]['path']}`, ChildEntries<Entries[Name]>>;
+};
 
 /**
  * A module's link manifest (ADR 0062). Each entry becomes a builder that takes the params of its
- * route pattern, which starts with /$plant/<moduleId>, and returns the link. The builders are plain
+ * route pattern, which starts with /$plant/<moduleId>, and returns the link. The param names come
+ * from the patterns, so a missing or unknown param is a type error. The builders are plain
  * functions, so code without a router (server code, MCP tools, end-to-end specs) can call them.
  */
-export function defineModuleLinks(moduleId: string, entries: LinkEntryDefinitions): ModuleLinks {
-  return builders(`/$plant/${moduleId}`, entries);
+export function defineModuleLinks<
+  const ModuleId extends string,
+  const Entries extends LinkEntryDefinitions,
+>(moduleId: ModuleId, entries: Entries): ModuleLinks<`/$plant/${ModuleId}`, Entries> {
+  return builders(`/$plant/${moduleId}`, entries) as ModuleLinks<`/$plant/${ModuleId}`, Entries>;
 }
 
-function builders(parent: string, entries: LinkEntryDefinitions): ModuleLinks {
+type Params = Readonly<Record<string, string>>;
+
+function builders(parent: string, entries: LinkEntryDefinitions): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(entries).map(([name, entry]) => {
       const pattern = `${parent}/${entry.path}`;
-      const build: LinkBuilder = (params) => ({
-        to: pattern,
-        params,
-        href: href(pattern, params),
-      });
+      const build = (params: Params) => ({ to: pattern, params, href: href(pattern, params) });
       return [name, Object.assign(build, builders(pattern, entry.children ?? {}))];
     }),
   );
 }
 
-function href(pattern: string, params: Readonly<Record<string, string>>): string {
+function href(pattern: string, params: Params): string {
   return pattern
     .split('/')
     .map((segment) =>
@@ -52,7 +77,7 @@ function href(pattern: string, params: Readonly<Record<string, string>>): string
 }
 
 // The encoded value of one param. An empty value throws, because the href would lose the segment.
-function param(pattern: string, name: string, params: Readonly<Record<string, string>>): string {
+function param(pattern: string, name: string, params: Params): string {
   const value = params[name];
   if (!value) {
     throw new Error(`Link ${pattern} has an empty value for ${name}`);

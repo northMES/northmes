@@ -5,6 +5,7 @@ export {
   type LinkBuilder,
   type LinkEntryDefinition,
   type LinkEntryDefinitions,
+  type LinkParams,
   type ModuleLink,
   type ModuleLinks,
 } from './define-module-links.ts';
