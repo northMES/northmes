@@ -109,6 +109,14 @@ describe('workspace', () => {
     }
   });
 
+  it('E02-S01 modules/planning/domain lists @northmes/testing for the scheduler contract suite', () => {
+    // E03-S09 runs the Scheduler contract suite from @northmes/testing in the domain package's tests
+    // (plan 14), and listing the harness now keeps that run from changing the lockfile.
+    const domain = readPackageJson('modules/planning/domain/package.json');
+
+    expect(domain.devDependencies?.['@northmes/testing']).toBe('workspace:*');
+  });
+
   it('the catalog pins exactly one TypeScript 6.0 version', () => {
     const workspace = readWorkspace();
 
