@@ -2,8 +2,14 @@
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule, useShell } from '@northmes/web-sdk';
-import { createMemoryHistory, createRoute, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import {
+  createMemoryHistory,
+  createRoute,
+  RouterProvider,
+  useNavigate,
+} from '@tanstack/react-router';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShellModule } from '../src/modules.ts';
 import { createShellRouter } from '../src/shell.tsx';
@@ -31,6 +37,31 @@ const planning: ShellModule = {
       });
       return planningRoute.addChildren([boardRoute]);
     },
+  }),
+};
+
+/** A screen with an h1 that can take focus and a button that changes only the search. */
+function SettingsScreen() {
+  const navigate = useNavigate();
+  return (
+    <>
+      <h1 tabIndex={-1}>Settings</h1>
+      <button type="button" onClick={() => navigate({ to: '.', search: { tab: 'history' } })}>
+        Show history
+      </button>
+    </>
+  );
+}
+
+const settings: ShellModule = {
+  label: 'Settings',
+  order: 40,
+  links: [{ label: 'Settings', link: ({ plant }) => ({ href: `/${plant}/settings` }) }],
+  module: defineWebModule({
+    id: 'settings',
+    version: '0.4.0',
+    routes: (plantRoute) =>
+      createRoute({ getParentRoute: () => plantRoute, path: 'settings', component: SettingsScreen }),
   }),
 };
 
@@ -120,6 +151,21 @@ describe('the shell', () => {
       [['Planning board', '/plant-a/planning/board']],
       [],
     ]);
+  });
+
+  it('E06-S06 a path change moves focus to the new h1, and a search change leaves focus where it is', async () => {
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/planning/board', [planning, settings]);
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+
+    await user.click(screen.getByRole('link', { name: 'Settings' }));
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    const button = screen.getByRole('button', { name: 'Show history' });
+    await user.click(button);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(document.activeElement).toBe(button);
   });
 
   it("E02-S05 a module's screen queries the API at apiUrl with the client for the plant in the URL", async () => {

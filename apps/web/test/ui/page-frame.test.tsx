@@ -25,6 +25,22 @@ describe('PageFrame', () => {
     expect(screen.getByText('Rows 1 to 25 of 63').closest('[aria-busy="true"]')).toBeNull();
   });
 
+  it('E06-S06 a page frame names the document after its title, and follows a new title', () => {
+    const { rerender } = render(
+      <PageFrame title="Article">
+        <p>Skeleton</p>
+      </PageFrame>,
+    );
+    expect(document.title).toBe('Article · NorthMES');
+
+    rerender(
+      <PageFrame title="Article AX-500">
+        <p>Identity</p>
+      </PageFrame>,
+    );
+    expect(document.title).toBe('Article AX-500 · NorthMES');
+  });
+
   it('E04-S07 a loading page frame keeps its h1 and toolbar and marks its content busy', () => {
     render(
       <PageFrame title="Articles" toolbar={toolbar} state={{ status: 'loading' }}>
