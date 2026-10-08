@@ -82,4 +82,20 @@ describe('pnpm gen:migration', () => {
     expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
     expect(lines).toEqual([]);
   });
+
+  it('E02-S02 pnpm gen:migration refuses a slug that is not a lower-case SQL name and writes nothing', async () => {
+    const slugs = ['work-note', 'Work_note', '1st_note', 'work__note', 'work_note;'];
+
+    const exitCodes: number[] = [];
+    for (const slug of slugs) exitCodes.push(await main(['production-start', slug], io()));
+
+    expect(exitCodes).toEqual([1, 1, 1, 1, 1]);
+    expect(errors).toEqual(
+      slugs.map(
+        (slug) =>
+          `Invalid slug "${slug}": the slug names the table, so use lower-case letters, digits and single underscores, starting with a letter`,
+      ),
+    );
+    expect(readdirSync(join(root, 'modules/production-start'))).toEqual([]);
+  });
 });
