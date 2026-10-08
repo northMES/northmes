@@ -130,4 +130,30 @@ describe('mit-imports', () => {
       },
     ]);
   });
+
+  it('E02-S01 a contracts package that is not MIT fails', () => {
+    const findings = scan(
+      [
+        ...workspacePackages,
+        {
+          path: 'modules/quality/contracts/package.json',
+          manifest: { name: '@northmes/quality-contracts', license: 'AGPL-3.0-or-later' },
+        },
+        {
+          path: 'modules/stock/contracts/package.json',
+          manifest: { name: '@northmes/stock-contracts' },
+        },
+      ],
+      [],
+    );
+
+    expect(findings).toEqual([
+      {
+        kind: 'license',
+        path: 'modules/quality/contracts/package.json',
+        license: 'AGPL-3.0-or-later',
+      },
+      { kind: 'license', path: 'modules/stock/contracts/package.json', license: undefined },
+    ]);
+  });
 });
