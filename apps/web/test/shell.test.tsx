@@ -11,7 +11,7 @@ import {
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ShellModule } from '../src/modules.ts';
+import { type ShellModule, shellModules } from '../src/modules.ts';
 import { createShellRouter } from '../src/shell.tsx';
 
 afterEach(cleanup);
@@ -154,6 +154,22 @@ describe('the shell', () => {
       ],
       [['Planning board', '/plant-a/planning/board']],
       [],
+    ]);
+  });
+
+  it("E06-S06 the web's menu has Articles in the Core group before Planning board in the Planning group", async () => {
+    // The screen's query never gets an answer; the test reads the menu alone.
+    const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
+    renderShellAt('/plant-a/core/articles', shellModules, { fetch });
+
+    const menu = await screen.findByRole('navigation', { name: 'Modules' });
+    const groups = within(menu)
+      .getAllByRole('list')
+      .filter((list) => list.hasAttribute('aria-labelledby'));
+    expect(groups.map(groupLabel)).toEqual(['Core', 'Planning']);
+    expect(groups.map(linksIn)).toEqual([
+      [['Articles', '/plant-a/core/articles']],
+      [['Planning board', '/plant-a/planning/board']],
     ]);
   });
 
