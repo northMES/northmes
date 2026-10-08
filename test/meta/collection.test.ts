@@ -15,6 +15,12 @@ interface Misfiled {
   projects: string[];
 }
 
+interface Resolved {
+  name: string;
+  environment: string;
+  plugins: string[];
+}
+
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const config = join(root, 'vitest.config.ts');
 const vitestBin = join(root, 'node_modules/vitest/vitest.mjs');
@@ -50,6 +56,33 @@ function collected(directory: string, flags: string[] = []): Map<string, string[
     byFile.set(path, [...(byFile.get(path) ?? []), projectName]);
   }
   return byFile;
+}
+
+// The projects Vitest resolves from the repository's config, each with its test environment and the
+// names of the plugins in its Vite config. A script in a child process loads them through Vitest's
+// Node API, so the answer comes from the same config a test run reads.
+function resolved(): Resolved[] {
+  const script = `
+    import { createVitest } from 'vitest/node';
+    const vitest = await createVitest({ config: ${JSON.stringify(config)}, root: ${JSON.stringify(root)}, watch: false });
+    try {
+      console.log(JSON.stringify(vitest.projects.map((project) => ({
+        name: project.name,
+        environment: project.config.environment,
+        plugins: (project.vite.config.plugins ?? []).map((plugin) => plugin.name),
+      }))));
+    } finally {
+      await vitest.close();
+    }
+  `;
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
+    cwd: root,
+    encoding: 'utf8',
+    env: environment(),
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  expect(result.status, result.stderr).toBe(0);
+  return JSON.parse(result.stdout) as Resolved[];
 }
 
 function tracked(): string[] {
@@ -96,6 +129,18 @@ describe('collection', () => {
 
       expect(testFiles, 'tracked test files').not.toHaveLength(0);
       expect(misfiled(testFiles, collected(root))).toEqual([]);
+    }, 60_000);
+  });
+
+  describe('the web project', () => {
+    it('the web project uses the React plugin and the happy-dom environment', () => {
+      const projects = resolved();
+      const web = projects.find((project) => project.name === 'web');
+      const unit = projects.find((project) => project.name === 'unit');
+
+      expect(web?.environment).toBe('happy-dom');
+      expect(web?.plugins).toContain('vite:react-babel');
+      expect(unit?.plugins.filter((name) => name.startsWith('vite:react'))).toEqual([]);
     }, 60_000);
   });
 
