@@ -48,4 +48,17 @@ describe('the exception filter', () => {
       { module: 'AppModule', token: expect.stringMatching(/^APP_FILTER\b/) },
     ]);
   });
+
+  it("E02-S04 a request to a route that does not exist still gets Nest's 404", async () => {
+    const booted = await bootFixtures(alpha);
+
+    const response = await fetch(new URL('/no-such-route', await booted.getUrl()), {
+      signal: AbortSignal.timeout(2000),
+    });
+
+    expect({ status: response.status, body: await response.json() }).toEqual({
+      status: 404,
+      body: { statusCode: 404, error: 'Not Found', message: 'Cannot GET /no-such-route' },
+    });
+  });
 });
