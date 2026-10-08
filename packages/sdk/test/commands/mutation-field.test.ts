@@ -121,16 +121,30 @@ describe('defineCommand', () => {
 
     for (const [field, fields] of Object.entries(fieldsWith)) {
       const contract = defineCommandContract({
-        name: 'planning.flagProductionOrder',
-        target: 'existing',
+        name: 'planning.flagProductionOrders',
+        target: 'none',
         fields,
       });
       expect(
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrder: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
       );
     }
+  });
+
+  it('E05-S01 defineCommand refuses a command on an existing entity without the target that the bus checks expectedVersion on', () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrder',
+      target: 'existing',
+      fields: z.object({}),
+    });
+
+    expect(() =>
+      defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
+    ).toThrow(
+      'Command planning.flagProductionOrder changes an existing entity, so its definition needs target, which the command bus loads to check expectedVersion (ADR 0012)',
+    );
   });
 });
