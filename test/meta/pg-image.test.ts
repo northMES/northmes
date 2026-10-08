@@ -35,6 +35,17 @@ describe('pg-image', () => {
     ]);
   });
 
+  it('scan ignores a reference with no name character after postgres:', () => {
+    const findings = scan([
+      {
+        path: 'compose.yaml',
+        text: 'services:\n  a:\n    image: postgres:(\\d+)\n  b:\n    image: postgres:${TAG}\n',
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
   // These pass on arrival. They pin what scan() leaves alone, so a later change that widens it
   // fails here.
   describe('characterisation', () => {
