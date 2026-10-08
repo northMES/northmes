@@ -1,9 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { scan, trackedFiles } from '../../scripts/lint/path-literals.mjs';
+
+const root = fileURLToPath(new URL('../../', import.meta.url));
 
 interface Finding {
   path: string;
@@ -257,6 +260,14 @@ describe('path-literals', () => {
       const findings = scan(trackedFiles(repository), []);
 
       expect(findings.map(describeFinding)).toEqual(['modules/planning/web/src/board.tsx:2: /x']);
+    });
+
+    it('E02-S05 the tracked files of this repository pass with the committed allowlist', () => {
+      const allowlist = JSON.parse(
+        readFileSync(join(root, 'scripts/lint/path-literals.allow.json'), 'utf8'),
+      );
+
+      expect(scan(trackedFiles(root), allowlist).map(describeFinding)).toEqual([]);
     });
   });
 });
