@@ -59,7 +59,7 @@ function dependencyOrder(
       return;
     }
     state.set(id, 'visiting');
-    for (const dependency of [...(entry.manifest.dependsOn ?? [])].sort()) {
+    for (const dependency of [...(entry.manifest.dependsOn ?? [])].sort(compareIds)) {
       const target = byId.get(dependency);
       if (target) visit(target, [...path, id]);
     }
@@ -67,12 +67,21 @@ function dependencyOrder(
     ordered.push(entry);
   };
   const sorted = [...entries].sort((a, b) =>
-    a.kind === b.kind ? a.manifest.id.localeCompare(b.manifest.id) : a.kind === 'module' ? -1 : 1,
+    a.kind === b.kind ? compareIds(a.manifest.id, b.manifest.id) : a.kind === 'module' ? -1 : 1,
   );
   const core = byId.get('core');
   if (core) visit(core, []);
   for (const entry of sorted) visit(entry, []);
   return ordered;
+}
+
+/**
+ * Compares ids by character code. localeCompare would follow the machine's locale, where for
+ * example Czech sorts "ch" after "h", and the boot order must be the same on every machine.
+ */
+function compareIds(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
 }
 
 /**
