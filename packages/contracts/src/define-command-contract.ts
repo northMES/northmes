@@ -2,10 +2,11 @@
 import { z } from 'zod';
 
 /**
- * What a command acts on (ADR 0017). existing: one entity, which the input names by id. none: no
- * one entity, so the input is the fields alone.
+ * What a command acts on (ADR 0017). new: an entity it creates under the client-generated id in
+ * its input, so a retry finds the first row (ADR 0012). existing: one entity, which the input names
+ * by id. none: no one entity, so the input is the fields alone.
  */
-export type CommandTarget = 'existing' | 'none';
+export type CommandTarget = 'new' | 'existing' | 'none';
 
 /** Extends fields by the id that names the target entity. extend keeps the refinements. */
 function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObjectConfig>(
