@@ -6,6 +6,8 @@ import { BootError } from '../boot/boot-error.ts';
 export interface CatalogEntry {
   readonly manifest: ModuleManifest;
   readonly kind: 'module' | 'plugin';
+  /** The folder that holds the module's migration files. Without one, the module has none. */
+  readonly migrationsDir?: string;
 }
 
 export interface CatalogOptions {
