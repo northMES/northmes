@@ -65,11 +65,14 @@ export function nameClashProblems(entries: readonly CatalogEntry[]): string[] {
   return problems;
 }
 
-/** A problem for every module whose NorthMES range does not hold the image's version (ADR 0038). */
+/**
+ * A problem for every module whose NorthMES range does not hold the image's version (ADR 0038).
+ * Prereleases count, so a release candidate of 0.4.0 runs modules built for >=0.3.0 <0.5.0.
+ */
 export function rangeProblems(entries: readonly CatalogEntry[], imageVersion: string): string[] {
   const problems: string[] = [];
   for (const { manifest } of entries) {
-    if (!satisfies(imageVersion, manifest.northmes)) {
+    if (!satisfies(imageVersion, manifest.northmes, { includePrerelease: true })) {
       problems.push(
         `Module ${manifest.id} ${manifest.version} runs on NorthMES ${manifest.northmes}, and this image is ${imageVersion}`,
       );
