@@ -32,8 +32,17 @@ export class CommandRejected extends DomainError {
 }
 
 /**
+ * Compares validator names by character code. localeCompare would follow the machine's locale, and
+ * the order of validators must be the same on every machine.
+ */
+function compareNames(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+/**
  * The validators of each command by command name, in catalog order of their modules and then by
- * name (ADR 0012). Names compare by code point, so the order is the same on every machine.
+ * name (ADR 0012).
  */
 function validatorsByCommand({
   modules,
@@ -42,8 +51,7 @@ function validatorsByCommand({
   const position = (module: string) => modules.indexOf(module);
   const ordered = [...validators].sort(
     (a, b) =>
-      position(a.module) - position(b.module) ||
-      (a.validator.name < b.validator.name ? -1 : a.validator.name > b.validator.name ? 1 : 0),
+      position(a.module) - position(b.module) || compareNames(a.validator.name, b.validator.name),
   );
   const byCommand = new Map<string, RegisteredValidator[]>();
   for (const registered of ordered) {

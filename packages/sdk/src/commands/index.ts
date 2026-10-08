@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// Server-only: commands, whose mutation fields the SDK generates from their contracts (ADR 0012).
+// Server-only: commands, whose mutation fields the SDK generates from their contracts (ADR 0012),
+// and the command validators of other modules that may veto them (ADR 0037).
 export {
   COMMAND_BUS,
   type Command,

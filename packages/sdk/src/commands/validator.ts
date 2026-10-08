@@ -38,8 +38,9 @@ export type CommandValidatorProvider<Contract extends ValidatableContract = Vali
   };
 
 /**
- * Registers a command validator. Listed in the providers of the validating module's Nest module,
- * it lets the module veto `contract`'s command, which another module owns (ADR 0037).
+ * Registers a command validator. Listed in the providers of the Nest module that the validating
+ * module's server entry exports, it lets the module veto `contract`'s command, which another
+ * module owns (ADR 0037).
  */
 export function CommandValidator<Contract extends ValidatableContract>(
   contract: Contract,
