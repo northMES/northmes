@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@12.6.0",
   "scripts": {
-    "check": "node scripts/check-node.mjs && turbo run lint typecheck && pnpm gen --check && vitest run",
+    "check": "node scripts/check-node.mjs && turbo run lint typecheck && pnpm gen --check && vitest run --project unit --project integration --project types",
     "check:full": "pnpm check && pnpm test:tz",
     "test:handoff": "pnpm check",
     "build": "turbo run build",
@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project integration",
+    "test:ai": "vitest run --project ai",
     "test:tz": "vitest run --project tz",
     "lint:customer-data": "node scripts/lint/no-customer-data.mjs",
     "adr:next": "node scripts/adr/next-number.mjs"

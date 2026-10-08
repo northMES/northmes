@@ -24,6 +24,35 @@ export default defineConfig({
           globalSetup: ['./packages/testing/src/global-setup.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'types',
+          exclude: ignored,
+          typecheck: {
+            enabled: true,
+            only: true,
+            include: ['**/*.test-d.ts'],
+            exclude: ignored,
+          },
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'ai',
+          include: ['**/*.ai.test.ts'],
+          exclude: ignored,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'ops',
+          include: ['**/*.ops.test.ts'],
+          exclude: ignored,
+        },
+      },
     ],
   },
 });

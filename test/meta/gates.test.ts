@@ -41,6 +41,7 @@ describe('gates', () => {
     expect(rootScripts.test).toBe('vitest run');
     expect(rootScripts['test:unit']).toBe('vitest run --project unit');
     expect(rootScripts['test:int']).toBe('vitest run --project integration');
+    expect(rootScripts['test:ai']).toBe('vitest run --project ai');
     expect(rootScripts['test:tz']).toBe('vitest run --project tz');
   });
 
@@ -55,7 +56,8 @@ describe('gates', () => {
       'node scripts/check-node.mjs',
       'turbo run lint typecheck',
       'pnpm gen --check',
-      'vitest run',
+      // The web project is absent on purpose until #301 adds it.
+      'vitest run --project unit --project integration --project types',
     ]);
   });
 
