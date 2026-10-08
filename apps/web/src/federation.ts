@@ -3,7 +3,7 @@ import * as ApolloClient from '@apollo/client';
 import * as ApolloReact from '@apollo/client/react';
 import type { ModuleFederation } from '@module-federation/runtime';
 import { apiPath } from '@northmes/contracts';
-import type { WebModuleEntry } from '@northmes/web-sdk';
+import type { WebModule, WebModuleEntry } from '@northmes/web-sdk';
 import * as WebSdk from '@northmes/web-sdk';
 import * as TanstackRouter from '@tanstack/react-router';
 import * as React from 'react';
@@ -89,4 +89,36 @@ export async function fetchModuleList(
   const response = await fetch(apiPath('web', 'modules'));
   const { modules } = (await response.json()) as { readonly modules: readonly ListedModule[] };
   return modules;
+}
+
+/** The part of the Module Federation runtime that loads remotes, which tests replace. */
+export interface FederationRuntime {
+  registerRemotes(remotes: { name: string; entry: string }[]): void;
+  loadRemote<T>(id: string): Promise<T | null>;
+}
+
+/** A listed module after the shell loaded its remote. */
+export interface LoadedModule {
+  readonly listed: ListedModule;
+  /** The default export of the remote's ./module entry. */
+  readonly module: WebModule;
+}
+
+/**
+ * Registers the remote of each listed module with the runtime and loads each remote's ./module
+ * entry, all in parallel. The result keeps the list's order.
+ */
+export async function loadModules(
+  list: readonly ListedModule[],
+  runtime: FederationRuntime,
+): Promise<LoadedModule[]> {
+  runtime.registerRemotes(
+    list.map(({ remoteName, manifestUrl }) => ({ name: remoteName, entry: manifestUrl })),
+  );
+  return Promise.all(
+    list.map(async (listed) => {
+      const entry = await runtime.loadRemote<{ default: WebModule }>(`${listed.remoteName}/module`);
+      return { listed, module: entry?.default as WebModule };
+    }),
+  );
 }
