@@ -15,8 +15,9 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 - `packages/testing/src/database.ts`: `useTestDatabase()`, which clones the migrated template for the calling file, or the template that `useTestDatabase({ template })` names.
 - `packages/testing/src/db-command.ts`: `db.command`, the fixture writer.
 - `packages/testing/src/given.ts`: `given.plant()` and `given.company()`.
-- `packages/testing/src/config-for-test.ts`: `configForTest(overrides)`, the ConfigModule of a test app.
+- `packages/testing/src/config-for-test.ts`: `configForTest(overrides, secrets)`, the ConfigModule of a test app.
 - `packages/testing/src/create-test-app.ts` and `apps/server/src/testing.ts`: `createTestApp` and the host factory it calls.
+- `apps/server/src/db/database.module.ts`: the app's one `nm_app` pool (the `Pool` provider) and the `ScopedDatabase` under `DATABASE` from `@northmes/sdk/data`. `apps/server/src/principal.ts`: `runAs(principal, fn)`, which names the principal whose scope sets each transaction in `fn` sets.
 - `packages/testing/src/boot-built.ts`: `bootBuilt`, which starts the built server in a child process.
 - `scripts/templates/table.sql`, rendered by `scripts/gen-migration.mjs`: the table template with its four policies.
 - `apps/server/src/migrate/runner.ts`: `migrate`, which the template setup and `pnpm northmes migrate` run.
@@ -37,7 +38,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 3. Isolate each test in scopes of its own: `const plant = given.plant()`. The id is a fresh uuidv7 and no row exists for it.
 4. Write fixtures with `db.command({ principal, scopes: [plant], reason }, async (tx) => ...)`. It runs `fn` in one transaction as `nm_app`, with `northmes.read_scopes` and `northmes.write_scopes` both set to the scopes, and commits.
 5. Read through the same path: `db.command` with the scopes of the rows you expect, so the policies apply as they do in the server. Use `db.ownerUrl` only for tests at the database seam, such as migrate. A test of migrate itself calls `useTestDatabase({ template: emptyTemplateDatabase })`, so its database holds only what the test applies.
-6. For a test through the host app, call `createTestApp({ modules: ['core', 'planning'], hostFactory })` with `hostFactory` from `@northmes/server/testing`, and close `testApp.app` in `afterEach` or `afterAll`. It takes in-repo modules only; a test of a built plugin uses `bootBuilt` (ADR 0037). A test that builds a Nest app of its own imports `await configForTest({ KEY: 'value' })`, which never reads or writes `process.env`.
+6. For a test through the host app, call `createTestApp({ modules: ['core', 'planning'], hostFactory, database: db })` with `hostFactory` from `@northmes/server/testing`, and close `testApp.app` in `afterEach` or `afterAll`, before `useTestDatabase` drops the database. `database` points the app's `nm_app` pool at the file's database. It takes in-repo modules only; a test of a built plugin uses `bootBuilt` (ADR 0037). A test that builds a Nest app of its own imports `await configForTest({ KEY: 'value' })`, which never reads or writes `process.env`; its second argument holds the secret values by name, such as `NORTHMES_DB_APP_PASSWORD`, in place of the files the server reads.
 7. For server-wide state (the database roles, a server setting, the server log) or code that needs the superuser, start a server of the file's own: `server = await startPostgres({ settings: { log_statement: 'all' } })` in `beforeAll`, `await server.stop()` in `afterAll`. `server.connection` logs in as that server's superuser. `server.logs()` returns the log so far, which lags: run a probe statement and wait for it with `vi.waitFor` before checking what the log lacks.
 8. Make a new table with `pnpm gen:migration` and keep its four policies, one per command.
 9. Start each test name with the story id, such as `E02-S02`.
@@ -65,5 +66,6 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 
 ### Harness
 
+- `connect ECONNREFUSED 127.0.0.1:1`: the app's pool reached for the database, but `createTestApp` got no `database`. Pass `database: db`.
 - `useTestDatabase() needs the global setups of @northmes/testing and apps/server`: the file is not a `*.int.test.ts`. `bootBuilt()` says the same about its global setup.
 - `terminating connection due to administrator command`: a client was still connected when `afterAll` dropped the file's database. Close every client the test opens.
