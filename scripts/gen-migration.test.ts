@@ -81,7 +81,7 @@ describe('pnpm gen:migration', () => {
       'Usage: pnpm gen:migration <module> <slug>',
       'No module folder apps/backend/src/modules/production-stat',
     ]);
-    expect(readdirSync(join(root, 'modules'))).toEqual(['production-start']);
+    expect(readdirSync(join(root, 'apps/backend/src/modules'))).toEqual(['production-start']);
     expect(readdirSync(join(root, 'apps/backend/src/modules/production-start'))).toEqual([]);
     expect(lines).toEqual([]);
   });
@@ -103,10 +103,10 @@ describe('pnpm gen:migration', () => {
   });
 
   it('E02-S02 pnpm gen:migration refuses a module that is not a module id and writes nothing', async () => {
-    // Both folders exist, so only the module id rule stops them: ../scripts would put the file
-    // outside modules/, and the quote would end the schema name in the SQL.
-    const modules = ['../scripts', "production-start'"];
-    mkdirSync(join(root, 'scripts'));
+    // Both folders exist, so only the module id rule stops them: ../graphql would put the file
+    // outside the modules folder, and the quote would end the schema name in the SQL.
+    const modules = ['../graphql', "production-start'"];
+    mkdirSync(join(root, 'apps/backend/src/graphql'), { recursive: true });
     mkdirSync(join(root, "apps/backend/src/modules/production-start'"));
 
     const exitCodes: number[] = [];
@@ -119,7 +119,7 @@ describe('pnpm gen:migration', () => {
           `Invalid module "${module}": the module id names the folder and the schema, so use lower-case letters, digits and single hyphens, starting with a letter`,
       ),
     );
-    expect(readdirSync(join(root, 'scripts'))).toEqual([]);
+    expect(readdirSync(join(root, 'apps/backend/src/graphql'))).toEqual([]);
     expect(readdirSync(join(root, "apps/backend/src/modules/production-start'"))).toEqual([]);
     expect(lines).toEqual([]);
   });

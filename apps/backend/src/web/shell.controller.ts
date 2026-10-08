@@ -19,9 +19,10 @@ export const CSP = [
 
 /**
  * The first path segments of the server's own routes (ADR 0064). A path that starts with one is not
- * an SPA path, and a plant slug is never one of them.
+ * an SPA path, and a plant slug is never one of them. `modules` held the module remotes, so a stale
+ * client that asks for a remote file gets 404 instead of the shell.
  */
-const SERVER_SEGMENTS = new Set(['api', 'assets', 'graphql', 'health', 'mcp']);
+const SERVER_SEGMENTS = new Set(['api', 'assets', 'graphql', 'health', 'mcp', 'modules']);
 
 /** Answers the SPA paths with the shell's index.html (ADR 0064). */
 @Controller()

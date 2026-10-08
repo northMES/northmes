@@ -28,7 +28,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
 
 - `pnpm exec vitest run --project integration <file>`: one integration file. Docker must be running.
 - `pnpm test:int`: every integration file.
-- `pnpm gen:migration <module> <slug>`: writes `modules/<module>/migrations/<UTC yyyymmddHHMMss>_<slug>.sql` from the table template.
+- `pnpm gen:migration <module> <slug>`: writes `apps/backend/src/modules/<module>/migrations/<UTC yyyymmddHHMMss>_<slug>.sql` from the table template.
 - `pnpm northmes db bootstrap` and `pnpm northmes migrate`: the same role setup and migrate run against a real database.
 - `pnpm check`: the gate before the work is handed over.
 
@@ -67,7 +67,7 @@ description: NorthMES recipe for tests against Postgres. Use when writing a *.in
     - `permission denied for table <table>` (42501): the file reads another module's table, such as `create table ... as select * from planning.production_order`, or adds a foreign key into a table whose module has not granted `references (id)` on it to `nm_ext`. A migration reads only its own module's tables. For the foreign key, store the id without one, or add the grant in the migrations of the module that owns the table.
     - Any other SQL error, such as `syntax error at or near "tabel"`: fix the file. It has not been applied, so it may still change.
 - `canceling statement due to lock timeout` (55P03): another migrate run held the migration advisory lock of the database for more than a minute.
-- `pnpm gen:migration` exits 1 with `Usage: pnpm gen:migration <module> <slug>`, `No module folder modules/<module>` or `Invalid slug "<slug>"` and writes nothing. It also refuses to replace a file that exists (`EEXIST`).
+- `pnpm gen:migration` exits 1 with `Usage: pnpm gen:migration <module> <slug>`, `No module folder apps/backend/src/modules/<module>` or `Invalid slug "<slug>"` and writes nothing. It also refuses to replace a file that exists (`EEXIST`).
 
 ### Row-level security and grants
 
