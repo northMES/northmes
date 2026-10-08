@@ -2,7 +2,7 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { type Command, COMMAND_BUS, type CommandBus } from '@northmes/sdk/commands';
+import { COMMAND_BUS, type Command, type CommandBus } from '@northmes/sdk/commands';
 import { defineSubgraph, SubgraphRegistry, SubgraphRegistryModule } from '@northmes/sdk/graphql';
 import { afterEach, describe, expect, it } from 'vitest';
 import { PlanningModule } from '../fixtures/commands/planning.ts';

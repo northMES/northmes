@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-// Fixture module planning: releases a production order through a command and writes no resolver.
+// Fixture module planning: lists production orders and releases one through a command, for which
+// it writes no resolver.
 import { Module } from '@nestjs/common';
-import { Field, ID, ObjectType } from '@nestjs/graphql';
+import { Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import { defineCommandContract } from '@northmes/contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { z } from 'zod';
@@ -19,6 +20,15 @@ export class ProductionOrder {
   @Field(() => String) status!: string;
 }
 
+/** A subgraph needs a Query root, which the module's own reads give it. */
+@Resolver(() => ProductionOrder)
+export class ProductionOrderResolver {
+  @Query(() => [ProductionOrder])
+  planningProductionOrders(): ProductionOrder[] {
+    return [];
+  }
+}
+
 export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   returns: () => ProductionOrder,
   async handle({ id }) {
@@ -26,5 +36,5 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   },
 });
 
-@Module({ providers: [ReleaseProductionOrder] })
+@Module({ providers: [ProductionOrderResolver, ReleaseProductionOrder] })
 export class PlanningModule {}
