@@ -45,4 +45,43 @@ describe('path-literals', () => {
       { path: 'apps/web/src/menu.tsx', line: 5, literal: '/x' },
     ]);
   });
+
+  it('E02-S05 navigate({ to: "/x" }) and page.goto("/x") fail, and an allowlisted literal with a reason passes', () => {
+    const files = [
+      {
+        path: 'modules/planning/web/src/use-release.ts',
+        text: [
+          'export function useRelease() {',
+          '  const navigate = useNavigate();',
+          "  return () => navigate({ to: '/x' });",
+          '}',
+          '',
+        ].join('\n'),
+      },
+      {
+        path: 'e2e/board.spec.ts',
+        text: [
+          "test('board', async ({ page }) => {",
+          "  await page.goto('/x');",
+          "  await page.goto('/plant-a/planning/board');",
+          '});',
+          '',
+        ].join('\n'),
+      },
+    ];
+    const allowlist = [
+      {
+        path: 'e2e/board.spec.ts',
+        literal: '/plant-a/planning/board',
+        reason: 'The spec opens the board URL as a person types it.',
+      },
+    ];
+
+    const findings = scan(files, allowlist);
+
+    expect(findings).toEqual([
+      { path: 'modules/planning/web/src/use-release.ts', line: 3, literal: '/x' },
+      { path: 'e2e/board.spec.ts', line: 2, literal: '/x' },
+    ]);
+  });
 });
