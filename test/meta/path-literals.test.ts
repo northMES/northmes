@@ -134,6 +134,24 @@ describe('path-literals', () => {
     ]);
   });
 
+  it('E02-S05 a URL with a scheme or a host, a fragment and a relative path are not app paths and pass', () => {
+    const text = [
+      'export const links = (',
+      '  <footer>',
+      '    <a href="https://example.com/help">Help</a>',
+      '    <a href="//cdn.example.com/guide.pdf">Guide</a>',
+      '    <a href="mailto:support@example.com">Support</a>',
+      '    <a href="#main">Skip to content</a>',
+      '    <Link to="..">Back</Link>',
+      '    <Link to="./history">History</Link>',
+      '  </footer>',
+      ');',
+      '',
+    ].join('\n');
+
+    expect(scan([{ path: 'apps/web/src/footer.tsx', text }], [])).toEqual([]);
+  });
+
   it('E02-S05 only source files under modules/*/web, examples/*/web, apps/web and e2e are scanned', () => {
     const link = '<Link to="/x">X</Link>;\n';
     const paths = [
