@@ -72,3 +72,29 @@ export function noBundledSingletons() {
     },
   };
 }
+
+/**
+ * Fails the build when the remote emits CSS. A remote under modules/<id>/web imports no
+ * stylesheet: the shell builds one Tailwind sheet that covers the remote's classes, and a remote's
+ * own sheet loaded after it could override the shell's rules (ADR 0019). An empty stylesheet still
+ * emits a file, so any CSS file fails.
+ *
+ * @returns {import('vite').Plugin}
+ */
+export function noRemoteCss() {
+  return {
+    name: 'northmes:no-remote-css',
+    apply: 'build',
+    generateBundle(_options, bundle) {
+      const sheets = Object.values(bundle)
+        .filter((file) => file.type === 'asset' && file.fileName.endsWith('.css'))
+        .map((file) => file.fileName);
+      if (sheets.length > 0) {
+        this.error(
+          `this remote emits CSS (${sheets.join(', ')}). A remote under modules/*/web imports no ` +
+            "stylesheet, because the shell's one stylesheet covers its classes (ADR 0019).",
+        );
+      }
+    },
+  };
+}
