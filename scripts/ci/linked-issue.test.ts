@@ -40,6 +40,18 @@ describe('ci / linked issue', () => {
     expect(checkLinkedIssue(renovate).ok).toBe(true);
   });
 
+  // release-please opens the release pull request from its branch in this repository.
+  it('passes a release pull request without Closes #N', () => {
+    for (const headRef of [
+      'release-please--branches--main',
+      'release-please--branches--main--components--northmes',
+    ]) {
+      expect(checkLinkedIssue({ ...pullRequest('Releases 0.2.0.'), headRef }).ok, headRef).toBe(
+        true,
+      );
+    }
+  });
+
   it('fails a pull request whose body has no Closes #N, saying how to link one', () => {
     for (const body of ['', 'Adds the gate.', 'Closes #N', 'Part of #196.', 'This encloses #12.']) {
       const result = checkLinkedIssue(pullRequest(body));
