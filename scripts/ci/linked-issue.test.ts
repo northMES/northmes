@@ -1,5 +1,17 @@
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { checkLinkedIssue } from './linked-issue.mjs';
+
+const script = fileURLToPath(new URL('./linked-issue.mjs', import.meta.url));
+
+// Runs the script as the ci / linked issue job does, with the pull request in the environment.
+function run(pullRequestEnv: Record<string, string>) {
+  return spawnSync(process.execPath, [script], {
+    env: { PATH: process.env.PATH, ...pullRequestEnv },
+    encoding: 'utf8',
+  });
+}
 
 // A pull request from a branch in this repository by a person, with the given body.
 function pullRequest(body: string) {
@@ -70,5 +82,22 @@ describe('ci / linked issue', () => {
       expect(result.ok, body).toBe(false);
       expect(result.message, body).toContain('Closes #N');
     }
+  });
+
+  it('the entry point reads the pull request from the environment and fails it with an annotation', () => {
+    const releaseBranch = {
+      PR_AUTHOR: 'a-contributor',
+      PR_HEAD_REF: 'release-please--branches--main',
+    };
+
+    const fromFork = run({ ...releaseBranch, PR_FROM_FORK: 'true', PR_BODY: 'Adds the gate.' });
+    const linked = run({ ...releaseBranch, PR_FROM_FORK: 'true', PR_BODY: 'Closes #196' });
+    const release = run({ ...releaseBranch, PR_FROM_FORK: 'false', PR_BODY: '' });
+
+    expect(fromFork.status).toBe(1);
+    expect(fromFork.stdout).toMatch(/^::error::The pull request body links no issue\./);
+    expect(linked.status).toBe(0);
+    expect(linked.stdout).toBe('');
+    expect(release.status).toBe(0);
   });
 });
