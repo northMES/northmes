@@ -3,6 +3,9 @@
     "strict": true,
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "customConditions": ["@northmes/source"]
+    "customConditions": ["@northmes/source"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false
   }
 }
