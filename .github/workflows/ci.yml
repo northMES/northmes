@@ -5,7 +5,8 @@
 # just before it. test/meta/workflows.test.ts lists the job names. Every job that CI / gate needs,
 # except the two pull request checks and react doctor, runs root pnpm scripts that pnpm check or
 # pnpm check:full contains; the coverage summary step of CI / test only copies a report into the
-# job summary.
+# job summary, and the git worktree add step of CI / fresh worktree only adds the directory that
+# the job's later steps run in.
 name: CI
 
 on:
@@ -148,6 +149,38 @@ jobs:
       - if: "!cancelled() && steps.scan.outcome != 'skipped'"
         run: pnpm react-doctor:summary
 
+  # A handoff run starts in a fresh git worktree and runs tests right after one install, with no
+  # build step, as
+  # docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
+  # decides. The job adds a worktree beside the checkout, installs in it and runs the integration
+  # project there; tests that boot the built server build it through bootBuilt. It runs on pull
+  # requests only, because on main CI / test runs the same integration tests.
+  fresh-worktree:
+    name: fresh worktree
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    # The runner of CI / test, which every job that runs Vitest takes.
+    runs-on: >-
+      ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
+          && 'ubuntu-24.04'
+          || vars.NM_RUNNER_X64 || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: git worktree add --detach ../fresh-worktree
+      - run: pnpm install --frozen-lockfile
+        working-directory: ../fresh-worktree
+      - run: pnpm test:int
+        working-directory: ../fresh-worktree
+
   # The pull request checks read the event, so they run only for pull requests. Their scripts take
   # the event values from environment variables: interpolated into a run script, a title or body
   # could inject shell code.
@@ -191,13 +224,14 @@ jobs:
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
   # so CI / gate always runs and fails itself instead. On a pull request every job it needs runs,
-  # so a skipped one fails it too; a push to main skips only the pull request checks.
+  # so a skipped one fails it too; a push to main skips only the pull request checks and
+  # CI / fresh worktree.
   gate:
     name: gate
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [lint, typecheck, build, test, react-doctor, pr-title, linked-issue]
+    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, pr-title, linked-issue]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that CI / gate needs did not pass
