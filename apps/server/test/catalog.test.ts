@@ -222,6 +222,19 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it("E02-S01 a permission key without its module's GraphQL prefix is refused naming the key", () => {
+    const error = refusal([
+      core,
+      inRepoModule('production-start', ['core'], {
+        permissions: { 'productionStart.report': ['read'], 'production_start.job': ['read'] },
+      }),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module production-start declares permission "production_start.job", which must start with "productionStart."',
+    ]);
+  });
+
   it('E02-S01 ids sort by character code, so a Czech locale gives the same order and cycle', () => {
     const { locale, outcomes } = checkInCzechLocale([
       [
