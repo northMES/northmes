@@ -100,7 +100,7 @@ Root scripts:
 |---|---|---|
 | `pnpm check` | turbo `lint` and `typecheck`, `pnpm gen --check`, then `vitest run` over `unit`, `integration`, `web` and `types` | The one gate: handoff's Tester, `ci / gate`, a developer before pushing |
 | `pnpm check:full` | `pnpm check`, the Europe/Stockholm leg and the end-to-end suite | Release 1's done conditions require it to pass on `main`; CI jobs call the parts it contains |
-| `pnpm test:unit`, `pnpm test:int` | One project | Local work |
+| `pnpm test:unit`, `pnpm test:int` | One project | Local work; `pnpm test:int` also runs in `CI / fresh worktree` |
 | `pnpm test:watch` | `vitest --project unit` | The TDD loop |
 | `pnpm test:coverage` | `vitest run --coverage` over `unit`, `integration`, `web` and `types` | The UTC leg of `CI / test` |
 | `pnpm test:tz` | Unit and integration with `TZ=Europe/Stockholm` and `NM_TEST_PG_TZ=Europe/Stockholm` | The Stockholm leg |
@@ -110,7 +110,7 @@ Root scripts:
 | `pnpm react-doctor:summary` | Copies the findings in `react-doctor-report.json` into the job summary and the log | `CI / react doctor` |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report.
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
 
 ## Testcontainers harness
 
@@ -383,6 +383,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `build` | turbo `build` |
 | `test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
 | `react doctor` | `pnpm react-doctor`: react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk`; an error fails it, and the next step copies the findings into the job summary and the log. CI only, under the license exception of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
+| `fresh worktree` | On pull requests: `git worktree add`, then `pnpm install --frozen-lockfile` and `pnpm test:int` in the new worktree, with no build step |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists), `cla` (before the first outside pull request) and `openapi diff` (with the first public route). |
@@ -404,12 +405,11 @@ Each job in `ci.yml` is a required check of its own, so the merge box shows each
 
 ### Other checks on pull requests
 
-Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `CI / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `e2e`, `fresh-worktree` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
+Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `CI / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `e2e` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it, as `fresh worktree` did ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
 
 | Check | Runs | When |
 |---|---|---|
 | `e2e` | `pnpm e2e` with Chromium, traces uploaded on failure | Every pull request and push to `main` |
-| `fresh-worktree` | `git worktree add`, `pnpm install --frozen-lockfile`, `pnpm test:int` with no build step | Every pull request |
 | `plugin-outside` | Packs the MIT packages, installs an example plugin from those tarballs outside the repository, builds it, drops it into a plugins directory, boots and runs the example spec | Every pull request |
 | Image build and scan | Builds the app and Postgres images without pushing; Trivy or Grype pinned by digest; fails on critical findings that have a fix | Pull requests and `main`, once a Dockerfile exists |
 | Composition corpus | Composes the in-repo examples, `test/plugin-corpus` SDL and the built package of any plugin the pilot runs against the pull request's schema | Every pull request |
