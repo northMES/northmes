@@ -1,16 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { CombinedGraphQLErrors, type ErrorLike } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
+import { Button } from '../../ui/button.tsx';
 import { buttonVariants } from '../../ui/button-variants.ts';
 import { DataTable, type DataTableColumn } from '../../ui/data-table.tsx';
 import { PageFrame, type PageState } from '../../ui/page-frame.tsx';
-import { type Article, CoreArticles } from './articles.graphql.ts';
+import { SearchField } from '../../ui/search-field.tsx';
+import {
+  type ArticleListSearch,
+  articleListSearch,
+  articleListVariables,
+  articlePageSize,
+  firstPageOf,
+  nextPage,
+  previousPage,
+  searchedFor,
+  sortedBy,
+  sortOf,
+} from './article-list-search.ts';
+import { type Article, type ArticlesPage, CoreArticles } from './articles.graphql.ts';
 
-/** The page size of the list (design ui-222, open question 15). */
-const pageSize = 25;
+/** The id of the Search articles input, where Clear filters moves focus. */
+const searchFieldId = 'articles-search';
 
 /** The article number, the link to the article's page (IdentifierLink in the design). */
 function ArticleLink({ article }: { readonly article: Article }) {
@@ -46,56 +61,140 @@ function NewArticleLink() {
   );
 }
 
+/** Whether the API refused the cursor of the URL's page, because the rows changed (ST21). */
+function isStaleCursor(error: ErrorLike | undefined): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some(({ extensions }) => extensions?.errorCode === 'core.list.invalid_cursor')
+  );
+}
+
+interface StateOptions {
+  readonly view: ArticleListSearch;
+  readonly page: ArticlesPage | undefined;
+  readonly error: ErrorLike | undefined;
+  readonly retry: () => void;
+  readonly show: (view: ArticleListSearch) => void;
+}
+
 /**
- * The articles of the plant (design ui-222, LI1): one page of the DataTable, sorted by article
- * number, with Previous, Next and the row range, and New article in the page actions. While a
- * page loads, the table draws skeleton rows (ST2); a plant without articles shows No articles yet
- * (ST3), and a failed load an error with Try again (ST4).
+ * The state of the list's data region (design ui-222, row 2): loading while a page has no rows
+ * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), a page whose cursor
+ * no longer applies (ST21) or a failed load (ST4).
  */
-export function ArticlesScreen() {
-  const { data, error, refetch } = useQuery(CoreArticles, {
-    variables: { first: pageSize, orderBy: [{ field: 'CODE', direction: 'ASC' }] },
-    fetchPolicy: 'cache-and-network',
-  });
-  const page = data?.coreArticles;
-  let state: PageState = { status: 'ready' };
+function listState({ view, page, error, retry, show }: StateOptions): PageState {
+  if (page === undefined && isStaleCursor(error)) {
+    return {
+      status: 'empty',
+      title: 'This page of results is out of date',
+      description:
+        'The rows changed since this link was made, so this page can no longer be found.',
+      action: <Button onClick={() => show(firstPageOf(view))}>Go to the first page</Button>,
+    };
+  }
   if (page === undefined && error !== undefined) {
-    state = {
+    return {
       status: 'error',
       title: 'Could not load articles',
       description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
-    };
-  } else if (page === undefined) {
-    state = { status: 'loading' };
-  } else if (page.totalCount === 0) {
-    state = {
-      status: 'empty',
-      title: 'No articles yet',
-      description:
-        'Articles come from an import or are created here. Create the first one, or wait for the next import.',
-      action: <NewArticleLink />,
+      onRetry: retry,
     };
   }
+  if (page === undefined) return { status: 'loading' };
+  if (page.totalCount > 0) return { status: 'ready' };
+  if (view.q !== undefined) {
+    return {
+      status: 'empty',
+      title: 'No articles match these filters',
+      description: 'Change or clear the filters to see articles again.',
+      action: (
+        <Button
+          variant="link"
+          onClick={() => {
+            show(searchedFor(view, ''));
+            document.getElementById(searchFieldId)?.focus();
+          }}
+        >
+          Clear filters
+        </Button>
+      ),
+    };
+  }
+  return {
+    status: 'empty',
+    title: 'No articles yet',
+    description:
+      'Articles come from an import or are created here. Create the first one, or wait for the next import.',
+    action: <NewArticleLink />,
+  };
+}
+
+/**
+ * The articles of the plant (design ui-222, LI1): Search articles, and one page of the DataTable
+ * with sortable Article number and Name headers, Previous, Next and the row range. Search, sort
+ * and page live in the URL (plan 06, View state in the URL), so a reload, Back or a copied link
+ * opens the same rows; each change replaces the history entry and leaves focus where it is.
+ */
+export function ArticlesScreen() {
+  const view = articleListSearch(useSearch({ strict: false }));
+  const navigate = useNavigate();
+  const { data, previousData, error, refetch } = useQuery(CoreArticles, {
+    variables: articleListVariables(view),
+    fetchPolicy: 'cache-and-network',
+  });
+  const page = data?.coreArticles;
+  // While a page loads, the pager keeps the buttons of the page before it, so the button just used
+  // keeps focus.
+  const shownPage = page ?? previousData?.coreArticles;
+  const show = (next: ArticleListSearch) => {
+    navigate({ to: '.', search: next, replace: true });
+  };
+  const state = listState({
+    view,
+    page,
+    error,
+    retry: () => {
+      refetch().catch(() => {});
+    },
+    show,
+  });
   return (
-    <PageFrame title="Articles" actions={<NewArticleLink />} state={state}>
+    <PageFrame
+      title="Articles"
+      actions={<NewArticleLink />}
+      toolbar={
+        <SearchField
+          id={searchFieldId}
+          label="Search articles"
+          value={view.q ?? ''}
+          onSearch={(text) => show(searchedFor(view, text))}
+          className="max-w-sm"
+        />
+      }
+      state={state}
+    >
       <DataTable
         label="Articles"
         columns={columns}
         rows={page?.edges.map(({ node }) => node) ?? []}
         getRowId={(article) => article.id}
         loading={page === undefined}
-        sort={{ id: 'code', desc: false }}
+        sort={sortOf(view)}
+        onSortChange={(sort) => show(sortedBy(view, sort))}
         paging={{
-          page: 1,
-          pageSize,
+          page: view.page ?? 1,
+          pageSize: articlePageSize,
           totalCount: page?.totalCount,
-          hasPreviousPage: page?.pageInfo.hasPreviousPage ?? false,
-          hasNextPage: page?.pageInfo.hasNextPage ?? false,
-          onPrevious: () => {},
-          onNext: () => {},
+          hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
+          hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
+          onPrevious: () => {
+            const startCursor = page?.pageInfo.startCursor;
+            if (startCursor) show(previousPage(view, startCursor));
+          },
+          onNext: () => {
+            const endCursor = page?.pageInfo.endCursor;
+            if (endCursor) show(nextPage(view, endCursor));
+          },
         }}
       />
     </PageFrame>

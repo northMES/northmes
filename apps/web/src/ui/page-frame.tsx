@@ -99,7 +99,8 @@ export function ErrorState({
  * focuses after a route change (tabindex -1) and which names the document ("Articles · NorthMES"),
  * the page actions, the toolbar, and the data region
  * in its state. Loading marks the region busy around the content's skeleton; empty and error
- * replace the content. Try again moves focus to the h1, because the error state goes away.
+ * replace the content. Try again moves focus to the h1, because the error state goes away, and so
+ * does an empty state's action that takes the state away without moving focus itself.
  */
 export function PageFrame({
   title,
@@ -112,6 +113,17 @@ export function PageFrame({
   useEffect(() => {
     document.title = `${title} · NorthMES`;
   }, [title]);
+  // The action of an empty or error state, such as Go to the first page, removes the state and
+  // the focused button with it. Unless the action moved focus itself, focus moves to the h1.
+  const shownStatus = useRef(state.status);
+  useEffect(() => {
+    const left = shownStatus.current;
+    shownStatus.current = state.status;
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (left !== state.status && (left === 'empty' || left === 'error') && lost) {
+      heading.current?.focus();
+    }
+  }, [state.status]);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
