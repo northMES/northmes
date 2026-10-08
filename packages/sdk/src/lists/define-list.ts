@@ -92,11 +92,11 @@ function badArgument(message: string): DomainError {
   return new DomainError({ code: 'core.list.bad_argument', kind: 'validation', message });
 }
 
-/** The page size the arguments ask for. */
-function pageSize(args: ListArgs<string>): number {
-  const size = args.first ?? DEFAULT_PAGE_SIZE;
+/** The page size that the argument `name` asks for. */
+function pageSize(name: 'first' | 'last', value: number | null | undefined): number {
+  const size = value ?? DEFAULT_PAGE_SIZE;
   if (!Number.isInteger(size) || size < 1 || size > MAX_PAGE_SIZE) {
-    throw badArgument(`first must be between 1 and ${MAX_PAGE_SIZE}`);
+    throw badArgument(`${name} must be between 1 and ${MAX_PAGE_SIZE}`);
   }
   return size;
 }
@@ -121,6 +121,46 @@ function keysOf<SortField extends string>(
 /** The order signature a cursor carries, such as code.AL,id.AL: column, direction, nulls last. */
 function signatureOf(keys: readonly Key[]): string {
   return keys.map(({ column, direction }) => `${column}.${direction.charAt(0)}L`).join(',');
+}
+
+/** The keys of the opposite order, which a backward page reads its rows in. */
+function reversed(keys: readonly Key[]): Key[] {
+  return keys.map((key) => ({
+    ...key,
+    direction: key.direction === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC,
+  }));
+}
+
+/** How one call reads its page. */
+interface PagePlan {
+  /** True when last or before asks for the page before a cursor, or for the last page. */
+  readonly backward: boolean;
+  readonly size: number;
+  /** The keys of the order the arguments ask for. */
+  readonly keys: readonly Key[];
+  readonly signature: string;
+  /** The sort values of the after or before cursor. */
+  readonly from: readonly string[] | undefined;
+}
+
+/**
+ * The plan of a call: last or before selects backward paging, and first is then ignored, because
+ * the schema gives every call first = 25 (ADR 0016). after with before is refused.
+ */
+function planOf<SortField extends string>(
+  declaration: ListDeclaration<SortField>,
+  args: ListArgs<SortField>,
+): PagePlan {
+  if (args.after != null && args.before != null) {
+    throw badArgument('after and before cannot be used together');
+  }
+  const backward = args.last != null || args.before != null;
+  const size = backward ? pageSize('last', args.last) : pageSize('first', args.first);
+  const keys = keysOf(declaration, args);
+  const signature = signatureOf(keys);
+  const cursor = backward ? args.before : args.after;
+  const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
+  return { backward, size, keys, signature, from };
 }
 
 /**
@@ -220,27 +260,28 @@ export function defineList<const SortField extends string>(
       query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
       args: ListArgs<SortField>,
     ): Promise<Connection<Row>> {
-      const size = pageSize(args);
-      const keys = keysOf(declaration, args);
-      const signature = signatureOf(keys);
-      const after = args.after ? decodeCursor(args.after, signature, keys.length) : undefined;
+      const { backward, size, keys, signature, from } = planOf(declaration, args);
+      // A backward page reads the rows before the cursor in the opposite order, and reverses them.
+      const readKeys = backward ? reversed(keys) : keys;
       const aliases = keys.map((_key, index) => `_nm_key_${index}`);
 
       const rows = await db.transaction((tx) => {
         let rowsQuery = query(tx);
-        if (after) rowsQuery = rowsQuery.where(afterValues(keys, after));
+        if (from) rowsQuery = rowsQuery.where(afterValues(readKeys, from));
         let ordered = rowsQuery.select(
           keys.map(({ column }, index) =>
             sql<string>`${sql.ref(column)}::text`.as(aliases[index] as string),
           ),
         );
-        for (const { column, direction } of keys) {
+        for (const { column, direction } of readKeys) {
           ordered = ordered.orderBy(sql.ref(column), direction === 'ASC' ? 'asc' : 'desc');
         }
         return ordered.limit(size + 1).execute();
       });
 
-      const edges = rows.slice(0, size).map((row) => {
+      const pageRows = rows.slice(0, size);
+      if (backward) pageRows.reverse();
+      const edges = pageRows.map((row) => {
         const record = row as Record<string, unknown>;
         const values = aliases.map((alias) => String(record[alias]));
         const nodeValue = Object.fromEntries(
@@ -251,8 +292,9 @@ export function defineList<const SortField extends string>(
       return {
         edges,
         pageInfo: {
-          hasNextPage: rows.length > size,
-          hasPreviousPage: after !== undefined,
+          // Exact in the direction of paging; in the other, whether the page started at a cursor.
+          hasNextPage: backward ? from !== undefined : rows.length > size,
+          hasPreviousPage: backward ? rows.length > size : from !== undefined,
           startCursor: edges[0]?.cursor ?? null,
           endCursor: edges.at(-1)?.cursor ?? null,
         },
