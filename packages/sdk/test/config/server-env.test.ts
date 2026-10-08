@@ -87,6 +87,14 @@ describe('serverEnvSchema', () => {
       expect(error.problems[0], origin).toMatch(/^NORTHMES_PUBLIC_ORIGIN: must be /);
     }
   });
+
+  it("E02-S04 a server environment without DATABASE_URL and nm_app's password file fails naming both", () => {
+    const error = configErrorOf(() =>
+      loadEnv(serverEnvSchema)({ PORT: '8080', NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com' }),
+    );
+
+    expect(keysOf(error)).toEqual(['DATABASE_URL', 'NORTHMES_DB_APP_PASSWORD_FILE']);
+  });
 });
 
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {
