@@ -5,6 +5,8 @@ import { basename, join } from 'node:path';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { hostFactory } from '@northmes/server/testing';
 import { createTestApp, given, type TestApp, useTestDatabase } from '@northmes/testing';
+import { CompiledQuery } from 'kysely';
+import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
@@ -16,6 +18,19 @@ import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';
 // The owner role of a module belongs to the server, which the other test files share, so this file
 // migrates a module of its own.
 const moduleId = 'scoped-database';
+
+/** What a connection reports about its login and its scope settings. */
+interface Session {
+  user: string;
+  pid: number;
+  readScopes: string | null;
+  writeScopes: string | null;
+}
+
+/** Selects a Session row. missing_ok is true, so a setting that was never set reads as null. */
+const sessionQuery = `select current_user as "user", pg_backend_pid() as pid,
+  current_setting('northmes.read_scopes', true) as "readScopes",
+  current_setting('northmes.write_scopes', true) as "writeScopes"`;
 
 /** The Kysely table types of the fixture module, written by hand. */
 interface FixtureDatabase {
@@ -61,6 +76,12 @@ describe('ScopedDatabase', () => {
     return testApp.app.get(DATABASE);
   }
 
+  /** The app's nm_app pool, which the ScopedDatabase runs on. */
+  function pool(): Pool {
+    if (!testApp) throw new Error('the test app did not start');
+    return testApp.app.get(Pool);
+  }
+
   /** The scope ids of the work notes that one transaction reads as `principal`. */
   function scopesReadAs(principal: Principal | null): Promise<string[]> {
     return runAs(principal, () =>
@@ -82,5 +103,28 @@ describe('ScopedDatabase', () => {
     const scopes = await scopesReadAs(null);
 
     expect(scopes).toEqual([]);
+  });
+
+  it('E02-S04 the pool connects as nm_app and sets scopes only inside the transaction', async () => {
+    const inside = await runAs(tracerPrincipal(plantA), () =>
+      scopedDatabase().transaction(async (tx) => {
+        const { rows } = await tx.executeQuery<Session>(CompiledQuery.raw(sessionQuery));
+        return rows[0];
+      }),
+    );
+    // The pool hands out the connection released last, the one the transaction ran on; the
+    // backend pid shows that it is.
+    const {
+      rows: [after],
+    } = await pool().query<Session>(sessionQuery);
+
+    expect(inside).toEqual({
+      user: 'nm_app',
+      pid: expect.any(Number),
+      readScopes: `{${plantA}}`,
+      writeScopes: `{${plantA}}`,
+    });
+    // A transaction-local setting reads as an empty string once its transaction ends (ADR 0008).
+    expect(after).toEqual({ user: 'nm_app', pid: inside?.pid, readScopes: '', writeScopes: '' });
   });
 });
