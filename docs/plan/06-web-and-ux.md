@@ -7,9 +7,9 @@ The NorthMES web app is one browser shell (`apps/web`) that loads one React remo
 | ADR | Status | What it fixes for the web app |
 |---|---|---|
 | [0019 Web shell with React Module Federation remotes](../adr/0019-web-shell-with-react-module-federation-remotes.md) | accepted | Runtime host, remote contract, singletons, CSS rule, plant switch, browser floor |
-| [0020 Frontend libraries](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md) | proposed | TanStack Router, Apollo Client 4, codegen, shadcn on Base UI, forms, design tokens |
-| [0017 Zod contracts as the single source for inputs](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md) | proposed | One schema per command for the pipeline, GraphQL inputs and forms; fieldErrors |
-| [0012 Commands as the single write path](../adr/0012-commands-as-the-single-write-path.md) | proposed | Parse step, DomainError, error extensions |
+| [0020 Frontend libraries](../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md) | accepted | TanStack Router, Apollo Client 4, codegen, shadcn on Base UI, forms, design tokens |
+| [0017 Zod contracts as the single source for inputs](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md) | accepted | One schema per command for the pipeline, GraphQL inputs and forms; fieldErrors |
+| [0012 Commands as the single write path](../adr/0012-commands-as-the-single-write-path.md) | accepted | Parse step, DomainError, error extensions |
 | [0062 Web form contracts, URL view state and module link manifests](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md) | accepted | The URL search serializer and `defineSearch`, link manifests and moved routes, nav entries from routes, the contracts packages and Zod that remotes bundle, measured inputs, the package homes of these names |
 | [0021 Accessibility target WCAG 2.2 AA](../adr/0021-accessibility-target-wcag-2-2-aa.md) | accepted | Target, shell services, gates, board accessibility |
 | [0022 Shared building blocks](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | Package map, promotion rule, master-data kit, settings |

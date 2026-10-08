@@ -15,7 +15,7 @@ NorthMES calls language models only through a provider that the customer configu
 | Outbound URLs and encrypted AI secrets | [ADR 0047](../adr/0047-secrets-and-the-installation-key.md) | proposed |
 | Drafts and soft locks that proposals feed | [ADR 0029](../adr/0029-per-planner-drafts-soft-locks-and-the-plan-revision.md) | accepted |
 | Chat panel accessibility | [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) | accepted |
-| MIT license of `@northmes/sdk` | [ADR 0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | proposed |
+| MIT license of `@northmes/sdk` | [ADR 0056](../adr/0056-mit-sdk-packages-the-extension-exception-and-the-trademark-policy.md) | accepted |
 | Presentation values in the time context line, ISO 8601 and canonical tool outputs | [ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md) | accepted |
 
 ## Ground rules

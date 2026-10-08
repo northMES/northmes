@@ -9,8 +9,8 @@ NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the
 | Federation subgraphs in one process, embedded gateway, schema snapshot | [0015][adr-0015] | accepted | none |
 | List conventions | [0016][adr-0016] | accepted | none |
 | Realtime subscriptions, reconnect, stale tabs | [0018][adr-0018] | accepted | none |
-| Commands as the single write path, error model | [0012][adr-0012] | proposed | none |
-| Zod contracts for inputs | [0017][adr-0017] | proposed | none |
+| Commands as the single write path, error model | [0012][adr-0012] | accepted | none |
+| Zod contracts for inputs | [0017][adr-0017] | accepted | none |
 | Principals, credentials, same-origin rules | [0011][adr-0011] | proposed | none |
 | Identity, roles, one plant per request | [0010][adr-0010] | accepted | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
 | No integration REST API in release 1 | [0031][adr-0031] | proposed | product owner (field ownership, spread rule) |
@@ -20,7 +20,7 @@ NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the
 | Health endpoints and shutdown order | [0043][adr-0043] | accepted | none |
 | Time scalars | [0024][adr-0024] | proposed | none |
 | Unit arguments and unit enums | [0023][adr-0023] | accepted | product owner (pieces per hour) |
-| Web codegen and Apollo Client | [0020][adr-0020] | proposed | maintainer (Base UI; token base) |
+| Web codegen and Apollo Client | [0020][adr-0020] | accepted | maintainer (Base UI; token base) |
 | API reports, version ranges, event schema diffs | [0038][adr-0038] | accepted | maintainer (no range override in 0.x) |
 | Slot ids and plugin checks | [0037][adr-0037] | accepted | maintainer (no third-party plugin on the pilot; web-only plugins degrade); product owner (unpaid-invoice validator) |
 | Presentation settings in `/api/v1/web/modules`, week labels, machine-readable output | [0061][adr-0061] | accepted | none |

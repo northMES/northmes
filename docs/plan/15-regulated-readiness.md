@@ -8,7 +8,7 @@ The pilot customer is not in a regulated industry, but release 1 must not close 
 |---|---|---|
 | Regulated readiness: the 24 no-regret rules, the compliance profile, the signature stage, security answers for the pilot | [ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md) | accepted; needs confirmation on the signature path, the vendor's role under the Cyber Resilience Act and the regulated profile switch |
 | Audit trail, export format, retention, personal data | [ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) | accepted |
-| Commands as the single write path, the shared reason input, the reserved signature stage | [ADR 0012](../adr/0012-commands-as-the-single-write-path.md) | proposed |
+| Commands as the single write path, the shared reason input, the reserved signature stage | [ADR 0012](../adr/0012-commands-as-the-single-write-path.md) | accepted |
 | Operators as full users, dated badges, retired usernames, temporary admin passwords | [ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) | accepted |
 | Reports are facts, corrections as new rows | [ADR 0033](../adr/0033-online-operator-station-in-the-production-start-module.md) | accepted |
 | AI never commits and never evaluates people | [ADR 0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md), [ADR 0036](../adr/0036-agent-proposals-as-planning-records-a-person-commits.md) | accepted |

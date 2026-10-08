@@ -8,17 +8,17 @@ This document describes the platform layer that every NorthMES module builds on:
 |---|---|---|---|
 | Module-owned schemas, process roles | [0002](../adr/0002-modular-monolith-with-module-owned-schemas-and-process-roles.md) | accepted | none |
 | Database image | [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md) | accepted | maintainer (the pgBackRest source fallback until PGDG publishes 2.59.3) |
-| Kysely, migrations, roles, keys and versions | [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | proposed | none |
+| Kysely, migrations, roles, keys and versions | [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) | accepted | none |
 | Tenancy and the scope tree | [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md) | accepted | product owner (customer order line scope); maintainer (one plant at a time) |
-| Row-level security | [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md) | proposed | none |
+| Row-level security | [0008](../adr/0008-row-level-security-with-transaction-local-scopes.md) | accepted | none |
 | Code uniqueness and cross-scope references | [0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md) | proposed | product owner (case-insensitive codes, archived codes, level of operation tools) |
 | Identity, roles and permissions | [0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md) | accepted | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
 | Companies created by the CLI, plant creation and onboarding, plant slugs unique per installation | [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | maintainer (the company admin role holding every installed permission) |
 | Principals, credentials, same-origin rules | [0011](../adr/0011-principals-credentials-and-same-origin-rules.md) | proposed | none |
-| Commands as the single write path | [0012](../adr/0012-commands-as-the-single-write-path.md) | proposed | none |
+| Commands as the single write path | [0012](../adr/0012-commands-as-the-single-write-path.md) | accepted | none |
 | Audit trail | [0013](../adr/0013-audit-trail-written-in-the-command-transaction.md) | accepted | maintainer (lifecycle classes; tool results as exports); lawyer (retention, erasure) |
-| Outbox, event log and jobs | [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md) | proposed | none |
-| Zod contracts for inputs | [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md) | proposed | none |
+| Outbox, event log and jobs | [0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md) | accepted | none |
+| Zod contracts for inputs | [0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md) | accepted | none |
 | Settings, master-data kit, generators | [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | none |
 | SI units and the unit catalog | [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md) | accepted | product owner (pieces per hour) |
 | Time storage and driver parsers | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | none |
