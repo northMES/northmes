@@ -56,6 +56,19 @@ export interface DataTablePaging {
   readonly onNext: () => void;
 }
 
+/** A group of rows under a header row that names it and counts its rows, such as a role kind. */
+export interface DataTableGroup<TRow> {
+  readonly id: string;
+  /** The group's name, such as "Custom roles of Acme AB". */
+  readonly label: string;
+  /** The count beside the name, such as "5 roles". */
+  readonly count: string;
+  /** The group's rows in the server's order. */
+  readonly rows: readonly TRow[];
+  /** The line a group without rows shows, such as "No custom roles yet". */
+  readonly empty?: ReactNode;
+}
+
 export interface DataTableProps<TRow> {
   /** The table's accessible name, such as "Articles". */
   readonly label: string;
@@ -75,6 +88,13 @@ export interface DataTableProps<TRow> {
    * it is.
    */
   readonly stale?: boolean;
+  /**
+   * The rows in groups (design core-304, RO1): each group is a row group with a header row that
+   * names it and counts its rows. With groups, `rows` is ignored.
+   */
+  readonly groups?: readonly DataTableGroup<TRow>[];
+  /** A line under the table, such as "2 groups, 11 roles". */
+  readonly footer?: ReactNode;
 }
 
 const features = tableFeatures({ rowSortingFeature });
@@ -102,7 +122,13 @@ export function DataTable<TRow extends RowData>({
   paging,
   loading = false,
   stale = false,
+  groups,
+  footer,
 }: DataTableProps<TRow>) {
+  const data = useMemo(
+    () => (groups === undefined ? rows : groups.flatMap((group) => group.rows)),
+    [groups, rows],
+  );
   const columnById = useMemo(
     () => new Map(columns.map((column) => [column.id, column] as const)),
     [columns],
@@ -127,7 +153,7 @@ export function DataTable<TRow extends RowData>({
   const table = useTable({
     features,
     columns: tableColumns,
-    data: rows,
+    data,
     getRowId: (row) => getRowId(row),
     manualSorting: true,
     enableMultiSort: false,
@@ -139,6 +165,23 @@ export function DataTable<TRow extends RowData>({
       if (next !== undefined) onSortChange?.({ id: next.id, desc: next.desc });
     },
   });
+
+  const bodyClass = cn(stale && 'opacity-60 transition-opacity delay-200 duration-150');
+  const renderRow = (row: ReturnType<typeof table.getRowModel>['rows'][number]) => (
+    <TableRow key={row.id} className="border-border hover:bg-accent">
+      {row.getAllCells().map((cell) => (
+        <TableCell
+          key={cell.id}
+          className={cn(
+            'px-3 py-2.5 whitespace-normal',
+            columnById.get(cell.column.id)?.numeric && 'text-end tabular-nums',
+          )}
+        >
+          <table.FlexRender cell={cell} />
+        </TableCell>
+      ))}
+    </TableRow>
+  );
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
@@ -196,37 +239,58 @@ export function DataTable<TRow extends RowData>({
           ))}
         </TableHeader>
         {/* The dimming waits a moment, so a quick answer swaps the rows without a flash. */}
-        <TableBody className={cn(stale && 'opacity-60 transition-opacity delay-200 duration-150')}>
-          {loading
-            ? skeletonRows.map((key) => (
-                <TableRow key={key} className="border-border hover:bg-transparent">
-                  {columns.map((column) => (
-                    <TableCell key={column.id} className="px-3 py-3.5">
-                      <Skeleton
-                        aria-hidden
-                        className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
-                      />
-                    </TableCell>
-                  ))}
+        {loading ? (
+          <TableBody>
+            {skeletonRows.map((key) => (
+              <TableRow key={key} className="border-border hover:bg-transparent">
+                {columns.map((column) => (
+                  <TableCell key={column.id} className="px-3 py-3.5">
+                    <Skeleton
+                      aria-hidden
+                      className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
+                    />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        ) : groups === undefined ? (
+          <TableBody className={bodyClass}>{table.getRowModel().rows.map(renderRow)}</TableBody>
+        ) : (
+          groups.map((group) => {
+            const ids = new Set(group.rows.map(getRowId));
+            const groupRows = table.getRowModel().rows.filter((row) => ids.has(row.id));
+            return (
+              <TableBody key={group.id} className={bodyClass}>
+                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                  <th
+                    scope="rowgroup"
+                    colSpan={columns.length}
+                    className="px-3 py-2.5 text-start text-sm font-semibold"
+                  >
+                    {group.label}
+                    <span className="ms-2 font-mono text-xs font-normal text-muted-foreground">
+                      {group.count}
+                    </span>
+                  </th>
                 </TableRow>
-              ))
-            : table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="border-border hover:bg-accent">
-                  {row.getAllCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={cn(
-                        'px-3 py-2.5 whitespace-normal',
-                        columnById.get(cell.column.id)?.numeric && 'text-end tabular-nums',
-                      )}
-                    >
-                      <table.FlexRender cell={cell} />
+                {groupRows.length === 0 && group.empty !== undefined ? (
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableCell colSpan={columns.length} className="px-3 py-2.5 whitespace-normal">
+                      {group.empty}
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-        </TableBody>
+                  </TableRow>
+                ) : (
+                  groupRows.map(renderRow)
+                )}
+              </TableBody>
+            );
+          })
+        )}
       </Table>
+      {footer !== undefined && (
+        <p className="border-t border-border px-3 py-2.5 text-xs text-muted-foreground">{footer}</p>
+      )}
       {paging !== undefined && (
         <Pager paging={paging} rowCount={loading ? 0 : rows.length} stale={stale} />
       )}
