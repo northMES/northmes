@@ -11,6 +11,7 @@ import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { formatDateTime } from '../../../../ui/lib/date-time.ts';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
+import { shownListPage } from '../../../../ui/lib/shown-list-page.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
@@ -205,11 +206,15 @@ export function ArticlesScreen() {
   const page = data?.coreArticles;
   const forbidden = page === undefined && isForbidden(error);
   const places = usePlaces({ skip: !forbidden });
-  // While the rows of a new search, sort, filter or page load, the list keeps the rows of the view
-  // before and their pager, so focus stays on the control used (design ui-222, LI7). The first load
-  // and a view before without rows show skeleton rows; an error replaces the rows.
-  const previous = previousData?.coreArticles;
-  const shownPage = page ?? (error === undefined && previous?.edges.length ? previous : undefined);
+  // While a new search, sort, filter or page loads, the list keeps the rows or the no-match state
+  // it shows, and their pager, so focus stays on the control used (design ui-222, LI7).
+  const shownPage = shownListPage({
+    page,
+    previous: previousData?.coreArticles,
+    failed: error !== undefined,
+    searching: view.q !== undefined,
+  });
+  const stale = page === undefined && shownPage !== undefined;
   const show = (next: ArticleListSearch) => {
     navigate({ to: '.', search: next, replace: true });
   };
@@ -248,6 +253,7 @@ export function ArticlesScreen() {
         )
       }
       state={state}
+      busy={stale}
     >
       <DataTable
         label="Articles"
@@ -255,7 +261,7 @@ export function ArticlesScreen() {
         rows={shownPage?.edges.map(({ node }) => node) ?? []}
         getRowId={(article) => article.id}
         loading={shownPage === undefined}
-        stale={page === undefined && shownPage !== undefined}
+        stale={stale}
         sort={sortOf(view)}
         onSortChange={(sort) => show(sortedBy(view, sort))}
         paging={{

@@ -79,6 +79,11 @@ export interface PageFrameProps {
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
   readonly state?: PageState;
+  /**
+   * The data region keeps what it shows, its rows or its empty state, while the next data loads,
+   * and is marked busy (design ui-222, LI7).
+   */
+  readonly busy?: boolean;
   /** The populated content, also rendered while loading. */
   readonly children: ReactNode;
 }
@@ -220,6 +225,7 @@ export function PageFrame({
   titleSection,
   toolbar,
   state = { status: 'ready' },
+  busy = false,
   children,
 }: PageFrameProps) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -291,7 +297,7 @@ export function PageFrame({
         )}
       </div>
       {toolbar}
-      <div aria-busy={shown.status === 'loading' || undefined}>
+      <div aria-busy={shown.status === 'loading' || busy || undefined}>
         {shown.status === 'empty' ? (
           <EmptyState
             icon={shown.icon}
