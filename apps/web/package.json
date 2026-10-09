@@ -45,6 +45,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typed-document-node": "catalog:",
+    "@graphql-codegen/typescript-operations": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/culori": "catalog:",
