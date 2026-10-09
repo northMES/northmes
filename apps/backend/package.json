@@ -42,7 +42,8 @@
     "semver": "catalog:",
     "temporal-polyfill": "catalog:",
     "ws": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zod-openapi": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

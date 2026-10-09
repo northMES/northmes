@@ -93,6 +93,7 @@ catalog:
   ws: 8.21.3
   yaml: 2.9.1
   zod: 4.6.5
+  zod-openapi: 6.0.2
 
 # React, the router, Apollo Client and graphql resolve to one copy each, also where a dependency's
 # own range would pick another version: two copies of one of them in the web bundle or the backend
