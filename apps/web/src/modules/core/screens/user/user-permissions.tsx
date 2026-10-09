@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { ErrorLike } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { Building2, Factory, Lock, type LucideIcon, ShieldCheck } from 'lucide-react';
 import { type ReactNode, useId, useMemo, useState } from 'react';
@@ -99,10 +100,12 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
   const headingId = useId();
   const everyId = useId();
   const [every, setEvery] = useState(false);
-  const [retrying, setRetrying] = useState(false);
-  const { data, error, refetch } = useQuery(CoreUserPermissions, {
+  // Try again keeps the failed load's error, and its focused button, until the reload settles.
+  const [retryFrom, setRetryFrom] = useState<ErrorLike | undefined>(undefined);
+  const { data, error: loaded, refetch } = useQuery(CoreUserPermissions, {
     variables: { id: user.id, ...useCompanyVariables() },
   });
+  const error = loaded ?? retryFrom;
   const companyName = places.company?.name ?? 'the company';
   // In plant settings the person's permissions at the plant, from roles there and at the company.
   const placeName = places.plant?.name ?? companyName;
@@ -158,14 +161,12 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
       <ErrorState
         title={`Could not load what ${user.name} can do`}
         error={error}
-        retrying={retrying}
+        retrying={retryFrom !== undefined}
         onRetry={async () => {
-          setRetrying(true);
-          try {
-            await refetch();
-          } finally {
-            setRetrying(false);
-          }
+          setRetryFrom(error);
+          // A failed reload settles too: the query's next error replaces the one kept.
+          await refetch().catch(() => {});
+          setRetryFrom(undefined);
         }}
       />
     );
