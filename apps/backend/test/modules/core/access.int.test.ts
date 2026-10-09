@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createTestApp, query, type TestApp, useTestDatabase } from '@northmes/testing';
+import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { can } from '../../../src/modules/core/core/access/access.ts';
 import { PrincipalService } from '../../../src/modules/core/core/access/principal.service.ts';
@@ -16,6 +17,26 @@ describe('roles, role assignments and the permission catalog', () => {
   afterAll(async () => {
     await testApp.app.close();
   });
+
+  /**
+   * Runs one statement as core's owner role and answers the SQLSTATE that Postgres refused it with,
+   * or 'accepted'. The statement rolls back either way.
+   */
+  async function asCoreOwner(sql: string, params: readonly unknown[]): Promise<string> {
+    const client = new Client({ connectionString: db.ownerUrl });
+    await client.connect();
+    try {
+      await client.query('begin');
+      await client.query('set local role nm_mod_core');
+      await client.query(sql, [...params]);
+      return 'accepted';
+    } catch (error) {
+      return (error as { code?: string }).code ?? String(error);
+    } finally {
+      await client.query('rollback').catch(() => undefined);
+      await client.end();
+    }
+  }
 
   /** The principal of a user, as the server resolves it once per request. */
   function principalOf(userId: string) {
@@ -81,5 +102,42 @@ describe('roles, role assignments and the permission catalog', () => {
 
     expect(can(principal, 'quality.inspection:read', plant)).toBe(false);
     expect(principal.readScopes).toEqual([]);
+  });
+
+  it("E05-S06 a role belongs to a company node, and a role assignment's role and scope are of one company", async () => {
+    const x = await givenCompany(db.ownerUrl);
+    const y = await givenCompany(db.ownerUrl);
+    const [plantY = ''] = y.plants;
+    // givenUser gives the user a role of company X, assigned at X.
+    const userId = await givenUser(db.ownerUrl, [
+      { scopeId: x.company, permissions: ['core.article:read'] },
+    ]);
+    const [roleOfX] = await query<{ id: string }>(
+      db.appUrl,
+      `select role_id as id from core.role_assignment where user_id = '${userId}'`,
+    );
+    const roleId = roleOfX?.id ?? '';
+
+    const roleAtPlant = await asCoreOwner(
+      "insert into core.role (company_id, key, name, origin) values ($1, 'at-plant', 'At plant', 'custom')",
+      [plantY],
+    );
+    const roleOfXAtY = await asCoreOwner(
+      `insert into core.role_assignment (user_id, scope_id, role_id, company_id)
+       values ($1, $2, $3, $4)`,
+      [userId, plantY, roleId, y.company],
+    );
+    const plantOfYUnderX = await asCoreOwner(
+      `insert into core.scope (company_id, parent_id, kind, span)
+       values ($1, $2, 'plant', int8range(2::int8 << 32, 3::int8 << 32))`,
+      [y.company, x.company],
+    );
+
+    expect(roleId).not.toBe('');
+    expect({ roleAtPlant, roleOfXAtY, plantOfYUnderX }).toEqual({
+      roleAtPlant: '23503',
+      roleOfXAtY: '23503',
+      plantOfYUnderX: '23503',
+    });
   });
 });
