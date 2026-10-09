@@ -83,7 +83,7 @@ describe('the web build', () => {
     }
   });
 
-  it("E04-S02 the built index.html links the stylesheet in its head before any script, and runs the theme script before the app's module (BO1, BO2)", async () => {
+  it("E04-S02 the built index.html links the stylesheet in its head and runs the theme script there before the app's module (BO1, BO2)", async () => {
     const outDir = await buildWeb();
     const manifest = JSON.parse(
       readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
@@ -94,24 +94,28 @@ describe('the web build', () => {
     const attribute = (tag: string, name: string) =>
       new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
 
+    // A stylesheet in the head with no media query holds the first paint until it has loaded.
     const [sheet] = manifest['index.html']?.css ?? [];
-    const sheetAt = tags.findIndex(
+    const sheetTag = tags.find(
       (tag) => attribute(tag, 'rel') === 'stylesheet' && attribute(tag, 'href') === `/${sheet}`,
     );
-    const scripts = tags.flatMap((tag, at) => (tag.startsWith('<script') ? [at] : []));
-    expect(sheetAt).toBeGreaterThanOrEqual(0);
-    expect(scripts.length).toBeGreaterThan(0);
-    expect(sheetAt).toBeLessThan(Math.min(...scripts));
+    expect(sheetTag).toBeDefined();
+    expect(attribute(sheetTag as string, 'media')).toBeUndefined();
 
-    // The theme script is a classic script from the hashed assets, the only files the server
-    // serves besides index.html, and it runs before the app's module.
+    // The theme script is a classic script, which runs where the parser meets it, from the hashed
+    // assets, the only files the server serves besides index.html. It comes before every module.
     const themeAt = tags.findIndex((tag) =>
       /^\/assets\/theme-boot-[\w-]+\.js$/.test(attribute(tag, 'src') ?? ''),
     );
+    expect(themeAt).toBeGreaterThanOrEqual(0);
     const theme = tags[themeAt] as string;
     expect(attribute(theme, 'type')).toBeUndefined();
     expect(theme).not.toMatch(/\s(async|defer)\b/);
-    expect(themeAt).toBe(Math.min(...scripts));
+    const modules = tags.flatMap((tag, at) =>
+      tag.startsWith('<script') && attribute(tag, 'type') === 'module' ? [at] : [],
+    );
+    expect(modules.length).toBeGreaterThan(0);
+    expect(themeAt).toBeLessThan(Math.min(...modules));
     expect(readFileSync(join(outDir, attribute(theme, 'src') as string), 'utf8')).toBe(
       readFileSync(new URL('../src/boot/theme-boot.js', import.meta.url), 'utf8'),
     );

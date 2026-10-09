@@ -20,13 +20,23 @@ function runThemeBoot(): void {
 
 const pageOrigin = 'https://web.northmes.test';
 
+/**
+ * The markup of index.html's head or body in an inert template, since happy-dom would fetch the
+ * stylesheet that a parsed document links.
+ */
+function indexHtmlPart(part: 'head' | 'body'): DocumentFragment {
+  const template = document.createElement('template');
+  template.innerHTML = new RegExp(`<${part}>([\\s\\S]*)</${part}>`).exec(indexHtml)?.[1] ?? '';
+  return template.content;
+}
+
 /** Puts index.html's body in the document, as the browser shows it before any script runs. */
 function loadIndexHtml(): HTMLElement {
-  const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+  const body = indexHtmlPart('body');
   // The entry script is what the tests call; the document only shows the markup.
-  for (const script of page.querySelectorAll('script')) script.remove();
-  document.title = page.title;
-  document.body.innerHTML = page.body.innerHTML;
+  for (const script of body.querySelectorAll('script')) script.remove();
+  document.title = indexHtmlPart('head').querySelector('title')?.textContent ?? '';
+  document.body.replaceChildren(body);
   return document.getElementById('root') as HTMLElement;
 }
 
@@ -77,21 +87,20 @@ describe('the boot page', () => {
   });
 
   it("E04-S02 index.html's head links the stylesheet and runs the theme script, a classic script, before the app script (BO1, BO2)", () => {
-    const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+    const head = indexHtmlPart('head');
 
-    const sheet = page.head.querySelector('link[rel="stylesheet"]');
+    const sheet = head.querySelector('link[rel="stylesheet"]');
     expect(sheet?.getAttribute('href')).toBe('/src/styles/app.css');
-    const scripts = [...page.querySelectorAll('script')];
-    const theme = scripts.find((script) => script.getAttribute('src') === themeBootPath);
-    expect(theme?.parentElement).toBe(page.head);
+    expect(sheet?.hasAttribute('media')).toBe(false);
     // A classic script without async or defer runs before the page paints; a module waits.
+    const theme = head.querySelector(`script[src="${themeBootPath}"]`);
+    expect(theme).not.toBeNull();
     expect(theme?.hasAttribute('type')).toBe(false);
     expect(theme?.hasAttribute('async') || theme?.hasAttribute('defer')).toBe(false);
-    const app = scripts.find((script) => script.getAttribute('src') === '/src/main.tsx');
+    // The app's module comes after it, in the body.
+    expect(head.querySelector('script[type="module"]')).toBeNull();
+    const app = indexHtmlPart('body').querySelector('script[src="/src/main.tsx"]');
     expect(app?.getAttribute('type')).toBe('module');
-    expect(scripts.indexOf(theme as HTMLScriptElement)).toBeLessThan(
-      scripts.indexOf(app as HTMLScriptElement),
-    );
   });
 
   it.each(['dark', 'light'] as const)(

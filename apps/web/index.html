@@ -4,6 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Loading · NorthMES</title>
+    <!--
+      The stylesheet and the stored theme apply before the first paint, so the boot page never
+      shows unstyled (design shell-306, BO1 and BO2). Vite serves app.css in dev and writes the
+      hashed stylesheet in its place in the build.
+    -->
+    <link rel="stylesheet" href="/src/styles/app.css" />
+    <script src="/src/boot/theme-boot.js"></script>
   </head>
   <body>
     <!--
@@ -40,6 +47,8 @@
             <p class="flex items-center gap-2 text-sm text-muted-foreground">
               <svg
                 aria-hidden="true"
+                width="16"
+                height="16"
                 class="size-4 animate-spin motion-reduce:animate-none"
                 viewBox="0 0 24 24"
                 fill="none"
