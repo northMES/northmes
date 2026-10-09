@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
+import { EyeOff } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { StatusBadge, type StatusTone } from '../../../../ui/components/status-badge/index.ts';
@@ -22,13 +23,22 @@ function OrderStatus({ status }: { readonly status: string }) {
   return <StatusBadge tone={tone}>{label}</StatusBadge>;
 }
 
-/** The article's code above its name, as the job table draws a job order's article. */
+/**
+ * The article's code and name on one line, as the production orders list of ui-222 LI35 draws
+ * them, and LI35's cell state for an article the reader cannot see.
+ */
 function OrderArticle({ article }: { readonly article: BoardOrder['article'] }) {
-  if (article === null) return <span className="text-muted-foreground">Unknown article</span>;
+  if (article === null) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+        <EyeOff aria-hidden="true" className="size-4 shrink-0" />
+        <span className="italic">Article not available to you</span>
+      </span>
+    );
+  }
   return (
-    <span className="flex flex-col">
-      <span className="font-mono">{article.code}</span>
-      <span className="text-xs text-muted-foreground">{article.name}</span>
+    <span>
+      <span className="font-mono text-muted-foreground">{article.code}</span> {article.name}
     </span>
   );
 }
