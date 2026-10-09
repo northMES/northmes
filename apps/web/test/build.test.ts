@@ -82,4 +82,44 @@ describe('the web build', () => {
       expect(existsSync(join(outDir, url.replace(/^\//, '')))).toBe(true);
     }
   });
+
+  it("E04-S02 the built index.html links the stylesheet in its head before any script, and runs the theme script before the app's module (BO1, BO2)", async () => {
+    const outDir = await buildWeb();
+    const manifest = JSON.parse(
+      readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
+    ) as Record<string, ManifestChunk>;
+    const html = readFileSync(join(outDir, 'index.html'), 'utf8');
+    const head = html.slice(0, html.indexOf('</head>'));
+    const tags = [...head.matchAll(/<(link|script)\b[^>]*>/g)].map(([tag]) => tag);
+    const attribute = (tag: string, name: string) =>
+      new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+    const [sheet] = manifest['index.html']?.css ?? [];
+    const sheetAt = tags.findIndex(
+      (tag) => attribute(tag, 'rel') === 'stylesheet' && attribute(tag, 'href') === `/${sheet}`,
+    );
+    const scripts = tags.flatMap((tag, at) => (tag.startsWith('<script') ? [at] : []));
+    expect(sheetAt).toBeGreaterThanOrEqual(0);
+    expect(scripts.length).toBeGreaterThan(0);
+    expect(sheetAt).toBeLessThan(Math.min(...scripts));
+
+    // The theme script is a classic script from the hashed assets, the only files the server
+    // serves besides index.html, and it runs before the app's module.
+    const themeAt = tags.findIndex((tag) =>
+      /^\/assets\/theme-boot-[\w-]+\.js$/.test(attribute(tag, 'src') ?? ''),
+    );
+    const theme = tags[themeAt] as string;
+    expect(attribute(theme, 'type')).toBeUndefined();
+    expect(theme).not.toMatch(/\s(async|defer)\b/);
+    expect(themeAt).toBe(Math.min(...scripts));
+    expect(readFileSync(join(outDir, attribute(theme, 'src') as string), 'utf8')).toBe(
+      readFileSync(new URL('../src/boot/theme-boot.js', import.meta.url), 'utf8'),
+    );
+
+    // The boot page's classes and the page's colours are in that stylesheet.
+    const css = readFileSync(join(outDir, sheet as string), 'utf8');
+    expect(css).toContain('.sr-only');
+    expect(css).toContain('.animate-spin');
+    expect(css).toMatch(/body\{background-color:var\(--background\);color:var\(--foreground\)\}/);
+  });
 });

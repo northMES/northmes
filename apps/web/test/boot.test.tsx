@@ -6,8 +6,17 @@ import { userEvent } from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bootWeb } from '../src/boot/index.ts';
+import { themeStorageKey } from '../src/ui/lib/theme.ts';
 
 const indexHtml = readFileSync(join(import.meta.dirname, '..', 'index.html'), 'utf8');
+
+/** The classic script that index.html's head runs before the first paint. */
+const themeBootPath = '/src/boot/theme-boot.js';
+
+/** Runs the theme script as the browser does when it reaches its tag in the head. */
+function runThemeBoot(): void {
+  new Function(readFileSync(join(import.meta.dirname, '..', themeBootPath), 'utf8'))();
+}
 
 const pageOrigin = 'https://web.northmes.test';
 
@@ -40,6 +49,9 @@ async function boot(fetch: (url: string) => Promise<Response>) {
 afterEach(() => {
   cleanup();
   document.body.innerHTML = '';
+  delete document.documentElement.dataset.theme;
+  localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe('the boot page', () => {
@@ -54,6 +66,66 @@ describe('the boot page', () => {
     const [first] = within(root).getAllByRole('link');
     expect(first?.textContent).toBe('Skip to main content');
     expect(root.contains(document.getElementById('announcer-polite'))).toBe(false);
+  });
+
+  it('E04-S02 the spinner of the boot page is 16 px even before the stylesheet applies (BO1)', () => {
+    const root = loadIndexHtml();
+
+    const spinner = within(root).getByRole('main').querySelector('svg');
+    expect(spinner?.getAttribute('width')).toBe('16');
+    expect(spinner?.getAttribute('height')).toBe('16');
+  });
+
+  it("E04-S02 index.html's head links the stylesheet and runs the theme script, a classic script, before the app script (BO1, BO2)", () => {
+    const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+
+    const sheet = page.head.querySelector('link[rel="stylesheet"]');
+    expect(sheet?.getAttribute('href')).toBe('/src/styles/app.css');
+    const scripts = [...page.querySelectorAll('script')];
+    const theme = scripts.find((script) => script.getAttribute('src') === themeBootPath);
+    expect(theme?.parentElement).toBe(page.head);
+    // A classic script without async or defer runs before the page paints; a module waits.
+    expect(theme?.hasAttribute('type')).toBe(false);
+    expect(theme?.hasAttribute('async') || theme?.hasAttribute('defer')).toBe(false);
+    const app = scripts.find((script) => script.getAttribute('src') === '/src/main.tsx');
+    expect(app?.getAttribute('type')).toBe('module');
+    expect(scripts.indexOf(theme as HTMLScriptElement)).toBeLessThan(
+      scripts.indexOf(app as HTMLScriptElement),
+    );
+  });
+
+  it.each(['dark', 'light'] as const)(
+    'E04-S02 the theme script sets the stored %s theme on the html element (BO2)',
+    (theme) => {
+      localStorage.setItem(themeStorageKey, theme);
+
+      runThemeBoot();
+
+      expect(document.documentElement.dataset.theme).toBe(theme);
+    },
+  );
+
+  it.each([
+    ['no stored choice', undefined],
+    ['an unknown stored value', 'sepia'],
+  ])(
+    'E04-S02 with %s the theme script sets nothing, so the page follows the system (BO1)',
+    (_, stored) => {
+      if (stored !== undefined) localStorage.setItem(themeStorageKey, stored);
+
+      runThemeBoot();
+
+      expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    },
+  );
+
+  it('E04-S02 the theme script sets nothing and does not fail when storage is blocked (BO1)', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+
+    expect(runThemeBoot).not.toThrow();
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
   });
 
   it('E04-S02 once config.json loads, the app replaces the boot page', async () => {
