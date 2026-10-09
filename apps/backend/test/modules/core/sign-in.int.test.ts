@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { SESSION_LIFETIME_SECONDS } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
 import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
 
@@ -118,6 +119,52 @@ describe('sign-in with Better Auth', () => {
     }).send(articlesQuery);
 
     expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  /** Signs a user in on /api/auth/sign-in/username and returns its session token. */
+  async function sessionTokenOf(user: { username: string; password: string }) {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+    return signedIn.headers.get('set-auth-token') ?? '';
+  }
+
+  /** The session and user that /api/auth/get-session answers for a session token. */
+  async function sessionOf(sessionToken: string) {
+    const response = await fetch(`${url}/api/auth/get-session`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    return (await response.json()) as {
+      session: { expiresAt: string };
+      user: { username: string };
+    };
+  }
+
+  it('E05-S05 a signed-in user cannot change their username, so a username is never reassigned', async () => {
+    const { user } = await reader();
+    const sessionToken = await sessionTokenOf(user);
+
+    const renamed = await fetch(`${url}/api/auth/update-user`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: JSON.stringify({ username: `${user.username}_renamed` }),
+    });
+
+    expect(renamed.status).toBe(400);
+    expect((await sessionOf(sessionToken)).user.username).toBe(user.username);
+  });
+
+  it('E05-S05 a session lives SESSION_LIFETIME_SECONDS from sign-in', async () => {
+    const { user } = await reader();
+    const before = Date.now();
+
+    const { session } = await sessionOf(await sessionTokenOf(user));
+
+    const expiresAt = new Date(session.expiresAt).getTime();
+    expect(expiresAt).toBeGreaterThanOrEqual(before + SESSION_LIFETIME_SECONDS * 1000 - 1000);
+    expect(expiresAt).toBeLessThanOrEqual(Date.now() + SESSION_LIFETIME_SECONDS * 1000 + 1000);
   });
 
   it('E05-S05 a request from an origin that webOrigins does not list is refused with 403', async () => {
