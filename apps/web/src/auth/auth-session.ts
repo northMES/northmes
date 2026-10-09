@@ -176,9 +176,13 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
           retryAfter = response.headers.get('x-retry-after');
         },
       };
-      const { data, error } = login.includes('@')
-        ? await client.signIn.email({ email: login, password }, hooks)
-        : await client.signIn.username({ username: login, password }, hooks);
+      // Better Fetch rejects when the request never reaches the API, as on a lost connection.
+      const answer = await (login.includes('@')
+        ? client.signIn.email({ email: login, password }, hooks)
+        : client.signIn.username({ username: login, password }, hooks)
+      ).catch(() => undefined);
+      if (answer === undefined) return { ok: false, reason: 'failed' };
+      const { data, error } = answer;
       if (error !== null) return refusal(error.status, error.code, retryAfter);
       const user = data?.user as { name?: unknown; username?: unknown } | undefined;
       const sessionToken = token ?? data?.token;
