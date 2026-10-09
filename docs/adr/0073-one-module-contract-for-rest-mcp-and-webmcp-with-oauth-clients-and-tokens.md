@@ -5,14 +5,14 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson; the WebMCP draft of the W3C Web Machine Learning Community Group; Better Auth's OAuth provider and api-key documentation
 informed: contributors, coding agents, module and plugin authors, pilot IT
 release: "1"
-needs-confirmation: "maintainer (article write tools on /mcp and WebMCP, where an agent runs a command as the user; articles under the plant segment of the public path; the audit surface webmcp and the principal type integration; the cap of eight tools per toolset and sixteen in all; token lifetimes and rate limit numbers; the ADR 0055 ledger row and its estimate; the navigator.modelContext fallback)"
+needs-confirmation: "maintainer (article write tools on /mcp and WebMCP, where an agent runs a command as the user, which limits ADR 0036's rule that AI never commits a change to planning; OAuth 2.1 sign-in for MCP clients in release 1, before the LAN spike; WebMCP off by default per installation; articles under the plant segment of the public path; the audit surface webmcp and the principal type integration; the cap of eight tools per toolset and sixteen in all; token lifetimes and rate limit numbers; the ADR 0055 ledger row and its estimate; the navigator.modelContext fallback)"
 ---
 
 # One module contract for REST, MCP and WebMCP with OAuth clients and tokens
 
 ## Context and problem statement
 
-On 2026-10-09 Krister Johansson asked: "The next thing is if we can create the api for articles, with support for oauth and service token?" He chose REST with OpenAPI as the public family of [ADR 0064][adr-0064], both OAuth flows now (client credentials for machine to machine, and the authorization code flow with PKCE and a consent screen, so an ERP can offer "Connect with NorthMES" and act for a signed-in user), both token kinds (integration tokens that a Company admin creates and personal access tokens that act as the user), and the full article set plus an upsert by article number, so an ERP can push its articles. He then added: "The ide is to have the basic things in place lime webmcp and mcp so we have the base and structure for starting creating the other modules later".
+On 2026-10-09 Krister Johansson asked: "The next thing is if we can create the api for articles, with support for oauth and service token?" He chose REST with OpenAPI as the public family of [ADR 0064][adr-0064], both OAuth flows now (client credentials for machine to machine, and the authorization code flow with PKCE and a consent screen, so an ERP can offer "Connect with NorthMES" and act for a signed-in user), both token kinds, and the full article set plus an upsert by article number, so an ERP can push its articles. For the token kinds he decided: integration tokens are created by a Company admin under Settings, Integrations, are bound to the company or one plant with roles there, are shown once and stored hashed, carry an expiry and a last-used time, can be revoked, and act as their own principal; personal access tokens act as the user. He then added: "The ide is to have the basic things in place lime webmcp and mcp so we have the base and structure for starting creating the other modules later".
 
 So the subject is the platform base that every later module uses, with articles as its first user. Today a module reaches GraphQL through `defineCommand` and the list kit, while [ADR 0034][adr-0034] plans `defineTool`, a shared runner and `/mcp`, and [ADR 0064][adr-0064] plans public REST routes, OpenAPI and integration tokens for "the first outside system". Nothing says how one capability of a module, such as "find articles" or "archive an article", reaches REST, `/mcp`, the browser and the later in-app assistant without being written four times, nor which credential each surface accepts once OAuth and two token kinds exist.
 
@@ -44,7 +44,7 @@ This ADR covers the operation contract in `@northmes/contracts` and `@northmes/s
 
 ## Decision outcome
 
-Chosen option: "One operation contract per capability", because it puts the data every surface needs (schemas, permission, REST route, tool text and annotations) where both the backend and the web can import it, keeps the handler on the server, and sends every call through one runner and the command bus. The maintainer decided the surfaces, the flows, the token kinds and the article set; the contract shape, the paths, the credential rules, the numbers and the waves below are the planning session's proposal.
+Chosen option: "One operation contract per capability", because it puts the data every surface needs (schemas, permission, REST route, tool text and annotations) where both the backend and the web can import it, keeps the handler on the server, and sends every call through one runner and the command bus. The maintainer decided the surfaces, the two OAuth flows, the token kinds with the integration token rules quoted above, and the article set. The rest below is the planning session's proposal: the contract shape, the paths, the api-key `configId` values and prefixes, the split of personal access tokens into `pat` and `mcp`, the token lifetimes, the OAuth details, the numbers and the waves.
 
 ### 1. The operation contract
 
@@ -52,9 +52,10 @@ An operation is one capability of a module: a command or a query. A module decla
 
 * Commands keep `defineCommandContract` in `@northmes/contracts` ([ADR 0017][adr-0017]).
 * Reads get `defineQueryContract({ name, input, output, permission })` in `@northmes/contracts`: a module-prefixed name such as `core.findArticles`, a Zod input, a Zod output and one permission key. A query never writes.
-* `defineOperations({ module, resource, operations })` in `@northmes/contracts` lists, for one resource, each operation with its contract and the surfaces it reaches:
-  * `rest`: the method, the path under the module segment and the success status, or `false`;
-  * `tool`: the tool name, title, description, annotations (`readOnlyHint`, `destructiveHint`, and `consequentialHint` for WebMCP), effect (`read`, `proposal` or `command`) and toolset, or `false`;
+* Lists get `defineListQueryContract({ name, list, permission })`, which derives the contract from the module's list declaration instead of a hand-written input. The list declaration's data (node schema, sort fields, filter fields, search fields, `archivable`) lives in the contracts package, as [05 GraphQL and APIs](../plan/05-graphql-and-apis.md#list-conventions) already says, and the backend's `defineList` reads the same object for the GraphQL connection. The derived input has fixed rules on every surface: `first` and `after` with the list kit's cursors; `orderBy` as a list of declared sort fields, each optionally prefixed with `-` for descending (in REST a comma-separated query parameter); one parameter per declared filter field, `<field>` for equality and `<field>[<operator>]` for the list kit's other operators; `search` over the declared search fields; and `includeArchived` for an archivable list. The output is `{ nodes, pageInfo: { hasNextPage, endCursor } }`, the connection without edges. A module writes no list contract by hand.
+* `defineOperations({ module, resource, scope, operations })` in `@northmes/contracts` lists, for one resource, each operation with its contract and the surfaces it reaches. `scope` is `plant` or `company` and tells the adapters whether the operation needs a plant. Each operation has:
+  * `rest`: the method, the path under the module segment, the success status (200, or 201 for an operation that may create, which answers 200 when the row already exists) and, for a list, `maxPageSize` (default 100), or `false`;
+  * `tool`: the tool name, title, description, annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, and `consequentialHint` for WebMCP), effect (`read`, `proposal` or `command`), toolset, for a list `maxPageSize` (default 25, so that two outside text fields per row stay within ADR 0034's 50 values per call), and `serverFills`, the input fields the adapter fills when a call leaves them out (today only `id`, filled with a new uuidv7), or `false`;
   * `webmcp`: `true` to register the tool in the browser, default `false`.
 * The declaration is plain data in the MIT contracts package. It imports no MCP SDK, no Nest and no web code, so the backend, the web app and `northmes openapi print` read the same object.
 * The backend binds handlers with `bindOperations(declaration, handlers)` from a new MIT subpath, `@northmes/sdk/operations`. A query's handler is a service method; a command's handler is the command provider that `defineCommand` already registers, so the operation adds no second write path.
@@ -64,17 +65,34 @@ An operation is one capability of a module: a command or a query. A module decla
 export const articleOperations = defineOperations({
   module: 'core',
   resource: 'articles',
+  scope: 'plant',
   operations: {
     find: {
-      contract: findArticles,
-      rest: { method: 'GET', path: 'plants/{plant}/articles' },
-      tool: { name: 'core_find_articles', effect: 'read', toolset: 'core', description: 'Find articles by number or name at a plant.' },
+      contract: findArticles, // defineListQueryContract({ name: 'core.findArticles', list: articleList, permission: 'core.article:read' })
+      rest: { method: 'GET', path: 'plants/{plant}/articles', status: 200, maxPageSize: 100 },
+      tool: {
+        name: 'core_find_articles',
+        title: 'Find articles',
+        description: 'Find articles by number or name at a plant.',
+        annotations: { readOnlyHint: true },
+        effect: 'read',
+        toolset: 'core',
+        maxPageSize: 25,
+      },
       webmcp: true,
     },
     upsert: {
       contract: upsertArticle,
-      rest: { method: 'POST', path: 'plants/{plant}/commands/upsert-article' },
-      tool: { name: 'core_save_article', effect: 'command', toolset: 'core', description: 'Create an article or rename the one with this number.' },
+      rest: { method: 'POST', path: 'plants/{plant}/commands/upsert-article', status: 201 },
+      tool: {
+        name: 'core_save_article',
+        title: 'Save an article',
+        description: 'Create an article or rename the one with this number.',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, consequentialHint: true },
+        effect: 'command',
+        toolset: 'core',
+        serverFills: ['id'],
+      },
       webmcp: true,
     },
     // get, create, update, archive and restore follow the table under section 2
@@ -97,7 +115,8 @@ The shared runner of [ADR 0034][adr-0034] becomes the operation runner, in the h
 3. checks the operation's permission at the plant as a coarse gate (the command bus checks again at the row's scope);
 4. for a query, runs the handler in a transaction with the row-level security scope in `SET TRANSACTION READ ONLY`; for a command, sends the parsed input to the command bus;
 5. validates the output against the contract's output schema and drops any key outside it;
-6. maps errors once: a `DomainError` keeps its code, status and field errors, anything else becomes `core.internal` with the correlation id ([05 GraphQL and APIs](../plan/05-graphql-and-apis.md#error-model)).
+6. on the tool surfaces (`mcp`, `webmcp` and later `assistant`), applies [ADR 0034][adr-0034]'s tool output rules: every field the output schema marks as outside text is wrapped as `{ untrusted: true, text }` and capped at 500 characters per value and 50 values per call, and the manifest-driven personal-field redactor runs on the whole output. A contract marks such a field with `outsideText()` from `@northmes/contracts`, a string schema with that mark in its metadata; the tool adapters publish the wrapped shape as the tool's output schema, and REST returns the plain string. Core's article `code` and `name` are marked, because an ERP writes both through the upsert;
+7. maps errors once: a `DomainError` keeps its code, status and field errors, anything else becomes `core.internal` with the correlation id ([05 GraphQL and APIs](../plan/05-graphql-and-apis.md#error-model)).
 
 The adapters sit on the runner and only translate:
 
@@ -133,11 +152,15 @@ The public API of [ADR 0064][adr-0064] starts with core's articles. Articles liv
 | Restore | `core.restoreArticle` | `POST /api/v1/core/plants/{plant}/commands/restore-article` | `coreRestoreArticle` | `core_restore_article` |
 | Upsert by article number | `core.upsertArticle` (new) | `POST /api/v1/core/plants/{plant}/commands/upsert-article` | `coreUpsertArticle` | `core_save_article` |
 
-* List. Query parameters `first` (default 25, at most 100), `after` (the opaque cursor of [05 GraphQL and APIs](../plan/05-graphql-and-apis.md#cursors)), `orderBy` (`code`, `-code`, `name` or `-name`), `code` (exact match), `search` (the list kit's search over code and name) and `includeArchived` (default false). The body is `{ nodes, pageInfo: { hasNextPage, endCursor } }`. A cursor used with another `orderBy` is 400 `core.list.invalid_cursor`.
+* List. `core.findArticles` is derived from core's article list declaration by the list rules of section 1: `first` (default 25, at most 100), `after` (the opaque cursor of [05 GraphQL and APIs](../plan/05-graphql-and-apis.md#cursors)), `orderBy` (a comma-separated list of `code`, `-code`, `name` and `-name`, default `code`), `code` (the declared filter field, exact match), `search` (over code and name) and `includeArchived` (default false). The body is `{ nodes, pageInfo: { hasNextPage, endCursor } }`. A cursor used with another `orderBy` is 400 `core.list.invalid_cursor`.
 * Read. The body is the article: `{ id, code, name, version, archivedAt }`, component `CoreArticle`. A missing id, or one at a scope the caller cannot read, is 404.
 * Create. The body is `core.createArticle`'s input with the client's uuidv7 `id`. A new row answers 201; a retry with an id that already exists answers 200 with the stored article, which the caller compares ([ADR 0012][adr-0012], [ADR 0064][adr-0064]).
 * Update, archive and restore. The body is the contract input with `id` and `expectedVersion`. A stale version is 409 `core.version_conflict`.
-* Upsert. `core.upsertArticle` takes `{ id, code, name, expectedVersion? }`. It finds the article with this code at the plant. None: it creates one under `id` (201). One that is active: it renames it if `name` differs, checking `expectedVersion` when given, and answers 200; an unchanged name bumps no version and writes no command row, as imports write only changed rows ([ADR 0031][adr-0031]). One that is archived: 409 `core.archived`. The contract's permission is `core.article:create` at the plant; when the code matches a row, the handler asks the bus for `core.article:update` at that row's scope through a new `context.require(permission, scopeId)` on the handler context, so the check stays in the bus and on the audit row. The ERP sends the same request again after a timeout and gets the same result.
+* Upsert. `core.upsertArticle` is a command contract with target `none` and the fields `id` (uuidv7), `code`, `name` and an optional `expectedVersion`, so the bus loads no row before the handler. It runs [ADR 0012][adr-0012]'s pipeline unchanged up to the handler: step 3 checks the contract's permission, `core.article:create`, at the request's plant, step 4 opens the audit context, and step 5 has no target version to check. The handler, in step 8, finds the article with this code at the plant:
+  * none: it creates one under `id` and answers 201;
+  * one that is active: it calls `context.require('core.article:update', scopeId)` at that row's scope, a new method on the handler context that runs the same `can()` check as step 3 inside the bus, so a denial rolls the command back, leaves no command row and writes the `permission.denied` event. It then writes `name` through the `/data` versioned update helper with `expectedVersion`, or with the row's loaded version when the input has none, so a stale version fails with `core.version_conflict` as ADR 0012 already maps it. An unchanged name writes no field and bumps no version, and the command still writes its one `audit.command` row, as ADR 0012 requires of every successful command. The answer is 200 with the article;
+  * one that is archived: 409 `core.archived`.
+  A caller therefore needs `core.article:create` at the plant even to rename. The ERP sends the same request again after a timeout and gets the same result. Each push of an unchanged article leaves a command row without field changes; a connector that wants fewer rows compares before it sends, as imports do ([ADR 0031][adr-0031]).
 * Versions and ETags. Every article response carries `ETag: "<version>"`. A read with a matching `If-None-Match` answers 304. Writes take the version only as `expectedVersion` in the body, the contract's field, so a version has one source. `If-Match` is not read, and the OpenAPI document says so.
 * Errors are `application/problem+json` as [05 GraphQL and APIs](../plan/05-graphql-and-apis.md#rest-errors) shows: `type`, `title`, `status`, `detail`, `instance`, `code`, `errors` (the field errors in the shape GraphQL uses) and `correlationId`. M-35 and M-36 (code spelling and the `type` base) are settled before the first public route, as ADR 0064 already requires.
 * OpenAPI. `toRestRoutes` gives each route its operation id, its tag `core`, its 2xx schema and its problem responses, and the document builder of ADR 0064 converts the contracts with `zod-openapi`. `northmes openapi print` writes `schema/openapi-v1.json`, `pnpm gen --check` covers it, the oasdiff gate compares it with the base branch, and `GET /api/v1/openapi.json` serves the installation's document. The document declares the security schemes of section 5: `bearer` for tokens, and `oauth2` with the client credentials and authorization code flows, each operation listing its permission as the required scope.
@@ -151,16 +174,17 @@ Core's toolset in release 1:
 | Tool | Effect | Annotations | Does |
 |---|---|---|---|
 | `core_list_plants` | read | read-only | the plants the user can reach (ADR 0034) |
-| `core_find_articles` | read | read-only | articles by number or name at a plant, at most 50 per call with a cursor |
+| `core_find_articles` | read | read-only | articles by number or name at a plant, at most 25 per call with a cursor |
 | `core_get_article` | read | read-only | one article by id |
 | `core_save_article` | command | not read-only, not destructive | the upsert by article number |
 | `core_archive_article` | command | destructive | archives an article |
 | `core_restore_article` | command | not destructive | restores an archived article |
 
 * `defineTool` of ADR 0034 becomes the `tool` entry of an operation. Its data (name, toolset, schemas, permission, annotations, effect) moves to the contracts package; its handler is the operation's handler, bound in the backend. `@northmes/sdk/mcp` keeps the tool types and the schema lint.
-* A new effect, `command`, runs one command through the bus as the user. The command row has surface `mcp`, the user as principal and the token as credential. ADR 0034 knew only `read` and `proposal`. Planning keeps its rule: no planning tool commits a schedule change, and `planning_propose_changes` stays a proposal ([ADR 0036][adr-0036]).
-* A tool without a `plant` argument takes it from the call, as ADR 0034 requires: `plant` is required unless the user reaches exactly one plant.
-* An agent cannot be asked for a uuidv7, so `toMcpTool` fills `id` with a new one when a `core_save_article` call leaves it out. The upsert is idempotent on the article number, so a retried call does not create a second article.
+* A new effect, `command`, runs one command through the bus as the user. The command row has surface `mcp`, the user as principal and the token as credential. ADR 0034 knew only `read` and `proposal`, because [ADR 0036][adr-0036] records the maintainer's decision that a person commits agent proposals and AI never commits a change. This ADR limits that rule to planning, pending the maintainer's confirmation: no planning tool commits a schedule change, and `planning_propose_changes` stays a proposal, while core's article tools commit their command as the user.
+* `toMcpTool` adds a `plant` argument to the input schema of every tool whose declaration has `scope: 'plant'`, because the contracts carry no plant (REST takes it from the path). The argument is required unless the user reaches exactly one plant, as ADR 0034 requires, and the runner checks the permission at the plant it names.
+* An agent cannot be asked for a uuidv7, so the tool adapters leave every field in `serverFills` out of the published input schema and fill `id` with a new uuidv7 before the runner parses the input. The upsert is idempotent on the article number, so a retried call does not create a second article.
+* A list tool's `first` is capped at the tool's `maxPageSize`, 25 for `core_find_articles`, while REST caps it at the route's `maxPageSize`, 100.
 * Each toolset holds at most eight tools, and the in-repo toolsets together at most sixteen; one CI check counts both. Release 1 then serves core's six tools and planning's seven (ADR 0034's eight less `core_list_plants`, which is core's): thirteen.
 
 ### 4. WebMCP in the web app
@@ -168,12 +192,13 @@ Core's toolset in release 1:
 The web app registers the operations marked `webmcp: true` as WebMCP tools, so an agent in the user's browser can use the page's tools as the signed-in user. The adapter lives in `apps/web/src/shell/webmcp/`.
 
 * Feature detection. The adapter uses `document.modelContext`, where the draft of 2026-10-09 places the API, and falls back to `navigator.modelContext`, where Chrome exposed it before May 2026. When neither exists, as in every browser without the flag or the origin trial and in an insecure context, the adapter does nothing and the page works as before. A failed registration is logged to the client-error route and never shown to the user.
-* Registration. The draft's `registerTool(tool, { signal })` takes `name`, `title`, `description`, `inputSchema`, `execute` and `annotations` (`readOnlyHint`, `untrustedContentHint`, `consequentialHint`). The adapter builds `inputSchema` with `z.toJSONSchema` from the contract, leaves out the `plant` argument because the page has one plant, sets `readOnlyHint` for queries and `consequentialHint` for commands, and sets `untrustedContentHint` on tools whose output holds text that outside systems wrote, such as an ERP's article name.
+* Registration. The draft's `registerTool(tool, { signal })` takes `name`, `title`, `description`, `inputSchema`, `execute` and `annotations` (`readOnlyHint`, `untrustedContentHint`, `consequentialHint`). The adapter builds `inputSchema` with `z.toJSONSchema` from the contract, leaves out the `plant` argument and the `serverFills` fields because the page has one plant and the adapter fills them, sets `readOnlyHint` for queries and `consequentialHint` for commands, and sets `untrustedContentHint` on tools whose output schema holds an `outsideText()` field, such as an article's name. The output itself is wrapped by the runner's step 6, as on `/mcp`.
+* Exposure. The adapter never passes the draft's `exposedTo` option, so no document of another origin in the page's tree sees the tools. The draft gates `registerTool`, `getTools` and `executeTool` behind the policy-controlled feature `tools`, whose default allowlist is `'self'`; the shell controller sends `Permissions-Policy: tools=(self)` beside the existing `frame-ancestors 'none'`, so the rule does not rest on the browser's default.
 * What is registered. Only tools whose permission the user holds at the current plant, read from the permissions the web already loads for the plant. A user without `core.article:archive` at the plant never sees `core_archive_article` registered.
 * Lifecycle. Each registration gets an `AbortSignal` from one `AbortController` per plant session. A plant switch aborts it, which unregisters every tool, and registers the new plant's set. Sign-out and a 401 abort it too. On the `navigator.modelContext` fallback, where a build may not take a signal, the adapter calls `unregisterTool(name)` when it exists.
 * Execution. `execute(input)` posts `{ input }` to the first-party route `POST /api/v1/web/tools/{tool}` with the web's JWT and `x-northmes-plant`. The route runs the same operation runner with surface `webmcp`. The page never calls a handler directly, so the browser gets the same permission checks, row scopes, output validation and error mapping as `/mcp`. The result is the tool's structured JSON, or the runner's error object.
 * The route is first-party: same-image callers, no compatibility promise, no entry in the OpenAPI document. It accepts only the web's JWT.
-* WebMCP needs no installation setting: it exposes nothing that the signed-in user cannot already do in the page. The user docs say that a browser agent's model is outside NorthMES, as they say for MCP clients.
+* WebMCP is off by default per installation, like `/mcp`: an audited settings command turns it on ([ADR 0022][adr-0022]), separately from `/mcp`'s setting. While it is off, the web registers no tool and `POST /api/v1/web/tools/{tool}` answers 404. The web reads the setting with the permissions it loads for the plant. An installation that keeps agents out therefore keeps browser agents out too, although each tool does only what the signed-in user can already do in the page. The user docs say that a browser agent's model is outside NorthMES, as they say for MCP clients.
 
 ### 5. Credentials
 
@@ -197,14 +222,18 @@ NorthMES runs one OAuth 2.1 authorization server on Better Auth's OAuth provider
 
 * Registration. A Company admin registers clients under Settings, Integrations, with `core.registerOAuthClient`, `core.updateOAuthClient`, `core.rotateOAuthClientSecret` and `core.disableOAuthClient`, which call `auth.api.adminCreateOAuthClient` and its siblings on the server. Dynamic client registration and client ID metadata documents stay off until the LAN spike of ADR 0034.
 * Confidential clients (`client_secret_basic` or `client_secret_post`) may use `client_credentials`. Such a client is bound, like an integration token, to the company or one plant with roles there, and acts as its own principal of type `integration`. Its secret is shown once.
-* Confidential and public clients (`token_endpoint_auth_method: "none"`) may use `authorization_code` with S256 PKCE, which OAuth 2.1 requires of both, plus `refresh_token`. The token acts as the user who consented.
+* Confidential and public clients (`token_endpoint_auth_method: "none"`) may use `authorization_code` with S256 PKCE, which OAuth 2.1 requires of both, plus `refresh_token`. Better Auth always requires PKCE of a public client and lets a confidential one skip it, so the registration commands create every client with `require_pkce: true`. The token acts as the user who consented.
 * Redirect URIs match exactly, with no wildcard, no fragment and no query that varies. They use `https`, except loopback URIs `http://localhost` and `http://127.0.0.1` with any port, which native and command-line clients need ([ADR 0034][adr-0034], [ADR 0011][adr-0011]).
 * The consent screen is a web route, `/oauth/consent`, and Better Auth's `consentPage` and `loginPage` point at the web app's origin. It names the client and the company that registered it, lists the requested scopes as the permission names the role editor shows, and offers Allow and Deny. A user revokes a consent under their profile, in Connected apps. Disabling a client revokes all its grants.
 * Scopes are permission keys, such as `core.article:read` and `core.article:update`, plus `offline_access` for a refresh token. A client is registered with the scopes it may request; for a client credentials client these are at most the permissions of its roles. `openid` is off in release 1, because no client signs users in with NorthMES.
-* Access tokens are JWTs signed with the jwt plugin's keys, with `aud` the resource: `NORTHMES_PUBLIC_ORIGIN + '/api/v1'` for the public REST API or `NORTHMES_PUBLIC_ORIGIN + '/mcp'` for `/mcp` (RFC 8707). They live 10 minutes. The guard verifies the signature, `iss`, `aud`, expiry and scopes in process, and checks through a cache of at most 60 seconds that the client is enabled and the grant not revoked, which keeps the 60-second bound of a revocation that the web's JWTs have.
-* Refresh tokens rotate on every use. Reusing a spent refresh token revokes the whole grant. A refresh token expires 30 days after its last use. Client credentials get no refresh token.
+* Access tokens are JWTs signed with the jwt plugin's keys, with `aud` the resource: `NORTHMES_PUBLIC_ORIGIN + '/api/v1'` for the public REST API or `NORTHMES_PUBLIC_ORIGIN + '/mcp'` for `/mcp` (RFC 8707). They live 10 minutes. Because the web's JWT is signed with the same keys, three rules keep the two apart:
+  * the provider's `resources` holds exactly these two audiences and never the bare origin, which is the web's audience, and boot exits when it holds anything else;
+  * a token request without `resource` is refused, because the provider issues an opaque token when none is named, and every client is linked to the resources it may use;
+  * the web guard accepts a JWT only when `aud` equals the origin and `sid` is present, and refuses one that carries `azp` or `client_id`.
+* The public REST and `/mcp` guards verify an access token's signature, `iss`, `aud`, expiry and scopes in process, and check through a cache of at most 60 seconds that the client is enabled and the grant not revoked, which keeps the 60-second bound of a revocation that the web's JWTs have.
+* Refresh tokens rotate on every use, and `refreshTokenReuseInterval` is 0, so no window returns a cached response for a spent token. Reusing a spent refresh token revokes the whole grant. A refresh token expires 30 days after its last use. Client credentials get no refresh token.
 * Each call's rights are the token's scopes intersected with a live `can()` of its principal: the user for the authorization code flow, the client for client credentials.
-* MCP clients use the same server. `/mcp` answers 401 with `WWW-Authenticate` naming `resource_metadata` at `/.well-known/oauth-protected-resource/mcp`, which names the issuer. The OAuth path that ADR 0034 planned through Better Auth's MCP plugin is replaced by the OAuth provider plugin with two resources, because the MCP plugin is itself an OAuth provider and cannot run beside a second one. An MCP client registered by a Company admin as a public client with a loopback redirect signs in with the authorization code flow; personal access tokens of `configId` `mcp` keep working for clients that cannot.
+* MCP clients use the same server, in release 1 and before ADR 0034's LAN spike, pending the maintainer's confirmation: he asked for both OAuth flows so an ERP can connect, and has not yet decided OAuth sign-in for MCP clients. `/mcp` answers 401 with `WWW-Authenticate` naming `resource_metadata` at `/.well-known/oauth-protected-resource/mcp`, which names the issuer. The OAuth path that ADR 0034 planned through Better Auth's MCP plugin is replaced by the OAuth provider plugin with two resources, because the MCP plugin is itself an OAuth provider and cannot run beside a second one. An MCP client registered by a Company admin as a public client with a loopback redirect signs in with the authorization code flow; personal access tokens of `configId` `mcp` keep working for clients that cannot.
 
 #### Credentials by surface
 
@@ -212,7 +241,7 @@ Every bearer credential arrives in `Authorization: Bearer`. The guard reads the 
 
 | Surface | Accepts | Rejects |
 |---|---|---|
-| `/graphql`, `/api/v1/web/*` (including `/api/v1/web/tools/{tool}`) | the web's JWT (`aud` the public origin, with `sid`); the station cookie as [ADR 0011][adr-0011] says | integration tokens, personal access tokens of both kinds, and OAuth access tokens of any audience |
+| `/graphql`, `/api/v1/web/*` (including `/api/v1/web/tools/{tool}`) | the web's JWT (`aud` the public origin, with `sid`, without `azp` or `client_id`); the station cookie as [ADR 0011][adr-0011] says | integration tokens, personal access tokens of both kinds, and OAuth access tokens of any audience |
 | Public REST, `/api/v1/<module-id>/...` | integration tokens; personal access tokens of `configId` `pat`; OAuth access tokens with `aud` `.../api/v1` | the web's JWT, cookies (ignored), personal access tokens of `configId` `mcp`, OAuth access tokens with `aud` `.../mcp` |
 | `GET /api/v1/openapi.json` | the web's JWT, and every credential the public REST row accepts | anonymous requests, personal access tokens of `configId` `mcp`, OAuth access tokens with `aud` `.../mcp` |
 | `/mcp` | personal access tokens of `configId` `mcp`; OAuth access tokens with `aud` `.../mcp` | the web's JWT, cookies (ignored), integration tokens, personal access tokens of `configId` `pat`, OAuth access tokens with `aud` `.../api/v1` |
@@ -240,18 +269,25 @@ Rate limits, counted per credential in the Postgres `ThrottlerStorage` that ADR 
 Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 
 1. Dependencies, each in its own pull request, all published before 2026-09-25 and under licenses that ADR 0040 allows: `@nestjs/swagger` 12.0.2 (MIT, 2026-09-23) and `zod-openapi` 6.0.2 (MIT, 2026-08-31) for wave 3; `@modelcontextprotocol/server` 2.1.0 (Apache-2.0, 2026-09-23) and `@modelcontextprotocol/client` 2.1.0 as a dev dependency for wave 4; `@better-auth/oauth-provider` 1.7.6 (MIT, 2026-09-24), pinned with `better-auth`, for wave 6.
-2. The operation contract: `defineQueryContract`, `defineOperations`, `bindOperations`, the runner with its error mapping, `context.require` on the command bus, `operationsConformance`, `core.upsertArticle` and the article operations bound in the backend. GraphQL gains `coreUpsertArticle` from the same command.
+2. The operation contract: `defineQueryContract`, `defineListQueryContract` with core's article list declaration moved into its contracts package, `outsideText()`, `defineOperations`, `bindOperations`, the runner with its tool output rules and error mapping, `context.require` on the command bus, `operationsConformance`, `core.upsertArticle` and the article operations bound in the backend. GraphQL gains `coreUpsertArticle` from the same command.
 3. Public REST and OpenAPI: `toRestRoutes`, the document builder and `northmes openapi print`, `schema/openapi-v1.json`, the oasdiff gate, `GET /api/v1/openapi.json`, the audit surface `api`, the principal type `integration`, integration tokens, personal access tokens of `configId` `pat`, Settings, Integrations, the credential guard and the Postgres throttler.
 4. `/mcp` as ADR 0034 decides, with core's toolset and personal access tokens of `configId` `mcp`, off by default.
-5. WebMCP: `toWebMcpTool`, the tool route, the audit surface `webmcp` and the registration lifecycle.
-6. OAuth 2.1: client registration, client credentials, the authorization code flow with PKCE, the consent screen, Connected apps, refresh rotation, the well-known metadata and OAuth access tokens on `/mcp`.
+5. WebMCP: `toWebMcpTool`, the tool route, the installation setting, the `Permissions-Policy` header, the audit surface `webmcp` and the registration lifecycle.
+6. OAuth 2.1, starting with the `/token` question under More information: client registration, client credentials, the authorization code flow with PKCE, the consent screen, Connected apps, refresh rotation, the well-known metadata and OAuth access tokens on `/mcp`.
 7. Planning's tools join as the planning stories that own them land ([ADR 0034][adr-0034]), and `toAgentTool` with the assistant ([ADR 0035][adr-0035]).
 
 ### Changes to ADR 0011
 
+* The driver "MCP agents act as the user but never commit a change as the user" becomes: MCP and WebMCP agents act as the user and commit only the commands their tools declare with effect `command`; planning tools still never commit a change (see Changes to ADR 0036).
 * Principal types gain `integration`: an outside system, with an integration token or a client credentials client, surface `api`, `acting_for` none. A person through an OAuth client is principal `user` with the OAuth grant as credential and surface `api` or `mcp`.
+* The principal table gains two `user` rows: a person through a browser agent, with the web's JWT as credential, surface `webmcp` and `acting_for` none; and a person through a personal access token of `configId` `pat`, surface `api`.
+* The consequence "an agent holding an MCP token cannot call any `/graphql` mutation, so commits stay with the person in the NorthMES UI" keeps its first half; commits of article commands no longer stay with the person.
 * The credential table becomes the one under [Credentials by surface](#credentials-by-surface). The rows marked "later" for public routes and `openapi.json` are decided here.
 * "When dynamic client registration arrives with OAuth login for MCP" stays as written: registration stays off, and the redirect URI rules above apply to registered clients.
+
+### Changes to ADR 0012
+
+* The handler context gains `context.require(permission, scopeId)`, which a handler calls for a row it finds in step 8 when the contract's target could not name it, such as the upsert by article number. It runs step 3's `can()` check at that scope; a denial rolls the command back and writes the `permission.denied` event as step 3 does. Steps 3 to 5 stay in their order, and every successful command, a no-op upsert included, still writes exactly one `audit.command` row.
 
 ### Changes to ADR 0031
 
@@ -261,10 +297,16 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 
 * "The cap is eight tools" becomes eight tools per toolset and sixteen across the in-repo toolsets, and the CI check counts both. Release 1 serves thirteen tools.
 * The toolset gains `core_find_articles`, `core_get_article`, `core_save_article`, `core_archive_article` and `core_restore_article`.
-* The tool effect gains `command`, which runs one command as the user with surface `mcp`.
+* The driver "Agent writes are proposals that a person commits" holds for planning only. The tool effect gains `command`, which runs one command as the user with surface `mcp`.
+* The tool rule on ERP free text and the personal-field redactor stay as written and run in the operation runner's step 6 for `mcp`, `webmcp` and `assistant`; a field is outside text when its contract marks it with `outsideText()`.
+* "Every plant-scoped tool takes an explicit `plant` argument" stays; `toMcpTool` adds it from the declaration's `scope`.
 * `defineTool`'s data moves into the operation declaration in the contracts package; the handler is bound in the backend. The shared runner becomes the operation runner and also serves REST and WebMCP.
-* "OAuth 2.1 login through Better Auth's MCP plugin, with client ID metadata documents and a dynamic client registration fallback" becomes OAuth 2.1 through the OAuth provider plugin with a Company admin's registered clients; client ID metadata documents and dynamic registration still wait for the LAN spike.
+* "OAuth 2.1 login through Better Auth's MCP plugin, with client ID metadata documents and a dynamic client registration fallback" becomes OAuth 2.1 through the OAuth provider plugin with a Company admin's registered clients, in release 1 and before the LAN spike. This replaces "personal access tokens before OAuth", which ADR 0034 left for the maintainer to confirm, and needs his confirmation in turn. Client ID metadata documents and dynamic registration still wait for the LAN spike.
 * WebMCP leaves "What waits".
+
+### Changes to ADR 0036
+
+* "AI never commits a change" holds for planning: proposals from the assistant and from `/mcp` reach the planner's draft and a person commits them, as ADR 0036 decides. Outside planning, a tool whose operation declares effect `command` runs that command as the user, with a command row that records the surface and the credential. In release 1 these are core's `core_save_article`, `core_archive_article` and `core_restore_article`. This limit needs the maintainer's confirmation, because ADR 0036 records his decision.
 
 ### Changes to ADR 0055
 
@@ -276,6 +318,7 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 
 * The public API starts in release 1, with core's articles. "Release 1 has no public route" and the route inventory test's "no route is in the public family" no longer hold.
 * A module's public routes come from its operation declarations through `toRestRoutes`, not from hand-written controllers in `server/rest/v1/`, and its public schemas live in `contracts/src/operations/`.
+* Lists reuse the cursors, paging, `orderBy`, filters and search of the connection conventions through `defineListQueryContract`, and return `nodes` instead of `edges`.
 * The root allowlist gains `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/*`.
 * The plant slug schema also refuses `oauth`, because `/oauth/consent` is a web route.
 * `openapi.json` and the public routes accept the credentials in the table above, not only integration tokens.
@@ -293,7 +336,8 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 * Good, because one authorization server serves integrations and MCP clients, and every credential is bound to the surfaces its prefix or audience names.
 * Good, because WebMCP adds nothing to a browser without it.
 * Bad, because release 1 grows by the ledger row above, before the pilot's planning work.
-* Bad, because agents can run commands on articles as the user, which ADR 0011's rule kept to proposals; the maintainer confirms this.
+* Bad, because agents can run commands on articles as the user, which the maintainer's rule in [ADR 0036][adr-0036], repeated as a driver of ADR 0011 and ADR 0034, kept to proposals; the maintainer confirms this.
+* Bad, because an ERP that pushes its whole catalog writes one command row per article, changed or not.
 * Bad, because the plant slug sits in every public path, so moving articles to company scope ([ADR 0007][adr-0007] places them there) or renaming a plant breaks integrations.
 * Bad, because WebMCP is a draft that changed its entry point in May 2026 and may change again, and only Chrome behind a flag can test it by hand.
 * Bad, because NorthMES owns the consent screen, the client and token pages and the credential guard.
@@ -301,15 +345,15 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 ### Confirmation
 
 * `packages/contracts/test/define-operations.test.ts`: "an operation whose tool name lacks its module prefix throws naming the operation"; "a REST path outside the module segment throws"; "a query contract without an output schema throws".
-* `packages/sdk/test/operations/runner.test.ts`: "a query handler that returns an extra key sends a result without it"; "an unknown error maps to core.internal with the correlation id".
+* `packages/sdk/test/operations/runner.test.ts`: "a query handler that returns an extra key sends a result without it"; "an outsideText field is wrapped as untrusted and capped at 500 characters on the mcp surface and returned plain on api"; "the personal-field redactor runs on every tool output"; "an unknown error maps to core.internal with the correlation id".
 * `apps/backend/test/operations/conformance.int.test.ts`, through `operationsConformance(articleOperations)`: every article REST operation is served and is in the OpenAPI document; every article tool is in `tools/list` for a Plant admin and missing for a user without its permission.
-* `apps/backend/test/rest/v1-articles.int.test.ts`: "a list with first 2 returns two articles and a cursor that returns the third"; "a create retried with the same id returns 200 and the first article"; "an update with a stale expectedVersion returns 409 core.version_conflict as application/problem+json"; "an upsert with a new number returns 201 and with the same number and name returns 200 without a command row"; "an upsert on an archived article returns 409 core.archived"; "a read with the ETag in If-None-Match returns 304"; "a token bound to plant A gets 403 for plant B in the path"; "a write writes one audit.command row with surface api and principal type integration".
+* `apps/backend/test/rest/v1-articles.int.test.ts`: "a list with first 2 returns two articles and a cursor that returns the third"; "a create retried with the same id returns 200 and the first article"; "an update with a stale expectedVersion returns 409 core.version_conflict as application/problem+json"; "an upsert with a new number returns 201, and with the same number and name returns 200 with the same version and one command row without field changes"; "an upsert that finds a row at a scope where the caller lacks core.article:update returns 403, leaves no command row and writes permission.denied"; "an upsert on an archived article returns 409 core.archived"; "a read with the ETag in If-None-Match returns 304"; "a token bound to plant A gets 403 for plant B in the path"; "a write writes one audit.command row with surface api and principal type integration".
 * `apps/backend/test/credentials-by-surface.int.test.ts` gains one case per cell of the credential table, for example "an integration token on POST /graphql returns 401", "a pat token on /mcp returns 401", "an OAuth access token with aud /mcp on a public route returns 401" and "the web's JWT on a public route returns 401".
-* `apps/backend/test/oauth/*.int.test.ts`: "client credentials for a client bound to plant A returns a token whose aud is /api/v1 and which lists articles at A"; "an authorization code without a code_verifier is refused"; "a redirect_uri https://attacker.example.test/cb is refused at registration"; "a reused refresh token revokes the grant and the next access token check fails within 60 seconds"; "a scope outside the client's registered scopes is refused".
-* `apps/backend/test/mcp/core-tools.int.test.ts` with `@modelcontextprotocol/client`: "core_save_article writes one command row with surface mcp"; "a user without core.article:archive gets no core_archive_article in tools/list".
+* `apps/backend/test/oauth/*.int.test.ts`: "client credentials for a client bound to plant A returns a token whose aud is /api/v1 and which lists articles at A"; "an authorization code without a code_verifier is refused"; "a redirect_uri https://attacker.example.test/cb is refused at registration"; "a reused refresh token revokes the grant and the next access token check fails within 60 seconds"; "a scope outside the client's registered scopes is refused"; "a token request without resource is refused"; "boot exits when the provider's resources hold the bare origin"; "a JWT signed with the jwt plugin's keys, with aud the origin, sid and azp, is refused by the web guard".
+* `apps/backend/test/mcp/core-tools.int.test.ts` with `@modelcontextprotocol/client`: "core_save_article writes one command row with surface mcp"; "a user without core.article:archive gets no core_archive_article in tools/list"; "a user with two plants sees plant as required in core_find_articles' input schema, and id is not in core_save_article's"; "core_find_articles with first 80 returns at most 25".
 * A CI check fails when a toolset holds more than eight tools or the in-repo toolsets more than sixteen.
-* `apps/web/test/webmcp/adapter.test.ts`, with a fake `document.modelContext`: "nothing is registered when neither document.modelContext nor navigator.modelContext exists"; "a user without core.article:archive at the plant gets no core_archive_article"; "a plant switch aborts the registrations and registers the new plant's tools"; "sign-out aborts every registration"; "execute posts to /api/v1/web/tools/core_find_articles with the plant header".
-* `apps/backend/test/rest/web-tools.int.test.ts`: "a tool call writes its command row with surface webmcp"; "an integration token on the tool route returns 401".
+* `apps/web/test/webmcp/adapter.test.ts`, with a fake `document.modelContext`: "nothing is registered when neither document.modelContext nor navigator.modelContext exists"; "a user without core.article:archive at the plant gets no core_archive_article"; "a plant switch aborts the registrations and registers the new plant's tools"; "sign-out aborts every registration"; "execute posts to /api/v1/web/tools/core_find_articles with the plant header"; "no registration passes exposedTo"; "nothing is registered while the installation setting is off".
+* `apps/backend/test/rest/web-tools.int.test.ts`: "a tool call writes its command row with surface webmcp"; "an integration token on the tool route returns 401"; "the tool route returns 404 while WebMCP is off". `apps/backend/test/web/shell.int.test.ts`: "the shell sends Permissions-Policy tools=(self)".
 * `apps/backend/test/rest/rate-limit.int.test.ts`: "the 61st write in a minute from one token returns 429 core.request.rate_limited with Retry-After".
 * The route inventory test lists the article routes in the public family and the well-known routes on the root allowlist.
 
@@ -354,10 +398,12 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 ## More information
 
 * Maintainer quotes, 2026-10-09: "The next thing is if we can create the api for articles, with support for oauth and service token?" and "The ide is to have the basic things in place lime webmcp and mcp so we have the base and structure for starting creating the other modules later".
-* Related ADRs: [0007][adr-0007] plants and scopes, [0010][adr-0010] identity and `can()`, [0011][adr-0011] principals and credentials, [0012][adr-0012] commands, [0013][adr-0013] audit, [0017][adr-0017] Zod contracts, [0031][adr-0031] ERP integration, [0034][adr-0034] MCP, [0035][adr-0035] the assistant, [0036][adr-0036] proposals, [0040][adr-0040] license policy, [0055][adr-0055] scope, [0062][adr-0062] module link manifests (the pattern the operation declaration follows), [0064][adr-0064] REST and OpenAPI, [0066][adr-0066] company settings.
+* Related ADRs: [0007][adr-0007] plants and scopes, [0010][adr-0010] identity and `can()`, [0011][adr-0011] principals and credentials, [0012][adr-0012] commands, [0013][adr-0013] audit, [0017][adr-0017] Zod contracts, [0022][adr-0022] settings, [0031][adr-0031] ERP integration, [0034][adr-0034] MCP, [0035][adr-0035] the assistant, [0036][adr-0036] proposals, [0040][adr-0040] license policy, [0055][adr-0055] scope, [0062][adr-0062] module link manifests (the pattern the operation declaration follows), [0064][adr-0064] REST and OpenAPI, [0066][adr-0066] company settings.
 * Plan: [05 GraphQL and APIs](../plan/05-graphql-and-apis.md) (errors, credentials, the public API and the MCP endpoint) and [10 AI and agents](../plan/10-ai-and-agents.md) (the runner and the toolset) follow this ADR once it is accepted.
 * WebMCP: https://webmachinelearning.github.io/webmcp/ (Draft Community Group Report). MCP authorization: https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization. Better Auth OAuth provider: https://www.better-auth.com/docs/plugins/oauth-provider. Better Auth API keys: https://www.better-auth.com/docs/plugins/api-key.
 * Unverified, to settle in the wave that relies on it:
+  * how the provider's own token endpoint coexists with the web's JWT at `/api/auth/token`: Better Auth's OAuth provider documentation puts `/token` in `disabledPaths` and sets the jwt plugin's `disableSettingJwtHeader`, while main mints the web's JWT at that path, so wave 6 starts by proving both work in one instance or by moving the web's JWT to a NorthMES route;
+  * whether a token request without `resource` can be refused, rather than answered with an opaque token;
   * whether `@better-auth/oauth-provider` 1.7.6 continues an authorization from a consent page on another origin that sends the web's bearer session instead of a cookie;
   * whether it issues JWT access tokens for two resources from one server with the jwt plugin options main already sets, and how it names the RFC 8414 metadata path for an issuer with a path;
   * whether `@better-auth/api-key` 1.7.6 reads a key from `Authorization: Bearer` through `customAPIKeyGetter` when three `configId` values share the header;
@@ -372,6 +418,7 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 [adr-0012]: 0012-commands-as-the-single-write-path.md
 [adr-0013]: 0013-audit-trail-written-in-the-command-transaction.md
 [adr-0017]: 0017-zod-contracts-as-the-single-source-for-inputs.md
+[adr-0022]: 0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md
 [adr-0031]: 0031-erp-integration-connector-modules-field-ownership-and-pending-changes.md
 [adr-0034]: 0034-mcp-surface-one-endpoint-a-read-mostly-planning-toolset.md
 [adr-0035]: 0035-ai-provider-port-with-customer-configured-providers.md
