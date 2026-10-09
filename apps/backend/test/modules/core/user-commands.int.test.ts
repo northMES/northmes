@@ -139,7 +139,12 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     });
 
     const username = await admin.client.send(createMutation, {
-      input: { id: randomUUIDv7(), username: 'Anna.Berg', name: 'Anna B' },
+      input: {
+        id: randomUUIDv7(),
+        username: 'Anna.Berg',
+        name: 'Anna B',
+        email: 'ab@example.test',
+      },
     });
     const email = await admin.client.send(createMutation, {
       input: { id: randomUUIDv7(), username: 'anna.b', name: 'Anna B', email: 'anna@example.com' },
@@ -165,12 +170,46 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
         fieldErrors: [
           {
             path: ['email'],
-            message: 'Another user has this email address. Enter another one, or leave it empty.',
+            message: 'Another user has this email address. Enter another one.',
             code: 'core.email_taken',
           },
         ],
       },
     ]);
+  });
+
+  it('E05-S08 coreCreateUser requires an email: without one, or with an empty one, the user is not created', async () => {
+    const { admin } = await company();
+
+    const without = await admin.client.send(createMutation, {
+      input: { id: randomUUIDv7(), username: 'b.sjo', name: 'Bo Sjö' },
+    });
+    const empty = await admin.client.send(createMutation, {
+      input: { id: randomUUIDv7(), username: 'b.sjo', name: 'Bo Sjö', email: '' },
+    });
+    const created = await createUser(admin.client, {
+      id: randomUUIDv7(),
+      username: 'b.sjo',
+      name: 'Bo Sjö',
+      email: 'bo.sjo@example.test',
+    });
+
+    expect(without.data ?? null).toBeNull();
+    expect(without.errors?.map(({ extensions }) => extensions?.code)).toEqual(['BAD_USER_INPUT']);
+    expect(refusals(empty)).toEqual([
+      {
+        code: 'BAD_USER_INPUT',
+        errorCode: undefined,
+        fieldErrors: [
+          {
+            path: ['email'],
+            code: 'invalid_format',
+            message: 'Enter an email address, such as name@example.com.',
+          },
+        ],
+      },
+    ]);
+    expect(created.user.username).toBe('b.sjo');
   });
 
   it('E05-S08 a retry of coreCreateUser whose first run created the user in Better Auth but failed before the company membership finishes the creation under the same id', async () => {
