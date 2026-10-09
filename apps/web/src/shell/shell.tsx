@@ -10,6 +10,7 @@ import {
 import {
   createRoute,
   createRouter,
+  type HistoryState,
   Link,
   Outlet,
   type RouterHistory,
@@ -91,8 +92,11 @@ export function createShellRouter(
   // client of the plant left behind come with the plant switcher.
   const clients = new Map<string, ApolloClient>();
   const clearCaches = () => Promise.all([...clients.values()].map((client) => client.clearStore()));
-  const toSignIn = async (search: { redirect?: string; signedOut?: true }) => {
-    await router.navigate({ to: signInPath, search });
+  const toSignIn = async (
+    search: { redirect?: string; signedOut?: true },
+    state: SignInState = {},
+  ) => {
+    await router.navigate({ to: signInPath, search, state: state as HistoryState });
     await clearCaches();
   };
   const auth = {
@@ -101,7 +105,8 @@ export function createShellRouter(
       // The first refused request ends the session; the requests refused with it follow it.
       if (session.user() === undefined) return;
       session.forget();
-      void toSignIn({ redirect: router.state.location.href });
+      // The URL keeps only the return path (SO1); the history entry says the session ended.
+      void toSignIn({ redirect: router.state.location.href }, { sessionEnded: true });
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
@@ -175,14 +180,24 @@ export function createShellRouter(
   return router;
 }
 
-/** The sign-in route's component: the sign-in page, which leads to the return path once signed in. */
+/** What the history entry of the sign-in page carries: whether the API ended the tab's session. */
+interface SignInState {
+  readonly sessionEnded?: boolean;
+}
+
+/**
+ * The sign-in route's component: the sign-in page, which leads to the return path once signed in,
+ * and says the session ended when a refused request sent the tab there (shell-306, SO1).
+ */
 function SignInPage({ session }: { readonly session: AuthSession }) {
   const search = signInSearch(useSearch({ strict: false }));
+  const state = useRouterState({ select: ({ location }) => location.state as SignInState });
   const router = useRouter();
   return (
     <SignInScreen
       session={session}
       signedOut={search.signedOut === true}
+      sessionEnded={state.sessionEnded === true}
       onSignedIn={() => void router.navigate({ href: returnPathOf(search) })}
     />
   );
