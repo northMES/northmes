@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-
 import { HttpStatus } from '@nestjs/common';
 import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { defineCommand } from '@northmes/sdk/commands';

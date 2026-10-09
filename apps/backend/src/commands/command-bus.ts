@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import type {
   Command,
   CommandBus,
@@ -109,8 +109,8 @@ interface ExistingInput {
 
 /**
  * Loads the target of a command on an existing entity and checks its version (ADR 0012 steps 3 and
- * 5): core.not_found when no row with the input's id is at the principal's scopes, and
- * core.version_conflict when the row's version is not the input's expectedVersion. A command
+ * 5): Nest's NotFoundException when no row with the input's id is at the principal's scopes,
+ * and core.version_conflict when the row's version is not the input's expectedVersion. A command
  * without a target gets undefined.
  */
 async function loadTarget<Input, Result, Target extends Versioned | undefined>(
@@ -123,11 +123,7 @@ async function loadTarget<Input, Result, Target extends Versioned | undefined>(
   const { id, expectedVersion } = input as ExistingInput;
   const row = await load(id, context);
   if (!row) {
-    throw new DomainError({
-      code: 'core.not_found',
-      status: HttpStatus.NOT_FOUND,
-      message: `${entity} ${id} was not found`,
-    });
+    throw new NotFoundException(`${entity} ${id} was not found`);
   }
   if (row.version !== expectedVersion) {
     throw new DomainError({
