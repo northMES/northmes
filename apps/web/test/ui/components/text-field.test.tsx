@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { TextField } from '../../../src/ui/primitives/text-field.tsx';
+import { TextField } from '../../../src/ui/components/text-field/index.ts';
 
 afterEach(cleanup);
 

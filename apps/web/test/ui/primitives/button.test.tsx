@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { Copy } from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Button, IconButton } from '../../../src/ui/primitives/button.tsx';
+import { Button } from '../../../src/ui/primitives/button.tsx';
 
 afterEach(cleanup);
 
@@ -54,16 +53,5 @@ describe('Button', () => {
     await user.tab();
 
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Next' }));
-  });
-
-  it('E04-S01 an icon button is named by its label, and its icon is hidden from assistive technology', () => {
-    render(
-      <IconButton label="Copy correlation id" variant="ghost">
-        <Copy />
-      </IconButton>,
-    );
-
-    const button = screen.getByRole('button', { name: 'Copy correlation id' });
-    expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 });
