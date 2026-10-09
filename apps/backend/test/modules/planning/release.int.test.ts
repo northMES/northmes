@@ -106,7 +106,7 @@ describe('planningReleaseProductionOrder', () => {
     });
   });
 
-  it('E02-S04 releasing an order at another plant returns core.not_found and leaves it planned', async () => {
+  it('E02-S04 releasing an order at another plant returns NOT_FOUND without an errorCode and leaves it planned', async () => {
     const plant = given.plant();
     const otherPlant = given.plant();
     const id = await writeOrder(otherPlant, '6503');
@@ -122,10 +122,11 @@ describe('planningReleaseProductionOrder', () => {
         {
           message: `Production order ${id} was not found`,
           path: ['planningReleaseProductionOrder'],
-          extensions: { code: 'NOT_FOUND', errorCode: 'core.not_found' },
+          extensions: { code: 'NOT_FOUND' },
         },
       ],
     });
+    expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
     expect(await (await clientAt(otherPlant)).send(ordersQuery)).toEqual({
       status: 200,
       data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },

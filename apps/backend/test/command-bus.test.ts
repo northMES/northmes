@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { HttpStatus } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
 import { type Command, CommandValidator } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
+import { DomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
@@ -182,12 +184,14 @@ describe('CommandBusImpl', () => {
 
     const run = bus.run(command, { id: ORDER_ID });
 
-    await expect(run).rejects.toMatchObject({
+    const error = await run.catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
       code: 'core.command_rejected',
-      kind: 'precondition',
       message: '1500 pcs is above the release limit of 1000 pcs',
       details: { rejectedBy: 'release-limits' },
     });
+    expect((error as DomainError).getStatus()).toBe(HttpStatus.PRECONDITION_FAILED);
     expect(handle).not.toHaveBeenCalled();
     expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
   });

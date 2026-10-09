@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import type {
   Command,
   CommandBus,
@@ -32,7 +33,7 @@ export class CommandRejected extends DomainError {
   constructor(rejectedBy: string, message: string) {
     super({
       code: 'core.command_rejected',
-      kind: 'precondition',
+      status: HttpStatus.PRECONDITION_FAILED,
       message,
       details: { rejectedBy },
     });
@@ -108,8 +109,8 @@ interface ExistingInput {
 
 /**
  * Loads the target of a command on an existing entity and checks its version (ADR 0012 steps 3 and
- * 5): core.not_found when no row with the input's id is at the principal's scopes, and
- * core.version_conflict when the row's version is not the input's expectedVersion. A command
+ * 5): Nest's NotFoundException when no row with the input's id is at the principal's scopes,
+ * and core.version_conflict when the row's version is not the input's expectedVersion. A command
  * without a target gets undefined.
  */
 async function loadTarget<Input, Result, Target extends Versioned | undefined>(
@@ -122,16 +123,12 @@ async function loadTarget<Input, Result, Target extends Versioned | undefined>(
   const { id, expectedVersion } = input as ExistingInput;
   const row = await load(id, context);
   if (!row) {
-    throw new DomainError({
-      code: 'core.not_found',
-      kind: 'not_found',
-      message: `${entity} ${id} was not found`,
-    });
+    throw new NotFoundException(`${entity} ${id} was not found`);
   }
   if (row.version !== expectedVersion) {
     throw new DomainError({
       code: 'core.version_conflict',
-      kind: 'conflict',
+      status: HttpStatus.CONFLICT,
       message: `${entity} ${id} is at version ${row.version}, and the change was made on version ${expectedVersion}`,
     });
   }
@@ -204,7 +201,7 @@ export class CommandBusImpl implements CommandBus {
           if (!parsed.success) {
             throw new DomainError({
               code: 'core.validator_contract_mismatch',
-              kind: 'precondition',
+              status: HttpStatus.PRECONDITION_FAILED,
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }

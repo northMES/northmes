@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { createArticle } from '@northmes/core-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
-import { DomainError } from '@northmes/sdk/errors';
 import { type ArticleRecord, recordColumns } from '../api/article.service.ts';
 import { Article } from '../api/article.type.ts';
 import type { CoreContext } from './context.ts';
@@ -15,11 +15,7 @@ export const CreateArticle = defineCommand(createArticle, {
   returns: () => Article,
   async handle({ id, code, name }, { tx, plantId }: CoreContext): Promise<ArticleRecord> {
     if (!plantId) {
-      throw new DomainError({
-        code: 'core.plant_forbidden',
-        kind: 'forbidden',
-        message: 'The request names no plant, so it cannot create an article',
-      });
+      throw new ForbiddenException('The request names no plant, so it cannot create an article');
     }
     const created = await tx
       .insertInto('core.article')
@@ -36,11 +32,7 @@ export const CreateArticle = defineCommand(createArticle, {
       .executeTakeFirst();
     if (!first) {
       // The id is taken at a scope the principal cannot read.
-      throw new DomainError({
-        code: 'core.not_found',
-        kind: 'not_found',
-        message: `Article ${id} was not found`,
-      });
+      throw new NotFoundException(`Article ${id} was not found`);
     }
     return first;
   },

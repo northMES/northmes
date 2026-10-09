@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import type { Type } from '@nestjs/common';
+import { HttpStatus, type Type } from '@nestjs/common';
 import {
   ArgsType,
   Field,
@@ -93,7 +93,11 @@ function namedClass(name: string): Type {
 }
 
 function badArgument(message: string): DomainError {
-  return new DomainError({ code: 'core.list.bad_argument', kind: 'validation', message });
+  return new DomainError({
+    code: 'core.list.bad_argument',
+    status: HttpStatus.BAD_REQUEST,
+    message,
+  });
 }
 
 /** The page size that the argument `name` asks for. */

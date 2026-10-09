@@ -1,14 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-/** What went wrong, in the terms a client acts on. Each kind maps to one GraphQL code (ADR 0012). */
-export type DomainErrorKind =
-  | 'validation'
-  | 'unauthenticated'
-  | 'not_found'
-  | 'forbidden'
-  | 'conflict'
-  | 'precondition'
-  | 'unavailable';
+import { HttpException, type HttpStatus } from '@nestjs/common';
 
 /**
  * A problem with one field of a command's input, in the shape of a Zod issue: the path from the
@@ -20,10 +11,28 @@ export interface FieldError {
   readonly code: string;
 }
 
+/**
+ * The statuses a DomainError may carry: the ones the exception filter maps to a GraphQL
+ * extensions.code. Any other status would reach the client masked, without its code and details.
+ */
+export type DomainErrorStatus =
+  | HttpStatus.BAD_REQUEST
+  | HttpStatus.UNAUTHORIZED
+  | HttpStatus.FORBIDDEN
+  | HttpStatus.NOT_FOUND
+  | HttpStatus.CONFLICT
+  | HttpStatus.PRECONDITION_FAILED
+  | HttpStatus.SERVICE_UNAVAILABLE;
+
 export interface DomainErrorOptions {
   /** Stable and module-scoped, such as core.command_rejected. Never renamed after a release. */
   readonly code: string;
-  readonly kind: DomainErrorKind;
+  /**
+   * The HTTP status, from which the exception filter takes the GraphQL extensions.code:
+   * 400 BAD_USER_INPUT, 401 UNAUTHENTICATED, 403 FORBIDDEN, 404 NOT_FOUND, 409 CONFLICT,
+   * 412 PRECONDITION or 503 UNAVAILABLE.
+   */
+  readonly status: DomainErrorStatus;
   /** The text the person who ran the operation reads. */
   readonly message: string;
   /** Values a client reads by code, such as rejectedBy of core.command_rejected. */
@@ -32,18 +41,19 @@ export interface DomainErrorOptions {
   readonly fieldErrors?: readonly FieldError[];
 }
 
-/** The one error type of NorthMES, which every surface reports in the same shape (ADR 0012). */
-export class DomainError extends Error {
+/**
+ * An HttpException with a NorthMES code that a client reads as extensions.errorCode, and the
+ * details and fieldErrors that go with it (ADR 0012, as ADR 0070 changes it). Code that needs no
+ * NorthMES code throws Nest's own exception instead, such as NotFoundException.
+ */
+export class DomainError extends HttpException {
   readonly code: string;
-  readonly kind: DomainErrorKind;
   readonly details: Readonly<Record<string, unknown>> | undefined;
   readonly fieldErrors: readonly FieldError[] | undefined;
 
-  constructor({ code, kind, message, details, fieldErrors }: DomainErrorOptions) {
-    super(message);
-    this.name = 'DomainError';
+  constructor({ code, status, message, details, fieldErrors }: DomainErrorOptions) {
+    super(message, status);
     this.code = code;
-    this.kind = kind;
     this.details = details;
     this.fieldErrors = fieldErrors;
   }
