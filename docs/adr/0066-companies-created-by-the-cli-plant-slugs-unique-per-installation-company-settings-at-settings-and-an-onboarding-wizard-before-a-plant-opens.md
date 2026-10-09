@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT, hosting partners
 release: "1"
-needs-confirmation: "maintainer (the company admin role holding every installed permission)"
+needs-confirmation: ""
 ---
 
 # Companies created by the CLI, plant slugs unique per installation, company settings at /settings and an onboarding wizard before a plant opens
@@ -107,7 +107,7 @@ docker compose run --rm migrate northmes admin reset-password \
 
 ### Core's company admin role
 
-* Core's manifest ships the company admin role. The permission sync in `northmes migrate` gives it every installed permission, those of plugins included, so its holder can assign any default or custom role under the rule of [ADR 0010][adr-0010] that the assigner holds every permission of the role, and can do every onboarding step. This waits for Krister Johansson's confirmation (M-61).
+* Core's manifest ships the company admin role. The permission sync in `northmes migrate` gives it every installed permission, those of plugins included, so its holder can assign any default or custom role under the rule of [ADR 0010][adr-0010] that the assigner holds every permission of the role, and can do every onboarding step. Krister Johansson confirmed this (M-61).
 * The CLI assigns it on the host as `core.cli`, outside `can()`. This is the only way a role is assigned without the assigner holding it, and no GraphQL field does it.
 
 ### Plants
