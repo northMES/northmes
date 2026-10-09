@@ -191,7 +191,7 @@ describe('sign-in with Better Auth', () => {
     expect(graphqlFromElsewhere.headers.get('access-control-allow-origin')).toBeNull();
   });
 
-  it('E05-S05 the web origin signs in across origins: its preflight passes and it may read the token headers', async () => {
+  it('E05-S05 the web origin signs in across origins: its preflight passes, it may read the token and retry headers, and it may send no cookies', async () => {
     const { user } = await reader();
 
     const preflight = await fetch(`${url}/api/auth/sign-in/username`, {
@@ -207,6 +207,11 @@ describe('sign-in with Better Auth', () => {
       headers: { 'content-type': 'application/json', origin: webOrigin },
       body: JSON.stringify({ username: user.username, password: user.password }),
     });
+    const refused = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: webOrigin },
+      body: JSON.stringify({ username: user.username, password: `${user.password}!` }),
+    });
 
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get('access-control-allow-origin')).toBe(webOrigin);
@@ -215,5 +220,13 @@ describe('sign-in with Better Auth', () => {
     expect(signedIn.headers.get('access-control-allow-origin')).toBe(webOrigin);
     expect(signedIn.headers.get('access-control-expose-headers')).toContain('set-auth-token');
     expect(signedIn.headers.get('set-auth-token')).toBeTruthy();
+    // The web reads Better Auth's X-Retry-After to say how long a rate-limited sign-in waits. A
+    // refused sign-in answers as a 429 does, without the bearer plugin's own expose header.
+    expect(preflight.headers.get('access-control-expose-headers')).toContain('x-retry-after');
+    expect(refused.status).toBe(401);
+    expect(refused.headers.get('access-control-expose-headers')).toContain('x-retry-after');
+    // The web sends no cookies, so the API does not let a web origin send them.
+    expect(preflight.headers.get('access-control-allow-credentials')).toBeNull();
+    expect(signedIn.headers.get('access-control-allow-credentials')).toBeNull();
   });
 });
