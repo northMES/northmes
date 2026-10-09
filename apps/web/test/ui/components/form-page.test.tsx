@@ -19,6 +19,9 @@ import { UnsavedChangesGuard } from '../../../src/ui/components/unsaved-changes-
 
 afterEach(cleanup);
 
+/** The page the form's links lead away to. */
+const otherPath = '/other';
+
 /** Renders page at /form, beside /other, in a memory router; returns the router. */
 function renderAtForm(page: () => ReactNode) {
   const root = createRootRoute({ component: () => <Outlet /> });
@@ -55,8 +58,13 @@ function RoleNameForm({ onSave = async () => {} }: { readonly onSave?: () => Pro
           <input value={name} onChange={(event) => setName(event.target.value)} />
         </label>
       </FormSection>
-      <Link to="/other">Roles</Link>
-      <FormActions saveLabel="Save role" saving={saving} cancelHref="/other" dirty={name !== ''} />
+      <Link to={otherPath}>Roles</Link>
+      <FormActions
+        saveLabel="Save role"
+        saving={saving}
+        cancelHref={otherPath}
+        dirty={name !== ''}
+      />
       <UnsavedChangesGuard when={name !== '' && !saving} />
     </form>
   );

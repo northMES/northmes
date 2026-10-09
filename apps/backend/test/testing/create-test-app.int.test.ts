@@ -41,6 +41,7 @@ describe('createTestApp', () => {
       'coreRoles',
       'coreUser',
       'coreUsers',
+      'coreViewer',
     ]);
   });
 });
