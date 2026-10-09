@@ -41,12 +41,9 @@ function checkbox(name: string): HTMLElement {
 }
 
 describe('the role editor', () => {
-  it('E05-S06 New role from Planner copies its permissions once and shows the difference; a permission the editor does not hold is locked; Create role opens the new role and announces it', async () => {
+  it('E05-S06 New role from Planner copies its permissions once and shows the difference; a permission the editor does not hold can be removed but not added; Create role opens the new role and announces it', async () => {
     const user = userEvent.setup();
-    const created = role('Night planner', [
-      'planning.productionOrder:read',
-      'planning.autoplan:run',
-    ]);
+    const created = role('Night planner', ['planning.productionOrder:read']);
     const router = renderCoreAt(coreLinks.roles.new({ plant }, { from: planner.id }).href, [
       viewerQuery(jonas, ['core.role:manage']),
       companiesQuery(),
@@ -58,7 +55,7 @@ describe('the role editor', () => {
           variables: ({ input }: { input: { id: string; name: string; permissions: string[] } }) =>
             uuidv7.test(input.id) &&
             input.name === 'Night planner' &&
-            input.permissions.join() === 'planning.productionOrder:read,planning.autoplan:run',
+            input.permissions.join() === 'planning.productionOrder:read',
         },
         result: { data: { coreCreateRole: created } },
       } as MockLink.MockedResponse,
@@ -76,13 +73,20 @@ describe('the role editor', () => {
     ).toBeDefined();
     expect((await screen.findByRole('status')).textContent).toBe('3 of 6 selected.');
 
-    // Run autoplan is locked: a disabled checkbox without a Tab stop, described by why.
+    // Read users, which the editor does not hold, is locked: a disabled checkbox without a Tab
+    // stop, described by why.
+    const users = checkbox('Read users and their roles');
+    expect(users.hasAttribute('disabled')).toBe(true);
+    expect(users.getAttribute('aria-describedby')).toBeTruthy();
+    expect((await screen.findAllByText('You do not hold it at Plant A.')).length).toBe(2);
+    // Run autoplan, which he does not hold either, comes ticked from Planner: removing it needs
+    // nothing, so it stays a checkbox, and once removed it is locked, since adding it needs it.
     const autoplan = checkbox('Run autoplan');
-    expect(autoplan.hasAttribute('disabled')).toBe(true);
-    expect(autoplan.getAttribute('aria-describedby')).toBeTruthy();
-    expect((await screen.findAllByText('You do not hold it at Plant A.')).length).toBeGreaterThan(
-      0,
-    );
+    expect(autoplan.hasAttribute('disabled')).toBe(false);
+    expect(autoplan.getAttribute('aria-checked')).toBe('true');
+    await user.click(autoplan);
+    expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('status').textContent).toBe('2 of 6 selected.');
     // The module that is not installed never shows.
     expect(screen.queryByText('kanban.board:read')).toBeNull();
 
@@ -93,10 +97,11 @@ describe('the role editor', () => {
 
     expect(document.activeElement).toBe(release);
     expect(release.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByRole('status').textContent).toBe('2 of 6 selected.');
+    expect(screen.getByRole('status').textContent).toBe('1 of 6 selected.');
     const difference = screen.getByRole('region', { name: 'Difference from Planner' });
-    expect(within(difference).getByText('Removed')).toBeDefined();
+    expect(within(difference).getAllByText('Removed')).toHaveLength(2);
     expect(within(difference).getByText('Release production orders to the floor')).toBeDefined();
+    expect(within(difference).getByText('Run autoplan')).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: 'Create role' }));
 
@@ -105,6 +110,31 @@ describe('the role editor', () => {
       coreLinks.roles.role({ plant, roleId: created.id }).href,
     );
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
+  });
+
+  it('E05-S06 Edit role lets the editor untick a permission of the role he does not hold and tick it again, since the role holds it already', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.roles.role.edit({ plant, roleId: shiftLead.id }).href, [
+      viewerQuery(
+        ['core.role:read', 'core.role:manage', 'planning.productionOrder:read'],
+        ['core.role:manage'],
+      ),
+      companiesQuery(),
+      roleQuery(shiftLead),
+      catalogQuery(),
+    ]);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Edit Shift lead' })).toBeDefined();
+    const release = await screen.findByRole('checkbox', {
+      name: 'Release production orders to the floor',
+    });
+    await user.click(release);
+    expect(release.getAttribute('aria-checked')).toBe('false');
+    await user.click(checkbox('Release production orders to the floor'));
+    expect(checkbox('Release production orders to the floor').getAttribute('aria-checked')).toBe(
+      'true',
+    );
+    expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(true);
   });
 
   it('E05-S06 Enter on a module button closes and opens the module, and focus stays on it', async () => {
