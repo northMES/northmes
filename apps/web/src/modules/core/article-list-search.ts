@@ -1,22 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { z } from 'zod';
 
-/** A sort field of coreArticles (ADR 0016). */
-export type ArticleSortField = 'CODE' | 'NAME';
-
-/** The arguments of coreArticles: one page forward (first, after) or backward (last, before). */
-export interface ArticlesVariables {
-  readonly first?: number;
-  readonly after?: string;
-  readonly last?: number;
-  readonly before?: string;
-  readonly orderBy: readonly {
-    readonly field: ArticleSortField;
-    readonly direction: 'ASC' | 'DESC';
-  }[];
-  readonly search?: string;
-}
-
 /** The page size of the list (design ui-222, open question 15). */
 export const articlePageSize = 25;
 
@@ -117,12 +101,15 @@ export function sortOf(view: Pick<ArticleListSearch, 'sort'>) {
   return { id: desc ? sort.slice(1) : sort, desc };
 }
 
-const sortFields: Readonly<Record<string, ArticleSortField>> = { code: 'CODE', name: 'NAME' };
-
-/** The variables of coreArticles for the view: 25 rows forward from after, or back from before. */
-export function articleListVariables(view: ArticleListSearch): ArticlesVariables {
+/**
+ * The variables of coreArticles for the view: 25 rows forward from after, or back from before.
+ * TypeScript infers their type, and the articles screen's useQuery checks it against the generated
+ * variables of CoreArticles, so a sort field the schema drops fails the typecheck there.
+ */
+export function articleListVariables(view: ArticleListSearch) {
   const { id, desc } = sortOf(view);
-  const orderBy = [{ field: sortFields[id] ?? 'CODE', direction: desc ? 'DESC' : 'ASC' }] as const;
+  const field = id === 'name' ? 'NAME' : 'CODE';
+  const orderBy = [{ field, direction: desc ? 'DESC' : 'ASC' }] as const;
   const paging =
     view.before !== undefined
       ? { last: articlePageSize, before: view.before }

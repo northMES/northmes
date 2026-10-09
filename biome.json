@@ -8,6 +8,8 @@
       "!**/node_modules",
       "!**/dist",
       "!docs/agents/handoff/graphs",
+      "!**/*.gen.ts",
+      "!schema/*.graphql",
       "!test/meta/workspace.test.ts"
     ]
   },
@@ -57,6 +59,16 @@
           },
           "suspicious": {
             "noDoubleEquals": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/web/src/**/*.graphql.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noConstantCondition": "off"
           }
         }
       }

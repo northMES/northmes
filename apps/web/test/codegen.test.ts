@@ -24,7 +24,7 @@ function schemaWith(type: string, line: string, replacement: string): string {
 function typeErrorsWith(files: readonly { path: string; content: string }[]): string[] {
   const configPath = join(webDir, 'tsconfig.json');
   const { config } = ts.readConfigFile(configPath, ts.sys.readFile);
-  const parsed = ts.parseJsonConfigFileContent(config, ts.sys, webDir);
+  const parsed = ts.parseJsonConfigFileContent(config, ts.sys, webDir, undefined, configPath);
   const overlay = new Map(files.map(({ path, content }) => [join(webDir, path), content]));
   const host = ts.createCompilerHost(parsed.options);
   const readFile = host.readFile.bind(host);

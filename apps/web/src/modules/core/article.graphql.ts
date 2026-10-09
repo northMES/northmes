@@ -1,30 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { gql, type TypedDocumentNode } from '@apollo/client';
+import { gql } from '@apollo/client';
+import type { CoreArticleQuery } from './article.graphql.gen.ts';
 
-// Hand-written types of the article query, until GraphQL codegen writes them. The article's page,
-// the edit page and the new article page's cache update all read it.
+export {
+  CoreArticleDocument as CoreArticle,
+  type CoreArticleQuery,
+  type CoreArticleQueryVariables,
+} from './article.graphql.gen.ts';
 
 /** An article with the fields the articles pages show and the version an edit sends. */
-export interface Article {
-  readonly __typename: 'Article';
-  readonly id: string;
-  /** The article number, unique at the article's scope. */
-  readonly code: string;
-  readonly name: string;
-  readonly version: number;
-}
+export type Article = NonNullable<CoreArticleQuery['coreArticle']>;
 
-/** The article with this id at the plant, or null. */
-export const CoreArticle: TypedDocumentNode<
-  { readonly coreArticle: Article | null },
-  { readonly id: string }
-> = gql`
-  query CoreArticle($id: ID!) {
-    coreArticle(id: $id) {
-      id
-      code
-      name
-      version
+// The article with this id at the plant, or null. The article's page, the edit page and the new
+// article page's cache update all read it. pnpm gen writes its typed document to
+// article.graphql.gen.ts; this block never runs, so the bundle holds only the generated document.
+if (false) {
+  gql`
+    query CoreArticle($id: ID!) {
+      coreArticle(id: $id) {
+        id
+        code
+        name
+        version
+      }
     }
-  }
-`;
+  `;
+}
