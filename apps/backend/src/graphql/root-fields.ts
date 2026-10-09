@@ -29,8 +29,8 @@ function rootFieldsOfResolver(resolver: Type): string[] {
 }
 
 /**
- * The root fields of a server entry, as Query.name, Mutation.name or Subscription.name: those of
- * every resolver that its Nest module, or a module it imports, lists.
+ * The root fields of a module, as Query.name, Mutation.name or Subscription.name: those of every
+ * resolver that its Nest module, or a module it imports, lists.
  */
 export function rootFieldsOf({ module }: Pick<RootFieldOwner, 'module'>): string[] {
   return moduleProviders(module)
@@ -41,7 +41,7 @@ export function rootFieldsOf({ module }: Pick<RootFieldOwner, 'module'>): string
 /**
  * NORTHMES_ROOT_FIELD_PREFIX: every Query, Mutation and Subscription field of the one schema starts
  * with the GraphQL name of the module that declares it and an upper-case letter, as
- * planningReleaseProductionOrder does. A field belongs to the server entry whose Nest module, or a
+ * planningReleaseProductionOrder does. A field belongs to the module whose Nest module, or a
  * module it imports, lists the resolver. Returns one problem per field that breaks the rule.
  */
 export function rootFieldProblems(owners: readonly RootFieldOwner[]): string[] {

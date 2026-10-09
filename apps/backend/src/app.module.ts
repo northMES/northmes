@@ -21,7 +21,7 @@ export interface ServerEntry {
   readonly dependsOn: readonly string[];
 }
 
-/** How AppModule.forRoot builds the app beyond its config and server entries. */
+/** How AppModule.forRoot builds the app beyond its config and Nest modules. */
 export interface AppOptions {
   /** What the app connects to. It defaults to 'app'; pnpm northmes migrate passes 'none'. */
   readonly database?: DatabaseMode;
