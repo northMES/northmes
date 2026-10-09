@@ -88,6 +88,7 @@ describe('the roles of a company and the permission catalog', () => {
     ).toEqual([
       { key: 'core-company-admin', name: 'Company admin', moduleId: 'core', version: 1 },
       { key: 'planning-planner', name: 'Planner', moduleId: 'planning', version: 1 },
+      { key: 'core-plant-admin', name: 'Plant admin', moduleId: 'core', version: 1 },
       { key: 'planning-viewer', name: 'Viewer', moduleId: 'planning', version: 1 },
     ]);
     expect(roles.find(({ key }) => key === 'planning-viewer')?.permissions).toEqual([

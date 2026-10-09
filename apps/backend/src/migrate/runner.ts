@@ -231,12 +231,13 @@ function roleName(key: string): string {
 }
 
 /**
- * Every default role of the catalog's manifests, keyed `<module>-<role>` so that two modules may
- * declare roles of one name, with its permission keys sorted.
+ * Every default role of the catalog's modules, keyed `<module>-<role>` so that two modules may
+ * declare roles of one name, with its permission keys sorted. A module whose roles depend on the
+ * installed permissions gets every key in `installed`.
  */
-function defaultRoles(catalog: readonly CatalogEntry[]): DefaultRole[] {
-  return catalog.flatMap(({ manifest }) =>
-    Object.entries(manifest.roles ?? {}).map(([role, permissions]) => ({
+function defaultRoles(catalog: readonly CatalogEntry[], installed: readonly string[]): DefaultRole[] {
+  return catalog.flatMap(({ manifest, rolesOf }) =>
+    Object.entries(rolesOf?.(installed) ?? manifest.roles ?? {}).map(([role, permissions]) => ({
       key: `${manifest.id}-${role}`,
       module: manifest.id,
       name: roleName(role),
@@ -328,7 +329,15 @@ async function syncPermissionCatalog(
       'update core.permission set installed = false where key <> all ($1::text[])',
       [keys.map(({ key }) => key)],
     );
-    if (withDefaultRoles) await syncDefaultRoles(client, defaultRoles(catalog));
+    if (withDefaultRoles) {
+      await syncDefaultRoles(
+        client,
+        defaultRoles(
+          catalog,
+          keys.map(({ key }) => key),
+        ),
+      );
+    }
     await client.query('commit');
   } catch (error) {
     await client.query('rollback').catch(() => {});

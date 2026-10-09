@@ -125,8 +125,8 @@ describe('the seed', () => {
 
     await seed({ appUrl: db.appUrl, ownerUrl: db.ownerUrl });
 
-    // The admin's role, and the three default roles of core and planning that the company gets.
-    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 4, assignments: 1 }]);
+    // The admin's role, and the four default roles of core and planning that the company gets.
+    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 5, assignments: 1 }]);
     expect(await counts()).toEqual(before);
   });
 });

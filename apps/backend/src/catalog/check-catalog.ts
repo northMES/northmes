@@ -33,6 +33,12 @@ export interface CatalogEntry {
    * migration files too. A plugin has none.
    */
   readonly schemas?: readonly string[];
+  /**
+   * The default roles of an in-repo module whose roles depend on the installed permissions, which
+   * migrate calls with every installed permission key in place of the manifest's roles. A plugin has
+   * none.
+   */
+  readonly rolesOf?: (installed: readonly string[]) => Readonly<Record<string, readonly string[]>>;
 }
 
 export interface CatalogOptions {

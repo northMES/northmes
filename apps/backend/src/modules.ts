@@ -7,6 +7,9 @@ import { corePermissions, coreRoles } from './modules/core/permissions.ts';
 import { planningPermissions, planningRoles } from './modules/planning/permissions.ts';
 import { PlanningModule } from './modules/planning/planning.module.ts';
 
+/** Default roles, role key to permission keys. */
+export type DefaultRoles = Readonly<Record<string, readonly string[]>>;
+
 /**
  * A module that ships in the backend: a plain Nest module in src/modules/<id>, with no manifest. It
  * has the backend's version (ADR 0070).
@@ -28,9 +31,10 @@ export interface InRepoModule {
   /**
    * Its default roles, role key to permission keys, which northmes migrate gives every company as
    * roles of origin module (ADR 0010). A role's name is its key in words, so company-admin is
-   * Company admin.
+   * Company admin. As a function, migrate calls it with every installed permission key, so the
+   * roles take up the permissions of every module, as core's admin roles do.
    */
-  readonly roles?: Readonly<Record<string, readonly string[]>>;
+  readonly roles?: DefaultRoles | ((installed: readonly string[]) => DefaultRoles);
   /** Further schemas its owner role owns, which migrate creates (see CatalogEntry.schemas). */
   readonly schemas?: readonly string[];
 }

@@ -139,8 +139,9 @@ async function importPluginManifests(
 
 /**
  * The catalog entries of in-repo modules. Each gets the manifest the catalog checks read: its id,
- * its dependsOn, its permissions, and the backend's version, which is also the only NorthMES
- * version it runs on.
+ * its dependsOn, its permissions, its default roles, and the backend's version, which is also the
+ * only NorthMES version it runs on. Default roles that depend on the installed permissions go in
+ * rolesOf instead.
  */
 function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
   const version = imageVersion();
@@ -151,12 +152,13 @@ function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
       northmes: version,
       ...(dependsOn ? { dependsOn } : {}),
       ...(permissions ? { permissions } : {}),
-      ...(roles ? { roles } : {}),
+      ...(roles && typeof roles !== 'function' ? { roles } : {}),
     },
     kind: 'module',
     module,
     migrationsDir: migrationsDir ?? inRepoMigrationsDir(id),
     ...(schemas ? { schemas } : {}),
+    ...(typeof roles === 'function' ? { rolesOf: roles } : {}),
   }));
 }
 
