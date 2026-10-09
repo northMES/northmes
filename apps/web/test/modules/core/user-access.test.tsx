@@ -21,6 +21,7 @@ import {
   rolesQuery,
   sara,
   settingsViewerQuery,
+  setViewport,
   shiftLead,
   user,
   userQuery,
@@ -107,8 +108,8 @@ describe("a user's access", () => {
     const roles = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
     await waitFor(() =>
       expect(bodyRows(roles)).toEqual([
-        ['Viewer', 'Acme AB, all plants', 'Remove'],
-        ['Shift lead', 'Plant A', ''],
+        ['Shift leadCustom role', 'Plant A', ''],
+        ['ViewerPlanning, default role', 'Acme AB, all plants', 'Remove'],
       ]),
     );
     // Shift lead includes Release, which the reader does not hold, so the reader cannot remove it.
@@ -119,18 +120,39 @@ describe("a user's access", () => {
     );
 
     const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Acme AB' });
-    const planning = await within(can).findByRole('table', { name: 'Planning' });
-    expect(bodyRows(planning)).toEqual([
+    expect(
+      within(can).getByText(
+        "Every permission of the roles above, by module. A change applies from Sara Nyberg's next action.",
+      ),
+    ).toBeDefined();
+    const permissions = await within(can).findByRole('table', {
+      name: 'What Sara Nyberg can do at Acme AB',
+    });
+    expect(groupedRows(permissions)).toEqual([
       [
-        'Read production orders and the planning boardplanning.productionOrder:read',
-        'Viewer at Acme AB',
+        'Planning',
+        [
+          [
+            'Read production orders and the planning boardplanning.productionOrder:read',
+            'Viewer at Acme AB',
+          ],
+        ],
       ],
     ]);
+    expect(
+      within(permissions)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Planning1']);
 
     await user.click(within(can).getByRole('checkbox', { name: 'Show every permission' }));
 
-    const every = within(can).getByRole('table', { name: 'Planning 1 of 3' });
-    expect(bodyRows(every).at(-1)).toEqual([
+    expect(
+      within(permissions)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Planning1 of 3']);
+    expect(groupedRows(permissions)[0]?.[1].at(-1)).toEqual([
       'Run autoplanplanning.autoplan:run',
       'No access. No role of Sara Nyberg at Acme AB includes it.',
     ]);
@@ -206,7 +228,7 @@ describe("a user's access", () => {
 
     await waitFor(() =>
       expect(bodyRows(screen.getByRole('table', { name: 'Roles of Sara Nyberg' }))).toEqual([
-        ['Viewer', 'Acme AB, all plants', 'Remove'],
+        ['ViewerPlanning, default role', 'Acme AB, all plants', 'Remove'],
       ]),
     );
     await waitFor(() =>
@@ -214,8 +236,9 @@ describe("a user's access", () => {
         "Shift lead at Plant A removed from Sara Nyberg. It applies from Sara Nyberg's next action.",
       ),
     );
+    // Focus moves to the next row's role link (NO24).
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Add role' })),
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Viewer' })),
     );
   });
 
@@ -284,7 +307,7 @@ describe("a user's access", () => {
     await pointer.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(bodyRows(screen.getByRole('table', { name: 'Roles of Sara Nyberg' }))).toEqual([
-      ['Company admin', 'Acme AB, all plants', 'Remove'],
+      ['Company adminCore, default role', 'Acme AB, all plants', 'Remove'],
     ]);
   });
 
@@ -404,10 +427,82 @@ describe("a user's access", () => {
     );
 
     expect(
-      await screen.findByText('Lena Ek holds no role at Acme AB or its plants.'),
+      await screen.findByRole('heading', {
+        level: 3,
+        name: 'Lena Ek holds no role at Acme AB or its plants.',
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByText('Add a role so that Lena Ek can work at Acme AB and its plants.'),
     ).toBeDefined();
     expect(await screen.findByRole('link', { name: 'Add role' })).toBeDefined();
-    expect(await screen.findByText('Permissions come from roles. Add a role above.')).toBeDefined();
+    expect(
+      await screen.findByRole('heading', {
+        level: 3,
+        name: 'Lena Ek can do nothing at Acme AB yet.',
+      }),
+    ).toBeDefined();
+    expect(screen.getByText('Permissions come from roles. Add a role above.')).toBeDefined();
+  });
+
+  it('E05-S06 what the user can do failed to load: the card shows the error with the correlation id, and Try again keeps focus and loads it', async () => {
+    const pointer = userEvent.setup();
+    renderCoreAt(accessHref, [
+      settingsViewerQuery(assigner),
+      companiesQuery(),
+      userQuery(saraOfPage),
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id, companyId } },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'x',
+              path: ['coreUser'],
+              extensions: { code: 'INTERNAL_SERVER_ERROR', correlationId: 'c0ffee12' },
+            },
+          ],
+        },
+      },
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Acme AB' });
+    expect(
+      await within(can).findByRole('heading', { name: 'Could not load what Sara Nyberg can do' }),
+    ).toBeDefined();
+    const retry = within(can).getByRole('button', { name: 'Try again' });
+    await pointer.click(retry);
+    expect(
+      await within(can).findByRole('table', { name: 'What Sara Nyberg can do at Acme AB' }),
+    ).toBeDefined();
+  });
+
+  it('E05-S06 at 320 px each role is a card with its kind, its place and Remove or who can remove it (NO13)', async () => {
+    setViewport(320, 640);
+    try {
+      renderCoreAt(accessHref, [
+        settingsViewerQuery(reader),
+        companiesQuery(),
+        userQuery(saraOfPage),
+        permissionsQuery(sara, saraGrants),
+      ]);
+
+      const list = await screen.findByRole('list', { name: 'Roles of Sara Nyberg' });
+      await waitFor(() =>
+        expect(
+          within(list)
+            .getAllByRole('listitem')
+            .map((item) => item.textContent),
+        ).toEqual([
+          'Shift leadCustom rolePlant A',
+          'ViewerPlanning, default roleAcme AB, all plantsRemove',
+        ]),
+      );
+      expect(screen.queryByRole('table', { name: 'Roles of Sara Nyberg' })).toBeNull();
+    } finally {
+      setViewport(1440, 900);
+    }
   });
 
   it('E05-S06 a reader without core.role:read sees No access in each Role cell, Remove named by the place, no Add role, and the permissions region denied with what it needs', async () => {
