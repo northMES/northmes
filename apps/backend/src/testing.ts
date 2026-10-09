@@ -232,6 +232,27 @@ export function grantRoles(
 }
 
 /**
+ * Gives a user a role at a scope node of the role's company, as core's owner role, and returns the
+ * assignment's id.
+ */
+export function givenAssignment(
+  ownerUrl: string,
+  { userId, roleId, scopeId }: { userId: string; roleId: string; scopeId: string },
+): Promise<string> {
+  return asCoreOwner(ownerUrl, async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
+       select $1, company_id, id, $3 from core.scope where id = $2
+       returning id`,
+      [userId, scopeId, roleId],
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error(`givenAssignment: no scope ${scopeId} in core.scope`);
+    return id;
+  });
+}
+
+/**
  * Writes a user straight into auth.user, without a password, and grants it roles. Such a user
  * cannot sign in; a test of can() or of the principal's scopes reads its principal directly.
  */

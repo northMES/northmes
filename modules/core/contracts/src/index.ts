@@ -4,3 +4,13 @@
 export { archiveArticle, createArticle, restoreArticle, updateArticle } from './article.ts';
 export { coreLinks } from './links.ts';
 export { plantSlug, reservedPlantSlugs } from './plant.ts';
+export {
+  accessReason,
+  assignRole,
+  createRole,
+  deleteRole,
+  permissionKey,
+  removeRoleAssignment,
+  updateRole,
+} from './role.ts';
+export { blockUser, createUser, unblockUser, username } from './user.ts';
