@@ -18,12 +18,14 @@ import { bodyRows, plant, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
 
+/** Reads roles at Plant A, and creates and edits them at Acme AB, where the API checks it. */
 const manager = ['core.role:read', 'core.role:manage'];
+const managerQuery = () => viewerQuery(manager, ['core.role:manage']);
 
 describe('roles', () => {
   it('E05-S06 the roles list shows the custom roles, then the default roles, with who defines them and how many hold them here, and New role for a user who may manage roles', async () => {
     renderCoreAt(coreLinks.roles({ plant }).href, [
-      viewerQuery(manager),
+      managerQuery(),
       companiesQuery(),
       rolesQuery([shiftLead, planner, viewerRole]),
     ]);
@@ -51,9 +53,9 @@ describe('roles', () => {
     );
   });
 
-  it('E05-S06 a reader without core.role:manage gets no New role, and a line says what it needs', async () => {
+  it('E05-S06 a reader without core.role:manage at Acme AB, even with it at Plant A, gets no New role, and a line says what it needs', async () => {
     renderCoreAt(coreLinks.roles({ plant }).href, [
-      viewerQuery(['core.role:read']),
+      viewerQuery(['core.role:read', 'core.role:manage']),
       companiesQuery(),
       rolesQuery([shiftLead]),
     ]);
@@ -92,7 +94,7 @@ describe('roles', () => {
   it("E05-S06 a role's page lists its permissions by module, and Holders, read only, who holds it at the company and at the plant; the open tab lives in the URL", async () => {
     const user = userEvent.setup();
     const router = renderCoreAt(coreLinks.roles.role({ plant, roleId: shiftLead.id }).href, [
-      viewerQuery(manager),
+      managerQuery(),
       companiesQuery(),
       roleQuery(shiftLead),
     ]);
@@ -126,7 +128,7 @@ describe('roles', () => {
 
   it('E05-S06 a default role cannot be edited: its page offers New role from it and says why', async () => {
     renderCoreAt(coreLinks.roles.role({ plant, roleId: planner.id }).href, [
-      viewerQuery(manager),
+      managerQuery(),
       companiesQuery(),
       roleQuery(planner),
     ]);

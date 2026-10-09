@@ -241,10 +241,25 @@ describe("a user's access", () => {
     ).toBeDefined();
   });
 
+  it('E05-S08 Block user needs core.user:block at the company: a plant admin who holds it at Plant A only gets no Block user', async () => {
+    renderCoreAt(accessHref, [
+      viewerQuery([...plantAdmin, 'core.user:block']),
+      companiesQuery(),
+      userQuery(saraOfPage),
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    // Remove shows once the reader's permissions arrived, so Block user would show by then too.
+    expect(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Block user' })).toBeNull();
+  });
+
   it('E05-S08 Block user asks with an optional reason that has focus, then Unblock user takes its place and focus, and the polite region says what changed', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.users.user({ plant, userId: sara.id }).href, [
-      viewerQuery(['core.user:read', 'core.user:block']),
+      viewerQuery(['core.user:read', 'core.user:block'], ['core.user:block']),
       companiesQuery(),
       userQuery(saraOfPage),
       {

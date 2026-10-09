@@ -65,7 +65,7 @@ function field(name: string): HTMLInputElement {
 describe('users', () => {
   it('E05-S08 the users list shows each user with their username, their roles per place and their status, and New user for a user who may create users', async () => {
     renderCoreAt(coreLinks.users({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create']),
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
       companiesQuery(),
       usersQuery([
         user(anna, [], true),
@@ -117,10 +117,32 @@ describe('users', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
+  it('E05-S08 New user needs core.user:create at the company: a plant admin who holds it at Plant A only gets the page No access to New user, and the list shows no New user', async () => {
+    const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
+      viewerQuery(['core.user:read', 'core.user:create']),
+      companiesQuery(),
+      usersQuery([user(sara, [])]),
+    ]);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'No access to New user' }),
+    ).toBeDefined();
+    expect(
+      await screen.findByText(
+        'Opening New user needs the permission to create users (core.user:create) at Acme AB. Ask a company admin of Acme AB for a role that includes it.',
+      ),
+    ).toBeDefined();
+    expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
+
+    await router.navigate({ to: coreLinks.users({ plant }).href });
+    expect(await screen.findByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'New user' })).toBeNull();
+  });
+
   it('E05-S08 Create user with empty fields shows each message in the summary, which takes focus, and sends nothing', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create']),
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
       companiesQuery(),
     ]);
 
@@ -135,7 +157,7 @@ describe('users', () => {
   it('E05-S08 a username that is taken or was used before lands on Username with the typed values kept', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create']),
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
       companiesQuery(),
       {
         request: {
@@ -187,7 +209,7 @@ describe('users', () => {
       username: 't.lindqvist',
     } as const;
     const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create']),
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
       companiesQuery(),
       {
         request: {

@@ -48,7 +48,7 @@ describe('the role editor', () => {
       'planning.autoplan:run',
     ]);
     const router = renderCoreAt(coreLinks.roles.new({ plant }, { from: planner.id }).href, [
-      viewerQuery(jonas),
+      viewerQuery(jonas, ['core.role:manage']),
       companiesQuery(),
       rolesQuery([shiftLead, planner, viewerRole]),
       catalogQuery(),
@@ -108,7 +108,7 @@ describe('the role editor', () => {
   it('E05-S06 Enter on a module button closes and opens the module, and focus stays on it', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.roles.new({ plant }).href, [
-      viewerQuery(karin),
+      viewerQuery(karin, ['core.role:manage']),
       companiesQuery(),
       rolesQuery([shiftLead]),
       catalogQuery(),
@@ -133,7 +133,7 @@ describe('the role editor', () => {
       permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
     };
     renderCoreAt(coreLinks.roles.role.edit({ plant, roleId: shiftLead.id }).href, [
-      viewerQuery(karin),
+      viewerQuery(karin, ['core.role:manage']),
       companiesQuery(),
       roleQuery(shiftLead),
       catalogQuery(),
@@ -172,7 +172,7 @@ describe('the role editor', () => {
   it('E05-S06 a Save the API refuses by the grant rule keeps every tick and the reason, and the summary takes focus and names the permission and who can act', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.roles.role.edit({ plant, roleId: shiftLead.id }).href, [
-      viewerQuery(karin),
+      viewerQuery(karin, ['core.role:manage']),
       companiesQuery(),
       roleQuery(shiftLead),
       catalogQuery(),
@@ -230,7 +230,7 @@ describe('the role editor', () => {
     const user = userEvent.setup();
     const renamed = { ...shiftLead, name: 'Shift leader', version: 2 };
     renderCoreAt(coreLinks.roles.role.edit({ plant, roleId: shiftLead.id }).href, [
-      viewerQuery(karin),
+      viewerQuery(karin, ['core.role:manage']),
       companiesQuery(),
       roleQuery(shiftLead),
       catalogQuery(),
@@ -270,9 +270,9 @@ describe('the role editor', () => {
     expect(checkbox('Run autoplan').getAttribute('aria-checked')).toBe('false');
   });
 
-  it('E05-S06 the edit route without core.role:manage is the page No access to Edit role', async () => {
+  it('E05-S06 the edit route without core.role:manage at Acme AB, even with it at Plant A, is the page No access to Edit role', async () => {
     renderCoreAt(coreLinks.roles.role.edit({ plant, roleId: shiftLead.id }).href, [
-      viewerQuery(['core.role:read']),
+      viewerQuery(['core.role:read', 'core.role:manage']),
       companiesQuery(),
       roleQuery(shiftLead),
     ]);
@@ -282,7 +282,7 @@ describe('the role editor', () => {
     ).toBeDefined();
     expect(
       await screen.findByText(
-        'Opening Edit role needs the permission to create and edit roles (core.role:manage) at Plant A. Ask a plant admin for a role that includes it.',
+        'Opening Edit role needs the permission to create and edit roles (core.role:manage) at Acme AB. Ask a company admin of Acme AB for a role that includes it.',
       ),
     ).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Role name' })).toBeNull();
