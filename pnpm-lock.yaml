@@ -234,6 +234,9 @@ importers:
       '@northmes/testing':
         specifier: workspace:*
         version: link:packages/testing
+      '@northmes/web-sdk':
+        specifier: workspace:*
+        version: link:packages/web-sdk
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0
