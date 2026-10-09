@@ -23,11 +23,20 @@ interface ReleaseContext {
  * its new version.
  */
 export const releaseProductionOrderHandler = {
-  // The bus reads the order and locks its row until the command's transaction ends, so the version
-  // check, the validators and the handler see the same order and a second release waits for the
-  // first. An order outside the principal's scopes is not found, like one that does not exist.
+  // The bus reads the order's scope and checks the permission there, then locks the row until the
+  // command's transaction ends, so the version check, the validators and the handler see the same
+  // order and a second release waits for the first. An order outside the principal's read scopes
+  // is not found, like one that does not exist.
   target: {
     entity: 'Production order',
+    scopeOf: async (id: string, { tx }: Pick<ReleaseContext, 'tx'>) =>
+      (
+        await tx
+          .selectFrom('planning.production_order')
+          .select('scope_id')
+          .where('id', '=', id)
+          .executeTakeFirst()
+      )?.scope_id,
     load: (id: string, { tx }: Pick<ReleaseContext, 'tx'>) =>
       tx
         .selectFrom('planning.production_order')

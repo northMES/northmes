@@ -35,6 +35,7 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   // The fixture reads no table: every order it is asked for exists at version 1.
   target: {
     entity: 'Production order',
+    scopeOf: async (_id, { plantId }) => plantId,
     load: async (id, { plantId }) => ({ id, version: 1, scope_id: plantId ?? '' }),
   },
   async handle({ id }) {

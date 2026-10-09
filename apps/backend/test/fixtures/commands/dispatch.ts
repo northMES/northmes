@@ -38,11 +38,18 @@ async function jobAtPlant(id: string, { plantId }: { readonly plantId: string | 
   return { id, version: 1, scope_id: plantId ?? '' };
 }
 
+/** Every job is at the plant the request names, where a job command runs. */
+const jobTarget = {
+  entity: 'Job',
+  scopeOf: async (_id: string, { plantId }: { readonly plantId: string | undefined }) => plantId,
+  load: jobAtPlant,
+};
+
 export const ReleaseJob = defineCommand(releaseJob, {
   returns: () => Job,
   // The fixture reads no table: every job it is asked for exists at version 1, at the request's
   // plant.
-  target: { entity: 'Job', load: jobAtPlant },
+  target: jobTarget,
   async buildPayload({ id }) {
     return { jobId: id, quantity: 1500 };
   },
@@ -61,7 +68,7 @@ export const holdJob = defineCommandContract({
 
 export const HoldJob = defineCommand(holdJob, {
   returns: () => Job,
-  target: { entity: 'Job', load: jobAtPlant },
+  target: jobTarget,
   async handle({ id }) {
     return { id, status: 'held' };
   },

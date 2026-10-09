@@ -33,15 +33,23 @@ export interface TargetRow {
 }
 
 /**
- * The entity a command on an existing entity changes (contract target existing). The bus loads it
- * before the validators and the handler run, and refuses the command with Nest's
- * NotFoundException when load finds no row, with core.forbidden when the principal does not hold
- * the contract's permission at the row's scope_id, or with core.version_conflict when the row's
- * version is not the input's expectedVersion (ADR 0012 steps 3 and 5).
+ * The entity a command on an existing entity changes (contract target existing). Before the
+ * validators and the handler run, the bus reads the row's scope with scopeOf and checks the
+ * contract's permission there, then locks the row with load and checks the permission at the
+ * locked row's scope_id again. It refuses the command with Nest's NotFoundException when either
+ * finds no row, with core.forbidden when the principal does not hold the permission at the row's
+ * scope, or with core.version_conflict when the row's version is not the input's expectedVersion
+ * (ADR 0012 steps 3 and 5).
  */
 export interface CommandTarget<Target> {
   /** The entity's name in the messages of those errors, such as Article. */
   readonly entity: string;
+  /**
+   * Reads the scope_id of the row with this id without locking it, so the bus refuses a row that
+   * the principal reads but may not change with core.forbidden: row-level security limits a lock
+   * to the write scopes. undefined when no row with the id is at the principal's read scopes.
+   */
+  scopeOf(id: string, context: Pick<HandlerContext, 'tx' | 'plantId'>): Promise<string | undefined>;
   /**
    * Reads the row with this id and locks it until the command's transaction ends, so the version
    * check, the validators and the handler judge the same row. undefined when no row with the id

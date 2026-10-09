@@ -108,54 +108,62 @@ interface ExistingInput {
   readonly expectedVersion: number;
 }
 
-/**
- * Loads the target of a command on an existing entity (ADR 0012 step 3): Nest's NotFoundException
- * when no row with the input's id is at the principal's scopes. A command without a target gets
- * undefined.
- */
-async function loadTarget<Input, Result, Target extends TargetRow | undefined>(
-  command: Command<Input, Result, Target>,
-  input: Input,
-  context: { readonly tx: Transaction<unknown>; readonly plantId: string | undefined },
-): Promise<Target | undefined> {
-  if (!command.target) return undefined;
-  const { entity, load } = command.target;
-  const { id } = input as ExistingInput;
-  const row = await load(id, context);
-  if (!row) {
-    throw new NotFoundException(`${entity} ${id} was not found`);
-  }
-  return row;
-}
-
 /** The refusal of a command whose permission the principal does not hold where it runs. */
 function forbidden(message: string): DomainError {
   return new DomainError({ code: 'core.forbidden', status: HttpStatus.FORBIDDEN, message });
 }
 
+/** The answer to a command on a row that is not at the principal's scopes, or does not exist. */
+function notFound(entity: string, id: string): NotFoundException {
+  return new NotFoundException(`${entity} ${id} was not found`);
+}
+
+/** core.forbidden when the principal does not hold `permission` at the scope of row `id`. */
+function authorizeAtRow(
+  principal: Principal,
+  permission: string,
+  row: { readonly entity: string; readonly id: string; readonly scopeId: string },
+): void {
+  if (!can(principal, permission, row.scopeId)) {
+    throw forbidden(`You need ${permission} at the scope of ${row.entity} ${row.id}`);
+  }
+}
+
 /**
- * The permission step (ADR 0010, ADR 0012 step 3): the principal must hold the contract's
- * permission at the scope of the row the command changes, or, for a command without a target such
- * as a create, at the plant the request names, where the handler writes. Anything else is
- * core.forbidden: a run without a principal, a create from a request without a plant, and a
- * principal whose role assignments do not grant the permission there or at a scope above it.
+ * The permission step (ADR 0010, ADR 0012 step 3), with the load of the target. The principal must
+ * hold the contract's permission at the scope of the row the command changes, or, for a command
+ * without a target such as a create, at the plant the request names, where the handler writes.
+ * Anything else is core.forbidden: a run without a principal, a create from a request without a
+ * plant, and a principal whose role assignments do not grant the permission there or at a scope
+ * above it.
+ *
+ * For a command on an existing entity, the bus checks the scope that target.scopeOf reads before
+ * target.load locks the row. Row-level security limits the lock to the write scopes, so a row that
+ * the principal reads but may not change would otherwise answer NOT_FOUND. The bus checks the
+ * locked row's scope again, which catches a row that moved in between. A row outside the
+ * principal's read scopes is NotFoundException, like one that does not exist. A command without a
+ * target gets undefined.
  */
-function authorize<Input, Result, Target extends TargetRow | undefined>(
+async function authorizeAndLoad<Input, Result, Target extends TargetRow | undefined>(
   command: Command<Input, Result, Target>,
   input: Input,
   principal: Principal | null,
-  target: TargetRow | undefined,
-): void {
+  context: { readonly tx: Transaction<unknown>; readonly plantId: string | undefined },
+): Promise<Target | undefined> {
   const { name, permission } = command.contract;
   if (!principal) {
     throw forbidden(`${name} runs only for a signed-in user`);
   }
-  if (command.target && target) {
-    if (!can(principal, permission, target.scope_id)) {
-      const { id } = input as ExistingInput;
-      throw forbidden(`You need ${permission} at the scope of ${command.target.entity} ${id}`);
-    }
-    return;
+  if (command.target) {
+    const { entity, scopeOf, load } = command.target;
+    const { id } = input as ExistingInput;
+    const scopeId = await scopeOf(id, context);
+    if (scopeId === undefined) throw notFound(entity, id);
+    authorizeAtRow(principal, permission, { entity, id, scopeId });
+    const row = await load(id, context);
+    if (!row) throw notFound(entity, id);
+    authorizeAtRow(principal, permission, { entity, id, scopeId: row.scope_id });
+    return row;
   }
   const { plantId } = principal;
   if (!plantId) {
@@ -164,6 +172,7 @@ function authorize<Input, Result, Target extends TargetRow | undefined>(
   if (!can(principal, permission, plantId)) {
     throw forbidden(`You need ${permission} at plant ${plantId}`);
   }
+  return undefined;
 }
 
 /**
@@ -217,9 +226,9 @@ function validatorsByCommand({
 }
 
 /**
- * The command bus of the host. It runs each command in one ScopedDatabase transaction: it loads the
- * target of a command on an existing entity, checks the contract's permission at the target's
- * scope or at the request's plant, and checks the target's version; for a command with validators
+ * The command bus of the host. It runs each command in one ScopedDatabase transaction: it checks
+ * the contract's permission at the scope of the row a command on an existing entity changes, before
+ * and after it locks the row, or at the request's plant, and checks the target's version; for a command with validators
  * it builds the payload, parses it with each validator's copy of the owner's contract and runs the
  * validators, each on its own frozen copy and within its time limit; then it runs the handler
  * (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit rejects the command,
@@ -244,8 +253,7 @@ export class CommandBusImpl implements CommandBus {
     return this.#transaction(async (tx) => {
       const plantId = principal?.plantId;
       // A command without a target gets undefined, which its Target type then is.
-      const target = (await loadTarget(command, input, { tx, plantId })) as Target;
-      authorize(command, input, principal, target);
+      const target = (await authorizeAndLoad(command, input, principal, { tx, plantId })) as Target;
       checkVersion(command, input, target);
       const context = { tx, plantId, target };
       if (validators.length > 0) {
