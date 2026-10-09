@@ -12,3 +12,4 @@ export {
   type HeldRole,
   type PickRole,
 } from './assign-role-form-fields.tsx';
+export type { PersonSearch } from './assign-role-form-person.tsx';

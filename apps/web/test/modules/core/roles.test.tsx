@@ -266,6 +266,7 @@ describe('roles', () => {
     ]);
 
     expect(await screen.findByText('No roles match these filters')).toBeDefined();
+    expect(await screen.findByText('2 roles at Acme AB')).toBeDefined();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     const table = await screen.findByRole('table', { name: 'Roles' });
     expect(groupedRows(table).map(([group]) => group)).toEqual([
