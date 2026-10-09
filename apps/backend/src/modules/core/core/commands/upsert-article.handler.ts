@@ -86,17 +86,18 @@ export const upsertArticleHandler = {
     const companyId = await requestCompany(input, context);
     // The scope hook found no company, so the bus refused the command before the handler runs.
     if (!companyId) throw new NotFoundException(`Article ${input.code} was not found`);
-    const codeKey = input.code.toLowerCase();
-    // Concurrent upserts of one new article number wait here for each other, so the second one
-    // finds the article the first one created instead of failing on its number with core.code_taken.
-    await sql`select pg_advisory_xact_lock(hashtextextended(${`core.article-code:${companyId}:${codeKey}`}, 0))`.execute(
+    // Postgres lowers the number for the lock and the lookup as it does for the stored code_key;
+    // JavaScript's toLowerCase differs for some letters, such as İ. Concurrent upserts of one new
+    // number wait on the lock, so the second finds the article the first one created instead of
+    // failing on its number with core.code_taken.
+    await sql`select pg_advisory_xact_lock(hashtextextended(${`core.article-code:${companyId}:`} || lower(${input.code}), 0))`.execute(
       tx,
     );
     const found = await tx
       .selectFrom('core.article')
       .selectAll()
       .where('company_id', '=', companyId)
-      .where('code_key', '=', codeKey)
+      .where('code_key', '=', sql<string>`lower(${input.code})`)
       .executeTakeFirst();
     if (!found) return createArticleHandler.handle(input, context);
     refuseArchived(found);
