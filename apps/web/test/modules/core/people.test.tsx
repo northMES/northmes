@@ -196,17 +196,16 @@ describe('People in plant settings', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Where' })).toBeNull();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Person' }), anna.id);
 
-    const roles = screen.getByRole('radiogroup', { name: 'Role' });
-    expect(
-      within(roles).getByRole('radio', { name: 'Company admin' }).hasAttribute('data-disabled'),
-    ).toBe(true);
-    expect(within(roles).getByRole('radio', { name: 'Viewer' }).hasAttribute('data-disabled')).toBe(
-      true,
-    );
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    const roles = await screen.findByRole('listbox');
+    const option = (name: string) =>
+      within(roles).getByRole('option', { name: new RegExp(`^${name}`) });
+    expect(option('Company admin').getAttribute('aria-disabled')).toBe('true');
+    expect(option('Viewer').getAttribute('aria-disabled')).toBe('true');
     expect(
       within(roles).getByText('Planning, default role. Anna Berg already holds it at Plant A.'),
     ).toBeDefined();
-    await user.click(within(roles).getByRole('radio', { name: 'Planner' }));
+    await user.click(option('Planner'));
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'People' })).toBeDefined();
