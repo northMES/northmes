@@ -75,7 +75,7 @@ Role `api` serves the one schema and no web files. Boot runs the root-field chec
 
 #### Changes to ADR 0003
 
-Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go.
+Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go. The manifest's `commands` field goes as well: a command's contract says whether a plugin may validate it ([ADR 0017][adr-0017]), and the longest validator time limit that the `commands` entry carried belongs on the contract once validator time limits are built.
 
 #### Changes to ADR 0012
 
