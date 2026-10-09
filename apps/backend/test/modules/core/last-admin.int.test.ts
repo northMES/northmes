@@ -148,6 +148,36 @@ describe('every company keeps an active Company admin', () => {
     expect(await blocked(karin.userId)).toBe(false);
   });
 
+  it('E05-S08 blocking the last active Company admin of another company of the user is refused with core.last_admin, from a plant of the first company', async () => {
+    const company = await acme();
+    const nordic = await givenCompany(db.ownerUrl, { name: 'Nordic AB' });
+    const [nordicAdmin] = await db.command(
+      { principal: { type: 'user', id: 'e05-s08' }, scopes: [nordic.company], reason: 'probe' },
+      async (tx) =>
+        (
+          await tx.query<{ id: string }>(
+            `select id from core.role where company_id = $1 and key = 'core-company-admin'`,
+            [nordic.company],
+          )
+        ).rows,
+    );
+    // Karin is a Company admin of Acme AB, where Oskar is one too, and the only one of Nordic AB.
+    const karin = await person(company, company.company);
+    const oskar = await person(company, company.company, [
+      { scopeId: nordic.company, permissions: ['core.user:block', 'core.user:read'] },
+    ]);
+    await givenAssignment(db.ownerUrl, {
+      userId: karin.userId,
+      roleId: nordicAdmin?.id ?? '',
+      scopeId: nordic.company,
+    });
+
+    const answer = await oskar.client.send(blockMutation, { input: { id: karin.userId } });
+
+    expect(refusals(answer)).toEqual(lastAdmin);
+    expect(await blocked(karin.userId)).toBe(false);
+  });
+
   it('E05-S06 a blocked Company admin and a Company admin assigned at a plant do not count, so the last active one at the company cannot remove their own', async () => {
     const company = await acme();
     const karin = await person(company, company.company);

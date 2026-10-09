@@ -98,7 +98,26 @@ describe('the row-level security policies of roles and role assignments', () => 
     expect(removeFromPlant).toEqual({ rows: 0 });
   });
 
-  it('E05-S06 nm_app still reads every role and assignment without scopes, as the principal query does', async () => {
+  it("E05-S06 nm_app reads a role only with the role's company among its read scopes, so a role of another company is not readable", async () => {
+    const acme = await given();
+    const nordic = await given();
+    const roleIds = [acme.roleId, nordic.roleId];
+
+    const atAcme = await db.command(
+      { principal, scopes: [acme.company, acme.plant], reason: 'E05-S06 probe' },
+      async (tx) =>
+        (await tx.query('select id from core.role where id = any ($1::uuid[])', [roleIds])).rows,
+    );
+    const withoutScopes = await query(
+      db.appUrl,
+      `select id from core.role where id in ('${acme.roleId}', '${nordic.roleId}')`,
+    );
+
+    expect(atAcme).toEqual([{ id: acme.roleId }]);
+    expect(withoutScopes).toEqual([]);
+  });
+
+  it("E05-S06 nm_app reads a user's grants without scopes through core.principal_grants, a definer function with a pinned search_path", async () => {
     const { company, plant, userId, roleId } = await given();
     await asApp(
       [plant],
@@ -107,12 +126,44 @@ describe('the row-level security policies of roles and role assignments', () => 
       [userId, company, plant, roleId],
     );
 
-    const rows = await query(
+    const grants = await query<{ id: string; parent_id: string | null; permissions: string[] }>(
       db.appUrl,
-      `select r.name, a.scope_id from core.role_assignment a join core.role r on r.id = a.role_id
-        where a.user_id = '${userId}'`,
+      `select id, parent_id, permissions from core.principal_grants('${userId}') order by parent_id nulls first`,
+    );
+    const [definer] = await query<{ prosecdef: boolean; proconfig: string[] }>(
+      db.appUrl,
+      `select prosecdef, proconfig from pg_proc where oid = 'core.principal_grants(uuid)'::regprocedure`,
     );
 
-    expect(rows).toEqual([{ name: 'Shift lead', scope_id: plant }]);
+    expect(grants).toEqual([
+      { id: company, parent_id: null, permissions: [] },
+      { id: plant, parent_id: company, permissions: ['core.article:read'] },
+    ]);
+    expect(definer).toEqual({ prosecdef: true, proconfig: ['search_path=pg_catalog, pg_temp'] });
+  });
+
+  it('E05-S06 core.default_role has row-level security with one SELECT policy, so nm_app reads the default roles and writes none', async () => {
+    const [table] = await query<{ relrowsecurity: boolean }>(
+      db.appUrl,
+      `select relrowsecurity from pg_class where oid = 'core.default_role'::regclass`,
+    );
+    const policies = await query<{ cmd: string; roles: string }>(
+      db.appUrl,
+      `select cmd, roles::text from pg_policies where schemaname = 'core' and tablename = 'default_role'`,
+    );
+    const keys = await query<{ key: string }>(
+      db.appUrl,
+      `select key from core.default_role where key = 'core-company-admin'`,
+    );
+    const insert = await asApp(
+      [],
+      `insert into core.default_role (key, module_id, name) values ('x-role', 'x', 'X')`,
+      [],
+    );
+
+    expect(table).toEqual({ relrowsecurity: true });
+    expect(policies).toEqual([{ cmd: 'SELECT', roles: '{nm_app}' }]);
+    expect(keys).toEqual([{ key: 'core-company-admin' }]);
+    expect(insert).toEqual({ refused: 'permission denied for table default_role' });
   });
 });
