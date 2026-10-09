@@ -5,6 +5,7 @@ import { currentPrincipal } from '../../../../principal.ts';
 import { forbidden } from '../access/request-scope.ts';
 import { type RoleRecord, roleColumns } from '../role.service.ts';
 import type { CoreContext } from './context.ts';
+import { refuseCompanyAdminRoleChange } from './last-admin.ts';
 import {
   normalizedPermissions,
   refuseTakenName,
@@ -17,7 +18,8 @@ import { type RoleRow, refuseDefaultRole, roleTarget } from './role-target.ts';
  * The handler of core.updateRole (ADR 0012), which the mutation coreUpdateRole sends through the
  * command bus after it checked core.role:manage at the role's company. It changes the name and the
  * permissions of a custom role and returns it with its new version. Each permission it adds must
- * be held by the editor at every scope where the role is assigned (ADR 0010).
+ * be held by the editor at every scope where the role is assigned (ADR 0010). Company admin is
+ * refused with core.last_admin, another default role with core.role_not_custom.
  */
 export const updateRoleHandler = {
   target: roleTarget,
@@ -25,6 +27,7 @@ export const updateRoleHandler = {
     { id, name, permissions }: z.output<typeof updateRole.input>,
     { tx, target }: CoreContext<RoleRow>,
   ): Promise<RoleRecord> {
+    refuseCompanyAdminRoleChange(target);
     refuseDefaultRole(target);
     const principal = currentPrincipal();
     if (!principal) throw forbidden('core.updateRole runs only for a signed-in user');

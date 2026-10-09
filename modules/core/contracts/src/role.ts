@@ -51,7 +51,8 @@ export const createRole = defineCommandContract({
  * Changes the name and the permissions of a custom role, which the input names by id with the
  * version the change was made on. It needs core.role:manage at the role's company, and each
  * permission it adds held by the editor at every scope where the role is assigned (ADR 0010),
- * else core.role_not_held. A default role is refused with core.role_not_custom.
+ * else core.role_not_held. Company admin is refused with core.last_admin, another default role
+ * with core.role_not_custom.
  */
 export const updateRole = defineCommandContract({
   name: 'core.updateRole',
@@ -62,9 +63,9 @@ export const updateRole = defineCommandContract({
 });
 
 /**
- * Deletes a custom role that nobody holds. It needs core.role:manage at the role's company. A
- * default role is refused with core.role_not_custom, and a role someone holds with
- * core.role_in_use.
+ * Deletes a custom role that nobody holds. It needs core.role:manage at the role's company.
+ * Company admin is refused with core.last_admin, another default role with core.role_not_custom,
+ * and a role someone holds with core.role_in_use.
  */
 export const deleteRole = defineCommandContract({
   name: 'core.deleteRole',
@@ -90,7 +91,8 @@ export const assignRole = defineCommandContract({
 /**
  * Takes a role assignment away from its user. It needs core.roleAssignment:manage at the
  * assignment's scope, and every permission of the role held by the remover there (ADR 0010), else
- * core.role_not_held. It applies from the user's next request.
+ * core.role_not_held. It applies from the user's next request. Removing Company admin at the
+ * company from the company's last active Company admin is refused with core.last_admin.
  */
 export const removeRoleAssignment = defineCommandContract({
   name: 'core.removeRoleAssignment',

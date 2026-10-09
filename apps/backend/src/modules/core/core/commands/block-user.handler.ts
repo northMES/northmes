@@ -10,6 +10,7 @@ import { userAccounts } from '../access/user-accounts.ts';
 import type { UserRecord } from '../user.service.ts';
 import { companyOfPlant } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
+import { refuseBlockingLastAdmin } from './last-admin.ts';
 import { userById, userOfCompany } from './user-rules.ts';
 
 /**
@@ -37,7 +38,8 @@ async function refuseOtherCompanies(context: CoreContext, id: string): Promise<v
  * command bus after it checked core.user:block at the company of the request's plant. The user's
  * other companies need it too. It blocks the user through Better Auth: the user cannot sign in,
  * their sessions end, and their next request is refused. Blocking yourself is refused with
- * core.cannot_block_self.
+ * core.cannot_block_self, and blocking the last active Company admin of a company with
+ * core.last_admin.
  */
 export const blockUserHandler = {
   scope: companyOfPlant,
@@ -54,6 +56,7 @@ export const blockUserHandler = {
       });
     }
     await refuseOtherCompanies(context, id);
+    await refuseBlockingLastAdmin(context.tx, id);
     await userAccounts().block(id, reason);
     return userById(context.tx, id);
   },
