@@ -108,8 +108,7 @@ describe('BoardScreen', () => {
         .map((cell) => cell.textContent),
     ).toEqual(['Order', 'Article', 'Quantity', 'Status', 'Actions']);
     const planned = await rowOf('7101');
-    expect(within(cellOf(planned, 'Article')).getByText('BR-40')).toBeTruthy();
-    expect(within(cellOf(planned, 'Article')).getByText('Bracket 40 mm')).toBeTruthy();
+    expect(cellOf(planned, 'Article').textContent).toBe('BR-40 Bracket 40 mm');
     expect(cellOf(planned, 'Quantity').textContent).toBe('40');
     expect(cellOf(planned, 'Status').textContent).toBe('Planned');
     expect(
@@ -123,11 +122,14 @@ describe('BoardScreen', () => {
     expect(within(table).queryByText('2')).toBeNull();
   });
 
-  it('E02-S05 an order whose article core does not hold says so, and a status without a label shows as the API sent it', async () => {
+  it('E02-S05 an order whose article the reader cannot see shows the cell state of ui-222 LI35, and a status without a label shows as the API sent it', async () => {
     renderBoard([boardQuery(order('7103', '5.000000', 'on_hold', null))]);
 
     const row = await rowOf('7103');
-    expect(cellOf(row, 'Article').textContent).toBe('Unknown article');
+    const article = cellOf(row, 'Article');
+    expect(article.textContent).toBe('Article not available to you');
+    expect(article.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(within(article).getByText('Article not available to you').className).toContain('italic');
     expect(cellOf(row, 'Status').textContent).toBe('on_hold');
   });
 
