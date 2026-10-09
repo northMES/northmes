@@ -41,8 +41,12 @@ export interface RoleFormProps {
   readonly startFrom?: ReactNode;
   /** The role the new role starts from, whose difference the checklist shows. */
   readonly baseline?: { readonly name: string; readonly permissions: readonly string[] };
-  /** The edit form asks for the reason of the change. */
-  readonly withReason?: boolean;
+  /** The reason field in the side column: its label and placeholder. */
+  readonly reason: { readonly label: string; readonly placeholder: string };
+  /** The cards at the top of the side column, such as who holds the role. */
+  readonly side?: ReactNode;
+  /** The Save bar says "Changes not saved" while the form has changes; off when a card says it. */
+  readonly dirtyLine?: boolean;
   /** The permissions the last save was refused for, marked invalid in the checklist. */
   readonly refused?: readonly string[];
   /** The permissions the edited role holds already, which the editor may tick again. */
@@ -85,62 +89,83 @@ export function RoleForm({
   conflict,
   startFrom,
   baseline,
-  withReason = false,
+  reason,
+  side,
+  dirtyLine = true,
   refused,
   current,
   assigned,
 }: RoleFormProps) {
   const { isDirty, isSubmitting } = form.formState;
   return (
-    <form noValidate onSubmit={form.handleSubmit(onSave)} className="flex max-w-190 flex-col gap-4">
-      <Summary form={form} conflict={conflict} failedHeading={failedHeading} />
-      <FormSection title="Role">
-        <TextField
-          label="Role name"
-          hint={`Unique within ${companyName}.`}
-          autoComplete="off"
-          className="max-w-120"
-          {...fieldProps(form, 'name')}
-        />
-        {startFrom}
-      </FormSection>
-      {baseline !== undefined && (
-        <RoleFormDifference
-          name={form.watch('name') ?? ''}
-          baseline={baseline}
-          value={form.watch('permissions') ?? []}
-        />
-      )}
-      <FormSection
-        title="Permissions"
-        description="Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support."
-      >
-        <Controller
-          control={form.control}
-          name="permissions"
-          render={({ field }) => (
-            <PermissionChecklist
-              value={field.value}
-              onChange={field.onChange}
-              baseline={baseline}
-              refused={refused}
-              current={current}
-              assigned={assigned}
+    // Two columns from 1280 px (RO13, RO17): the form, then a 340 px side column with the cards,
+    // the reason and the buttons. Narrower, the side column follows and the Save bar sticks to the
+    // bottom (NO15).
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(onSave)}
+      className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start"
+    >
+      <div className="flex min-w-0 flex-col gap-4">
+        <Summary form={form} conflict={conflict} failedHeading={failedHeading} />
+        <FormSection title="Role">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {startFrom}
+            <TextField
+              label="Role name"
+              hint={`Unique within ${companyName}.`}
+              autoComplete="off"
+              className="max-w-120"
+              {...fieldProps(form, 'name')}
             />
-          )}
-        />
-      </FormSection>
-      {withReason && (
-        <FormSection title="Reason for change">
-          <TextareaField label="Reason" optional {...fieldProps(form, 'reason')} />
+          </div>
         </FormSection>
-      )}
-      <FormActions
-        saveLabel={saveLabel}
-        saving={isSubmitting}
-        cancelHref={cancelHref}
-        dirty={isDirty}
-      />
+        {baseline !== undefined && (
+          <RoleFormDifference
+            name={form.watch('name') ?? ''}
+            baseline={baseline}
+            value={form.watch('permissions') ?? []}
+          />
+        )}
+        <FormSection
+          title="Permissions"
+          description="Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support."
+        >
+          <Controller
+            control={form.control}
+            name="permissions"
+            render={({ field }) => (
+              <PermissionChecklist
+                value={field.value}
+                onChange={field.onChange}
+                baseline={baseline}
+                refused={refused}
+                current={current}
+                assigned={assigned}
+              />
+            )}
+          />
+        </FormSection>
+      </div>
+      <div className="flex min-w-0 flex-col gap-4">
+        {side}
+        <TextareaField
+          label={reason.label}
+          optional
+          placeholder={reason.placeholder}
+          hint="Shown in the role's history. Do not enter personal data. Up to 500 characters."
+          maxLength={500}
+          {...fieldProps(form, 'reason')}
+        />
+        <div className="xl:[&>[data-slot=form-actions]]:static xl:[&>[data-slot=form-actions]]:mx-0 xl:[&>[data-slot=form-actions]]:border-0 xl:[&>[data-slot=form-actions]]:bg-transparent xl:[&>[data-slot=form-actions]]:p-0">
+          <FormActions
+            saveLabel={saveLabel}
+            saving={isSubmitting}
+            cancelHref={cancelHref}
+            dirty={isDirty && dirtyLine}
+          />
+        </div>
+      </div>
       <UnsavedChangesGuard when={isDirty && !isSubmitting} />
     </form>
   );

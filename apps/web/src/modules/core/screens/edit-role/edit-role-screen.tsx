@@ -121,7 +121,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
       refused={refused}
       current={role.permissions}
       assigned={{ roleName: role.name, places: assignedPlaces(role) }}
-      withReason
+      reason={{ label: 'Reason', placeholder: 'Why you change this role' }}
     />
   );
 }
