@@ -48,6 +48,11 @@ export interface ListDeclaration<SortField extends string> {
   readonly defaultOrderBy: readonly OrderBy<NoInfer<SortField>>[];
   /** The text columns that search matches a part of, ignoring case (ADR 0016). */
   readonly search: readonly string[];
+  /**
+   * The list's rows are archived through archived_at, never deleted (ADR 0006). The root field
+   * then takes includeArchived, false by default, and hides archived rows unless it is true.
+   */
+  readonly archivable?: boolean;
 }
 
 /** The arguments of a list's root field (ADR 0016). */
@@ -58,6 +63,8 @@ export interface ListArgs<SortField extends string> {
   readonly before?: string | null;
   readonly orderBy?: readonly OrderBy<SortField>[] | null;
   readonly search?: string | null;
+  /** Lists archived rows too; only an archivable list takes it (ADR 0016). */
+  readonly includeArchived?: boolean | null;
 }
 
 export interface Edge<Node> {
@@ -256,6 +263,12 @@ export function defineList<const SortField extends string>(
   Field(() => String, optional)(ArgsClass.prototype, 'before');
   Field(() => [OrderByInput], optional)(ArgsClass.prototype, 'orderBy');
   Field(() => String, optional)(ArgsClass.prototype, 'search');
+  if (declaration.archivable) {
+    Field(() => Boolean, { nullable: true, defaultValue: false })(
+      ArgsClass.prototype,
+      'includeArchived',
+    );
+  }
   ArgsType()(ArgsClass);
 
   @Resolver(() => ConnectionType)
@@ -291,9 +304,14 @@ export function defineList<const SortField extends string>(
       args: ListArgs<SortField>,
     ): Promise<Connection<Row>> {
       const { backward, size, keys, signature, from, search } = planOf(declaration, args);
-      // The rows of the list without paging: those that search matches.
-      const listed = (tx: Transaction<DB>) =>
-        search ? query(tx).where(matching(declaration.search, search)) : query(tx);
+      // The rows of the list without paging: the active ones unless the call includes archived
+      // rows, and those that search matches.
+      const hideArchived = declaration.archivable === true && args.includeArchived !== true;
+      const listed = (tx: Transaction<DB>) => {
+        let rows = query(tx);
+        if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);
+        return search ? rows.where(matching(declaration.search, search)) : rows;
+      };
       // A backward page reads the rows before the cursor in the opposite order, and reverses them.
       const readKeys = backward ? reversed(keys) : keys;
       const aliases = keys.map((_key, index) => `_nm_key_${index}`);

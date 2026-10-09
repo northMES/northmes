@@ -37,17 +37,20 @@ apps/web/src/
   modules/core/
     index.ts, routes.tsx, screens.ts     public api and wiring
     article.graphql.ts, use-article.tsx  read by more than one screen
+    restore-article.graphql.ts           run by the article and edit screens
     article-list-search.ts               the list's URL search, read by routes.tsx
     screens/
       articles/      index.ts, articles-screen.tsx, articles.graphql.ts
-      article/       index.ts, article-screen.tsx
+      article/       index.ts, article-screen.tsx, article-actions.tsx, archive-article.graphql.ts
       new-article/   index.ts, new-article-screen.tsx, create-article.graphql.ts
       edit-article/  index.ts, edit-article-screen.tsx, update-article.graphql.ts
     components/
-      article-form/  index.ts, article-form.tsx, article-form-reload-button.tsx, article-save-errors.ts
+      article-form/  index.ts, article-form.tsx, article-form-summary-button.tsx, article-save-errors.ts
   ui/
-    primitives/  button.tsx, input.tsx, field.tsx, input-group.tsx, table.tsx, tooltip.tsx, ... (shadcn)
-    components/  icon-button/, text-field/, search-field/, data-table/, page-frame/, error-summary/
+    primitives/  button.tsx, input.tsx, field.tsx, input-group.tsx, table.tsx, tooltip.tsx,
+                 checkbox.tsx, badge.tsx, alert-dialog.tsx, ... (shadcn)
+    components/  icon-button/, text-field/, search-field/, data-table/, page-frame/, error-summary/,
+                 confirm-dialog/
     lib/         field-id.ts, announce.ts, use-zod-form.ts
 ```
 
@@ -56,7 +59,7 @@ Names and places:
 - Directory and file names are kebab-case. A component file is named after the component it exports: `article-form.tsx` exports `ArticleForm`.
 - A component carries a domain name and lives in its module's folder. `apps/web/src/ui` holds the domain-free pieces: `ui/primitives` shadcn's single-concern ones, one file each; `ui/components` the composites, one folder each; `ui/lib` the helpers and hooks that render nothing. A module's composite moves to `ui/components` once two modules render it identically.
 - Each screen has its folder `screens/<screen>/`: `<screen>-screen.tsx`, the documents only that screen runs (`<operation>.graphql.ts`, one named operation per file, each with its generated `<operation>.graphql.gen.ts`, which the tree above leaves out), its helpers and parts, and `index.ts`, which exports the screen.
-- A composite component has its folder `components/<component>/`: `index.ts`, `<component>.tsx`, its parts as `<component>-<part>.tsx` (`article-form-reload-button.tsx`, a `<component>-row.tsx`), and `<operation>.graphql.ts` for the documents only that component runs.
+- A composite component has its folder `components/<component>/`: `index.ts`, `<component>.tsx`, its parts as `<component>-<part>.tsx` (`article-form-summary-button.tsx`, a `<component>-row.tsx`), and `<operation>.graphql.ts` for the documents only that component runs.
 - Code in `src` imports a screen or component folder through its `index.ts`, and a `ui/primitives` or `ui/lib` file by its own path. Tests under `apps/web/test` import a document they mock from the file that holds it.
 - The module root holds the wiring and the code that `routes.tsx` or several screens read: a shared document, a hook, a list's URL search. `routes.tsx` imports root files only and the screens through the lazy `screens.ts`, which keeps every screen in the module's chunk.
 
@@ -106,6 +109,8 @@ To add a query or mutation:
 After a change to the backend's schema, run `pnpm gen` and fix the typecheck errors it leads to. `pnpm gen --check`, part of `pnpm check`, fails while a generated file differs from what `pnpm gen` writes. Never edit `schema/api.graphql` or a `*.gen.ts` file by hand; on a merge conflict in one, run `pnpm gen`. Biome skips both.
 
 Each `.gen.ts` reads only its own operation file, so it holds the input and enum types its operation uses, and an operation cannot spread a fragment from another file yet.
+
+A custom scalar gets its TypeScript type from `scalars` in `apps/web/codegen.ts`: `DateTime` is a `string`, the ISO 8601 instant the API sends. A scalar without a mapping is `unknown`, so a new scalar in the schema needs its line there.
 
 ## Adding a module's web part
 

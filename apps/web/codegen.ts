@@ -23,6 +23,8 @@ const pluginConfig = {
   avoidOptionals: { field: true, inputValue: false },
   // A scalar without a mapping is unknown, never any.
   defaultScalarType: 'unknown',
+  // DateTime arrives as an ISO 8601 instant in a JSON string.
+  scalars: { DateTime: 'string' },
   // The cache adds __typename to every object below the root.
   nonOptionalTypename: true,
   skipTypeNameForRoot: true,

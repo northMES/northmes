@@ -14,7 +14,9 @@ describe('schemaSdl', () => {
       'planningProductionOrders',
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
+      'coreArchiveArticle',
       'coreCreateArticle',
+      'coreRestoreArticle',
       'coreUpdateArticle',
       'planningReleaseProductionOrder',
     ]);

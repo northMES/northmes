@@ -12,10 +12,18 @@ export interface ArticleRecord {
   readonly name: string;
   /** Grows by one with every change to the article. */
   readonly version: number;
+  /** When the article was archived, or null while it is active. */
+  readonly archivedAt: Date | null;
 }
 
 /** The columns of core.article that make an ArticleRecord. */
-export const recordColumns = ['id', 'code', 'name', 'version'] as const;
+export const recordColumns = [
+  'id',
+  'code',
+  'name',
+  'version',
+  'archived_at as archivedAt',
+] as const;
 
 /**
  * Reads articles through the ScopedDatabase, so a caller sees only the articles at the scopes of
@@ -46,7 +54,10 @@ export class ArticleService {
     return ids.map((id) => byId.get(id) ?? null);
   }
 
-  /** One page of the articles at the principal's read scopes, as coreArticles' arguments ask. */
+  /**
+   * One page of the articles at the principal's read scopes, as coreArticles' arguments ask: the
+   * active ones, and the archived ones too when includeArchived is true.
+   */
   list(args: ArticleListArgs): Promise<Connection<ArticleRecord>> {
     return articleList.page(
       this.db,

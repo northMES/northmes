@@ -5,4 +5,4 @@ export {
   type ArticleFormProps,
   type ArticleValues,
 } from './article-form.tsx';
-export { hasErrorCode, showSaveError } from './article-save-errors.ts';
+export { commandFailure, hasErrorCode, showSaveError } from './article-save-errors.ts';

@@ -7,8 +7,9 @@ export {
   type CoreArticlesQueryVariables,
 } from './articles.graphql.gen.ts';
 
-// One page of the articles of the plant that the client's x-northmes-plant header names. pnpm gen
-// writes its typed document to articles.graphql.gen.ts; this block never runs.
+// One page of the articles of the plant that the client's x-northmes-plant header names: the active
+// ones, and the archived ones too with includeArchived. pnpm gen writes its typed document to
+// articles.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
     query CoreArticles(
@@ -18,6 +19,7 @@ if (false) {
       $before: String
       $orderBy: [ArticleOrderBy!]
       $search: String
+      $includeArchived: Boolean
     ) {
       coreArticles(
         first: $first
@@ -26,6 +28,7 @@ if (false) {
         before: $before
         orderBy: $orderBy
         search: $search
+        includeArchived: $includeArchived
       ) {
         totalCount
         pageInfo {
@@ -41,6 +44,7 @@ if (false) {
             code
             name
             version
+            archivedAt
           }
         }
       }

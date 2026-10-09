@@ -12,9 +12,11 @@ import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
   type ArticleValues,
+  commandFailure,
   hasErrorCode,
   showSaveError,
 } from '../../components/article-form/index.ts';
+import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
 import { useArticle } from '../../use-article.tsx';
 import { CoreUpdateArticle } from './update-article.graphql.ts';
 
@@ -34,13 +36,17 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   // The version the form was filled from; only a save reads it, so it is no render state.
   const expectedVersion = useRef(article.version);
   const [conflict, setConflict] = useState(false);
+  // An archived article refuses changes, so its form offers Restore article (DE31).
+  const [archived, setArchived] = useState(article.archivedAt !== null);
   const form = useZodForm(updateArticle.fields, {
     defaultValues: { code: article.code, name: article.name },
   });
   const [update] = useMutation(CoreUpdateArticle);
+  const [restore] = useMutation(CoreRestoreArticle);
 
   const save = async (values: ArticleValues) => {
     setConflict(false);
+    setArchived(false);
     try {
       const { data } = await update({
         variables: {
@@ -56,6 +62,10 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     } catch (error) {
       if (hasErrorCode(error, 'core.version_conflict')) {
         setConflict(true);
+        return;
+      }
+      if (hasErrorCode(error, 'core.archived')) {
+        setArchived(true);
         return;
       }
       showSaveError(form, error, values);
@@ -83,12 +93,46 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     document.getElementById(fieldId('code'))?.focus();
   };
 
+  // Restore article: reads the saved article and restores it with its version. When its saved
+  // values are still the ones the form was filled from, the typed values go on from the restored
+  // version; otherwise someone changed it meanwhile, which the version conflict shows. The typed
+  // values stay, so no form.reset clears the failure of an earlier try: clearErrors does.
+  const onRestore = async () => {
+    form.clearErrors('root.server');
+    let restored: Article | undefined;
+    try {
+      const saved = await reload();
+      if (saved === undefined) return;
+      restored = saved;
+      if (saved.archivedAt !== null) {
+        const { data } = await restore({
+          variables: { input: { id: article.id, expectedVersion: saved.version } },
+        });
+        if (!data) return;
+        restored = data.coreRestoreArticle;
+        announce(`Article ${restored.code} restored`);
+      }
+    } catch (error) {
+      form.setError('root.server', { message: commandFailure(error, 'restore') });
+      return;
+    }
+    setArchived(false);
+    const filledFrom = form.formState.defaultValues;
+    if (restored.code !== filledFrom?.code || restored.name !== filledFrom?.name) {
+      setConflict(true);
+      return;
+    }
+    expectedVersion.current = restored.version;
+    document.getElementById(fieldId('code'))?.focus();
+  };
+
   return (
     <ArticleForm
       form={form}
       onSave={save}
       cancelHref={coreLinks.articles.article({ plant: plantId, articleId: article.id }).href}
       conflict={conflict ? { onReload } : undefined}
+      archived={archived ? { onRestore } : undefined}
     />
   );
 }
@@ -97,7 +141,8 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
  * The edit page of an article (design ui-222, DE7): the article form filled in, validated with
  * the contract of core.updateArticle. A saved change opens the article's page in place of the form
  * and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values and
- * offers Reload article (DE19).
+ * offers Reload article (DE19), and an archived article keeps them and offers Restore article
+ * (DE31).
  */
 export function EditArticleScreen() {
   const { plantId } = useShell();

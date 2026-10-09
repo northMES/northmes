@@ -46,7 +46,9 @@ function createOf(
 
 /** The article that coreCreateArticle returns for an input. */
 function created(input: CreateInput) {
-  return { data: { coreCreateArticle: { __typename: 'Article', version: 1, ...input } } };
+  return {
+    data: { coreCreateArticle: { __typename: 'Article', version: 1, archivedAt: null, ...input } },
+  };
 }
 
 /** The polite live region's text. */

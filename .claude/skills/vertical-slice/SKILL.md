@@ -40,6 +40,7 @@ Where a change goes:
 - A new table: its migration in `migrations/`, its table type in `infrastructure/database.ts`.
 - A new query: a method on the service in `core/`, the root field on `api/<entity>/queries/<entity>.query.resolver.ts`, and its argument types in `inputs/`.
 - A new field: a plain field on the type in `types/`; a field that reads another module or a batch is a `@ResolveField` in `fields/`.
+- An archivable entity: an `archived_at timestamptz` column, `archivable: true` on its `defineList`, which gives the root field `includeArchived: Boolean = false` and hides archived rows without it, and archive and restore commands; a handler that changes the entity refuses an archived one with `core.archived`, as `refuseArchived` in `core/core/commands/article-target.ts` does (ADR 0006, ADR 0016).
 - A new command: its contract in the contracts package, its handler in `core/commands/`, its mutation in `api/<entity>/mutations/`, listed in the entity module's providers.
 - A new entity: `api/<entity>/` with its module, imported by `<id>.module.ts`, and its service with a service module in `core/`.
 - Something other modules need: export it from `public-api.ts`, usually the service, its service module, its record type and the object type.

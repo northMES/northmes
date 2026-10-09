@@ -18,6 +18,7 @@ if (false) {
         code
         name
         version
+        archivedAt
       }
     }
   `;

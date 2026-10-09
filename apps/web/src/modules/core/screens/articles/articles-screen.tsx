@@ -4,11 +4,14 @@ import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { Archive, Plus } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
+import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
+import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import {
   type ArticleListSearch,
   articleListSearch,
@@ -18,6 +21,7 @@ import {
   nextPage,
   previousPage,
   searchedFor,
+  showingArchived,
   sortedBy,
   sortOf,
 } from '../../article-list-search.ts';
@@ -31,6 +35,9 @@ type ArticleRow = ArticlesPage['edges'][number]['node'];
 
 /** The id of the Search articles input, where Clear filters moves focus. */
 const searchFieldId = 'articles-search';
+
+/** The id of the Show archived checkbox, which its label names. */
+const showArchivedId = 'articles-show-archived';
 
 /** The article number, the link to the article's page (IdentifierLink in the design). */
 function ArticleLink({ article }: { readonly article: ArticleRow }) {
@@ -52,7 +59,24 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
     sortable: true,
     cell: (article) => <ArticleLink article={article} />,
   },
-  { id: 'name', header: 'Name', sortable: true, cell: (article) => article.name },
+  {
+    id: 'name',
+    header: 'Name',
+    sortable: true,
+    // An archived article, listed with Show archived, carries the Archived badge (LI31).
+    cell: (article) =>
+      article.archivedAt === null ? (
+        article.name
+      ) : (
+        <span className="flex flex-wrap items-center gap-2">
+          {article.name}
+          <Badge variant="secondary" className="text-muted-foreground">
+            <Archive aria-hidden />
+            Archived
+          </Badge>
+        </span>
+      ),
+  },
 ];
 
 /** New article, the page's main action, as a link to the new article page. */
@@ -135,10 +159,12 @@ function listState({ view, page, error, retry, show }: StateOptions): PageState 
 }
 
 /**
- * The articles of the plant (design ui-222, LI1): Search articles, and one page of the DataTable
- * with sortable Article number and Name headers, Previous, Next and the row range. Search, sort
- * and page live in the URL (plan 06, View state in the URL), so a reload, Back or a copied link
- * opens the same rows; each change replaces the history entry and leaves focus where it is.
+ * The articles of the plant (design ui-222, LI1): Search articles, Show archived, and one page of
+ * the DataTable with sortable Article number and Name headers, Previous, Next and the row range.
+ * Archived articles show only with Show archived, each with the Archived badge (LI31). Search,
+ * sort, Show archived and page live in the URL (plan 06, View state in the URL), so a reload, Back
+ * or a copied link opens the same rows; each change replaces the history entry and leaves focus
+ * where it is.
  */
 export function ArticlesScreen() {
   const view = articleListSearch(useSearch({ strict: false }));
@@ -168,13 +194,23 @@ export function ArticlesScreen() {
       title="Articles"
       actions={<NewArticleLink />}
       toolbar={
-        <SearchField
-          id={searchFieldId}
-          label="Search articles"
-          value={view.q ?? ''}
-          onSearch={(text) => show(searchedFor(view, text))}
-          className="max-w-sm"
-        />
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <SearchField
+            id={searchFieldId}
+            label="Search articles"
+            value={view.q ?? ''}
+            onSearch={(text) => show(searchedFor(view, text))}
+            className="w-full max-w-sm"
+          />
+          <Field orientation="horizontal" className="w-auto">
+            <Checkbox
+              id={showArchivedId}
+              checked={view.archived !== undefined}
+              onCheckedChange={(shown) => show(showingArchived(view, shown))}
+            />
+            <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+          </Field>
+        </div>
       }
       state={state}
     >
