@@ -5,8 +5,8 @@ import { createShellRoutes } from '@northmes/web-sdk';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PlanningBoard } from '../../../src/modules/planning/board.graphql.ts';
 import { planningModule } from '../../../src/modules/planning/index.ts';
+import { PlanningBoard } from '../../../src/modules/planning/screens/board/board.graphql.ts';
 
 afterEach(cleanup);
 

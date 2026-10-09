@@ -12,6 +12,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Generated files (schema snapshots, link snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict.
 - Run every command as `pnpm` or `git` from the repository root, through a root script, `pnpm --filter` or `pnpm -C`.
 - Start the subject of a commit that adds a failing test with `test:`.
+- Name and place web components and screens by the "Naming and folders" section of `.claude/skills/web-module/SKILL.md`.
 - Bring a new dependency in its own pull request, at a version older than Renovate's `minimumReleaseAge` window.
 - Do not run react-doctor, through `pnpm react-doctor` or any other command: it runs in CI only (`CI / react doctor`) until its vendor confirms that agents may run it (ADR 0040).
 - Packages published under MIT (`packages/sdk`, `packages/web-sdk`, `packages/ui`, `packages/contracts`, `packages/testing`, every `modules/*/contracts` package and the generator package) import only MIT or other permissive code, never the AGPL modules.
