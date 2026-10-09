@@ -40,12 +40,36 @@ export function fakeApi(answers: Answers) {
     });
     const answer = answers[operationName];
     if (answer === undefined) return new Promise<Response>(() => {});
-    return new Response(JSON.stringify({ data: answer(variables) }), {
+    const result = answer(variables);
+    if (result === unreachable) throw new TypeError('Failed to fetch');
+    const body = result instanceof Refusal ? { data: null, errors: [result.error] } : { data: result };
+    return new Response(JSON.stringify(body), {
       headers: { 'content-type': 'application/graphql-response+json' },
     });
   });
   return { fetch, seen };
 }
+
+/** An answer the API refuses with a GraphQL error. */
+class Refusal {
+  constructor(
+    readonly error: {
+      readonly message: string;
+      readonly extensions: Record<string, unknown>;
+    },
+  ) {}
+}
+
+/** The API's refusal of a read the user may not make: FORBIDDEN with core.forbidden. */
+export function forbidden(): Refusal {
+  return new Refusal({
+    message: 'Forbidden',
+    extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+  });
+}
+
+/** An answer that never arrives: the fetch fails, as when the browser cannot reach the API. */
+export const unreachable = Symbol('unreachable');
 
 /** coreCompanies: Acme AB with Plant A and Plant B. */
 export function companies() {
@@ -176,4 +200,18 @@ export function linksIn(element: HTMLElement): (string | null)[][] {
 export function focusedName(): string {
   const element = document.activeElement;
   return element?.getAttribute('aria-label') ?? element?.textContent?.trim() ?? '';
+}
+
+/** Resizes happy-dom's window, as the browser does at 320 px or on a desktop. */
+export function setViewport(width: number, height: number) {
+  (
+    window as unknown as {
+      happyDOM: { setViewport(viewport: { width: number; height: number }): void };
+    }
+  ).happyDOM.setViewport({ width, height });
+}
+
+/** Whether element a comes before element b in the document. */
+export function isBefore(a: Element, b: Element): boolean {
+  return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }

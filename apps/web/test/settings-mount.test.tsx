@@ -9,13 +9,18 @@ import {
   crumbs,
   fakeApi,
   focusedName,
+  forbidden,
+  isBefore,
   linksIn,
   renderShellAt,
+  setViewport,
+  unreachable,
   viewer,
 } from './settings-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
+  setViewport(1440, 900);
   localStorage.clear();
 });
 
@@ -149,5 +154,108 @@ describe('company settings', () => {
         name: 'Users',
       }),
     ).toBe(document.activeElement);
+  });
+
+  it("E04-S02 leaving company settings returns the main sidebar to the user's own state", async () => {
+    const user = userEvent.setup();
+    const { fetch } = companyAdmin();
+    renderShellAt('/plant-b/core/articles', shellModules, { fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Articles' });
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+
+    await user.click(
+      await within(screen.getByRole('banner')).findByRole('link', { name: 'Settings' }),
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    await user.click(await screen.findByRole('link', { name: 'Back to Plant B' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Articles' });
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeDefined();
+  });
+
+  it('E04-S02 the landing of a company the user holds no role in says so, without the loading state, and leads back to the plant', async () => {
+    const foreign = '019a0000-0000-7000-8000-0000000f0e10';
+    const { fetch } = fakeApi({
+      CoreCompanies: companies,
+      CoreViewer: ({ companyId: asked }) =>
+        asked === undefined ? viewer(['core.article:read'], ['core.user:read']) : forbidden(),
+    });
+    const router = renderShellAt('/plant-a/core/articles', shellModules, { fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Articles' });
+
+    await router.navigate({ href: `/settings/${foreign}` });
+
+    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    const main = screen.getByRole('main');
+    expect(
+      await within(main).findByText(
+        'These company settings do not exist, or you cannot open them. The link may be out of date.',
+      ),
+    ).toBeDefined();
+    expect(main.querySelector('[aria-busy="true"]')).toBeNull();
+    const back = within(main).getAllByRole('link', { name: 'Back to Plant A' });
+    expect(back.map((link) => link.getAttribute('href'))).toEqual([
+      '/plant-a/core/articles',
+      '/plant-a/core/articles',
+    ]);
+  });
+
+  it('E04-S02 a company landing whose permissions could not be read shows the error with Try again, which reads them again', async () => {
+    const user = userEvent.setup();
+    let reads = 0;
+    const { fetch } = fakeApi({
+      CoreCompanies: companies,
+      CoreViewer: () => {
+        reads += 1;
+        return reads === 1 ? unreachable : viewer([], ['core.user:read']);
+      },
+    });
+    renderShellAt(`/settings/${companyId}`, shellModules, { fetch });
+
+    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load company settings' })).toBeDefined();
+    expect(within(alert).getByText('Check the connection, then try again.')).toBeDefined();
+
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+
+    const list = await screen.findByRole('list', { name: 'Company settings entries' });
+    expect(linksIn(list)).toEqual([['Users', `/settings/${companyId}/core/users`]]);
+  });
+});
+
+describe('company settings below 768 px', () => {
+  it('E04-S02 at 320 px the company landing shows Back to the plant above the h1 and no settings navigation (C5)', async () => {
+    setViewport(320, 640);
+    const user = userEvent.setup();
+    const { fetch } = companyAdmin();
+    renderShellAt('/plant-b/core/articles', shellModules, { fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Articles' });
+    await user.click(
+      await within(screen.getByRole('banner')).findByRole('link', { name: 'Settings' }),
+    );
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    const back = await within(screen.getByRole('main')).findByRole('link', {
+      name: 'Back to Plant B',
+    });
+    expect(isBefore(back, heading)).toBe(true);
+    await screen.findByRole('list', { name: 'Company settings entries' });
+    expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
+  });
+
+  it('E04-S02 at 320 px a company settings page shows the link Company settings above its h1 and no settings navigation (C6)', async () => {
+    setViewport(320, 640);
+    const { fetch } = companyAdmin();
+    renderShellAt(`/settings/${companyId}/core/users`, shellModules, { fetch });
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Users' });
+    const landing = await within(screen.getByRole('main')).findByRole('link', {
+      name: 'Company settings',
+    });
+    expect(landing.getAttribute('href')).toBe(`/settings/${companyId}`);
+    expect(isBefore(landing, heading)).toBe(true);
+    expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Back to/ })).toBeNull();
   });
 });

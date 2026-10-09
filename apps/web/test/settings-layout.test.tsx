@@ -10,13 +10,16 @@ import {
   equipment,
   fakeApi,
   focusedName,
+  isBefore,
   linksIn,
   renderShellAt,
+  setViewport,
   viewer,
 } from './settings-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
+  setViewport(1440, 900);
   localStorage.clear();
 });
 
@@ -136,6 +139,20 @@ describe('plant settings', () => {
     await user.tab();
 
     expect(focusedName()).toBe('First control of Machines');
+  });
+});
+
+describe('plant settings below 768 px', () => {
+  it('E04-S02 at 320 px the plant settings navigation sits above the page in main', async () => {
+    setViewport(320, 640);
+    const { fetch } = api(['equipment.calendar:read']);
+    renderShellAt('/plant-a/equipment/machines', [equipment], { fetch });
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Machines' });
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    expect(screen.getByRole('main').contains(settings)).toBe(true);
+    await waitFor(() => expect(isBefore(settings, heading)).toBe(true));
+    expect(screen.queryByRole('link', { name: /^Back to/ })).toBeNull();
   });
 });
 
