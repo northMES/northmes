@@ -128,6 +128,23 @@ describe('the boot page', () => {
     },
   );
 
+  it('E04-S02 before the stylesheet arrives, the blank page already follows the system theme, and the build leaves the theme script to its own plugin (BO1, BO2)', () => {
+    const head = indexHtmlPart('head');
+
+    const scheme = head.querySelector('meta[name="color-scheme"]');
+    expect(scheme?.getAttribute('content')).toBe('light dark');
+    const sheet = head.querySelector('link[rel="stylesheet"]');
+    expect(
+      scheme !== null &&
+        sheet !== null &&
+        Boolean(scheme.compareDocumentPosition(sheet) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
+    // Vite cannot bundle a classic script; vite-ignore keeps its HTML step from warning on it.
+    expect(head.querySelector(`script[src="${themeBootPath}"]`)?.hasAttribute('vite-ignore')).toBe(
+      true,
+    );
+  });
+
   it('E04-S02 the theme script sets nothing and does not fail when storage is blocked (BO1)', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
