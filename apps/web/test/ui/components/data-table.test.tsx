@@ -164,4 +164,31 @@ describe('DataTable', () => {
     expect(within(grid).queryByText('AX-20411')).toBeNull();
     expect(within(grid).getAllByRole('row', { hidden: true }).length).toBeGreaterThan(1);
   });
+
+  it('E02-S05 a numeric column aligns its header and cells to the end, and a hidden header still names its column', () => {
+    interface Line {
+      readonly id: string;
+      readonly quantity: string;
+    }
+    const lineColumns: readonly DataTableColumn<Line>[] = [
+      { id: 'quantity', header: 'Quantity', numeric: true, cell: (line) => line.quantity },
+      { id: 'actions', header: 'Actions', headerHidden: true, cell: () => 'Release' },
+    ];
+    render(
+      <DataTable
+        label="Lines"
+        columns={lineColumns}
+        rows={[{ id: 'l1', quantity: '1,200' }]}
+        getRowId={(line) => line.id}
+      />,
+    );
+
+    const grid = screen.getByRole('table', { name: 'Lines' });
+    const quantityHeader = within(grid).getByRole('columnheader', { name: 'Quantity' });
+    expect(quantityHeader.className).toContain('text-end');
+    expect(within(grid).getByRole('cell', { name: '1,200' }).className).toContain('text-end');
+    const actionsHeader = within(grid).getByRole('columnheader', { name: 'Actions' });
+    expect(actionsHeader.querySelector('.sr-only')?.textContent).toBe('Actions');
+  });
 });
+
