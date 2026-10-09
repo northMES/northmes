@@ -1,3 +1,4 @@
+import { randomUUIDv7 } from 'node:crypto';
 import { hostFactory } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -64,6 +65,50 @@ describe('the seed', () => {
       { slug: 'plant-a', name: 'Plant A' },
       { slug: 'plant-b', name: 'Plant B' },
     ]);
+  });
+
+  it("E05-S06 the dev admin's role holds the permission of every command, so the admin creates and edits an article and releases an order at plant-a", async () => {
+    const client = gqlClient(url, {
+      headers: { authorization: `Bearer ${await adminToken()}`, 'x-northmes-plant': 'plant-a' },
+    });
+    const orders = await client.send<{
+      planningProductionOrders: { id: string; status: string; version: number }[];
+    }>('{ planningProductionOrders { id status version } }');
+    const order = orders.data?.planningProductionOrders.find(({ status }) => status === 'planned');
+    if (!order) throw new Error('the seed has no planned production order at plant-a');
+
+    const created = await client.send<{ coreCreateArticle: { id: string; version: number } }>(
+      `mutation ($input: CoreCreateArticleInput!) { coreCreateArticle(input: $input) { id version } }`,
+      { input: { id: randomUUIDv7(), code: 'SEED-TEST-1', name: 'Seed test article' } },
+    );
+    const article = created.data?.coreCreateArticle;
+    if (!article) throw new Error(`coreCreateArticle failed: ${JSON.stringify(created)}`);
+    const updated = await client.send(
+      `mutation ($input: CoreUpdateArticleInput!) { coreUpdateArticle(input: $input) { code name } }`,
+      {
+        input: {
+          id: article.id,
+          expectedVersion: article.version,
+          code: 'SEED-TEST-1',
+          name: 'Seed test article, edited',
+        },
+      },
+    );
+    const released = await client.send(
+      `mutation ($input: PlanningReleaseProductionOrderInput!) {
+        planningReleaseProductionOrder(input: $input) { status }
+      }`,
+      { input: { id: order.id, expectedVersion: order.version } },
+    );
+
+    expect(updated).toEqual({
+      status: 200,
+      data: { coreUpdateArticle: { code: 'SEED-TEST-1', name: 'Seed test article, edited' } },
+    });
+    expect(released).toEqual({
+      status: 200,
+      data: { planningReleaseProductionOrder: { status: 'released' } },
+    });
   });
 
   it('E05-S05 a second run of the seed adds no scope, company, plant, role or assignment', async () => {
