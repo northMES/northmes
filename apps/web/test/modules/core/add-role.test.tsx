@@ -222,6 +222,43 @@ describe('Add role', () => {
     expect(document.activeElement).toBe(viewer);
   });
 
+  it('E05-S06 a refusal of permissions the assigner lacks at the company, where the assigner may not assign either, names both as AS5 words it', async () => {
+    const user = userEvent.setup();
+    // Jonas Holm reads production orders at Acme AB but may not assign roles there.
+    renderCoreAt(addRoleHref, [
+      viewerQuery(plantAdmin, ['planning.productionOrder:read']),
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([operator, viewerRole]),
+      assignOf(viewerRole, acme, {
+        data: null,
+        errors: [
+          {
+            message: 'You do not hold core.article:read at scope x',
+            path: ['coreAssignRole'],
+            extensions: {
+              code: 'FORBIDDEN',
+              errorCode: 'core.role_not_held',
+              details: {
+                scopeId: acme.id,
+                missingPermissions: ['core.article:read', 'planning.productionOrder:read'],
+              },
+            },
+          },
+        ],
+      }),
+    ]);
+
+    await user.click(await screen.findByRole('radio', { name: 'Acme AB, all plants' }));
+    await user.click(screen.getByRole('radio', { name: 'Viewer' }));
+    await user.click(screen.getByRole('button', { name: 'Add role' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to add the role' });
+    expect(within(summary).getByRole('link').textContent).toBe(
+      'You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: Read articles (core.article:read) and Read production orders and the planning board (planning.productionOrder:read). Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.',
+    );
+  });
+
   it('E05-S06 a refusal because the assigner may not assign at the company names the assignment permission there and who can act', async () => {
     const user = userEvent.setup();
     // Jonas Holm reads production orders at Acme AB but may not assign roles there.
