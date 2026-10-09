@@ -94,8 +94,10 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
 
   // Restore article: reads the saved article and restores it with its version. When its saved
   // values are still the ones the form was filled from, the typed values go on from the restored
-  // version; otherwise someone changed it meanwhile, which the version conflict shows.
+  // version; otherwise someone changed it meanwhile, which the version conflict shows. The typed
+  // values stay, so no form.reset clears the failure of an earlier try: clearErrors does.
   const onRestore = async () => {
+    form.clearErrors('root.server');
     let restored: Article | undefined;
     try {
       const saved = await reload();
