@@ -653,8 +653,13 @@ describe('coreResetPassword', () => {
     await testApp?.app.close();
   });
 
-  /** What a company admin holds to reset passwords. */
-  const resetAdmin = ['core.user:read', 'core.user:block', 'core.user:resetPassword'];
+  /** What a company admin holds to reset passwords, with what the operator below holds. */
+  const resetAdmin = [
+    'core.user:read',
+    'core.user:block',
+    'core.user:resetPassword',
+    'core.article:read',
+  ];
 
   /** A fresh signed-in user with these grants, and a client of theirs at the plant `plant`. */
   async function signedIn(grants: readonly Grant[], plant: string) {
@@ -780,6 +785,34 @@ describe('coreResetPassword', () => {
     const answer = await plantAdmin.client.send(resetMutation, { input: { id: operator.userId } });
 
     expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+  });
+
+  it('E05-S08 coreResetPassword refuses a user who holds a permission the resetter does not hold, with core.role_not_held, so a custom role with core.user:resetPassword cannot take over a Company admin', async () => {
+    const { company: companyId, slug } = await company();
+    const companyAdmin = await signedIn([], slug);
+    const [{ id: roleId } = { id: '' }] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-company-admin'`,
+      [companyId],
+    );
+    await givenAssignment(db.ownerUrl, { userId: companyAdmin.userId, roleId, scopeId: companyId });
+    const helpdesk = await signedIn(
+      [{ scopeId: companyId, permissions: ['core.user:read', 'core.user:resetPassword'] }],
+      slug,
+    );
+    const reader = await signedIn([{ scopeId: companyId, permissions: ['core.user:read'] }], slug);
+
+    const ofAdmin = await helpdesk.client.send(resetMutation, {
+      input: { id: companyAdmin.userId },
+    });
+    const ofReader = await helpdesk.client.send<ResetAnswer>(resetMutation, {
+      input: { id: reader.userId },
+    });
+
+    expect(refusals(ofAdmin)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.role_not_held' }]);
+    expect(await signInStatus(companyAdmin.email, companyAdmin.password)).toBe(200);
+    expect(ofReader.errors).toBeUndefined();
+    expect(ofReader.data?.coreResetPassword.temporaryPassword).toMatch(/^\S{16,}$/);
   });
 
   it('E05-S08 coreResetPassword refuses your own password, a blocked user and a user who also belongs to a company where you cannot reset passwords', async () => {
