@@ -33,7 +33,7 @@ const themeBootPath = '/src/boot/theme-boot.js';
 /**
  * Vite bundles module scripts only, so the build writes the theme script to assets/ under a name
  * with its content hash and points index.html's tag at it: the server serves files from /assets/
- * alone, and caches them for good. The dev server serves the source file as it is.
+ * alone, and caches them for good. The dev server serves the source file from src without bundling it.
  */
 function themeBoot(): Plugin {
   let root = '';

@@ -7,10 +7,13 @@
     <!--
       The stylesheet and the stored theme apply before the first paint, so the boot page never
       shows unstyled (design shell-306, BO1 and BO2). Vite serves app.css in dev and writes the
-      hashed stylesheet in its place in the build.
+      hashed stylesheet in its place in the build. color-scheme makes the blank page follow the
+      system theme while the stylesheet loads. vite-ignore leaves the theme script's tag to the
+      theme-boot plugin in vite.config.ts, because Vite bundles module scripts only.
     -->
+    <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="/src/styles/app.css" />
-    <script src="/src/boot/theme-boot.js"></script>
+    <script vite-ignore src="/src/boot/theme-boot.js"></script>
   </head>
   <body>
     <!--
