@@ -102,7 +102,11 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
   const [every, setEvery] = useState(false);
   // Try again keeps the failed load's error, and its focused button, until the reload settles.
   const [retryFrom, setRetryFrom] = useState<ErrorLike | undefined>(undefined);
-  const { data, error: loaded, refetch } = useQuery(CoreUserPermissions, {
+  const {
+    data,
+    error: loaded,
+    refetch,
+  } = useQuery(CoreUserPermissions, {
     variables: { id: user.id, ...useCompanyVariables() },
   });
   const error = loaded ?? retryFrom;
