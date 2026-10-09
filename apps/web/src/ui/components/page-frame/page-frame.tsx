@@ -21,10 +21,13 @@ export type PageState =
   | { readonly status: 'ready' }
   /** The content renders its own skeleton of the populated layout and is marked busy. */
   | { readonly status: 'loading' }
-  /** First run, filtered empty, not found or forbidden: what is missing and the way on. */
+  /**
+   * First run, filtered empty, not found or forbidden: what is missing and the way on. A page
+   * opened without its permission leaves out the title, because its h1 already says it.
+   */
   | {
       readonly status: 'empty';
-      readonly title: string;
+      readonly title?: string;
       readonly description: string;
       readonly action?: ReactNode;
     }
@@ -65,9 +68,11 @@ export function EmptyState({
   return (
     <Empty className={stateCard}>
       <EmptyHeader className="max-w-prose">
-        <EmptyTitle>
-          <h2 className="text-base font-semibold">{title}</h2>
-        </EmptyTitle>
+        {title !== undefined && (
+          <EmptyTitle>
+            <h2 className="text-base font-semibold">{title}</h2>
+          </EmptyTitle>
+        )}
         <EmptyDescription>{description}</EmptyDescription>
       </EmptyHeader>
       {action !== undefined && <EmptyContent>{action}</EmptyContent>}
