@@ -30,10 +30,14 @@ function rootFieldsOfResolver(resolver: Type): string[] {
 
 /**
  * The root fields of a module, as Query.name, Mutation.name or Subscription.name: those of every
- * resolver that its Nest module, or a module it imports, lists.
+ * resolver that its Nest module, or a module it imports, lists. The walk does not enter `others`,
+ * the Nest modules of the other modules and plugins, whose fields are theirs.
  */
-export function rootFieldsOf({ module }: Pick<RootFieldOwner, 'module'>): string[] {
-  return moduleProviders(module)
+export function rootFieldsOf(
+  { module }: Pick<RootFieldOwner, 'module'>,
+  others: Iterable<Type> = [],
+): string[] {
+  return moduleProviders(module, new Set([...others].filter((other) => other !== module)))
     .filter((provider): provider is Type => typeof provider === 'function')
     .flatMap(rootFieldsOfResolver);
 }
@@ -42,14 +46,16 @@ export function rootFieldsOf({ module }: Pick<RootFieldOwner, 'module'>): string
  * NORTHMES_ROOT_FIELD_PREFIX: every Query, Mutation and Subscription field of the one schema starts
  * with the GraphQL name of the module that declares it and an upper-case letter, as
  * planningReleaseProductionOrder does. A field belongs to the module whose Nest module, or a
- * module it imports, lists the resolver. Returns one problem per field that breaks the rule.
+ * module it imports that is not another module's, lists the resolver. Returns one problem per field
+ * that breaks the rule.
  */
 export function rootFieldProblems(owners: readonly RootFieldOwner[]): string[] {
+  const roots = owners.map(({ module }) => module);
   return owners.flatMap((owner) => {
     const { id } = owner;
     const prefix = moduleNames(id).gql;
     const prefixed = new RegExp(`^${prefix}[A-Z]`);
-    return rootFieldsOf(owner)
+    return rootFieldsOf(owner, roots)
       .filter((field) => !prefixed.test(field.slice(field.indexOf('.') + 1)))
       .map(
         (field) =>
