@@ -168,7 +168,11 @@ describe('companies, plants and the request plant', () => {
     );
 
     expect(atA.data?.coreArticles.edges.map(({ node }) => node.code)).toEqual(['CO-1', 'PA-1']);
-    expect(withoutPlant.data?.coreArticles.edges).toEqual([]);
+    // Without a plant the request holds core.article:read nowhere, so it reads no article.
+    expect(withoutPlant.data).toBeNull();
+    expect(withoutPlant.errors?.map(({ extensions }) => extensions?.errorCode)).toEqual([
+      'core.forbidden',
+    ]);
   });
 
   it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is NOT_FOUND and keeps its version', async () => {

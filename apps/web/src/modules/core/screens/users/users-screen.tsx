@@ -3,7 +3,7 @@ import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Plus } from 'lucide-react';
+import { Building2, Factory, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
@@ -45,20 +45,27 @@ function UserLink({ user }: { readonly user: UserRow }) {
   );
 }
 
-/** The user's roles per place as chips: "Shift lead · Plant A", or No access for a hidden role. */
+/**
+ * The user's roles per place as chips (design core-304, US1): "Shift lead at Plant A" with the
+ * place's icon, or No access for a role the reader may not read.
+ */
 function RoleChips({ user }: { readonly user: UserRow }) {
   if (user.roleAssignments.length === 0) {
     return <span className="text-muted-foreground">No role</span>;
   }
   return (
     <ul className="flex flex-wrap gap-1">
-      {user.roleAssignments.map(({ id, role, scope }) => (
-        <li key={id}>
-          <Badge variant="outline" className="font-normal">
-            {role?.name ?? 'No access'} · {scope.name}
-          </Badge>
-        </li>
-      ))}
+      {user.roleAssignments.map(({ id, role, scope }) => {
+        const Place = scope.kind === 'COMPANY' ? Building2 : Factory;
+        return (
+          <li key={id}>
+            <Badge variant="outline" className="font-normal">
+              <Place aria-hidden />
+              {role?.name ?? 'No access'} at {scope.name}
+            </Badge>
+          </li>
+        );
+      })}
     </ul>
   );
 }

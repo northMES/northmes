@@ -59,20 +59,45 @@ function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
 }
 
 /**
- * The permissions the user loses with the assignment: those no other role of theirs grants there.
- * A role at the company grants at each of its plants, so only the user's other roles at the company
- * keep a permission at the plants other than the request's. A role at the plant is kept by every
- * other role the page lists, which are at the plant or at its company.
+ * The user's other assignments that keep a permission where the assignment applies: a role at the
+ * company grants at each of its plants, so only the user's other roles at the company keep a
+ * permission at the plants other than the request's. A role at the plant is kept by every other
+ * role the page lists, which are at the plant or at its company.
  */
-function lostWith(assignment: UserAssignment, user: User): string[] {
+function keepersOf(assignment: UserAssignment, user: User): UserAssignment[] {
   const atCompany = assignment.scope.kind === 'COMPANY';
-  const kept = new Set(
-    user.roleAssignments
-      .filter(({ id }) => id !== assignment.id)
-      .filter(({ scope }) => !atCompany || scope.kind === 'COMPANY')
-      .flatMap(({ role }) => role?.permissions ?? []),
-  );
+  return user.roleAssignments
+    .filter(({ id }) => id !== assignment.id)
+    .filter(({ scope }) => !atCompany || scope.kind === 'COMPANY');
+}
+
+/** The permissions the user loses with the assignment: those no keeper grants. */
+function lostWith(assignment: UserAssignment, user: User): string[] {
+  const kept = new Set(keepersOf(assignment, user).flatMap(({ role }) => role?.permissions ?? []));
   return (assignment.role?.permissions ?? []).filter((key) => !kept.has(key));
+}
+
+/** "a", "a, and b" or "a, b, and c": permission lines in running text, which may hold an "and". */
+function linesOf(items: readonly string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')}, and ${items.at(-1)}`;
+}
+
+/**
+ * What each keeper still lets the user do of the removed role's permissions (AS7): "Viewer at Acme
+ * AB still lets Sara Nyberg read production orders and the planning board, and read job orders."
+ */
+function keptSentences(assignment: UserAssignment, user: User): string[] {
+  const removed = assignment.role?.permissions ?? [];
+  return keepersOf(assignment, user).flatMap(({ role, scope }) => {
+    const kept = removed.filter((key) => role?.permissions.includes(key));
+    if (role == null || kept.length === 0) return [];
+    const lines = kept.map((key) => {
+      const line = permissionLine(key);
+      return `${line.charAt(0).toLowerCase()}${line.slice(1)}`;
+    });
+    return [`${role.name} at ${scope.name} still lets ${user.name} ${linesOf(lines)}.`];
+  });
 }
 
 /**
@@ -111,7 +136,8 @@ interface RemoveRoleProps {
 
 /**
  * Remove on a role of the user (design core-304, AS7 and NO24): an alert dialog that names what
- * the user loses, with an optional reason that has focus. Escape or Cancel go back to Remove.
+ * the user loses and what the user's other roles still let them do, with an optional reason that
+ * has focus. Escape or Cancel go back to Remove.
  */
 function RemoveRole({ user, assignment, focusAfter }: RemoveRoleProps) {
   const [reason, setReason] = useState('');
@@ -133,6 +159,7 @@ function RemoveRole({ user, assignment, focusAfter }: RemoveRoleProps) {
   const role = assignment.role?.name;
   const place = placeOf(assignment);
   const lost = lostWith(assignment, user);
+  const kept = keptSentences(assignment, user);
   const label = role === undefined ? `Remove role at ${place}` : `Remove ${role} at ${place}`;
   return (
     <ConfirmDialog
@@ -175,16 +202,22 @@ function RemoveRole({ user, assignment, focusAfter }: RemoveRoleProps) {
       {lost.length > 0 && (
         <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
           {lost.map((key) => (
-            <li key={key}>
-              {permissionLine(key)} <span className="font-mono text-xs">({key})</span>
-            </li>
+            <li key={key}>{permissionLine(key)}</li>
           ))}
         </ul>
       )}
+      {kept.map((sentence) => (
+        <p key={sentence} className="text-sm text-muted-foreground">
+          {sentence}
+        </p>
+      ))}
       <TextareaField
         ref={field}
         label="Reason"
         optional
+        placeholder="Why you remove this role"
+        hint="Shown in the user's history. Do not enter personal data. Up to 500 characters."
+        maxLength={500}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
       />

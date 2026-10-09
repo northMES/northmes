@@ -15,6 +15,7 @@ if (false) {
     query CoreRoles {
       coreRoles {
         id
+        key
         name
         origin
         moduleId
@@ -25,6 +26,10 @@ if (false) {
           scope {
             id
             kind
+          }
+          # The roles list counts the people who hold the role, once each.
+          user {
+            id
           }
         }
       }

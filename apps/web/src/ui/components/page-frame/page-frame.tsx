@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { CircleAlert, Copy, RotateCw } from 'lucide-react';
+import { CircleAlert, Copy, type LucideIcon, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { announce } from '../../lib/announce.ts';
@@ -27,6 +27,8 @@ export type PageState =
    */
   | {
       readonly status: 'empty';
+      /** An icon above the heading, such as Lock on a forbidden state (design ui-222, ST19). */
+      readonly icon?: LucideIcon;
       readonly title?: string;
       readonly description: string;
       readonly action?: ReactNode;
@@ -46,6 +48,11 @@ export interface PageFrameProps {
   /** The page actions, such as New article: in the shell's top bar, else beside the h1. */
   readonly actions?: ReactNode;
   /**
+   * The header slot beside the h1, such as "11 roles at Acme AB" on a list or the kind of a role
+   * on its page (design core-304, Shell, frame and slots).
+   */
+  readonly meta?: ReactNode;
+  /**
    * The crumbs between the module and this page, such as Articles above an article. The shell's
    * top bar shows them after the plant and the module crumbs, and the title as the last crumb.
    */
@@ -59,8 +66,9 @@ export interface PageFrameProps {
 
 const stateCard = 'gap-3 rounded-xl border border-solid bg-card px-6 py-16';
 
-/** An empty state: a heading, its text and the action that leads on. */
+/** An empty state: its icon, a heading, its text and the action that leads on. */
 export function EmptyState({
+  icon: Icon,
   title,
   description,
   action,
@@ -68,6 +76,11 @@ export function EmptyState({
   return (
     <Empty className={stateCard}>
       <EmptyHeader className="max-w-prose">
+        {Icon !== undefined && (
+          <EmptyMedia className="size-10 rounded-full bg-muted text-muted-foreground">
+            <Icon aria-hidden className="size-5" />
+          </EmptyMedia>
+        )}
         {title !== undefined && (
           <EmptyTitle>
             <h2 className="text-base font-semibold">{title}</h2>
@@ -131,15 +144,16 @@ export function ErrorState({
 /**
  * The frame of a screen (plan 06, UI patterns): the h1 from the route title, which the shell
  * focuses after a route change (tabindex -1) and which names the document ("Articles · Plant A ·
- * NorthMES" in the shell, "Articles · NorthMES" outside it), the page actions, the toolbar, and the
- * data region in its state. In the shell the breadcrumb and the page actions render in the top bar
- * (D2), before main in the Tab order. Loading marks the region busy around the content's skeleton; empty and error
- * replace the content. Try again moves focus to the h1, because the error state goes away, and so
+ * NorthMES" in the shell, "Articles · NorthMES" outside it), the header slot beside it, the page
+ * actions, the toolbar, and the data region in its state. In the shell the breadcrumb and the page
+ * actions render in the top bar (D2), before main in the Tab order. Loading marks the region busy
+ * around the content's skeleton; empty and error replace the content. Try again moves focus to the h1, because the error state goes away, and so
  * does an empty state's action that takes the state away without moving focus itself.
  */
 export function PageFrame({
   title,
   actions,
+  meta,
   crumbs = [],
   toolbar,
   state = { status: 'ready' },
@@ -179,9 +193,16 @@ export function PageFrame({
         topBar?.actions &&
         createPortal(<div className="flex items-center gap-2">{actions}</div>, topBar.actions)}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
-          {title}
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
+            {title}
+          </h1>
+          {meta !== undefined && (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {meta}
+            </div>
+          )}
+        </div>
         {actions !== undefined && topBar === null && (
           <div className="flex flex-wrap gap-2">{actions}</div>
         )}
@@ -189,7 +210,12 @@ export function PageFrame({
       {toolbar}
       <div aria-busy={state.status === 'loading' || undefined}>
         {state.status === 'empty' ? (
-          <EmptyState title={state.title} description={state.description} action={state.action} />
+          <EmptyState
+            icon={state.icon}
+            title={state.title}
+            description={state.description}
+            action={state.action}
+          />
         ) : state.status === 'error' ? (
           <ErrorState
             title={state.title}

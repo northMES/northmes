@@ -81,7 +81,7 @@ describe('users', () => {
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
         ['Anna Berg', 'a.berg', 'No role', 'Blocked'],
-        ['Sara Nyberg', 's.nyberg', 'Viewer · Acme ABShift lead · Plant A', 'Active'],
+        ['Sara Nyberg', 's.nyberg', 'Viewer at Acme ABShift lead at Plant A', 'Active'],
       ]),
     );
     await waitFor(() =>

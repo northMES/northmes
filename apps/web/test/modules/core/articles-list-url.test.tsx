@@ -9,6 +9,7 @@ import {
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
 } from './core-app.tsx';
@@ -16,6 +17,8 @@ import {
 afterEach(cleanup);
 
 const byName = (direction: 'ASC' | 'DESC') => [{ field: 'NAME', direction }];
+const byCode = (direction: 'ASC' | 'DESC') => [{ field: 'CODE', direction }];
+const byChange = (direction: 'ASC' | 'DESC') => [{ field: 'UPDATED_AT', direction }];
 
 /** The articles list's href with this search. */
 function listHref(search: Record<string, string> = {}): string {
@@ -72,7 +75,7 @@ describe('articles list URL state', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(25));
-    expect(bodyRows(table)[0]).toEqual(['AX-525', 'Axle 525 mm']);
+    expect(bodyRows(table)[0]).toEqual(['AX-525', 'Axle 525 mm', lastChangedText]);
     expect(screen.getByText('Rows 26 to 50 of 60')).toBeDefined();
     expect(ariaSort(table, 'Name')).toBe('descending');
     expect(
@@ -91,7 +94,7 @@ describe('articles list URL state', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
-    expect(ariaSort(table, 'Article number')).toBe('ascending');
+    expect(ariaSort(table, 'Last changed')).toBe('descending');
     expect(screen.getByText('Rows 1 to 3 of 3')).toBeDefined();
   });
 
@@ -113,7 +116,9 @@ describe('articles list URL state', () => {
     const search = screen.getByRole('searchbox', { name: 'Search articles' });
     await user.type(search, ' hinge ');
 
-    await waitFor(() => expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm']]));
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', lastChangedText]]),
+    );
     expect(router.state.location.href).toBe(listHref({ q: 'hinge' }));
     expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
     expect(document.activeElement).toBe(search);
@@ -240,5 +245,41 @@ describe('articles list URL state', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('heading', { level: 1, name: 'Articles' }),
     );
+  });
+
+  it('E06-S06 the default sort, Last changed newest first, stays out of the URL; Article number sorts as sort=code and Last changed ascending as sort=changed', async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(2), { totalCount: 2 })),
+      articlesQuery(
+        { first: 25, orderBy: byCode('ASC') },
+        articlesPage(articleRange(2, 700), { totalCount: 2 }),
+      ),
+      articlesQuery(
+        { first: 25, orderBy: byChange('ASC') },
+        articlesPage(articleRange(2, 800), { totalCount: 2 }),
+      ),
+      articlesQuery(firstPage, articlesPage(articleRange(2, 900), { totalCount: 2 })),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(router.state.location.href).toBe(listHref());
+
+    await user.click(within(table).getByRole('button', { name: 'Article number' }));
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-700'));
+    expect(router.state.location.href).toBe(listHref({ sort: 'code' }));
+    expect(ariaSort(table, 'Article number')).toBe('ascending');
+    expect(ariaSort(table, 'Last changed')).toBe('none');
+
+    const changedHeader = within(table).getByRole('button', { name: 'Last changed' });
+    await user.click(changedHeader);
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-800'));
+    expect(router.state.location.href).toBe(listHref({ sort: 'changed' }));
+    expect(ariaSort(table, 'Last changed')).toBe('ascending');
+
+    await user.click(changedHeader);
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-900'));
+    expect(router.state.location.href).toBe(listHref());
+    expect(ariaSort(table, 'Last changed')).toBe('descending');
   });
 });

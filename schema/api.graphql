@@ -9,6 +9,7 @@ type Article {
   code: String!
   id: ID!
   name: String!
+  updatedAt: DateTime!
   version: Int!
 }
 
@@ -31,6 +32,7 @@ input ArticleOrderBy {
 enum ArticleSortField {
   CODE
   NAME
+  UPDATED_AT
 }
 
 type Company {
