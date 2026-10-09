@@ -152,7 +152,7 @@ describe('sign-in with Better Auth', () => {
       body: JSON.stringify({ username: `${user.username}_renamed` }),
     });
 
-    expect(renamed.status).toBe(400);
+    expect(renamed.status).toBe(404);
     expect((await sessionOf(sessionToken)).user.username).toBe(user.username);
   });
 

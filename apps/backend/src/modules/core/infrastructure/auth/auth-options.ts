@@ -14,8 +14,20 @@ export const AUTH_BASE_PATH = '/api/auth';
 export const JWT_LIFETIME = '5m';
 
 /**
+ * How long a session lives after sign-in, in seconds. The session token from set-auth-token is the
+ * web's long-lived credential: it mints new JWTs from /api/auth/token until the session expires or
+ * is revoked. These are Better Auth's defaults, seven days renewed once a day of use, until the
+ * maintainer sets NorthMES's own.
+ */
+export const SESSION_LIFETIME_SECONDS = 7 * 24 * 60 * 60;
+
+/** How old a session gets before a request renews its expiry, in seconds. */
+export const SESSION_RENEWAL_SECONDS = 24 * 60 * 60;
+
+/**
  * The paths of the admin and api-key plugins. NorthMES calls them only on the server, through
- * auth.api from its own commands, so their HTTP paths are disabled (ADR 0011).
+ * auth.api from its own commands, so their HTTP paths are disabled (ADR 0011). Sign-up, the
+ * username check and /update-user are disabled too.
  */
 export const disabledPaths: readonly string[] = [
   '/admin/set-role',
@@ -40,6 +52,10 @@ export const disabledPaths: readonly string[] = [
   '/api-key/list',
   '/is-username-available',
   '/sign-up/email',
+  // Better Auth applies the bearer plugin's session only after every before hook has run, so the
+  // username plugin's immutableUsername check finds no session on a bearer request and lets a
+  // rename through. A user's own profile changes go through core's commands instead.
+  '/update-user',
 ];
 
 export interface AuthOptionsInput {
@@ -56,7 +72,8 @@ export interface AuthOptionsInput {
 /**
  * Better Auth's options in NorthMES (ADR 0010): the username, organization, admin and api-key
  * plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
- * the API may be on different origins. Sign-up is disabled, ids are uuids and the tables are in the
+ * the API may be on different origins. The session token that mints the JWTs lives
+ * SESSION_LIFETIME_SECONDS. Sign-up is disabled, ids are uuids and the tables are in the
  * auth schema. The same options build the runtime instance and core's migration, and the drift
  * test compares the two.
  */
@@ -70,6 +87,7 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
     trustedOrigins: [baseURL, ...webOrigins],
     disabledPaths: [...disabledPaths],
     emailAndPassword: { enabled: true, disableSignUp: true },
+    session: { expiresIn: SESSION_LIFETIME_SECONDS, updateAge: SESSION_RENEWAL_SECONDS },
     rateLimit: { storage: 'database' },
     telemetry: { enabled: false },
     advanced: {
@@ -77,7 +95,9 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
       defaultCookieAttributes: { sameSite: 'strict' },
     },
     plugins: [
-      username(),
+      // A username is never reassigned (ADR 0010, ADR 0051). The flag guards a call that carries
+      // the session cookie; /update-user is disabled over HTTP because a bearer request passes it.
+      username({ immutableUsername: true }),
       organization({ allowUserToCreateOrganization: false }),
       admin(),
       apiKey(),
