@@ -12,12 +12,15 @@ type ArticleSort = '-code' | 'name' | '-name';
 
 /**
  * The view of the articles list that lives in the URL (plan 06, View state in the URL): the search
- * in q, the sort, and the page counter with the cursor of a page after the first, in after for a
- * page reached forward and in before for one reached backward. Defaults stay out.
+ * in q, the sort, Show archived in archived=1, and the page counter with the cursor of a page
+ * after the first, in after for a page reached forward and in before for one reached backward.
+ * Defaults stay out.
  */
 export interface ArticleListSearch {
   readonly q?: string;
   readonly sort?: ArticleSort;
+  /** Show archived (design ui-222, LI31): 1 lists archived articles too. */
+  readonly archived?: 1;
   /** The 1-based page counter behind "Rows 26 to 50 of 60", from 2 and only with a cursor. */
   readonly page?: number;
   readonly after?: string;
@@ -36,14 +39,23 @@ const searchKeys = z.object({
     .optional()
     .catch(undefined),
   sort: z.enum(['-code', 'name', '-name']).optional().catch(undefined),
+  archived: z
+    .union([z.literal(1), z.literal('1')])
+    .transform(() => 1 as const)
+    .optional()
+    .catch(undefined),
   page: z.coerce.number().int().min(2).optional().catch(undefined),
   after: z.string().min(1).optional().catch(undefined),
   before: z.string().min(1).optional().catch(undefined),
 });
 
-/** The search and the sort of a view, which every change but paging keeps. */
-function query({ q, sort }: ArticleListSearch): ArticleListSearch {
-  return { ...(q !== undefined && { q }), ...(sort !== undefined && { sort }) };
+/** The search, the sort and Show archived of a view, which every change but paging keeps. */
+function query({ q, sort, archived }: ArticleListSearch): ArticleListSearch {
+  return {
+    ...(q !== undefined && { q }),
+    ...(sort !== undefined && { sort }),
+    ...(archived !== undefined && { archived }),
+  };
 }
 
 /**
@@ -69,8 +81,7 @@ export function sortedBy(
   { id, desc }: { readonly id: string; readonly desc: boolean },
 ): ArticleListSearch {
   const sort = `${desc ? '-' : ''}${id}`;
-  const { q } = query(view);
-  return query({ q, sort: sort === 'code' ? undefined : (sort as ArticleSort) });
+  return query({ ...view, sort: sort === 'code' ? undefined : (sort as ArticleSort) });
 }
 
 /** The view searching for text, from the first page; an empty text clears the search. */
@@ -78,7 +89,12 @@ export function searchedFor(view: ArticleListSearch, text: string): ArticleListS
   return query({ ...query(view), q: text === '' ? undefined : text });
 }
 
-/** The view's first page, with the same search and sort. */
+/** The view with archived articles shown or hidden, from the first page. */
+export function showingArchived(view: ArticleListSearch, shown: boolean): ArticleListSearch {
+  return query({ ...view, archived: shown ? 1 : undefined });
+}
+
+/** The view's first page, with the same search, sort and Show archived. */
 export function firstPageOf(view: ArticleListSearch): ArticleListSearch {
   return query(view);
 }
@@ -114,5 +130,10 @@ export function articleListVariables(view: ArticleListSearch) {
     view.before !== undefined
       ? { last: articlePageSize, before: view.before }
       : { first: articlePageSize, ...(view.after !== undefined && { after: view.after }) };
-  return { ...paging, orderBy, ...(view.q !== undefined && { search: view.q }) };
+  return {
+    ...paging,
+    orderBy,
+    ...(view.q !== undefined && { search: view.q }),
+    ...(view.archived !== undefined && { includeArchived: true }),
+  };
 }
