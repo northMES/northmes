@@ -10,6 +10,7 @@ import { FormActions } from '../../../../ui/components/form-actions/index.ts';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
+import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { detailsOf, fieldErrorsOf } from '../../../../ui/lib/graphql-errors.ts';
 import {
@@ -40,19 +41,21 @@ interface CreatedBefore {
 }
 
 /**
- * The New user form: Name, Username and Email, then Create user. Create user sends the values under
+ * The New user form (design core-304, US5 to US8): Person with Name, Username and Email, Password,
+ * which says the password is temporary and must be replaced at the first sign-in, and the optional
+ * Reason for change, then Create user. Create user sends the values under
  * a uuidv7 the form made once (ADR 0012). A retry after a first try that failed before its answer
  * finishes the creation. A retry after a first try that created the user, whose answer with the
  * temporary password was lost, is refused with core.user_created_password_hidden: the form says the
  * user was created and offers Open user, since NorthMES cannot show the password again.
  */
-function NewUserForm({ companyName }: { readonly companyName: string }) {
+function NewUserForm() {
   const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
   const [createdBefore, setCreatedBefore] = useState<CreatedBefore>();
   const form = useZodForm(createUser.fields, {
-    defaultValues: { name: '', username: '', email: '' },
+    defaultValues: { name: '', username: '', email: '', reason: '' },
   });
   const [create] = useMutation(CoreCreateUser, {
     // The user's page reads the new user from the cache.
@@ -71,7 +74,9 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   const save = async (values: UserValues) => {
     setCreatedBefore(undefined);
     try {
-      const { data } = await create({ variables: { input: { ...values, id, companyId } } });
+      const { reason, ...rest } = values;
+      const input = { ...rest, ...(reason ? { reason } : {}), id, companyId };
+      const { data } = await create({ variables: { input } });
       if (!data) return;
       const { user, temporaryPassword } = data.coreCreateUser;
       handOverTemporaryPassword(user.id, temporaryPassword);
@@ -106,6 +111,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
 
   const errors = summaryErrors(form.formState.errors);
   const email = form.register('email', { setValueAs: (value: string) => value.trim() });
+  const name = form.watch('name').trim();
   return (
     <form noValidate onSubmit={form.handleSubmit(save)} className="flex max-w-190 flex-col gap-4">
       {createdBefore === undefined ? (
@@ -135,7 +141,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
           />
         </ErrorSummary>
       )}
-      <FormSection title="Person" description={`A user of ${companyName}.`}>
+      <FormSection title="Person">
         <TextField label="Name" autoComplete="off" {...fieldProps(form, 'name')} />
         <TextField
           label="Username"
@@ -152,9 +158,25 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
           {...email}
           error={form.getFieldState('email', form.formState).error?.message}
         />
-        <p className="text-sm text-muted-foreground">
-          NorthMES makes a temporary password and shows it to you once after you create the user.
-        </p>
+      </FormSection>
+      <FormSection title="Password">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold">Password</p>
+          <p className="text-sm">Temporary, shown to you once after you create the user</p>
+          <p className="text-xs text-muted-foreground">
+            {name === '' ? 'The user' : name} must choose a new password at the first sign-in.
+          </p>
+        </div>
+      </FormSection>
+      <FormSection title="Reason for change">
+        <TextareaField
+          label="Reason"
+          optional
+          placeholder="Why you create this user"
+          hint={`Shown in the user's history. Do not enter personal data. Up to 500 characters.`}
+          maxLength={500}
+          {...fieldProps(form, 'reason')}
+        />
       </FormSection>
       <FormActions
         saveLabel="Create user"
@@ -199,7 +221,7 @@ export function NewUserScreen() {
       crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
       state={state}
     >
-      {viewer.loaded && !forbidden && <NewUserForm companyName={companyName} />}
+      {viewer.loaded && !forbidden && <NewUserForm />}
     </PageFrame>
   );
 }
