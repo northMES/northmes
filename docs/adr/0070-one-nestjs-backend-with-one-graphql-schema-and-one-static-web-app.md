@@ -77,6 +77,10 @@ Role `api` serves the one schema and no web files. Boot runs the root-field chec
 
 Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go. The manifest's `commands` field goes as well: a command's contract says whether a plugin may validate it ([ADR 0017][adr-0017]), and the longest validator time limit that the `commands` entry carried belongs on the contract once validator time limits are built.
 
+#### Changes to ADR 0010
+
+The web signs in with a bearer session instead of a session cookie, because the web and the API may be on different sites, where browsers block a third-party cookie. Better Auth's bearer plugin hands the session token to the web, which keeps it in the tab's `sessionStorage` and uses it only to mint five-minute JWTs from `/api/auth/token` (the jwt plugin); every API request carries the JWT. A session lives 12 hours and renews after an hour of use, so it works as the web's refresh token. The API answers CORS only for the `webOrigins` in `northmes.config.json` and never with credentials, so the cookie cache and `SameSite=Strict` go. The guard checks the JWT's session and the user's ban through a cache of at most 60 seconds, which keeps the 60-second bound for a ban or a revoked session (#407). Rotating refresh tokens come with Better Auth's OAuth provider plugin, together with the OAuth integration API.
+
 #### Changes to ADR 0012
 
 `DomainError` extends `HttpException` from `@nestjs/common` and takes a `status` (`HttpStatus`) instead of `kind`; `defineErrors` declares a status per code. The seven kinds map to 400, 401, 403, 404, 409, 412 and 503, and GraphQL `extensions.code` comes from the status. Code that needs no NorthMES code throws Nest's built-in exceptions, such as `NotFoundException` or `ForbiddenException`, and the filter answers them like a `DomainError` without `errorCode`.
