@@ -69,3 +69,30 @@ export function accessOf(nodes: readonly ScopeGrant[]): Access {
   }
   return { scopes, readScopes: [...read].sort(), writeScopes: [...write].sort() };
 }
+
+/**
+ * True when the principal may open the plant at scopeId: a role assignment at the plant or at a
+ * node above it, such as the company, grants it a permission there (ADR 0007).
+ */
+export function canOpen(principal: Pick<Access, 'scopes'>, scopeId: string): boolean {
+  return grantedAt(principal.scopes, scopeId, () => true);
+}
+
+/**
+ * The access of a request at one plant (ADR 0008): of the scopes the principal reads, it reads
+ * the plant, the nodes above it and the nodes below it, so never another plant; of those, it writes
+ * the ones the principal writes. A request without a plant reads and writes nothing. Both sets
+ * stay sorted.
+ */
+export function atPlant(access: Access, plantId: string | undefined): Access {
+  if (plantId === undefined) return { ...access, readScopes: [], writeScopes: [] };
+  const above = new Set([...ancestorsOrSelf(access.scopes, plantId)].map(({ id }) => id));
+  const inPlant = (scopeId: string) =>
+    above.has(scopeId) ||
+    [...ancestorsOrSelf(access.scopes, scopeId)].some(({ id }) => id === plantId);
+  return {
+    ...access,
+    readScopes: access.readScopes.filter(inPlant),
+    writeScopes: access.writeScopes.filter(inPlant),
+  };
+}
