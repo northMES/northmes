@@ -10,16 +10,10 @@ interface SkillsLock {
 }
 
 /**
- * The project skills that plan 13 names. Each is NorthMES's own file, so it gets no skills-lock.json
+ * The project skills in .claude/skills. Each is NorthMES's own file, so it gets no skills-lock.json
  * entry and no section in THIRD_PARTY_LICENSE.md, which pin and license third-party skills only.
  */
-const projectSkills: readonly string[] = [
-  'db-test',
-  'vertical-slice',
-  'graphql-subgraph',
-  'web-module',
-  'dst-test',
-];
+const projectSkills: readonly string[] = ['db-test', 'vertical-slice', 'web-module', 'dst-test'];
 
 /**
  * The skills check (ADR 0063): every folder in .claude/skills is a skill that skills-lock.json

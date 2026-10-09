@@ -23,20 +23,11 @@ interface PlannedPath {
 // Paths that the agent files name before they exist, each with the task in docs/plan that creates
 // it. An entry stays until someone removes it, also after its task merges.
 const plannedPaths: PlannedPath[] = [
-  { path: 'packages', task: 'E00-S02-T01' },
-  { path: 'packages/testing', task: 'E00-S02-T01' },
   { path: 'scripts/handoff/tests-changed.mjs', task: 'E00-S06-T01' },
   // release-please writes the file in its first release pull request.
   { path: 'CHANGELOG.md', task: 'E01-S03-T02' },
-  { path: 'modules', task: 'E02-S01-T01' },
-  { path: 'examples', task: 'E02-S01-T01' },
-  { path: 'packages/sdk', task: 'E02-S01-T01' },
-  { path: 'packages/contracts', task: 'E02-S01-T01' },
-  { path: 'packages/web-sdk', task: 'E02-S01-T01' },
-  { path: 'packages/web-build', task: 'E02-S01-T01' },
-  { path: '.claude/launch.json', task: 'E02-S08-T05' },
   { path: 'packages/ui', task: 'E04-S01' },
-  { path: 'modules/ai/server/model-call.ts', task: 'E13-S01' },
+  { path: 'apps/backend/src/modules/ai/model-call.ts', task: 'E13-S01' },
   { path: 'apps/docs/reference', task: 'E19-S02' },
 ];
 

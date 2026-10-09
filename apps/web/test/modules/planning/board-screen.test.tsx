@@ -10,7 +10,7 @@ import { PlanningReleaseProductionOrder } from '../../../src/modules/planning/re
 
 afterEach(cleanup);
 
-/** A fictional order of the board's query, with the article the core subgraph resolves. */
+/** A fictional order of the board's query, with the article the core module resolves. */
 function order(number: string, quantity: string, status: string, article: string, version: number) {
   return {
     __typename: 'ProductionOrder',
@@ -96,12 +96,10 @@ describe('BoardScreen', () => {
   });
 
   it('E02-S05 the board stub shows the error when its query fails', async () => {
-    renderBoard([
-      { request: { query: PlanningBoard }, error: new Error('The GraphQL gateway is not ready.') },
-    ]);
+    renderBoard([{ request: { query: PlanningBoard }, error: new Error('The API is not ready.') }]);
 
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'The production orders could not be loaded: The GraphQL gateway is not ready.',
+      'The production orders could not be loaded: The API is not ready.',
     );
   });
 

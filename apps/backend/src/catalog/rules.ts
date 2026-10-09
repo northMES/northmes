@@ -30,12 +30,7 @@ export function reservedIdProblems(entries: readonly CatalogEntry[]): string[] {
 }
 
 /** The names moduleNames derives from an id, each its own namespace. */
-const DERIVED_NAMES = [
-  'gql',
-  'sql',
-  'ownerRole',
-  'remote',
-] as const satisfies readonly (keyof ModuleNames)[];
+const DERIVED_NAMES = ['gql', 'sql', 'ownerRole'] as const satisfies readonly (keyof ModuleNames)[];
 
 /**
  * A problem for every two modules that derive the same name of one kind, such as press-2 and

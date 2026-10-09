@@ -1,7 +1,10 @@
 // The types of gen-migration.mjs, for the TypeScript tests that render a migration file.
 
 export interface RenderOptions {
-  /** The module id, which names the folder under modules/ and, as its SQL name, the schema. */
+  /**
+   * The module id, which names the folder under apps/backend/src/modules/ and, as its SQL name,
+   * the schema.
+   */
   readonly module: string;
   /** The table name, which also ends the file name. */
   readonly slug: string;

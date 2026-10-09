@@ -121,7 +121,7 @@ jobs:
 
   # react-doctor runs in CI only, under the reviewed license exception in
   # docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md, so neither pnpm check nor pnpm
-  # check:full runs it. The root script scans apps/web, every modules/*/web and packages/web-sdk.
+  # check:full runs it. The root script scans apps/web and packages/web-sdk.
   # --no-telemetry skips react-doctor's score API, share URL and crash reports, and
   # --no-supply-chain skips its Socket.dev lookup of each dependency, which the supply-chain checks
   # of docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md cover. An error

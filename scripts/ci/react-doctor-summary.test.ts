@@ -83,13 +83,13 @@ describe('the summary step of CI / react doctor', () => {
               column: 3,
             },
           ],
-          'modules/planning/web': [
+          'packages/web-sdk': [
             {
               plugin: 'react',
               rule: 'no-array-index-key',
               severity: 'warning',
               message: 'Key the rows by their order id',
-              normalizedFilePath: 'src/order-list.tsx',
+              normalizedFilePath: 'src/shell-context.tsx',
               line: 40,
               column: 9,
             },
@@ -107,7 +107,7 @@ describe('the summary step of CI / react doctor', () => {
       '| Severity | Rule | Where | Message |',
       '|---|---|---|---|',
       '| error | react-doctor/no-derived-state | apps/web/src/board.tsx:12:3 | Compute the label \\| during render |',
-      '| warning | react/no-array-index-key | modules/planning/web/src/order-list.tsx:40:9 | Key the rows by their order id |',
+      '| warning | react/no-array-index-key | packages/web-sdk/src/shell-context.tsx:40:9 | Key the rows by their order id |',
       '',
     ].join('\n');
 

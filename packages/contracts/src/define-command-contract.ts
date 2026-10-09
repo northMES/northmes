@@ -76,7 +76,7 @@ type CommandInput<Options extends CommandContractOptions> = InputFor<
 
 /**
  * A command's contract, plain data in the owning module's MIT contracts package, so manifests,
- * validators, plugins and web remotes read it without Nest or React (ADR 0012, ADR 0017).
+ * validators, plugins and the web app read it without Nest or React (ADR 0012, ADR 0017).
  */
 export type CommandContract<Options extends CommandContractOptions = CommandContractOptions> =
   Options & {

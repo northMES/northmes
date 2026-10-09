@@ -28,11 +28,11 @@ export interface ModuleManifest {
     readonly columns: readonly string[];
     readonly purpose: string;
   }[];
-  /** A web remote exists. Static facts the server needs before any browser code runs. */
+  /** The module has screens in the web app. Static facts the server reads without web code. */
   readonly web?: {
     readonly label: string;
     readonly permission?: string;
-    /** Sidebar position, kept when the remote fails to load. */
+    /** Sidebar position. */
     readonly order: number;
     /** Slots this module owns, by slot id `<owner>/<area>/<name>/v<N>` (ADR 0068). */
     readonly slots?: Readonly<
@@ -40,7 +40,7 @@ export interface ModuleManifest {
     >;
     /**
      * Contributions to slots this module owns or slots of modules in its dependsOn closure. The
-     * remote supplies each implementation under the same id (ADR 0068).
+     * module's web code supplies each implementation under the same id (ADR 0068).
      */
     readonly contributes?: readonly {
       /** Starts with the module id. */

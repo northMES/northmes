@@ -3,7 +3,7 @@ import { gql, type TypedDocumentNode } from '@apollo/client';
 
 // Hand-written types of the board's operations, until GraphQL codegen writes them.
 
-/** One production order on the board, with the article that the core subgraph resolves. */
+/** One production order on the board, with the article that the core module resolves. */
 export interface BoardOrder {
   readonly __typename: 'ProductionOrder';
   readonly id: string;

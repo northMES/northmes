@@ -8,11 +8,8 @@ interface MountComponents {
   readonly plantComponent?: RouteComponent;
 }
 
-/**
- * Creates a root route and, under it, the $plant route that every module mounts under. Internal:
- * createShellRoutes and validateWebModule each call it for routes of their own.
- */
-export function createMountRoutes({ rootComponent, plantComponent }: MountComponents = {}) {
+/** Creates a root route and, under it, the $plant route that every module mounts under. */
+function createMountRoutes({ rootComponent, plantComponent }: MountComponents = {}) {
   const rootRoute = createRootRoute({ component: rootComponent });
   const plantRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -26,7 +23,7 @@ export function createMountRoutes({ rootComponent, plantComponent }: MountCompon
 export type PlantRoute = ReturnType<typeof createMountRoutes>['plantRoute'];
 
 export interface ShellRoutesOptions extends MountComponents {
-  /** The loaded modules, each checked with validateWebModule. */
+  /** The modules whose routes go under the $plant route. */
   readonly modules: readonly WebModule[];
 }
 

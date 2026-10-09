@@ -6,8 +6,8 @@ import { API_MAJOR } from '@northmes/contracts';
 export const API_CONTROLLER_METADATA = 'northmes:api-controller';
 
 /**
- * The route family of a controller (ADR 0064). First-party routes serve the shell, the remotes and
- * the stations from the same image and carry no compatibility promise; public routes are the
+ * The route family of a controller (ADR 0064). First-party routes serve the web app and the
+ * stations from the same image and carry no compatibility promise; public routes are the
  * integration API for outside systems.
  */
 export type ApiFamily = 'first-party' | 'public';

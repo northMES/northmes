@@ -34,7 +34,8 @@ describe('freePort', () => {
 describe('freePorts', () => {
   it('E02-S08 the ports pnpm dev takes in one process are disjoint and leave out the stack port', async () => {
     // freePort closes its socket before it resolves, so the next call may get the same port. pnpm
-    // dev takes the stack's PORT for the server and one more port for the shell and each remote.
+    // dev takes the stack's PORT for the server and one more port for the web dev server. Eight
+    // ports check that a larger count stays disjoint too.
     const stackPort = await freePort();
 
     const ports = await freePorts(8, { except: [stackPort] });

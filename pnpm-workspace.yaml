@@ -1,6 +1,5 @@
 packages:
   - apps/*
-  - modules/*
   - modules/*/contracts
   - modules/planning/domain
   - packages/*
@@ -9,7 +8,6 @@ packages:
 pmOnFail: ignore
 
 allowBuilds:
-  '@apollo/protobufjs': false
   cpu-features: false
   protobufjs: false
   ssh2: false
@@ -87,8 +85,9 @@ catalog:
   yaml: 2.9.1
   zod: 4.6.5
 
-# The web singletons and graphql resolve to one copy each, also where a dependency's own range
-# would pick another version (ADR 0015, ADR 0019).
+# React, the router, Apollo Client and graphql resolve to one copy each, also where a dependency's
+# own range would pick another version: two copies of one of them in the web bundle or the backend
+# break hooks, context and instanceof checks.
 overrides:
   '@apollo/client': 'catalog:'
   '@tanstack/react-router': 'catalog:'

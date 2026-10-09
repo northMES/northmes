@@ -169,12 +169,7 @@ describe.skipIf(!existsSync(`${root}.git`))('repository', () => {
   });
 
   it('E02-S01 .gitattributes marks the schema snapshots and the *.gen.* files as generated', () => {
-    const generated = [
-      'schema/api.graphql',
-      'schema/supergraph.graphql',
-      'modules/planning/schema.graphql',
-      'modules/planning/web/src/documents.gen.ts',
-    ];
+    const generated = ['schema/api.graphql', 'apps/web/src/modules/planning/documents.gen.ts'];
 
     for (const path of generated) {
       expect(git('check-attr', 'linguist-generated', '--', path).trim(), path).toBe(
