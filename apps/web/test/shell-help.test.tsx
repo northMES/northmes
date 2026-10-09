@@ -132,6 +132,26 @@ describe('the Help menu', () => {
     ]);
   });
 
+  it('E04-S02 every link of All pages is a target at least --nm-target-min wide and high (WCAG 2.5.8)', async () => {
+    renderAt('/plant-a/all-pages');
+
+    const main = await screen.findByRole('main');
+    await within(main).findByRole('heading', { level: 1, name: 'All pages' });
+    // happy-dom applies no Tailwind, so the test reads the classes.
+    const links = within(main).getAllByRole('link');
+    expect(links).toHaveLength(3);
+    for (const link of links) {
+      expect(link.className.split(' ')).toEqual(
+        expect.arrayContaining([
+          'inline-flex',
+          'items-center',
+          'min-h-(--nm-target-min)',
+          'min-w-(--nm-target-min)',
+        ]),
+      );
+    }
+  });
+
   it('E04-S02 Page not found in a plant offers See all pages beside Go to the plant (NF1)', async () => {
     renderAt('/plant-a/reports');
 
