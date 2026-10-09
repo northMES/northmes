@@ -91,7 +91,7 @@ export async function migrateTemplate({
  * @northmes/testing has started Postgres and created the empty template. It bootstraps the database
  * roles as the container's superuser with passwords of this run, migrates the in-repo modules into
  * the template that useTestDatabase clones, and gives the tests its name and the passwords of
- * nm_app and nm_owner, the roles that useTestDatabase hands out (ADR 0041).
+ * nm_app, nm_owner and nm_auth, the roles that useTestDatabase hands out (ADR 0041).
  */
 export default async function setup(project: TestProject): Promise<void> {
   const { pg } = project.getProvidedContext();
@@ -108,5 +108,5 @@ export default async function setup(project: TestProject): Promise<void> {
     catalog,
   });
   project.provide('pgTemplate', name);
-  project.provide('pgRolePasswords', { owner: passwords.owner, app: passwords.app });
+  project.provide('pgRolePasswords', passwords);
 }
