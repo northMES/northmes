@@ -2,10 +2,11 @@
 import { Module } from '@nestjs/common';
 import { AccessApiModule } from './api/access/access-api.module.ts';
 import { ArticleModule } from './api/article/article.module.ts';
+import { CompanyModule } from './api/company/company.module.ts';
 
 /**
  * The core module's Nest module, which AppModule imports: sign-in and the principal guard, and one
  * module per entity of its GraphQL surface (ADR 0070).
  */
-@Module({ imports: [AccessApiModule, ArticleModule] })
+@Module({ imports: [AccessApiModule, ArticleModule, CompanyModule] })
 export class CoreModule {}

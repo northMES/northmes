@@ -125,48 +125,74 @@ async function asCoreOwner<Result>(
   }
 }
 
-/** A company and its plants in the scope tree, as givenCompany writes them. */
+/** A company and its plants, as givenCompany writes them. */
 export interface GivenCompany {
+  /** The company's id: its node in core.scope and its core.company row. */
   readonly company: string;
   /** The plants' scope ids, plant number 1 first. */
   readonly plants: readonly string[];
+  /** The plants' slugs, in the order of plants. */
+  readonly slugs: readonly string[];
 }
 
 export interface GivenCompanyOptions {
+  /** The company's name. It defaults to one made of the company's id. */
+  readonly name?: string;
   /** How many plants the company gets, with fresh ids. It defaults to one. */
   readonly plants?: number;
   /** The ids of the plants, such as ids from given.plant(), instead of fresh ones. */
   readonly plantIds?: readonly string[];
+  /** The plants' names, which also set how many plants the company gets. */
+  readonly plantNames?: readonly string[];
 }
 
 /**
- * Writes a company and its plants into core.scope as core's owner role, with fresh uuidv7 ids
- * unless plantIds names them, and the spans of ADR 0007: the company's is unbounded, plant number
- * k's is [k << 32, (k + 1) << 32).
+ * Writes a company and its plants as core's owner role (ADR 0007): the Better Auth organization
+ * with the company's id as its slug (ADR 0066), the company's node in core.scope and its
+ * core.company row, and for each plant its node, with the span of plant number k,
+ * [k << 32, (k + 1) << 32), and its core.plant row with a fresh slug. Ids are fresh uuidv7s
+ * unless plantIds names the plants'.
  */
 export function givenCompany(
   ownerUrl: string,
-  { plants = 1, plantIds }: GivenCompanyOptions = {},
+  { name, plants, plantIds, plantNames }: GivenCompanyOptions = {},
 ): Promise<GivenCompany> {
-  const wanted = plantIds ?? Array.from({ length: plants }, () => randomUUIDv7());
+  const count = plantIds?.length ?? plantNames?.length ?? plants ?? 1;
+  const ids = plantIds ?? Array.from({ length: count }, () => randomUUIDv7());
   return asCoreOwner(ownerUrl, async (client) => {
     const company = randomUUIDv7();
+    const companyName = name ?? `Company ${company}`;
+    const { rows } = await client.query<{ id: string }>(
+      `insert into auth.organization (name, slug, "createdAt") values ($1, $2, now())
+       returning id`,
+      [companyName, company],
+    );
     await client.query(
       `insert into core.scope (id, company_id, parent_id, kind, span)
        values ($1, $1, null, 'company', '(,)')`,
       [company],
     );
-    const ids: string[] = [];
-    for (const [index, plant] of wanted.entries()) {
+    await client.query('insert into core.company (id, organization_id, name) values ($1, $2, $3)', [
+      company,
+      rows[0]?.id,
+      companyName,
+    ]);
+    const slugs: string[] = [];
+    for (const [index, plant] of ids.entries()) {
       const k = index + 1;
+      const slug = `plant-${randomBytes(5).toString('hex')}`;
       await client.query(
         `insert into core.scope (id, company_id, parent_id, kind, span)
          values ($1, $2, $2, 'plant', int8range($3::int8 << 32, ($3::int8 + 1) << 32))`,
         [plant, company, k],
       );
-      ids.push(plant);
+      await client.query(
+        'insert into core.plant (id, company_id, slug, name) values ($1, $2, $3, $4)',
+        [plant, company, slug, plantNames?.[index] ?? `Plant ${k}`],
+      );
+      slugs.push(slug);
     }
-    return { company, plants: ids };
+    return { company, plants: ids, slugs };
   });
 }
 
@@ -267,24 +293,28 @@ export async function signIn(
 }
 
 /**
- * Signs in a user who holds every installed permission at `plant`, which becomes the one plant of
- * a fresh company unless core.scope holds it already, and returns the headers of a request at that plant: the JWT and
- * x-northmes-plant. The user reads the plant and the company above it and writes the plant, as a
- * plant planner does (ADR 0008). The app must listen.
+ * Signs in a user who holds every installed permission at `plant`, a plant's scope id, which
+ * becomes the one plant of a fresh company unless core.plant holds it already, and returns the
+ * headers of a request at that plant: the JWT, and the plant's slug in x-northmes-plant. The user
+ * reads the plant and the company above it and writes the plant, as a plant planner does (ADR
+ * 0008). The app must listen.
  */
 export async function signInAt(
   app: INestApplication,
   ownerUrl: string,
   plant: string,
 ): Promise<Record<string, string>> {
-  const { exists, permissions } = await asCoreOwner(ownerUrl, async (client) => {
-    const scope = await client.query('select 1 from core.scope where id = $1', [plant]);
+  const { slug, permissions } = await asCoreOwner(ownerUrl, async (client) => {
+    const found = await client.query<{ slug: string }>(
+      'select slug from core.plant where id = $1',
+      [plant],
+    );
     const { rows } = await client.query<{ key: string }>(
       'select key from core.permission where installed order by key',
     );
-    return { exists: scope.rowCount !== 0, permissions: rows.map(({ key }) => key) };
+    return { slug: found.rows[0]?.slug, permissions: rows.map(({ key }) => key) };
   });
-  if (!exists) await givenCompany(ownerUrl, { plantIds: [plant] });
+  const plantSlug = slug ?? (await givenCompany(ownerUrl, { plantIds: [plant] })).slugs[0] ?? '';
   const { authorization } = await signIn(app, ownerUrl, [{ scopeId: plant, permissions }]);
-  return { authorization, [PLANT_HEADER]: plant };
+  return { authorization, [PLANT_HEADER]: plantSlug };
 }

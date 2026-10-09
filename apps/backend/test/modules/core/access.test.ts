@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { accessOf, atPlant, can, canOpen, type ScopeGrant } from '../../../src/modules/core/core/access/access.ts';
+import {
+  accessOf,
+  atPlant,
+  can,
+  canOpen,
+  type ScopeGrant,
+} from '../../../src/modules/core/core/access/access.ts';
 
 // One company with plants A and B, and an area below plant A, so the walk has three levels.
 const company = '019a0000-0000-7000-8000-000000000c01';

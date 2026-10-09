@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
+import { DomainError } from '@northmes/sdk/errors';
 import { sql } from 'kysely';
 import {
   PLANT_HEADER,
@@ -10,7 +11,7 @@ import {
   type ScopeGrant,
 } from '../../../../principal.ts';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
-import { accessOf } from './access.ts';
+import { accessOf, atPlant, canOpen } from './access.ts';
 import { AuthService } from './auth.service.ts';
 
 /** The bearer token of an Authorization header. */
@@ -21,6 +22,20 @@ interface GrantRow {
   readonly id: string;
   readonly parent_id: string | null;
   readonly permissions: string[];
+  /** The plant's slug, for a plant node. */
+  readonly slug: string | null;
+}
+
+/**
+ * The refusal of a request whose x-northmes-plant names a plant that its principal may not open,
+ * or no plant at all: one answer for both, so it never tells whether a plant exists (ADR 0007).
+ */
+export function plantForbidden(plant: string): DomainError {
+  return new DomainError({
+    code: 'core.plant_forbidden',
+    status: HttpStatus.FORBIDDEN,
+    message: `You cannot open plant ${plant}. Choose one of your plants.`,
+  });
 }
 
 /**
@@ -39,7 +54,7 @@ export class PrincipalService extends PrincipalResolver {
 
   /**
    * The principal of a request with these headers, or null when it carries no bearer token, or one
-   * that is not a valid JWT of this API.
+   * that is not a valid JWT of this API. x-northmes-plant names the request's plant by its slug.
    */
   async resolve(headers: Headers): Promise<Principal | null> {
     const token = bearer.exec(headers.get('authorization') ?? '')?.[1];
@@ -50,11 +65,13 @@ export class PrincipalService extends PrincipalResolver {
   }
 
   /**
-   * The principal of a user at the plant that plantId names. Its scope tree holds every node of
+   * The principal of a user at the plant whose slug is `plant`. Its scope tree holds every node of
    * the companies where the user holds a role, each with the installed permissions of the roles
-   * assigned at it. The tables carry no policies, so the query runs without scopes.
+   * assigned at it, and its scope sets are narrowed to the plant and its company (ADR 0008); without
+   * a plant they are empty. A plant the user may not open, or no plant with that slug, throws
+   * core.plant_forbidden (ADR 0007). The tables carry no policies, so the query runs without scopes.
    */
-  async forUser(userId: string, plantId?: string): Promise<Principal> {
+  async forUser(userId: string, plant?: string): Promise<Principal> {
     const rows = await runAs(null, () =>
       this.db.transaction(async (tx) => {
         const { rows } = await sql<GrantRow>`
@@ -64,7 +81,7 @@ export class PrincipalService extends PrincipalResolver {
               join core.role r on r.id = a.role_id
              where a.user_id = ${userId}
           )
-          select s.id, s.parent_id,
+          select s.id, s.parent_id, pl.slug,
                  coalesce(
                    (select array_agg(distinct p.key order by p.key)
                       from assigned x
@@ -74,6 +91,7 @@ export class PrincipalService extends PrincipalResolver {
                    '{}'
                  ) as permissions
             from core.scope s
+            left join core.plant pl on pl.id = s.id
            where s.company_id in (
                    select c.company_id from core.scope c join assigned x on x.scope_id = c.id
                  )`.execute(tx);
@@ -85,6 +103,10 @@ export class PrincipalService extends PrincipalResolver {
       parentId: row.parent_id,
       permissions: row.permissions,
     }));
-    return { userId, plantId, ...accessOf(nodes) };
+    const access = accessOf(nodes);
+    if (plant === undefined) return { userId, plantId: undefined, ...atPlant(access, undefined) };
+    const plantId = rows.find(({ slug }) => slug === plant)?.id;
+    if (plantId === undefined || !canOpen(access, plantId)) throw plantForbidden(plant);
+    return { userId, plantId, ...atPlant(access, plantId) };
   }
 }

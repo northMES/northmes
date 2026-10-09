@@ -38,9 +38,9 @@ describe('roles, role assignments and the permission catalog', () => {
     }
   }
 
-  /** The principal of a user, as the server resolves it once per request. */
-  function principalOf(userId: string) {
-    return testApp.app.get(PrincipalService).forUser(userId);
+  /** The principal of a user at the plant with this slug, as the server resolves it per request. */
+  function principalOf(userId: string, plant?: string) {
+    return testApp.app.get(PrincipalService).forUser(userId, plant);
   }
 
   it('E05-S06 northmes migrate writes every permission the modules declare into core.permission', async () => {
@@ -78,15 +78,16 @@ describe('roles, role assignments and the permission catalog', () => {
     expect(can(atPlantA, 'planning.productionOrder:release', company)).toBe(false);
   });
 
-  it("E05-S04 the principal's read and write scopes come from its role assignments", async () => {
-    const { company, plants } = await givenCompany(db.ownerUrl, { plants: 2 });
+  it("E05-S04 the principal's read and write scopes come from its role assignments at the request's plant", async () => {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
     const [plantA = ''] = plants;
     const userId = await givenUser(db.ownerUrl, [
       { scopeId: plantA, permissions: ['core.article:read', 'core.article:update'] },
     ]);
 
-    const principal = await principalOf(userId);
+    const principal = await principalOf(userId, slugs[0]);
 
+    expect(principal.plantId).toBe(plantA);
     expect(principal.readScopes).toEqual([company, plantA].sort());
     expect(principal.writeScopes).toEqual([plantA]);
   });

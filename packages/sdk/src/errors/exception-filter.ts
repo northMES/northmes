@@ -24,14 +24,37 @@ function graphqlCodeOf(status: number): string | undefined {
 }
 
 /**
+ * The GraphQL error of an HttpException (ADR 0012): its message and the extensions.code of its
+ * status, and for a DomainError also errorCode, details and fieldErrors, in the shape of a Zod
+ * failure's. Any other exception, and an HttpException of a status without a GraphQL code, has
+ * none, so GraphQL Yoga masks it. The server also answers a refusal raised outside a resolver with
+ * it, such as a request's plant that its principal may not open.
+ */
+export function toGraphQLError(exception: unknown): GraphQLError | undefined {
+  if (!(exception instanceof HttpException)) return undefined;
+  const code = graphqlCodeOf(exception.getStatus());
+  if (!code) return undefined;
+  if (!(exception instanceof DomainError)) {
+    return new GraphQLError(exception.message, { extensions: { code } });
+  }
+  return new GraphQLError(exception.message, {
+    extensions: {
+      code,
+      errorCode: exception.code,
+      details: exception.details,
+      fieldErrors: exception.fieldErrors,
+    },
+  });
+}
+
+/**
  * The one exception filter of the server. The host registers it once as APP_FILTER in its root
  * module, and modules and plugins register no filter of their own (ADR 0012). It catches every
  * exception. An HttpException thrown in a resolver, such as Nest's NotFoundException, becomes a
- * GraphQL error with its message and the extensions.code of its status. A DomainError adds
- * errorCode, details and fieldErrors, in the shape of a Zod failure's. Any other exception in a
- * resolver, and an HttpException of a status without a GraphQL code, passes on as it was thrown,
- * so GraphQL Yoga masks it. Outside GraphQL it leaves the answer to Nest's default filter, until
- * REST routes answer with problem details.
+ * GraphQL error with its message and the extensions.code of its status (toGraphQLError). Any other
+ * exception in a resolver, and an HttpException of a status without a GraphQL code, passes on as it
+ * was thrown, so GraphQL Yoga masks it. Outside GraphQL it leaves the answer to Nest's default
+ * filter, until REST routes answer with problem details.
  */
 @Catch()
 export class DomainErrorFilter extends BaseExceptionFilter {
@@ -40,19 +63,8 @@ export class DomainErrorFilter extends BaseExceptionFilter {
       super.catch(exception, host);
       return undefined;
     }
-    if (!(exception instanceof HttpException)) throw exception;
-    const code = graphqlCodeOf(exception.getStatus());
-    if (!code) throw exception;
-    if (!(exception instanceof DomainError)) {
-      return new GraphQLError(exception.message, { extensions: { code } });
-    }
-    return new GraphQLError(exception.message, {
-      extensions: {
-        code,
-        errorCode: exception.code,
-        details: exception.details,
-        fieldErrors: exception.fieldErrors,
-      },
-    });
+    const error = toGraphQLError(exception);
+    if (!error) throw exception;
+    return error;
   }
 }

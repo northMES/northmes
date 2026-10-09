@@ -133,10 +133,11 @@ describe('companies, plants and the request plant', () => {
     );
 
     for (const [index, answer] of answers.entries()) {
-      expect(answer, `answer ${index}`).toMatchObject({
-        data: null,
-        errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' } }],
-      });
+      // The request fails before any field runs, so the answer holds no data (GraphQL spec 7.1.2).
+      expect(answer.data, `answer ${index}`).toBeUndefined();
+      expect(answer.errors, `answer ${index}`).toMatchObject([
+        { extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' } },
+      ]);
     }
     // The answer for a plant of another company and for no plant at all read the same.
     expect(answers[1]?.errors?.[0]?.message).toBe(
