@@ -256,8 +256,8 @@ describe('tooling', () => {
 
   it('E04-S01 the UI, form and table libraries are catalog entries that apps/web takes from the catalog', () => {
     // ADR 0020 and the articles slice name these packages. Each pin is the newest release that was
-    // outside Renovate's 14-day window on 2026-10-09. The shadcn primitives import cn, and the
-    // stylesheet imports tw-animate-css for their animations. culori and its types run the token
+    // outside Renovate's 14-day window on 2026-10-09. The shadcn primitives and the rest of the web
+    // import cn, which replaces clsx and tailwind-merge, and the stylesheet imports tw-animate-css for their animations. culori and its types run the token
     // contrast test, and shadcn is the CLI that writes the primitives, so they are dev dependencies.
     const dependencies = {
       '@base-ui/react': '1.8.0',
@@ -267,11 +267,9 @@ describe('tooling', () => {
       '@tailwindcss/vite': '4.3.3',
       '@tanstack/react-table': '9.2.4',
       'class-variance-authority': '0.7.1',
-      clsx: '2.1.1',
       cn: '0.4.0',
       'lucide-react': '1.48.0',
       'react-hook-form': '7.88.0',
-      'tailwind-merge': '3.7.0',
       tailwindcss: '4.3.3',
       'tw-animate-css': '1.4.0',
       uuid: '14.0.2',
@@ -293,6 +291,10 @@ describe('tooling', () => {
     }
     for (const name of Object.keys(devDependencies)) {
       expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBe('catalog:');
+    }
+    for (const name of ['clsx', 'tailwind-merge']) {
+      expect(catalog[name], `catalog ${name}`).toBeUndefined();
+      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBeUndefined();
     }
     // TanStack Table v9 is the version the project skill and ADR 0020 describe.
     expect(catalog['@tanstack/react-table']).toMatch(/^9\.\d+\.\d+$/);
