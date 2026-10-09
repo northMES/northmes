@@ -14,6 +14,7 @@ import {
   linksIn,
   renderShellAt,
   setViewport,
+  settingsModule,
   viewer,
 } from './settings-fixtures.tsx';
 
@@ -60,6 +61,25 @@ describe('plant settings', () => {
 
     await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'Machines']));
     expect(document.title).toBe('Machines · Plant A · NorthMES');
+  });
+
+  it('E04-S02 the plant settings navigation puts the entries of every module other than core in one Modules group, in module order', async () => {
+    const { fetch } = api(['core.user:read']);
+    const modules = [
+      ...shellModules,
+      equipment,
+      settingsModule('quality', 'Quality', 30),
+      settingsModule('maintenance', 'Maintenance', 40),
+    ];
+    renderShellAt('/plant-a/equipment/machines', modules, { fetch });
+
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() => expect(within(settings).getAllByText('Modules')).toHaveLength(1));
+    expect(linksIn(within(settings).getByRole('list', { name: 'Modules' }))).toEqual([
+      ['Machines', '/plant-a/equipment/machines'],
+      ['Quality plans', '/plant-a/quality/plans'],
+      ['Maintenance plans', '/plant-a/maintenance/plans'],
+    ]);
   });
 
   it('E04-S02 the plant settings navigation ends with the company settings link for a user with a company settings entry', async () => {

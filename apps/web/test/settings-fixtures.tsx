@@ -165,6 +165,46 @@ export const equipment: ShellModule = {
   }),
 };
 
+/**
+ * A module with one plant settings entry and one company settings entry, so that two of them
+ * show how the settings navigations group the entries of the modules other than core.
+ */
+export function settingsModule(id: string, label: string, order: number): ShellModule {
+  return {
+    label,
+    order,
+    links: [
+      {
+        label: `${label} plans`,
+        icon: 'ClipboardList',
+        area: 'settings',
+        link: ({ plant }) => ({ href: `/${plant}/${id}/plans` }),
+      },
+    ],
+    settingsLinks: [
+      {
+        label: `${label} rules`,
+        icon: 'ListChecks',
+        link: ({ companyId: company }) => ({ href: `/settings/${company}/${id}/rules` }),
+      },
+    ],
+    module: defineWebModule({
+      id,
+      version: '0.1.0',
+      routes: (plantRoute) => {
+        const moduleRoute = createRoute({ getParentRoute: () => plantRoute, path: id });
+        return moduleRoute.addChildren([
+          createRoute({
+            getParentRoute: () => moduleRoute,
+            path: 'plans',
+            component: page(`${label} plans`),
+          }),
+        ]);
+      },
+    }),
+  };
+}
+
 /** Renders the shell's router for the modules at path, for a signed-in viewer. */
 export function renderShellAt(
   path: string,
