@@ -52,7 +52,7 @@ export function ArticleForm({ form, onSave, cancelHref, conflict }: ArticleFormP
           focusKey={form.formState.submitCount}
         />
       ) : (
-        <ErrorSummary heading="This article changed while you edited it" errors={[]}>
+        <ErrorSummary heading="This article changed while you edited it" errors={errors}>
           <p>
             Someone saved this article after you opened it. Your entries are kept. Reload the
             article to see the saved values, then make your change again.

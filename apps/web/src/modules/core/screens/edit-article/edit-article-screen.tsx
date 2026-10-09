@@ -65,7 +65,16 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   // Reload article: the saved values and their version replace the typed ones, and focus moves to
   // the first field, where the change starts again.
   const onReload = async () => {
-    const saved = await reload();
+    let saved: Article | undefined;
+    try {
+      saved = await reload();
+    } catch {
+      // The conflict stays, and its summary lists the failure with the typed values kept.
+      form.setError('root.server', {
+        message: 'Could not reload the article. Check the connection, then try again.',
+      });
+      return;
+    }
     if (saved === undefined) return;
     form.reset({ code: saved.code, name: saved.name });
     expectedVersion.current = saved.version;
