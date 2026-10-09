@@ -23,12 +23,12 @@ const workspacePackages = [
     manifest: { name: '@northmes/backend', license: 'AGPL-3.0-or-later' },
   },
   {
-    path: 'modules/core/package.json',
-    manifest: { name: '@northmes/module-core', license: 'AGPL-3.0-or-later' },
+    path: 'apps/web/package.json',
+    manifest: { name: '@northmes/web', license: 'AGPL-3.0-or-later' },
   },
   {
-    path: 'modules/planning/package.json',
-    manifest: { name: '@northmes/module-planning', license: 'AGPL-3.0-or-later' },
+    path: 'modules/planning/domain/package.json',
+    manifest: { name: '@northmes/planning-domain', license: 'AGPL-3.0-or-later' },
   },
   {
     path: 'modules/planning/contracts/package.json',
@@ -49,7 +49,7 @@ describe('mit-imports', () => {
         text: [
           "import { z } from 'zod';",
           "import { defineCommandContract } from '@northmes/contracts';",
-          "import { coreModule } from '@northmes/module-core';",
+          "import { schedule } from '@northmes/planning-domain';",
           '',
         ].join('\n'),
       },
@@ -58,8 +58,8 @@ describe('mit-imports', () => {
         text: "export { planningLinks } from './links.ts';\n",
       },
       {
-        path: 'modules/planning/server/planning.module.ts',
-        text: "import { coreModule } from '@northmes/module-core';\n",
+        path: 'apps/backend/src/modules/planning/planning.module.ts',
+        text: "import { schedule } from '@northmes/planning-domain';\n",
       },
     ]);
 
@@ -68,7 +68,7 @@ describe('mit-imports', () => {
         kind: 'import',
         path: 'packages/sdk/src/index.ts',
         line: 3,
-        imported: '@northmes/module-core',
+        imported: '@northmes/planning-domain',
       },
     ]);
   });
@@ -79,7 +79,7 @@ describe('mit-imports', () => {
         path: 'packages/sdk/test/host.int.test.ts',
         text: [
           "import { createHostApp } from '@northmes/backend/testing';",
-          "const { loadCatalog } = await import('@northmes/module-planning');",
+          "const { shellModules } = await import('@northmes/web');",
           "import { boot } from '../../../apps/backend/src/boot/boot.ts';",
           "import { contract } from '../../contracts/src/index.ts';",
           "const main = new URL('../../../apps/backend/dist/main.js', import.meta.url);",
@@ -99,7 +99,7 @@ describe('mit-imports', () => {
         kind: 'import',
         path: 'packages/sdk/test/host.int.test.ts',
         line: 2,
-        imported: '@northmes/module-planning',
+        imported: '@northmes/web',
       },
       {
         kind: 'import',
@@ -160,7 +160,7 @@ describe('mit-imports', () => {
         },
         {
           path: 'examples/plugin-validator/test/validator.test.ts',
-          text: "import { CommandBus } from '@northmes/module-core';\n",
+          text: "import { schedule } from '@northmes/planning-domain';\n",
         },
       ],
     );
@@ -170,7 +170,7 @@ describe('mit-imports', () => {
         kind: 'import',
         path: 'examples/plugin-validator/test/validator.test.ts',
         line: 1,
-        imported: '@northmes/module-core',
+        imported: '@northmes/planning-domain',
       },
     ]);
   });

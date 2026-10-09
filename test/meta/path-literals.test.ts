@@ -44,10 +44,10 @@ describe('path-literals', () => {
       '',
     ].join('\n');
 
-    const findings = scan([{ path: 'modules/planning/web/src/board.tsx', text }], []);
+    const findings = scan([{ path: 'apps/web/src/modules/planning/board.tsx', text }], []);
 
     expect(findings).toEqual([
-      { path: 'modules/planning/web/src/board.tsx', line: 6, literal: '/x' },
+      { path: 'apps/web/src/modules/planning/board.tsx', line: 6, literal: '/x' },
     ]);
   });
 
@@ -75,7 +75,7 @@ describe('path-literals', () => {
   it('E02-S05 navigate({ to: "/x" }) and page.goto("/x") fail, and an allowlisted literal with a reason passes', () => {
     const files = [
       {
-        path: 'modules/planning/web/src/use-release.ts',
+        path: 'apps/web/src/modules/planning/use-release.ts',
         text: [
           'export function useRelease() {',
           '  const navigate = useNavigate();',
@@ -106,7 +106,7 @@ describe('path-literals', () => {
     const findings = scan(files, allowlist);
 
     expect(findings).toEqual([
-      { path: 'modules/planning/web/src/use-release.ts', line: 3, literal: '/x' },
+      { path: 'apps/web/src/modules/planning/use-release.ts', line: 3, literal: '/x' },
       { path: 'e2e/board.spec.ts', line: 2, literal: '/x' },
     ]);
   });
@@ -127,11 +127,11 @@ describe('path-literals', () => {
       '',
     ].join('\n');
 
-    const findings = scan([{ path: 'modules/planning/web/src/routes.ts', text }], []);
+    const findings = scan([{ path: 'apps/web/src/modules/planning/routes.ts', text }], []);
 
     expect(findings).toEqual([
-      { path: 'modules/planning/web/src/routes.ts', line: 4, literal: '/x' },
-      { path: 'modules/planning/web/src/routes.ts', line: 10, literal: '/y' },
+      { path: 'apps/web/src/modules/planning/routes.ts', line: 4, literal: '/x' },
+      { path: 'apps/web/src/modules/planning/routes.ts', line: 10, literal: '/y' },
     ]);
   });
 
@@ -212,12 +212,13 @@ describe('path-literals', () => {
     expect(scan([{ path: 'apps/web/src/open.tsx', text }], [])).toEqual([]);
   });
 
-  it('E02-S05 only source files under modules/*/web, examples/*/web, apps/web and e2e are scanned', () => {
+  it('E02-S05 only source files under examples/*/web, apps/web and e2e are scanned', () => {
     const link = '<Link to="/x">X</Link>;\n';
     const paths = [
       'examples/plugin-validator/web/src/panel.tsx',
       'packages/web-sdk/test/module-link.test.tsx',
       'modules/planning/contracts/src/links.tsx',
+      'modules/planning/web/src/board.tsx',
       'modules/planning/web-extra/src/a.tsx',
       'modules/planning/src/web/a.tsx',
       'apps/website/src/a.tsx',
@@ -278,7 +279,7 @@ describe('path-literals', () => {
       repository = mkdtempSync(join(tmpdir(), 'path-literals-'));
       git('init', '-q');
       write(
-        'modules/planning/web/src/board.tsx',
+        'apps/web/src/modules/planning/board.tsx',
         'const a = 1;\nexport const b = <Link to="/x">X</Link>;\n',
       );
       write('packages/ui/test/link.test.tsx', '<Link to="/x">X</Link>;\n');
@@ -293,7 +294,9 @@ describe('path-literals', () => {
     it('E02-S05 a literal in a tracked file fails naming the file and line, and an untracked file is not read', () => {
       const findings = scan(trackedFiles(repository), []);
 
-      expect(findings.map(describeFinding)).toEqual(['modules/planning/web/src/board.tsx:2: /x']);
+      expect(findings.map(describeFinding)).toEqual([
+        'apps/web/src/modules/planning/board.tsx:2: /x',
+      ]);
     });
 
     it('E02-S05 the tracked files of this repository pass with the committed allowlist', () => {

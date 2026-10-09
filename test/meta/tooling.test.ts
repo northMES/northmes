@@ -296,11 +296,11 @@ describe('tooling', () => {
     expect(listing).toEqual(['apps/web/package.json']);
   });
 
-  it('E02-S01 style/noProcessEnv fails in apps/backend/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
+  it('E02-S01 style/noProcessEnv fails in apps/backend/src, modules/planning/domain/src and packages/contracts/src and passes in packages/sdk/src/config, tests, scripts and vitest.config.ts', () => {
     const read = 'export const port = process.env.PORT;\n';
     const failing = [
       'apps/backend/src/main.ts',
-      'modules/core/server/core.module.ts',
+      'modules/planning/domain/src/index.ts',
       'packages/contracts/src/index.ts',
     ];
     const passing = [

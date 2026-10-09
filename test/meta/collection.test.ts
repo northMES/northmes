@@ -279,7 +279,7 @@ describe('collection', () => {
     const sources = [
       'x.ts',
       'packages/a/src/x.ts',
-      'modules/a/web/x.tsx',
+      'apps/a/src/x.tsx',
       'scripts/x.mjs',
       'scripts/x.mts',
     ];

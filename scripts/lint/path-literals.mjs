@@ -1,8 +1,8 @@
 // Keeps app paths out of string literals in the web code and the end-to-end specs
 // (docs/adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md): a path comes from
 // a link builder's `to` or `href`, or from apiPath. The check parses the TypeScript and JavaScript
-// sources under modules/*/web, examples/*/web, apps/web and e2e with the TypeScript parser, so a
-// call split over several lines is found, and reports an app path written as a literal in:
+// sources under examples/*/web, apps/web and e2e with the TypeScript parser, so a call split over
+// several lines is found, and reports an app path written as a literal in:
 //
 // - the value of a `to` or `href` JSX attribute, written directly or in braces;
 // - the `to` or `href` option of a `navigate` or `redirect` call, such as
@@ -37,12 +37,7 @@ import ts from 'typescript';
  * The folders the rule covers. Paths are repository-relative with forward slashes, as
  * `git ls-files` prints them.
  */
-const scannedFolders = [
-  /^modules\/[^/]+\/web\//,
-  /^examples\/[^/]+\/web\//,
-  /^apps\/web\//,
-  /^e2e\//,
-];
+const scannedFolders = [/^examples\/[^/]+\/web\//, /^apps\/web\//, /^e2e\//];
 
 /** TypeScript and JavaScript sources, the files the TypeScript parser reads. */
 const sourceExtension = /\.[cm]?[jt]sx?$/;
