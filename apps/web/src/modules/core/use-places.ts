@@ -9,7 +9,7 @@ export interface Place {
   readonly name: string;
 }
 
-/** A plant of the company, with the slug its URLs name it by. */
+/** A plant of the company, with the slug that names it in URLs and in an article's plants. */
 export interface PlantPlace extends Place {
   readonly slug: string;
 }
@@ -39,10 +39,10 @@ export function usePlaces({ skip = false }: { readonly skip?: boolean } = {}): P
       return {
         company: { id: company.id, name: company.name },
         plant: plant === undefined ? undefined : { id: plant.id, name: plant.name },
-        plants: company.plants.map(({ id, name, slug: plantSlug }) => ({
+        plants: company.plants.map(({ id, slug: plantSlug, name }) => ({
           id,
-          name,
           slug: plantSlug,
+          name,
         })),
       };
     }

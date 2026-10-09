@@ -77,7 +77,7 @@ describe('articles list URL state', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(25));
-    expect(bodyRows(table)[0]).toEqual(['AX-525', 'Axle 525 mm', lastChangedText]);
+    expect(bodyRows(table)[0]).toEqual(['AX-525', 'Axle 525 mm', 'Plant A', lastChangedText]);
     expect(screen.getByText('Rows 26 to 50 of 60')).toBeDefined();
     expect(ariaSort(table, 'Name')).toBe('descending');
     expect(
@@ -119,7 +119,7 @@ describe('articles list URL state', () => {
     await user.type(search, ' hinge ');
 
     await waitFor(() =>
-      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', lastChangedText]]),
+      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', 'Plant A', lastChangedText]]),
     );
     expect(router.state.location.href).toBe(listHref({ q: 'hinge' }));
     expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();

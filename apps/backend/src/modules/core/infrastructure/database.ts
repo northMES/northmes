@@ -1,19 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Generated, GeneratedAlways } from 'kysely';
 
-/** core.article, as its migration creates it. */
+/** core.article, as its migrations shape it: an article of a company (ADR 0073). */
 export interface ArticleTable {
   id: Generated<string>;
+  /** The company's node, where every article of the company sits. */
   scope_id: string;
   version: Generated<number>;
   code: string;
   name: string;
-  /** lower(code), which the unique index of the code per scope holds. */
+  /** lower(code), which the unique index of the code within the company holds. */
   code_key: GeneratedAlways<string>;
+  /** The article's company, the same as scope_id. */
+  company_id: string;
+  /** The company's span, an int8range as Postgres writes it (ADR 0009). */
+  scope_span: string;
+  /** Assigned to every plant of the company, those created later included. */
+  all_plants: Generated<boolean>;
+  /** The one plant the article is assigned to, or the company otherwise: where it is changed. */
+  edit_scope_id: string;
   /** When the article was archived, or null while it is active (ADR 0006). */
   archived_at: Date | null;
   /** When the article last changed, its creation included; an update trigger moves it on. */
   updated_at: Generated<Date>;
+}
+
+/** core.article_plant: a plant an article is assigned to (ADR 0073). */
+export interface ArticlePlantTable {
+  article_id: string;
+  plant_id: string;
+  /** The article's scope_id, the company. */
+  scope_id: string;
+  /** The article's edit_scope_id. */
+  edit_scope_id: string;
 }
 
 /** core.scope: one node of a company's scope tree (ADR 0007). */
@@ -107,6 +126,7 @@ export interface RoleAssignmentTable {
  */
 export interface CoreDatabase {
   'core.article': ArticleTable;
+  'core.article_plant': ArticlePlantTable;
   'core.scope': ScopeTable;
   'core.company': CompanyTable;
   'core.plant': PlantTable;

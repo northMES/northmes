@@ -11,6 +11,7 @@ import {
   articlesQuery,
   firstPage,
   plant,
+  plants,
   renderCoreAt,
 } from './core-app.tsx';
 
@@ -38,7 +39,12 @@ function createOf(
     request: {
       query: CoreCreateArticle,
       variables: ({ input }: { input: CreateInput }) =>
-        uuidv7.test(input.id) && input.code === code && input.name === name,
+        uuidv7.test(input.id) &&
+        input.code === code &&
+        input.name === name &&
+        // A user without core.article:assign at the company leaves the plants to the API.
+        !('plants' in input) &&
+        !('allPlants' in input),
     },
     result: ({ input }: { input: CreateInput }) => result(input),
   } as MockLink.MockedResponse;
@@ -47,7 +53,16 @@ function createOf(
 /** The article that coreCreateArticle returns for an input. */
 function created(input: CreateInput) {
   return {
-    data: { coreCreateArticle: { __typename: 'Article', version: 1, archivedAt: null, ...input } },
+    data: {
+      coreCreateArticle: {
+        __typename: 'Article',
+        version: 1,
+        archivedAt: null,
+        allPlants: false,
+        plants: [plants.a],
+        ...input,
+      },
+    },
   };
 }
 

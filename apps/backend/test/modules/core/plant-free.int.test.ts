@@ -10,15 +10,22 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * with it.
  */
 const releaseOnePlantFree = [
+  'Mutation.coreArchiveArticle',
   'Mutation.coreAssignRole',
   'Mutation.coreBlockUser',
+  'Mutation.coreCreateArticle',
   'Mutation.coreCreateRole',
   'Mutation.coreCreateUser',
   'Mutation.coreDeleteRole',
   'Mutation.coreRemoveRoleAssignment',
   'Mutation.coreResetPassword',
+  'Mutation.coreRestoreArticle',
+  'Mutation.coreSetArticlePlants',
   'Mutation.coreUnblockUser',
+  'Mutation.coreUpdateArticle',
   'Mutation.coreUpdateRole',
+  'Query.coreArticle',
+  'Query.coreArticles',
   'Query.coreCompanies',
   'Query.corePermissionCatalog',
   'Query.coreRole',
@@ -71,7 +78,7 @@ describe('operations without x-northmes-plant', () => {
 
     for (const document of [
       '{ planningProductionOrders { id } }',
-      '{ coreArticles { totalCount } }',
+      '{ coreArticles { totalCount } planningProductionOrders { id } }',
       'query Orders { ...Root } fragment Root on Query { planningProductionOrders { id } }',
     ]) {
       const answer = await client.send(document);

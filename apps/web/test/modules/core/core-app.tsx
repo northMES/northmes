@@ -74,7 +74,39 @@ export interface ArticleNode {
   readonly version: number;
   readonly archivedAt: string | null;
   readonly updatedAt: string;
+  readonly allPlants: boolean;
+  readonly plants: readonly PlantNode[];
 }
+
+/** A plant of an article, as the API returns it. */
+export interface PlantNode {
+  readonly __typename: 'Plant';
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+}
+
+/** The plants of the tests' company, Acme AB, by name: Plant A is the plant every test opens. */
+export const plants = {
+  a: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a001',
+    slug: 'plant-a',
+    name: 'Plant A',
+  },
+  b: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a002',
+    slug: 'plant-b',
+    name: 'Plant B',
+  },
+  c: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a003',
+    slug: 'plant-c',
+    name: 'Plant C',
+  },
+} as const satisfies Record<string, PlantNode>;
 
 /** When the fixtures' articles last changed: 2026-10-05 14:07 in the browser's time zone. */
 export const lastChanged = new Date(2026, 9, 5, 14, 7).toISOString();
@@ -82,7 +114,10 @@ export const lastChanged = new Date(2026, 9, 5, 14, 7).toISOString();
 /** lastChanged as the Last changed column shows it. */
 export const lastChangedText = '2026-10-05 14:07';
 
-/** A fictional article with an id made from its code, active unless archivedAt says otherwise. */
+/**
+ * A fictional article with an id made from its code, active unless archivedAt says otherwise,
+ * assigned to Plant A.
+ */
 export function article(
   code: string,
   name: string,
@@ -92,7 +127,17 @@ export function article(
 ): ArticleNode {
   const digits = [...code].map((char) => char.charCodeAt(0).toString(16)).join('');
   const id = `019a0000-0000-7000-8000-${digits.padStart(12, '0').slice(-12)}`;
-  return { __typename: 'Article', id, code, name, version, archivedAt, updatedAt };
+  return {
+    __typename: 'Article',
+    id,
+    code,
+    name,
+    version,
+    archivedAt,
+    updatedAt,
+    allPlants: false,
+    plants: [plants.a],
+  };
 }
 
 /** The polite live region's text. */

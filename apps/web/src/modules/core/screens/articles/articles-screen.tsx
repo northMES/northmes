@@ -28,6 +28,7 @@ import {
   sortedBy,
   sortOf,
 } from '../../article-list-search.ts';
+import { plantsLabel } from '../../article-plants.ts';
 import { readForbiddenState } from '../../no-access.tsx';
 import { usePlaces } from '../../use-places.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
@@ -80,6 +81,12 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
           </StatusBadge>
         </span>
       ),
+  },
+  {
+    // Where the article is used (ADR 0073); no design frame draws this column yet.
+    id: 'plants',
+    header: 'Plants',
+    cell: (article) => plantsLabel(article),
   },
   {
     id: 'changed',
@@ -187,14 +194,14 @@ function listState({
 }
 
 /**
- * The articles of the plant (design ui-222, LI1): Search articles, Show archived, and one page of
- * the DataTable with sortable Article number, Name and Last changed headers, Previous, Next and
- * the row range, newest change first by default (A5). Archived articles show only with Show
- * archived, each with the Archived badge (LI31). A user who may not read articles gets the
- * forbidden state with no toolbar and no page actions (ST19, A18). Search,
- * sort, Show archived and page live in the URL (plan 06, View state in the URL), so a reload, Back
- * or a copied link opens the same rows; each change replaces the history entry and leaves focus
- * where it is.
+ * The articles assigned to the plant or to All plants (design ui-222, LI1, and ADR 0073): Search
+ * articles, Show archived, and one page of the DataTable with sortable Article number, Name and
+ * Last changed headers, the Plants column, Previous, Next and the row range, newest change first
+ * by default (A5). Archived articles show only with Show archived, each with the Archived badge
+ * (LI31). A user who may not read articles gets the forbidden state with no toolbar and no page
+ * actions (ST19, A18). Search, sort, Show archived and page live in the URL (plan 06, View state
+ * in the URL), so a reload, Back or a copied link opens the same rows; each change replaces the
+ * history entry and leaves focus where it is.
  */
 export function ArticlesScreen() {
   const view = articleListSearch(useSearch({ strict: false }));

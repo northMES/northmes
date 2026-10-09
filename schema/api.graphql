@@ -5,10 +5,12 @@ type AccessScope {
 }
 
 type Article {
+  allPlants: Boolean!
   archivedAt: DateTime
   code: String!
   id: ID!
   name: String!
+  plants: [Plant!]!
   updatedAt: DateTime!
   version: Int!
 }
@@ -62,9 +64,12 @@ input CoreBlockUserInput {
 }
 
 input CoreCreateArticleInput {
+  allPlants: Boolean
   code: String!
+  companyId: String
   id: ID!
   name: String!
+  plants: [String!]
 }
 
 input CoreCreateRoleInput {
@@ -105,6 +110,13 @@ input CoreResetPasswordInput {
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
+}
+
+input CoreSetArticlePlantsInput {
+  allPlants: Boolean!
+  expectedVersion: Int!
+  id: ID!
+  plants: [String!]!
 }
 
 input CoreUnblockUserInput {
@@ -154,6 +166,7 @@ type Mutation {
   coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
   coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
+  coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
   coreUpdateRole(input: CoreUpdateRoleInput!): Role!
@@ -211,8 +224,30 @@ type ProductionOrder {
 }
 
 type Query {
-  coreArticle(id: ID!): Article
-  coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
+  coreArticle(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): Article
+  coreArticles(
+    after: String
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    includeArchived: Boolean = false
+    last: Int
+    orderBy: [ArticleOrderBy!]
+    search: String
+
+    """Only the articles assigned to no plant and not to All plants."""
+    unassigned: Boolean
+  ): ArticleConnection!
   coreCompanies: [Company!]!
   corePermissionCatalog(
     """

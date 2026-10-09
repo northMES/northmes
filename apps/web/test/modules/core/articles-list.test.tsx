@@ -27,8 +27,8 @@ describe('articles list', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(25));
-    expect(bodyRows(table)[0]).toEqual(['AX-500', 'Axle 500 mm', lastChangedText]);
-    expect(bodyRows(table)[24]).toEqual(['AX-524', 'Axle 524 mm', lastChangedText]);
+    expect(bodyRows(table)[0]).toEqual(['AX-500', 'Axle 500 mm', 'Plant A', lastChangedText]);
+    expect(bodyRows(table)[24]).toEqual(['AX-524', 'Axle 524 mm', 'Plant A', lastChangedText]);
     expect(within(table).getByRole('link', { name: 'AX-500' }).getAttribute('href')).toBe(
       coreLinks.articles.article({ plant, articleId: articles[0]?.id ?? '' }).href,
     );

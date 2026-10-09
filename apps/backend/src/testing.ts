@@ -208,6 +208,118 @@ export function givenCompany(
   });
 }
 
+/** An article as givenArticle and givenArticles write it. */
+export interface GivenArticleOptions {
+  /** The article's id. It defaults to one that Postgres makes with uuidv7(). */
+  readonly id?: string;
+  readonly code: string;
+  readonly name: string;
+  /**
+   * The scope ids of the plants the article is assigned to. A plant that core.plant does not hold
+   * becomes the one plant of a fresh company, as signInAt does.
+   */
+  readonly plants?: readonly string[];
+  /** Assigns the article to All plants of its company. */
+  readonly allPlants?: boolean;
+  /** The article's company, which an article without plants needs. */
+  readonly company?: string;
+  /** When the article last changed. It defaults to the time of the insert. */
+  readonly updatedAt?: Date;
+  /** When the article was archived. It defaults to null, an active article. */
+  readonly archivedAt?: Date;
+}
+
+/** The company of each plant that core.plant holds, by plant, read as core's owner role. */
+async function companiesOfPlants(
+  ownerUrl: string,
+  plants: readonly string[],
+): Promise<Map<string, string>> {
+  if (plants.length === 0) return new Map();
+  const rows = await queryAsCore<{ id: string; company_id: string }>(
+    ownerUrl,
+    'select id, company_id from core.plant where id = any($1::uuid[])',
+    [plants],
+  );
+  return new Map(rows.map((row) => [row.id, row.company_id]));
+}
+
+/**
+ * Writes articles in one transaction as core's owner role (ADR 0073): each at its company's node,
+ * assigned to its plants or to All plants, with its edit scope at the one plant it is assigned to
+ * and at the company otherwise. Returns their ids in their order.
+ */
+export async function givenArticles(
+  ownerUrl: string,
+  articles: readonly GivenArticleOptions[],
+): Promise<string[]> {
+  const plants = [...new Set(articles.flatMap((article) => article.plants ?? []))];
+  const companyOf = await companiesOfPlants(ownerUrl, plants);
+  for (const plant of plants) {
+    if (!companyOf.has(plant)) {
+      companyOf.set(plant, (await givenCompany(ownerUrl, { plantIds: [plant] })).company);
+    }
+  }
+  const rows = articles.map((article) => {
+    const { plants: assigned = [], allPlants = false } = article;
+    const companies = assigned.map((plant) => companyOf.get(plant));
+    const companyId = article.company ?? companies[0];
+    if (!companyId) throw new Error('givenArticles: an article without plants needs its company');
+    if (companies.some((each) => each !== companyId)) {
+      throw new Error('givenArticles: the plants of an article belong to its company');
+    }
+    const [only] = assigned;
+    const editScope = assigned.length === 1 && !allPlants && only ? only : companyId;
+    return { ...article, companyId, editScope, assigned };
+  });
+  // Postgres makes a missing id with uuidv7(), which grows within one session, so the ids follow
+  // the order of the articles as a list's tie-breaker reads it.
+  return asCoreOwner(ownerUrl, async (client) => {
+    const ids: string[] = [];
+    for (const row of rows) {
+      const { rows: inserted } = await client.query<{ id: string }>(
+        `insert into core.article
+           (id, scope_id, company_id, scope_span, edit_scope_id, all_plants, code, name,
+            updated_at, archived_at)
+         select coalesce($1::uuid, uuidv7()), s.id, s.company_id, s.span, $3, $4, $5, $6,
+                coalesce($7, now()), $8
+           from core.scope s where s.id = $2
+         returning id`,
+        [
+          row.id ?? null,
+          row.companyId,
+          row.editScope,
+          row.allPlants ?? false,
+          row.code,
+          row.name,
+          row.updatedAt ?? null,
+          row.archivedAt ?? null,
+        ],
+      );
+      const id = inserted[0]?.id;
+      if (!id) throw new Error(`givenArticles: no company ${row.companyId} in core.scope`);
+      for (const plant of row.assigned) {
+        await client.query(
+          `insert into core.article_plant (article_id, plant_id, scope_id, edit_scope_id)
+           values ($1, $2, $3, $4)`,
+          [id, plant, row.companyId, row.editScope],
+        );
+      }
+      ids.push(id);
+    }
+    return ids;
+  });
+}
+
+/** Writes one article as givenArticles does and returns its id. */
+export async function givenArticle(
+  ownerUrl: string,
+  article: GivenArticleOptions,
+): Promise<string> {
+  const [id] = await givenArticles(ownerUrl, [article]);
+  if (!id) throw new Error('givenArticle: no article was written');
+  return id;
+}
+
 /** A role a test user holds: the permission keys of a role assigned at one scope node. */
 export interface Grant {
   readonly scopeId: string;
