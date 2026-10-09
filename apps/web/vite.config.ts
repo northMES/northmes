@@ -10,21 +10,18 @@ const apiPaths = ['/graphql', '/api'];
 interface ProxiedPath {
   target: string;
   ws: true;
-  headers: { origin: string };
 }
 
 /**
  * The dev server's proxy: pnpm dev names the backend's origin in NORTHMES_API_ORIGIN, so the
  * browser reaches the API through the web's origin (ADR 0058). Each path forwards WebSockets too,
- * as /graphql carries subscriptions. The forwarded request names the API's origin as its Origin:
- * the API refuses an origin that northmes.config.json does not list, and the dev server's port
- * changes from run to run.
+ * as /graphql carries subscriptions. The forwarded request keeps the browser's Origin, the web's
+ * origin, which pnpm dev makes the server's NORTHMES_PUBLIC_ORIGIN: the API lets its own origin
+ * through, and Better Auth trusts it.
  */
 function devProxy(apiOrigin: string | undefined): Record<string, ProxiedPath> {
   if (!apiOrigin) return {};
-  return Object.fromEntries(
-    apiPaths.map((path) => [path, { target: apiOrigin, ws: true, headers: { origin: apiOrigin } }]),
-  );
+  return Object.fromEntries(apiPaths.map((path) => [path, { target: apiOrigin, ws: true }]));
 }
 
 /**
