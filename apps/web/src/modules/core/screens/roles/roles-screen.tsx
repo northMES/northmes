@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useId, useMemo } from 'react';
@@ -12,7 +11,7 @@ import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { noAccessState, permissionPhrase } from '../../no-access.tsx';
 import { moduleName } from '../../permission-names.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 
 /** One role of the list. */
@@ -20,10 +19,10 @@ type RoleRow = CoreRolesQuery['coreRoles'][number];
 
 /** The role's name, the link to its page. */
 function RoleLink({ role }: { readonly role: RoleRow }) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   return (
     <Link
-      to={coreLinks.roles.role({ plant, roleId: role.id }).href}
+      to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
       className="text-link underline underline-offset-2 hover:no-underline"
     >
       {role.name}
@@ -32,10 +31,10 @@ function RoleLink({ role }: { readonly role: RoleRow }) {
 }
 
 /**
- * The columns of a group of roles: Defined by names the company or the role's module, and the
- * holders column counts the people who hold the role at the company or at the plant.
+ * The columns of a group of roles: Defined by names the company or the role's module, and Holders
+ * counts the people who hold the role at the company or at one of its plants.
  */
-function columnsOf(companyName: string, plantName: string): readonly DataTableColumn<RoleRow>[] {
+function columnsOf(companyName: string): readonly DataTableColumn<RoleRow>[] {
   return [
     { id: 'name', header: 'Role', cell: (role) => <RoleLink role={role} /> },
     {
@@ -46,7 +45,7 @@ function columnsOf(companyName: string, plantName: string): readonly DataTableCo
     { id: 'permissions', header: 'Permissions', cell: (role) => role.permissions.length },
     {
       id: 'holders',
-      header: `Held at ${companyName} and ${plantName}`,
+      header: 'Holders',
       cell: (role) => role.holders.length,
     },
   ];
@@ -88,24 +87,28 @@ function RoleGroup({
 }
 
 /**
- * The roles of the company (design core-304, RO1): its custom roles, then the default roles of
- * the modules, each by name, with who defines them, how many permissions they hold and how many
- * people hold them at the company and at the plant. New role shows to a user who may create and
- * edit roles; another reader gets a line that says why it is missing (RO27). A reader without
- * core.role:read gets the page "No access to Roles" (NO1).
+ * The roles of the company in company settings (design core-304, RO1): its custom roles, then
+ * the default roles of the modules, each by name, with who defines them, how many permissions they
+ * hold and how many people hold them at the company and its plants. New role shows to a user who
+ * may create and edit roles; another reader gets a line that says why it is missing (RO27). A
+ * reader without core.role:read gets the page "No access to Roles" (NO1).
  */
 export function RolesScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
-  const { data, error, refetch } = useQuery(CoreRoles);
+  const { data, error, refetch } = useQuery(CoreRoles, { variables: { companyId } });
   const roles = data?.coreRoles;
   const companyName = places.company?.name ?? 'the company';
-  const plantName = places.plant?.name ?? plant;
   const forbidden = roles === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('Roles', 'core.role:read', plantName);
+    state = noAccessState(
+      'Roles',
+      'core.role:read',
+      companyName,
+      `a company admin of ${companyName}`,
+    );
   } else if (roles === undefined && error !== undefined) {
     state = {
       status: 'error',
@@ -120,14 +123,14 @@ export function RolesScreen() {
   }
   // The API checks core.role:manage at the company (ADR 0010).
   const canManage = viewer.canAtCompany('core.role:manage');
-  const columns = useMemo(() => columnsOf(companyName, plantName), [companyName, plantName]);
+  const columns = useMemo(() => columnsOf(companyName), [companyName]);
   const loading = roles === undefined;
   return (
     <PageFrame
       title={forbidden ? 'No access to Roles' : 'Roles'}
       actions={
         canManage ? (
-          <Link to={coreLinks.roles.new({ plant }).href} className={buttonVariants()}>
+          <Link to={coreLinks.settings.roles.new({ companyId }).href} className={buttonVariants()}>
             <Plus aria-hidden />
             New role
           </Link>

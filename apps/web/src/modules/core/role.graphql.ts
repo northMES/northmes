@@ -7,13 +7,13 @@ export {
   type CoreRoleQueryVariables,
 } from './role.graphql.gen.ts';
 
-// One role of the company with who holds it at the company and at the plant: the role page and the
-// role editor read it. pnpm gen writes its typed document to role.graphql.gen.ts; this block never
-// runs.
+// One role of the company with who holds it at the company and at its plants, in company settings:
+// the role page and the role editor read it. pnpm gen writes its typed document to
+// role.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
-    query CoreRole($id: ID!) {
-      coreRole(id: $id) {
+    query CoreRole($id: ID!, $companyId: ID!) {
+      coreRole(id: $id, companyId: $companyId) {
         id
         name
         origin

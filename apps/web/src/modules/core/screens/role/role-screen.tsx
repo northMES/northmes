@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Copy, Pencil } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
@@ -12,7 +11,7 @@ import { rolePageSearch } from '../../access-search.ts';
 import { permissionPhrase } from '../../no-access.tsx';
 import { groupsOfKeys } from '../../permission-groups.ts';
 import { moduleName, permissionLine } from '../../permission-names.ts';
-import { type Place, usePlaces } from '../../use-places.ts';
+import { type Places, useCompanyId, usePlaces } from '../../use-places.ts';
 import { type Role, useRole } from '../../use-role.tsx';
 import { useViewer } from '../../use-viewer.ts';
 
@@ -78,29 +77,21 @@ function holdersLine(count: number, role: string, place: string): string {
 }
 
 /**
- * Who holds the role at the company and at the plant (design core-304, RO21 and RO25), read only:
- * roles are given and taken on a person's Access tab.
+ * Who holds the role at the company and at each of its plants (design core-304, RO21 and RO25),
+ * read only: roles are given and taken on a person's Access tab.
  */
-function HoldersTab({
-  role,
-  company,
-  plant,
-}: {
-  readonly role: Role;
-  readonly company: Place | undefined;
-  readonly plant: Place | undefined;
-}) {
-  const { plant: slug } = useShell();
-  const places = [
-    { kind: 'COMPANY', name: company?.name ?? 'the company' },
-    { kind: 'PLANT', name: plant?.name ?? slug },
-  ] as const;
+function HoldersTab({ role, places }: { readonly role: Role; readonly places: Places }) {
+  const companyId = useCompanyId() ?? '';
+  const where = [
+    { id: places.company?.id ?? companyId, name: places.company?.name ?? 'the company' },
+    ...places.plants,
+  ];
   return (
     <Card title="Holders">
-      {places.map(({ kind, name }) => {
-        const holders = role.holders.filter(({ scope }) => scope.kind === kind);
+      {where.map(({ id, name }) => {
+        const holders = role.holders.filter(({ scope }) => scope.id === id);
         return (
-          <div key={kind} className="flex flex-col gap-1">
+          <div key={id} className="flex flex-col gap-1">
             <h3 className="text-sm font-semibold">{name}</h3>
             <p className="text-sm text-muted-foreground">
               {holdersLine(holders.length, role.name, name)}
@@ -111,8 +102,10 @@ function HoldersTab({
                   <li key={id}>
                     <Link
                       to={
-                        coreLinks.users.user({ plant: slug, userId: user.id }, { tab: 'access' })
-                          .href
+                        coreLinks.settings.users.user(
+                          { companyId, userId: user.id },
+                          { tab: 'access' },
+                        ).href
                       }
                       className="text-link underline underline-offset-2 hover:no-underline"
                     >
@@ -140,7 +133,7 @@ function HoldersTab({
  * audit trail.
  */
 export function RoleScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const search = rolePageSearch(useSearch({ strict: false }));
   const { role, state, forbidden } = useRole();
@@ -158,12 +151,12 @@ export function RoleScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to Roles' : (role?.name ?? 'Role')}
-      crumbs={[{ label: 'Roles', href: coreLinks.roles({ plant }).href }]}
+      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ companyId }).href }]}
       actions={
         role !== undefined && canManage ? (
           <>
             <Link
-              to={coreLinks.roles.new({ plant }, { from: role.id }).href}
+              to={coreLinks.settings.roles.new({ companyId }, { from: role.id }).href}
               className={buttonVariants({ variant: 'outline' })}
             >
               <Copy aria-hidden />
@@ -171,7 +164,7 @@ export function RoleScreen() {
             </Link>
             {role.origin === 'CUSTOM' && (
               <Link
-                to={coreLinks.roles.role.edit({ plant, roleId: role.id }).href}
+                to={coreLinks.settings.roles.role.edit({ companyId, roleId: role.id }).href}
                 className={buttonVariants()}
               >
                 <Pencil aria-hidden />
@@ -207,7 +200,7 @@ export function RoleScreen() {
               {
                 value: 'holders',
                 label: 'Holders',
-                content: <HoldersTab role={role} company={places.company} plant={places.plant} />,
+                content: <HoldersTab role={role} places={places} />,
               },
             ]}
           />

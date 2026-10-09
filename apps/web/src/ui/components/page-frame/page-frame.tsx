@@ -50,6 +50,11 @@ export interface PageFrameProps {
    * top bar shows them after the plant and the module crumbs, and the title as the last crumb.
    */
   readonly crumbs?: readonly Crumb[];
+  /**
+   * The last crumb, the current page, when the trail names it apart from its title: the company
+   * landing is "Company settings", and its trail ends with the company (design shell-313, C5).
+   */
+  readonly currentCrumb?: string;
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
   readonly state?: PageState;
@@ -141,6 +146,7 @@ export function PageFrame({
   title,
   actions,
   crumbs = [],
+  currentCrumb = title,
   toolbar,
   state = { status: 'ready' },
   children,
@@ -172,7 +178,7 @@ export function PageFrame({
     <div className="flex flex-col gap-4">
       {topBar?.breadcrumb &&
         createPortal(
-          <PageFrameBreadcrumb crumbs={[...topBar.trail, ...crumbs]} current={title} />,
+          <PageFrameBreadcrumb crumbs={[...topBar.trail, ...crumbs]} current={currentCrumb} />,
           topBar.breadcrumb,
         )}
       {actions !== undefined &&

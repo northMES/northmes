@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { userPageSearch } from '../../access-search.ts';
 import { forgetTemporaryPassword, temporaryPasswordOf } from '../../temporary-password.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { type User, useUser } from '../../use-user.tsx';
 import { useViewer } from '../../use-viewer.ts';
 import { UserStatus } from '../../user-status.tsx';
@@ -63,11 +62,12 @@ function useTemporaryPassword(userId: string | undefined) {
  * A user's page (design core-304, AS1, AS11 and US11 to US17): the name in the h1 with the
  * username and the StatusBadge, Block user or Unblock user in the page actions for a reader who may
  * block users, and the tabs General and Access, the open one in the URL's tab. The Access tab
- * holds the user's roles and what they can do at the plant. A user created a moment ago shows the
- * temporary password once. History comes with the audit trail.
+ * holds the user's roles at the company and its plants, and what they can do at the company. A
+ * user created a moment ago shows the temporary password once. History comes with the audit
+ * trail.
  */
 export function UserScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const { userId } = useParams({ strict: false });
   const search = userPageSearch(useSearch({ strict: false }));
@@ -81,7 +81,7 @@ export function UserScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to Users' : (user?.name ?? 'User')}
-      crumbs={[{ label: 'Users', href: coreLinks.users({ plant }).href }]}
+      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
       actions={canBlock ? <UserBlockAction user={user} /> : undefined}
       state={state}
     >

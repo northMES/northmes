@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation } from '@apollo/client/react';
 import { coreLinks, createUser } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
@@ -21,7 +20,7 @@ import {
 } from '../../../../ui/lib/use-zod-form.ts';
 import { noAccessState } from '../../no-access.tsx';
 import { handOverTemporaryPassword } from '../../temporary-password.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreUser } from '../../user.graphql.ts';
 import { CoreCreateUser } from './create-user.graphql.ts';
@@ -48,7 +47,7 @@ interface CreatedBefore {
  * user was created and offers Open user, since NorthMES cannot show the password again.
  */
 function NewUserForm({ companyName }: { readonly companyName: string }) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
   const [createdBefore, setCreatedBefore] = useState<CreatedBefore>();
@@ -60,7 +59,11 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
     update(cache, { data }) {
       if (!data) return;
       const { user } = data.coreCreateUser;
-      cache.writeQuery({ query: CoreUser, variables: { id: user.id }, data: { coreUser: user } });
+      cache.writeQuery({
+        query: CoreUser,
+        variables: { id: user.id, companyId },
+        data: { coreUser: user },
+      });
     },
   });
   const { isDirty, isSubmitting } = form.formState;
@@ -68,12 +71,12 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   const save = async (values: UserValues) => {
     setCreatedBefore(undefined);
     try {
-      const { data } = await create({ variables: { input: { ...values, id } } });
+      const { data } = await create({ variables: { input: { ...values, id, companyId } } });
       if (!data) return;
       const { user, temporaryPassword } = data.coreCreateUser;
       handOverTemporaryPassword(user.id, temporaryPassword);
       await navigate({
-        to: coreLinks.users.user({ plant, userId: user.id }).href,
+        to: coreLinks.settings.users.user({ companyId, userId: user.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -125,7 +128,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
             label="Open user"
             onAction={() =>
               navigate({
-                to: coreLinks.users.user({ plant, userId: createdBefore.userId }).href,
+                to: coreLinks.settings.users.user({ companyId, userId: createdBefore.userId }).href,
                 replace: true,
               })
             }
@@ -156,7 +159,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
       <FormActions
         saveLabel="Create user"
         saving={isSubmitting}
-        cancelHref={coreLinks.users({ plant }).href}
+        cancelHref={coreLinks.settings.users({ companyId }).href}
         dirty={isDirty}
       />
       <UnsavedChangesGuard when={isDirty && !isSubmitting && createdBefore === undefined} />
@@ -173,7 +176,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
  * core.user:create gets the page "No access to New user".
  */
 export function NewUserScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
   // The API checks core.user:create at the company (its scope hook).
@@ -193,7 +196,7 @@ export function NewUserScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to New user' : 'New user'}
-      crumbs={[{ label: 'Users', href: coreLinks.users({ plant }).href }]}
+      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
       state={state}
     >
       {viewer.loaded && !forbidden && <NewUserForm companyName={companyName} />}

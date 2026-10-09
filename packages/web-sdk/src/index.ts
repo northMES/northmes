@@ -5,6 +5,7 @@ export {
   type NorthmesClientAuth,
 } from './apollo.ts';
 export {
+  companySettingsHref,
   createShellRoutes,
   type PlantBeforeLoad,
   type PlantRoute,

@@ -1,23 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { linkEntry } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
-import type { PlantRoute } from '@northmes/web-sdk';
+import type { PlantRoute, SettingsRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch } from './article-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 
-/**
- * The core module's routes under the shell's $plant route. Each route takes its path from its
- * entry in coreLinks, so a path is written once, in the link manifest (ADR 0062); a list and a
- * record's page are the index routes of their entries. Each search definition sits on its route,
- * never in the lazy screens.ts, from which the screens load.
- */
 /** A screen of screens.ts as a route component, which loads the screens' chunk on first use. */
 function lazyScreen(name: keyof typeof import('./screens.ts')) {
   return lazyRouteComponent(() => import('./screens.ts'), name);
 }
 
+/**
+ * The core module's routes under the shell's $plant route: the articles, and People in plant
+ * settings (ADR 0066). Each route takes its path from its entry in coreLinks, so a path is written
+ * once, in the link manifest (ADR 0062); a list and a record's page are the index routes of their
+ * entries. Each search definition sits on its route, never in the lazy screens.ts, from which the
+ * screens load.
+ */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({
     getParentRoute: () => plantRoute,
@@ -53,9 +54,43 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.articles.article.edit).path,
     component: lazyScreen('EditArticleScreen'),
   });
+  const peopleRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.people).path,
+  });
+  const peopleListRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: '/',
+    component: lazyScreen('PeopleScreen'),
+  });
+  const peopleAddRoleRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: linkEntry(coreLinks.people.addRole).path,
+    component: lazyScreen('PeopleAddRoleScreen'),
+  });
+  return coreRoute.addChildren([
+    articlesRoute.addChildren([
+      articleListRoute,
+      newArticleRoute,
+      articleRoute.addChildren([articleDetailRoute, editArticleRoute]),
+    ]),
+    peopleRoute.addChildren([peopleListRoute, peopleAddRoleRoute]),
+  ]);
+}
+
+/**
+ * The core module's company settings routes under the shell's /settings/$companyId route (ADR
+ * 0066): the users with a user's page and Add role, and the roles with a role's page and its
+ * editor. Their paths come from the settings section of coreLinks.
+ */
+export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
+  const coreRoute = createRoute({
+    getParentRoute: () => settingsRoute,
+    path: linkEntry(coreLinks.settings).path,
+  });
   const usersRoute = createRoute({
     getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.users).path,
+    path: linkEntry(coreLinks.settings.users).path,
   });
   const userListRoute = createRoute({
     getParentRoute: () => usersRoute,
@@ -65,12 +100,12 @@ export function coreRoutes(plantRoute: PlantRoute) {
   });
   const newUserRoute = createRoute({
     getParentRoute: () => usersRoute,
-    path: linkEntry(coreLinks.users.new).path,
+    path: linkEntry(coreLinks.settings.users.new).path,
     component: lazyScreen('NewUserScreen'),
   });
   const userRoute = createRoute({
     getParentRoute: () => usersRoute,
-    path: linkEntry(coreLinks.users.user).path,
+    path: linkEntry(coreLinks.settings.users.user).path,
   });
   const userDetailRoute = createRoute({
     getParentRoute: () => userRoute,
@@ -80,12 +115,12 @@ export function coreRoutes(plantRoute: PlantRoute) {
   });
   const addRoleRoute = createRoute({
     getParentRoute: () => userRoute,
-    path: linkEntry(coreLinks.users.user.addRole).path,
+    path: linkEntry(coreLinks.settings.users.user.addRole).path,
     component: lazyScreen('AddRoleScreen'),
   });
   const rolesRoute = createRoute({
     getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.roles).path,
+    path: linkEntry(coreLinks.settings.roles).path,
   });
   const roleListRoute = createRoute({
     getParentRoute: () => rolesRoute,
@@ -94,13 +129,13 @@ export function coreRoutes(plantRoute: PlantRoute) {
   });
   const newRoleRoute = createRoute({
     getParentRoute: () => rolesRoute,
-    path: linkEntry(coreLinks.roles.new).path,
+    path: linkEntry(coreLinks.settings.roles.new).path,
     validateSearch: newRoleSearch,
     component: lazyScreen('NewRoleScreen'),
   });
   const roleRoute = createRoute({
     getParentRoute: () => rolesRoute,
-    path: linkEntry(coreLinks.roles.role).path,
+    path: linkEntry(coreLinks.settings.roles.role).path,
   });
   const roleDetailRoute = createRoute({
     getParentRoute: () => roleRoute,
@@ -110,15 +145,10 @@ export function coreRoutes(plantRoute: PlantRoute) {
   });
   const editRoleRoute = createRoute({
     getParentRoute: () => roleRoute,
-    path: linkEntry(coreLinks.roles.role.edit).path,
+    path: linkEntry(coreLinks.settings.roles.role.edit).path,
     component: lazyScreen('EditRoleScreen'),
   });
   return coreRoute.addChildren([
-    articlesRoute.addChildren([
-      articleListRoute,
-      newArticleRoute,
-      articleRoute.addChildren([articleDetailRoute, editArticleRoute]),
-    ]),
     usersRoute.addChildren([
       userListRoute,
       newUserRoute,

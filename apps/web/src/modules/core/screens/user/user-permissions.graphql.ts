@@ -7,14 +7,14 @@ export {
   type CoreUserPermissionsQueryVariables,
 } from './user-permissions.graphql.gen.ts';
 
-// What the user may do at the plant: every installed permission with the roles that grant it
-// there. It names roles, so a reader without core.role:read gets FORBIDDEN, and the Access tab
+// What the user may do at the company of company settings: every installed permission with the
+// roles that grant it there. It names roles, so a reader without core.role:read gets FORBIDDEN, and the Access tab
 // shows that region denied. pnpm gen writes its typed document to user-permissions.graphql.gen.ts;
 // this block never runs.
 if (false) {
   gql`
-    query CoreUserPermissions($id: ID!) {
-      coreUser(id: $id) {
+    query CoreUserPermissions($id: ID!, $companyId: ID!) {
+      coreUser(id: $id, companyId: $companyId) {
         id
         effectivePermissions {
           permission {

@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from '../ui/primitives/sidebar.tsx';
 import type { ShellCompany } from './companies.graphql.ts';
+import { currentOf, shownTo, sidebarLinks } from './shell-pages.ts';
 import { ShellPlantSwitcher } from './shell-plant-switcher.tsx';
 import { type ShellUser, ShellUserMenu } from './shell-user-menu.tsx';
 
@@ -42,25 +43,14 @@ export interface ShellSidebarProps {
   readonly permissions?: ReadonlySet<string>;
 }
 
-/** The id of Administration's label, which names its list. */
-const adminLabelId = 'sidebar-group-administration';
-
-/**
- * How an entry relates to the page on screen: its own page ("page"), a page under it ("true", as
- * an article under Articles), or neither.
- */
-function currentOf(href: string, pathname: string): 'page' | 'true' | undefined {
-  if (href === pathname) return 'page';
-  return pathname.startsWith(`${href}/`) ? 'true' : undefined;
-}
-
 /**
  * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the plant
- * switcher, one group per module in their order with its entries, Administration last with the
- * modules' admin entries (C7), and the user menu at the foot. An entry that needs a permission
- * shows only to a user who holds it at the plant. collapsible="icon" makes it the 64 px rail, where each entry shows its icon and its
- * label in a tooltip; where the shell is narrow it is the Navigation sheet, whose head holds Close
- * navigation and whose entries close it.
+ * switcher, one group per module in their order with its entries, and the user menu at the foot.
+ * An entry that needs a permission shows only to a user who holds it at the plant, and an entry of
+ * the plant settings navigation stays out (ADR 0066), as administration does: it lives in the
+ * settings area behind the Settings button. collapsible="icon" makes it the 64 px rail, where each
+ * entry shows its icon and its label in a tooltip; where the shell is narrow it is the Navigation
+ * sheet, whose head holds Close navigation and whose entries close it.
  */
 export function ShellSidebar({
   id,
@@ -71,9 +61,7 @@ export function ShellSidebar({
   onSignOut,
   permissions,
 }: ShellSidebarProps) {
-  const shown = ({ permission }: MenuLink) =>
-    permission === undefined || (permissions?.has(permission) ?? false);
-  const adminLinks = modules.flatMap(({ adminLinks: links = [] }) => links).filter(shown);
+  const shown = shownTo(permissions);
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const entry = ({ label, icon, link }: MenuLink) => {
@@ -118,7 +106,8 @@ export function ShellSidebar({
           )}
         </SidebarHeader>
         <SidebarContent>
-          {modules.map(({ module, label, links = [] }, index) => {
+          {modules.map((each, index) => {
+            const { module, label } = each;
             const labelId = `sidebar-group-${module.id}`;
             return (
               <Fragment key={module.id}>
@@ -129,26 +118,12 @@ export function ShellSidebar({
                     aria-labelledby={labelId}
                     className="group-data-[collapsible=icon]:items-center"
                   >
-                    {links.filter(shown).map(entry)}
+                    {sidebarLinks(each).filter(shown).map(entry)}
                   </SidebarMenu>
                 </SidebarGroup>
               </Fragment>
             );
           })}
-          {adminLinks.length > 0 && (
-            <>
-              <SidebarSeparator />
-              <SidebarGroup>
-                <SidebarGroupLabel id={adminLabelId}>Administration</SidebarGroupLabel>
-                <SidebarMenu
-                  aria-labelledby={adminLabelId}
-                  className="group-data-[collapsible=icon]:items-center"
-                >
-                  {adminLinks.map(entry)}
-                </SidebarMenu>
-              </SidebarGroup>
-            </>
-          )}
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border">
           <ShellUserMenu user={user} onSignOut={onSignOut} />

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
@@ -12,7 +11,7 @@ import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { noAccessState } from '../../no-access.tsx';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import {
   nextUsersPage,
@@ -34,10 +33,10 @@ const searchFieldId = 'users-search';
 
 /** The user's name, the link to the user's page. */
 function UserLink({ user }: { readonly user: UserRow }) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   return (
     <Link
-      to={coreLinks.users.user({ plant, userId: user.id }).href}
+      to={coreLinks.settings.users.user({ companyId, userId: user.id }).href}
       className="text-link underline underline-offset-2 hover:no-underline"
     >
       {user.name}
@@ -63,8 +62,8 @@ function RoleChips({ user }: { readonly user: UserRow }) {
   );
 }
 
-/** The columns of the list; the roles column names the two places it reads. */
-function columnsOf(companyName: string, plantName: string): readonly DataTableColumn<UserRow>[] {
+/** The columns of the list, as C1 of design shell-313 heads them. */
+function columnsOf(): readonly DataTableColumn<UserRow>[] {
   return [
     { id: 'name', header: 'Name', cell: (user) => <UserLink user={user} /> },
     {
@@ -74,7 +73,7 @@ function columnsOf(companyName: string, plantName: string): readonly DataTableCo
     },
     {
       id: 'roles',
-      header: `Roles at ${companyName} and ${plantName}`,
+      header: 'Roles',
       cell: (user) => <RoleChips user={user} />,
     },
     { id: 'status', header: 'Status', cell: (user) => <UserStatus blocked={user.blocked} /> },
@@ -82,42 +81,47 @@ function columnsOf(companyName: string, plantName: string): readonly DataTableCo
 }
 
 /**
- * The users of the company (design core-304, US1): Search users, and one page of 25 users by name
- * with their username, their roles at the company and at the plant as chips, and their status,
+ * The users of the company in company settings (design core-304, US1, and shell-313, C1): Search
+ * users, and one page of 25 users by name with their username, their roles at the company and at
+ * each of its plants as chips, and their status,
  * with Previous and Next. Search and page live in the URL. New user shows to a user who may
  * create users. The list takes the canonical list's loading, empty and error states with users as
  * the noun; a reader without core.user:read gets the page "No access to Users".
  */
 export function UsersScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
   const view = userListSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
   const { data, previousData, error, refetch } = useQuery(CoreUsers, {
-    variables: userListVariables(view),
+    variables: { companyId, ...userListVariables(view) },
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
   });
   const page = data?.coreUsers;
   const shownPage = page ?? previousData?.coreUsers;
   const companyName = places.company?.name ?? 'the company';
-  const plantName = places.plant?.name ?? plant;
-  const columns = useMemo(() => columnsOf(companyName, plantName), [companyName, plantName]);
+  const columns = useMemo(columnsOf, []);
   const show = (next: UserListSearch) => {
     navigate({ to: '.', search: next, replace: true });
   };
   const forbidden = page === undefined && isForbidden(error);
-  // The API checks core.user:create at the company (its scope hook), so a plant role's is not enough.
+  // The API checks core.user:create at the company (its scope hook).
   const newUser = viewer.canAtCompany('core.user:create') ? (
-    <Link to={coreLinks.users.new({ plant }).href} className={buttonVariants()}>
+    <Link to={coreLinks.settings.users.new({ companyId }).href} className={buttonVariants()}>
       <Plus aria-hidden />
       New user
     </Link>
   ) : undefined;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('Users', 'core.user:read', plantName);
+    state = noAccessState(
+      'Users',
+      'core.user:read',
+      companyName,
+      `a company admin of ${companyName}`,
+    );
   } else if (page === undefined && error !== undefined) {
     state = {
       status: 'error',

@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { useRouterState } from '@tanstack/react-router';
+import { useEffect, useRef } from 'react';
+import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
+import type { ShellCompany } from './companies.graphql.ts';
+
+/** The id of main, which the skip link moves focus to outside settings. */
+export const mainId = 'main';
+
+/** The id of the sidebar, which the sidebar trigger controls. */
+export const sidebarId = 'shell-sidebar';
+
+/**
+ * Moves focus to the page's h1 after each path change, one frame after the new route rendered, and
+ * to main when the page has no h1 that takes focus (ADR 0021). The first load moves no focus, so
+ * the first Tab reaches the skip link (D2, Focus rules). A change of the search alone leaves focus
+ * where it is, so sorting, searching and paging keep focus on their control.
+ */
+export function useFocusPageHeading() {
+  const main = useRef<HTMLElement>(null);
+  const shownPath = useRef<string | undefined>(undefined);
+  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname });
+  useEffect(() => {
+    if (pathname === undefined) return;
+    const left = shownPath.current;
+    shownPath.current = pathname;
+    if (left === undefined || left === pathname) return;
+    const frame = requestAnimationFrame(() => {
+      // An h1 without a tabindex, such as the board stub's, cannot take focus, so main does.
+      const heading = main.current?.querySelector<HTMLElement>('h1[tabindex]');
+      (heading ?? main.current)?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
+  return main;
+}
+
+/**
+ * How an entry relates to the page on screen: its own page ("page"), a page under it ("true", as
+ * an article under Articles or a user's page under Users), or neither.
+ */
+export function currentOf(href: string, pathname: string): 'page' | 'true' | undefined {
+  if (href === pathname) return 'page';
+  return pathname.startsWith(`${href}/`) ? 'true' : undefined;
+}
+
+/** Whether an entry shows to a user with these permissions: one without a permission always does. */
+export function shownTo(permissions: ReadonlySet<string> | undefined) {
+  return ({ permission }: Pick<MenuLink | SettingsLink, 'permission'>) =>
+    permission === undefined || (permissions?.has(permission) ?? false);
+}
+
+/** The entries of the main sidebar of a module: those outside the plant settings navigation. */
+export function sidebarLinks(module: ShellModule): readonly MenuLink[] {
+  return (module.links ?? []).filter(({ area }) => area !== 'settings');
+}
+
+/** The entries of the plant settings navigation of a module (ADR 0066). */
+export function plantSettingsLinks(module: ShellModule): readonly MenuLink[] {
+  return (module.links ?? []).filter(({ area }) => area === 'settings');
+}
+
+/** The href of the first sidebar entry of a module, at a plant. */
+export function firstHref(module: ShellModule | undefined, plant: string): string | undefined {
+  const [first] = module === undefined ? [] : sidebarLinks(module);
+  return first?.link({ plant }).href;
+}
+
+/** The href of a plant's first page, the first entry of the sidebar, until a plant has a home page. */
+export function plantHome(modules: readonly ShellModule[], plant: string): string | undefined {
+  return firstHref(
+    modules.find((module) => sidebarLinks(module).length > 0),
+    plant,
+  );
+}
+
+/** The company and the plant of the user's companies that a slug names. */
+export function plantOf(companies: readonly ShellCompany[], slug: string) {
+  for (const company of companies) {
+    const plant = company.plants.find((each) => each.slug === slug);
+    if (plant !== undefined) return { company, plant };
+  }
+  return undefined;
+}
+
+/**
+ * The company settings entries of the modules that a user with these permissions at the company
+ * may open, for a company: core's first, then the other modules' (ADR 0066).
+ */
+export function companySettingsEntries(
+  modules: readonly ShellModule[],
+  permissions: ReadonlySet<string> | undefined,
+  companyId: string,
+) {
+  const shown = shownTo(permissions);
+  return modules.map(({ module, settingsLinks = [] }) => ({
+    moduleId: module.id,
+    entries: settingsLinks
+      .filter(shown)
+      .map(({ label, icon, link }) => ({ label, icon, href: link({ companyId }).href })),
+  }));
+}

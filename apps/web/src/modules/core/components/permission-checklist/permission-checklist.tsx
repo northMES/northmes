@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
-import { useShell } from '@northmes/web-sdk';
 import { ChevronDown, Lock } from 'lucide-react';
 import { useId } from 'react';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
@@ -14,7 +13,7 @@ import {
 } from '../../../../ui/primitives/collapsible.tsx';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
 import { moduleName, permissionLine } from '../../permission-names.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import {
   CorePermissionCatalog,
@@ -75,7 +74,7 @@ interface RowProps {
 
 /**
  * One permission: a checkbox named by its plain line and described by its id. A permission the
- * editor does not hold at the plant is described by why; when ticking it would add it, it is
+ * editor does not hold at the company is described by why; when ticking it would add it, it is
  * locked: a Lock in place of the checkbox, aria-disabled and no Tab stop (design core-304, NO19).
  */
 function PermissionRow({
@@ -247,7 +246,7 @@ function selectedLine(count: number, total: number): string {
  * installed permissions grouped by module in the catalog's order, each in plain words with its
  * id, and the count of those ticked ("6 of 36 selected."), which a tick says through announce(). Space ticks a permission
  * and focus stays on it; Enter on a module's button opens or closes the module. A permission the
- * editor does not hold at the plant can be unticked but not ticked, because the grant rule asks
+ * editor does not hold at the company can be unticked but not ticked, because the grant rule asks
  * for it to add it and for nothing to remove it (ADR 0010). One the edited role holds already
  * can be ticked again.
  */
@@ -258,10 +257,10 @@ export function PermissionChecklist({
   refused,
   current = [],
 }: PermissionChecklistProps) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
-  const { data, error } = useQuery(CorePermissionCatalog);
+  const { data, error } = useQuery(CorePermissionCatalog, { variables: { companyId } });
   const catalog = data?.corePermissionCatalog;
   if (catalog === undefined) {
     if (error !== undefined) {
@@ -283,7 +282,7 @@ export function PermissionChecklist({
   const all = groups.flatMap(({ keys }) => keys);
   const ticked = new Set(value);
   const count = all.filter((key) => ticked.has(key)).length;
-  const plantName = places.plant?.name ?? plant;
+  const companyName = places.company?.name ?? 'the company';
   // The count changes only through a tick, so the tick says the new count.
   const change = (next: string[]) => {
     onChange(next);
@@ -303,7 +302,7 @@ export function PermissionChecklist({
           refused={refused}
           held={(key) => viewer.can(key)}
           current={new Set(current)}
-          lockedReason={`You do not hold it at ${plantName}.`}
+          lockedReason={`You do not hold it at ${companyName}.`}
         />
       ))}
       {baseline !== undefined && <Difference baseline={baseline} value={value} />}

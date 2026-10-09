@@ -17,6 +17,11 @@ export type PlantBeforeLoad = (context: { readonly location: ParsedLocation }) =
 /** The path of the company settings mount, beside /$plant (ADR 0066). */
 export const settingsPath = 'settings/$companyId';
 
+/** The href of a company's settings landing, /settings/<company id> (ADR 0066). */
+export function companySettingsHref(companyId: string): string {
+  return `/${settingsPath.replace('$companyId', encodeURIComponent(companyId))}`;
+}
+
 /**
  * The components of the root route, the $plant route and the company settings route, and its
  * landing. Without one, a route renders its child.
