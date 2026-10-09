@@ -188,6 +188,30 @@ describe("a user's access", () => {
     );
   });
 
+  it("E05-S06 Remove of a company role names what a plant role keeps only at that plant as lost, since the company's other plants keep only what other company roles grant", async () => {
+    const user = userEvent.setup();
+    const companyAdmin = [...plantAdmin, 'core.roleAssignment:manage'];
+    renderCoreAt(accessHref, [
+      viewerQuery(companyAdmin, companyAdmin),
+      companiesQuery(),
+      userQuery(saraOfPage),
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Remove Viewer at Acme AB' }));
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Remove Viewer at Acme AB from Sara Nyberg?',
+    });
+
+    expect(
+      within(dialog).getByText(
+        'From the next action, Sara Nyberg loses these permissions at Acme AB:',
+      ),
+    ).toBeDefined();
+    expect(within(dialog).getByText('Read production orders and the planning board')).toBeDefined();
+    expect(within(dialog).queryByText(/keeps every permission/)).toBeNull();
+  });
+
   it("E05-S06 Remove of a company's last active Company admin is refused: the dialog shows the server's message and the role stays", async () => {
     const pointer = userEvent.setup();
     const all = [...companyAdminRole.permissions];
