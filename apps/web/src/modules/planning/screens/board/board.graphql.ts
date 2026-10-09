@@ -25,6 +25,7 @@ if (false) {
         version
         article {
           id
+          code
           name
         }
       }

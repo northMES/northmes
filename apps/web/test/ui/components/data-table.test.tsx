@@ -191,4 +191,3 @@ describe('DataTable', () => {
     expect(actionsHeader.querySelector('.sr-only')?.textContent).toBe('Actions');
   });
 });
-

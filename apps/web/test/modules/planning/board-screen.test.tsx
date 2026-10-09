@@ -102,13 +102,11 @@ describe('BoardScreen', () => {
     ]);
 
     const table = await screen.findByRole('table', { name: 'Production orders' });
-    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
-      'Order',
-      'Article',
-      'Quantity',
-      'Status',
-      'Actions',
-    ]);
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Order', 'Article', 'Quantity', 'Status', 'Actions']);
     const planned = await rowOf('7101');
     expect(within(cellOf(planned, 'Article')).getByText('BR-40')).toBeTruthy();
     expect(within(cellOf(planned, 'Article')).getByText('Bracket 40 mm')).toBeTruthy();

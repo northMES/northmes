@@ -31,6 +31,10 @@ export interface DataTableColumn<TRow> {
   readonly cell: (row: TRow) => ReactNode;
   /** The server sorts on this column; its header becomes a sort button with aria-sort. */
   readonly sortable?: boolean;
+  /** A number column, such as Quantity: its header and cells align to the end, in tabular digits. */
+  readonly numeric?: boolean;
+  /** The header text is for screen readers only, as on a row's Actions column. */
+  readonly headerHidden?: boolean;
 }
 
 /** The sort the server applied: one column, ascending or descending. */
@@ -90,6 +94,10 @@ export function DataTable<TRow extends RowData>({
   paging,
   loading = false,
 }: DataTableProps<TRow>) {
+  const columnById = useMemo(
+    () => new Map(columns.map((column) => [column.id, column] as const)),
+    [columns],
+  );
   const tableColumns = useMemo(
     () =>
       columns.map(
@@ -134,14 +142,18 @@ export function DataTable<TRow extends RowData>({
                 const { column } = header;
                 const sorted = column.getIsSorted();
                 const text = column.columnDef.header as string;
+                const { numeric = false, headerHidden = false } = columnById.get(column.id) ?? {};
                 if (!column.getCanSort()) {
                   return (
                     <TableHead
                       key={header.id}
                       scope="col"
-                      className="h-auto px-3 py-2.5 text-start font-semibold text-muted-foreground"
+                      className={cn(
+                        'h-auto px-3 py-2.5 text-start font-semibold text-muted-foreground',
+                        numeric && 'text-end',
+                      )}
                     >
-                      {text}
+                      {headerHidden ? <span className="sr-only">{text}</span> : text}
                     </TableHead>
                   );
                 }
@@ -152,7 +164,10 @@ export function DataTable<TRow extends RowData>({
                     key={header.id}
                     scope="col"
                     aria-sort={sorted === false ? 'none' : ariaSort[sorted]}
-                    className="h-auto px-3 py-1.5 text-start font-semibold text-muted-foreground"
+                    className={cn(
+                      'h-auto px-3 py-1.5 text-start font-semibold text-muted-foreground',
+                      numeric && 'text-end',
+                    )}
                   >
                     <Button
                       variant="ghost"
@@ -188,7 +203,13 @@ export function DataTable<TRow extends RowData>({
             : table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} className="border-border hover:bg-accent">
                   {row.getAllCells().map((cell) => (
-                    <TableCell key={cell.id} className="px-3 py-2.5 whitespace-normal">
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        'px-3 py-2.5 whitespace-normal',
+                        columnById.get(cell.column.id)?.numeric && 'text-end tabular-nums',
+                      )}
+                    >
                       <table.FlexRender cell={cell} />
                     </TableCell>
                   ))}
