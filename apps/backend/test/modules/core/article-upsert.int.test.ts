@@ -148,6 +148,21 @@ describe('upsert of an article by its article number', () => {
     expect(ids.size).toBe(1);
   });
 
+  it('ADR0073-W3 an upsert finds an article whose number has a letter that lowercases differently in JavaScript and Postgres', async () => {
+    const place = await givenHelAndSto();
+    const { helAdmin } = await admins(place);
+    const number = code('İX');
+    const created = await upsert(helAdmin, { id: randomUUIDv7(), code: number, name: 'Bolt' });
+
+    const answer = await upsert(helAdmin, { id: randomUUIDv7(), code: number, name: 'Bolt M8' });
+
+    expect(refusals(answer)).toBeUndefined();
+    expect(answer.data?.coreUpsertArticle).toMatchObject({
+      id: created.data?.coreUpsertArticle.id,
+      name: 'Bolt M8',
+    });
+  });
+
   it('ADR0073-W3 an upsert from company settings without plants creates an unassigned article', async () => {
     const place = await givenHelAndSto();
     const { companyAdmin } = await admins(place);
