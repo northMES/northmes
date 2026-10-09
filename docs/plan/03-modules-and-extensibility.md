@@ -142,7 +142,7 @@ Each remote exposes one entry, `./module`, whose default export is checked by th
 // @northmes/web-sdk (MIT)
 defineWebModule({
   id, version, northmesRange, permissions,
-  routes(plantRoute),          // code-based route subtree under /$plant/<id>
+  routes(plantRoute),          // code-based route subtree under /$plant/<id>; core's is pathless, at /$plant (ADR 0074)
   stationRoutes(stationRoute), // optional; production-start's operator screen under /station/$stationId
   contributions,               // implementations keyed by the ids in the manifest's web.contributes, built with the kind helpers
   help,                        // optional; entries in the shell's help menu, grouped by module
@@ -152,7 +152,7 @@ defineWebModule({
 
 `defineWebModule` has no nav field. A route declares its own sidebar entry through the `nav` option of `screenRoute`, and the shell builds the module's nav entries from the routes that `routes(plantRoute)` returns. Each route takes its path segment and search definition from its entry in the module's link manifest (`defineModuleLinks` in the module's MIT contracts package), so a path is written once; station routes sit in the manifest's separate `station` section ([06 web and UX](06-web-and-ux.md#routes-and-typed-links), [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md)).
 
-A build check compares `id`, `version` and `northmesRange` with the backend manifest. The shell checks only that `id` and `version` equal the server's entry in `/api/v1/web/modules`, because the server already filtered on the range. A module owns `/$plant/<id>/*` and nothing else; the shell rejects a route tree whose path differs from the id ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)).
+A build check compares `id`, `version` and `northmesRange` with the backend manifest. The shell checks only that `id` and `version` equal the server's entry in `/api/v1/web/modules`, because the server already filtered on the range. A module owns `/$plant/<id>/*` and nothing else; the shell rejects a route tree whose path differs from the id ([ADR 0019](../adr/0019-web-shell-with-react-module-federation-remotes.md)). Core is the exception: its pages sit at the plant root and at the company settings root without its id, its link manifest comes from `defineCoreLinks`, and no module may take the id of one of core's or the shell's top-level web path segments ([ADR 0074](../adr/0074-core-pages-at-the-plant-root-and-the-company-settings-root.md)).
 
 ## Catalog checks at boot
 
