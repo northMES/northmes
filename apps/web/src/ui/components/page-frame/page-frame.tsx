@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert, Copy, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { announce } from '../../lib/announce.ts';
 import { Button } from '../../primitives/button.tsx';
 import {
@@ -12,6 +13,8 @@ import {
   EmptyTitle,
 } from '../../primitives/empty.tsx';
 import { IconButton } from '../icon-button/index.ts';
+import { PageFrameBreadcrumb } from './page-frame-breadcrumb.tsx';
+import { type Crumb, usePageFrameTopBar } from './page-frame-top-bar.tsx';
 
 /** What a page's data region shows (plan 06, Page states). */
 export type PageState =
@@ -37,8 +40,13 @@ export type PageState =
 export interface PageFrameProps {
   /** The route title, rendered as the page's only h1. */
   readonly title: string;
-  /** The page actions, such as New article, beside the h1. */
+  /** The page actions, such as New article: in the shell's top bar, else beside the h1. */
   readonly actions?: ReactNode;
+  /**
+   * The crumbs between the module and this page, such as Articles above an article. The shell's
+   * top bar shows them after the plant and the module crumbs, and the title as the last crumb.
+   */
+  readonly crumbs?: readonly Crumb[];
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
   readonly state?: PageState;
@@ -117,27 +125,33 @@ export function ErrorState({
 
 /**
  * The frame of a screen (plan 06, UI patterns): the h1 from the route title, which the shell
- * focuses after a route change (tabindex -1) and which names the document ("Articles · NorthMES"),
- * the page actions, the toolbar, and the data region
- * in its state. Loading marks the region busy around the content's skeleton; empty and error
+ * focuses after a route change (tabindex -1) and which names the document ("Articles · Plant A ·
+ * NorthMES" in the shell, "Articles · NorthMES" outside it), the page actions, the toolbar, and the
+ * data region in its state. In the shell the breadcrumb and the page actions render in the top bar
+ * (D2), before main in the Tab order. Loading marks the region busy around the content's skeleton; empty and error
  * replace the content. Try again moves focus to the h1, because the error state goes away, and so
  * does an empty state's action that takes the state away without moving focus itself.
  */
 export function PageFrame({
   title,
   actions,
+  crumbs = [],
   toolbar,
   state = { status: 'ready' },
   children,
 }: PageFrameProps) {
   const heading = useRef<HTMLHeadingElement>(null);
+  const topBar = usePageFrameTopBar();
+  const titleContext = topBar?.titleContext;
   // The page names the document while it shows; a page without a frame gets the plain name.
   useEffect(() => {
-    document.title = `${title} · NorthMES`;
+    document.title = [title, titleContext, 'NorthMES']
+      .filter((part) => part !== undefined)
+      .join(' · ');
     return () => {
       document.title = 'NorthMES';
     };
-  }, [title]);
+  }, [title, titleContext]);
   // The action of an empty or error state, such as Go to the first page, removes the state and
   // the focused button with it. Unless the action moved focus itself, focus moves to the h1.
   const shownStatus = useRef(state.status);
@@ -151,11 +165,21 @@ export function PageFrame({
   }, [state.status]);
   return (
     <div className="flex flex-col gap-4">
+      {topBar?.breadcrumb &&
+        createPortal(
+          <PageFrameBreadcrumb crumbs={[...topBar.trail, ...crumbs]} current={title} />,
+          topBar.breadcrumb,
+        )}
+      {actions !== undefined &&
+        topBar?.actions &&
+        createPortal(<div className="flex items-center gap-2">{actions}</div>, topBar.actions)}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
           {title}
         </h1>
-        {actions !== undefined && <div className="flex flex-wrap gap-2">{actions}</div>}
+        {actions !== undefined && topBar === null && (
+          <div className="flex flex-wrap gap-2">{actions}</div>
+        )}
       </div>
       {toolbar}
       <div aria-busy={state.status === 'loading' || undefined}>

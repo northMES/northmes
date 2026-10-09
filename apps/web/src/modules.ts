@@ -4,22 +4,25 @@ import { planningLinks } from '@northmes/planning-contracts';
 import type { WebModule } from '@northmes/web-sdk';
 import { coreModule } from './modules/core/index.ts';
 import { planningModule } from './modules/planning/index.ts';
+import type { NavIconName } from './ui/lib/nav-icon-names.ts';
 
-/** One link of a module's menu group. */
+/** One entry of a module's sidebar group. */
 export interface MenuLink {
   readonly label: string;
+  /** The entry's icon in the sidebar and the rail, by its lucide name (ADR 0067). */
+  readonly icon: NavIconName;
   /** Builds the link for a plant, such as the entry planningLinks.board of a link manifest. */
   readonly link: (params: { readonly plant: string }) => { readonly href: string };
 }
 
-/** A module the web is built with, and its group in the menu. */
+/** A module the web is built with, and its group in the sidebar. */
 export interface ShellModule {
   readonly module: WebModule;
-  /** The menu group's label, as in the web block of the module's manifest. */
+  /** The sidebar group's label, as in the web block of the module's manifest. */
   readonly label: string;
-  /** The menu group's position, as in the web block of the module's manifest. */
+  /** The sidebar group's position, as in the web block of the module's manifest. */
   readonly order: number;
-  /** The links of the module's menu group, in their order. */
+  /** The entries of the module's sidebar group, in their order. */
   readonly links?: readonly MenuLink[];
 }
 
@@ -32,12 +35,12 @@ export const shellModules: readonly ShellModule[] = [
     module: coreModule,
     label: 'Core',
     order: 10,
-    links: [{ label: 'Articles', link: coreLinks.articles }],
+    links: [{ label: 'Articles', icon: 'Package', link: coreLinks.articles }],
   },
   {
     module: planningModule,
     label: 'Planning',
     order: 20,
-    links: [{ label: 'Planning board', link: planningLinks.board }],
+    links: [{ label: 'Planning board', icon: 'ChartGantt', link: planningLinks.board }],
   },
 ];

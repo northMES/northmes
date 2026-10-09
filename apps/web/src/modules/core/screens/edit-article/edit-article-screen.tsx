@@ -100,10 +100,23 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
  * offers Reload article (DE19).
  */
 export function EditArticleScreen() {
+  const { plantId } = useShell();
   const { article, state, reload } = useArticle();
+  const articles = { label: 'Articles', href: coreLinks.articles({ plant: plantId }).href };
   return (
     <PageFrame
       title={article === undefined ? 'Edit article' : `Edit article ${article.code}`}
+      crumbs={
+        article === undefined
+          ? [articles]
+          : [
+              articles,
+              {
+                label: `Article ${article.code}`,
+                href: coreLinks.articles.article({ plant: plantId, articleId: article.id }).href,
+              },
+            ]
+      }
       state={state}
     >
       {article !== undefined && (

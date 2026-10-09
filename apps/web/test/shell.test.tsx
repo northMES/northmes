@@ -349,22 +349,23 @@ describe('the shell', () => {
     const breadcrumb = within(banner).getByRole('navigation', { name: 'Breadcrumb' });
     expect(
       within(breadcrumb)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['plant-a', 'Planning', 'Production orders', 'Order 1001']);
+    expect(
+      within(breadcrumb)
         .getAllByRole('link')
-        .map((link) => [
-          link.textContent,
-          link.getAttribute('href'),
-          link.getAttribute('aria-current'),
-        ]),
+        .map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([
-      ['plant-a', '/plant-a/quality', null],
-      ['Planning', '/plant-a/planning/board', null],
-      ['Production orders', '/plant-a/planning/orders', null],
-      ['Order 1001', null, 'page'],
+      ['plant-a', '/plant-a/quality'],
+      ['Planning', '/plant-a/planning/board'],
+      ['Production orders', '/plant-a/planning/orders'],
     ]);
+    expect(within(breadcrumb).getByText('Order 1001').getAttribute('aria-current')).toBe('page');
     expect(document.title).toBe('Order 1001 · plant-a · NorthMES');
   });
 
-  it("E04-S02 the page actions sit in the top bar, and the h1 stays in main", async () => {
+  it('E04-S02 the page actions sit in the top bar, and the h1 stays in main', async () => {
     renderShellAt('/plant-a/planning/orders', [planning]);
     await screen.findByRole('heading', { level: 1, name: 'Production orders' });
 
@@ -372,7 +373,10 @@ describe('the shell', () => {
       within(screen.getByRole('banner')).getByRole('button', { name: 'New order' }),
     ).toBeDefined();
     expect(
-      within(screen.getByRole('main')).getByRole('heading', { level: 1, name: 'Production orders' }),
+      within(screen.getByRole('main')).getByRole('heading', {
+        level: 1,
+        name: 'Production orders',
+      }),
     ).toBeDefined();
   });
 

@@ -49,6 +49,7 @@ export function ArticleScreen() {
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
+      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant: plantId }).href }]}
       actions={
         article === undefined ? undefined : (
           <Link
