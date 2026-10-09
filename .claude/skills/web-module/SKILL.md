@@ -1,32 +1,73 @@
 ---
 name: web-module
-description: NorthMES recipe for a module's screens in apps/web/src/modules/<id>, the one static web app. Use when adding a module's web part, a route, a screen or a link entry, when the module boundary check fails, or when the web cannot reach the API.
+description: NorthMES recipe for a module's screens in apps/web/src/modules/<id>, the one static web app. Use when adding a module's web part, a route, a screen, a component or a link entry, when naming or placing a web file, when the module boundary check fails, or when the web cannot reach the API.
 ---
 
 # Web module
 
-The web is one Vite React app in `apps/web`, built once to static files. Each module's screens live in `apps/web/src/modules/<id>`, and `apps/web/src/modules.ts` lists the modules the web is built with. One TanStack Router tree holds every module's routes under `/$plant`, and each module's screens load lazily as one chunk. The planning module is the first; the files below are its.
+The web is one Vite React app in `apps/web`, built once to static files. Each module's screens live in `apps/web/src/modules/<id>`, and `apps/web/src/modules.ts` lists the modules the web is built with. One TanStack Router tree holds every module's routes under `/$plant`, and each module's screens load lazily as one chunk. The files below are the planning module's; [Naming and folders](#naming-and-folders) lays out a module's folders with core's articles pages.
 
 ## Files
 
 - `apps/web/src/modules/planning/index.ts`: the module's public api, `planningModule = defineWebModule({ id, version, routes })`. The shell and other modules import the module from this file only.
 - `routes.tsx`: `planningRoutes(plantRoute)`. Each route's path comes from `linkEntry(planningLinks...)`, the top route's from the manifest itself (ADR 0062). Each component is `lazyRouteComponent(() => import('./screens.ts'), '<Screen>')`.
-- `screens.ts`: re-exports every screen, so the build puts them in one chunk.
-- `board-screen.tsx`, `board.graphql.ts`, `release.graphql.ts`: the screen and its typed documents, `gql` from `@apollo/client` as a `TypedDocumentNode`.
+- `screens.ts`: re-exports every screen from its folder's `index.ts`, so the build puts them in one chunk.
+- `screens/board/`: `board-screen.tsx`, its row `order-row.tsx`, and the typed documents `board.graphql.ts` and `release.graphql.ts`, `gql` from `@apollo/client` as a `TypedDocumentNode`.
 - `apps/web/src/modules.ts`: one `{ module, label, order }` entry per module. `label` and `order` repeat the web block of the module's manifest.
 - `apps/web/src/config.ts`: `loadWebConfig` reads `/config.json` at boot. `{ "apiUrl": "https://mes.example.com" }` sends the client's requests to `<apiUrl>/graphql`; without the file the API is on the page's origin.
 - `apps/web/vite.config.ts`: in dev, proxies `/graphql` and `/api` to `NORTHMES_API_ORIGIN`, WebSockets included, and resolves workspace packages to their source (ADR 0058).
 
 Tests:
 - `apps/web/test/modules/planning/`: the board link opens the board, every `planningLinks` entry matches a route `fullPath`, and the screen with a `MockedProvider` that answers each document once.
+- `apps/web/test/ui/primitives/`, `components/` and `lib/`: one test file per `src/ui` piece, in the folder that mirrors its own.
 - `apps/web/test/shell.test.tsx`, `config.test.ts`, `vite-config.test.ts`, `build.test.ts`: the shell, config.json, the dev proxy, and a build whose manifest has `src/modules/<id>/screens.ts` as a dynamic entry.
 - `test/meta/module-boundaries.test.ts` runs `scripts/lint/module-boundaries.mjs`.
 - `test/meta/path-literals.test.ts` runs `scripts/lint/path-literals.mjs`: an app path comes from a link builder's `to` or `href`, never a literal.
 
+## Naming and folders
+
+Core's articles pages show the layout:
+
+```text
+apps/web/src/
+  modules/core/
+    index.ts, routes.tsx, screens.ts     public api and wiring
+    article.graphql.ts, use-article.tsx  read by more than one screen
+    article-list-search.ts               the list's URL search, read by routes.tsx
+    screens/
+      articles/      index.ts, articles-screen.tsx, articles.graphql.ts
+      article/       index.ts, article-screen.tsx
+      new-article/   index.ts, new-article-screen.tsx, create-article.graphql.ts
+      edit-article/  index.ts, edit-article-screen.tsx, update-article.graphql.ts
+    components/
+      article-form/  index.ts, article-form.tsx, article-form-reload-button.tsx, article-save-errors.ts
+  ui/
+    primitives/  button.tsx, button-variants.ts, text-field.tsx, search-field.tsx, field.ts
+    components/  data-table/, page-frame/, error-summary/
+    lib/         cn.ts, announce.ts, use-zod-form.ts
+```
+
+Names and places:
+
+- Directory and file names are kebab-case. A component file is named after the component it exports: `article-form.tsx` exports `ArticleForm`.
+- A component carries a domain name and lives in its module's folder. `apps/web/src/ui` holds the domain-free pieces: `ui/primitives` the single-concern ones, one file each; `ui/components` the composites, one folder each; `ui/lib` the helpers and hooks that render nothing. A module's composite moves to `ui/components` once two modules render it identically.
+- Each screen has its folder `screens/<screen>/`: `<screen>-screen.tsx`, the documents only that screen runs (`<operation>.graphql.ts`), its helpers and parts, and `index.ts`, which exports the screen.
+- A composite component has its folder `components/<component>/`: `index.ts`, `<component>.tsx`, and its parts as `<component>-<part>.tsx` (`article-form-reload-button.tsx`, a `<component>-row.tsx`).
+- Code in `src` imports a screen or component folder through its `index.ts`, and a `ui/primitives` or `ui/lib` file by its own path. Tests under `apps/web/test` import a document they mock from the file that holds it.
+- The module root holds the wiring and the code that `routes.tsx` or several screens read: a shared document, a hook, a list's URL search. `routes.tsx` imports root files only and the screens through the lazy `screens.ts`, which keeps every screen in the module's chunk.
+
+Behaviour:
+
+- A component is self-contained. The component that triggers an action runs its mutation and cache update: `OrderRow` releases its order, and `NewArticleScreen` writes the created article into `CoreArticle`'s cache. A parent passes ids, and a child that needs data runs its own query, as each article screen calls `useArticle()`. The parts in a component's folder take the record or the rows their component's query returned.
+- A form that a create and an edit screen share belongs to each screen. The screen holds the form state (`useZodForm` with its command's contract), the mutation and its cache update, and passes `ArticleForm` the form, the save and the Cancel target; the form draws the fields, the summary and the buttons.
+- A `ui` piece owns no data: it takes values and callbacks, such as `DataTable`'s `onSortChange`.
+- Every component that shows data has a loading, an empty and a populated state. A screen hands `PageFrame` a `PageState`: loading shows the content's own skeleton, marked busy; empty names what is missing and the action that leads on; error offers Try again.
+- Errors take the shared paths. A failed save goes to the form: `setServerErrors` from `ui/lib/use-zod-form.ts` places the server's `extensions.fieldErrors` on their fields and the rest on the error summary, which `showSaveError` in the article form does. A failed load goes to `PageFrame`'s error state. The shell has no global error handler yet; it comes with the shell's shared toast, which echoes what the page shows inline (plan 06).
+
 ## Adding a module's web part
 
 1. Declare the module's link manifest in its contracts package with `defineModuleLinks('<id>', entries)` and export it from `src/index.ts`.
-2. Write `apps/web/src/modules/<id>/routes.tsx`, `screens.ts`, the screens and `index.ts` as planning does. Add the contracts package to `apps/web/package.json` (`workspace:*`) and run `pnpm install`.
+2. Write `apps/web/src/modules/<id>/routes.tsx`, `screens.ts`, `index.ts` and a folder per screen, as [Naming and folders](#naming-and-folders) lays them out. Add the contracts package to `apps/web/package.json` (`workspace:*`) and run `pnpm install`.
 3. Add the module to `apps/web/src/modules.ts` with the label and order of its manifest's web block.
 4. Test the routes against the link manifest and each screen with `MockedProvider`. Start each test name with the story id.
 5. Add the module's screens chunk to `apps/web/test/build.test.ts`.
