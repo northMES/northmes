@@ -167,7 +167,8 @@ describe('Add role', () => {
     await waitFor(() => expect(role.getAttribute('aria-activedescendant')).toBeTruthy());
     const highlighted = document.getElementById(role.getAttribute('aria-activedescendant') ?? '');
     const name = highlighted?.querySelector('[data-role-name]')?.textContent ?? '';
-    expect(await screen.findByRole('region', { name: `${name} at Plant A` })).toBeDefined();
+    // The listbox hides the page from the accessibility tree while it is open.
+    expect(await screen.findByText(`${name} at Plant A`, { selector: 'h2' })).toBeDefined();
 
     await user.click(option(roles, 'Viewer'));
     const card = await screen.findByRole('region', { name: 'Viewer at Plant A' });
@@ -243,10 +244,10 @@ describe('Add role', () => {
         'You can assign a role at Plant A when you hold every permission it includes there. A company admin of Acme AB can assign the others.',
       ),
     ).toBeDefined();
-    await waitFor(async () => {
-      const roles = await openRoles(user);
-      expect(option(roles, 'Kanban reader').getAttribute('aria-disabled')).toBeNull();
-    });
+    const roles = await openRoles(user);
+    await waitFor(() =>
+      expect(option(roles, 'Kanban reader').getAttribute('aria-disabled')).toBeNull(),
+    );
   });
 
   it('E05-S06 a refusal of the API at the company lands on Role: the summary takes focus with the message, the choices stay, and its link leads to Role', async () => {
