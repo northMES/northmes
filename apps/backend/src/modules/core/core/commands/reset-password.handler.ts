@@ -8,7 +8,13 @@ import { userAccounts } from '../access/user-accounts.ts';
 import type { UserRecord } from '../user.service.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
-import { refuseOtherCompanies, temporaryPassword, userById, userOfCompany } from './user-rules.ts';
+import {
+  refuseOtherCompanies,
+  refuseUserHoldingMore,
+  temporaryPassword,
+  userById,
+  userOfCompany,
+} from './user-rules.ts';
 
 /** A user whose password core.resetPassword reset, with the temporary password shown once. */
 export interface PasswordResetRecord {
@@ -23,7 +29,9 @@ export interface PasswordResetRecord {
  * password through Better Auth, which marks the user as needing a new password and ends their
  * sessions, and returns the password once; NorthMES keeps no copy it can read (design core-304,
  * US15 to US18). Resetting your own password is refused with core.cannot_reset_own_password, as
- * blocking yourself is, and a blocked user's with core.user_blocked. The reason is accepted and
+ * blocking yourself is, and a blocked user's with core.user_blocked. Since the temporary password
+ * lets the resetter sign in as the user, a user who holds a permission the resetter does not hold
+ * at some scope is refused with core.role_not_held. The reason is accepted and
  * recorded once the audit trail arrives (#443).
  *
  * Better Auth writes on its own pool, outside the command's transaction. A retry sets another
@@ -52,6 +60,7 @@ export const resetPasswordHandler = {
       });
     }
     await refuseOtherCompanies(context, id, 'core.user:resetPassword');
+    await refuseUserHoldingMore(context, user);
     const password = temporaryPassword();
     await userAccounts().setPassword(id, password, { temporary: true });
     return {

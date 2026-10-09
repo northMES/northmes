@@ -90,7 +90,8 @@ export const unblockUser = defineCommandContract({
  * the user must choose a new password at the next sign-in (ADR 0051 rule 13). It needs
  * core.user:resetPassword at the company and at every other company the user belongs to, which
  * only Company admin holds of the default roles. Resetting your own password is refused with
- * core.cannot_reset_own_password, and a blocked user's with core.user_blocked.
+ * core.cannot_reset_own_password, a blocked user's with core.user_blocked, and the password of a
+ * user who holds a permission the resetter does not hold at some scope with core.role_not_held.
  */
 export const resetPassword = defineCommandContract({
   name: 'core.resetPassword',

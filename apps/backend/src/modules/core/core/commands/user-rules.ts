@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomInt } from 'node:crypto';
-import { NotFoundException } from '@nestjs/common';
-import type { Transaction } from 'kysely';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
+import { DomainError } from '@northmes/sdk/errors';
+import { sql, type Transaction } from 'kysely';
 import { currentPrincipal } from '../../../../principal.ts';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
 import { can } from '../access/access.ts';
@@ -74,4 +75,40 @@ export async function refuseOtherCompanies(
       ? 'The user also belongs to a company where you cannot block users. Ask an admin of each of their companies.'
       : 'The user also belongs to a company where you cannot reset passwords. Ask an admin of each of their companies.',
   );
+}
+
+/**
+ * Refuses with core.role_not_held, whose details name the scope and the permissions, when the user
+ * holds an installed permission at a scope where the principal does not hold it, there or above
+ * (ADR 0010). A new password lets the resetter sign in as the user, so a reset must not hand the
+ * resetter more than they hold: a custom role with core.user:resetPassword does not reach a
+ * Company admin. The user's grants are read through core.principal_grants, which sees the roles of
+ * every company of the user, as the user's own principal does.
+ */
+export async function refuseUserHoldingMore(
+  context: Pick<CoreContext, 'tx'>,
+  user: Pick<UserRecord, 'id' | 'name'>,
+): Promise<void> {
+  const principal = currentPrincipal();
+  if (!principal) throw forbidden('Users are changed only by a signed-in user');
+  const { rows } = await sql<{ id: string; permissions: string[] }>`
+    select id, permissions from core.principal_grants(${user.id}) order by id`.execute(context.tx);
+  for (const { id: scopeId, permissions } of rows) {
+    const missing = permissions.filter((key) => !can(principal, key, scopeId));
+    if (missing.length === 0) continue;
+    const place = await context.tx
+      .selectFrom('core.scope as s')
+      .leftJoin('core.company as c', 'c.id', 's.id')
+      .leftJoin('core.plant as p', 'p.id', 's.id')
+      .select(['c.name as companyName', 'p.name as plantName'])
+      .where('s.id', '=', scopeId)
+      .executeTakeFirst();
+    const at = place?.companyName ?? place?.plantName ?? 'another company';
+    throw new DomainError({
+      code: 'core.role_not_held',
+      status: HttpStatus.FORBIDDEN,
+      message: `${user.name} holds ${missing.join(', ')} at ${at}, which you do not hold there. Ask an admin who holds them to reset the password.`,
+      details: { scopeId, missingPermissions: missing },
+    });
+  }
 }
