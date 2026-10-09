@@ -1,6 +1,6 @@
 import { randomUUIDv7 } from 'node:crypto';
 import { hostFactory, queryAsCore } from '@northmes/backend/testing';
-import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
+import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { devAdmin, seed, seedCompany, seedPlants } from './seed.mjs';
 
@@ -22,10 +22,10 @@ describe('the seed', () => {
 
   /** The dev admin's JWT, signed in through Better Auth with the seed's password. */
   async function adminToken(): Promise<string> {
-    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: devAdmin.username, password: devAdmin.password }),
+      body: JSON.stringify({ email: devAdmin.email, password: devAdmin.password }),
     });
     expect(signedIn.status).toBe(200);
     const sessionToken = signedIn.headers.get('set-auth-token');
@@ -137,6 +137,17 @@ describe('the seed', () => {
     expect(removed.errors?.map(({ extensions }) => extensions?.errorCode)).toEqual([
       'core.last_admin',
     ]);
+  });
+
+  it('E05-S05 a seed run on a database seeded before the dev admin had an email to sign in with moves the admin to that email', async () => {
+    await query(
+      db.authUrl,
+      `update auth."user" set email = 'admin@users.northmes.invalid' where id = '${devAdmin.id}'`,
+    );
+
+    await seed({ appUrl: db.appUrl, ownerUrl: db.ownerUrl });
+
+    expect(await adminToken()).toEqual(expect.any(String));
   });
 
   it('E05-S05 a second run of the seed adds no scope, company, plant, role or assignment', async () => {

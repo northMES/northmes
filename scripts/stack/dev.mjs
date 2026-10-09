@@ -6,6 +6,7 @@ import { join, relative } from 'node:path';
 import { boardUrl } from './board.mjs';
 import { freePorts } from './ports.mjs';
 import { messageOf, onStopSignal, repositoryRoot, run, say, start } from './processes.mjs';
+import { devAdmin } from './seed.mjs';
 import { startStack } from './stack.mjs';
 
 /** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
@@ -90,7 +91,7 @@ export function completedBuild(line) {
 /**
  * Runs the processes of plan on a started stack: starts the web's dev server and tsc -b --watch, restarts the server after each completed build, runs northmes
  * migrate and then restarts the server when a migration file changes, and prints the board URL
- * once the server listens. A migrate that fails leaves the server running.
+ * and the dev admin's email once the server listens. A migrate that fails leaves the server running.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
@@ -152,6 +153,8 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
           if (listened || !line.includes('Listening on')) return;
           listened = true;
           log(`The board of the seeded plant: ${plan.boardUrl}`);
+          // The password stays in the seed file, so the log never holds it.
+          log(`Sign in as ${devAdmin.email}; the password is in scripts/stack/seed.mjs`);
           log('Ctrl+C stops pnpm dev and its Postgres container.');
         },
       });

@@ -53,7 +53,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   const [id] = useState(() => uuidv7());
   const [createdBefore, setCreatedBefore] = useState<CreatedBefore>();
   const form = useZodForm(createUser.fields, {
-    defaultValues: { name: '', username: '', email: undefined },
+    defaultValues: { name: '', username: '', email: '' },
   });
   const [create] = useMutation(CoreCreateUser, {
     // The user's page reads the new user from the cache.
@@ -102,9 +102,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   };
 
   const errors = summaryErrors(form.formState.errors);
-  const email = form.register('email', {
-    setValueAs: (value: string) => (value.trim() === '' ? undefined : value.trim()),
-  });
+  const email = form.register('email', { setValueAs: (value: string) => value.trim() });
   return (
     <form noValidate onSubmit={form.handleSubmit(save)} className="flex max-w-190 flex-col gap-4">
       {createdBefore === undefined ? (
@@ -140,15 +138,14 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
           label="Username"
           autoComplete="off"
           className="max-w-xs"
-          hint="Used to sign in. It cannot be changed later, and no one else can ever use it."
+          hint="Shown in lists of users. It cannot be changed later, and no one else can ever use it."
           {...fieldProps(form, 'username')}
         />
         <TextField
           label="Email"
           type="email"
-          optional
           autoComplete="off"
-          hint="Leave it empty for a person without email, such as an operator who signs in at a station."
+          hint="Used to sign in."
           {...email}
           error={form.getFieldState('email', form.formState).error?.message}
         />
@@ -168,10 +165,12 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
 }
 
 /**
- * New user (design core-304, US5 to US10): Name, Username and an optional Email, then Create
- * user. The created user's page replaces the form in the history and shows the temporary
- * password once. A taken or retired username lands on Username with the typed values kept. A
- * reader without core.user:create gets the page "No access to New user".
+ * New user (design core-304, US5 to US10): Name, Username and Email, then Create user. Every user
+ * signs in with their email; the maintainer's decision supersedes the design's frames of an
+ * operator without email (US5, US6), who signs in with a badge at the operator station instead.
+ * The created user's page replaces the form in the history and shows the temporary password once.
+ * A taken or retired username lands on Username with the typed values kept. A reader without
+ * core.user:create gets the page "No access to New user".
  */
 export function NewUserScreen() {
   const { plant } = useShell();

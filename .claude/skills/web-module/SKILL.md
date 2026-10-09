@@ -158,5 +158,5 @@ A custom scalar gets its TypeScript type from `scalars` in `apps/web/codegen.ts`
 
 - `<file>:<line> imports ../<other>/<path>` from `module-boundaries`: a module imports another module's internal file. Import from the other module's `index.ts` or `api.ts`, and export what you need there.
 - `NorthMES failed to start: config.json: apiUrl must be an absolute http or https URL, got <value>`: the host's `config.json` names a relative or non-http URL. Write the full URL or leave `apiUrl` out.
-- Every page under a plant shows the sign-in page: the tab has no session. Sign in as the seed's dev admin, `admin` with the password in `scripts/stack/seed.mjs`; the session lasts until the tab closes.
+- Every page under a plant shows the sign-in page: the tab has no session. Sign in with the email of the seed's dev admin, `admin@northmes.test`, which `pnpm dev` prints, and the password in `scripts/stack/seed.mjs`; the session lasts until the tab closes. The sign-in page takes an email only: the API's username sign-in is disabled, and a username in Email gets the email field error.
 - A screen that loads but whose queries fail with a network error in dev: `NORTHMES_API_ORIGIN` is unset, so the dev server forwards nothing. Start the web through `pnpm dev`.

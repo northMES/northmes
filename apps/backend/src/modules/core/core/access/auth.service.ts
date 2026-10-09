@@ -4,13 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { toNodeHandler } from 'better-auth/node';
 import { BetterAuth } from '../../infrastructure/auth/better-auth.ts';
 
-/**
- * The domain of the placeholder address of a user without one: Better Auth needs a unique email on
- * every user, and no mail reaches a .invalid address (ADR 0010; the maintainer confirms the scheme).
- */
-export const PLACEHOLDER_EMAIL_DOMAIN = 'users.northmes.invalid';
-
-/** A user to create: the username they sign in with and their first password. */
+/** A user to create: the email they sign in with, their username and their first password. */
 export interface NewUser {
   /**
    * The user's id, a uuid of version 1 to 5, which Better Auth keeps. Without it, Better Auth makes
@@ -21,8 +15,8 @@ export interface NewUser {
   readonly password: string;
   /** The name others see. Without it, the username. */
   readonly name?: string;
-  /** The user's email. Without it, a placeholder under PLACEHOLDER_EMAIL_DOMAIN. */
-  readonly email?: string;
+  /** The email the user signs in with, unique among users. */
+  readonly email: string;
 }
 
 /** Better Auth's code for an email that another user has. */
@@ -57,8 +51,7 @@ export class AuthService {
 
   /**
    * Creates a user with a password through Better Auth's server API, with sign-up disabled on HTTP
-   * (ADR 0011). Without an email, the user's email is a placeholder under PLACEHOLDER_EMAIL_DOMAIN.
-   * An email that another user has throws EmailTaken.
+   * (ADR 0011). An email that another user has throws EmailTaken.
    */
   async createUser({
     id,
@@ -70,7 +63,7 @@ export class AuthService {
     try {
       return await this.betterAuth.auth.api.createUser({
         body: {
-          email: email ?? `${username.toLowerCase()}@${PLACEHOLDER_EMAIL_DOMAIN}`,
+          email,
           password,
           name: name ?? username,
           // Better Auth writes the user with the id in its data.

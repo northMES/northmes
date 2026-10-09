@@ -10,7 +10,7 @@ export class User {
   @Field(() => ID) id!: string;
   /** The name others see. */
   @Field(() => String) name!: string;
-  /** What the user signs in with. It never changes and is never given to anyone else. */
+  /** The handle lists show for the user. It never changes and is never given to anyone else. */
   @Field(() => String) username!: string;
   /** A blocked user cannot sign in, and their next request is refused. */
   @Field(() => Boolean) blocked!: boolean;

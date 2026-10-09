@@ -39,12 +39,17 @@ const json = (body: unknown, init: ResponseInit = {}) =>
   });
 
 /**
- * Better Auth's answers as the API gives them: alex.lund signs in with the password
+ * Better Auth's answers as the API gives them: alex.lund signs in by email with the password
  * "correct horse", gets the session token "session-1", and /token mints JWTs that live five
- * minutes from `clock.now`.
+ * minutes from `clock.now`. Its username sign-in is disabled, so that path is not found.
  */
 function betterAuth(clock: { now: number }) {
-  const user = { id: 'user-1', name: 'Alex Lund', username: 'alex.lund', email: 'alex@x.invalid' };
+  const user = {
+    id: 'user-1',
+    name: 'Alex Lund',
+    username: 'alex.lund',
+    email: 'alex.lund@example.test',
+  };
   let minted = 0;
   const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
@@ -53,19 +58,17 @@ function betterAuth(clock: { now: number }) {
     const sent = typeof body === 'string' && body !== '' ? JSON.parse(body) : {};
     const signedIn = headers.get('authorization') === 'Bearer session-1';
     switch (url.pathname) {
-      case '/mes/api/auth/sign-in/username':
       case '/mes/api/auth/sign-in/email': {
-        if (sent.username === 'rate.limited') {
+        if (sent.email === 'rate.limited@example.test') {
           return json(
             { message: 'Too many requests' },
             { status: 429, headers: { 'x-retry-after': '7' } },
           );
         }
-        if (sent.username === 'banned.user') {
+        if (sent.email === 'banned.user@example.test') {
           return json({ code: 'BANNED_USER', message: 'You have been banned' }, { status: 403 });
         }
-        const known = sent.username === user.username || sent.email === user.email;
-        if (!known || sent.password !== 'correct horse') {
+        if (sent.email !== user.email || sent.password !== 'correct horse') {
           return json({ code: 'INVALID_USERNAME_OR_PASSWORD' }, { status: 401 });
         }
         return json({ token: 'session-1', user }, { headers: { 'set-auth-token': 'session-1' } });
@@ -100,32 +103,34 @@ function setup() {
 }
 
 describe('the auth session', () => {
-  it('E05-S05 a user signs in with username and password, and a reload of the tab keeps the user', async () => {
-    const { open } = setup();
+  it('E05-S05 a user signs in with email and password, and a reload of the tab keeps the user', async () => {
+    const { open, api } = setup();
     const session = open();
 
-    const result = await session.signIn('alex.lund', 'correct horse');
+    const result = await session.signIn('alex.lund@example.test', 'correct horse');
 
     expect(result).toEqual({ ok: true });
+    expect(api.calls('/sign-in/email')).toHaveLength(1);
     expect(session.user()).toEqual({ name: 'Alex Lund', username: 'alex.lund' });
     expect(open().user()).toEqual({ name: 'Alex Lund', username: 'alex.lund' });
   });
 
-  it('E05-S05 a login with an @ signs in by email', async () => {
+  it('E05-S05 a login without an @ is sent to the email sign-in too, never to the username sign-in', async () => {
     const { open, api } = setup();
 
-    const result = await open().signIn('alex@x.invalid', 'correct horse');
+    const result = await open().signIn('alex.lund', 'correct horse');
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({ ok: false, reason: 'wrong-credentials' });
     expect(api.calls('/sign-in/email')).toHaveLength(1);
+    expect(api.calls('/sign-in/username')).toHaveLength(0);
   });
 
   it('E05-S05 a wrong password or an unknown user is wrong credentials, and nobody is signed in', async () => {
     const { open } = setup();
     const session = open();
 
-    const wrong = await session.signIn('alex.lund', 'Correct horse');
-    const unknown = await session.signIn('nobody', 'correct horse');
+    const wrong = await session.signIn('alex.lund@example.test', 'Correct horse');
+    const unknown = await session.signIn('nobody@example.test', 'correct horse');
 
     expect([wrong, unknown]).toEqual([
       { ok: false, reason: 'wrong-credentials' },
@@ -139,12 +144,15 @@ describe('the auth session', () => {
     const { open } = setup();
     const session = open();
 
-    expect(await session.signIn('rate.limited', 'x')).toEqual({
+    expect(await session.signIn('rate.limited@example.test', 'x')).toEqual({
       ok: false,
       reason: 'rate-limited',
       retryAfterSeconds: 7,
     });
-    expect(await session.signIn('banned.user', 'x')).toEqual({ ok: false, reason: 'blocked' });
+    expect(await session.signIn('banned.user@example.test', 'x')).toEqual({
+      ok: false,
+      reason: 'blocked',
+    });
   });
 
   it('E05-S05 a sign-in that never reaches the API failed, so the page asks the user to check the connection', async () => {
@@ -152,7 +160,7 @@ describe('the auth session', () => {
     const session = open();
     api.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-    expect(await session.signIn('alex.lund', 'correct horse')).toEqual({
+    expect(await session.signIn('alex.lund@example.test', 'correct horse')).toEqual({
       ok: false,
       reason: 'failed',
     });
@@ -162,7 +170,7 @@ describe('the auth session', () => {
   it('E05-S05 token() mints a JWT with the session token, reuses it, and mints the next one 30 seconds before it expires', async () => {
     const { open, api, clock } = setup();
     const session = open();
-    await session.signIn('alex.lund', 'correct horse');
+    await session.signIn('alex.lund@example.test', 'correct horse');
 
     const first = await session.token();
     const [again, together] = await Promise.all([session.token(), session.token()]);
@@ -184,7 +192,7 @@ describe('the auth session', () => {
   it('E05-S05 sign-out ends the session at the API and forgets the user and the JWT', async () => {
     const { open, api } = setup();
     const session = open();
-    await session.signIn('alex.lund', 'correct horse');
+    await session.signIn('alex.lund@example.test', 'correct horse');
     await session.token();
 
     await session.signOut();
@@ -202,7 +210,7 @@ describe('the auth session', () => {
     const { open, api } = setup();
     const session = open();
 
-    await session.signIn('alex.lund', 'correct horse');
+    await session.signIn('alex.lund@example.test', 'correct horse');
     await session.token();
     await session.signOut();
 
@@ -222,7 +230,7 @@ describe('the auth session', () => {
       storage: memoryStorage(),
       now: () => behind.now,
     });
-    await session.signIn('alex.lund', 'correct horse');
+    await session.signIn('alex.lund@example.test', 'correct horse');
 
     const first = await session.token();
     clock.now += 271_000;
@@ -236,7 +244,7 @@ describe('the auth session', () => {
   it('E05-S05 forget() drops the session in this tab without calling the API', async () => {
     const { open, api } = setup();
     const session = open();
-    await session.signIn('alex.lund', 'correct horse');
+    await session.signIn('alex.lund@example.test', 'correct horse');
     const before = api.fetch.mock.calls.length;
 
     session.forget();

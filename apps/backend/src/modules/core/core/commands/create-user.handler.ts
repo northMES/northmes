@@ -43,7 +43,7 @@ function createdPasswordHidden(username: string, userId: string): DomainError {
   });
 }
 
-const EMAIL_TAKEN = 'Another user has this email address. Enter another one, or leave it empty.';
+const EMAIL_TAKEN = 'Another user has this email address. Enter another one.';
 
 /** The namespace of userIdOf, a fixed random uuid. */
 const USER_ID_NAMESPACE = Buffer.from('6b1f0c2e9d4a4f53a1c7e8b25d3f9a60', 'hex');
@@ -140,17 +140,15 @@ export const createUserHandler = {
       .where('username', '=', username)
       .executeTakeFirst();
     if (taken) throw usernameTaken(username);
-    await accounts
-      .createUser({ id, username, password, name, ...(email ? { email } : {}) })
-      .catch((error: unknown) => {
-        if (!(error instanceof EmailTaken)) throw error;
-        throw new DomainError({
-          code: 'core.email_taken',
-          status: HttpStatus.CONFLICT,
-          message: EMAIL_TAKEN,
-          fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
-        });
+    await accounts.createUser({ id, username, password, name, email }).catch((error: unknown) => {
+      if (!(error instanceof EmailTaken)) throw error;
+      throw new DomainError({
+        code: 'core.email_taken',
+        status: HttpStatus.CONFLICT,
+        message: EMAIL_TAKEN,
+        fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
       });
+    });
     await accounts.addToOrganization(id, organization_id);
     return { user: await userById(tx, id), temporaryPassword: password };
   },

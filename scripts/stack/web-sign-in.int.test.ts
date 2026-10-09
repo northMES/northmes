@@ -65,7 +65,7 @@ describe("the web's sign-in against the API", () => {
   it("E05-S05 the dev admin signs in through the web's session and reads the seed plant's articles", async () => {
     const { session, onUnauthenticated, searchArticles } = openWeb();
 
-    const signedIn = await session.signIn(devAdmin.username, devAdmin.password);
+    const signedIn = await session.signIn(devAdmin.email, devAdmin.password);
     const answer = await searchArticles('BR-140');
 
     expect(signedIn).toEqual({ ok: true });
@@ -80,7 +80,7 @@ describe("the web's sign-in against the API", () => {
   it('E05-S05 a wrong password is wrong credentials, and the API refuses the client without a session', async () => {
     const { session, onUnauthenticated, searchArticles } = openWeb();
 
-    const signedIn = await session.signIn(devAdmin.username, `${devAdmin.password}x`);
+    const signedIn = await session.signIn(devAdmin.email, `${devAdmin.password}x`);
     const answer = await searchArticles('BR-140');
 
     expect(signedIn).toEqual({ ok: false, reason: 'wrong-credentials' });
@@ -91,7 +91,7 @@ describe("the web's sign-in against the API", () => {
   it('E05-S05 sign-out ends the session at the API: its session token mints no JWT, and the API refuses the client', async () => {
     const storage = memoryStorage();
     const { session, onUnauthenticated, searchArticles } = openWeb(storage);
-    await session.signIn(devAdmin.username, devAdmin.password);
+    await session.signIn(devAdmin.email, devAdmin.password);
     const { token: sessionToken } = JSON.parse(storage.getItem('northmes.session') ?? '{}') as {
       token?: string;
     };

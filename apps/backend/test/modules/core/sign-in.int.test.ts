@@ -42,7 +42,7 @@ describe('sign-in with Better Auth', () => {
     return { user, plant: slugs[0] ?? '' };
   }
 
-  it('E05-S05 a user signs in with username and password, and the JWT from /api/auth/token reads the API', async () => {
+  it('E05-S05 a user signs in with email and password, and the JWT from /api/auth/token reads the API', async () => {
     const { user, plant } = await reader();
 
     const answer = await gqlClient(url, {
@@ -55,13 +55,26 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 a wrong password is refused with 401', async () => {
     const { user } = await reader();
 
-    const response = await fetch(`${url}/api/auth/sign-in/username`, {
+    const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: user.username, password: `${user.password}x` }),
+      body: JSON.stringify({ email: user.email, password: `${user.password}x` }),
     });
 
     expect(response.status).toBe(401);
+    expect(response.headers.get('set-auth-token')).toBeNull();
+  });
+
+  it('E05-S05 a username sign-in is refused with 404: the web signs in with email only', async () => {
+    const { user } = await reader();
+
+    const response = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+
+    expect(response.status).toBe(404);
     expect(response.headers.get('set-auth-token')).toBeNull();
   });
 
@@ -107,10 +120,10 @@ describe('sign-in with Better Auth', () => {
 
   it('E05-S05 a session token is no bearer token for the API: only the JWT is', async () => {
     const { user, plant } = await reader();
-    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: user.username, password: user.password }),
+      body: JSON.stringify({ email: user.email, password: user.password }),
     });
 
     const answer = await gqlClient(url, {
@@ -123,12 +136,12 @@ describe('sign-in with Better Auth', () => {
     expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
   });
 
-  /** Signs a user in on /api/auth/sign-in/username and returns its session token. */
-  async function sessionTokenOf(user: { username: string; password: string }) {
-    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+  /** Signs a user in on /api/auth/sign-in/email and returns its session token. */
+  async function sessionTokenOf(user: { email: string; password: string }) {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: user.username, password: user.password }),
+      body: JSON.stringify({ email: user.email, password: user.password }),
     });
     return signedIn.headers.get('set-auth-token') ?? '';
   }
@@ -174,10 +187,10 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 a request from an origin that webOrigins does not list is refused with 403', async () => {
     const { user } = await reader();
 
-    const signInFromElsewhere = await fetch(`${url}/api/auth/sign-in/username`, {
+    const signInFromElsewhere = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: 'https://intranet.example.com' },
-      body: JSON.stringify({ username: user.username, password: user.password }),
+      body: JSON.stringify({ email: user.email, password: user.password }),
     });
     const graphqlFromElsewhere = await fetch(`${url}/graphql`, {
       method: 'POST',
@@ -198,7 +211,7 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 the web origin signs in across origins: its preflight passes, it may read the token and retry headers, and it may send no cookies', async () => {
     const { user } = await reader();
 
-    const preflight = await fetch(`${url}/api/auth/sign-in/username`, {
+    const preflight = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'OPTIONS',
       headers: {
         origin: webOrigin,
@@ -206,15 +219,15 @@ describe('sign-in with Better Auth', () => {
         'access-control-request-headers': 'content-type',
       },
     });
-    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: webOrigin },
-      body: JSON.stringify({ username: user.username, password: user.password }),
+      body: JSON.stringify({ email: user.email, password: user.password }),
     });
-    const refused = await fetch(`${url}/api/auth/sign-in/username`, {
+    const refused = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', origin: webOrigin },
-      body: JSON.stringify({ username: user.username, password: `${user.password}!` }),
+      body: JSON.stringify({ email: user.email, password: `${user.password}!` }),
     });
 
     expect(preflight.status).toBe(204);

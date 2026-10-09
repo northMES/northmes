@@ -2,7 +2,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it, vi } from 'vitest';
 import { completedBuild, devPlan, superviseDev } from './dev.mjs';
 import type { run, start } from './processes.mjs';
-import { seedPlants } from './seed.mjs';
+import { devAdmin, seedPlants } from './seed.mjs';
 
 // The ports the stack hands pnpm dev: the server's PORT and a port for the web's dev server, which
 // freePorts takes apart from the server's.
@@ -220,6 +220,21 @@ describe('superviseDev', () => {
     expect(dev.logs.filter((line) => line.includes(plan.boardUrl))).toEqual([
       `The board of the seeded plant: ${plan.boardUrl}`,
     ]);
+  });
+
+  it("E05-S05 pnpm dev prints the dev admin's email on the reserved .test domain and where its password is, never the password", async () => {
+    const dev = fakeDev();
+    const plan = await devPlan(ports);
+    superviseDev({ plan, ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+    dev.print('server', 'Listening on http://127.0.0.1:41001');
+
+    expect(dev.logs).toContain(
+      'Sign in as admin@northmes.test; the password is in scripts/stack/seed.mjs',
+    );
+    expect(dev.logs.filter((line) => line.includes(devAdmin.password))).toEqual([]);
   });
 
   it('E02-S08 a changed migration file makes pnpm dev run northmes migrate once and then restart the server', async () => {

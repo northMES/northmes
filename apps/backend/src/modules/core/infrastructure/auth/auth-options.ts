@@ -27,7 +27,9 @@ export const SESSION_RENEWAL_SECONDS = 60 * 60;
 /**
  * The paths of the admin and api-key plugins. NorthMES calls them only on the server, through
  * auth.api from its own commands, so their HTTP paths are disabled (ADR 0011). Sign-up, the
- * username check and /update-user are disabled too.
+ * username check and /update-user are disabled too, and so is the username plugin's sign-in: a user
+ * signs in on the web with email and password only, as the maintainer decided. A person without
+ * email signs in with a badge at the operator station (ADR 0010).
  */
 export const disabledPaths: readonly string[] = [
   '/admin/set-role',
@@ -51,6 +53,7 @@ export const disabledPaths: readonly string[] = [
   '/api-key/delete',
   '/api-key/list',
   '/is-username-available',
+  '/sign-in/username',
   '/sign-up/email',
   // Better Auth applies the bearer plugin's session only after every before hook has run, so the
   // username plugin's immutableUsername check finds no session on a bearer request and lets a
@@ -70,8 +73,8 @@ export interface AuthOptionsInput {
 }
 
 /**
- * Better Auth's options in NorthMES (ADR 0010): the username, organization, admin and api-key
- * plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
+ * Better Auth's options in NorthMES (ADR 0010): the username plugin for the never-reassigned
+ * handle (its sign-in path is disabled), the organization, admin and api-key plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
  * the API may be on different origins. The session token that mints the JWTs lives
  * SESSION_LIFETIME_SECONDS. Sign-up is disabled, ids are uuids and the tables are in the
  * auth schema. The same options build the runtime instance and core's migration, and the drift

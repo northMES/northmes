@@ -5,8 +5,9 @@ import { tooLong } from './messages.ts';
 import { accessReason } from './role.ts';
 
 /**
- * A username, which a user signs in with (ADR 0010): 3 to 30 letters, digits, dots and
- * underscores, stored in lower case. It never changes and is never given to anyone else.
+ * A username, the handle that lists show for a user (ADR 0010): 3 to 30 letters, digits, dots and
+ * underscores, stored in lower case. It never changes and is never given to anyone else. A user
+ * signs in with their email, not with it.
  */
 export const username = z
   .string()
@@ -18,8 +19,9 @@ export const username = z
 
 /**
  * Creates a user of the company of the request's plant under the client's id, with a temporary
- * password that the answer shows once (ADR 0010). It needs core.user:create at the company. Without
- * an email the user gets a placeholder address that no mail reaches. A username that is taken, or
+ * password that the answer shows once (ADR 0010). It needs core.user:create at the company. Every
+ * user has an email, which they sign in with on the web. A person without one signs in with a badge
+ * at the operator station instead, as the maintainer decided. A username that is taken, or
  * was used before, is refused with core.username_taken, and an email another user has with
  * core.email_taken. A retry with the id of a first run that failed finishes the creation; a retry
  * after the first run finished is refused with core.user_created_password_hidden and the user's id
@@ -35,7 +37,7 @@ export const createUser = defineCommandContract({
       .trim()
       .min(1, 'Enter a name.')
       .max(120, { error: tooLong('Name', 120) }),
-    email: z.email('Enter an email address, such as name@example.com.').optional(),
+    email: z.email('Enter an email address, such as name@example.com.'),
   }),
   permission: 'core.user:create',
 });

@@ -176,7 +176,12 @@ describe("core's Company admin role", () => {
       },
     });
     const created = await jonas.client.send(createUserMutation, {
-      input: { id: randomUUIDv7(), username: 'p.sund', name: 'Petra Sund' },
+      input: {
+        id: randomUUIDv7(),
+        username: 'p.sund',
+        name: 'Petra Sund',
+        email: 'petra.sund@example.test',
+      },
     });
     const blocked = await jonas.client.send(blockUserMutation, { input: { id: sara.userId } });
 

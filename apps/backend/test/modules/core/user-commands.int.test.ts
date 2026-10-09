@@ -77,12 +77,12 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     return { ...given, admin };
   }
 
-  /** Signs in through Better Auth's handler and answers its status. */
-  async function signInStatus(username: string, password: string): Promise<number> {
-    const answer = await fetch(`${url}/api/auth/sign-in/username`, {
+  /** Signs in by email through Better Auth's handler and answers its status. */
+  async function signInStatus(email: string, password: string): Promise<number> {
+    const answer = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     });
     return answer.status;
   }
@@ -109,7 +109,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
       id: randomUUIDv7(),
       username: ' T.Lindqvist ',
       name: 'Tove Lindqvist',
-      email: null,
+      email: 'tove.lindqvist@example.test',
     });
     const users = await admin.client.send<UsersAnswer>(usersQuery);
 
@@ -120,7 +120,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
       blocked: false,
     });
     expect(created.temporaryPassword).toMatch(/^\S{16,}$/);
-    expect(await signInStatus('t.lindqvist', created.temporaryPassword)).toBe(200);
+    expect(await signInStatus('tove.lindqvist@example.test', created.temporaryPassword)).toBe(200);
     expect(users.data?.coreUsers.edges.map(({ node }) => node)).toContainEqual({
       id: created.user.id,
       username: 't.lindqvist',
@@ -139,7 +139,12 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     });
 
     const username = await admin.client.send(createMutation, {
-      input: { id: randomUUIDv7(), username: 'Anna.Berg', name: 'Anna B' },
+      input: {
+        id: randomUUIDv7(),
+        username: 'Anna.Berg',
+        name: 'Anna B',
+        email: 'ab@example.test',
+      },
     });
     const email = await admin.client.send(createMutation, {
       input: { id: randomUUIDv7(), username: 'anna.b', name: 'Anna B', email: 'anna@example.com' },
@@ -165,12 +170,49 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
         fieldErrors: [
           {
             path: ['email'],
-            message: 'Another user has this email address. Enter another one, or leave it empty.',
+            message: 'Another user has this email address. Enter another one.',
             code: 'core.email_taken',
           },
         ],
       },
     ]);
+  });
+
+  it('E05-S08 coreCreateUser requires an email: without one, or with an empty one, the user is not created', async () => {
+    const { admin } = await company();
+
+    const without = await admin.client.send(createMutation, {
+      input: { id: randomUUIDv7(), username: 'b.sjo', name: 'Bo Sjö' },
+    });
+    const empty = await admin.client.send(createMutation, {
+      input: { id: randomUUIDv7(), username: 'b.sjo', name: 'Bo Sjö', email: '' },
+    });
+    const created = await createUser(admin.client, {
+      id: randomUUIDv7(),
+      username: 'b.sjo',
+      name: 'Bo Sjö',
+      email: 'bo.sjo@example.test',
+    });
+
+    // GraphQL refuses the input before the command runs: email is a String!.
+    expect(without.status).toBe(400);
+    expect(without.errors?.map(({ message }) => message)).toEqual([
+      expect.stringContaining('Field "email" of required type "String!" was not provided.'),
+    ]);
+    expect(refusals(empty)).toEqual([
+      {
+        code: 'BAD_USER_INPUT',
+        errorCode: undefined,
+        fieldErrors: [
+          {
+            path: ['email'],
+            code: 'invalid_format',
+            message: 'Enter an email address, such as name@example.com.',
+          },
+        ],
+      },
+    ]);
+    expect(created.user.username).toBe('b.sjo');
   });
 
   it('E05-S08 a retry of coreCreateUser whose first run created the user in Better Auth but failed before the company membership finishes the creation under the same id', async () => {
@@ -182,10 +224,15 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     await query(
       db.authUrl,
       `insert into auth."user" (id, name, email, "emailVerified", username, "displayUsername")
-       values ('${userId}', 'Ida Holm', 'i.holm@users.northmes.invalid', false, 'i.holm', 'i.holm')`,
+       values ('${userId}', 'Ida Holm', 'ida.holm@example.test', false, 'i.holm', 'i.holm')`,
     );
 
-    const retried = await createUser(admin.client, { id, username: 'i.holm', name: 'Ida Holm' });
+    const retried = await createUser(admin.client, {
+      id,
+      username: 'i.holm',
+      name: 'Ida Holm',
+      email: 'ida.holm@example.test',
+    });
     const users = await admin.client.send<UsersAnswer>(usersQuery);
 
     expect(retried.user).toEqual({
@@ -194,13 +241,18 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
       username: 'i.holm',
       blocked: false,
     });
-    expect(await signInStatus('i.holm', retried.temporaryPassword)).toBe(200);
+    expect(await signInStatus('ida.holm@example.test', retried.temporaryPassword)).toBe(200);
     expect(users.data?.coreUsers.edges.map(({ node }) => node.id)).toContain(userId);
   });
 
   it("E05-S08 a retry of coreCreateUser after its first run finished is refused with core.user_created_password_hidden and the user's id, and keeps the first temporary password", async () => {
     const { admin } = await company();
-    const input = { id: randomUUIDv7(), username: 'o.ek', name: 'Olle Ek' };
+    const input = {
+      id: randomUUIDv7(),
+      username: 'o.ek',
+      name: 'Olle Ek',
+      email: 'olle.ek@example.test',
+    };
     const first = await createUser(admin.client, input);
 
     const retried = await admin.client.send(createMutation, { input });
@@ -213,25 +265,26 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
       }),
     ]);
     expect(refusals(retried)?.[0]?.fieldErrors).toBeUndefined();
-    expect(await signInStatus('o.ek', first.temporaryPassword)).toBe(200);
+    expect(await signInStatus('olle.ek@example.test', first.temporaryPassword)).toBe(200);
   });
 
   it('E05-S08 a retry of coreCreateUser with another username, or from another company, is NOT_FOUND and leaves the first user as they were', async () => {
     const { admin } = await company();
     const other = await company();
     const id = randomUUIDv7();
-    const first = await createUser(admin.client, { id, username: 'a.lund', name: 'Alva Lund' });
+    const alva = { username: 'a.lund', name: 'Alva Lund', email: 'alva.lund@example.test' };
+    const first = await createUser(admin.client, { id, ...alva });
 
     const otherUsername = await admin.client.send(createMutation, {
-      input: { id, username: 'a.lund2', name: 'Alva Lund' },
+      input: { id, ...alva, username: 'a.lund2' },
     });
     const otherCompany = await other.admin.client.send(createMutation, {
-      input: { id, username: 'a.lund', name: 'Alva Lund' },
+      input: { id, ...alva },
     });
 
     expect(otherUsername.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
     expect(otherCompany.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
-    expect(await signInStatus('a.lund', first.temporaryPassword)).toBe(200);
+    expect(await signInStatus('alva.lund@example.test', first.temporaryPassword)).toBe(200);
   });
 
   it('E05-S08 a retried coreBlockUser or coreUnblockUser answers the same user, also after a first run that blocked the user in Better Auth and failed before it answered', async () => {
@@ -269,7 +322,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
         coreUnblockUser: { id: operator.userId, username: operator.username, blocked: false },
       });
     }
-    expect(await signInStatus(operator.username, operator.password)).toBe(200);
+    expect(await signInStatus(operator.email, operator.password)).toBe(200);
   });
 
   it('E05-S08 a plant admin with core.user:create at the plant only cannot create a user of the company', async () => {
@@ -280,7 +333,12 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     );
 
     const answer = await plantAdmin.client.send(createMutation, {
-      input: { id: randomUUIDv7(), username: 'plant.user', name: 'Plant user' },
+      input: {
+        id: randomUUIDv7(),
+        username: 'plant.user',
+        name: 'Plant user',
+        email: 'plant.user@example.test',
+      },
     });
 
     expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
@@ -305,7 +363,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(blocked.errors).toBeUndefined();
     expect(blocked.data?.coreBlockUser.blocked).toBe(true);
     expect(after.errors?.map(({ extensions }) => extensions?.code)).toEqual(['UNAUTHENTICATED']);
-    expect(await signInStatus(operator.username, operator.password)).not.toBe(200);
+    expect(await signInStatus(operator.email, operator.password)).not.toBe(200);
     expect(
       users.data?.coreUsers.edges.find(({ node }) => node.id === operator.userId)?.node.blocked,
     ).toBe(true);
@@ -325,7 +383,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     );
 
     expect(answer.data?.coreUnblockUser.blocked).toBe(false);
-    expect(await signInStatus(operator.username, operator.password)).toBe(200);
+    expect(await signInStatus(operator.email, operator.password)).toBe(200);
   });
 
   it('E05-S08 blocking and unblocking need core.user:block at the company: a plant admin and a reader without it are refused', async () => {
@@ -357,7 +415,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     for (const answer of [...blocks, ...unblocks]) {
       expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
     }
-    expect(await signInStatus(operator.username, operator.password)).not.toBe(200);
+    expect(await signInStatus(operator.email, operator.password)).not.toBe(200);
   });
 
   it('E05-S08 an admin of one company cannot block or unblock a user who also belongs to another company, since a block holds everywhere', async () => {
@@ -381,7 +439,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     const blockedByAcme = await acme.admin.client.send(blockMutation, {
       input: { id: planner.userId },
     });
-    const statusAfterRefusal = await signInStatus(planner.username, planner.password);
+    const statusAfterRefusal = await signInStatus(planner.email, planner.password);
     const blockedByBoth = await bothAdmin.client.send(blockMutation, {
       input: { id: planner.userId },
     });
@@ -393,7 +451,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(statusAfterRefusal).toBe(200);
     expect(blockedByBoth.errors).toBeUndefined();
     expect(refusals(unblockedByAcme)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
-    expect(await signInStatus(planner.username, planner.password)).not.toBe(200);
+    expect(await signInStatus(planner.email, planner.password)).not.toBe(200);
   });
 
   it('E05-S08 coreBlockUser refuses blocking yourself and a user of another company', async () => {
