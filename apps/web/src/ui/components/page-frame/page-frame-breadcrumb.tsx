@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link } from '@tanstack/react-router';
 import { Fragment } from 'react';
+import { useIsMobile } from '../../lib/use-mobile.ts';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,7 +15,10 @@ import type { Crumb } from './page-frame-top-bar.tsx';
 /**
  * The trail in the top bar (D2, ADR 0067): the crumbs as links, or as text when a crumb has no
  * page, then the current page, which carries aria-current="page". The crumb links meet the 24 px
- * target (2.5.8).
+ * target (2.5.8). Every crumb shrinks and truncates, and the current page keeps the most room.
+ * Below 768 px, where the sidebar is the sheet, the trail keeps the first crumb (the plant) and the
+ * current page, so it fits beside the page actions at 320 px (1.4.10); NA11's Show the full path
+ * menu is not built yet.
  */
 export function PageFrameBreadcrumb({
   crumbs,
@@ -23,20 +27,22 @@ export function PageFrameBreadcrumb({
   readonly crumbs: readonly Crumb[];
   readonly current: string;
 }) {
+  const isMobile = useIsMobile();
+  const shown = isMobile ? crumbs.slice(0, 1) : crumbs;
   return (
     <Breadcrumb aria-label="Breadcrumb" className="min-w-0">
       <BreadcrumbList className="flex-nowrap">
-        {crumbs.map((crumb) => (
+        {shown.map((crumb) => (
           <Fragment key={`${crumb.label} ${crumb.href}`}>
-            <BreadcrumbItem>
+            <BreadcrumbItem className="min-w-0 max-w-40 shrink-[2]">
               {crumb.href === undefined ? (
                 <span className="truncate">{crumb.label}</span>
               ) : (
                 <BreadcrumbLink
                   render={<Link to={crumb.href} />}
-                  className="inline-flex min-h-(--nm-target-min) items-center truncate rounded-sm"
+                  className="inline-flex min-h-(--nm-target-min) min-w-0 items-center rounded-sm"
                 >
-                  {crumb.label}
+                  <span className="truncate">{crumb.label}</span>
                 </BreadcrumbLink>
               )}
             </BreadcrumbItem>

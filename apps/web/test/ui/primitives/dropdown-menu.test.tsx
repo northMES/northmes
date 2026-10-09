@@ -19,10 +19,12 @@ afterEach(cleanup);
 
 /**
  * The classes that draw D2's menu item focus: --accent with a 2 px inset --focus-outline, and no
- * --focus-ring band outside the item. happy-dom applies no Tailwind, so the test reads the classes.
+ * --focus-ring band outside the item. outline-solid is needed because shadcn's outline-hidden sets
+ * the outline style to none. happy-dom applies no Tailwind, so the test reads the classes.
  */
 const insetFocusOutline = [
   'focus-visible:outline-2',
+  'focus-visible:outline-solid',
   'focus-visible:-outline-offset-2',
   'focus-visible:outline-focus-outline',
   'focus-visible:shadow-none',
