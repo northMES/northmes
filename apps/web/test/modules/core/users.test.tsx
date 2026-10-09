@@ -206,6 +206,56 @@ describe('users', () => {
     expect(field('Name').value).toBe('Tove Lindqvist');
   });
 
+  it("E05-S08 a retry whose first run created the user says the user was created without a password to show and opens the user's page", async () => {
+    const user = userEvent.setup();
+    const tove = idOf('tove');
+    const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+      companiesQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
+            uuidv7.test(input.id) &&
+            input.name === 'Tove Lindqvist' &&
+            input.username === 't.lindqvist',
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'The user was created before.',
+              path: ['coreCreateUser'],
+              extensions: {
+                code: 'CONFLICT',
+                errorCode: 'core.user_created_password_hidden',
+                details: { userId: tove },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
+    await user.type(field('Username'), 't.lindqvist');
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'The user t.lindqvist was created' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(field('Username').getAttribute('aria-invalid')).not.toBe('true');
+    expect(summary.textContent).toContain('NorthMES cannot show the temporary password again.');
+
+    await user.click(within(summary).getByRole('button', { name: 'Open user' }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        coreLinks.users.user({ plant, userId: tove }).href,
+      ),
+    );
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
   it("E05-S08 a created user's page replaces the form and shows the temporary password once, with focus on Copy password; Done closes it and focus goes to the h1", async () => {
     const user = userEvent.setup();
     const tove = {

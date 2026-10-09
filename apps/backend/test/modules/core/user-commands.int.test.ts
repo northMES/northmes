@@ -198,14 +198,21 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(users.data?.coreUsers.edges.map(({ node }) => node.id)).toContain(userId);
   });
 
-  it('E05-S08 a retry of coreCreateUser after its first run finished is refused as a taken username and keeps the first temporary password', async () => {
+  it("E05-S08 a retry of coreCreateUser after its first run finished is refused with core.user_created_password_hidden and the user's id, and keeps the first temporary password", async () => {
     const { admin } = await company();
     const input = { id: randomUUIDv7(), username: 'o.ek', name: 'Olle Ek' };
     const first = await createUser(admin.client, input);
 
     const retried = await admin.client.send(createMutation, { input });
 
-    expect(refusals(retried)?.map(({ errorCode }) => errorCode)).toEqual(['core.username_taken']);
+    expect(retried.errors?.map(({ extensions }) => extensions)).toEqual([
+      expect.objectContaining({
+        code: 'CONFLICT',
+        errorCode: 'core.user_created_password_hidden',
+        details: { userId: first.user.id },
+      }),
+    ]);
+    expect(refusals(retried)?.[0]?.fieldErrors).toBeUndefined();
     expect(await signInStatus('o.ek', first.temporaryPassword)).toBe(200);
   });
 
