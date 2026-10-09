@@ -11,7 +11,10 @@ import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
-import { PermissionChecklist } from '../permission-checklist/index.ts';
+import {
+  PermissionChecklist,
+  type PermissionChecklistProps,
+} from '../permission-checklist/index.ts';
 
 /** The fields of the role form: the name, the permissions and the reason of a change. */
 export type RoleFields = typeof updateRole.fields;
@@ -43,6 +46,8 @@ export interface RoleFormProps {
   readonly refused?: readonly string[];
   /** The permissions the edited role holds already, which the editor may tick again. */
   readonly current?: readonly string[];
+  /** The edited role's name and the places where it is assigned, where an added permission locks. */
+  readonly assigned?: PermissionChecklistProps['assigned'];
 }
 
 /** The error summary: the version conflict, or the errors of the save. */
@@ -82,6 +87,7 @@ export function RoleForm({
   withReason = false,
   refused,
   current,
+  assigned,
 }: RoleFormProps) {
   const { isDirty, isSubmitting } = form.formState;
   return (
@@ -111,6 +117,7 @@ export function RoleForm({
               baseline={baseline}
               refused={refused}
               current={current}
+              assigned={assigned}
             />
           )}
         />

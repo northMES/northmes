@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useId } from 'react';
+import { useQuery } from '@apollo/client/react';
+import { useId, useMemo } from 'react';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Label } from '../../../../ui/primitives/label.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
@@ -7,6 +8,8 @@ import { listOf, permissionCount } from '../../access-refusal.ts';
 import { permissionWithId } from '../../permission-names.ts';
 import { roleKind } from '../../role-kind.ts';
 import type { CoreRolesQuery } from '../../roles.graphql.ts';
+import { useCompanyVariables } from '../../use-places.ts';
+import { CorePermissionCatalog } from '../permission-checklist/permission-catalog.graphql.ts';
 
 /** A role of the company, as the picker lists it. */
 export type PickRole = CoreRolesQuery['coreRoles'][number];
@@ -36,6 +39,11 @@ interface LockContext {
   readonly place: AssignPlace | undefined;
   readonly held: readonly HeldRole[];
   readonly holds: (permission: string, place: AssignPlace) => boolean;
+  /**
+   * Whether the permission's module is installed; the API grants and checks only installed
+   * permissions (ADR 0010), so the others lock no role.
+   */
+  readonly installed: (permission: string) => boolean;
 }
 
 /** How a role of the picker reads at the place: its line, and whether it can be added there. */
@@ -55,7 +63,10 @@ interface RoleOption {
  * The role as the picker lists it at the place, for the person and the assigner. Before a place
  * is chosen, no role is locked and the line names the role's kind and permission count.
  */
-function optionOf(role: PickRole, { person, place, held, holds }: LockContext): RoleOption {
+function optionOf(
+  role: PickRole,
+  { person, place, held, holds, installed }: LockContext,
+): RoleOption {
   const kind = `${roleKind(role)}.`;
   const count = `${permissionCount(role.permissions.length)}.`;
   if (place === undefined) {
@@ -64,7 +75,7 @@ function optionOf(role: PickRole, { person, place, held, holds }: LockContext): 
   const holdsIt =
     person !== undefined &&
     held.some(({ roleId, scopeId }) => roleId === role.id && scopeId === place.id);
-  const missing = role.permissions.filter((key) => !holds(key, place));
+  const missing = role.permissions.filter((key) => installed(key) && !holds(key, place));
   const parts = [kind];
   if (holdsIt) parts.push(`${person.name} already holds it at ${place.name}.`);
   if (missing.length > 0) {
@@ -272,7 +283,29 @@ export function AssignRoleFormFields({
   const whereLabelId = useId();
   const [onlyPlace] = places.length === 1 ? places : [];
   const place = places.find((each) => each.id === where);
-  const lock: LockContext = { person, place, held, holds };
+  // Until the catalog loads, every permission counts as installed, which locks more, not less.
+  const catalog = useQuery(CorePermissionCatalog, { variables: useCompanyVariables() }).data
+    ?.corePermissionCatalog;
+  const installedKeys = useMemo(
+    () =>
+      catalog === undefined
+        ? undefined
+        : new Set(
+            catalog.flatMap(({ resources }) =>
+              resources.flatMap(({ permissions }) =>
+                permissions.filter((each) => each.installed).map(({ key }) => key),
+              ),
+            ),
+          ),
+    [catalog],
+  );
+  const lock: LockContext = {
+    person,
+    place,
+    held,
+    holds,
+    installed: (key) => installedKeys === undefined || installedKeys.has(key),
+  };
   return (
     <>
       {onlyPlace === undefined ? (

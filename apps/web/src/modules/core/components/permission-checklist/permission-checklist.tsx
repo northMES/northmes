@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
-import { ChevronDown, Lock } from 'lucide-react';
+import { ChevronDown, Info, Lock } from 'lucide-react';
 import { useId } from 'react';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
+import { Alert, AlertDescription } from '../../../../ui/primitives/alert.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import {
   Collapsible,
@@ -12,8 +13,9 @@ import {
   CollapsibleTrigger,
 } from '../../../../ui/primitives/collapsible.tsx';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
+import { listOf } from '../../access-refusal.ts';
 import { moduleName, permissionLine } from '../../permission-names.ts';
-import { useCompanyId, usePlaces } from '../../use-places.ts';
+import { useCompanyId } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import {
   CorePermissionCatalog,
@@ -58,6 +60,15 @@ export interface PermissionChecklistProps {
    * is never locked.
    */
   readonly current?: readonly string[];
+  /**
+   * The edited role's name and the places where it is assigned, company first. A permission it
+   * adds must be held by the editor at each of them (ADR 0010), so the others lock. A new role is
+   * assigned nowhere and locks nothing.
+   */
+  readonly assigned?: {
+    readonly roleName: string;
+    readonly places: readonly { readonly id: string; readonly name: string }[];
+  };
 }
 
 interface RowProps {
@@ -142,10 +153,10 @@ function ModuleGroup({
   PermissionChecklistProps,
   'onChange' | 'refused'
 > & {
-    readonly held: (key: string) => boolean;
+    /** The first place where the role is assigned and the editor lacks the permission. */
+    readonly lackingAt: (key: string) => string | undefined;
     /** Ticking the permission adds nothing: the role holds it already. */
     readonly current: ReadonlySet<string>;
-    readonly lockedReason: string;
     readonly all: readonly string[];
   }) {
   const headingId = useId();
@@ -170,28 +181,31 @@ function ModuleGroup({
       </h3>
       <CollapsibleContent>
         <ul className="flex flex-col">
-          {group.keys.map((key) => (
-            <PermissionRow
-              key={key}
-              permission={key}
-              checked={value.has(key)}
-              unheld={!rest.held(key)}
-              // Removing a permission needs nothing; adding one needs it (ADR 0010).
-              locked={!rest.held(key) && !value.has(key) && !rest.current.has(key)}
-              invalid={rest.refused?.includes(key) ?? false}
-              lockedReason={rest.lockedReason}
-              onCheckedChange={(checked) => {
-                const next = new Set(value);
-                if (checked) next.add(key);
-                else next.delete(key);
-                // Keep the catalog's order, and the permissions the checklist does not show.
-                rest.onChange([
-                  ...rest.all.filter((each) => next.has(each)),
-                  ...[...next].filter((each) => !rest.all.includes(each)),
-                ]);
-              }}
-            />
-          ))}
+          {group.keys.map((key) => {
+            const lacking = rest.lackingAt(key);
+            return (
+              <PermissionRow
+                key={key}
+                permission={key}
+                checked={value.has(key)}
+                unheld={lacking !== undefined}
+                // Removing a permission needs nothing; adding one needs it (ADR 0010).
+                locked={lacking !== undefined && !value.has(key) && !rest.current.has(key)}
+                invalid={rest.refused?.includes(key) ?? false}
+                lockedReason={`You do not hold it at ${lacking ?? ''}.`}
+                onCheckedChange={(checked) => {
+                  const next = new Set(value);
+                  if (checked) next.add(key);
+                  else next.delete(key);
+                  // Keep the catalog's order, and the permissions the checklist does not show.
+                  rest.onChange([
+                    ...rest.all.filter((each) => next.has(each)),
+                    ...[...next].filter((each) => !rest.all.includes(each)),
+                  ]);
+                }}
+              />
+            );
+          })}
         </ul>
       </CollapsibleContent>
     </Collapsible>
@@ -256,9 +270,9 @@ export function PermissionChecklist({
   baseline,
   refused,
   current = [],
+  assigned,
 }: PermissionChecklistProps) {
   const companyId = useCompanyId() ?? '';
-  const places = usePlaces();
   const viewer = useViewer();
   const { data, error } = useQuery(CorePermissionCatalog, { variables: { companyId } });
   const catalog = data?.corePermissionCatalog;
@@ -282,7 +296,11 @@ export function PermissionChecklist({
   const all = groups.flatMap(({ keys }) => keys);
   const ticked = new Set(value);
   const count = all.filter((key) => ticked.has(key)).length;
-  const companyName = places.company?.name ?? 'the company';
+  // In company settings the viewer's permissions are those at the company, which grant at each
+  // of its plants too (ADR 0066).
+  const lackingAt = (key: string) => (viewer.can(key) ? undefined : assigned?.places[0]?.name);
+  const currentKeys = new Set(current);
+  const anyLocked = all.some((key) => lackingAt(key) !== undefined && !currentKeys.has(key));
   // The count changes only through a tick, so the tick says the new count.
   const change = (next: string[]) => {
     onChange(next);
@@ -292,6 +310,16 @@ export function PermissionChecklist({
   return (
     <div id={fieldId('permissions')} tabIndex={-1} className="flex flex-col gap-3">
       <p className="text-sm text-muted-foreground">{selectedLine(count, all.length)}</p>
+      {assigned !== undefined && anyLocked && (
+        <Alert role="note" className="border-info bg-info-subtle text-foreground">
+          <Info aria-hidden className="text-info" />
+          <AlertDescription className="text-foreground">
+            You can add a permission to {assigned.roleName} only when you hold it at{' '}
+            {listOf(assigned.places.map(({ name }) => name))}, where {assigned.roleName} is
+            assigned. The others show a lock.
+          </AlertDescription>
+        </Alert>
+      )}
       {groups.map((group) => (
         <ModuleGroup
           key={group.moduleId}
@@ -300,9 +328,8 @@ export function PermissionChecklist({
           all={all}
           onChange={change}
           refused={refused}
-          held={(key) => viewer.can(key)}
-          current={new Set(current)}
-          lockedReason={`You do not hold it at ${companyName}.`}
+          lackingAt={lackingAt}
+          current={currentKeys}
         />
       ))}
       {baseline !== undefined && <Difference baseline={baseline} value={value} />}

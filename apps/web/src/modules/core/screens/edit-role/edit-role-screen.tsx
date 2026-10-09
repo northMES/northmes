@@ -21,6 +21,14 @@ function appliesTo(count: number): string {
   return `It applies to ${count} ${count === 1 ? 'person' : 'people'} from their next action.`;
 }
 
+/** The places where the role is assigned, each once, the company first. */
+function assignedPlaces(role: Role): { readonly id: string; readonly name: string }[] {
+  const scopes = new Map(role.holders.map(({ scope }) => [scope.id, scope]));
+  return [...scopes.values()]
+    .sort((a, b) => Number(a.kind === 'PLANT') - Number(b.kind === 'PLANT'))
+    .map(({ id, name }) => ({ id, name }));
+}
+
 interface EditRoleFormProps {
   readonly role: Role;
   readonly reload: () => Promise<Role | undefined>;
@@ -112,6 +120,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
       conflict={conflict ? { onReload } : undefined}
       refused={refused}
       current={role.permissions}
+      assigned={{ roleName: role.name, places: assignedPlaces(role) }}
       withReason
     />
   );
