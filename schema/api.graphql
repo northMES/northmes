@@ -1,0 +1,78 @@
+type Article {
+  code: String!
+  id: ID!
+  name: String!
+  version: Int!
+}
+
+type ArticleConnection {
+  edges: [ArticleEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ArticleEdge {
+  cursor: String!
+  node: Article!
+}
+
+input ArticleOrderBy {
+  direction: SortDirection = ASC
+  field: ArticleSortField!
+}
+
+enum ArticleSortField {
+  CODE
+  NAME
+}
+
+input CoreCreateArticleInput {
+  code: String!
+  id: ID!
+  name: String!
+}
+
+input CoreUpdateArticleInput {
+  code: String!
+  expectedVersion: Int!
+  id: ID!
+  name: String!
+}
+
+type Mutation {
+  coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
+  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+input PlanningReleaseProductionOrderInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
+type ProductionOrder {
+  article: Article
+  id: ID!
+  number: String!
+  quantity: String!
+  status: String!
+  version: Int!
+}
+
+type Query {
+  coreArticle(id: ID!): Article
+  coreArticles(after: String, before: String, first: Int = 25, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
+  planningProductionOrders: [ProductionOrder!]!
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}

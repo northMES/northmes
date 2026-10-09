@@ -9,7 +9,6 @@ import { DataTable, type DataTableColumn } from '../../../../ui/components/data-
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
-import type { Article } from '../../article.graphql.ts';
 import {
   type ArticleListSearch,
   articleListSearch,
@@ -22,13 +21,19 @@ import {
   sortedBy,
   sortOf,
 } from '../../article-list-search.ts';
-import { type ArticlesPage, CoreArticles } from './articles.graphql.ts';
+import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
+
+/** One page of the list, as CoreArticles answers it. */
+type ArticlesPage = CoreArticlesQuery['coreArticles'];
+
+/** One row of the list. */
+type ArticleRow = ArticlesPage['edges'][number]['node'];
 
 /** The id of the Search articles input, where Clear filters moves focus. */
 const searchFieldId = 'articles-search';
 
 /** The article number, the link to the article's page (IdentifierLink in the design). */
-function ArticleLink({ article }: { readonly article: Article }) {
+function ArticleLink({ article }: { readonly article: ArticleRow }) {
   const { plantId } = useShell();
   return (
     <Link
@@ -40,7 +45,7 @@ function ArticleLink({ article }: { readonly article: Article }) {
   );
 }
 
-const columns: readonly DataTableColumn<Article>[] = [
+const columns: readonly DataTableColumn<ArticleRow>[] = [
   {
     id: 'code',
     header: 'Article number',
