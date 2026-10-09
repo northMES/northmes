@@ -59,13 +59,19 @@ function cells(row: HTMLElement): (string | null)[] {
 }
 
 describe('BoardScreen', () => {
-  it('E02-S05 the board stub marks its data region busy until the production orders arrive', async () => {
+  it('E02-S05 the board stub marks its data region busy and draws skeleton rows until the production orders arrive', async () => {
     renderBoard([{ ...boardQuery(order('PO-1', '40.000000', 'planned', 'Hinge', 1)), delay: 50 }]);
 
     const region = () => screen.getByTestId('board-screen').closest('[aria-busy="true"]');
+    const skeletonRows = () =>
+      within(screen.getByTestId('board-screen'))
+        .getAllByRole('row')
+        .filter((row) => row.querySelector('[data-slot="skeleton"]') !== null);
     expect(region()).not.toBeNull();
+    expect(skeletonRows().length).toBeGreaterThan(0);
     await screen.findByTestId('order-PO-1');
     expect(region()).toBeNull();
+    expect(skeletonRows()).toEqual([]);
   });
 
   it('E02-S05 the board stub lists production orders with their article names', async () => {
