@@ -97,6 +97,19 @@ describe('every company keeps an active Company admin', () => {
     return rows.map(({ id }) => id);
   }
 
+  /** The users who hold Company admin at the company and are not blocked, read as nm_app. */
+  async function activeAdmins(company: Acme): Promise<string[]> {
+    const rows = await query<{ user_id: string }>(
+      db.appUrl,
+      `select distinct a.user_id from core.role_assignment a
+         join core.user_directory u on u.id = a.user_id
+        where a.role_id = '${company.adminRole.id}' and a.scope_id = '${company.company}'
+          and not u.banned
+        order by a.user_id`,
+    );
+    return rows.map(({ user_id }) => user_id);
+  }
+
   /** Whether the user is blocked, read as nm_app. */
   async function blocked(userId: string): Promise<boolean | undefined> {
     const [row] = await query<{ banned: boolean }>(
@@ -193,5 +206,47 @@ describe('every company keeps an active Company admin', () => {
 
     expect(answers.filter(({ errors }) => errors === undefined)).toHaveLength(1);
     expect(await adminAssignments(company)).toHaveLength(1);
+  });
+
+  it('E05-S08 two users who each block one of the two Company admins at once leave one', async () => {
+    const company = await acme();
+    const karin = await person(company, company.company);
+    const anna = await person(company, company.company);
+    const blocker = [
+      { scopeId: company.company, permissions: ['core.user:block', 'core.user:read'] },
+    ];
+    const oskar = await person(company, undefined, blocker);
+    const lena = await person(company, undefined, blocker);
+
+    const answers = await Promise.all([
+      oskar.client.send(blockMutation, { input: { id: karin.userId } }),
+      lena.client.send(blockMutation, { input: { id: anna.userId } }),
+    ]);
+
+    expect(answers.filter(({ errors }) => errors === undefined)).toHaveLength(1);
+    expect(answers.flatMap((answer) => refusals(answer) ?? [])).toEqual(lastAdmin);
+    expect(await activeAdmins(company)).toHaveLength(1);
+  });
+
+  it('E05-S08 blocking one of two Company admins while the other loses Company admin at once leaves one', async () => {
+    const company = await acme();
+    const karin = await person(company, company.company);
+    const anna = await person(company, company.company);
+    const oskar = await person(company, undefined, [
+      { scopeId: company.company, permissions: ['core.user:block', 'core.user:read'] },
+    ]);
+    // Lena holds every permission of Company admin through a custom role, which does not count.
+    const lena = await person(company, undefined, [
+      { scopeId: company.company, permissions: company.adminRole.permissions },
+    ]);
+
+    const answers = await Promise.all([
+      oskar.client.send(blockMutation, { input: { id: karin.userId } }),
+      lena.client.send(removeMutation, { input: { id: anna.assignmentId } }),
+    ]);
+
+    expect(answers.filter(({ errors }) => errors === undefined)).toHaveLength(1);
+    expect(answers.flatMap((answer) => refusals(answer) ?? [])).toEqual(lastAdmin);
+    expect(await activeAdmins(company)).toHaveLength(1);
   });
 });
