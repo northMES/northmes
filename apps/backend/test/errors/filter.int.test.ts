@@ -159,4 +159,24 @@ describe('the exception filter', () => {
       });
     },
   );
+
+  it.each([
+    ['faultyNotFound', 'Thing t-9 was not found', 'NOT_FOUND'],
+    ['faultyForbidden', 'Forbidden', 'FORBIDDEN'],
+  ])(
+    "Nest's exception thrown in %s reaches the client as %s, %s and no errorCode",
+    async (field, message, code) => {
+      const booted = await bootFixtures(faulty);
+      const client = gqlClient(await booted.getUrl());
+
+      const answer = await client.send(`{ ${field} }`);
+
+      expect(answer).toMatchObject({
+        status: 200,
+        data: null,
+        errors: [{ message, path: [field], extensions: { code } }],
+      });
+      expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
+    },
+  );
 });
