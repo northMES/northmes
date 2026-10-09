@@ -19,7 +19,8 @@ apps/backend/src/modules/<id>/
   api/                    the inbound GraphQL surface; never touches the database
     <entity>/
       <entity>.module.ts  imports the service module, provides the resolvers and the mutations
-      types/              <entity>.type.ts, one object type per file
+      types/              <entity>.type.ts, one object type per file, with a to<Type> mapper
+                          only when the service's record differs from the type
       inputs/             <name>.input.ts, one input type per file, for query arguments
       queries/            <entity>.query.resolver.ts, and <entity>.list.ts for a defineList list
       fields/             <entity>.field.resolver.ts with the loaders it uses
