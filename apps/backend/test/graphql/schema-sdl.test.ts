@@ -22,8 +22,11 @@ describe('schemaSdl', () => {
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
       'coreArchiveArticle',
       'coreCreateArticle',
+      'coreCreateRole',
+      'coreDeleteRole',
       'coreRestoreArticle',
       'coreUpdateArticle',
+      'coreUpdateRole',
       'planningReleaseProductionOrder',
     ]);
     expect(sdl.endsWith('}\n')).toBe(true);

@@ -50,6 +50,17 @@ input CoreCreateArticleInput {
   name: String!
 }
 
+input CoreCreateRoleInput {
+  id: ID!
+  name: String!
+  permissions: [String!]!
+}
+
+input CoreDeleteRoleInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
@@ -60,6 +71,14 @@ input CoreUpdateArticleInput {
   expectedVersion: Int!
   id: ID!
   name: String!
+}
+
+input CoreUpdateRoleInput {
+  expectedVersion: Int!
+  id: ID!
+  name: String!
+  permissions: [String!]!
+  reason: String
 }
 
 """
@@ -75,8 +94,11 @@ type EffectivePermission {
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreCreateRole(input: CoreCreateRoleInput!): Role!
+  coreDeleteRole(input: CoreDeleteRoleInput!): Role!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
+  coreUpdateRole(input: CoreUpdateRoleInput!): Role!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
 }
 
