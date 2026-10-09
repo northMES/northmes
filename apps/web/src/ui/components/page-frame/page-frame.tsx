@@ -45,7 +45,7 @@ export type PageState =
       readonly error?: unknown;
       readonly correlationId?: string;
       /** Sends the request again; Try again stays busy until the promise settles. */
-      readonly onRetry: () => Promise<unknown> | void;
+      readonly onRetry: () => Promise<unknown>;
     };
 
 export interface PageFrameProps {
@@ -262,11 +262,12 @@ export function PageFrame({
           <ErrorState
             {...shown}
             retrying={retry !== undefined}
-            onRetry={() => {
+            onRetry={async () => {
               const from = shown;
               setRetry({ from, settled: false });
-              const settle = () => setRetry({ from, settled: true });
-              Promise.resolve().then(from.onRetry).then(settle, settle);
+              // A refused retry settles too: the page's next state says how it went.
+              await from.onRetry().catch(() => {});
+              setRetry({ from, settled: true });
             }}
           />
         ) : (
