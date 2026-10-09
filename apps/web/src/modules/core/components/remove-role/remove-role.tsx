@@ -103,8 +103,9 @@ function removalFailure(
 
 /**
  * Remove on a role of a person (design core-304, AS7 and NO24), on a user's Access tab and on
- * People in plant settings: an alert dialog that names what the person loses and what the person's
- * other roles still let them do, with an optional reason that has focus. Escape or Cancel go back to Remove. The removed assignment leaves the
+ * People in plant settings: an alert dialog described by what the person loses and what the
+ * person's other roles still let them do, with an optional reason that has focus. Escape or Cancel
+ * go back to Remove. The removed assignment leaves the
  * person's roles, the role's holders and the people of the plant in the cache.
  */
 export function RemoveRole({
@@ -159,6 +160,24 @@ export function RemoveRole({
           : `Remove ${role} at ${place} from ${person.name}?`
       }
       description={removalDescription(person, assignment, lost)}
+      details={
+        (lost !== undefined && lost.length > 0) || kept.length > 0 ? (
+          <>
+            {lost !== undefined && lost.length > 0 && (
+              <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+                {lost.map((key) => (
+                  <li key={key}>{permissionLine(key)}</li>
+                ))}
+              </ul>
+            )}
+            {kept.map((sentence) => (
+              <p key={sentence} className="text-sm text-muted-foreground">
+                {sentence}
+              </p>
+            ))}
+          </>
+        ) : undefined
+      }
       confirmLabel="Remove role"
       destructive
       initialFocus={field}
@@ -186,18 +205,6 @@ export function RemoveRole({
         );
       }}
     >
-      {lost !== undefined && lost.length > 0 && (
-        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-          {lost.map((key) => (
-            <li key={key}>{permissionLine(key)}</li>
-          ))}
-        </ul>
-      )}
-      {kept.map((sentence) => (
-        <p key={sentence} className="text-sm text-muted-foreground">
-          {sentence}
-        </p>
-      ))}
       <TextareaField
         ref={field}
         label="Reason"

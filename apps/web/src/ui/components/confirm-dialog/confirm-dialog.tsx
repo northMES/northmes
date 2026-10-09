@@ -5,6 +5,7 @@ import {
   type ReactNode,
   type RefObject,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react';
@@ -27,6 +28,11 @@ export interface ConfirmDialogProps {
   readonly title: string;
   /** What the action does, which describes the dialog. */
   readonly description: string;
+  /**
+   * What the description goes on to name, such as a list of what changes, under it; it describes
+   * the dialog too, so a screen reader hears it with the description.
+   */
+  readonly details?: ReactNode;
   /** The confirm button's text, such as "Archive article". */
   readonly confirmLabel: string;
   /**
@@ -48,7 +54,8 @@ export interface ConfirmDialogProps {
 
 /**
  * ConfirmDialog (design ui-222, DE23 and DE27; WCAG 3.3.4): shadcn's Alert Dialog that asks before
- * an action, named by its title and described by its text, with Cancel and the confirm button.
+ * an action, named by its title and described by its text and the details under it, with Cancel
+ * and the confirm button.
  * Tab stays in the dialog and Escape cancels. A body, such as a reason field, goes between the text
  * and the buttons, and initialFocus puts focus in it on open.
  */
@@ -56,6 +63,7 @@ export function ConfirmDialog({
   trigger,
   title,
   description,
+  details,
   confirmLabel,
   onConfirm,
   focusAfterConfirm,
@@ -65,6 +73,8 @@ export function ConfirmDialog({
   children,
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
+  const descriptionId = useId();
+  const detailsId = useId();
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // Whether the action ran or is running; only the close and the unmount read it, so it is no
@@ -115,6 +125,8 @@ export function ConfirmDialog({
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent
         initialFocus={initialFocus}
+        // Base UI describes the dialog by its description; details join it when there are any.
+        {...(details !== undefined && { 'aria-describedby': `${descriptionId} ${detailsId}` })}
         finalFocus={() => {
           // The dialog closed, so the unmount has no focus left to move.
           const after = confirmed.current;
@@ -124,8 +136,13 @@ export function ConfirmDialog({
       >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogDescription id={descriptionId}>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {details !== undefined && (
+          <div id={detailsId} className="flex flex-col gap-2">
+            {details}
+          </div>
+        )}
         {children}
         {error !== undefined && (
           <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
