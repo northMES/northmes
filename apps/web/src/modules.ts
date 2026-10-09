@@ -18,9 +18,9 @@ export interface MenuLink {
 /** A module the web is built with, and its group in the sidebar. */
 export interface ShellModule {
   readonly module: WebModule;
-  /** The sidebar group's label, as in the web block of the module's manifest. */
+  /** The sidebar group's label; the backend module carries no manifest (ADR 0070). */
   readonly label: string;
-  /** The sidebar group's position, as in the web block of the module's manifest. */
+  /** The sidebar group's position among the modules' groups. */
   readonly order: number;
   /** The entries of the module's sidebar group, in their order. */
   readonly links?: readonly MenuLink[];
