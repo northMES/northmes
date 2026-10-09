@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { hostFactory, signInAt } from '@northmes/backend/testing';
+import { hostFactory, signIn, signInAt } from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -253,5 +253,40 @@ describe('coreArchiveArticle and coreRestoreArticle', () => {
       });
     }
     expect(await readArticle(otherPlant, other.id)).toEqual(other);
+  });
+
+  it("E06-S06 coreArchiveArticle and coreRestoreArticle need core.article:archive at the article's scope", async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const plant = given.plant();
+    const owner = await signInAt(testApp.app, db.ownerUrl, plant);
+    const article = await create(await clientAt(plant), 'BR-190', 'Wall bracket, narrow');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+    const planner = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': owner['x-northmes-plant'] ?? '' },
+    });
+    const forbidden = (mutation: string) => ({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `You need core.article:archive at the scope of Article ${article.id}`,
+          path: [mutation],
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+        },
+      ],
+    });
+
+    const archived = await planner.send(archiveMutation, {
+      input: { id: article.id, expectedVersion: article.version },
+    });
+    const restored = await planner.send(restoreMutation, {
+      input: { id: article.id, expectedVersion: article.version },
+    });
+
+    expect(archived).toEqual(forbidden('coreArchiveArticle'));
+    expect(restored).toEqual(forbidden('coreRestoreArticle'));
+    expect(await readArticle(await clientAt(plant), article.id)).toEqual(article);
   });
 });
