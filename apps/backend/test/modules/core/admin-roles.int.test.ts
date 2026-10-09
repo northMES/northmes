@@ -226,6 +226,7 @@ describe('northmes migrate and the admin roles', () => {
         'core.role:manage',
         'core.user:block',
         'core.user:create',
+        'core.user:resetPassword',
         'planning.productionOrder:read',
         'planning.productionOrder:release',
       ]),
@@ -243,8 +244,14 @@ describe('northmes migrate and the admin roles', () => {
     expect(after['core-plant-admin']).toEqual(
       after['core-company-admin']?.filter((key) => !companyLevel.includes(key)),
     );
+    expect(after['core-plant-admin']).not.toContain('core.user:resetPassword');
   });
 });
 
 /** The permissions the API checks only at the company, which Plant admin never holds. */
-const companyLevel = ['core.role:manage', 'core.user:block', 'core.user:create'];
+const companyLevel = [
+  'core.role:manage',
+  'core.user:block',
+  'core.user:create',
+  'core.user:resetPassword',
+];

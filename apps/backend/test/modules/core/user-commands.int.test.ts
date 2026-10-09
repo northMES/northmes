@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
+import {
+  type Grant,
+  givenAssignment,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -497,5 +504,193 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
 
     expect(refusals(self)).toEqual([{ code: 'PRECONDITION', errorCode: 'core.cannot_block_self' }]);
     expect(elsewhere.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
+  });
+});
+
+const resetMutation = `mutation ($input: CoreResetPasswordInput!) {
+  coreResetPassword(input: $input) { user { id username blocked } temporaryPassword }
+}`;
+
+interface ResetAnswer {
+  coreResetPassword: {
+    user: { id: string; username: string; blocked: boolean };
+    temporaryPassword: string;
+  };
+}
+
+describe('coreResetPassword', () => {
+  const db = useTestDatabase();
+  let testApp: TestApp | undefined;
+  let url = '';
+
+  beforeAll(async () => {
+    testApp = await createTestApp({ modules: ['core', 'planning'], hostFactory, database: db });
+    await testApp.app.listen(0, '127.0.0.1');
+    url = await testApp.app.getUrl();
+  });
+
+  afterAll(async () => {
+    await testApp?.app.close();
+  });
+
+  /** What a company admin holds to reset passwords. */
+  const resetAdmin = ['core.user:read', 'core.user:block', 'core.user:resetPassword'];
+
+  /** A fresh signed-in user with these grants, and a client of theirs at the plant `plant`. */
+  async function signedIn(grants: readonly Grant[], plant: string) {
+    if (!testApp) throw new Error('the test app did not start');
+    const user = await signIn(testApp.app, db.ownerUrl, grants);
+    const client = gqlClient(url, {
+      headers: { authorization: user.authorization, 'x-northmes-plant': plant },
+    });
+    return { ...user, client };
+  }
+
+  /** A company with an admin who resets passwords and an operator who reads articles. */
+  async function company() {
+    const given = await givenCompany(db.ownerUrl, { name: 'Acme AB' });
+    const slug = given.slugs[0] ?? '';
+    const admin = await signedIn([{ scopeId: given.company, permissions: resetAdmin }], slug);
+    const operator = await signedIn(
+      [{ scopeId: given.company, permissions: ['core.article:read'] }],
+      slug,
+    );
+    return { ...given, slug, admin, operator };
+  }
+
+  /** Signs in by email through Better Auth's handler and answers its status. */
+  async function signInStatus(email: string, password: string): Promise<number> {
+    const answer = await fetch(`${url}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    return answer.status;
+  }
+
+  /** The errorCode of each of an answer's errors, with its code. */
+  function refusals(answer: { readonly errors?: readonly { extensions?: unknown }[] }) {
+    return answer.errors?.map(({ extensions }) => {
+      const { code, errorCode } = extensions as Record<string, unknown>;
+      return { code, errorCode };
+    });
+  }
+
+  it('E05-S08 coreResetPassword gives the user a new temporary password: the old password and sessions stop working, and the new one signs in marked as needing a new password', async () => {
+    const { admin, operator, slug } = await company();
+    const sessionToken = (
+      await fetch(`${url}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: operator.email, password: operator.password }),
+      })
+    ).headers.get('set-auth-token');
+
+    const reset = await admin.client.send<ResetAnswer>(resetMutation, {
+      input: { id: operator.userId, reason: 'Forgot it' },
+    });
+    const temporary = reset.data?.coreResetPassword.temporaryPassword ?? '';
+    const minted = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: operator.email, password: temporary }),
+    });
+    const { token } = (await (
+      await fetch(`${url}/api/auth/token`, {
+        headers: { authorization: `Bearer ${signedIn.headers.get('set-auth-token')}` },
+      })
+    ).json()) as { token: string };
+    const answer = await gqlClient(url, {
+      headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': slug },
+    }).send('{ coreArticles { totalCount } }');
+
+    expect(reset.errors).toBeUndefined();
+    expect(reset.data?.coreResetPassword.user).toEqual({
+      id: operator.userId,
+      username: operator.username,
+      blocked: false,
+    });
+    expect(temporary).toMatch(/^\S{16,}$/);
+    expect(temporary).not.toBe(operator.password);
+    expect(await signInStatus(operator.email, operator.password)).toBe(401);
+    expect(minted.status).not.toBe(200);
+    expect(signedIn.status).toBe(200);
+    expect(refusals(answer)).toEqual([
+      { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
+    ]);
+  });
+
+  it('E05-S08 coreResetPassword needs core.user:resetPassword at the company: a reader without it and a plant admin who holds it at the plant only are refused', async () => {
+    const { company: companyId, plants, slug, operator } = await company();
+    const reader = await signedIn(
+      [{ scopeId: companyId, permissions: ['core.user:read', 'core.user:block'] }],
+      slug,
+    );
+    const plantAdmin = await signedIn(
+      [{ scopeId: plants[0] ?? '', permissions: resetAdmin }],
+      slug,
+    );
+    const input = { id: operator.userId };
+
+    const byReader = await reader.client.send(resetMutation, { input });
+    const byPlantAdmin = await plantAdmin.client.send(resetMutation, { input });
+
+    expect(refusals(byReader)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    expect(refusals(byPlantAdmin)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    expect(await signInStatus(operator.email, operator.password)).toBe(200);
+  });
+
+  it("E05-S08 a Plant admin, core's default role, cannot reset passwords", async () => {
+    const { company: companyId, plants, slug, operator } = await company();
+    const plantAdmin = await signedIn([], slug);
+    const [{ id: roleId } = { id: '' }] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-plant-admin'`,
+      [companyId],
+    );
+    await givenAssignment(db.ownerUrl, {
+      userId: plantAdmin.userId,
+      roleId,
+      scopeId: plants[0] ?? '',
+    });
+
+    const answer = await plantAdmin.client.send(resetMutation, { input: { id: operator.userId } });
+
+    expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+  });
+
+  it('E05-S08 coreResetPassword refuses your own password, a blocked user and a user who also belongs to a company where you cannot reset passwords', async () => {
+    const acme = await company();
+    const nordic = await company();
+    const blocked = acme.operator;
+    await acme.admin.client.send(
+      `mutation ($input: CoreBlockUserInput!) { coreBlockUser(input: $input) { id } }`,
+      { input: { id: blocked.userId } },
+    );
+    const both = await signedIn(
+      [
+        { scopeId: acme.company, permissions: ['core.article:read'] },
+        { scopeId: nordic.company, permissions: ['core.article:read'] },
+      ],
+      acme.slug,
+    );
+
+    const self = await acme.admin.client.send(resetMutation, {
+      input: { id: acme.admin.userId },
+    });
+    const ofBlocked = await acme.admin.client.send(resetMutation, {
+      input: { id: blocked.userId },
+    });
+    const ofBoth = await acme.admin.client.send(resetMutation, { input: { id: both.userId } });
+
+    expect(refusals(self)).toEqual([
+      { code: 'PRECONDITION', errorCode: 'core.cannot_reset_own_password' },
+    ]);
+    expect(refusals(ofBlocked)).toEqual([{ code: 'PRECONDITION', errorCode: 'core.user_blocked' }]);
+    expect(refusals(ofBoth)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    expect(await signInStatus(both.email, both.password)).toBe(200);
   });
 });
