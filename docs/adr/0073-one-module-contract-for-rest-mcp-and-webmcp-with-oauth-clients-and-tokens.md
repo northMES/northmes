@@ -288,7 +288,7 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 
 ### Changes to ADR 0012
 
-* "The SDK generates the mutation field, so a module writes no resolver for it" no longer holds. `defineCommand` registers the command's handler with the bus and keeps deriving the input type from the contract, and the module writes a thin mutation resolver in `api/` that calls its service, which sends the command. The maintainer's rule that every surface calls the service, quoted under section 1, is the reason.
+* "the SDK generates the mutation field, so a module writes no resolver for it" no longer holds. `defineCommand` registers the command's handler with the bus and keeps deriving the input type from the contract, and the module writes a thin mutation resolver in `api/` that calls its service, which sends the command. The maintainer's rule that every surface calls the service, quoted under section 1, is the reason.
 * The handler context gains `context.require(permission, scopeId)`, which a handler calls for a row it finds in step 8 when the contract's target could not name it, such as the upsert by article number. It runs step 3's `can()` check at that scope; a denial rolls the command back and writes the `permission.denied` event as step 3 does. Steps 3 to 5 stay in their order, and every successful command, a no-op upsert included, still writes exactly one `audit.command` row.
 
 ### Changes to ADR 0031
