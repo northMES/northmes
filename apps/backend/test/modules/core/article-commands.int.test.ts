@@ -276,13 +276,13 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
 
   /**
    * A GraphQL client for the test app, signed in as a user whose roles grant `grants`, that names
-   * `plant` in x-northmes-plant.
+   * the plant with slug `plantSlug` in x-northmes-plant.
    */
-  async function clientWith(plant: string, grants: readonly Grant[]): Promise<GqlClient> {
+  async function clientWith(plantSlug: string, grants: readonly Grant[]): Promise<GqlClient> {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signIn(testApp.app, db.ownerUrl, grants);
     return gqlClient(await testApp.app.getUrl(), {
-      headers: { authorization, 'x-northmes-plant': plant },
+      headers: { authorization, 'x-northmes-plant': plantSlug },
     });
   }
 
@@ -300,10 +300,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
   });
 
   it('E05-S06 a user who holds core.article:update at the company updates an article at a plant below it', async () => {
-    const { company, plants } = await givenCompany(db.ownerUrl);
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
+    const [slug = ''] = slugs;
     const { id } = await create(await clientAt(plant), 'LG-100', 'Leveling foot');
-    const companyEditor = await clientWith(plant, [
+    const companyEditor = await clientWith(slug, [
       { scopeId: company, permissions: ['core.article:read', 'core.article:update'] },
     ]);
 
@@ -318,13 +319,14 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
   });
 
   it('E05-S06 a user whose role at the plant creates articles but does not update them gets FORBIDDEN core.forbidden, and the article stays as it was', async () => {
-    const { plants } = await givenCompany(db.ownerUrl);
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
+    const [slug = ''] = slugs;
     const planner = await clientAt(plant);
     const { id } = await create(planner, 'DR-200', 'Drawer runner');
     // core.article:create is a write permission, so row-level security lets this user write at
     // the plant; only the permission step refuses the update.
-    const creator = await clientWith(plant, [
+    const creator = await clientWith(slug, [
       { scopeId: plant, permissions: ['core.article:read', 'core.article:create'] },
     ]);
 
@@ -342,12 +344,13 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
   });
 
   it('E05-S06 a user who holds core.article:update at a sibling plant gets FORBIDDEN core.forbidden on an article at the other plant', async () => {
-    const { plants } = await givenCompany(db.ownerUrl, { plants: 2 });
+    const { plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
     const [plantA = '', plantB = ''] = plants;
+    const [slugA = ''] = slugs;
     const planner = await clientAt(plantA);
     const { id } = await create(planner, 'KN-300', 'Cabinet knob');
     // The user reads articles at plant A and updates them at plant B only.
-    const plantBEditor = await clientWith(plantA, [
+    const plantBEditor = await clientWith(slugA, [
       { scopeId: plantA, permissions: ['core.article:read'] },
       { scopeId: plantB, permissions: ['core.article:read', 'core.article:update'] },
     ]);
@@ -376,10 +379,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
   }
 
   it('E05-S06 a plant planner who updates articles at the plant gets FORBIDDEN core.forbidden on an article at the company, which the planner reads', async () => {
-    const { company, plants } = await givenCompany(db.ownerUrl);
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
+    const [slug = ''] = slugs;
     const id = await writeArticleAt(company, 'FR-500', 'Frame rail');
-    const plantPlanner = await clientWith(plant, [
+    const plantPlanner = await clientWith(slug, [
       { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
     ]);
     expect(await readArticle(plantPlanner, id)).toMatchObject({ code: 'FR-500', version: 1 });
@@ -393,9 +397,10 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
   });
 
   it('E05-S06 a user without core.article:create at the plant gets FORBIDDEN core.forbidden from coreCreateArticle', async () => {
-    const { plants } = await givenCompany(db.ownerUrl);
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
-    const editor = await clientWith(plant, [
+    const [slug = ''] = slugs;
+    const editor = await clientWith(slug, [
       { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
     ]);
 

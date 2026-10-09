@@ -163,14 +163,15 @@ describe('planningReleaseProductionOrder', () => {
 
   it('E05-S06 a user who reads production orders at the plant but holds no release permission gets FORBIDDEN core.forbidden, and the order stays planned', async () => {
     if (!testApp) throw new Error('the test app did not start');
-    const { plants } = await givenCompany(db.ownerUrl);
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
+    const [slug = ''] = slugs;
     const id = await writeOrder(plant, '6601');
     const { authorization } = await signIn(testApp.app, db.ownerUrl, [
       { scopeId: plant, permissions: ['planning.productionOrder:read', 'core.article:update'] },
     ]);
     const viewer = gqlClient(await testApp.app.getUrl(), {
-      headers: { authorization, 'x-northmes-plant': plant },
+      headers: { authorization, 'x-northmes-plant': slug },
     });
 
     const answer = await viewer.send(releaseMutation, { input: { id, expectedVersion: 1 } });
