@@ -28,8 +28,8 @@ export interface Versioned {
 
 /**
  * The entity a command on an existing entity changes (contract target existing). The bus loads it
- * before the validators and the handler run, and refuses the command with core.not_found when
- * load finds no row, or with core.version_conflict when the row's version is not the input's
+ * before the validators and the handler run, and refuses the command with Nest's
+ * NotFoundException when load finds no row, or with core.version_conflict when the row's version is not the input's
  * expectedVersion (ADR 0012 steps 3 and 5).
  */
 export interface CommandTarget<Target> {
