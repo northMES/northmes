@@ -111,6 +111,34 @@ describe('the seed', () => {
     });
   });
 
+  it("E05-S06 the dev admin holds core's Company admin at the seed company, with every installed permission, so the last-admin rule keeps the seed company's admin", async () => {
+    const roles = await queryAsCore<{ id: string; key: string; scope_id: string; all: boolean }>(
+      db.ownerUrl,
+      `select a.id, r.key, a.scope_id,
+              r.permissions @> (select array_agg(key) from core.permission where installed) as all
+         from core.role_assignment a join core.role r on r.id = a.role_id
+        where a.user_id = $1`,
+      [devAdmin.id],
+    );
+    const client = gqlClient(url, {
+      headers: { authorization: `Bearer ${await adminToken()}`, 'x-northmes-plant': 'plant-a' },
+    });
+
+    const removed = await client.send(
+      `mutation ($input: CoreRemoveRoleAssignmentInput!) {
+        coreRemoveRoleAssignment(input: $input) { id }
+      }`,
+      { input: { id: roles[0]?.id } },
+    );
+
+    expect(roles).toEqual([
+      { id: expect.any(String), key: 'core-company-admin', scope_id: seedCompany.id, all: true },
+    ]);
+    expect(removed.errors?.map(({ extensions }) => extensions?.errorCode)).toEqual([
+      'core.last_admin',
+    ]);
+  });
+
   it('E05-S05 a second run of the seed adds no scope, company, plant, role or assignment', async () => {
     // Core's owner role reads every role; nm_app reads only those of its read scopes.
     const counts = () =>
@@ -126,8 +154,8 @@ describe('the seed', () => {
 
     await seed({ appUrl: db.appUrl, ownerUrl: db.ownerUrl });
 
-    // The admin's role, and the four default roles of core and planning that the company gets.
-    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 5, assignments: 1 }]);
+    // The four default roles of core and planning that the company gets, one of them the admin's.
+    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 4, assignments: 1 }]);
     expect(await counts()).toEqual(before);
   });
 });
