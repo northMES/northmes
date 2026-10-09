@@ -11,7 +11,7 @@ import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-va
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
 import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
-import { faulty } from '../fixtures/graphql/faulty.ts';
+import { faulty, UNKNOWN_ERROR_TEXT } from '../fixtures/graphql/faulty.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
@@ -179,4 +179,43 @@ describe('the exception filter', () => {
       expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
     },
   );
+
+  it("a DomainError's fieldErrors reach the client in extensions.fieldErrors, in the shape of a Zod failure's", async () => {
+    const booted = await bootFixtures(faulty);
+    const client = gqlClient(await booted.getUrl());
+
+    const answer = await client.send('{ faultyFieldErrors }');
+
+    expect(answer).toMatchObject({
+      errors: [
+        {
+          message: 'The code is already taken.',
+          extensions: {
+            code: 'CONFLICT',
+            errorCode: 'faulty.code_taken',
+            fieldErrors: [
+              { path: ['code'], message: 'The code is already taken.', code: 'faulty.code_taken' },
+            ],
+          },
+        },
+      ],
+    });
+  });
+
+  it.each([
+    ['faultyUnknown', 'a plain Error'],
+    ['faultyServerError', 'an HttpException of a status without a GraphQL code'],
+  ])('%s, which throws %s, reaches the client masked as Unexpected error.', async (field) => {
+    const booted = await bootFixtures(faulty);
+    const client = gqlClient(await booted.getUrl());
+
+    const answer = await client.send(`{ ${field} }`);
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [{ message: 'Unexpected error.', path: [field] }],
+    });
+    expect(JSON.stringify(answer)).not.toContain(UNKNOWN_ERROR_TEXT);
+  });
 });

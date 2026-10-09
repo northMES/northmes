@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixture module faulty: each of its fields throws one kind of error, for the exception filter.
-import { ForbiddenException, Module, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  InternalServerErrorException,
+  Module,
+  NotFoundException,
+} from '@nestjs/common';
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { defineModule } from '@northmes/sdk';
 import { DomainError } from '@northmes/sdk/errors';
 
-/** The message of the plain Error that faultyUnknown throws, which no client may read. */
+/** The message that faultyServerError and faultyUnknown throw, which no client may read. */
 export const UNKNOWN_ERROR_TEXT = 'connection to 10.0.0.7 refused for user nm_app';
 
 @Resolver()
@@ -40,6 +45,11 @@ export class FaultyResolver {
   @Query(() => Boolean)
   faultyForbidden(): boolean {
     throw new ForbiddenException();
+  }
+
+  @Query(() => Boolean)
+  faultyServerError(): boolean {
+    throw new InternalServerErrorException(UNKNOWN_ERROR_TEXT);
   }
 
   @Query(() => Boolean)
