@@ -4,6 +4,7 @@ import { useShell } from '@northmes/web-sdk';
 import { ChevronDown, Lock } from 'lucide-react';
 import { useId } from 'react';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import {
@@ -236,10 +237,15 @@ function Difference({
   );
 }
 
+/** The count of the ticked permissions, such as "6 of 36 selected.". */
+function selectedLine(count: number, total: number): string {
+  return `${count} of ${total} selected.`;
+}
+
 /**
  * The permission checklist of the role editor (design core-304, RO13 to RO20 and NO20): the
  * installed permissions grouped by module in the catalog's order, each in plain words with its
- * id, and the count of those ticked as a status ("6 of 36 selected."). Space ticks a permission
+ * id, and the count of those ticked ("6 of 36 selected."), which a tick says through announce(). Space ticks a permission
  * and focus stays on it; Enter on a module's button opens or closes the module. A permission the
  * editor does not hold at the plant can be unticked but not ticked, because the grant rule asks
  * for it to add it and for nothing to remove it (ADR 0010). One the edited role holds already
@@ -278,18 +284,22 @@ export function PermissionChecklist({
   const ticked = new Set(value);
   const count = all.filter((key) => ticked.has(key)).length;
   const plantName = places.plant?.name ?? plant;
+  // The count changes only through a tick, so the tick says the new count.
+  const change = (next: string[]) => {
+    onChange(next);
+    const selected = new Set(next);
+    announce(selectedLine(all.filter((key) => selected.has(key)).length, all.length));
+  };
   return (
     <div id={fieldId('permissions')} tabIndex={-1} className="flex flex-col gap-3">
-      <p role="status" className="text-sm text-muted-foreground">
-        {count} of {all.length} selected.
-      </p>
+      <p className="text-sm text-muted-foreground">{selectedLine(count, all.length)}</p>
       {groups.map((group) => (
         <ModuleGroup
           key={group.moduleId}
           group={group}
           value={ticked}
           all={all}
-          onChange={onChange}
+          onChange={change}
           refused={refused}
           held={(key) => viewer.can(key)}
           current={new Set(current)}
