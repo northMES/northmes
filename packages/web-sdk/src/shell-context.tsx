@@ -15,15 +15,13 @@ export function ShellProvider({ value, children }: { value: ShellState; children
 }
 
 /**
- * Reads the shell's state. A module that bundles its own copy of this package reads a context the
- * shell never provided, so the hook throws instead of returning nothing.
+ * Reads the shell's state. Outside a ShellProvider there is no state to read, so the hook throws
+ * instead of returning nothing.
  */
 export function useShell(): ShellState {
   const value = useContext(ShellContext);
   if (value === null) {
-    throw new Error(
-      'useShell() found no ShellProvider: the shell and this module hold two copies of @northmes/web-sdk',
-    );
+    throw new Error('useShell() found no ShellProvider: render it inside the $plant route');
   }
   return value;
 }
