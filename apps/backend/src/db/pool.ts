@@ -8,6 +8,24 @@ const appRole = 'nm_app';
 const logger = new Logger('Database');
 
 /**
+ * A pool that logs in to DATABASE_URL, which carries no login (ADR 0060), as `role` with
+ * `password`. pg reads the login from the URL ahead of the user and password options, so they go
+ * into the URL. See appPool for the error listener.
+ */
+export function rolePool(databaseUrl: string, role: string, password: string): Pool {
+  const url = new URL(databaseUrl);
+  url.username = role;
+  url.password = password;
+  const pool = new Pool({ connectionString: url.href });
+  pool.on('error', (error: Error & { code?: string }) => {
+    logger.warn(
+      `The ${role} pool dropped an idle connection after error ${error.code ?? 'without a code'}: ${error.message}`,
+    );
+  });
+  return pool;
+}
+
+/**
  * The one pool of the server. It logs in to DATABASE_URL, which carries no login (ADR 0060), as
  * nm_app with the password from nm_app's secret file. pg reads the login from the URL ahead of
  * the user and password options, so they go into the URL.
@@ -18,14 +36,5 @@ const logger = new Logger('Database');
  * client, with its connection settings and password, on the error.
  */
 export function appPool(databaseUrl: string, password: string): Pool {
-  const url = new URL(databaseUrl);
-  url.username = appRole;
-  url.password = password;
-  const pool = new Pool({ connectionString: url.href });
-  pool.on('error', (error: Error & { code?: string }) => {
-    logger.warn(
-      `The nm_app pool dropped an idle connection after error ${error.code ?? 'without a code'}: ${error.message}`,
-    );
-  });
-  return pool;
+  return rolePool(databaseUrl, appRole, password);
 }

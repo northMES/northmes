@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ChevronsUpDown, Moon, Sun } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Moon, Sun } from 'lucide-react';
 import { type Theme, useTheme } from '../ui/lib/theme.ts';
 import { Avatar, AvatarFallback } from '../ui/primitives/avatar.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -56,9 +57,16 @@ function Identity({ user }: { readonly user: ShellUser }) {
  * The user menu at the foot of the sidebar (D2, C2, KE24): a 48 px button named "{user},
  * {username}, account" that opens the menu upward, or to the right of the rail's avatar. The menu
  * holds the theme switch, Light and Dark; choosing one closes the menu, and focus returns to the
- * button (K7). Profile, Presentation settings and Sign out come with sign-in (#391).
+ * button (K7). Sign out ends the session and goes to the sign-in page (KE24). Profile and
+ * Presentation settings come with their pages.
  */
-export function ShellUserMenu({ user }: { readonly user: ShellUser }) {
+export function ShellUserMenu({
+  user,
+  onSignOut,
+}: {
+  readonly user: ShellUser;
+  readonly onSignOut: () => void;
+}) {
   const { isMobile, state } = useSidebar();
   const [theme, setTheme] = useTheme();
   return (
@@ -102,6 +110,11 @@ export function ShellUserMenu({ user }: { readonly user: ShellUser }) {
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onSignOut}>
+              <LogOut aria-hidden />
+              Sign out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

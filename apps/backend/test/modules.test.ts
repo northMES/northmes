@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { inRepoCatalog } from '../src/boot/boot.ts';
 import { CoreModule } from '../src/modules/core/core.module.ts';
+import { corePermissions } from '../src/modules/core/permissions.ts';
+import { planningPermissions } from '../src/modules/planning/permissions.ts';
 import { PlanningModule } from '../src/modules/planning/planning.module.ts';
 import { inRepoModules } from '../src/modules.ts';
 import { imageVersion } from '../src/version.ts';
@@ -13,8 +15,13 @@ const modulesDir = fileURLToPath(new URL('../src/modules/', import.meta.url));
 describe('the in-repo modules', () => {
   it('E02-S01 core and planning are plain Nest modules, listed in dependency order', () => {
     expect(inRepoModules).toEqual([
-      { id: 'core', module: CoreModule },
-      { id: 'planning', module: PlanningModule, dependsOn: ['core'] },
+      { id: 'core', module: CoreModule, permissions: corePermissions, schemas: ['auth'] },
+      {
+        id: 'planning',
+        module: PlanningModule,
+        dependsOn: ['core'],
+        permissions: planningPermissions,
+      },
     ]);
   });
 

@@ -6,12 +6,20 @@ import { defaultClientConditions, defineConfig } from 'vite';
 /** The API paths that the dev server forwards to the backend. */
 const apiPaths = ['/graphql', '/api'];
 
+/** One path that the dev server forwards. */
+interface ProxiedPath {
+  target: string;
+  ws: true;
+}
+
 /**
  * The dev server's proxy: pnpm dev names the backend's origin in NORTHMES_API_ORIGIN, so the
  * browser reaches the API through the web's origin (ADR 0058). Each path forwards WebSockets too,
- * as /graphql carries subscriptions.
+ * as /graphql carries subscriptions. The forwarded request keeps the browser's Origin, the web's
+ * origin, which pnpm dev makes the server's NORTHMES_PUBLIC_ORIGIN: the API lets its own origin
+ * through, and Better Auth trusts it.
  */
-function devProxy(apiOrigin: string | undefined): Record<string, { target: string; ws: true }> {
+function devProxy(apiOrigin: string | undefined): Record<string, ProxiedPath> {
   if (!apiOrigin) return {};
   return Object.fromEntries(apiPaths.map((path) => [path, { target: apiOrigin, ws: true }]));
 }

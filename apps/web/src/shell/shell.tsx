@@ -3,13 +3,20 @@ import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { createNorthmesClient, createShellRoutes, ShellProvider } from '@northmes/web-sdk';
 import {
+  createRoute,
   createRouter,
   Outlet,
   type RouterHistory,
+  redirect,
   useParams,
+  useRouter,
   useRouterState,
+  useSearch,
 } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { AuthSession } from '../auth/auth-session.ts';
+import { returnPathOf, signInPath, signInSearch } from '../auth/sign-in-link.ts';
+import { SignInScreen } from '../auth/sign-in-screen/index.ts';
 import type { ShellModule } from '../modules.ts';
 import {
   type Crumb,
@@ -24,6 +31,8 @@ import { ShellTopBar } from './shell-top-bar.tsx';
 import type { ShellUser } from './shell-user-menu.tsx';
 
 export interface ShellRouterOptions {
+  /** The viewer's session: the plant routes need one, and every API request carries its JWT. */
+  readonly session: AuthSession;
   /** The URL of the API, from config.json. Without one, the API is on the page's origin. */
   readonly apiUrl?: string;
   /** Replaces the browser history, for tests. */
@@ -33,28 +42,77 @@ export interface ShellRouterOptions {
 }
 
 /**
- * Creates the web's router, once at boot: each module's routes under /$plant. The $plant route
- * renders the D2 shell, and ShellProvider and the Apollo client of the plant in the URL around the
- * screen.
+ * Creates the web's router, once at boot: each module's routes under /$plant, and the sign-in
+ * page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client
+ * of the plant in the URL around the screen. A viewer without a session who opens a plant page
+ * goes to sign-in with the page as the return path, and so does one whose request the API
+ * refuses with 401.
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
-  { apiUrl, history, fetch }: ShellRouterOptions = {},
+  { session, apiUrl, history, fetch }: ShellRouterOptions,
 ) {
   // One client per plant for the router's life (ADR 0018). Switching plants and disposing the
   // client of the plant left behind come with the plant switcher.
   const clients = new Map<string, ApolloClient>();
+  const clearCaches = () => Promise.all([...clients.values()].map((client) => client.clearStore()));
+  const toSignIn = async (search: { redirect?: string; signedOut?: true }) => {
+    await router.navigate({ to: signInPath, search });
+    await clearCaches();
+  };
+  const auth = {
+    token: () => session.token(),
+    onUnauthenticated: () => {
+      // The first refused request ends the session; the requests refused with it follow it.
+      if (session.user() === undefined) return;
+      session.forget();
+      void toSignIn({ redirect: router.state.location.href });
+    },
+  };
   const clientFor = (plantId: string): ApolloClient => {
-    const client = clients.get(plantId) ?? createNorthmesClient({ plantId, apiUrl, fetch });
+    const client = clients.get(plantId) ?? createNorthmesClient({ plantId, apiUrl, fetch, auth });
     clients.set(plantId, client);
     return client;
+  };
+  const signOut = async () => {
+    await session.signOut();
+    await toSignIn({ signedOut: true });
   };
   const ordered = [...modules].sort((a, b) => a.order - b.order);
   const routeTree = createShellRoutes({
     modules: modules.map(({ module }) => module),
-    plantComponent: () => <PlantLayout modules={ordered} clientFor={clientFor} />,
+    plantComponent: () => (
+      <PlantLayout modules={ordered} clientFor={clientFor} session={session} onSignOut={signOut} />
+    ),
+    plantBeforeLoad: ({ location }) => {
+      if (session.user() === undefined) {
+        throw redirect({ to: signInPath, search: { redirect: location.href } });
+      }
+    },
+    outsidePlantRoutes: (rootRoute) => [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: signInPath,
+        validateSearch: signInSearch,
+        component: () => <SignInPage session={session} />,
+      }),
+    ],
   });
-  return createRouter({ routeTree, history });
+  const router = createRouter({ routeTree, history });
+  return router;
+}
+
+/** The sign-in route's component: the sign-in page, which leads to the return path once signed in. */
+function SignInPage({ session }: { readonly session: AuthSession }) {
+  const search = signInSearch(useSearch({ strict: false }));
+  const router = useRouter();
+  return (
+    <SignInScreen
+      session={session}
+      signedOut={search.signedOut === true}
+      onSignedIn={() => void router.navigate({ href: returnPathOf(search) })}
+    />
+  );
 }
 
 /** The id of main, which the skip link moves focus to. */
@@ -63,8 +121,8 @@ const mainId = 'main';
 /** The id of the sidebar, which the sidebar trigger controls. */
 const sidebarId = 'shell-sidebar';
 
-/** The signed-in user comes with sign-in (#391); until then the user menu shows this placeholder. */
-const placeholderUser: ShellUser = { name: 'Planner', username: 'not signed in' };
+/** The user menu's user while the session has none, which the plant routes' guard prevents. */
+const nobody: ShellUser = { name: 'Not signed in', username: '' };
 
 /**
  * Moves focus to the page's h1 after each path change, one frame after the new route rendered, and
@@ -116,6 +174,8 @@ function shellTrail(
 interface PlantLayoutProps {
   readonly modules: readonly ShellModule[];
   readonly clientFor: (plantId: string) => ApolloClient;
+  readonly session: AuthSession;
+  readonly onSignOut: () => void;
 }
 
 /**
@@ -123,7 +183,7 @@ interface PlantLayoutProps {
  * the breadcrumb and the page actions, and main with the route, inside the shell state and Apollo
  * client of the plant. The DOM order is the focus order: skip link, sidebar, top bar, main.
  */
-function PlantLayout({ modules, clientFor }: PlantLayoutProps) {
+function PlantLayout({ modules, clientFor, session, onSignOut }: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
@@ -144,7 +204,13 @@ function PlantLayout({ modules, clientFor }: PlantLayoutProps) {
       <ShellProvider value={{ plantId: plant }}>
         <SkipLink targetId={mainId} />
         <SidebarProvider>
-          <ShellSidebar id={sidebarId} modules={modules} plant={plant} user={placeholderUser} />
+          <ShellSidebar
+            id={sidebarId}
+            modules={modules}
+            plant={plant}
+            user={session.user() ?? nobody}
+            onSignOut={onSignOut}
+          />
           <SidebarInset className="min-w-0">
             <ShellTopBar
               sidebarId={sidebarId}

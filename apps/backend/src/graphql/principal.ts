@@ -3,41 +3,32 @@ import type { RequestContext } from '@northmes/sdk/graphql';
 import { isAsyncIterable, type Plugin } from 'graphql-yoga';
 import { type Principal, runAs } from '../principal.ts';
 
-/** The header that names a request's plant by its scope id, until plant slugs arrive (E05-S03). */
-export const PLANT_HEADER = 'x-northmes-plant';
-
 /** What the server adds to the context of every request. */
 export interface ServerContext extends RequestContext {
   /** Who the request acts as, or null for a request without a principal. */
   readonly principal: Principal | null;
 }
 
-/**
- * The principal of a request at a plant until sign-in, roles and the plant check exist (E05-S03 to
- * E05-S06): it holds every permission, and both of its scope sets hold the plant alone.
- */
-export function tracerPrincipal(plantId: string): Principal {
-  return {
-    plantId,
-    readScopes: [plantId],
-    writeScopes: [plantId],
-    can: () => true,
-  };
-}
+/** Resolves the principal of a request from its headers, or null. */
+export type ResolvePrincipal = (headers: Headers) => Promise<Principal | null>;
+
+/** The resolver of a server without the core module: no request has a principal. */
+export const noPrincipal: ResolvePrincipal = async () => null;
 
 /**
- * Resolves the principal once per request from the plant in its x-northmes-plant header, and adds
- * it to the context as `principal`, next to the request's empty loaders. A request without the
- * header gets null, so it reads nothing. The plant comes from the HTTP request alone, which for a
- * graphql-ws subscription is its handshake: no NorthMES code reads a socket's connectionParams
- * (ADR 0011, ADR 0018).
+ * Resolves the principal once per request with `resolve`, from the request's headers, and adds it
+ * to the context as `principal`, next to the request's empty loaders (ADR 0011). A request without
+ * a valid bearer token gets null, so it reads nothing, and the principal guard refuses its fields.
+ * The headers come from the HTTP request alone, which for a graphql-ws subscription is its
+ * handshake: no NorthMES code reads a socket's connectionParams (ADR 0018).
  */
-export const tracerPrincipalPlugin: Plugin<ServerContext> = {
-  onContextBuilding({ context, extendContext }) {
-    const plantId = context.request.headers.get(PLANT_HEADER);
-    extendContext({ principal: plantId ? tracerPrincipal(plantId) : null, loaders: new Map() });
-  },
-};
+export function principalPlugin(resolve: ResolvePrincipal): Plugin<ServerContext> {
+  return {
+    async onContextBuilding({ context, extendContext }) {
+      extendContext({ principal: await resolve(context.request.headers), loaders: new Map() });
+    },
+  };
+}
 
 /**
  * Runs every operation as the principal of its request, so the ScopedDatabase transactions its

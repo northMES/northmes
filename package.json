@@ -37,6 +37,7 @@
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/sdk": "workspace:*",
     "@northmes/testing": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
     "@playwright/test": "catalog:",
     "@testcontainers/postgresql": "catalog:",
     "@vitejs/plugin-react": "catalog:",

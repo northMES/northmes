@@ -26,6 +26,7 @@
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-table": "catalog:",
+    "better-auth": "catalog:",
     "class-variance-authority": "catalog:",
     "cn": "catalog:",
     "graphql": "catalog:",

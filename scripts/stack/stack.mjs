@@ -80,12 +80,12 @@ function loginUrl(databaseUrl, role, password) {
 /**
  * Prepares the database that env.DATABASE_URL names: northmes db bootstrap creates the roles as the
  * container's superuser, northmes migrate applies the migrations as nm_owner, and the seed writes
- * the tracer records as nm_app. Each step reads its passwords from the secret files env names, and
+ * the scope tree and the dev admin as nm_owner and the records as nm_app. Each step reads its passwords from the secret files env names, and
  * log gets a line before each step starts.
  * @param {Readonly<Record<string, string>>} env The stack's environment, with DATABASE_URL.
  * @param {{ northmes?: Northmes, seed?: typeof seed, log?: Log }} [options] northmes runs the
- *   server's commands, by default through pnpm northmes, and seed writes the seed through a URL that
- *   logs in as nm_app.
+ *   server's commands, by default through pnpm northmes, and seed writes the seed through URLs that
+ *   log in as nm_app and nm_owner.
  */
 export async function prepareDatabase(
   env,
@@ -95,9 +95,13 @@ export async function prepareDatabase(
   await run(northmes, ['db', 'bootstrap'], env);
   log('Migrating the database: pnpm northmes migrate');
   await run(northmes, ['migrate'], env);
-  log('Seeding the fictional articles and production orders');
+  log('Seeding the dev admin and the fictional articles and production orders');
   const appPassword = readSecret(env.NORTHMES_DB_APP_PASSWORD_FILE ?? '');
-  await writeSeed(loginUrl(env.DATABASE_URL ?? '', 'nm_app', appPassword));
+  const ownerPassword = readSecret(env.NORTHMES_DB_OWNER_PASSWORD_FILE ?? '');
+  await writeSeed({
+    appUrl: loginUrl(env.DATABASE_URL ?? '', 'nm_app', appPassword),
+    ownerUrl: loginUrl(env.DATABASE_URL ?? '', 'nm_owner', ownerPassword),
+  });
 }
 
 /**

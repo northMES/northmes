@@ -16,6 +16,7 @@ import { createShellRouter } from '../src/shell/index.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import type { NavIconName } from '../src/ui/lib/nav-icon-names.ts';
 import { Button } from '../src/ui/primitives/button.tsx';
+import { fakeSession } from './auth/fake-session.ts';
 
 /** Resizes happy-dom's window, as the browser does at 320 px or on a desktop. */
 function setViewport(width: number, height: number) {
@@ -186,13 +187,14 @@ const maintenance: ShellModule = {
   }),
 };
 
-/** Renders the shell's router for the modules at path. */
+/** Renders the shell's router for the modules at path, for a signed-in viewer. */
 function renderShellAt(
   path: string,
   modules: Parameters<typeof createShellRouter>[0],
-  options: Parameters<typeof createShellRouter>[1] = {},
+  options: Partial<Parameters<typeof createShellRouter>[1]> = {},
 ) {
   const router = createShellRouter(modules, {
+    session: fakeSession(),
     ...options,
     history: createMemoryHistory({ initialEntries: [path] }),
   });

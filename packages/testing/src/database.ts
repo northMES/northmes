@@ -20,6 +20,7 @@ export interface PgConnection {
 export interface RolePasswords {
   owner: string;
   app: string;
+  auth: string;
 }
 
 /**
@@ -56,6 +57,8 @@ export interface TestDatabase {
   appUrl: string;
   /** Logs in as nm_owner, the migration role, for tests at the database seam. */
   ownerUrl: string;
+  /** Logs in as nm_auth, the role of Better Auth's own pool, which reads and writes auth.* only. */
+  authUrl: string;
   databaseName: string;
   /**
    * Writes fixtures: runs fn in one transaction as nm_app with the context's scopes as both scope
@@ -128,6 +131,10 @@ export function useTestDatabase(options: TestDatabaseOptions = {}): TestDatabase
     appUrl,
     ownerUrl: connectionStringFor(
       { ...pg, user: 'nm_owner', password: passwords.owner },
+      databaseName,
+    ),
+    authUrl: connectionStringFor(
+      { ...pg, user: 'nm_auth', password: passwords.auth },
       databaseName,
     ),
     databaseName,

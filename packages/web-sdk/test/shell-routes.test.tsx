@@ -6,10 +6,11 @@ import {
   createRouter,
   Outlet,
   RouterProvider,
+  redirect,
   useParams,
 } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const quality = defineWebModule({
   id: 'quality',
@@ -39,6 +40,8 @@ function Plant() {
   );
 }
 
+afterEach(cleanup);
+
 describe('createShellRoutes', () => {
   it("E02-S05 createShellRoutes renders the root and $plant components around a module's screen", async () => {
     const router = createRouter({
@@ -55,5 +58,35 @@ describe('createShellRoutes', () => {
     const shell = await screen.findByRole('region', { name: 'Shell' });
     const plant = within(shell).getByRole('region', { name: 'Plant plant-a' });
     expect(within(plant).getByText('Quality screen')).toBeDefined();
+  });
+
+  it('E05-S05 a route outside the plant renders under the root, and plantBeforeLoad can send a plant path there', async () => {
+    const seen: string[] = [];
+    const router = createRouter({
+      routeTree: createShellRoutes({
+        modules: [quality],
+        rootComponent: Shell,
+        plantComponent: Plant,
+        outsidePlantRoutes: (rootRoute) => [
+          createRoute({
+            getParentRoute: () => rootRoute,
+            path: 'sign-in',
+            component: () => <h1>Sign in</h1>,
+          }),
+        ],
+        plantBeforeLoad: ({ location }) => {
+          seen.push(location.href);
+          throw redirect({ to: '/sign-in' });
+        },
+      }),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/quality?tab=open'] }),
+    });
+
+    render(<RouterProvider router={router} />);
+
+    const heading = await screen.findByRole('heading', { name: 'Sign in' });
+    expect(screen.getByRole('region', { name: 'Shell' }).contains(heading)).toBe(true);
+    expect(screen.queryByText('Quality screen')).toBeNull();
+    expect(seen).toEqual(['/plant-a/quality?tab=open']);
   });
 });

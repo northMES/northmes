@@ -7,7 +7,7 @@ import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';
  * What a test app runs with unless the overrides say otherwise. PORT 0 lets the OS pick a port, so
  * the public origin is a fixed loopback origin that serverEnvSchema accepts in test. Nothing listens
  * on port 1 of DATABASE_URL, so an app that reaches the database without a test database of its
- * own fails at once. No file is read for NORTHMES_DB_APP_PASSWORD_FILE: the secrets come as values.
+ * own fails at once. No file is read for the _FILE keys: the secrets come as values.
  */
 const testDefaults: Readonly<Record<string, string>> = {
   NODE_ENV: 'test',
@@ -15,6 +15,8 @@ const testDefaults: Readonly<Record<string, string>> = {
   NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4100',
   DATABASE_URL: 'postgres://127.0.0.1:1/northmes',
   NORTHMES_DB_APP_PASSWORD_FILE: '/run/secrets/db_app_password',
+  NORTHMES_DB_AUTH_PASSWORD_FILE: '/run/secrets/db_auth_password',
+  NORTHMES_AUTH_SECRET_FILE: '/run/secrets/auth_secret',
 };
 
 /**

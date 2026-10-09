@@ -36,6 +36,10 @@ export const serverEnvSchema = z
     // The server logs in to DATABASE_URL as nm_app with the password in this file (ADR 0060).
     DATABASE_URL: databaseUrl,
     NORTHMES_DB_APP_PASSWORD_FILE: secretFile,
+    // Better Auth's own pool logs in as nm_auth with the password in this file (ADR 0010).
+    NORTHMES_DB_AUTH_PASSWORD_FILE: secretFile,
+    // The secret Better Auth signs its cookies with and encrypts its JWT keys with (ADR 0010).
+    NORTHMES_AUTH_SECRET_FILE: secretFile,
     NORTHMES_CONFIG: configFile,
   })
   .refine((env) => isPublicOrigin(env.NORTHMES_PUBLIC_ORIGIN, env.NODE_ENV), {

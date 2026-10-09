@@ -139,15 +139,23 @@ async function importPluginManifests(
 
 /**
  * The catalog entries of in-repo modules. Each gets the manifest the catalog checks read: its id,
- * its dependsOn, and the backend's version, which is also the only NorthMES version it runs on.
+ * its dependsOn, its permissions, and the backend's version, which is also the only NorthMES
+ * version it runs on.
  */
 function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
   const version = imageVersion();
-  return modules.map(({ id, module, dependsOn, migrationsDir }) => ({
-    manifest: { id, version, northmes: version, ...(dependsOn ? { dependsOn } : {}) },
+  return modules.map(({ id, module, dependsOn, migrationsDir, permissions, schemas }) => ({
+    manifest: {
+      id,
+      version,
+      northmes: version,
+      ...(dependsOn ? { dependsOn } : {}),
+      ...(permissions ? { permissions } : {}),
+    },
     kind: 'module',
     module,
     migrationsDir: migrationsDir ?? inRepoMigrationsDir(id),
+    ...(schemas ? { schemas } : {}),
   }));
 }
 
@@ -236,7 +244,7 @@ async function bootSteps<
   mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
+  const { pluginRoots, webOrigins } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
     imageVersion: imageVersion(),
   });
   installResolveHook(pluginRoots);
@@ -251,7 +259,7 @@ async function bootSteps<
     mode,
   });
   const servers = await importServers(catalog);
-  const root = AppModule.forRoot(config, servers, appOptions);
+  const root = AppModule.forRoot(config, servers, { webOrigins, ...appOptions });
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
   return { env, secrets, catalog, pending, app };

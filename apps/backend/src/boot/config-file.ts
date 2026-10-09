@@ -18,12 +18,26 @@ const configSchema = z.object({
   northmes: z.string().optional(),
   /** The folders of the plugins to load, relative to the file's folder or absolute. */
   plugins: z.array(z.string()),
+  /**
+   * The origins the web app is served from when it is not the API's own origin, such as
+   * https://mes.example.com or http://localhost:5173. Better Auth trusts them and CORS lets them
+   * read the API's answers; any other origin is refused (ADR 0011).
+   */
+  webOrigins: z
+    .array(
+      z
+        .string()
+        .refine((value) => URL.parse(value)?.origin === value, 'must be an origin with no path'),
+    )
+    .default([]),
 });
 
 /** What boot reads from northmes.config.json. */
 export interface InstallationConfig {
   /** The folders of the plugins to load, as absolute paths, in the order the file lists them. */
   readonly pluginRoots: readonly string[];
+  /** The origins of the web app, in the order the file lists them. */
+  readonly webOrigins: readonly string[];
 }
 
 export interface ConfigFileOptions {
@@ -40,13 +54,13 @@ export function readConfigFile(
   file: string,
   { imageVersion }: ConfigFileOptions,
 ): InstallationConfig {
-  const { northmes, plugins } = parseConfig(file);
+  const { northmes, plugins, webOrigins } = parseConfig(file);
   if (northmes !== undefined && northmes !== imageVersion) {
     throw new BootError([
       `${file}: config names ${northmes}, this image is ${imageVersion}. Set northmes to ${imageVersion} or remove it`,
     ]);
   }
-  return { pluginRoots: plugins.map((plugin) => resolve(dirname(file), plugin)) };
+  return { pluginRoots: plugins.map((plugin) => resolve(dirname(file), plugin)), webOrigins };
 }
 
 /** Reads and parses the file, or throws a BootError naming it. */

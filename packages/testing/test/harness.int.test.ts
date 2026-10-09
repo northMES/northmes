@@ -123,15 +123,21 @@ describe('the test database', () => {
 describe('the connections of a test database', () => {
   const database = useTestDatabase();
 
-  it('E02-S02 useTestDatabase hands out nm_app and nm_owner connections and never the superuser', async () => {
+  it('E02-S02 useTestDatabase hands out nm_app, nm_owner and nm_auth connections and never the superuser', async () => {
     const { password } = inject('pg');
 
     // No connection string of the superuser is handed out, under any key.
-    expect(Object.keys(database).sort()).toEqual(['appUrl', 'command', 'databaseName', 'ownerUrl']);
+    expect(Object.keys(database).sort()).toEqual([
+      'appUrl',
+      'authUrl',
+      'command',
+      'databaseName',
+      'ownerUrl',
+    ]);
     expect(JSON.stringify(database)).not.toContain(encodeURIComponent(password));
 
     const sessions = await Promise.all(
-      [database.appUrl, database.ownerUrl].map((url) =>
+      [database.appUrl, database.ownerUrl, database.authUrl].map((url) =>
         query(url, 'select current_user, current_database()'),
       ),
     );
@@ -139,6 +145,7 @@ describe('the connections of a test database', () => {
     expect(sessions).toEqual([
       [{ current_user: 'nm_app', current_database: database.databaseName }],
       [{ current_user: 'nm_owner', current_database: database.databaseName }],
+      [{ current_user: 'nm_auth', current_database: database.databaseName }],
     ]);
   });
 

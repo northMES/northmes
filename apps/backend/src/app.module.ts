@@ -7,6 +7,7 @@ import { CommandsModule } from './commands/commands.module.ts';
 import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
 import { GraphqlModule } from './graphql/graphql.module.ts';
 import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
+import { WebOriginsModule } from './http/web-origins.module.ts';
 import { WebModule } from './web/web.module.ts';
 
 /**
@@ -25,6 +26,8 @@ export interface ServerEntry {
 export interface AppOptions {
   /** What the app connects to. It defaults to 'app'; pnpm northmes migrate passes 'none'. */
   readonly database?: DatabaseMode;
+  /** The origins of the web app, webOrigins in northmes.config.json. It defaults to none. */
+  readonly webOrigins?: readonly string[];
 }
 
 /** The root module of the server. */
@@ -33,7 +36,8 @@ export interface AppOptions {
 export class AppModule {
   /**
    * Imports config first: the ConfigModule that boot created before it imported any plugin
-   * manifest (ADR 0060). Then the database that `options.database` names (the nm_app pool and the
+   * manifest (ADR 0060). Then the web origins and the origin rule that runs before every route,
+   * the database that `options.database` names (the nm_app pool and the
    * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the Nest module of
    * every in-repo module and plugin in boot order, and the GraphQL module that builds one schema from their resolvers and serves it on
    * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
@@ -43,7 +47,7 @@ export class AppModule {
   static forRoot(
     config: DynamicModule,
     servers: readonly ServerEntry[] = [],
-    { database = 'app' }: AppOptions = {},
+    { database = 'app', webOrigins = [] }: AppOptions = {},
   ): DynamicModule {
     const problems = rootFieldProblems(servers);
     if (problems.length > 0) throw new BootError(problems);
@@ -55,6 +59,7 @@ export class AppModule {
       module: AppModule,
       imports: [
         config,
+        WebOriginsModule.forRoot(webOrigins),
         DatabaseModule.forRoot(database),
         CommandsModule.forRoot(servers),
         ...servers.map((server) => server.module),

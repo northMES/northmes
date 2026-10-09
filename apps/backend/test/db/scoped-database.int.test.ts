@@ -12,7 +12,6 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
-import { tracerPrincipal } from '../../src/graphql/principal.ts';
 import { migrate } from '../../src/migrate/runner.ts';
 import { type Principal, runAs } from '../../src/principal.ts';
 import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';
@@ -84,6 +83,17 @@ describe('ScopedDatabase', () => {
     return testApp.app.get(Pool);
   }
 
+  /** A principal that reads and writes `plant` alone. */
+  function principalAt(plant: string): Principal {
+    return {
+      userId: '019a0000-0000-7000-8000-0000000000e1',
+      plantId: plant,
+      readScopes: [plant],
+      writeScopes: [plant],
+      scopes: new Map(),
+    };
+  }
+
   /** The scope ids of the work notes that one transaction reads as `principal`. */
   function scopesReadAs(principal: Principal | null): Promise<string[]> {
     return runAs(principal, () =>
@@ -95,20 +105,20 @@ describe('ScopedDatabase', () => {
   }
 
   it("E02-S04 a transaction for plant A reads plant A's rows and none of plant B's", async () => {
-    const scopes = await scopesReadAs(tracerPrincipal(plantA));
+    const scopes = await scopesReadAs(principalAt(plantA));
 
     expect(scopes).toEqual([plantA]);
   });
 
   it('E02-S04 a transaction without a plant reads zero rows', async () => {
-    // The tracer principal plugin gives a request without x-northmes-plant no principal.
+    // A request without a valid bearer token has no principal.
     const scopes = await scopesReadAs(null);
 
     expect(scopes).toEqual([]);
   });
 
   it('E02-S04 the pool connects as nm_app and sets scopes only inside the transaction', async () => {
-    const inside = await runAs(tracerPrincipal(plantA), () =>
+    const inside = await runAs(principalAt(plantA), () =>
       scopedDatabase().transaction(async (tx) => {
         const { rows } = await tx.executeQuery<Session>(CompiledQuery.raw(sessionQuery));
         return rows[0];
@@ -135,7 +145,7 @@ describe('ScopedDatabase', () => {
     const warned = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     try {
       // The transaction leaves its connection idle in the pool.
-      await scopesReadAs(tracerPrincipal(plantA));
+      await scopesReadAs(principalAt(plantA));
 
       // A restart, pg_terminate_backend or idle_session_timeout ends a connection the same way.
       // nm_app may end the other connections of its own role. pg-pool drops each ended client and
@@ -152,7 +162,7 @@ describe('ScopedDatabase', () => {
         'The nm_app pool dropped an idle connection after error 57P01: terminating connection due to administrator command',
       );
       expect(inspect(warned.mock.calls, { depth: null })).not.toContain(appPassword);
-      expect(await scopesReadAs(tracerPrincipal(plantA))).toEqual([plantA]);
+      expect(await scopesReadAs(principalAt(plantA))).toEqual([plantA]);
     } finally {
       warned.mockRestore();
     }

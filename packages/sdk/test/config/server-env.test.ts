@@ -17,6 +17,8 @@ describe('serverEnvSchema', () => {
   const databaseKeys = {
     DATABASE_URL: 'postgres://db.internal:5432/northmes',
     NORTHMES_DB_APP_PASSWORD_FILE: '/run/secrets/db_app_password',
+    NORTHMES_DB_AUTH_PASSWORD_FILE: '/run/secrets/db_auth_password',
+    NORTHMES_AUTH_SECRET_FILE: '/run/secrets/auth_secret',
   };
 
   it('E02-S01 loadEnv(serverEnvSchema)() reads PORT and NORTHMES_PUBLIC_ORIGIN from process.env', () => {
@@ -109,7 +111,12 @@ describe('serverEnvSchema', () => {
       loadEnv(serverEnvSchema)({ PORT: '8080', NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com' }),
     );
 
-    expect(keysOf(error)).toEqual(['DATABASE_URL', 'NORTHMES_DB_APP_PASSWORD_FILE']);
+    expect(keysOf(error)).toEqual([
+      'DATABASE_URL',
+      'NORTHMES_AUTH_SECRET_FILE',
+      'NORTHMES_DB_APP_PASSWORD_FILE',
+      'NORTHMES_DB_AUTH_PASSWORD_FILE',
+    ]);
   });
 });
 

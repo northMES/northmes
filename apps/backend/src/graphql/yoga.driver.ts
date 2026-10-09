@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { AbstractGraphQLDriver, type GqlModuleOptions } from '@nestjs/graphql';
 import type { ExecutionArgs } from 'graphql';
 import { useServer } from 'graphql-ws/use/ws';
 import { WebSocketServer } from 'ws';
+import { PrincipalResolver } from '../principal.ts';
+import { noPrincipal, type ResolvePrincipal } from './principal.ts';
 import { createGraphqlServer, GRAPHQL_PATH, type GraphqlServer } from './server.ts';
 
 /** What the driver passes to graphql-ws as an operation's root value: the enveloped functions. */
@@ -23,9 +26,13 @@ export class YogaDriver extends AbstractGraphQLDriver<GqlModuleOptions> {
   #server?: GraphqlServer;
   #sockets?: WebSocketServer;
 
+  @Inject(ModuleRef) private readonly moduleRef!: ModuleRef;
+
   async start(options: GqlModuleOptions): Promise<void> {
     if (!options.schema) throw new Error('YogaDriver started without a schema');
-    const server = createGraphqlServer(options.schema);
+    const server = createGraphqlServer(options.schema, {
+      resolvePrincipal: this.#resolvePrincipal(),
+    });
     this.#server = server;
     this.#sockets = this.#serveGraphqlWs(server);
   }
@@ -35,6 +42,20 @@ export class YogaDriver extends AbstractGraphQLDriver<GqlModuleOptions> {
     if (!sockets) return;
     for (const client of sockets.clients) client.terminate();
     await new Promise((resolve) => sockets.close(resolve));
+  }
+
+  /**
+   * The core module's PrincipalResolver, which resolves a request's principal from its bearer
+   * token. An app without core, such as one of fixture modules in a test, resolves none.
+   */
+  #resolvePrincipal(): ResolvePrincipal {
+    let resolver: PrincipalResolver;
+    try {
+      resolver = this.moduleRef.get(PrincipalResolver, { strict: false });
+    } catch {
+      return noPrincipal;
+    }
+    return (headers) => resolver.resolve(headers);
   }
 
   /** Serves a request to GRAPHQL_PATH, or hands it on while the schema is not built yet. */

@@ -12,14 +12,16 @@ import { parseEnv } from 'node:util';
 const devSecretMarker = 'northmes-dev-secret-';
 
 /**
- * The secret files the database steps read, by _FILE key: the superuser's password for db
- * bootstrap and the password of each login role it creates (ADR 0047, ADR 0060).
+ * The secret files of the stack, by _FILE key: the superuser's password for db bootstrap, the
+ * password of each login role it creates, and Better Auth's secret, which the server reads
+ * (ADR 0047, ADR 0060).
  */
 const secretFiles = {
   POSTGRES_PASSWORD_FILE: 'postgres_password',
   NORTHMES_DB_OWNER_PASSWORD_FILE: 'db_owner_password',
   NORTHMES_DB_APP_PASSWORD_FILE: 'db_app_password',
   NORTHMES_DB_AUTH_PASSWORD_FILE: 'db_auth_password',
+  NORTHMES_AUTH_SECRET_FILE: 'auth_secret',
 };
 
 const devEnvHeader = `# Written by the stack script (ADR 0058). The processes it starts read these keys; the secret
