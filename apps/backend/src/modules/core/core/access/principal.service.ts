@@ -53,15 +53,19 @@ export class PrincipalService extends PrincipalResolver {
   }
 
   /**
-   * The principal of a request with these headers, or null when it carries no bearer token, or one
-   * that is not a valid JWT of this API. x-northmes-plant names the request's plant by its slug.
+   * The principal of a request with these headers, or null when it carries no bearer token, one
+   * that is not a valid JWT of this API, or the JWT of a blocked user. x-northmes-plant names the
+   * request's plant by its slug.
    */
   async resolve(headers: Headers): Promise<Principal | null> {
     const token = bearer.exec(headers.get('authorization') ?? '')?.[1];
     if (!token) return null;
     const userId = await this.auth.userOfToken(token);
     if (!userId) return null;
-    return this.forUser(userId, headers.get(PLANT_HEADER) ?? undefined);
+    const { rows, blocked } = await this.#grants(userId);
+    // A blocked user's JWT may outlive the block by its lifetime; the user's next request fails.
+    if (blocked) return null;
+    return this.#principal(userId, rows, headers.get(PLANT_HEADER) ?? undefined);
   }
 
   /**
@@ -69,11 +73,25 @@ export class PrincipalService extends PrincipalResolver {
    * the companies where the user holds a role, each with the installed permissions of the roles
    * assigned at it, and its scope sets are narrowed to the plant and its company (ADR 0008); without
    * a plant they are empty. A plant the user may not open, or no plant with that slug, throws
-   * core.plant_forbidden (ADR 0007). The tables carry no policies, so the query runs without scopes.
+   * core.plant_forbidden (ADR 0007).
    */
   async forUser(userId: string, plant?: string): Promise<Principal> {
-    const rows = await runAs(null, () =>
+    return this.#principal(userId, (await this.#grants(userId)).rows, plant);
+  }
+
+  /**
+   * The grant rows of a user, one per scope node of the companies where the user holds a role, and
+   * whether the user is blocked, in one transaction. The tables carry no policies, so it runs
+   * without scopes.
+   */
+  async #grants(userId: string): Promise<{ rows: GrantRow[]; blocked: boolean }> {
+    return runAs(null, () =>
       this.db.transaction(async (tx) => {
+        const user = await tx
+          .selectFrom('core.user_directory')
+          .select('banned')
+          .where('id', '=', userId)
+          .executeTakeFirst();
         const { rows } = await sql<GrantRow>`
           with assigned as (
             select a.scope_id, r.permissions
@@ -95,9 +113,13 @@ export class PrincipalService extends PrincipalResolver {
            where s.company_id in (
                    select c.company_id from core.scope c join assigned x on x.scope_id = c.id
                  )`.execute(tx);
-        return rows;
+        return { rows, blocked: user?.banned === true };
       }),
     );
+  }
+
+  /** The principal of a user with these grant rows at the plant whose slug is `plant`. */
+  #principal(userId: string, rows: readonly GrantRow[], plant: string | undefined): Principal {
     const nodes: ScopeGrant[] = rows.map((row) => ({
       id: row.id,
       parentId: row.parent_id,

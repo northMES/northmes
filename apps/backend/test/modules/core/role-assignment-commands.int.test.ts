@@ -3,7 +3,6 @@ import { randomUUIDv7 } from 'node:crypto';
 import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
 import {
   createTestApp,
-  type GqlClient,
   gqlClient,
   type TestApp,
   useTestDatabase,
