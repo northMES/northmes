@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 // Server-only: the binding of a module's operation declarations to its service, and the operation
 // runner that every surface calls (ADR 0073).
+export type {
+  Operation,
+  OperationEntry,
+  OperationScope,
+  OperationsDeclaration,
+} from '@northmes/contracts';
 export {
   type BoundOperations,
   type BoundOperationsProvider,
