@@ -626,4 +626,75 @@ describe('users', () => {
       within(table).getByRole('columnheader', { name: /^Name/ }).getAttribute('aria-sort'),
     ).toBe('descending');
   });
+
+  it('E05-S08 New user says the password is temporary and must be replaced at the first sign-in, and sends the optional reason', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
+      companiesQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.username === 't.lindqvist' && input.reason === 'Night shift operator for line 2',
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: { ...tove, blocked: false, roleAssignments: [] },
+            },
+          },
+        },
+      },
+    ]);
+
+    await events.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
+    const password = screen.getByRole('region', { name: 'Password' });
+    expect(password.textContent).toContain(
+      'Temporary, shown to you once after you create the user',
+    );
+    expect(password.textContent).toContain(
+      'Tove Lindqvist must choose a new password at the first sign-in.',
+    );
+    expect(screen.queryByText('A user of Acme AB.')).toBeNull();
+    const reason = screen.getByRole('textbox', { name: 'Reason (optional)' });
+    expect([reason.getAttribute('placeholder'), reason.getAttribute('maxlength')]).toEqual([
+      'Why you create this user',
+      '500',
+    ]);
+    expect(
+      screen.getByText(
+        "Shown in the user's history. Do not enter personal data. Up to 500 characters.",
+      ),
+    ).toBeDefined();
+    await events.type(field('Username'), 't.lindqvist');
+    await events.type(field('Email'), 'tove.lindqvist@example.test');
+    await events.type(reason, 'Night shift operator for line 2');
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
+  });
+
+  it('E05-S08 Create user with an empty username says Enter a username', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
+      companiesQuery(),
+    ]);
+
+    await events.click(await screen.findByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: /^Fix 3 fields/ });
+    expect(within(summary).getByRole('link', { name: 'Enter a username.' })).toBeDefined();
+  });
 });
