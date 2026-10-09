@@ -283,6 +283,28 @@ describe('tooling', () => {
     expect(catalog['@tanstack/react-table']).toMatch(/^9\.\d+\.\d+$/);
   });
 
+  it('GraphQL Code Generator and the typed document plugins are catalog entries that apps/web takes as dev dependencies', () => {
+    // Apollo Client 4 recommends typescript-operations with typed-document-node over the client
+    // preset, which adds runtime code. typescript-operations 6 emits the input and enum types it
+    // uses, so the typescript plugin is not needed. Each pin is the newest release that was outside
+    // Renovate's 14-day window on 2026-10-09.
+    const devDependencies = {
+      '@graphql-codegen/cli': '7.4.3',
+      '@graphql-codegen/typed-document-node': '7.1.0',
+      '@graphql-codegen/typescript-operations': '6.1.7',
+    };
+    const catalog = readWorkspace().catalog ?? {};
+    const web = readJson<PackageJson>('apps/web/package.json');
+
+    expect(
+      Object.fromEntries(Object.keys(devDependencies).map((name) => [name, catalog[name]])),
+    ).toEqual(devDependencies);
+    for (const name of Object.keys(devDependencies)) {
+      expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBe('catalog:');
+      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBeUndefined();
+    }
+  });
+
   it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {
     // The fonts ship in the web bundle. A package listing them would carry OFL-1.1 files into an
     // MIT package (ADR 0040).
