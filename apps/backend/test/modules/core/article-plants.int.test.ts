@@ -305,6 +305,103 @@ describe('articles at the company, assigned to plants', () => {
     expect(refusals(await archive(everywhere, 1))).toEqual(forbidden);
   });
 
+  it('ADR0073-W2 a Plant admin at HEL and STO gets core.forbidden changing an article of STO alone from a request at HEL, and the article keeps its version', async () => {
+    const place = await givenHelAndSto();
+    const [helSlug = ''] = place.slugs;
+    const admin = await holderOf('core-plant-admin', {
+      company: place.company,
+      scopeId: place.hel,
+      slug: helSlug,
+    });
+    const [role] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      "select id from core.role where company_id = $1 and key = 'core-plant-admin'",
+      [place.company],
+    );
+    await givenAssignment(db.ownerUrl, {
+      userId: admin.userId,
+      roleId: role?.id ?? '',
+      scopeId: place.sto,
+    });
+    const id = await givenArticle(db.ownerUrl, { code: 'ST-1', name: 'Stud', plants: [place.sto] });
+
+    const updated = await admin.client.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'ST-1', name: 'Renamed' },
+    });
+    const archived = await admin.client.send(archiveMutation, {
+      input: { id, expectedVersion: 1 },
+    });
+
+    expect(refusals(updated)).toEqual(forbidden);
+    expect(refusals(archived)).toEqual(forbidden);
+    const read = await admin.client.send<{ coreArticle: Article | null }>(articleQuery, { id });
+    expect(read.data?.coreArticle).toMatchObject({ name: 'Stud', version: 1, archivedAt: null });
+  });
+
+  it('ADR0073-W2 a Company admin in company settings creates an unassigned article and one for HEL, and changes their plants and names without a plant', async () => {
+    const place = await givenHelAndSto();
+    const [helSlug = '', stoSlug = ''] = place.slugs;
+    const inSettings = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+    });
+    const atHel = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+      slug: helSlug,
+    });
+    const loose = randomUUIDv7();
+
+    const unassigned = await inSettings.client.send<{ coreCreateArticle: Article }>(
+      createMutation,
+      { input: { id: loose, code: 'CS-1', name: 'Clamp', companyId: place.company } },
+    );
+    const forHel = await inSettings.client.send<{ coreCreateArticle: Article }>(createMutation, {
+      input: {
+        id: randomUUIDv7(),
+        code: 'CS-2',
+        name: 'Clamp',
+        companyId: place.company,
+        plants: [helSlug],
+      },
+    });
+
+    expect(unassigned.errors).toBeUndefined();
+    expect(unassigned.data?.coreCreateArticle).toMatchObject({ allPlants: false, plants: [] });
+    expect(forHel.errors).toBeUndefined();
+    expect(forHel.data?.coreCreateArticle).toMatchObject({ plants: [{ slug: helSlug }] });
+    expect(
+      await listed(inSettings.client, { companyId: place.company, unassigned: true }),
+    ).toEqual(['CS-1']);
+    expect(await listed(atHel.client)).toEqual(['CS-2']);
+
+    const assigned = await inSettings.client.send<{ coreSetArticlePlants: Article }>(
+      setPlantsMutation,
+      { input: { id: loose, expectedVersion: 1, allPlants: false, plants: [stoSlug] } },
+    );
+    const renamed = await inSettings.client.send(updateMutation, {
+      input: { id: loose, expectedVersion: 2, code: 'CS-1', name: 'Bar clamp' },
+    });
+
+    expect(assigned.errors).toBeUndefined();
+    expect(assigned.data?.coreSetArticlePlants).toMatchObject({ plants: [{ slug: stoSlug }] });
+    expect(renamed.errors).toBeUndefined();
+  });
+
+  it('ADR0073-W2 a Plant admin in company settings gets core.forbidden creating an article', async () => {
+    const place = await givenHelAndSto();
+    const helAdmin = await holderOf('core-plant-admin', {
+      company: place.company,
+      scopeId: place.hel,
+    });
+
+    const answer = await helAdmin.client.send(createMutation, {
+      input: { id: randomUUIDv7(), code: 'CS-3', name: 'Clamp', companyId: place.company },
+    });
+
+    expect(refusals(answer)).toEqual(forbidden);
+  });
+
   it("ADR0073-W2 a Plant admin gets core.forbidden setting the plants of an article that only the admin's plant uses", async () => {
     const place = await givenHelAndSto();
     const [helSlug = '', stoSlug = ''] = place.slugs;

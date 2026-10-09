@@ -10,13 +10,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  * with it.
  */
 const releaseOnePlantFree = [
+  'Mutation.coreArchiveArticle',
   'Mutation.coreAssignRole',
   'Mutation.coreBlockUser',
+  'Mutation.coreCreateArticle',
   'Mutation.coreCreateRole',
   'Mutation.coreCreateUser',
   'Mutation.coreDeleteRole',
   'Mutation.coreRemoveRoleAssignment',
+  'Mutation.coreRestoreArticle',
+  'Mutation.coreSetArticlePlants',
   'Mutation.coreUnblockUser',
+  'Mutation.coreUpdateArticle',
   'Mutation.coreUpdateRole',
   'Query.coreArticle',
   'Query.coreArticles',
