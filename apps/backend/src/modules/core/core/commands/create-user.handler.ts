@@ -29,6 +29,20 @@ function usernameTaken(username: string): DomainError {
   });
 }
 
+/**
+ * The refusal of a retry whose first run created the user: the first answer carried the temporary
+ * password, which NorthMES cannot show again. Its details name the user, so the client can open
+ * the user's page.
+ */
+function createdPasswordHidden(username: string, userId: string): DomainError {
+  return new DomainError({
+    code: 'core.user_created_password_hidden',
+    status: HttpStatus.CONFLICT,
+    message: `The user ${username} was created by an earlier try. NorthMES cannot show the temporary password again.`,
+    details: { userId },
+  });
+}
+
 const EMAIL_TAKEN = 'Another user has this email address. Enter another one, or leave it empty.';
 
 /** The namespace of userIdOf, a fixed random uuid. */
@@ -75,12 +89,13 @@ async function firstRunUser(tx: CoreContext['tx'], id: string) {
  *
  * Better Auth writes on its own pool as nm_auth, which the command's transaction cannot join, so
  * the creation is made safe to retry instead (ADR 0012). A retry finds the user of the first run
- * by the derived id. A first run that failed after Better Auth's write left a user who belongs to no company,
- * and nobody saw its password: the retry gives that user a new temporary password, makes them a
+ * by the derived id. A first run that failed after Better Auth's write left a user who belongs to
+ * no company, and nobody saw its password: the retry gives that user a new temporary password, makes them a
  * member and answers as a first run would. A first run that finished made the user a member, and
- * its answer may have shown the password: a retry is refused with core.username_taken and changes
- * nothing, so no retry resets the password of a user who may have signed in. A retry with another
- * username, or of a user who belongs to another company, is NOT_FOUND.
+ * its answer may have shown the password: a retry is refused with core.user_created_password_hidden
+ * and the user's id and changes nothing, so no retry resets the password of a user who may have
+ * signed in. A retry with another username, or of a user who belongs to another company, is
+ * NOT_FOUND.
  */
 export const createUserHandler = {
   scope: companyOfPlant,
@@ -108,7 +123,7 @@ export const createUserHandler = {
       if (first.username !== username || !ours) {
         throw new NotFoundException(`User ${id} was not found`);
       }
-      if (first.companyIds.length > 0) throw usernameTaken(username);
+      if (first.companyIds.length > 0) throw createdPasswordHidden(username, id);
       await accounts.setPassword(id, password);
       await accounts.addToOrganization(id, organization_id);
       return { user: await userById(tx, id), temporaryPassword: password };

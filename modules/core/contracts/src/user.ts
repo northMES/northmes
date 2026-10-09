@@ -22,8 +22,8 @@ export const username = z
  * an email the user gets a placeholder address that no mail reaches. A username that is taken, or
  * was used before, is refused with core.username_taken, and an email another user has with
  * core.email_taken. A retry with the id of a first run that failed finishes the creation; a retry
- * after the first run finished is refused with core.username_taken, since the password is shown
- * once only.
+ * after the first run finished is refused with core.user_created_password_hidden and the user's id
+ * in details.userId, since the password is shown once only.
  */
 export const createUser = defineCommandContract({
   name: 'core.createUser',

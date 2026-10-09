@@ -6,13 +6,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
 import type { z } from 'zod';
-import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
+import { ErrorSummary, ErrorSummaryAction } from '../../../../ui/components/error-summary/index.ts';
 import { FormActions } from '../../../../ui/components/form-actions/index.ts';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
-import { fieldErrorsOf } from '../../../../ui/lib/graphql-errors.ts';
+import { detailsOf, fieldErrorsOf } from '../../../../ui/lib/graphql-errors.ts';
 import {
   fieldProps,
   setServerErrors,
@@ -34,14 +34,24 @@ function summaryHeading(fieldCount: number): string {
   return `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to create the user`;
 }
 
+/** A user that an earlier try of Create user created, whose temporary password is not known. */
+interface CreatedBefore {
+  readonly userId: string;
+  readonly username: string;
+}
+
 /**
  * The New user form: Name, Username and Email, then Create user. Create user sends the values under
- * a uuidv7 the form made once, so a retry after a timeout finishes the first creation (ADR 0012).
+ * a uuidv7 the form made once (ADR 0012). A retry after a first try that failed before its answer
+ * finishes the creation. A retry after a first try that created the user, whose answer with the
+ * temporary password was lost, is refused with core.user_created_password_hidden: the form says the
+ * user was created and offers Open user, since NorthMES cannot show the password again.
  */
 function NewUserForm({ companyName }: { readonly companyName: string }) {
   const { plant } = useShell();
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
+  const [createdBefore, setCreatedBefore] = useState<CreatedBefore>();
   const form = useZodForm(createUser.fields, {
     defaultValues: { name: '', username: '', email: undefined },
   });
@@ -56,6 +66,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   const { isDirty, isSubmitting } = form.formState;
 
   const save = async (values: UserValues) => {
+    setCreatedBefore(undefined);
     try {
       const { data } = await create({ variables: { input: { ...values, id } } });
       if (!data) return;
@@ -66,6 +77,11 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
         replace: true,
       });
     } catch (error) {
+      const userId = detailsOf(error, 'core.user_created_password_hidden')?.userId;
+      if (typeof userId === 'string') {
+        setCreatedBefore({ userId, username: values.username });
+        return;
+      }
       const fieldErrors = fieldErrorsOf(error).map((entry) =>
         entry.code === 'core.username_taken'
           ? {
@@ -91,11 +107,33 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
   });
   return (
     <form noValidate onSubmit={form.handleSubmit(save)} className="flex max-w-190 flex-col gap-4">
-      <ErrorSummary
-        heading={summaryHeading(errors.filter(({ name }) => name !== undefined).length)}
-        errors={errors}
-        focusKey={form.formState.submitCount}
-      />
+      {createdBefore === undefined ? (
+        <ErrorSummary
+          heading={summaryHeading(errors.filter(({ name }) => name !== undefined).length)}
+          errors={errors}
+          focusKey={form.formState.submitCount}
+        />
+      ) : (
+        <ErrorSummary
+          heading={`The user ${createdBefore.username} was created`}
+          errors={[]}
+          focusKey={form.formState.submitCount}
+        >
+          <p>
+            An earlier try of Create user created this user, but its answer with the temporary
+            password did not arrive. NorthMES cannot show the temporary password again.
+          </p>
+          <ErrorSummaryAction
+            label="Open user"
+            onAction={() =>
+              navigate({
+                to: coreLinks.users.user({ plant, userId: createdBefore.userId }).href,
+                replace: true,
+              })
+            }
+          />
+        </ErrorSummary>
+      )}
       <FormSection title="Person" description={`A user of ${companyName}.`}>
         <TextField label="Name" autoComplete="off" {...fieldProps(form, 'name')} />
         <TextField
@@ -124,7 +162,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
         cancelHref={coreLinks.users({ plant }).href}
         dirty={isDirty}
       />
-      <UnsavedChangesGuard when={isDirty && !isSubmitting} />
+      <UnsavedChangesGuard when={isDirty && !isSubmitting && createdBefore === undefined} />
     </form>
   );
 }
