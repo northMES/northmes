@@ -126,6 +126,32 @@ describe('edit article', () => {
     await waitFor(() => expect(spoken()).toBe('Article AX-500 saved'));
   });
 
+  it('E06-S06 when Reload article fails, the conflict summary says so and the typed values stay', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(editHref(axle.id), [
+      articleQuery(axle),
+      updateOf({ expectedVersion: 1, code: 'AX-500', name: 'Axle 20 mm, steel' }, versionConflict),
+      {
+        request: { query: CoreArticle, variables: { id: axle.id } },
+        error: new Error('The network is down.'),
+      },
+    ]);
+
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), ', steel');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+    const summary = await screen.findByRole('group', {
+      name: 'This article changed while you edited it',
+    });
+    await user.click(within(summary).getByRole('button', { name: 'Reload article' }));
+
+    expect(
+      await within(summary).findByText(
+        'Could not reload the article. Check the connection, then try again.',
+      ),
+    ).toBeDefined();
+    expect(field('Name').value).toBe('Axle 20 mm, steel');
+  });
+
   it('E06-S06 the edit page of an article that does not exist shows the not-found state', async () => {
     renderCoreAt(editHref(axle.id), [
       {
