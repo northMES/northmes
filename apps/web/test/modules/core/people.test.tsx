@@ -389,6 +389,80 @@ describe('People in plant settings', () => {
     expect(within(can).getByText('Shift lead at Plant A')).toBeDefined();
   });
 
+  it("E04-S02 Add role on a person's page is for that person: its title names them, it asks no Person, and the added role returns to the person's page with focus on its h1", async () => {
+    const user = userEvent.setup();
+    const given = { ...heldAtPlant(planner, sara), id: '019a0000-0000-7000-8000-0000000000b1' };
+    const saraAtPlant = userOf(sara, [assignment(shiftLead, plantA, saraLead.id)]);
+    const router = renderCoreAt(coreLinks.people.person({ plant, userId: sara.id }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      {
+        request: { query: CoreUser, variables: { id: sara.id } },
+        result: { data: { coreUser: saraAtPlant } },
+      },
+      rolesQuery([shiftLead, planner, viewerRole], {}),
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: { coreUser: { __typename: 'User', id: sara.id, effectivePermissions: [] } },
+        },
+      },
+      {
+        request: {
+          query: CoreAssignRole,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            uuidv7.test(input.id ?? '') &&
+            input.userId === sara.id &&
+            input.roleId === planner.id &&
+            input.scopeId === plantA.id,
+        },
+        result: { data: { coreAssignRole: given } },
+      } as MockLink.MockedResponse,
+            {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: { coreUser: { __typename: 'User', id: sara.id, effectivePermissions: [] } },
+        },
+      },
+    ]);
+
+    const add = await screen.findByRole('link', { name: 'Add role' });
+    expect(add.getAttribute('href')).toBe(
+      coreLinks.people.person.addRole({ plant, userId: sara.id }).href,
+    );
+    await user.click(add);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Add role for Sara Nyberg' }),
+    ).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Sara Nyberg' }).getAttribute('href')).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    expect(screen.queryByRole('combobox', { name: 'Person' })).toBeNull();
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    const roles = await screen.findByRole('listbox');
+    expect(
+      within(roles)
+        .getByRole('option', { name: /^Shift lead/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
+    await user.click(within(roles).getByRole('option', { name: /^Planner/ }));
+    await user.click(screen.getByRole('button', { name: 'Add role' }));
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' });
+    expect(router.state.location.pathname).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    await waitFor(() =>
+      expect(spoken()).toBe(
+        "Planner at Plant A added for Sara Nyberg. It applies from Sara Nyberg's next action.",
+      ),
+    );
+    const table = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
+    await waitFor(() => expect(within(table).getByText('Planner')).toBeDefined());
+  });
+
   it('E04-S02 a reader without core.user:read at the plant gets the page No access to People', async () => {
     renderCoreAt(coreLinks.people({ plant }).href, [
       viewerQuery(['core.article:read']),
