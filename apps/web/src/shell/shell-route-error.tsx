@@ -35,7 +35,8 @@ function focusNextHeading() {
  * renders the route again and focus moves to its h1. A data request that failed and reached the
  * route gets the server error page (shell-306 SE) in ui-222's wording, "Could not load {route
  * title}", with the correlation id and code the server sent. Both lead out to the first entry of
- * the module. The route title is the label of the page's navigation entry.
+ * the module, or to See all pages when the page is that entry (shell-306 LS3). The route title is
+ * the label of the page's navigation entry.
  */
 export function ShellRouteError({
   modules,
@@ -112,7 +113,7 @@ export function ShellRouteError({
             </Button>
             {wayOut !== undefined && (
               <Link to={wayOut.href} className={buttonVariants({ variant: 'outline' })}>
-                Go to {wayOut.label}
+                {wayOut.label}
               </Link>
             )}
           </>
