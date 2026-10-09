@@ -365,6 +365,24 @@ describe('the shell', () => {
     expect(document.title).toBe('Order 1001 · plant-a · NorthMES');
   });
 
+  it('E04-S02 at 320 px the breadcrumb keeps the plant and the current page and leaves out the crumbs between, so it fits beside the page actions', async () => {
+    setViewport(320, 640);
+    renderShellAt('/plant-a/planning/orders/1001', [planning]);
+    await screen.findByRole('heading', { level: 1, name: 'Order 1001' });
+
+    const breadcrumb = within(screen.getByRole('banner')).getByRole('navigation', {
+      name: 'Breadcrumb',
+    });
+    await waitFor(() =>
+      expect(
+        within(breadcrumb)
+          .getAllByRole('listitem')
+          .map((item) => item.textContent),
+      ).toEqual(['plant-a', 'Order 1001']),
+    );
+    expect(within(breadcrumb).getByText('Order 1001').getAttribute('aria-current')).toBe('page');
+  });
+
   it('E04-S02 the page actions sit in the top bar, and the h1 stays in main', async () => {
     renderShellAt('/plant-a/planning/orders', [planning]);
     await screen.findByRole('heading', { level: 1, name: 'Production orders' });
