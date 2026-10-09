@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-router';
 import { newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch } from './article-list-search.ts';
+import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 
 /** A screen of screens.ts as a route component, which loads the screens' chunk on first use. */
@@ -150,6 +151,8 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const roleListRoute = createRoute({
     getParentRoute: () => rolesRoute,
     path: '/',
+    // Search, Defined by and the sort live in the URL; a key that does not apply falls back.
+    validateSearch: roleListSearch,
     component: lazyScreen('RolesScreen'),
   });
   const newRoleRoute = createRoute({

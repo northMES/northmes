@@ -16,6 +16,7 @@ import {
   companyAdminRole,
   companyId,
   forbiddenError,
+  groupedRows,
   plantA,
   rolesQuery,
   sara,
@@ -320,9 +321,11 @@ describe("a user's access", () => {
       permissionsQuery(sara, { 'planning.productionOrder:read': [assignment(viewerRole, acme)] }),
     ]);
 
-    const custom = await screen.findByRole('table', { name: 'Custom roles of Acme AB' });
+    const roles = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
-      expect(bodyRows(custom)).toEqual([['Shift lead', 'Acme AB', '2 of 6', '2 people']]),
+      expect(groupedRows(roles)[0]?.[1].map((row) => row.slice(0, 4))).toEqual([
+        ['Shift lead', 'Acme AB', '2 of 6', '2 people'],
+      ]),
     );
     await router.navigate({ to: accessHref });
     await user.click(await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }));
@@ -334,9 +337,11 @@ describe("a user's access", () => {
     await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
 
     await waitFor(() =>
-      expect(bodyRows(screen.getByRole('table', { name: 'Custom roles of Acme AB' }))).toEqual([
-        ['Shift lead', 'Acme AB', '2 of 6', '1 person'],
-      ]),
+      expect(
+        groupedRows(screen.getByRole('table', { name: 'Roles' }))[0]?.[1].map((row) =>
+          row.slice(0, 4),
+        ),
+      ).toEqual([['Shift lead', 'Acme AB', '2 of 6', '1 person']]),
     );
   });
 

@@ -35,6 +35,8 @@ export interface DataTableColumn<TRow> {
   readonly numeric?: boolean;
   /** The header text is for screen readers only, as on a row's Actions column. */
   readonly headerHidden?: boolean;
+  /** The column stays in view while the table scrolls sideways, as Role at 320 px (NO11). */
+  readonly sticky?: boolean;
 }
 
 /** The sort the server applied: one column, ascending or descending. */
@@ -95,6 +97,11 @@ export interface DataTableProps<TRow> {
   readonly groups?: readonly DataTableGroup<TRow>[];
   /** A line under the table, such as "2 groups, 11 roles". */
   readonly footer?: ReactNode;
+  /**
+   * The name of the region the table scrolls sideways in, such as "Roles table, scrolls
+   * sideways" at 320 px (design core-304, NO11): a Tab stop, so the keyboard scrolls it too.
+   */
+  readonly scrollLabel?: string;
 }
 
 const features = tableFeatures({ rowSortingFeature });
@@ -103,6 +110,10 @@ const features = tableFeatures({ rowSortingFeature });
 const skeletonRows = Array.from({ length: 8 }, (_, index) => `skeleton-${index}`);
 
 const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
+
+/** A sticky column's header and cells: they keep their place and cover what scrolls under them. */
+const stickyHead = 'sticky start-0 z-10 w-37 min-w-37 bg-muted';
+const stickyCell = 'sticky start-0 z-10 w-37 min-w-37 bg-card';
 
 /**
  * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
@@ -124,6 +135,7 @@ export function DataTable<TRow extends RowData>({
   stale = false,
   groups,
   footer,
+  scrollLabel,
 }: DataTableProps<TRow>) {
   const data = useMemo(
     () => (groups === undefined ? rows : groups.flatMap((group) => group.rows)),
@@ -175,6 +187,7 @@ export function DataTable<TRow extends RowData>({
           className={cn(
             'px-3 py-2.5 whitespace-normal',
             columnById.get(cell.column.id)?.numeric && 'text-end tabular-nums',
+            columnById.get(cell.column.id)?.sticky && stickyCell,
           )}
         >
           <table.FlexRender cell={cell} />
@@ -183,111 +196,132 @@ export function DataTable<TRow extends RowData>({
     </TableRow>
   );
 
-  return (
-    <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-      <Table aria-busy={loading || stale || undefined}>
-        <TableCaption className="sr-only">{label}</TableCaption>
-        <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
-          {table.getHeaderGroups().map((group) => (
-            <TableRow key={group.id} className="border-border hover:bg-transparent">
-              {group.headers.map((header) => {
-                const { column } = header;
-                const sorted = column.getIsSorted();
-                const text = column.columnDef.header as string;
-                const { numeric = false, headerHidden = false } = columnById.get(column.id) ?? {};
-                if (!column.getCanSort()) {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      scope="col"
-                      className={cn(
-                        'h-auto px-3 py-2.5 text-start font-semibold text-muted-foreground',
-                        numeric && 'text-end',
-                      )}
-                    >
-                      {headerHidden ? <span className="sr-only">{text}</span> : text}
-                    </TableHead>
-                  );
-                }
-                const SortIcon =
-                  sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+  const grid = (
+    <Table aria-busy={loading || stale || undefined}>
+      <TableCaption className="sr-only">{label}</TableCaption>
+      <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
+        {table.getHeaderGroups().map((group) => (
+          <TableRow key={group.id} className="border-border hover:bg-transparent">
+            {group.headers.map((header) => {
+              const { column } = header;
+              const sorted = column.getIsSorted();
+              const text = column.columnDef.header as string;
+              const {
+                numeric = false,
+                headerHidden = false,
+                sticky = false,
+              } = columnById.get(column.id) ?? {};
+              if (!column.getCanSort()) {
                 return (
                   <TableHead
                     key={header.id}
                     scope="col"
-                    aria-sort={sorted === false ? 'none' : ariaSort[sorted]}
                     className={cn(
-                      'h-auto px-3 py-1.5 text-start font-semibold text-muted-foreground',
+                      'h-auto px-3 py-2.5 text-start font-semibold text-muted-foreground',
                       numeric && 'text-end',
+                      sticky && stickyHead,
                     )}
                   >
-                    <Button
-                      variant="ghost"
-                      onClick={() => column.toggleSorting()}
-                      className={cn(
-                        'h-auto min-h-(--nm-target-min) gap-1 rounded-sm px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:translate-y-0',
-                        sorted !== false && 'text-foreground',
-                      )}
-                    >
-                      {text}
-                      <SortIcon aria-hidden className="size-3.5" />
-                    </Button>
+                    {headerHidden ? <span className="sr-only">{text}</span> : text}
                   </TableHead>
                 );
-              })}
+              }
+              const SortIcon =
+                sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+              return (
+                <TableHead
+                  key={header.id}
+                  scope="col"
+                  aria-sort={sorted === false ? 'none' : ariaSort[sorted]}
+                  className={cn(
+                    'h-auto px-3 py-1.5 text-start font-semibold text-muted-foreground',
+                    numeric && 'text-end',
+                    sticky && stickyHead,
+                  )}
+                >
+                  <Button
+                    variant="ghost"
+                    onClick={() => column.toggleSorting()}
+                    className={cn(
+                      'h-auto min-h-(--nm-target-min) gap-1 rounded-sm px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:translate-y-0',
+                      sorted !== false && 'text-foreground',
+                    )}
+                  >
+                    {text}
+                    <SortIcon aria-hidden className="size-3.5" />
+                  </Button>
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableHeader>
+      {/* The dimming waits a moment, so a quick answer swaps the rows without a flash. */}
+      {loading ? (
+        <TableBody>
+          {skeletonRows.map((key) => (
+            <TableRow key={key} className="border-border hover:bg-transparent">
+              {columns.map((column) => (
+                <TableCell key={column.id} className="px-3 py-3.5">
+                  <Skeleton
+                    aria-hidden
+                    className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
+                  />
+                </TableCell>
+              ))}
             </TableRow>
           ))}
-        </TableHeader>
-        {/* The dimming waits a moment, so a quick answer swaps the rows without a flash. */}
-        {loading ? (
-          <TableBody>
-            {skeletonRows.map((key) => (
-              <TableRow key={key} className="border-border hover:bg-transparent">
-                {columns.map((column) => (
-                  <TableCell key={column.id} className="px-3 py-3.5">
-                    <Skeleton
-                      aria-hidden
-                      className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
-                    />
-                  </TableCell>
-                ))}
+        </TableBody>
+      ) : groups === undefined ? (
+        <TableBody className={bodyClass}>{table.getRowModel().rows.map(renderRow)}</TableBody>
+      ) : (
+        groups.map((group) => {
+          const ids = new Set(group.rows.map(getRowId));
+          const groupRows = table.getRowModel().rows.filter((row) => ids.has(row.id));
+          return (
+            <TableBody key={group.id} className={bodyClass}>
+              <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+                <th
+                  scope="rowgroup"
+                  colSpan={columns.length}
+                  className="px-3 py-2.5 text-start text-sm font-semibold"
+                >
+                  {group.label}
+                  <span className="ms-2 font-mono text-xs font-normal text-muted-foreground">
+                    {group.count}
+                  </span>
+                </th>
               </TableRow>
-            ))}
-          </TableBody>
-        ) : groups === undefined ? (
-          <TableBody className={bodyClass}>{table.getRowModel().rows.map(renderRow)}</TableBody>
-        ) : (
-          groups.map((group) => {
-            const ids = new Set(group.rows.map(getRowId));
-            const groupRows = table.getRowModel().rows.filter((row) => ids.has(row.id));
-            return (
-              <TableBody key={group.id} className={bodyClass}>
-                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
-                  <th
-                    scope="rowgroup"
-                    colSpan={columns.length}
-                    className="px-3 py-2.5 text-start text-sm font-semibold"
-                  >
-                    {group.label}
-                    <span className="ms-2 font-mono text-xs font-normal text-muted-foreground">
-                      {group.count}
-                    </span>
-                  </th>
+              {groupRows.length === 0 && group.empty !== undefined ? (
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="px-3 py-2.5 whitespace-normal">
+                    {group.empty}
+                  </TableCell>
                 </TableRow>
-                {groupRows.length === 0 && group.empty !== undefined ? (
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableCell colSpan={columns.length} className="px-3 py-2.5 whitespace-normal">
-                      {group.empty}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  groupRows.map(renderRow)
-                )}
-              </TableBody>
-            );
-          })
-        )}
-      </Table>
+              ) : (
+                groupRows.map(renderRow)
+              )}
+            </TableBody>
+          );
+        })
+      )}
+    </Table>
+  );
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
+      {scrollLabel === undefined ? (
+        grid
+      ) : (
+        <section
+          aria-label={scrollLabel}
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: a region that scrolls sideways takes focus, so the keyboard scrolls it (WCAG 2.1.1).
+          tabIndex={0}
+          className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-(--focus-outline) [&>[data-slot=table-container]]:overflow-visible"
+        >
+          {grid}
+        </section>
+      )}
       {footer !== undefined && (
         <p className="border-t border-border px-3 py-2.5 text-xs text-muted-foreground">{footer}</p>
       )}

@@ -96,13 +96,20 @@ describe('roles', () => {
     const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
       expect(groupedRows(table)).toEqual([
-        ['Custom roles of Acme AB', [['No custom roles yet']]],
+        [
+          'Custom roles of Acme AB',
+          [
+            [
+              'No custom roles yetAcme AB uses the default roles of its modules. Create a role when a job needs another set of permissions, starting from a default role or from none.',
+            ],
+          ],
+        ],
         [
           'Default roles from modules',
           [
             ['Company admin', 'Core', '6 of 6', 'None'],
-            ['Plant admin', 'Core', '5 of 6', 'None'],
             ['Planner', 'Planning', '3 of 6', 'None'],
+            ['Plant admin', 'Core', '5 of 6', 'None'],
             ['Viewer', 'Planning', '1 of 6', '1 person'],
           ],
         ],
@@ -212,6 +219,7 @@ describe('roles', () => {
       expect(region.getAttribute('tabindex')).toBe('0');
       expect(within(region).getByRole('table', { name: 'Roles' })).toBeDefined();
       expect(screen.queryByRole('button', { name: 'Defined by' })).toBeNull();
+      expect(await screen.findByText('3 roles at Acme AB')).toBeDefined();
       await user.click(screen.getByRole('button', { name: 'Filters' }));
       const sheet = await screen.findByRole('dialog', { name: 'Filters' });
       await user.click(within(sheet).getByRole('radio', { name: 'Acme AB' }));
