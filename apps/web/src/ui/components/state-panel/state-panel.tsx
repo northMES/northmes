@@ -38,14 +38,18 @@ const toneClass = {
   muted: 'text-muted-foreground',
 } as const;
 
-/** Copies a row's value; focus stays on the button, and the polite region says so once. */
-async function copy(value: string, copiedMessage: string) {
+/**
+ * Copies a row's value; focus stays on the button, and the polite region says once that it was
+ * copied, or that it was not, naming the row: "Could not copy the correlation id."
+ */
+async function copy({ label, value, copiedMessage }: StateRow) {
   try {
     await navigator.clipboard.writeText(value);
-    announce(copiedMessage);
+    announce(copiedMessage ?? `${label} copied`);
   } catch {
     // The browser refuses without focus, without permission or on an insecure origin.
-    announce('Could not copy the correlation id. Select it and copy it by hand.');
+    const row = label.charAt(0).toLowerCase() + label.slice(1);
+    announce(`Could not copy the ${row}. Select it and copy it by hand.`);
   }
 }
 
@@ -87,7 +91,7 @@ export function StatePanel({
                     label={copyLabel}
                     variant="ghost"
                     className="shrink-0"
-                    onClick={() => copy(value, copiedMessage ?? `${label} copied`)}
+                    onClick={() => copy({ label, value, copiedMessage })}
                   >
                     <Copy />
                   </IconButton>
