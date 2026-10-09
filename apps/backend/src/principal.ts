@@ -35,6 +35,12 @@ export interface Principal {
   readonly writeScopes: readonly string[];
   /** Every node of the scope trees of the principal's companies, by id, which can() walks. */
   readonly scopes: ReadonlyMap<string, ScopeGrant>;
+  /**
+   * The company a request without a plant acts at, which its caller names outside the input, such
+   * as the company a credential of the public API belongs to (ADR 0073). Company settings name it
+   * in the input instead.
+   */
+  readonly companyId?: string | undefined;
 }
 
 /**

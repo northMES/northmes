@@ -36,6 +36,7 @@ describe('schemaSdl', () => {
       'coreUnblockUser',
       'coreUpdateArticle',
       'coreUpdateRole',
+      'coreUpsertArticle',
       'planningReleaseProductionOrder',
     ]);
     expect(sdl.endsWith('}\n')).toBe(true);

@@ -258,6 +258,52 @@ describe('defineCommand', () => {
     expect(handled).toEqual([{ urgent: true, late: false, tags: ['rush'] }, { urgent: false }]);
   });
 
+  it('ADR0073-W3 the generated input carries an optional 32-bit integer as Int, and a null for it reaches the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrders',
+      target: 'none',
+      fields: z.object({ expectedVersion: z.int32().min(1).optional() }),
+      permission: 'planning.productionOrder:flag',
+    });
+    const handled: unknown[] = [];
+    const FlagProductionOrders = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [FlagProductionOrders] })
+    class FlagModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      FlagModule,
+    ]);
+    opened.push(moduleRef);
+    const flag = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningFlagProductionOrdersInput!) {
+          planningFlagProductionOrders(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const given = await flag({ expectedVersion: 3 });
+    const nulls = await flag({ expectedVersion: null });
+
+    expect(printSchema(schema)).toContain(
+      'input PlanningFlagProductionOrdersInput {\n  expectedVersion: Int\n}',
+    );
+    expect([given.errors, nulls.errors]).toEqual([undefined, undefined]);
+    expect(handled).toEqual([{ expectedVersion: 3 }, {}]);
+  });
+
   it('ADR0073-W2 registerCommand gives a provider whose command carries the handler and adds no Mutation field', async () => {
     const contract = defineCommandContract({
       name: 'planning.flagProductionOrders',
@@ -324,7 +370,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean or list of strings, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean, 32-bit integer or list of strings, the kinds a generated mutation input supports so far`,
       );
     }
   });

@@ -39,6 +39,11 @@ export {
   type SubscriptionTransport,
 } from './gql-client.ts';
 export {
+  type ConformanceCall,
+  type OperationsConformanceOptions,
+  operationsConformance,
+} from './operations-conformance.ts';
+export {
   type PostgresServer,
   type StartPostgresOptions,
   startPostgres,

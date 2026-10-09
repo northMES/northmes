@@ -6,6 +6,7 @@ import { CreateArticleCommand } from './commands/create-article.handler.ts';
 import { RestoreArticleCommand } from './commands/restore-article.handler.ts';
 import { SetArticlePlantsCommand } from './commands/set-article-plants.handler.ts';
 import { UpdateArticleCommand } from './commands/update-article.handler.ts';
+import { UpsertArticleCommand } from './commands/upsert-article.handler.ts';
 
 /**
  * Provides core's ArticleService and registers the article commands it sends, so boot checks their
@@ -20,6 +21,7 @@ import { UpdateArticleCommand } from './commands/update-article.handler.ts';
     SetArticlePlantsCommand,
     ArchiveArticleCommand,
     RestoreArticleCommand,
+    UpsertArticleCommand,
   ],
   exports: [ArticleService],
 })

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { defineCommandContract } from '@northmes/contracts';
+import { defineCommandContract, version } from '@northmes/contracts';
 import { z } from 'zod';
 import { tooLong } from './messages.ts';
 import { plantSlug } from './plant.ts';
@@ -108,4 +108,32 @@ export const setArticlePlants = defineCommandContract({
   target: 'existing',
   fields: articlePlants,
   permission: 'core.article:assign',
+});
+
+/**
+ * Creates or changes the article with this article number in the company, for an ERP that pushes
+ * its articles (ADR 0073). Without one, it creates the article under `id`, as core.createArticle
+ * does, also for its plants. With an active one, it renames it when `name` differs, which needs
+ * core.article:update at the article's edit scope, and replaces its plants when the input names
+ * other ones, which needs core.article:assign at the company; an input without plants leaves them
+ * as they are. A rename checks `expectedVersion`, or the version it found. An archived article is
+ * refused with core.archived. The bus checks core.article:create where a new article would be
+ * edited, also when the article exists.
+ */
+export const upsertArticle = defineCommandContract({
+  name: 'core.upsertArticle',
+  target: 'none',
+  fields: articleFields
+    .extend({
+      id: z.uuid(),
+      allPlants: z.boolean().optional(),
+      plants: z.array(plantSlug).optional(),
+      expectedVersion: version.optional(),
+      companyId: settingsCompanyId,
+    })
+    .refine(({ allPlants, plants }) => !(allPlants === true && (plants?.length ?? 0) > 0), {
+      error: plantsOrAllPlants,
+      path: ['plants'],
+    }),
+  permission: 'core.article:create',
 });

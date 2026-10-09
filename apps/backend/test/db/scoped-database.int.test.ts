@@ -7,11 +7,12 @@ import { Logger } from '@nestjs/common';
 import { hostFactory } from '@northmes/backend/testing';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { createTestApp, given, query, type TestApp, useTestDatabase } from '@northmes/testing';
-import { CompiledQuery } from 'kysely';
+import { CompiledQuery, type Generated } from 'kysely';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
+import { readOnly } from '../../src/db/scoped-database.ts';
 import { migrate } from '../../src/migrate/runner.ts';
 import { type Principal, runAs } from '../../src/principal.ts';
 import { imageVersion, inRepoModule } from '../fixtures/catalog.ts';
@@ -35,7 +36,11 @@ const sessionQuery = `select current_user as "user", pg_backend_pid() as pid,
 
 /** The Kysely table types of the fixture module, written by hand. */
 interface FixtureDatabase {
-  'scoped_database.work_note': { id: string; scope_id: string; version: number };
+  'scoped_database.work_note': {
+    id: Generated<string>;
+    scope_id: string;
+    version: Generated<number>;
+  };
 }
 
 describe('ScopedDatabase', () => {
@@ -166,5 +171,31 @@ describe('ScopedDatabase', () => {
     } finally {
       warned.mockRestore();
     }
+  });
+
+  it('ADR0073-W3 a transaction inside readOnly reads its rows and refuses a write with 25006', async () => {
+    const principal = principalAt(plantA);
+
+    const scopes = await readOnly(() => scopesReadAs(principal));
+    const write = await readOnly(() =>
+      runAs(principal, () =>
+        scopedDatabase().transaction((tx) =>
+          tx.insertInto('scoped_database.work_note').values({ scope_id: plantA }).execute(),
+        ),
+      ),
+    ).catch((error: unknown) => error);
+    const afterwards = await runAs(principal, () =>
+      scopedDatabase().transaction((tx) =>
+        tx
+          .insertInto('scoped_database.work_note')
+          .values({ scope_id: plantA })
+          .returning('scope_id')
+          .execute(),
+      ),
+    );
+
+    expect(scopes).toEqual([plantA]);
+    expect(write).toMatchObject({ code: '25006' });
+    expect(afterwards).toEqual([{ scope_id: plantA }]);
   });
 });

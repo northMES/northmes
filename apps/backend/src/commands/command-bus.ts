@@ -244,14 +244,19 @@ function validatorsByCommand({
 /**
  * The principal a command runs its transaction as. A command from company settings, a request
  * without a plant, reads and writes in the companies where the principal holds the command's
- * permission at the company node, their nodes and their plants (ADR 0066); a request at a plant
- * keeps its scope sets.
+ * permission at the company node, their nodes and their plants (ADR 0066), and only in the company
+ * the principal acts at when it names one (ADR 0073); a request at a plant keeps its scope sets.
  */
 function inSettings(principal: Principal | null, permission: string): Principal | null {
   if (!principal || principal.plantId !== undefined) return principal;
+  const { companyId } = principal;
   return {
     ...principal,
-    ...inCompanies(principal, (company) => can(principal, permission, company)),
+    ...inCompanies(
+      principal,
+      (company) =>
+        (companyId === undefined || company === companyId) && can(principal, permission, company),
+    ),
   };
 }
 
