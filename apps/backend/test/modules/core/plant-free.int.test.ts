@@ -23,6 +23,7 @@ const releaseOnePlantFree = [
   'Mutation.coreUnblockUser',
   'Mutation.coreUpdateArticle',
   'Mutation.coreUpdateRole',
+  'Mutation.coreUpsertArticle',
   'Query.coreArticle',
   'Query.coreArticles',
   'Query.coreCompanies',

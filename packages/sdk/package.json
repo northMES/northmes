@@ -35,6 +35,10 @@
     "./lists": {
       "@northmes/source": "./src/lists/index.ts",
       "default": "./dist/lists/index.js"
+    },
+    "./operations": {
+      "@northmes/source": "./src/operations/index.ts",
+      "default": "./dist/operations/index.js"
     }
   },
   "scripts": {

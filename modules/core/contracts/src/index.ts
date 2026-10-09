@@ -8,8 +8,11 @@ export {
   restoreArticle,
   setArticlePlants,
   updateArticle,
+  upsertArticle,
 } from './article.ts';
+export { article, articleList, findArticles, getArticle } from './article-queries.ts';
 export { coreLinks } from './links.ts';
+export { articleOperations } from './operations/article.ts';
 export { plantSlug, reservedPlantSlugs } from './plant.ts';
 export {
   accessReason,

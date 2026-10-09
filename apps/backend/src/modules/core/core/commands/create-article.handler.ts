@@ -2,6 +2,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { createArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
+import { noteCreated } from '@northmes/sdk/operations';
 import type { z } from 'zod';
 import { type ArticleRecord, selectArticles } from '../article-record.ts';
 import { type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
@@ -45,9 +46,10 @@ function isDefault(plan: PlantsPlan, plantId: string | undefined): boolean {
  * The handler of core.createArticle (ADR 0012). Its scope hook returns the edit scope the new
  * article will have, where the bus checks core.article:create: the request's plant by default, or
  * the company for an article of several plants, of All plants or, from company settings, of none
- * (ADR 0073). Plants other than that default also need core.article:assign at the company. It writes the article at its
- * company's node under the client's id with its plants and returns it with version 1, or returns
- * the article a first run with that id created.
+ * (ADR 0073). Plants other than that default also need core.article:assign at the company. It
+ * writes the article at its company's node under the client's id with its plants, notes that it
+ * created a row, and returns it with version 1, or returns the article a first run with that id
+ * created.
  */
 export const createArticleHandler = {
   async scope(input: CreateArticleInput, context: Pick<CoreContext, 'tx' | 'plantId'>) {
@@ -75,7 +77,10 @@ export const createArticleHandler = {
       .onConflict((conflict) => conflict.column('id').doNothing())
       .returning('id')
       .executeTakeFirst();
-    if (created) await writePlants(tx, input.id, plan);
+    if (created) {
+      await writePlants(tx, input.id, plan);
+      noteCreated();
+    }
     // A retry after a timeout or a restart finds the article the first run created (ADR 0012).
     const article = await selectArticles(tx).where('id', '=', input.id).executeTakeFirst();
     if (!article) {

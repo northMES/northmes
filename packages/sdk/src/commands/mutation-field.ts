@@ -77,8 +77,8 @@ function isStringList(property: z.core.JSONSchema.JSONSchema): boolean {
 
 /**
  * The GraphQL type of an input field, from its JSON Schema, or undefined for a kind the generated
- * input cannot carry: a required scalar, boolean or list of strings, or an optional string, boolean
- * or list of strings, which is nullable.
+ * input cannot carry: a required scalar, boolean or list of strings, or an optional string,
+ * boolean, 32-bit integer or list of strings, which is nullable.
  */
 function inputFieldType(
   property: z.core.JSONSchema._JSONSchema,
@@ -87,14 +87,17 @@ function inputFieldType(
   if (typeof property !== 'object') return undefined;
   if (property.type === 'boolean') return () => Boolean;
   if (isStringList(property)) return () => [String];
-  if (!required) return property.type === 'string' ? () => String : undefined;
+  if (!required) {
+    if (property.type === 'string') return () => String;
+    return property.type === 'integer' ? scalarOf(property) : undefined;
+  }
   return scalarOf(property);
 }
 
 /**
  * The fields of a command's input type, built from contract.input. It covers the field kinds the
  * commands use so far: required ID, string, number, boolean, 32-bit integer and list of strings
- * fields, and optional strings, booleans and lists of strings. Any other field throws, naming it,
+ * fields, and optional strings, booleans, 32-bit integers and lists of strings. Any other field throws, naming it,
  * before a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
  */
 function inputFields(contract: CommandContract): InputField[] {
@@ -104,7 +107,7 @@ function inputFields(contract: CommandContract): InputField[] {
     const type = inputFieldType(property, required.has(field));
     if (!type) {
       throw new Error(
-        `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean or list of strings, the kinds a generated mutation input supports so far`,
+        `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean, 32-bit integer or list of strings, the kinds a generated mutation input supports so far`,
       );
     }
     return { field, type, optional: !required.has(field) };

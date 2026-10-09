@@ -129,6 +129,16 @@ input CoreUpdateRoleInput {
   reason: String
 }
 
+input CoreUpsertArticleInput {
+  allPlants: Boolean
+  code: String!
+  companyId: String
+  expectedVersion: Int
+  id: ID!
+  name: String!
+  plants: [String!]
+}
+
 type CreatedUser {
   temporaryPassword: String!
   user: User!
@@ -158,6 +168,7 @@ type Mutation {
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
   coreUpdateRole(input: CoreUpdateRoleInput!): Role!
+  coreUpsertArticle(input: CoreUpsertArticleInput!): Article!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
 }
 

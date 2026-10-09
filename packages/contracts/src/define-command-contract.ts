@@ -44,6 +44,16 @@ export type CommandContractOptions = {
  */
 export const version = z.int32().min(1);
 
+/**
+ * A point in time as JSON carries it, an ISO 8601 string with an offset, which a service hands
+ * out as a Date (ADR 0073). An output schema encodes the Date to the string, and the JSON Schema
+ * of its input side is the string with format date-time.
+ */
+export const timestamp = z.codec(z.iso.datetime({ offset: true }), z.date(), {
+  decode: (text) => new Date(text),
+  encode: (date) => date.toISOString(),
+});
+
 /** Extends fields by the id that names the new entity. extend keeps the refinements. */
 function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObjectConfig>(
   fields: z.ZodObject<Shape, Config>,
