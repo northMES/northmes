@@ -1,0 +1,38 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/*
+ * The web's one stylesheet: Tailwind 4 through @tailwindcss/vite, the D1 tokens and their theme,
+ * and IBM Plex Sans and Mono from Fontsource, bundled so the app makes no CDN calls. Tailwind reads
+ * class names from src and index.html only.
+ */
+@import "tailwindcss" source(none);
+@import "./theme.css";
+@import "./tokens.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/ibm-plex-mono/700.css";
+
+@source "..";
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  /*
+   * The D1 two-tone focus ring: the inner 2 px band in --focus-ring touches the control, the outer
+   * 2 px outline in --focus-outline touches the surface around it. The outline stays in forced
+   * colors mode.
+   */
+  :focus-visible {
+    outline: 2px solid var(--focus-outline);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+}

@@ -12,6 +12,7 @@ interface ManifestChunk {
   readonly isEntry?: boolean;
   readonly isDynamicEntry?: boolean;
   readonly dynamicImports?: readonly string[];
+  readonly css?: readonly string[];
 }
 
 /** Builds the web with its own vite.config.ts into a fresh folder and returns that folder. */
@@ -49,5 +50,36 @@ describe('the web build', () => {
     expect(manifest['index.html']?.isEntry).toBe(true);
     expect(manifest['index.html']?.dynamicImports).toContain('src/modules/planning/screens.ts');
     expect(manifest['src/modules/planning/screens.ts']?.isDynamicEntry).toBe(true);
+  });
+
+  it('E04-S01 the web build ships one stylesheet with the D1 tokens in both themes, the two-tone focus ring and self-hosted IBM Plex', async () => {
+    const outDir = await buildWeb();
+    const manifest = JSON.parse(
+      readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
+    ) as Record<string, ManifestChunk>;
+    const sheets = manifest['index.html']?.css ?? [];
+
+    expect(sheets).toHaveLength(1);
+    const css = readFileSync(join(outDir, sheets[0] as string), 'utf8');
+    // Light on :root; dark when the system asks for it unless the page forces light, or when the
+    // page forces dark.
+    expect(css).toMatch(/--background:\s*oklch\((?:98\.5%|0?\.985) 0?\.002 250\)/);
+    expect(css).toMatch(/--background:\s*oklch\((?:20\.5%|0?\.205) 0?\.005 250\)/);
+    expect(css).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
+    expect(css).toMatch(/data-theme=["']?light/);
+    expect(css).toMatch(/data-theme=["']?dark/);
+    // The D1 focus ring: a 2 px outline in --focus-outline around a 2 px band in --focus-ring.
+    expect(css).toMatch(/outline:\s*2px solid var\(--focus-outline\)/);
+    expect(css).toMatch(/box-shadow:\s*0 0 0 2px var\(--focus-ring\)/);
+    // Both families come from files in the build, never from a CDN.
+    for (const family of ['IBM Plex Sans', 'IBM Plex Mono']) {
+      expect(css).toContain(`font-family:${family}`);
+    }
+    const fontUrls = [...css.matchAll(/url\(([^)]+\.woff2)\)/g)].map(([, url]) => url as string);
+    expect(fontUrls.length).toBeGreaterThan(0);
+    for (const url of fontUrls) {
+      expect(url).not.toMatch(/^(https?:)?\/\//);
+      expect(existsSync(join(outDir, url.replace(/^\//, '')))).toBe(true);
+    }
   });
 });

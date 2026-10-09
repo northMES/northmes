@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { loadWebConfig } from './config.ts';
 import { shellModules } from './modules.ts';
 import { createShellRouter } from './shell.tsx';
+import './styles/app.css';
 
 /** Boots the web: reads config.json and renders the router built from the modules' routes. */
 async function boot(root: HTMLElement): Promise<void> {

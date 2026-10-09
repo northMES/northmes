@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defaultClientConditions, defineConfig } from 'vite';
 
@@ -20,7 +21,8 @@ function devProxy(apiOrigin: string | undefined): Record<string, { target: strin
  * config.json next to them when the API is on another origin.
  */
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
+  // Tailwind builds the one stylesheet, src/styles/app.css, which main.tsx imports.
+  plugins: [react(), tailwindcss()],
   // The dev server resolves workspace packages to their source, as the tests do (ADR 0058).
   ...(command === 'serve' && {
     resolve: { conditions: ['@northmes/source', ...defaultClientConditions] },

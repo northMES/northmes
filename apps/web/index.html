@@ -7,6 +7,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- announce() speaks here; outside #root, so it works while a modal is open (ADR 0021). -->
+    <div id="announcer-polite" class="sr-only" aria-live="polite" aria-atomic="true"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

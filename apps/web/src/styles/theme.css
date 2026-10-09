@@ -1,0 +1,124 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/*
+ * The Tailwind theme of the D1 tokens: Tailwind's theme names mapped to the token variables of
+ * tokens.css, so `bg-card` or `text-muted-foreground` follow the theme. Tailwind's own color
+ * palette is removed, so a raw color class such as `bg-red-500` produces nothing.
+ */
+
+/* Dark when the page sets data-theme="dark", or when the system asks for dark and the page does
+ * not set data-theme="light". */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+}
+
+@theme {
+  --color-*: initial;
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* The page title and the data sizes of the Graphite type scale (D1, F5). */
+  --text-title: 1.75rem;
+  --text-title--line-height: 2.125rem;
+  --text-data: 0.8125rem;
+  --text-data--line-height: 1.125rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-primary-hover: var(--primary-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-link: var(--link);
+  --color-focus-outline: var(--focus-outline);
+  --color-focus-ring: var(--focus-ring);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-lane: var(--lane);
+  --color-lane-alt: var(--lane-alt);
+  --color-off-time: var(--off-time);
+  --color-block-border: var(--block-border);
+  --color-now: var(--now);
+  --color-now-foreground: var(--now-foreground);
+  --color-status-registered: var(--status-registered);
+  --color-status-registered-foreground: var(--status-registered-foreground);
+  --color-status-planned: var(--status-planned);
+  --color-status-planned-foreground: var(--status-planned-foreground);
+  --color-status-active: var(--status-active);
+  --color-status-active-foreground: var(--status-active-foreground);
+  --color-status-paused: var(--status-paused);
+  --color-status-paused-foreground: var(--status-paused-foreground);
+  --color-status-finished: var(--status-finished);
+  --color-status-finished-foreground: var(--status-finished-foreground);
+  --color-status-delivered: var(--status-delivered);
+  --color-status-delivered-foreground: var(--status-delivered-foreground);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-foreground: var(--status-cancelled-foreground);
+  --color-late: var(--late);
+  --color-late-foreground: var(--late-foreground);
+  --color-lock-owner: var(--lock-owner);
+  --color-lock-owner-foreground: var(--lock-owner-foreground);
+  --color-palette-1: var(--palette-1);
+  --color-palette-2: var(--palette-2);
+  --color-palette-3: var(--palette-3);
+  --color-palette-4: var(--palette-4);
+  --color-palette-5: var(--palette-5);
+  --color-palette-6: var(--palette-6);
+  --color-palette-7: var(--palette-7);
+  --color-palette-8: var(--palette-8);
+  --color-palette-9: var(--palette-9);
+  --color-palette-10: var(--palette-10);
+  --color-palette-11: var(--palette-11);
+  --color-palette-12: var(--palette-12);
+  --color-palette-13: var(--palette-13);
+  --color-palette-14: var(--palette-14);
+  --color-palette-15: var(--palette-15);
+  --color-palette-16: var(--palette-16);
+  --color-palette-17: var(--palette-17);
+  --color-palette-18: var(--palette-18);
+  --color-palette-19: var(--palette-19);
+  --color-palette-20: var(--palette-20);
+  --color-group-1: var(--group-1);
+  --color-group-2: var(--group-2);
+
+  /* The radius steps of D1 (Q21): 0.6, 0.8, 1 and 1.4 times --radius. */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
