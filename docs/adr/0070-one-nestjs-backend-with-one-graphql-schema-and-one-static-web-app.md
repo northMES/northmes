@@ -42,6 +42,7 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 
 * Module web code lives in `apps/web/src/modules/<id>`. Module schemas, owner roles, row-level security and the command bus stay; the MIT contracts packages stay separate packages.
 * A CI check in `pnpm check` fails when a module imports another module's code other than its public api.
+* NorthMES's own modules carry no manifest. `AppModule` imports `CoreModule`, `PlanningModule` and the rest as plain Nest modules in dependency order, they take the backend's version, boot reads their migrations from `src/modules/<id>/migrations`, and the command contract's `validatable` flag ([ADR 0017][adr-0017]) marks the commands a plugin may validate. `defineModule` and the catalog check stay for drop-in plugins ([ADR 0037][adr-0037]).
 
 ### Web
 
@@ -72,7 +73,7 @@ Role `api` serves the one schema and no web files. Boot runs the root-field chec
 
 #### Changes to ADR 0003
 
-Module code moves from packages to the folders above. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go.
+Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go.
 
 #### Changes to ADR 0016
 
@@ -149,6 +150,7 @@ The plant's presentation values leave the module list; their carrier is open.
 
 [adr-0002]: 0002-modular-monolith-with-module-owned-schemas-and-process-roles.md
 [adr-0015]: 0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md
+[adr-0017]: 0017-zod-contracts-as-the-single-source-for-inputs.md
 [adr-0018]: 0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md
 [adr-0019]: 0019-web-shell-with-react-module-federation-remotes.md
 [adr-0037]: 0037-plugins-drop-in-packages-command-validators-and-ui-slots.md
