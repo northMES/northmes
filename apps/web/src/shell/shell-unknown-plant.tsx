@@ -4,6 +4,7 @@ import { Factory, SearchX } from 'lucide-react';
 import { type RefObject, useEffect } from 'react';
 import type { ShellModule } from '../modules.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
+import { useScrollPaddingTop } from '../ui/lib/use-scroll-padding-top.ts';
 import { Card } from '../ui/primitives/card.tsx';
 import type { ShellCompany } from './companies.graphql.ts';
 import { mainId, plantHome } from './shell-pages.ts';
@@ -37,13 +38,17 @@ export function ShellUnknownPlant({
 }: ShellUnknownPlantProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const withPlants = companies.filter(({ plants }) => plants.length > 0);
+  const stickyBlock = useScrollPaddingTop<HTMLElement>();
   useEffect(() => {
     document.title = `${pageNotFound} · NorthMES`;
   }, []);
   return (
     <div className="flex min-h-svh flex-col">
       <SkipLink targetId={mainId} />
-      <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4">
+      <header
+        ref={stickyBlock}
+        className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4"
+      >
         <span
           aria-hidden
           className="grid size-6 place-items-center rounded-md bg-primary text-xs font-semibold text-primary-foreground"

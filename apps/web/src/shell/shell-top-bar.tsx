@@ -4,6 +4,7 @@ import { cn } from 'cn';
 import { Menu, PanelLeft, Settings } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import { IconButton } from '../ui/components/icon-button/index.ts';
+import { useScrollPaddingTop } from '../ui/lib/use-scroll-padding-top.ts';
 import { buttonVariants } from '../ui/primitives/button.tsx';
 import { useSidebar } from '../ui/primitives/sidebar.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/primitives/tooltip.tsx';
@@ -91,7 +92,8 @@ function SettingsButton({ href, current }: SettingsButtonTarget) {
 /**
  * The top bar (D2), the banner landmark: the sidebar trigger at its start, then the breadcrumb and
  * the page actions, which the page frame of the route fills, then the Settings button, where Help
- * will follow it, and on a page without the sidebar the account button.
+ * will follow it, and on a page without the sidebar the account button. It is sticky, so it keeps
+ * the page's scroll-padding-top at its height plus 8 px (KE19, KE20).
  */
 export function ShellTopBar({
   sidebarId,
@@ -100,8 +102,12 @@ export function ShellTopBar({
   settings,
   account,
 }: ShellTopBarProps) {
+  const stickyBlock = useScrollPaddingTop<HTMLElement>();
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
+    <header
+      ref={stickyBlock}
+      className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4"
+    >
       {sidebarId !== undefined && <SidebarToggle sidebarId={sidebarId} />}
       <div ref={breadcrumbRef} className="min-w-0 flex-1" />
       <div ref={actionsRef} className="flex shrink-0 items-center gap-2" />
