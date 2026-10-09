@@ -10,5 +10,6 @@ import { User } from '../types/user.type.ts';
  */
 export const BlockUser = defineCommand(blockUser, {
   returns: () => User,
+  plantFree: true,
   ...blockUserHandler,
 });
