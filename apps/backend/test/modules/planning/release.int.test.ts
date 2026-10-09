@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory, signInAt } from '@northmes/backend/testing';
+import { givenCompany, hostFactory, signIn, signInAt } from '@northmes/backend/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -156,6 +156,36 @@ describe('planningReleaseProductionOrder', () => {
       ],
     });
     expect(await client.send(ordersQuery)).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },
+    });
+  });
+
+  it('E05-S06 a user who reads production orders at the plant but holds no release permission gets FORBIDDEN core.forbidden, and the order stays planned', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { plants } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const id = await writeOrder(plant, '6601');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['planning.productionOrder:read', 'core.article:update'] },
+    ]);
+    const viewer = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': plant },
+    });
+
+    const answer = await viewer.send(releaseMutation, { input: { id, expectedVersion: 1 } });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `You need planning.productionOrder:release at the scope of Production order ${id}`,
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+        },
+      ],
+    });
+    expect(await viewer.send(ordersQuery)).toEqual({
       status: 200,
       data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },
     });
