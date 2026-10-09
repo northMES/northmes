@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
-import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
+import { hasErrorCode, refusalMessage } from '../../../../ui/lib/graphql-errors.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
 import {
@@ -12,6 +12,7 @@ import {
   type PlantsChoice,
   plantsChoiceError,
 } from '../../components/article-plants-field/index.ts';
+import { permissionPhrase } from '../../no-access.tsx';
 import { usePlaces } from '../../use-places.ts';
 import { CoreSetArticlePlants } from './set-article-plants.graphql.ts';
 
@@ -26,12 +27,27 @@ function choiceOf(article: Pick<Article, 'allPlants' | 'plants'>): PlantsChoice 
   return { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) };
 }
 
-/** The message of a save of plants that the API refused, or that got no answer. */
-function failureOf(error: unknown): string {
+/**
+ * The message of a save of plants that the API refused, or that got no answer. core.forbidden
+ * names the permission at the company, as design core-304 names a refused permission and its
+ * place; core.archived takes the copy of design ui-222; another refusal, such as core.plant_unknown,
+ * shows the API's message; and only a save without an answer asks to check the connection.
+ */
+function failureOf(error: unknown, company: string): string {
   if (hasErrorCode(error, 'core.version_conflict')) {
     return 'Someone changed this article after you opened it. The page now shows the saved plants. Check them, then save again.';
   }
-  return 'Could not save the plants. Check the connection, then try again.';
+  if (hasErrorCode(error, 'core.forbidden')) {
+    return `You do not have permission to change the plants of this article. This needs ${permissionPhrase('core.article:assign')} at ${company}.`;
+  }
+  if (hasErrorCode(error, 'core.archived')) {
+    return 'This article is archived. Archived articles cannot be changed until they are restored.';
+  }
+  const reasons = refusalMessage(error);
+  if (reasons === undefined) {
+    return 'Could not save the plants. Check the connection, then try again.';
+  }
+  return `Could not save the plants. ${reasons}`;
 }
 
 /**
@@ -78,7 +94,7 @@ export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
         const saved = await reload().catch(() => undefined);
         if (saved !== undefined) setChoice(choiceOf(saved));
       }
-      setFailure(failureOf(thrown));
+      setFailure(failureOf(thrown, places.company?.name ?? 'the company'));
     }
   };
 
