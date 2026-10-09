@@ -41,7 +41,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@nestjs/testing": "catalog:",
     "@northmes/testing": "workspace:*",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
