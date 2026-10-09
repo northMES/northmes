@@ -166,6 +166,31 @@ describe('sign-in', () => {
     );
   });
 
+  it('E05-S05 a second refusal moves focus to the summary once it names the new refusal, so a screen reader reads the new error', async () => {
+    const user = userEvent.setup();
+    renderAt('/sign-in', fakeSession({ signedIn: false }));
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, 'alex.lund', 'Correct horse');
+    await screen.findByRole('group', { name: 'The username or password is wrong' });
+    await user.clear(screen.getByLabelText('Username or email'));
+
+    // The heading the summary holds each time it takes focus.
+    const focused: string[] = [];
+    const record = (event: FocusEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.getAttribute('role') === 'group') {
+        focused.push(target.querySelector('h2')?.textContent ?? '');
+      }
+    };
+    document.addEventListener('focusin', record);
+    await signIn(user, 'rate.limited', 'anything');
+
+    const summary = await screen.findByRole('group', { name: 'Too many sign-in attempts' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    document.removeEventListener('focusin', record);
+    expect(focused).toEqual(['Too many sign-in attempts']);
+  });
+
   it('E05-S05 the user menu names the signed-in user and offers Sign out', async () => {
     const user = userEvent.setup();
     renderAt('/plant-a/quality', fakeSession());
