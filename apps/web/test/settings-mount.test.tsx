@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { companySettingsHref } from '@northmes/web-sdk';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -183,7 +184,7 @@ describe('company settings', () => {
     const router = renderShellAt('/plant-a/core/articles', shellModules, { fetch });
     await screen.findByRole('heading', { level: 1, name: 'Articles' });
 
-    await router.navigate({ href: `/settings/${foreign}` });
+    await router.navigate({ href: companySettingsHref(foreign) });
 
     await screen.findByRole('heading', { level: 1, name: 'Company settings' });
     const main = screen.getByRole('main');
