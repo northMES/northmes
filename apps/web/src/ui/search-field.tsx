@@ -28,20 +28,34 @@ export interface SearchFieldProps {
 export function SearchField({ label, value, onSearch, className }: SearchFieldProps) {
   const [text, setText] = useState(value);
   const [shown, setShown] = useState(value);
+  // The last search this field sent, so its echo through value keeps the text typed since.
+  const [sent, setSent] = useState(value);
+  // Counts searches from outside; each one cancels a search that still waits for the pause.
+  const [outsideSearches, setOutsideSearches] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // A new search from outside, such as Clear filters, replaces the typed text.
   if (value !== shown) {
     setShown(value);
-    setText(value);
+    if (value !== sent) {
+      setSent(value);
+      setText(value);
+      setOutsideSearches((count) => count + 1);
+    }
   }
+
+  useEffect(() => {
+    if (outsideSearches > 0) clearTimeout(timer.current);
+  }, [outsideSearches]);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
   const search = (next: string) => {
     clearTimeout(timer.current);
-    if (next !== value) onSearch(next);
+    if (next === value) return;
+    setSent(next);
+    onSearch(next);
   };
 
   const clear = () => {
