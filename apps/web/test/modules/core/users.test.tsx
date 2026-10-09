@@ -697,4 +697,132 @@ describe('users', () => {
     const summary = await screen.findByRole('group', { name: /^Fix 3 fields/ });
     expect(within(summary).getByRole('link', { name: 'Enter a username.' })).toBeDefined();
   });
+
+  /** A company admin who creates users and assigns roles, holding Viewer's one permission. */
+  const creator = [
+    'core.user:read',
+    'core.user:create',
+    'core.role:read',
+    'core.roleAssignment:manage',
+    'planning.productionOrder:read',
+  ];
+
+  /** Types Tove Lindqvist's name, username and email into New user. */
+  async function typeTove(events: ReturnType<typeof userEvent.setup>) {
+    await events.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
+    await events.type(field('Username'), 't.lindqvist');
+    await events.type(field('Email'), 'tove.lindqvist@example.test');
+  }
+
+  it('E05-S08 New user gives the user a first role at the place chosen under Where, with the roles the creator cannot give locked', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.username === 't.lindqvist' &&
+            input.roleId === viewerRole.id &&
+            input.scopeId === plantA.id,
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: { ...tove, blocked: false, roleAssignments: [assignment(viewerRole, plantA)] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Plant A only' }));
+    expect(
+      within(section).getByText(
+        'Roles that need permissions you do not hold at Plant A stay in the list, with what they need.',
+      ),
+    ).toBeDefined();
+    expect(
+      (
+        within(section).getByRole('radio', { name: 'Shift lead' }) as HTMLButtonElement
+      ).getAttribute('aria-disabled') ??
+        within(section).getByRole('radio', { name: 'Shift lead' }).hasAttribute('data-disabled'),
+    ).toBeTruthy();
+    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
+  });
+
+  it('E05-S08 a role the server refuses at the place lands on Role with every value kept', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === acme.id,
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'You do not hold it.',
+              path: ['coreCreateUser'],
+              extensions: {
+                code: 'FORBIDDEN',
+                errorCode: 'core.role_not_held',
+                details: { missingPermissions: ['planning.productionOrder:read'] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Acme AB, all plants' }));
+    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(within(summary).getByRole('link').textContent).toMatch(
+      /^You cannot assign Viewer at Acme AB\./,
+    );
+    expect(
+      (within(section).getByRole('radio', { name: 'Viewer' }) as HTMLElement).getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('true');
+    expect(field('Name').value).toBe('Tove Lindqvist');
+  });
+
+  it('E05-S08 New user shows no Role and place to a creator who may not assign roles', async () => {
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
+      companiesQuery(),
+    ]);
+
+    expect(await screen.findByRole('textbox', { name: 'Name' })).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Role and place' })).toBeNull();
+  });
 });
