@@ -149,7 +149,7 @@ describe('articles list URL state', () => {
     expect(document.activeElement).toBe(search);
 
     await waitFor(() =>
-      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', lastChangedText]]),
+      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', 'Plant A', lastChangedText]]),
     );
     expect(table.getAttribute('aria-busy')).toBeNull();
     expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
