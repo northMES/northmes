@@ -54,7 +54,7 @@ describe('the shadcn CLI configuration', () => {
     ).toEqual({
       components: 'src/ui/components',
       ui: 'src/ui/primitives',
-      utils: 'src/ui/lib/cn',
+      utils: 'src/ui/lib/utils',
       lib: 'src/ui/lib',
       hooks: 'src/ui/lib',
     });
