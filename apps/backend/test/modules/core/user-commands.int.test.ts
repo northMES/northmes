@@ -168,6 +168,126 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     ]);
   });
 
+  /**
+   * A company whose admin creates users and assigns roles, holding core.article:read and
+   * core.article:update at the company and core.article:archive at its plant only, with a custom
+   * role Shift lead of core.article:read and core.article:update, and Archiver of
+   * core.article:archive.
+   */
+  async function companyWithRoles() {
+    const given = await givenCompany(db.ownerUrl, { name: 'Acme AB' });
+    const slug = given.slugs[0] ?? '';
+    const plant = given.plants[0] ?? '';
+    const admin = await signedIn(
+      [
+        {
+          scopeId: given.company,
+          permissions: [
+            ...userAdmin,
+            'core.role:manage',
+            'core.roleAssignment:manage',
+            'core.article:read',
+            'core.article:update',
+          ],
+        },
+        { scopeId: plant, permissions: ['core.article:archive'] },
+      ],
+      slug,
+    );
+    const role = async (name: string, permissions: string[]) => {
+      const answer = await admin.client.send<{ coreCreateRole: { id: string } }>(
+        `mutation ($input: CoreCreateRoleInput!) { coreCreateRole(input: $input) { id } }`,
+        { input: { id: randomUUIDv7(), name, permissions } },
+      );
+      return answer.data?.coreCreateRole.id ?? '';
+    };
+    const shiftLead = await role('Shift lead', ['core.article:read', 'core.article:update']);
+    const archiver = await role('Archiver', ['core.article:archive']);
+    return { ...given, slug, plant, admin, shiftLead, archiver };
+  }
+
+  it('E05-S08 coreCreateUser with a role and a place creates the user holding that role there, and takes a reason', async () => {
+    const { admin, plant, shiftLead } = await companyWithRoles();
+
+    const created = await createUser(admin.client, {
+      id: randomUUIDv7(),
+      username: 'o.wik',
+      name: 'Oskar Wik',
+      email: 'oskar.wik@example.test',
+      roleId: shiftLead,
+      scopeId: plant,
+      reason: 'Starts on the night shift',
+    });
+    const answer = await admin.client.send<{
+      coreUser: { roleAssignments: { scope: { id: string }; role: { name: string } }[] };
+    }>(
+      `query ($id: ID!) { coreUser(id: $id) { roleAssignments { scope { id } role { name } } } }`,
+      {
+        id: created.user.id,
+      },
+    );
+
+    expect(answer.data?.coreUser.roleAssignments).toEqual([
+      { scope: { id: plant }, role: { name: 'Shift lead' } },
+    ]);
+  });
+
+  it('E05-S08 coreCreateUser with a role the creator cannot grant there is refused with core.role_not_held, and no user is created', async () => {
+    const { admin, company: companyId, archiver } = await companyWithRoles();
+
+    const answer = await admin.client.send(createMutation, {
+      input: {
+        id: randomUUIDv7(),
+        username: 'm.strand',
+        name: 'Mikael Strand',
+        email: 'mikael.strand@example.test',
+        roleId: archiver,
+        scopeId: companyId,
+      },
+    });
+    const users = await admin.client.send<UsersAnswer>(usersQuery);
+
+    expect(refusals(answer)?.map(({ errorCode }) => errorCode)).toEqual(['core.role_not_held']);
+    expect(users.data?.coreUsers.edges.map(({ node }) => node.username)).not.toContain('m.strand');
+    expect(await signInStatus('mikael.strand@example.test', 'anything')).toBe(401);
+  });
+
+  it('E05-S08 coreCreateUser with a role needs core.roleAssignment:manage at the place, and a role and a place given together', async () => {
+    const { company: companyId, slug, shiftLead } = await companyWithRoles();
+    const creator = await signedIn(
+      [
+        {
+          scopeId: companyId,
+          permissions: [...userAdmin, 'core.article:read', 'core.article:update'],
+        },
+      ],
+      slug,
+    );
+
+    const withRole = await creator.client.send(createMutation, {
+      input: {
+        id: randomUUIDv7(),
+        username: 'i.wall',
+        name: 'Ida Wall',
+        email: 'ida.wall@example.test',
+        roleId: shiftLead,
+        scopeId: companyId,
+      },
+    });
+    const roleOnly = await creator.client.send(createMutation, {
+      input: {
+        id: randomUUIDv7(),
+        username: 'i.wall',
+        name: 'Ida Wall',
+        email: 'ida.wall@example.test',
+        roleId: shiftLead,
+      },
+    });
+
+    expect(refusals(withRole)?.map(({ errorCode }) => errorCode)).toEqual(['core.forbidden']);
+    expect(refusals(roleOnly)?.map(({ code }) => code)).toEqual(['BAD_USER_INPUT']);
+  });
+
   it('E05-S08 coreCreateUser refuses a username that is taken and an email another user has', async () => {
     const { admin } = await company();
     await createUser(admin.client, {
