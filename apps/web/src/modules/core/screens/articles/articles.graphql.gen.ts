@@ -11,7 +11,8 @@ export type ArticleOrderBy = {
 
 export type ArticleSortField =
   | 'CODE'
-  | 'NAME';
+  | 'NAME'
+  | 'UPDATED_AT';
 
 export type SortDirection =
   | 'ASC'
