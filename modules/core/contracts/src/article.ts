@@ -60,6 +60,7 @@ export const archiveArticle = defineCommandContract({
   name: 'core.archiveArticle',
   target: 'existing',
   fields: z.object({}),
+  permission: 'core.article:archive',
 });
 
 /**
@@ -70,4 +71,5 @@ export const restoreArticle = defineCommandContract({
   name: 'core.restoreArticle',
   target: 'existing',
   fields: z.object({}),
+  permission: 'core.article:archive',
 });

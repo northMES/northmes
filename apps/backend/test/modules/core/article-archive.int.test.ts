@@ -272,6 +272,7 @@ describe('coreArchiveArticle and coreRestoreArticle', () => {
       errors: [
         {
           message: `You need core.article:archive at the scope of Article ${article.id}`,
+          locations: [{ line: 2, column: 3 }],
           path: [mutation],
           extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
         },
