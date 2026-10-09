@@ -3,10 +3,12 @@ import 'reflect-metadata';
 import { HttpStatus, Module } from '@nestjs/common';
 import { Args, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
 import type { ScopedDatabase } from '@northmes/sdk/data';
+import { defineListDeclaration } from '@northmes/contracts';
 import { DomainError } from '@northmes/sdk/errors';
 import { defineList, type ListArgs } from '@northmes/sdk/lists';
 import { type GraphQLArgument, getNullableType } from 'graphql';
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { buildSchema } from '../fixtures/graphql/schema.ts';
 
 @ObjectType('Tool')
@@ -42,7 +44,28 @@ const gaugeList = defineList({
   archivable: true,
 });
 
-/** The root fields tools and gauges, which only take their list's arguments. */
+@ObjectType('Bolt')
+class Bolt {
+  @Field(() => ID) id!: string;
+}
+
+/** A list declared in a contracts package, with camelCase sort fields (ADR 0073). */
+const boltDeclaration = defineListDeclaration({
+  name: 'Bolt',
+  node: z.object({ id: z.uuid(), code: z.string() }),
+  sortFields: {
+    code: { column: 'code', type: 'text' },
+    updatedAt: { column: 'updated_at', type: 'timestamptz' },
+  },
+  defaultOrderBy: ['code'],
+  filters: { code: z.string() },
+  search: ['code'],
+  archivable: true,
+});
+
+const boltList = defineList(boltDeclaration, { node: () => Bolt });
+
+/** The root fields tools, gauges and bolts, which only take their list's arguments. */
 @Resolver()
 class ListsResolver {
   @Query(() => toolList.Connection)
@@ -54,10 +77,20 @@ class ListsResolver {
   gauges(@Args({ type: () => gaugeList.Args }) _args: ListArgs<'CODE'>): never {
     throw new Error('the test reads only the schema');
   }
+
+  @Query(() => boltList.Connection)
+  bolts(@Args({ type: () => boltList.Args }) _args: ListArgs<'CODE'>): never {
+    throw new Error('the test reads only the schema');
+  }
 }
 
 @Module({
-  providers: [ListsResolver, toolList.ConnectionResolver, gaugeList.ConnectionResolver],
+  providers: [
+    ListsResolver,
+    toolList.ConnectionResolver,
+    gaugeList.ConnectionResolver,
+    boltList.ConnectionResolver,
+  ],
 })
 class ListsModule {}
 
@@ -94,6 +127,31 @@ describe('defineList', () => {
       message: 'orderBy takes at most 3 entries',
     });
     expect((error as DomainError).getStatus()).toBe(HttpStatus.BAD_REQUEST);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('ADR0073-W3 a list declared in a contracts package names its GraphQL sort fields in upper snake case and keeps includeArchived', async () => {
+    const { schema, moduleRef } = await buildSchema([ListsModule]);
+    await moduleRef.close();
+
+    const sortField = schema.getType('BoltSortField') as { getValues(): { name: string }[] };
+    expect(sortField.getValues().map(({ name }) => name)).toEqual(['CODE', 'UPDATED_AT']);
+    const args = schema.getQueryType()?.getFields().bolts?.args.map(({ name }) => name);
+    expect(args).toContain('includeArchived');
+  });
+
+  it('ADR0073-W3 find refuses an orderBy that names a field twice with core.list.bad_argument before any query', async () => {
+    const transaction = vi.fn();
+    const db = { transaction } as unknown as ScopedDatabase<unknown>;
+
+    const error = await boltList
+      .find(db, () => ({}) as never, { orderBy: ['code', '-code'] })
+      .catch((thrown: unknown) => thrown);
+
+    expect(error).toMatchObject({
+      code: 'core.list.bad_argument',
+      message: 'orderBy names CODE more than once',
+    });
     expect(transaction).not.toHaveBeenCalled();
   });
 });
