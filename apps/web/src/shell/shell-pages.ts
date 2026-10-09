@@ -82,6 +82,23 @@ export function plantSettingsLinks(module: ShellModule): readonly MenuLink[] {
   return menuLinks(module).filter(({ area }) => area === 'settings');
 }
 
+/**
+ * The nested group of a module that holds the page on screen: the group with the entry whose page
+ * it is, or the nearest one above it, as Master data for an article.
+ */
+export function groupAt(
+  module: ShellModule | undefined,
+  plant: string,
+  pathname: string,
+): MenuGroup | undefined {
+  if (module === undefined) return undefined;
+  return sidebarItems(module)
+    .filter(isMenuGroup)
+    .find(({ links }) =>
+      links.some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
+    );
+}
+
 /** The href of the first sidebar entry of a module, at a plant. */
 export function firstHref(module: ShellModule | undefined, plant: string): string | undefined {
   const [first] = module === undefined ? [] : sidebarLinks(module);

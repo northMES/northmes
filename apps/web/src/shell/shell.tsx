@@ -44,6 +44,7 @@ import {
   companySettingsEntries,
   currentOf,
   firstHref,
+  groupAt,
   isCore,
   mainId,
   menuLinks,
@@ -238,8 +239,9 @@ function firstOpenPage(
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
  * linked to the plant's first page; then the module of the page, linked to its first entry, or on
  * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
- * Core's pages sit at the plant root and have no module crumb (ADR 0074). A crumb whose page is the
- * one on screen is plain text.
+ * Core's pages sit at the plant root and have no module crumb (ADR 0074). A page in a nested group,
+ * as Articles in Master data, adds the group's crumb, as text, since the group has no page. A crumb
+ * whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
@@ -258,11 +260,13 @@ function shellTrail(
   ];
   if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
   const current = moduleOfPath(modules, pathname);
+  const group = groupAt(current, plant, pathname);
   return [
     ...head,
     ...(current === undefined || isCore(current)
       ? []
       : [crumb(current.label, firstHref(current, plant))]),
+    ...(group === undefined ? [] : [{ label: group.label }]),
   ];
 }
 
