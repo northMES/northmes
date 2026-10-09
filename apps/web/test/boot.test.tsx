@@ -14,6 +14,8 @@ const pageOrigin = 'https://web.northmes.test';
 /** Puts index.html's body in the document, as the browser shows it before any script runs. */
 function loadIndexHtml(): HTMLElement {
   const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+  // The entry script is what the tests call; the document only shows the markup.
+  for (const script of page.querySelectorAll('script')) script.remove();
   document.title = page.title;
   document.body.innerHTML = page.body.innerHTML;
   return document.getElementById('root') as HTMLElement;
