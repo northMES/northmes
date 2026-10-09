@@ -44,6 +44,13 @@ input CoreArchiveArticleInput {
   id: ID!
 }
 
+input CoreAssignRoleInput {
+  id: ID!
+  roleId: ID!
+  scopeId: ID!
+  userId: ID!
+}
+
 input CoreCreateArticleInput {
   code: String!
   id: ID!
@@ -59,6 +66,11 @@ input CoreCreateRoleInput {
 input CoreDeleteRoleInput {
   expectedVersion: Int!
   id: ID!
+}
+
+input CoreRemoveRoleAssignmentInput {
+  id: ID!
+  reason: String
 }
 
 input CoreRestoreArticleInput {
@@ -93,9 +105,11 @@ type EffectivePermission {
 
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
+  coreAssignRole(input: CoreAssignRoleInput!): RoleAssignment!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
   coreCreateRole(input: CoreCreateRoleInput!): Role!
   coreDeleteRole(input: CoreDeleteRoleInput!): Role!
+  coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
   coreUpdateRole(input: CoreUpdateRoleInput!): Role!

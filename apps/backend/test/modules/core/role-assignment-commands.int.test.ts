@@ -136,7 +136,11 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
     });
     expect(retry.data?.coreAssignRole).toEqual(answer.data?.coreAssignRole);
     expect(refusals(again)).toEqual([
-      { code: 'CONFLICT', errorCode: 'core.role_already_assigned' },
+      {
+        code: 'CONFLICT',
+        errorCode: 'core.role_already_assigned',
+        details: { assignmentId: input.id },
+      },
     ]);
     expect(roles.data?.coreUser.roleAssignments).toContainEqual({
       id: input.id,

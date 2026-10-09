@@ -21,9 +21,11 @@ describe('schemaSdl', () => {
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
       'coreArchiveArticle',
+      'coreAssignRole',
       'coreCreateArticle',
       'coreCreateRole',
       'coreDeleteRole',
+      'coreRemoveRoleAssignment',
       'coreRestoreArticle',
       'coreUpdateArticle',
       'coreUpdateRole',
