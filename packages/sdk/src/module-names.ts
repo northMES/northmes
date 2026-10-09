@@ -7,8 +7,6 @@ export interface ModuleNames {
   readonly sql: string;
   /** Postgres role that owns the module's schema: `nm_mod_<sql>`. */
   readonly ownerRole: string;
-  /** Module Federation remote name (no hyphens allowed). */
-  readonly remote: string;
 }
 
 /** kebab-case: starts with a letter, then lower-case segments joined by single hyphens. */
@@ -36,5 +34,5 @@ export function moduleNames(id: string): ModuleNames {
       `Invalid module id "${id}": its owner role ${ownerRole} is ${ownerRole.length} bytes, and Postgres identifiers hold at most ${MAX_IDENTIFIER_BYTES} bytes; use an id of at most ${MAX_ID_LENGTH} characters`,
     );
   }
-  return { id, gql, sql, ownerRole, remote: gql };
+  return { id, gql, sql, ownerRole };
 }

@@ -14,10 +14,6 @@ describe('moduleNames', () => {
     expect(moduleNames('production-start').ownerRole).toBe('nm_mod_production_start');
   });
 
-  it('E02-S01 the remote name of production-start is productionStart', () => {
-    expect(moduleNames('production-start').remote).toBe('productionStart');
-  });
-
   it('E02-S01 ids Planning, -a, a- and a--b are rejected', () => {
     for (const id of ['Planning', '-a', 'a-', 'a--b']) {
       expect(() => moduleNames(id), id).toThrow(`Invalid module id "${id}"`);
