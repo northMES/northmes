@@ -3,7 +3,7 @@ import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { upsertArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
-import type { Selectable, Updateable } from 'kysely';
+import { type Selectable, sql, type Updateable } from 'kysely';
 import type { z } from 'zod';
 import type { ArticleTable } from '../../infrastructure/database.ts';
 import { forbidden } from '../access/request-scope.ts';
@@ -70,7 +70,8 @@ async function lockAt(
 /**
  * The handler of core.upsertArticle (ADR 0073). Its scope hook is create's: the edit scope a new
  * article would have, where the bus checks core.article:create. The handler finds the article with
- * the input's article number in the company, without regard to case. None: it creates one as
+ * the input's article number in the company, without regard to case, under a lock on that number
+ * so concurrent upserts of a new number create it once. None: it creates one as
  * core.createArticle does. An archived one: core.archived. An active one: a different name needs
  * core.article:update at the article's edit scope, and other plants need core.article:assign at
  * the company, both checked with context.require; the change is one update at the input's
@@ -85,11 +86,17 @@ export const upsertArticleHandler = {
     const companyId = await requestCompany(input, context);
     // The scope hook found no company, so the bus refused the command before the handler runs.
     if (!companyId) throw new NotFoundException(`Article ${input.code} was not found`);
+    const codeKey = input.code.toLowerCase();
+    // Concurrent upserts of one new article number wait here for each other, so the second one
+    // finds the article the first one created instead of failing on its number with core.code_taken.
+    await sql`select pg_advisory_xact_lock(hashtextextended(${`core.article-code:${companyId}:${codeKey}`}, 0))`.execute(
+      tx,
+    );
     const found = await tx
       .selectFrom('core.article')
       .selectAll()
       .where('company_id', '=', companyId)
-      .where('code_key', '=', input.code.toLowerCase())
+      .where('code_key', '=', codeKey)
       .executeTakeFirst();
     if (!found) return createArticleHandler.handle(input, context);
     refuseArchived(found);
