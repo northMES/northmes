@@ -428,4 +428,75 @@ describe("an article's plants", () => {
       'true',
     ]);
   });
+
+  it('ADR0073-W2 Save plants refused with core.forbidden names the permission at the company, core.archived says the article is archived, another refusal shows the API message, and only a save without an answer asks to check the connection', async () => {
+    const axle = article('AX-500', 'Axle 20 mm', 3);
+    const refusal = (message: string, code: string, errorCode: string) => ({
+      result: {
+        data: null,
+        errors: [{ message, path: ['coreSetArticlePlants'], extensions: { code, errorCode } }],
+      },
+    });
+    const cases = [
+      {
+        answer: refusal(
+          `You need core.article:assign at scope ${axle.id}`,
+          'FORBIDDEN',
+          'core.forbidden',
+        ),
+        shown:
+          'You do not have permission to change the plants of this article. This needs the permission to assign articles to plants (core.article:assign) at Acme AB.',
+      },
+      {
+        answer: refusal(
+          'Article AX-500 is archived, and an archived article cannot be changed until it is restored',
+          'PRECONDITION',
+          'core.archived',
+        ),
+        shown:
+          'This article is archived. Archived articles cannot be changed until they are restored.',
+      },
+      {
+        answer: refusal(
+          'No plant of the company has the slug plant-b.',
+          'BAD_USER_INPUT',
+          'core.plant_unknown',
+        ),
+        shown: 'Could not save the plants. No plant of the company has the slug plant-b.',
+      },
+      {
+        answer: { error: new Error('Failed to fetch') },
+        shown: 'Could not save the plants. Check the connection, then try again.',
+      },
+    ];
+    for (const { answer, shown } of cases) {
+      const user = userEvent.setup();
+      renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
+        articleQuery(axle),
+        assigner(),
+        companiesQuery(),
+        {
+          request: {
+            query: CoreSetArticlePlants,
+            variables: {
+              input: {
+                id: axle.id,
+                expectedVersion: 3,
+                allPlants: false,
+                plants: ['plant-a', 'plant-b'],
+              },
+            },
+          },
+          ...answer,
+        } as MockLink.MockedResponse,
+      ]);
+
+      const plantsSection = await screen.findByRole('region', { name: 'Plants' });
+      await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
+      await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
+
+      expect(await within(plantsSection).findByText(shown)).toBeDefined();
+      cleanup();
+    }
+  });
 });
