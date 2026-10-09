@@ -1,4 +1,5 @@
 type Article {
+  archivedAt: DateTime
   code: String!
   id: ID!
   name: String!
@@ -26,10 +27,20 @@ enum ArticleSortField {
   NAME
 }
 
+input CoreArchiveArticleInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
 input CoreCreateArticleInput {
   code: String!
   id: ID!
   name: String!
+}
+
+input CoreRestoreArticleInput {
+  expectedVersion: Int!
+  id: ID!
 }
 
 input CoreUpdateArticleInput {
@@ -39,8 +50,15 @@ input CoreUpdateArticleInput {
   name: String!
 }
 
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
 type Mutation {
+  coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
 }
@@ -68,7 +86,7 @@ type ProductionOrder {
 
 type Query {
   coreArticle(id: ID!): Article
-  coreArticles(after: String, before: String, first: Int = 25, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
+  coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
   planningProductionOrders: [ProductionOrder!]!
 }
 
