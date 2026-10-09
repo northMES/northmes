@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MockLink } from '@apollo/client/testing';
 import { MockedProvider } from '@apollo/client/testing/react';
+import { coreLinks } from '@northmes/core-contracts';
 import { createShellRoutes, ShellProvider } from '@northmes/web-sdk';
 import {
   createMemoryHistory,
@@ -17,11 +18,16 @@ import { CoreArticles } from '../../../src/modules/core/screens/articles/article
 /** The plant of every test, as the $plant segment names it. */
 export const plant = 'plant-a';
 
-/** The $plant route's component of the tests: the shell state of the plant in the URL. */
+/**
+ * The $plant route's component of the tests: the shell state of the plant in the URL, whose first
+ * page the user may open is Articles.
+ */
 function PlantStub() {
   const { plant } = useParams({ strict: false });
   return (
-    <ShellProvider value={{ plant }}>
+    <ShellProvider
+      value={{ plant, home: { label: 'Articles', href: coreLinks.articles({ plant }).href } }}
+    >
       <main>
         <Outlet />
       </main>

@@ -187,6 +187,32 @@ const maintenance: ShellModule = {
   }),
 };
 
+/** A screen whose h1 names the plant's first page the user may open, as the shell gives it. */
+function HomeScreen() {
+  const { home } = useShell();
+  return <h1>{home === undefined ? 'No first page' : `${home.label} at ${home.href}`}</h1>;
+}
+
+/** A module whose only entry needs a permission. */
+const audit: ShellModule = {
+  label: 'Audit',
+  order: 5,
+  links: [
+    {
+      label: 'Audit log',
+      icon: 'ListChecks',
+      link: ({ plant }) => ({ href: `/${plant}/audit` }),
+      permission: 'core.audit:read',
+    },
+  ],
+  module: defineWebModule({
+    id: 'audit',
+    version: '0.4.0',
+    routes: (plantRoute) =>
+      createRoute({ getParentRoute: () => plantRoute, path: 'audit', component: HomeScreen }),
+  }),
+};
+
 /** Renders the shell's router for the modules at path, for a signed-in viewer. */
 function renderShellAt(
   path: string,
@@ -340,6 +366,16 @@ describe('the shell', () => {
       ),
     );
     expect((await sidebarGroups()).map(groupLabel)).toEqual(['Core', 'Planning']);
+  });
+
+  it("E05-S06 the shell gives a page the plant's first sidebar entry the user may open, the way out of a page without access", async () => {
+    // The permissions never arrive, so the entry that needs one stays out.
+    const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
+    renderShellAt('/plant-a/audit', [audit, planning, quality], { fetch });
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Inspections at /plant-a/quality' }),
+    ).toBeDefined();
   });
 
   it('E04-S02 every nav entry shows an icon hidden from assistive technology, also for a name the web does not know', async () => {

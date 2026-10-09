@@ -88,7 +88,10 @@ describe('roles', () => {
       ),
     ).toBeDefined();
     expect(screen.queryByRole('table')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Go back' })).toBeDefined();
+    // A page opened by URL may have no page before it, so the way out is a link, not a step back.
+    expect(screen.getByRole('link', { name: 'Go to Articles' }).getAttribute('href')).toBe(
+      coreLinks.articles({ plant }).href,
+    );
   });
 
   it("E05-S06 a role's page lists its permissions by module, and Holders, read only, who holds it at the company and at the plant; the open tab lives in the URL", async () => {
