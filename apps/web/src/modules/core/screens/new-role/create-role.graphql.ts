@@ -7,7 +7,8 @@ export {
   type CoreCreateRoleMutationVariables,
 } from './create-role.graphql.gen.ts';
 
-// Creates a custom role with the fields the role page reads, which New role writes into CoreRole's cache. pnpm gen writes its typed document to create-role.graphql.gen.ts; this block never runs.
+// Creates a custom role with the fields the role page reads, which New role writes into CoreRole's
+// cache. pnpm gen writes its typed document to create-role.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
     mutation CoreCreateRole($input: CoreCreateRoleInput!) {

@@ -7,7 +7,8 @@ export {
   type CoreUpdateRoleMutationVariables,
 } from './update-role.graphql.gen.ts';
 
-// Saves a custom role's name and permissions with the version the edit started from. pnpm gen writes its typed document to update-role.graphql.gen.ts; this block never runs.
+// Saves a custom role's name and permissions with the version the edit started from. pnpm gen
+// writes its typed document to update-role.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
     mutation CoreUpdateRole($input: CoreUpdateRoleInput!) {
