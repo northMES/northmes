@@ -3,18 +3,25 @@ import { type ArgumentsHost, Catch, HttpException, HttpStatus } from '@nestjs/co
 import { BaseExceptionFilter } from '@nestjs/core';
 import type { GqlContextType } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
-import { DomainError } from './domain-error.ts';
+import { DomainError, type DomainErrorStatus } from './domain-error.ts';
 
 /** The GraphQL extensions.code of each HTTP status an error may carry (ADR 0012). */
-const graphqlCodes: ReadonlyMap<number, string> = new Map([
-  [HttpStatus.BAD_REQUEST, 'BAD_USER_INPUT'],
-  [HttpStatus.UNAUTHORIZED, 'UNAUTHENTICATED'],
-  [HttpStatus.FORBIDDEN, 'FORBIDDEN'],
-  [HttpStatus.NOT_FOUND, 'NOT_FOUND'],
-  [HttpStatus.CONFLICT, 'CONFLICT'],
-  [HttpStatus.PRECONDITION_FAILED, 'PRECONDITION'],
-  [HttpStatus.SERVICE_UNAVAILABLE, 'UNAVAILABLE'],
-]);
+const graphqlCodes: Readonly<Record<DomainErrorStatus, string>> = {
+  [HttpStatus.BAD_REQUEST]: 'BAD_USER_INPUT',
+  [HttpStatus.UNAUTHORIZED]: 'UNAUTHENTICATED',
+  [HttpStatus.FORBIDDEN]: 'FORBIDDEN',
+  [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
+  [HttpStatus.CONFLICT]: 'CONFLICT',
+  [HttpStatus.PRECONDITION_FAILED]: 'PRECONDITION',
+  [HttpStatus.SERVICE_UNAVAILABLE]: 'UNAVAILABLE',
+};
+
+/** The GraphQL extensions.code of an HTTP status, or undefined for a status the filter masks. */
+function graphqlCodeOf(status: number): string | undefined {
+  return Object.hasOwn(graphqlCodes, status)
+    ? graphqlCodes[status as DomainErrorStatus]
+    : undefined;
+}
 
 /**
  * The one exception filter of the server. The host registers it once as APP_FILTER in its root
@@ -34,7 +41,7 @@ export class DomainErrorFilter extends BaseExceptionFilter {
       return undefined;
     }
     if (!(exception instanceof HttpException)) throw exception;
-    const code = graphqlCodes.get(exception.getStatus());
+    const code = graphqlCodeOf(exception.getStatus());
     if (!code) throw exception;
     if (!(exception instanceof DomainError)) {
       return new GraphQLError(exception.message, { extensions: { code } });

@@ -3,6 +3,7 @@
 export {
   DomainError,
   type DomainErrorOptions,
+  type DomainErrorStatus,
   type FieldError,
 } from './domain-error.ts';
 export { DomainErrorFilter } from './exception-filter.ts';

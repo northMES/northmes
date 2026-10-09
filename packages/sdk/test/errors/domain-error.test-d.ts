@@ -8,13 +8,17 @@ describe('DomainError', () => {
     new DomainError({ code: 'core.code_taken', status: HttpStatus.CONFLICT, message: 'Taken.' });
     new DomainError({ code: 'core.version_conflict', status: 409, message: 'Changed.' });
 
-    // @ts-expect-error a 500 reaches the client masked, without its code and details
     new DomainError({
       code: 'core.broken',
+      // @ts-expect-error a 500 reaches the client masked, without its code and details
       status: HttpStatus.INTERNAL_SERVER_ERROR,
-      message: 'x',
+      message: 'Broken.',
     });
-    // @ts-expect-error 422 has no GraphQL code in the filter
-    new DomainError({ code: 'core.unprocessable', status: 422, message: 'x' });
+    new DomainError({
+      code: 'core.unprocessable',
+      // @ts-expect-error 422 has no GraphQL code in the filter
+      status: 422,
+      message: 'Unprocessable.',
+    });
   });
 });

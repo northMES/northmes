@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { defineModule } from '@northmes/sdk';
-import { DomainError } from '@northmes/sdk/errors';
+import { DomainError, type DomainErrorStatus } from '@northmes/sdk/errors';
 
 /** The message that faultyServerError and faultyUnknown throw, which no client may read. */
 export const UNKNOWN_ERROR_TEXT = 'connection to 10.0.0.7 refused for user nm_app';
@@ -19,7 +19,8 @@ export class FaultyResolver {
   faultyDomainError(@Args('status', { type: () => Int }) status: number): boolean {
     throw new DomainError({
       code: 'faulty.refused',
-      status,
+      // The tests also send statuses outside DomainErrorStatus, to see the filter mask them.
+      status: status as DomainErrorStatus,
       message: `Refused with status ${status}`,
       details: { status },
     });

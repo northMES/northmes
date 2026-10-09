@@ -11,6 +11,19 @@ export interface FieldError {
   readonly code: string;
 }
 
+/**
+ * The statuses a DomainError may carry: the ones the exception filter maps to a GraphQL
+ * extensions.code. Any other status would reach the client masked, without its code and details.
+ */
+export type DomainErrorStatus =
+  | HttpStatus.BAD_REQUEST
+  | HttpStatus.UNAUTHORIZED
+  | HttpStatus.FORBIDDEN
+  | HttpStatus.NOT_FOUND
+  | HttpStatus.CONFLICT
+  | HttpStatus.PRECONDITION_FAILED
+  | HttpStatus.SERVICE_UNAVAILABLE;
+
 export interface DomainErrorOptions {
   /** Stable and module-scoped, such as core.command_rejected. Never renamed after a release. */
   readonly code: string;
@@ -19,7 +32,7 @@ export interface DomainErrorOptions {
    * 400 BAD_USER_INPUT, 401 UNAUTHENTICATED, 403 FORBIDDEN, 404 NOT_FOUND, 409 CONFLICT,
    * 412 PRECONDITION or 503 UNAVAILABLE.
    */
-  readonly status: HttpStatus;
+  readonly status: DomainErrorStatus;
   /** The text the person who ran the operation reads. */
   readonly message: string;
   /** Values a client reads by code, such as rejectedBy of core.command_rejected. */
