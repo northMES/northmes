@@ -392,10 +392,9 @@ describe('roles', () => {
       coreLinks.settings.users.user({ companyId, userId: sara.id }, { tab: 'access' }).href,
     );
     expect(within(holders).queryByRole('button')).toBeNull();
+    // Every place of the company has its card here, so the note says only where roles change.
     expect(
-      within(holders).getByText(
-        "People in each plant's settings lists who holds a role at that plant. To add or remove a role, open the person and use the Access tab.",
-      ),
+      within(holders).getByText('To add or remove a role, open the person and use the Access tab.'),
     ).toBeDefined();
   });
 
