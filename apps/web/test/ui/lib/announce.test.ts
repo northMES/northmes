@@ -4,11 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import indexHtml from '../../../index.html?raw';
 import { announce } from '../../../src/ui/lib/announce.ts';
 
-/** The body of the web's index.html before the app renders, without the app's script. */
+/**
+ * The body of the web's index.html before the app renders, without the app's script. It goes
+ * through an inert template, since happy-dom would fetch the stylesheet a parsed document links.
+ */
 function indexBody(): string {
-  const page = new DOMParser().parseFromString(indexHtml, 'text/html');
-  for (const script of page.querySelectorAll('script')) script.remove();
-  return page.body.innerHTML;
+  const template = document.createElement('template');
+  template.innerHTML = /<body>([\s\S]*)<\/body>/.exec(indexHtml)?.[1] ?? '';
+  for (const script of template.content.querySelectorAll('script')) script.remove();
+  return template.innerHTML;
 }
 
 /** The text of the polite region after each timer, with repeats in a row folded into one. */

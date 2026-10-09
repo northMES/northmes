@@ -5,11 +5,6 @@ import { createAuthSession } from './auth/auth-session.ts';
 import { bootWeb } from './boot/index.ts';
 import { shellModules } from './modules.ts';
 import { createShellRouter } from './shell/index.ts';
-import { applyStoredTheme } from './ui/lib/theme.ts';
-import './styles/app.css';
-
-// The theme the viewer chose before applies as early as the script runs.
-applyStoredTheme();
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('index.html has no element with the id root');

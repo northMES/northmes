@@ -82,4 +82,48 @@ describe('the web build', () => {
       expect(existsSync(join(outDir, url.replace(/^\//, '')))).toBe(true);
     }
   });
+
+  it("E04-S02 the built index.html links the stylesheet in its head and runs the theme script there before the app's module (BO1, BO2)", async () => {
+    const outDir = await buildWeb();
+    const manifest = JSON.parse(
+      readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
+    ) as Record<string, ManifestChunk>;
+    const html = readFileSync(join(outDir, 'index.html'), 'utf8');
+    const head = html.slice(0, html.indexOf('</head>'));
+    const tags = [...head.matchAll(/<(link|script)\b[^>]*>/g)].map(([tag]) => tag);
+    const attribute = (tag: string, name: string) =>
+      new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+    // A stylesheet in the head with no media query holds the first paint until it has loaded.
+    const [sheet] = manifest['index.html']?.css ?? [];
+    const sheetTag = tags.find(
+      (tag) => attribute(tag, 'rel') === 'stylesheet' && attribute(tag, 'href') === `/${sheet}`,
+    );
+    expect(sheetTag).toBeDefined();
+    expect(attribute(sheetTag as string, 'media')).toBeUndefined();
+
+    // The theme script is a classic script, which runs where the parser meets it, from the hashed
+    // assets, the only files the server serves besides index.html. It comes before every module.
+    const themeAt = tags.findIndex((tag) =>
+      /^\/assets\/theme-boot-[\w-]+\.js$/.test(attribute(tag, 'src') ?? ''),
+    );
+    expect(themeAt).toBeGreaterThanOrEqual(0);
+    const theme = tags[themeAt] as string;
+    expect(attribute(theme, 'type')).toBeUndefined();
+    expect(theme).not.toMatch(/\s(async|defer)\b/);
+    const modules = tags.flatMap((tag, at) =>
+      tag.startsWith('<script') && attribute(tag, 'type') === 'module' ? [at] : [],
+    );
+    expect(modules.length).toBeGreaterThan(0);
+    expect(themeAt).toBeLessThan(Math.min(...modules));
+    expect(readFileSync(join(outDir, attribute(theme, 'src') as string), 'utf8')).toBe(
+      readFileSync(new URL('../src/boot/theme-boot.js', import.meta.url), 'utf8'),
+    );
+
+    // The boot page's classes and the page's colours are in that stylesheet.
+    const css = readFileSync(join(outDir, sheet as string), 'utf8');
+    expect(css).toContain('.sr-only');
+    expect(css).toContain('.animate-spin');
+    expect(css).toMatch(/body\{background-color:var\(--background\);color:var\(--foreground\)\}/);
+  });
 });

@@ -6,18 +6,37 @@ import { userEvent } from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bootWeb } from '../src/boot/index.ts';
+import { themeStorageKey } from '../src/ui/lib/theme.ts';
 
 const indexHtml = readFileSync(join(import.meta.dirname, '..', 'index.html'), 'utf8');
 
+/** The classic script that index.html's head runs before the first paint. */
+const themeBootPath = '/src/boot/theme-boot.js';
+
+/** Runs the theme script as the browser does when it reaches its tag in the head. */
+function runThemeBoot(): void {
+  new Function(readFileSync(join(import.meta.dirname, '..', themeBootPath), 'utf8'))();
+}
+
 const pageOrigin = 'https://web.northmes.test';
+
+/**
+ * The markup of index.html's head or body in an inert template, since happy-dom would fetch the
+ * stylesheet that a parsed document links.
+ */
+function indexHtmlPart(part: 'head' | 'body'): DocumentFragment {
+  const template = document.createElement('template');
+  template.innerHTML = new RegExp(`<${part}>([\\s\\S]*)</${part}>`).exec(indexHtml)?.[1] ?? '';
+  return template.content;
+}
 
 /** Puts index.html's body in the document, as the browser shows it before any script runs. */
 function loadIndexHtml(): HTMLElement {
-  const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+  const body = indexHtmlPart('body');
   // The entry script is what the tests call; the document only shows the markup.
-  for (const script of page.querySelectorAll('script')) script.remove();
-  document.title = page.title;
-  document.body.innerHTML = page.body.innerHTML;
+  for (const script of body.querySelectorAll('script')) script.remove();
+  document.title = indexHtmlPart('head').querySelector('title')?.textContent ?? '';
+  document.body.replaceChildren(body);
   return document.getElementById('root') as HTMLElement;
 }
 
@@ -40,6 +59,9 @@ async function boot(fetch: (url: string) => Promise<Response>) {
 afterEach(() => {
   cleanup();
   document.body.innerHTML = '';
+  delete document.documentElement.dataset.theme;
+  localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe('the boot page', () => {
@@ -54,6 +76,82 @@ describe('the boot page', () => {
     const [first] = within(root).getAllByRole('link');
     expect(first?.textContent).toBe('Skip to main content');
     expect(root.contains(document.getElementById('announcer-polite'))).toBe(false);
+  });
+
+  it('E04-S02 the spinner of the boot page is 16 px even before the stylesheet applies (BO1)', () => {
+    const root = loadIndexHtml();
+
+    const spinner = within(root).getByRole('main').querySelector('svg');
+    expect(spinner?.getAttribute('width')).toBe('16');
+    expect(spinner?.getAttribute('height')).toBe('16');
+  });
+
+  it("E04-S02 index.html's head links the stylesheet and runs the theme script, a classic script, before the app script (BO1, BO2)", () => {
+    const head = indexHtmlPart('head');
+
+    const sheet = head.querySelector('link[rel="stylesheet"]');
+    expect(sheet?.getAttribute('href')).toBe('/src/styles/app.css');
+    expect(sheet?.hasAttribute('media')).toBe(false);
+    // A classic script without async or defer runs before the page paints; a module waits.
+    const theme = head.querySelector(`script[src="${themeBootPath}"]`);
+    expect(theme).not.toBeNull();
+    expect(theme?.hasAttribute('type')).toBe(false);
+    expect(theme?.hasAttribute('async') || theme?.hasAttribute('defer')).toBe(false);
+    // The app's module comes after it, in the body.
+    expect(head.querySelector('script[type="module"]')).toBeNull();
+    const app = indexHtmlPart('body').querySelector('script[src="/src/main.tsx"]');
+    expect(app?.getAttribute('type')).toBe('module');
+  });
+
+  it.each(['dark', 'light'] as const)(
+    'E04-S02 the theme script sets the stored %s theme on the html element (BO2)',
+    (theme) => {
+      localStorage.setItem(themeStorageKey, theme);
+
+      runThemeBoot();
+
+      expect(document.documentElement.dataset.theme).toBe(theme);
+    },
+  );
+
+  it.each([
+    ['no stored choice', undefined],
+    ['an unknown stored value', 'sepia'],
+  ])(
+    'E04-S02 with %s the theme script sets nothing, so the page follows the system (BO1)',
+    (_, stored) => {
+      if (stored !== undefined) localStorage.setItem(themeStorageKey, stored);
+
+      runThemeBoot();
+
+      expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
+    },
+  );
+
+  it('E04-S02 before the stylesheet arrives, the blank page already follows the system theme, and the build leaves the theme script to its own plugin (BO1, BO2)', () => {
+    const head = indexHtmlPart('head');
+
+    const scheme = head.querySelector('meta[name="color-scheme"]');
+    expect(scheme?.getAttribute('content')).toBe('light dark');
+    const sheet = head.querySelector('link[rel="stylesheet"]');
+    expect(
+      scheme !== null &&
+        sheet !== null &&
+        Boolean(scheme.compareDocumentPosition(sheet) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ).toBe(true);
+    // Vite cannot bundle a classic script; vite-ignore keeps its HTML step from warning on it.
+    expect(head.querySelector(`script[src="${themeBootPath}"]`)?.hasAttribute('vite-ignore')).toBe(
+      true,
+    );
+  });
+
+  it('E04-S02 the theme script sets nothing and does not fail when storage is blocked (BO1)', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    });
+
+    expect(runThemeBoot).not.toThrow();
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
   });
 
   it('E04-S02 once config.json loads, the app replaces the boot page', async () => {
