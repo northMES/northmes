@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Search, X } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { cn } from '../lib/cn.ts';
-import { IconButton } from './button.tsx';
-import { inputClassName } from './field.ts';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../../primitives/input-group.tsx';
+import { IconButton } from '../icon-button/index.ts';
 
 /** The pause in typing after which the field searches. */
 const searchDelay = 300;
@@ -24,8 +23,9 @@ export interface SearchFieldProps {
 }
 
 /**
- * The search input of a list toolbar (design ui-222, keyboard model): typing searches after a
- * pause, Escape or Clear search empties it at once, and focus stays in the field throughout.
+ * The search input of a list toolbar (design ui-222, keyboard model) on shadcn's InputGroup:
+ * typing searches after a pause, Escape or Clear search empties it at once, and focus stays in the
+ * field throughout.
  */
 export function SearchField({ id, label, value, onSearch, className }: SearchFieldProps) {
   const [text, setText] = useState(value);
@@ -72,12 +72,11 @@ export function SearchField({ id, label, value, onSearch, className }: SearchFie
   };
 
   return (
-    <div className={cn('relative', className)}>
-      <Search
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-      />
-      <input
+    <InputGroup className={className}>
+      <InputGroupAddon>
+        <Search aria-hidden />
+      </InputGroupAddon>
+      <InputGroupInput
         ref={input}
         id={id}
         type="search"
@@ -92,25 +91,23 @@ export function SearchField({ id, label, value, onSearch, className }: SearchFie
           timer.current = setTimeout(() => search(next.trim()), searchDelay);
         }}
         onKeyDown={onKeyDown}
-        className={cn(
-          inputClassName,
-          'pr-9 pl-9 [&::-webkit-search-cancel-button]:appearance-none',
-        )}
+        className="[&::-webkit-search-cancel-button]:appearance-none"
       />
       {text !== '' && (
-        <IconButton
-          label="Clear search"
-          variant="ghost"
-          size="icon-sm"
-          className="absolute top-1/2 right-1.5 -translate-y-1/2"
-          onClick={() => {
-            clear();
-            input.current?.focus();
-          }}
-        >
-          <X />
-        </IconButton>
+        <InputGroupAddon align="inline-end">
+          <IconButton
+            label="Clear search"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => {
+              clear();
+              input.current?.focus();
+            }}
+          >
+            <X />
+          </IconButton>
+        </InputGroupAddon>
       )}
-    </div>
+    </InputGroup>
   );
 }

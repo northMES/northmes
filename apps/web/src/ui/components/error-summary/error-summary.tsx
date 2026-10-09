@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert } from 'lucide-react';
 import { type ReactNode, useEffect, useId, useRef } from 'react';
-import { fieldId } from '../../primitives/field.ts';
+import { fieldId } from '../../lib/field-id.ts';
+import { Alert, AlertDescription, AlertTitle } from '../../primitives/alert.tsx';
 
 /** One entry of the summary: a message, and the form field it belongs to when there is one. */
 export interface SummaryError {
@@ -44,43 +45,51 @@ export function ErrorSummary({ heading, errors, focusKey, children }: ErrorSumma
 
   if (!showing) return null;
   return (
-    // biome-ignore lint/a11y/useSemanticElements: the design names the summary a group of links; a fieldset groups form controls.
-    <div
+    // The design names the summary a group of links, named by its heading; it takes focus instead
+    // of interrupting as an alert.
+    <Alert
       ref={summary}
+      variant="destructive"
       role="group"
       aria-labelledby={headingId}
       tabIndex={-1}
-      className="rounded-lg border border-destructive bg-destructive-subtle p-4 text-sm text-destructive"
+      className="gap-2 border-destructive bg-destructive-subtle p-4 text-sm"
     >
-      <h2 id={headingId} className="flex items-center gap-2 text-base font-semibold">
-        <CircleAlert aria-hidden className="size-4 shrink-0" />
-        {heading}
-      </h2>
-      {errors.length > 0 && (
-        <ul className="mt-2 flex list-disc flex-col gap-1 pl-10">
-          {errors.map(({ name, fieldId: id, message }) => (
-            <li key={`${name ?? ''}:${message}`}>
-              {name === undefined ? (
-                message
-              ) : (
-                <a
-                  href={`#${id ?? fieldId(name)}`}
-                  className="underline underline-offset-2 hover:no-underline"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    document.getElementById(id ?? fieldId(name))?.focus();
-                  }}
-                >
-                  {message}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
+      <CircleAlert aria-hidden />
+      <AlertTitle>
+        <h2 id={headingId} className="text-base font-semibold">
+          {heading}
+        </h2>
+      </AlertTitle>
+      {(errors.length > 0 || children !== undefined) && (
+        <AlertDescription className="text-destructive text-pretty [&_p:not(:last-child)]:mb-0">
+          {errors.length > 0 && (
+            <ul className="flex list-disc flex-col gap-1 pl-5">
+              {errors.map(({ name, fieldId: id, message }) => (
+                <li key={`${name ?? ''}:${message}`}>
+                  {name === undefined ? (
+                    message
+                  ) : (
+                    <a
+                      href={`#${id ?? fieldId(name)}`}
+                      className="text-destructive underline underline-offset-2 hover:no-underline"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        document.getElementById(id ?? fieldId(name))?.focus();
+                      }}
+                    >
+                      {message}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {children !== undefined && (
+            <div className="mt-2 flex flex-col items-start gap-3 text-foreground">{children}</div>
+          )}
+        </AlertDescription>
       )}
-      {children !== undefined && (
-        <div className="mt-2 flex flex-col items-start gap-3 text-foreground">{children}</div>
-      )}
-    </div>
+    </Alert>
   );
 }

@@ -13,9 +13,10 @@ The web is one Vite React app in `apps/web`, built once to static files. Each mo
 - `routes.tsx`: `planningRoutes(plantRoute)`. Each route's path comes from `linkEntry(planningLinks...)`, the top route's from the manifest itself (ADR 0062). Each component is `lazyRouteComponent(() => import('./screens.ts'), '<Screen>')`.
 - `screens.ts`: re-exports every screen from its folder's `index.ts`, so the build puts them in one chunk.
 - `screens/board/`: `board-screen.tsx`, its row `order-row.tsx`, and the typed documents `board.graphql.ts` and `release.graphql.ts`, `gql` from `@apollo/client` as a `TypedDocumentNode`.
-- `apps/web/src/modules.ts`: one `{ module, label, order }` entry per module. It is the only source of the menu's label and order; the backend modules carry no manifest (ADR 0070).
+- `apps/web/src/modules.ts`: one `{ module, label, order, links }` entry per module. It is the only source of the menu's label and order, since the backend modules carry no manifest (ADR 0070); each link is a sidebar entry with its `label`, its `icon` (a name from `navIconNames` in `ui/lib/nav-icon-names.ts`, ADR 0067) and its link builder.
+- `apps/web/src/shell/`: the D2 shell (`docs/design/shell/shell-190-navigation.md`) that the `$plant` route renders: `shell.tsx` (`createShellRouter`, the skip link, focus on a path change), `shell-sidebar.tsx` (the module groups, the rail and the 320 px sheet on shadcn's Sidebar), `shell-top-bar.tsx` and `shell-user-menu.tsx`. A screen's `PageFrame` renders its breadcrumb and page actions into the top bar, so a screen passes `crumbs` for the pages between its module and itself.
 - `apps/web/src/config.ts`: `loadWebConfig` reads `/config.json` at boot. `{ "apiUrl": "https://mes.example.com" }` sends the client's requests to `<apiUrl>/graphql`; without the file the API is on the page's origin.
-- `apps/web/components.json`: the shadcn CLI's config (Base UI, Tailwind 4, the `#ui/*` alias of `apps/web/package.json`). A primitive in `apps/web/src/ui/primitives` comes from `pnpm -C apps/web exec shadcn add <component>`, never written by hand; its helpers and hooks land in `apps/web/src/ui/lib`.
+- `apps/web/components.json`: the shadcn CLI's config (Base UI, Tailwind 4, the `#ui/*` alias of `apps/web/package.json`). A primitive in `apps/web/src/ui/primitives` comes from `pnpm -C apps/web exec shadcn add <component>`, never written by hand; its helpers and hooks land in `apps/web/src/ui/lib`. A generated file is edited only for the D1 tokens or a NorthMES rule, with a `NorthMES edit:` comment, and `pnpm exec biome check --write apps/web` formats it. Every file imports `cn` from the `cn` package. A NorthMES rule that shadcn lacks, such as IconButton's required label, is a component in `ui/components` built on the primitives.
 - `apps/web/vite.config.ts`: in dev, proxies `/graphql` and `/api` to `NORTHMES_API_ORIGIN`, WebSockets included, and resolves workspace packages to their source (ADR 0058).
 
 Tests:
@@ -43,15 +44,15 @@ apps/web/src/
     components/
       article-form/  index.ts, article-form.tsx, article-form-reload-button.tsx, article-save-errors.ts
   ui/
-    primitives/  button.tsx, button-variants.ts, text-field.tsx, search-field.tsx, field.ts
-    components/  data-table/, page-frame/, error-summary/
-    lib/         cn.ts, announce.ts, use-zod-form.ts
+    primitives/  button.tsx, input.tsx, field.tsx, input-group.tsx, table.tsx, tooltip.tsx, ... (shadcn)
+    components/  icon-button/, text-field/, search-field/, data-table/, page-frame/, error-summary/
+    lib/         field-id.ts, announce.ts, use-zod-form.ts
 ```
 
 Names and places:
 
 - Directory and file names are kebab-case. A component file is named after the component it exports: `article-form.tsx` exports `ArticleForm`.
-- A component carries a domain name and lives in its module's folder. `apps/web/src/ui` holds the domain-free pieces: `ui/primitives` the single-concern ones, one file each; `ui/components` the composites, one folder each; `ui/lib` the helpers and hooks that render nothing. A module's composite moves to `ui/components` once two modules render it identically.
+- A component carries a domain name and lives in its module's folder. `apps/web/src/ui` holds the domain-free pieces: `ui/primitives` shadcn's single-concern ones, one file each; `ui/components` the composites, one folder each; `ui/lib` the helpers and hooks that render nothing. A module's composite moves to `ui/components` once two modules render it identically.
 - Each screen has its folder `screens/<screen>/`: `<screen>-screen.tsx`, the documents only that screen runs (`<operation>.graphql.ts`, one named operation per file), its helpers and parts, and `index.ts`, which exports the screen.
 - A composite component has its folder `components/<component>/`: `index.ts`, `<component>.tsx`, its parts as `<component>-<part>.tsx` (`article-form-reload-button.tsx`, a `<component>-row.tsx`), and `<operation>.graphql.ts` for the documents only that component runs.
 - Code in `src` imports a screen or component folder through its `index.ts`, and a `ui/primitives` or `ui/lib` file by its own path. Tests under `apps/web/test` import a document they mock from the file that holds it.

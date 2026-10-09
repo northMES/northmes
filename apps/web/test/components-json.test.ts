@@ -27,6 +27,18 @@ function folderOf(alias: string, imports: Record<string, string>): string | unde
 }
 
 describe('the shadcn CLI configuration', () => {
+  it('E04-S01 the utils alias resolves to a module that exports cn, for a component that imports it', async () => {
+    const { aliases = {} } = readJson<ComponentsJson>('components.json');
+    const { imports = {} } = readJson<{ imports?: Record<string, string> }>('package.json');
+    const folder = folderOf(aliases.utils ?? '', imports);
+
+    const utils = (await import(new URL(`../${folder}.ts`, import.meta.url).href)) as {
+      cn?: (...classes: string[]) => string;
+    };
+
+    expect(utils.cn?.('px-2', 'px-4')).toBe('px-4');
+  });
+
   it('E04-S01 components.json adds Base UI primitives for Tailwind 4 with CSS variables and lucide icons', () => {
     const config = readJson<ComponentsJson>('components.json');
 
@@ -54,7 +66,7 @@ describe('the shadcn CLI configuration', () => {
     ).toEqual({
       components: 'src/ui/components',
       ui: 'src/ui/primitives',
-      utils: 'src/ui/lib/cn',
+      utils: 'src/ui/lib/utils',
       lib: 'src/ui/lib',
       hooks: 'src/ui/lib',
     });

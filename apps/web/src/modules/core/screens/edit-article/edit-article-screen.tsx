@@ -6,8 +6,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
-import { fieldId } from '../../../../ui/primitives/field.ts';
 import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
@@ -100,10 +100,23 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
  * offers Reload article (DE19).
  */
 export function EditArticleScreen() {
+  const { plantId } = useShell();
   const { article, state, reload } = useArticle();
+  const articles = { label: 'Articles', href: coreLinks.articles({ plant: plantId }).href };
   return (
     <PageFrame
       title={article === undefined ? 'Edit article' : `Edit article ${article.code}`}
+      crumbs={
+        article === undefined
+          ? [articles]
+          : [
+              articles,
+              {
+                label: `Article ${article.code}`,
+                href: coreLinks.articles.article({ plant: plantId, articleId: article.id }).href,
+              },
+            ]
+      }
       state={state}
     >
       {article !== undefined && (

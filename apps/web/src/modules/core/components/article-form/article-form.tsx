@@ -3,10 +3,9 @@ import type { createArticle } from '@northmes/core-contracts';
 import { Link } from '@tanstack/react-router';
 import type { z } from 'zod';
 import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
+import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
-import { Button } from '../../../../ui/primitives/button.tsx';
-import { buttonVariants } from '../../../../ui/primitives/button-variants.ts';
-import { TextField } from '../../../../ui/primitives/text-field.tsx';
+import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { ArticleFormReloadButton } from './article-form-reload-button.tsx';
 
 /** The fields of the article form, the same for a new and an existing article (ADR 0017). */

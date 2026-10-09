@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SearchField } from '../../../src/ui/primitives/search-field.tsx';
+import { SearchField } from '../../../src/ui/components/search-field/index.ts';
 
 afterEach(cleanup);
 

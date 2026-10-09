@@ -56,7 +56,10 @@ export function NewArticleScreen() {
   };
 
   return (
-    <PageFrame title="New article">
+    <PageFrame
+      title="New article"
+      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant: plantId }).href }]}
+    >
       <ArticleForm
         form={form}
         onSave={save}

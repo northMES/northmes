@@ -7,10 +7,20 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table';
+import { cn } from 'cn';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
-import { cn } from '../../lib/cn.ts';
 import { Button } from '../../primitives/button.tsx';
+import { Skeleton } from '../../primitives/skeleton.tsx';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../primitives/table.tsx';
 
 /** One column of a DataTable. */
 export interface DataTableColumn<TRow> {
@@ -115,79 +125,77 @@ export function DataTable<TRow extends RowData>({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-      <div className="overflow-x-auto">
-        <table aria-busy={loading || undefined} className="w-full border-collapse text-sm">
-          <caption className="sr-only">{label}</caption>
-          <thead className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
-            {table.getHeaderGroups().map((group) => (
-              <tr key={group.id}>
-                {group.headers.map((header) => {
-                  const { column } = header;
-                  const sorted = column.getIsSorted();
-                  const text = column.columnDef.header as string;
-                  if (!column.getCanSort()) {
-                    return (
-                      <th
-                        key={header.id}
-                        scope="col"
-                        className="whitespace-nowrap px-3 py-2.5 text-start"
-                      >
-                        {text}
-                      </th>
-                    );
-                  }
-                  const SortIcon =
-                    sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+      <Table aria-busy={loading || undefined}>
+        <TableCaption className="sr-only">{label}</TableCaption>
+        <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
+          {table.getHeaderGroups().map((group) => (
+            <TableRow key={group.id} className="border-border hover:bg-transparent">
+              {group.headers.map((header) => {
+                const { column } = header;
+                const sorted = column.getIsSorted();
+                const text = column.columnDef.header as string;
+                if (!column.getCanSort()) {
                   return (
-                    <th
+                    <TableHead
                       key={header.id}
                       scope="col"
-                      aria-sort={sorted === false ? 'none' : ariaSort[sorted]}
-                      className="whitespace-nowrap px-3 py-1.5 text-start"
+                      className="h-auto px-3 py-2.5 text-start font-semibold text-muted-foreground"
                     >
-                      <button
-                        type="button"
-                        onClick={() => column.toggleSorting()}
-                        className={cn(
-                          'inline-flex min-h-(--nm-target-min) items-center gap-1 rounded-sm hover:text-foreground',
-                          sorted !== false && 'text-foreground',
-                        )}
-                      >
-                        {text}
-                        <SortIcon aria-hidden className="size-3.5" />
-                      </button>
-                    </th>
+                      {text}
+                    </TableHead>
                   );
-                })}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {loading
-              ? skeletonRows.map((key) => (
-                  <tr key={key} className="border-t border-border">
-                    {columns.map((column) => (
-                      <td key={column.id} className="px-3 py-3.5">
-                        <span
-                          aria-hidden
-                          className="block h-3 w-24 animate-pulse rounded-sm bg-accent motion-reduce:animate-none"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border hover:bg-accent">
-                    {row.getAllCells().map((cell) => (
-                      <td key={cell.id} className="px-3 py-2.5">
-                        <table.FlexRender cell={cell} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-          </tbody>
-        </table>
-      </div>
+                }
+                const SortIcon =
+                  sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+                return (
+                  <TableHead
+                    key={header.id}
+                    scope="col"
+                    aria-sort={sorted === false ? 'none' : ariaSort[sorted]}
+                    className="h-auto px-3 py-1.5 text-start font-semibold text-muted-foreground"
+                  >
+                    <Button
+                      variant="ghost"
+                      onClick={() => column.toggleSorting()}
+                      className={cn(
+                        'h-auto min-h-(--nm-target-min) gap-1 rounded-sm px-0 text-xs font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground active:not-aria-[haspopup]:translate-y-0',
+                        sorted !== false && 'text-foreground',
+                      )}
+                    >
+                      {text}
+                      <SortIcon aria-hidden className="size-3.5" />
+                    </Button>
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {loading
+            ? skeletonRows.map((key) => (
+                <TableRow key={key} className="border-border hover:bg-transparent">
+                  {columns.map((column) => (
+                    <TableCell key={column.id} className="px-3 py-3.5">
+                      <Skeleton
+                        aria-hidden
+                        className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
+                      />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            : table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="border-border hover:bg-accent">
+                  {row.getAllCells().map((cell) => (
+                    <TableCell key={cell.id} className="px-3 py-2.5 whitespace-normal">
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+        </TableBody>
+      </Table>
       {paging !== undefined && <Pager paging={paging} rowCount={loading ? 0 : rows.length} />}
     </div>
   );
@@ -212,12 +220,12 @@ function Pager({
   readonly rowCount: number;
 }) {
   const { hasPreviousPage, hasNextPage, onPrevious, onNext } = paging;
-  const previous = useRef<HTMLElement>(null);
-  const next = useRef<HTMLElement>(null);
+  const previous = useRef<HTMLButtonElement>(null);
+  const next = useRef<HTMLButtonElement>(null);
   const used = useRef<'previous' | 'next' | null>(null);
 
   useEffect(() => {
-    const lost = (button: HTMLElement | null) =>
+    const lost = (button: HTMLButtonElement | null) =>
       document.activeElement === button || document.activeElement === document.body;
     if (used.current === 'next' && !hasNextPage && lost(next.current)) previous.current?.focus();
     if (used.current === 'previous' && !hasPreviousPage && lost(previous.current))

@@ -47,6 +47,21 @@
   },
   "overrides": [
     {
+      "includes": ["apps/web/src/ui/primitives/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "useKeyWithClickEvents": "off",
+            "useSemanticElements": "off"
+          },
+          "suspicious": {
+            "noDoubleEquals": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": [
         "packages/sdk/src/config/**",
         "**/*.test.ts",

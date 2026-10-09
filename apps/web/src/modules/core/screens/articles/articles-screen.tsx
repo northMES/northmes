@@ -7,9 +7,8 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
-import { Button } from '../../../../ui/primitives/button.tsx';
-import { buttonVariants } from '../../../../ui/primitives/button-variants.ts';
-import { SearchField } from '../../../../ui/primitives/search-field.tsx';
+import { SearchField } from '../../../../ui/components/search-field/index.ts';
+import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
 import {
   type ArticleListSearch,

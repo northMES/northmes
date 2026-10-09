@@ -3,6 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { TextField } from '../../../src/ui/components/text-field/index.ts';
 import {
   fieldProps,
   type ServerFieldError,
@@ -10,7 +11,6 @@ import {
   useZodForm,
 } from '../../../src/ui/lib/use-zod-form.ts';
 import { Button } from '../../../src/ui/primitives/button.tsx';
-import { TextField } from '../../../src/ui/primitives/text-field.tsx';
 
 afterEach(cleanup);
 
