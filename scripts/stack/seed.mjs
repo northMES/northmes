@@ -27,7 +27,8 @@ export const seedPlants = [
 const [plantA, plantB] = seedPlants.map(({ id }) => id);
 
 /**
- * The dev admin, the seed company's Company admin, who holds every permission there. The password is for development
+ * The dev admin, the seed company's Company admin, who holds every permission there, and who signs
+ * in with the email under the reserved .test domain (RFC 2606). The password is for development
  * only, it is no secret, and it never reaches production: the stack script seeds only the database
  * of pnpm dev, pnpm demo and the end-to-end tests.
  */
@@ -36,8 +37,11 @@ export const devAdmin = {
   username: 'admin',
   password: 'northmes-dev-admin',
   name: 'Dev admin',
-  email: 'admin@users.northmes.invalid',
+  email: 'admin@northmes.test',
 };
+
+/** The dev admin's address before it signed in with an email, which no mail reaches. */
+const earlierDevAdminEmail = 'admin@users.northmes.invalid';
 
 const scryptAsync = promisify(scrypt);
 
@@ -188,11 +192,13 @@ async function seedAccess(ownerUrl) {
       );
     }
     const { id, username, password, name, email } = devAdmin;
+    // A dev admin seeded with the earlier address moves to the one it signs in with.
     await client.query(
       `insert into auth."user" (id, name, email, "emailVerified", username, "displayUsername")
        values ($1, $2, $3, true, $4, $4)
-       on conflict (id) do nothing`,
-      [id, name, email, username],
+       on conflict (id) do update set email = excluded.email
+        where auth."user".email = $5`,
+      [id, name, email, username, earlierDevAdminEmail],
     );
     await client.query(
       `insert into auth.account ("accountId", "providerId", "userId", password, "updatedAt")
