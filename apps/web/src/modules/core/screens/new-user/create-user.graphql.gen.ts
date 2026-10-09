@@ -9,6 +9,9 @@ export type CoreCreateUserInput = {
   readonly email: string;
   readonly id: string | number;
   readonly name: string;
+  readonly reason?: string | null | undefined;
+  readonly roleId?: string | null | undefined;
+  readonly scopeId?: string | null | undefined;
   readonly username: string;
 };
 

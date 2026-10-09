@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { createHash } from 'node:crypto';
+import { createHash, randomUUIDv7 } from 'node:crypto';
 import { HttpStatus, NotFoundException } from '@nestjs/common';
 import type { createUser } from '@northmes/core-contracts';
 import { DomainError } from '@northmes/sdk/errors';
 import { sql } from 'kysely';
 import type { z } from 'zod';
+import { currentPrincipal } from '../../../../principal.ts';
+import { can } from '../access/access.ts';
 import { EmailTaken } from '../access/auth.service.ts';
+import { forbidden } from '../access/request-scope.ts';
 import { userAccounts } from '../access/user-accounts.ts';
 import type { UserRecord } from '../user.service.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
+import { assignableScopes, refuseRoleNotHeld } from './role-assignment-rules.ts';
 import { temporaryPassword, userById } from './user-rules.ts';
 
 /** A user that core.createUser created, with the temporary password the answer shows once. */
@@ -69,6 +73,78 @@ export function userIdOf(commandId: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+type CreateUserInput = z.output<typeof createUser.input>;
+
+/** The first role of a new user and where it applies (design core-304, US5). */
+interface FirstRole {
+  readonly roleId: string;
+  readonly scopeId: string;
+}
+
+/**
+ * The first role of the input, after the rules of core.assignRole (ADR 0010): the place is the
+ * company or one of its plants that the request reads, the role is one of the company's, the
+ * creator holds core.roleAssignment:manage there and every installed permission of the role,
+ * else core.role_not_held. A role without a place, or a place without a role, is refused. It runs
+ * before the user is created, so a refusal creates nobody.
+ */
+async function firstRoleOf(
+  input: CreateUserInput,
+  context: CoreContext,
+  companyId: string,
+): Promise<FirstRole | undefined> {
+  const { roleId, scopeId } = input;
+  if (roleId === undefined && scopeId === undefined) return undefined;
+  if (roleId === undefined || scopeId === undefined) {
+    const message = 'Choose a role and where it applies, or neither.';
+    throw new DomainError({
+      code: 'core.role_without_place',
+      status: HttpStatus.BAD_REQUEST,
+      message,
+      fieldErrors: [
+        { path: [roleId === undefined ? 'roleId' : 'scopeId'], message, code: 'custom' },
+      ],
+    });
+  }
+  const { tx } = context;
+  if (!(await assignableScopes(context, input)).includes(scopeId)) {
+    throw new NotFoundException(`Scope ${scopeId} was not found`);
+  }
+  const role = await tx
+    .selectFrom('core.role')
+    .select('id')
+    .where('id', '=', roleId)
+    .where('company_id', '=', companyId)
+    .executeTakeFirst();
+  if (!role) throw new NotFoundException(`Role ${roleId} was not found`);
+  const principal = currentPrincipal();
+  if (!principal || !can(principal, 'core.roleAssignment:manage', scopeId)) {
+    throw forbidden('Giving a new user a role needs the permission to assign roles there.');
+  }
+  await refuseRoleNotHeld(tx, { roleId, scopeId });
+  return { roleId, scopeId };
+}
+
+/** Gives the new user their first role, in the command's transaction. */
+async function assignFirstRole(
+  tx: CoreContext['tx'],
+  userId: string,
+  companyId: string,
+  first: FirstRole | undefined,
+): Promise<void> {
+  if (!first) return;
+  await tx
+    .insertInto('core.role_assignment')
+    .values({
+      id: randomUUIDv7(),
+      user_id: userId,
+      company_id: companyId,
+      scope_id: first.scopeId,
+      role_id: first.roleId,
+    })
+    .execute();
+}
+
 /** The user with this id, which a first run of the command created, or undefined. */
 async function firstRunUser(tx: CoreContext['tx'], id: string) {
   const user = await tx
@@ -102,14 +178,13 @@ async function firstRunUser(tx: CoreContext['tx'], id: string) {
  * its answer may have shown the password: a retry is refused with core.user_created_password_hidden
  * and the user's id and changes nothing, so no retry resets the password of a user who may have
  * signed in. A retry with another username, or of a user who belongs to another company, is
- * NOT_FOUND.
+ * NOT_FOUND. With a first role and place, the handler applies core.assignRole's rules before it
+ * creates anyone, and assigns the role in the command's transaction once the user exists (question
+ * 11 of design core-304). The reason is accepted and recorded once the audit trail arrives (#443).
  */
 export const createUserHandler = {
   scope: requestCompany,
-  async handle(
-    input: z.output<typeof createUser.input>,
-    context: CoreContext,
-  ): Promise<CreatedUserRecord> {
+  async handle(input: CreateUserInput, context: CoreContext): Promise<CreatedUserRecord> {
     const { id: commandId, username, name, email } = input;
     const { tx } = context;
     const id = userIdOf(commandId);
@@ -123,6 +198,7 @@ export const createUserHandler = {
       .select('organization_id')
       .where('id', '=', companyId)
       .executeTakeFirstOrThrow();
+    const firstRole = await firstRoleOf(input, context, companyId);
     const accounts = userAccounts();
     const password = temporaryPassword();
     const first = await firstRunUser(tx, id);
@@ -134,6 +210,7 @@ export const createUserHandler = {
       if (first.companyIds.length > 0) throw createdPasswordHidden(username, id);
       await accounts.setPassword(id, password, { temporary: true });
       await accounts.addToOrganization(id, organization_id);
+      await assignFirstRole(tx, id, companyId, firstRole);
       return { user: await userById(tx, id, companyId), temporaryPassword: password };
     }
     const taken = await tx
@@ -154,6 +231,7 @@ export const createUserHandler = {
         });
       });
     await accounts.addToOrganization(id, organization_id);
+    await assignFirstRole(tx, id, companyId, firstRole);
     return { user: await userById(tx, id, companyId), temporaryPassword: password };
   },
 };

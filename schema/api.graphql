@@ -78,6 +78,9 @@ input CoreCreateUserInput {
   email: String!
   id: ID!
   name: String!
+  reason: String
+  roleId: String
+  scopeId: String
   username: String!
 }
 
