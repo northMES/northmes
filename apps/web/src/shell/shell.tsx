@@ -175,6 +175,24 @@ function plantHome(modules: readonly ShellModule[], plant: string): string | und
   );
 }
 
+/**
+ * The plant's first page the user may open: the first entry of the sidebar that shows, the modules
+ * by their order, then Administration. An entry that needs a permission counts only once the
+ * permissions say the user holds it.
+ */
+function firstOpenPage(
+  modules: readonly ShellModule[],
+  plant: string,
+  permissions: ReadonlySet<string> | undefined,
+): { label: string; href: string } | undefined {
+  const ordered = [...modules].sort((a, b) => a.order - b.order);
+  const entry = [
+    ...ordered.flatMap(({ links = [] }) => links),
+    ...ordered.flatMap(({ adminLinks = [] }) => adminLinks),
+  ].find(({ permission }) => permission === undefined || (permissions?.has(permission) ?? false));
+  return entry === undefined ? undefined : { label: entry.label, href: entry.link({ plant }).href };
+}
+
 /** The company and the plant of the user's companies that a slug names. */
 function plantOf(companies: readonly ShellCompany[], slug: string) {
   for (const company of companies) {
@@ -246,6 +264,10 @@ function PlantLayout({
     () => (viewer === undefined ? undefined : new Set(viewer.coreViewer.plantPermissions)),
     [viewer],
   );
+  const shell = useMemo(
+    () => ({ plant, home: firstOpenPage(modules, plant, permissions) }),
+    [modules, plant, permissions],
+  );
   const loaded = data?.coreCompanies;
   const companies = loaded ?? [];
   const found = plantOf(companies, plant);
@@ -266,7 +288,7 @@ function PlantLayout({
   }
   return (
     <ApolloProvider client={clientFor(plant)}>
-      <ShellProvider value={{ plant }}>
+      <ShellProvider value={shell}>
         <SkipLink targetId={mainId} />
         <SidebarProvider>
           <ShellSidebar

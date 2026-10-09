@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useRouter } from '@tanstack/react-router';
+import { useShell } from '@northmes/web-sdk';
+import { Link } from '@tanstack/react-router';
 import { Lock } from 'lucide-react';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
-import { Button } from '../../ui/primitives/button.tsx';
+import { buttonVariants } from '../../ui/primitives/button.tsx';
 import {
   Empty,
   EmptyDescription,
@@ -18,13 +19,18 @@ export function permissionPhrase(key: string): string {
   return `the permission to ${line.charAt(0).toLowerCase()}${line.slice(1)} (${key})`;
 }
 
-/** Go back, the way out of a page the user may not open. */
-function GoBack() {
-  const router = useRouter();
+/**
+ * "Go to Planning board", the way out of a page the user may not open: a link to the plant's first
+ * page they may open (design core-304, NO1). A page opened by URL may have no page before it, so
+ * the way out is never a step back in the history.
+ */
+function GoToFirstPage() {
+  const { home } = useShell();
+  if (home === undefined) return null;
   return (
-    <Button variant="outline" onClick={() => router.history.back()}>
-      Go back
-    </Button>
+    <Link to={home.href} className={buttonVariants({ variant: 'outline' })}>
+      Go to {home.label}
+    </Link>
   );
 }
 
@@ -44,7 +50,7 @@ export function noAccessState(
   return {
     status: 'empty',
     description: `Opening ${page} needs ${permissionPhrase(permission)} at ${place}. Ask ${admin} for a role that includes it.`,
-    action: <GoBack />,
+    action: <GoToFirstPage />,
   };
 }
 
