@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmDialog } from '../../../src/ui/components/confirm-dialog/index.ts';
 import { Button } from '../../../src/ui/primitives/button.tsx';
@@ -113,5 +113,49 @@ describe('ConfirmDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('E05-S06 a dialog with a reason field puts focus in it on open, and the confirm reads what was typed', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn(async (_reason: string) => {});
+    function BlockUser() {
+      const [reason, setReason] = useState('');
+      const field = useRef<HTMLTextAreaElement>(null);
+      return (
+        <ConfirmDialog
+          trigger={<Button variant="outline">Block user</Button>}
+          title="Block Anna Berg?"
+          description="Anna Berg cannot sign in, and is signed out within a minute."
+          confirmLabel="Block user"
+          destructive
+          initialFocus={field}
+          onOpenChange={(open) => {
+            if (open) setReason('');
+          }}
+          onConfirm={() => onConfirm(reason)}
+        >
+          <label>
+            Reason (optional)
+            <textarea
+              ref={field}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </label>
+        </ConfirmDialog>
+      );
+    }
+    render(<BlockUser />);
+
+    await user.click(screen.getByRole('button', { name: 'Block user' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Block Anna Berg?' });
+    const reason = within(dialog).getByRole('textbox', { name: 'Reason (optional)' });
+    await waitFor(() => expect(document.activeElement).toBe(reason));
+    await user.type(reason, 'Left the company');
+    await user.click(within(dialog).getByRole('button', { name: 'Block user' }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(onConfirm).toHaveBeenCalledWith('Left the company');
   });
 });
