@@ -12,6 +12,11 @@ export const PLACEHOLDER_EMAIL_DOMAIN = 'users.northmes.invalid';
 
 /** A user to create: the username they sign in with and their first password. */
 export interface NewUser {
+  /**
+   * The user's id, a uuid of version 1 to 5, which Better Auth keeps. Without it, Better Auth makes
+   * one.
+   */
+  readonly id?: string;
   readonly username: string;
   readonly password: string;
   /** The name others see. Without it, the username. */
@@ -56,6 +61,7 @@ export class AuthService {
    * An email that another user has throws EmailTaken.
    */
   async createUser({
+    id,
     username,
     password,
     name,
@@ -67,7 +73,8 @@ export class AuthService {
           email: email ?? `${username.toLowerCase()}@${PLACEHOLDER_EMAIL_DOMAIN}`,
           password,
           name: name ?? username,
-          data: { username, displayUsername: username },
+          // Better Auth writes the user with the id in its data.
+          data: { ...(id ? { id } : {}), username, displayUsername: username },
         },
       });
     } catch (error) {
@@ -75,6 +82,26 @@ export class AuthService {
         throw new EmailTaken();
       throw error;
     }
+  }
+
+  /**
+   * Gives the user this password, on the credential account Better Auth signs them in with, which
+   * it creates when the user has none.
+   */
+  async setPassword(userId: string, password: string): Promise<void> {
+    const { internalAdapter, password: hasher } = await this.betterAuth.auth.$context;
+    const hash = await hasher.hash(password);
+    const accounts = await internalAdapter.findAccounts(userId);
+    if (accounts.some(({ providerId }) => providerId === 'credential')) {
+      await internalAdapter.updatePassword(userId, hash);
+      return;
+    }
+    await internalAdapter.linkAccount({
+      providerId: 'credential',
+      accountId: userId,
+      password: hash,
+      userId,
+    });
   }
 
   /**

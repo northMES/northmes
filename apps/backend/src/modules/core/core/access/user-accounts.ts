@@ -5,7 +5,7 @@ import { AuthService } from './auth.service.ts';
 /** What core's user commands ask of Better Auth (ADR 0010). */
 export type UserAccounts = Pick<
   AuthService,
-  'createUser' | 'addToOrganization' | 'block' | 'unblock'
+  'createUser' | 'setPassword' | 'addToOrganization' | 'block' | 'unblock'
 >;
 
 let registered: UserAccounts | undefined;

@@ -17,14 +17,17 @@ export const username = z
   .regex(/^[a-z0-9._]+$/, 'Use letters, digits, dots and underscores.');
 
 /**
- * Creates a user of the company of the request's plant, with a temporary password that the answer
- * shows once (ADR 0010). It needs core.user:create at the company. Without an email the user gets
- * a placeholder address that no mail reaches. A username that is taken, or was used before, is
- * refused with core.username_taken, and an email another user has with core.email_taken.
+ * Creates a user of the company of the request's plant under the client's id, with a temporary
+ * password that the answer shows once (ADR 0010). It needs core.user:create at the company. Without
+ * an email the user gets a placeholder address that no mail reaches. A username that is taken, or
+ * was used before, is refused with core.username_taken, and an email another user has with
+ * core.email_taken. A retry with the id of a first run that failed finishes the creation; a retry
+ * after the first run finished is refused with core.username_taken, since the password is shown
+ * once only.
  */
 export const createUser = defineCommandContract({
   name: 'core.createUser',
-  target: 'none',
+  target: 'new',
   fields: z.object({
     username,
     name: z

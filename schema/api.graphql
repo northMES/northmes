@@ -70,6 +70,7 @@ input CoreCreateRoleInput {
 
 input CoreCreateUserInput {
   email: String
+  id: ID!
   name: String!
   username: String!
 }

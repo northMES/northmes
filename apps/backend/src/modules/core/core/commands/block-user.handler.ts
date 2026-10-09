@@ -40,6 +40,11 @@ async function refuseOtherCompanies(context: CoreContext, id: string): Promise<v
  * their sessions end, and their next request is refused. Blocking yourself is refused with
  * core.cannot_block_self, and blocking the last active Company admin of a company with
  * core.last_admin.
+ *
+ * Better Auth writes the block on its own pool, outside the command's transaction, which it cannot
+ * join. Both of its writes may run again, and a blocked user passes the last-admin check, so a
+ * retry after a run that failed past Better Auth's write finishes the block and answers the same
+ * user.
  */
 export const blockUserHandler = {
   scope: companyOfPlant,
@@ -65,7 +70,7 @@ export const blockUserHandler = {
 /**
  * The handler of core.unblockUser (ADR 0012), which the mutation coreUnblockUser sends through the
  * command bus after it checked core.user:block at the company of the request's plant. The user's
- * other companies need it too. The user can sign in again.
+ * other companies need it too. The user can sign in again. Like a block, an unblock may run again.
  */
 export const unblockUserHandler = {
   scope: companyOfPlant,

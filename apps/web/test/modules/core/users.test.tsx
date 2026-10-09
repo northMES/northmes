@@ -25,6 +25,9 @@ import { bodyRows, plant, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
 
+/** A uuidv7: version 7 in the third group, variant 10 in the fourth. */
+const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
 /** coreUsers' first page with these users. */
 function usersQuery(nodes: readonly ReturnType<typeof user>[]): MockLink.MockedResponse {
   return {
@@ -162,7 +165,10 @@ describe('users', () => {
       {
         request: {
           query: CoreCreateUser,
-          variables: { input: { name: 'Tove Lindqvist', username: 't.lindqvist' } },
+          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
+            uuidv7.test(input.id) &&
+            input.name === 'Tove Lindqvist' &&
+            input.username === 't.lindqvist',
         },
         result: {
           data: null,
@@ -214,7 +220,10 @@ describe('users', () => {
       {
         request: {
           query: CoreCreateUser,
-          variables: { input: { name: 'Tove Lindqvist', username: 't.lindqvist' } },
+          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
+            uuidv7.test(input.id) &&
+            input.name === 'Tove Lindqvist' &&
+            input.username === 't.lindqvist',
         },
         result: {
           data: {

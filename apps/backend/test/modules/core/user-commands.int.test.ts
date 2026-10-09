@@ -10,6 +10,7 @@ import {
   useTestDatabase,
 } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { userIdOf } from '../../../src/modules/core/core/commands/create-user.handler.ts';
 
 const createMutation = `mutation ($input: CoreCreateUserInput!) {
   coreCreateUser(input: $input) { user { id name username blocked } temporaryPassword }
@@ -175,20 +176,26 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   it('E05-S08 a retry of coreCreateUser whose first run created the user in Better Auth but failed before the company membership finishes the creation under the same id', async () => {
     const { admin } = await company();
     const id = randomUUIDv7();
+    const userId = userIdOf(id);
     // What a first run leaves when it fails after Better Auth wrote the user: no password, no
     // membership and no role.
     await query(
       db.authUrl,
       `insert into auth."user" (id, name, email, "emailVerified", username, "displayUsername")
-       values ('${id}', 'Ida Holm', 'i.holm@users.northmes.invalid', false, 'i.holm', 'i.holm')`,
+       values ('${userId}', 'Ida Holm', 'i.holm@users.northmes.invalid', false, 'i.holm', 'i.holm')`,
     );
 
     const retried = await createUser(admin.client, { id, username: 'i.holm', name: 'Ida Holm' });
     const users = await admin.client.send<UsersAnswer>(usersQuery);
 
-    expect(retried.user).toEqual({ id, name: 'Ida Holm', username: 'i.holm', blocked: false });
+    expect(retried.user).toEqual({
+      id: userId,
+      name: 'Ida Holm',
+      username: 'i.holm',
+      blocked: false,
+    });
     expect(await signInStatus('i.holm', retried.temporaryPassword)).toBe(200);
-    expect(users.data?.coreUsers.edges.map(({ node }) => node.id)).toContain(id);
+    expect(users.data?.coreUsers.edges.map(({ node }) => node.id)).toContain(userId);
   });
 
   it('E05-S08 a retry of coreCreateUser after its first run finished is refused as a taken username and keeps the first temporary password', async () => {
@@ -202,23 +209,22 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(await signInStatus('o.ek', first.temporaryPassword)).toBe(200);
   });
 
-  it('E05-S08 coreCreateUser with the id of another user is NOT_FOUND and leaves that user as they were', async () => {
-    const { company: companyId, slugs, admin } = await company();
-    const operator = await signedIn(
-      [{ scopeId: companyId, permissions: ['core.article:read'] }],
-      slugs[0] ?? '',
-    );
+  it('E05-S08 a retry of coreCreateUser with another username, or from another company, is NOT_FOUND and leaves the first user as they were', async () => {
+    const { admin } = await company();
+    const other = await company();
+    const id = randomUUIDv7();
+    const first = await createUser(admin.client, { id, username: 'a.lund', name: 'Alva Lund' });
 
-    const sameUsername = await admin.client.send(createMutation, {
-      input: { id: operator.userId, username: operator.username, name: 'Someone' },
-    });
     const otherUsername = await admin.client.send(createMutation, {
-      input: { id: operator.userId, username: 'not.them', name: 'Someone' },
+      input: { id, username: 'a.lund2', name: 'Alva Lund' },
+    });
+    const otherCompany = await other.admin.client.send(createMutation, {
+      input: { id, username: 'a.lund', name: 'Alva Lund' },
     });
 
-    expect(sameUsername.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
     expect(otherUsername.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
-    expect(await signInStatus(operator.username, operator.password)).toBe(200);
+    expect(otherCompany.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
+    expect(await signInStatus('a.lund', first.temporaryPassword)).toBe(200);
   });
 
   it('E05-S08 a retried coreBlockUser or coreUnblockUser answers the same user, also after a first run that blocked the user in Better Auth and failed before it answered', async () => {

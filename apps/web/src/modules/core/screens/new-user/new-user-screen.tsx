@@ -3,6 +3,8 @@ import { useMutation } from '@apollo/client/react';
 import { coreLinks, createUser } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
+import { v7 as uuidv7 } from 'uuid';
 import type { z } from 'zod';
 import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
 import { FormActions } from '../../../../ui/components/form-actions/index.ts';
@@ -32,10 +34,14 @@ function summaryHeading(fieldCount: number): string {
   return `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to create the user`;
 }
 
-/** The New user form: Name, Username and Email, then Create user. */
+/**
+ * The New user form: Name, Username and Email, then Create user. Create user sends the values under
+ * a uuidv7 the form made once, so a retry after a timeout finishes the first creation (ADR 0012).
+ */
 function NewUserForm({ companyName }: { readonly companyName: string }) {
   const { plant } = useShell();
   const navigate = useNavigate();
+  const [id] = useState(() => uuidv7());
   const form = useZodForm(createUser.fields, {
     defaultValues: { name: '', username: '', email: undefined },
   });
@@ -51,7 +57,7 @@ function NewUserForm({ companyName }: { readonly companyName: string }) {
 
   const save = async (values: UserValues) => {
     try {
-      const { data } = await create({ variables: { input: values } });
+      const { data } = await create({ variables: { input: { ...values, id } } });
       if (!data) return;
       const { user, temporaryPassword } = data.coreCreateUser;
       handOverTemporaryPassword(user.id, temporaryPassword);

@@ -6,6 +6,7 @@ export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' |
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
 export type CoreCreateUserInput = {
   readonly email?: string | null | undefined;
+  readonly id: string | number;
   readonly name: string;
   readonly username: string;
 };
