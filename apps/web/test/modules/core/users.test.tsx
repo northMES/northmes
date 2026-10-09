@@ -395,6 +395,15 @@ describe('users', () => {
       (within(dialog).getByRole('textbox', { name: 'Temporary password' }) as HTMLInputElement)
         .value,
     ).toBe('fictional-temp-4821');
+    expect(dialog.textContent).toContain(
+      'Give it to Tove Lindqvist, who must choose a new password at the next sign-in.',
+    );
+    expect(dialog.textContent).not.toContain('The old password no longer works.');
+    expect(
+      within(dialog).getByText(
+        'Shown only now. After you close this dialog, it cannot be shown again.',
+      ),
+    ).toBeDefined();
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(dialog).getByRole('button', { name: 'Copy password' }),
