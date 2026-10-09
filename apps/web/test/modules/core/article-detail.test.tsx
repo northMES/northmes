@@ -13,6 +13,7 @@ import {
   plant,
   renderCoreAt,
 } from './core-app.tsx';
+import { companiesQuery, forbiddenError } from './access-fixtures.ts';
 
 afterEach(cleanup);
 
@@ -111,5 +112,29 @@ describe('article page', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined(),
     );
+  });
+
+  it('E06-S06 a link to an article opened without core.article:read shows the forbidden state under the h1 Article, with no data', async () => {
+    renderCoreAt(articleHref(axle.id), [
+      {
+        request: { query: CoreArticle, variables: { id: axle.id } },
+        result: { data: { coreArticle: null }, errors: [forbiddenError(['coreArticle'])] },
+      },
+      companiesQuery(),
+    ]);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'You need the permission to read articles in Acme AB',
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByText('Ask your plant admin for a role that can read articles.'),
+    ).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Article' })).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Identity' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
