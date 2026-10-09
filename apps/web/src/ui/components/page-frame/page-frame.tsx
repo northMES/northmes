@@ -108,9 +108,11 @@ function correlationIdOf({
 }
 
 /**
- * An error state (design ui-222, ST4 and ST8): an alert with the page's title, ui-222's text, the
- * correlation id with Copy correlation id, and Try again, which keeps focus in its loading state
- * while the request runs (shell-306, SE7).
+ * An error state (design ui-222, ST4 and ST8): an alert with the page's title and ui-222's text,
+ * then the correlation id with Copy correlation id, and Try again, which keeps focus in its loading
+ * state while the request runs (shell-306, SE7). The alert holds only the heading and the text, so
+ * Trying again and the new correlation id of a failed retry do not announce it again; the polite
+ * region reports the outcome once (shell-306, E22).
  */
 export function ErrorState({
   title,
@@ -127,8 +129,8 @@ export function ErrorState({
       ? 'Check the connection, then try again.'
       : 'Check the connection, then try again. If it fails again, give your plant admin the correlation id.');
   return (
-    <Empty role="alert" className={stateCard}>
-      <EmptyHeader className="max-w-prose">
+    <Empty className={stateCard}>
+      <EmptyHeader role="alert" className="max-w-prose">
         <EmptyMedia className="size-10 rounded-full bg-destructive-subtle text-destructive">
           <CircleAlert aria-hidden className="size-5" />
         </EmptyMedia>
