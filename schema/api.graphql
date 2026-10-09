@@ -49,6 +49,7 @@ input CoreArchiveArticleInput {
 input CoreAssignRoleInput {
   companyId: String
   id: ID!
+  reason: String
   roleId: ID!
   scopeId: ID!
   userId: ID!
@@ -71,6 +72,7 @@ input CoreCreateRoleInput {
   id: ID!
   name: String!
   permissions: [String!]!
+  reason: String
 }
 
 input CoreCreateUserInput {
