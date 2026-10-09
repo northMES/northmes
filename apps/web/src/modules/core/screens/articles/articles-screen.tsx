@@ -11,6 +11,7 @@ import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { formatDateTime } from '../../../../ui/lib/date-time.ts';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
+import { shownListPage } from '../../../../ui/lib/shown-list-page.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
@@ -117,6 +118,7 @@ interface StateOptions {
   /** The company's name, where the forbidden state says the permission is missing. */
   readonly companyName: string;
   readonly view: ArticleListSearch;
+  /** The page the list shows: the one loaded, or the one before while the next loads. */
   readonly page: ArticlesPage | undefined;
   readonly error: ErrorLike | undefined;
   readonly retry: () => Promise<unknown>;
@@ -124,9 +126,9 @@ interface StateOptions {
 }
 
 /**
- * The state of the list's data region (design ui-222, row 2): loading while a page has no rows
- * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the forbidden state
- * (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
+ * The state of the list's data region (design ui-222, row 2): loading while the list has no rows
+ * to show yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the
+ * forbidden state (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
  */
 function listState({
   forbidden,
@@ -204,9 +206,15 @@ export function ArticlesScreen() {
   const page = data?.coreArticles;
   const forbidden = page === undefined && isForbidden(error);
   const places = usePlaces({ skip: !forbidden });
-  // While a page loads, the pager keeps the buttons of the page before it, so the button just used
-  // keeps focus.
-  const shownPage = page ?? previousData?.coreArticles;
+  // While a new search, sort, filter or page loads, the list keeps the rows or the no-match state
+  // it shows, and their pager, so focus stays on the control used (design ui-222, LI7).
+  const shownPage = shownListPage({
+    page,
+    previous: previousData?.coreArticles,
+    failed: error !== undefined,
+    searching: view.q !== undefined,
+  });
+  const stale = page === undefined && shownPage !== undefined;
   const show = (next: ArticleListSearch) => {
     navigate({ to: '.', search: next, replace: true });
   };
@@ -214,7 +222,7 @@ export function ArticlesScreen() {
     forbidden,
     companyName: places.company?.name ?? 'the company',
     view,
-    page,
+    page: shownPage,
     error,
     retry: () => refetch(),
     show,
@@ -245,19 +253,21 @@ export function ArticlesScreen() {
         )
       }
       state={state}
+      busy={stale}
     >
       <DataTable
         label="Articles"
         columns={columns}
-        rows={page?.edges.map(({ node }) => node) ?? []}
+        rows={shownPage?.edges.map(({ node }) => node) ?? []}
         getRowId={(article) => article.id}
-        loading={page === undefined}
+        loading={shownPage === undefined}
+        stale={stale}
         sort={sortOf(view)}
         onSortChange={(sort) => show(sortedBy(view, sort))}
         paging={{
           page: view.page ?? 1,
           pageSize: articlePageSize,
-          totalCount: page?.totalCount,
+          totalCount: shownPage?.totalCount,
           hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
           hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
           onPrevious: () => {

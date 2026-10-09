@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from '../../../../ui/components/data-
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
+import { shownListPage } from '../../../../ui/lib/shown-list-page.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { noAccessState } from '../../no-access.tsx';
@@ -107,7 +108,15 @@ export function UsersScreen() {
     errorPolicy: 'all',
   });
   const page = data?.coreUsers;
-  const shownPage = page ?? previousData?.coreUsers;
+  // While a new search or page loads, the list keeps the users or the no-match state it shows, and
+  // their pager, so focus stays on the control used (design ui-222, LI7).
+  const shownPage = shownListPage({
+    page,
+    previous: previousData?.coreUsers,
+    failed: error !== undefined,
+    searching: view.q !== undefined,
+  });
+  const stale = page === undefined && shownPage !== undefined;
   const companyName = places.company?.name ?? 'the company';
   const columns = useMemo(columnsOf, []);
   const show = (next: UserListSearch) => {
@@ -136,9 +145,9 @@ export function UsersScreen() {
       error,
       onRetry: () => refetch(),
     };
-  } else if (page === undefined) {
+  } else if (shownPage === undefined) {
     state = { status: 'loading' };
-  } else if (page.totalCount === 0 && view.q !== undefined) {
+  } else if (shownPage.totalCount === 0 && view.q !== undefined) {
     state = {
       status: 'empty',
       title: 'No users match this search',
@@ -155,7 +164,7 @@ export function UsersScreen() {
         </Button>
       ),
     };
-  } else if (page.totalCount === 0) {
+  } else if (shownPage.totalCount === 0) {
     state = {
       status: 'empty',
       title: 'No users yet',
@@ -179,17 +188,19 @@ export function UsersScreen() {
         )
       }
       state={state}
+      busy={stale}
     >
       <DataTable
         label="Users"
         columns={columns}
-        rows={page?.edges.map(({ node }) => node) ?? []}
+        rows={shownPage?.edges.map(({ node }) => node) ?? []}
         getRowId={(user) => user.id}
-        loading={page === undefined}
+        loading={shownPage === undefined}
+        stale={stale}
         paging={{
           page: view.page ?? 1,
           pageSize: userPageSize,
-          totalCount: page?.totalCount,
+          totalCount: shownPage?.totalCount,
           hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
           hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
           onPrevious: () => {
