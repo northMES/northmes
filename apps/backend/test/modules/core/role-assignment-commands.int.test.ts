@@ -150,6 +150,41 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
     });
   });
 
+  it('E05-S06 coreAssignRole takes an optional reason and refuses one over 500 characters on reason', async () => {
+    const { admin, roleId, sara, plantA } = await company();
+
+    const assigned = await admin.client.send<{ coreAssignRole: Assignment }>(assignMutation, {
+      input: {
+        id: randomUUIDv7(),
+        userId: sara.userId,
+        roleId,
+        scopeId: plantA,
+        reason: 'Covers the night shift',
+      },
+    });
+    const tooLong = await admin.client.send(assignMutation, {
+      input: {
+        id: randomUUIDv7(),
+        userId: sara.userId,
+        roleId,
+        scopeId: plantA,
+        reason: 'x'.repeat(501),
+      },
+    });
+
+    expect(assigned.errors).toBeUndefined();
+    expect(assigned.data?.coreAssignRole.role.name).toBe('Shift lead');
+    expect(
+      tooLong.errors?.map(({ extensions }) => {
+        const { code, fieldErrors } = extensions as {
+          code: string;
+          fieldErrors: { path: string[]; code: string }[];
+        };
+        return { code, fields: fieldErrors.map(({ path, code }) => ({ path, code })) };
+      }),
+    ).toEqual([{ code: 'BAD_USER_INPUT', fields: [{ path: ['reason'], code: 'too_big' }] }]);
+  });
+
   it('E05-S06 assigning a role is refused with core.role_not_held when the assigner lacks one of its permissions at that scope', async () => {
     const { roleId, sara, plantA, slugA } = await company();
     const plantAdmin = await signedIn(

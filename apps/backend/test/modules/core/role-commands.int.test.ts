@@ -170,6 +170,34 @@ describe('coreCreateRole, coreUpdateRole and coreDeleteRole', () => {
     ]);
   });
 
+  it('E05-S06 coreCreateRole takes an optional reason and refuses one over 500 characters on reason', async () => {
+    const { client } = await companyAdmin();
+
+    const created = await client.send<{ coreCreateRole: Role }>(createMutation, {
+      input: { id: randomUUIDv7(), name: 'Report checker', permissions: [], reason: 'Audit' },
+    });
+    const tooLong = await client.send(createMutation, {
+      input: {
+        id: randomUUIDv7(),
+        name: 'Night planner',
+        permissions: [],
+        reason: 'x'.repeat(501),
+      },
+    });
+
+    expect(created.errors).toBeUndefined();
+    expect(created.data?.coreCreateRole.name).toBe('Report checker');
+    expect(
+      refusals(tooLong)?.map(({ code, fieldErrors }) => ({
+        code,
+        fields: (fieldErrors as { path: string[]; code: string }[]).map(({ path, code }) => ({
+          path,
+          code,
+        })),
+      })),
+    ).toEqual([{ code: 'BAD_USER_INPUT', fields: [{ path: ['reason'], code: 'too_big' }] }]);
+  });
+
   it('E05-S06 a plant admin, who holds core.role:manage at the plant only, can neither create nor update a role of the company', async () => {
     const { client: admin, plants, slugs } = await companyAdmin();
     const role = await createRole(admin, 'Shift lead', ['core.article:read']);
