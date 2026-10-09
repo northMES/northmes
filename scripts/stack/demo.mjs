@@ -9,8 +9,8 @@ import { startStack } from './stack.mjs';
 /** @typedef {import('./processes.mjs').PlannedProcess} PlannedProcess */
 
 /**
- * What pnpm demo runs: pnpm build, which builds the server, the shell and every remote, then the
- * built server in role all, which serves the shell and the remotes itself; and the URL of the seed
+ * What pnpm demo runs: pnpm build, which builds the server and the web, then the
+ * built server in role all, which serves the web itself; and the URL of the seed
  * plant's board, which it prints. The server listens on the PORT of env, which handoff and the
  * desktop preview set, and else on the PORT that the stack took.
  * @param {Readonly<Record<string, string | undefined>>} stackEnv The stack's environment.
@@ -60,7 +60,7 @@ async function demo() {
     const plan = await demoPlan(stack.env, process.env);
     // The build runs without the stack's environment: its NODE_ENV=development would make Vite
     // build React for development.
-    log('Building the server, the shell and every remote: pnpm build');
+    log('Building the server and the web: pnpm build');
     await run(plan.build);
     log(`Starting the built server in role all on PORT ${plan.server.env.PORT}`);
     server = start(plan.server, {

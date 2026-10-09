@@ -27,8 +27,7 @@ function workspaceManifests(): string[] {
 }
 
 // The workspace packages of the walking skeleton that other packages, tests or scripts import.
-// apps/web and modules/planning/web have no exports: nothing imports the shell, and the shell
-// loads a remote by URL.
+// apps/web has no exports: nothing imports the web app.
 const packagesWithExports = [
   'apps/backend/package.json',
   'examples/plugin-validator/package.json',
@@ -37,14 +36,9 @@ const packagesWithExports = [
   'packages/contracts/package.json',
   'packages/sdk/package.json',
   'packages/testing/package.json',
-  'packages/web-build/package.json',
   'packages/web-sdk/package.json',
 ];
-const packagesWithoutExports = ['apps/web/package.json', 'modules/planning/web/package.json'];
-
-// web-build ships its plain .mjs files with no build step (plan 06), so both of its conditions point
-// at the same file instead of a .ts entry and a dist/ build.
-const packagesWithoutBuild = ['packages/web-build/package.json'];
+const packagesWithoutExports = ['apps/web/package.json'];
 
 // The subpath entries of an exports field. A field whose keys are conditions, or a plain string,
 // stands for the single entry ".".
@@ -85,7 +79,7 @@ describe('source exports', () => {
   it('E02-S01 the @northmes/source condition points at a .ts entry and default under dist/', () => {
     // Production resolves "default" (ADR 0058), so a default that points at a source file would
     // make Node run TypeScript.
-    const manifests = workspaceManifests().filter((path) => !packagesWithoutBuild.includes(path));
+    const manifests = workspaceManifests();
 
     expect(manifests).toContain('apps/backend/package.json');
     for (const path of manifests) {

@@ -1,17 +1,16 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it, vi } from 'vitest';
-import { completedBuild, devPlan, superviseDev, webRemotes } from './dev.mjs';
+import { completedBuild, devPlan, superviseDev } from './dev.mjs';
 import type { run, start } from './processes.mjs';
 import { seedScopes } from './seed.mjs';
 
-// The ports the stack hands pnpm dev: the server's PORT and one port each for the shell and the
-// planning remote, which freePorts takes apart from the server's.
-const ports = { server: 41_001, shell: 41_002, remotes: { planning: 41_003 } };
+// The ports the stack hands pnpm dev: the server's PORT and a port for the web's dev server, which
+// freePorts takes apart from the server's.
+const ports = { server: 41_001, web: 41_002 };
 
 describe('devPlan', () => {
-  it("E02-S08 pnpm dev starts tsc -b --watch, the shell dev server and one dev server per remote on the stack's ports", async () => {
+  it("E02-S08 pnpm dev starts tsc -b --watch and one web dev server on the stack's ports", async () => {
     const plan = await devPlan(ports);
-    const [shell, ...remotes] = plan.web;
 
     // tsc -b rebuilds the server and the workspace packages it runs from their dist/.
     expect(plan.watch.command).toBe('pnpm');
@@ -40,9 +39,9 @@ describe('devPlan', () => {
         NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:41002',
       },
     });
-    expect(webRemotes()).toEqual(['planning']);
-    expect(shell).toMatchObject({
-      name: 'shell',
+    // The web's dev server serves apps/web and forwards the API paths to the server's origin.
+    expect(plan.web).toEqual({
+      name: 'web',
       command: 'pnpm',
       args: [
         '-C',
@@ -55,40 +54,14 @@ describe('devPlan', () => {
         '41002',
         '--strictPort',
       ],
+      env: { NORTHMES_API_ORIGIN: 'http://127.0.0.1:41001' },
     });
-    expect(remotes).toEqual([
-      {
-        name: 'planning',
-        command: 'pnpm',
-        args: [
-          '-C',
-          'modules/planning/web',
-          'exec',
-          'vite',
-          '--host',
-          '127.0.0.1',
-          '--port',
-          '41003',
-          '--strictPort',
-        ],
-        env: {},
-      },
-    ]);
-    // The shell's dev server sends each remote's files to the remote's dev server and every other
-    // server path to the server, in this order, so the browser sees one origin.
-    expect(Object.entries(JSON.parse(shell?.env.NORTHMES_DEV_PROXY ?? '{}'))).toEqual([
-      ['/modules/planning/', 'http://127.0.0.1:41003'],
-      ['/api', 'http://127.0.0.1:41001'],
-      ['/graphql', 'http://127.0.0.1:41001'],
-      ['/health', 'http://127.0.0.1:41001'],
-      ['/modules', 'http://127.0.0.1:41001'],
-    ]);
   });
 
   it('E02-S08 the printed board URL is planningLinks.board for the seeded plant', async () => {
     const plan = await devPlan(ports);
 
-    // The seed plant's board on the shell's origin, which the browser opens.
+    // The seed plant's board on the web's origin, which the browser opens.
     expect(plan.boardUrl).toBe(
       'http://127.0.0.1:41002/019a0000-0000-7000-8000-00000000a001/planning/board',
     );
@@ -110,27 +83,6 @@ describe('devPlan', () => {
       name: 'migrate',
       command: 'node',
       args: ['apps/backend/dist/main.js', 'migrate'],
-      env: {},
-    });
-  });
-
-  it('E02-S08 pnpm dev builds the workspace packages that the shell and the remotes import before their dev servers start', async () => {
-    const plan = await devPlan(ports);
-
-    // A remote resolves workspace packages to their dist/, and @module-federation/vite reads the
-    // named exports of @northmes/web-sdk from its dist/. Turbo builds what each one depends on.
-    expect(plan.build).toEqual({
-      name: 'build',
-      command: 'pnpm',
-      args: [
-        'exec',
-        'turbo',
-        'run',
-        'build',
-        '--filter=@northmes/web^...',
-        '--filter=@northmes/planning-web^...',
-        '--output-logs=errors-only',
-      ],
       env: {},
     });
   });
@@ -352,16 +304,12 @@ describe('superviseDev', () => {
 
     await supervisor.stop();
 
-    // The dev servers start after the build of the packages they import. The container stops
-    // last, so no process loses its database while it runs.
+    // The container stops last, so no process loses its database while it runs.
     expect(dev.events).toEqual([
-      'run build',
-      'start shell',
-      'start planning',
+      'start web',
       'start tsc',
       'start server',
-      'stop shell',
-      'stop planning',
+      'stop web',
       'stop tsc',
       'stop server',
       'stop stack',
@@ -370,7 +318,7 @@ describe('superviseDev', () => {
     expect(dev.logs.filter((line) => line.includes('exited'))).toEqual([]);
   });
 
-  it.each(['shell', 'planning', 'tsc'])(
+  it.each(['web', 'tsc'])(
     'E02-S08 pnpm dev fails when %s exits on its own, and says why',
     async (name) => {
       const dev = fakeDev();
@@ -383,14 +331,4 @@ describe('superviseDev', () => {
       expect(dev.logs).toContain(`${name} exited with 1, so pnpm dev stops`);
     },
   );
-
-  it('E02-S08 pnpm dev fails when the build of the packages the dev servers import fails, and says why', async () => {
-    const dev = fakeDev({ failing: ['build'] });
-    const supervisor = superviseDev({ plan: await devPlan(ports), ...dev.options });
-
-    await supervisor.failed;
-
-    expect(dev.events).toEqual(['run build']);
-    expect(dev.logs).toContain('pnpm exited with 1');
-  });
 });

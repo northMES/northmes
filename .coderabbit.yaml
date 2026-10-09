@@ -161,7 +161,7 @@ reviews:
       instructions: |
         @northmes/ui: shared primitives on Base UI, tokens and presentational patterns. Every interactive primitive meets WCAG 2.2 AA by default: keyboard operation, a single-pointer alternative for any drag, targets of at least 24 by 24 CSS px through --nm-target-min, no state by color alone, an accessible name and label, visible focus. Flag imports of Apollo, TanStack Router or GraphQL.
 
-    - path: 'packages/{contracts,sdk,web-sdk,ui,web-build,testing}/**'
+    - path: 'packages/{contracts,sdk,web-sdk,ui,testing}/**'
       instructions: |
         MIT-licensed package. It must not import AGPL code: flag any import or package.json dependency on @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or any path under modules/*/server, modules/*/web, modules/*/domain or apps/. The package.json license field stays MIT. A changed or removed export is a breaking change: the PR title needs ! and the docs change in the same PR.
 
@@ -233,7 +233,7 @@ reviews:
         mode: warning
         instructions: >-
           Scope: changed files under packages/contracts, packages/sdk,
-          packages/web-sdk, packages/ui, packages/web-build, packages/testing
+          packages/web-sdk, packages/ui, packages/testing
           and modules/*/contracts. Fail if any of them adds an import, a
           re-export or a package.json dependency that points at
           @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or a

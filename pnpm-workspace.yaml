@@ -2,7 +2,6 @@ packages:
   - apps/*
   - modules/*
   - modules/*/contracts
-  - modules/*/web
   - modules/planning/domain
   - packages/*
   - examples/*
@@ -28,8 +27,6 @@ catalog:
   '@fontsource/ibm-plex-mono': 5.3.0
   '@fontsource/ibm-plex-sans': 5.3.0
   '@hookform/resolvers': 5.9.1
-  '@module-federation/runtime': 2.9.0
-  '@module-federation/vite': 1.22.1
   '@nestjs/common': 12.1.0
   '@nestjs/config': 12.0.1
   '@nestjs/core': 12.1.0
@@ -98,14 +95,3 @@ overrides:
   graphql: 'catalog:'
   react: 'catalog:'
   react-dom: 'catalog:'
-  # @module-federation/dts-plugin pins adm-zip 0.6.0 and undici 7.29.0 exactly, and both carry high
-  # advisories. Drop these two once a mature @module-federation/vite brings a dts-plugin without them.
-  '@module-federation/dts-plugin>adm-zip': 0.6.1
-  '@module-federation/dts-plugin>undici': 7.29.1
-
-# Backports module-federation/vite#1400 (released in 1.23.2, inside the minimumReleaseAge window
-# until 2026-10-18): the parse barrier waits for an import that has no ModuleInfo yet, so a remote's
-# import: false wrapper no longer misses the names of a module that loads late (#356). pnpm fails on
-# a patch it does not apply, so the upgrade past 1.22.1 removes this entry and the patch file.
-patchedDependencies:
-  '@module-federation/vite@1.22.1': patches/@module-federation__vite@1.22.1.patch

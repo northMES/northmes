@@ -673,14 +673,12 @@ describe('workflows', () => {
     }
   });
 
-  // The web code is apps/web, the web remote of every module and packages/web-sdk, so a module that
-  // gains a web remote joins the scan in the same change.
-  it('the react doctor job scans apps/web, every modules/*/web and packages/web-sdk', () => {
+  // The web code is apps/web, which holds every module's screens, and packages/web-sdk.
+  it('the react doctor job scans apps/web and packages/web-sdk', () => {
     const { job } = jobNamed('react doctor');
-    const web = ['apps/web', ...globSync('modules/*/web', { cwd: root }), 'packages/web-sdk'];
+    const web = ['apps/web', 'packages/web-sdk'];
     const commands = reactDoctorCommandsOf(job);
 
-    expect(web, 'web code').toContain('modules/planning/web');
     expect(commands, 'react-doctor commands').not.toHaveLength(0);
     for (const command of commands) {
       const projects = /--project (\S+)/.exec(command)?.[1]?.split(',') ?? [];

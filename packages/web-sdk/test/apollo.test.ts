@@ -99,4 +99,25 @@ describe('createNorthmesClient', () => {
     expect(sockets[0]?.url).toBe('wss://northmes.test:8443/graphql');
     subscription.unsubscribe();
   });
+
+  it("E02-S05 with an apiUrl, the client sends HTTP and graphql-ws requests to that API's /graphql", async () => {
+    // A static host serves the web on one origin, and config.json names the API on another.
+    vi.stubGlobal('location', new URL('https://web.northmes.test/plant-a/planning/board'));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
+    const { WebSocket, sockets } = mockWebSocket();
+    const client = createNorthmesClient({
+      plantId: 'plant-a',
+      apiUrl: 'https://api.northmes.test/mes',
+      fetch,
+      webSocketImpl: WebSocket,
+    });
+
+    await client.query({ query: gql`query Ping { ping }` });
+    const subscription = client.subscribe({ query: boardChanged }).subscribe(() => {});
+    await vi.waitFor(() => expect(sockets).toHaveLength(1));
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.northmes.test/mes/graphql');
+    expect(sockets[0]?.url).toBe('wss://api.northmes.test/mes/graphql');
+    subscription.unsubscribe();
+  });
 });
