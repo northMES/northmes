@@ -11,8 +11,10 @@ import {
   anna,
   assignment,
   companiesQuery,
+  companyAdminRole,
   planner,
   plantA,
+  plantAdminRole,
   role,
   rolesQuery,
   shiftLead,
@@ -123,6 +125,24 @@ describe('Add role', () => {
         ['Viewer', 'Planning', '1', '2'],
       ]),
     );
+  });
+
+  it("E05-S06 the role picker lists core's Plant admin like the other default roles, and a plant admin cannot give Company admin", async () => {
+    renderCoreAt(addRoleHref, [
+      viewerQuery([...plantAdminRole.permissions]),
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([operator, companyAdminRole, plantAdminRole, planner, viewerRole]),
+    ]);
+
+    const roles = await screen.findByRole('radiogroup', { name: 'Role' });
+    const plantAdmin = within(roles).getByRole('radio', { name: 'Plant admin' });
+    const companyAdmin = within(roles).getByRole('radio', { name: 'Company admin' });
+
+    expect(plantAdmin.hasAttribute('data-disabled')).toBe(false);
+    expect(companyAdmin.hasAttribute('data-disabled')).toBe(true);
+    expect(within(roles).getByRole('radio', { name: 'Planner' })).toBeDefined();
+    expect(within(roles).getByRole('radio', { name: 'Viewer' })).toBeDefined();
   });
 
   it('E05-S06 a refusal of the API at the company lands on Role: the summary takes focus with the message, the choices stay, and its link leads to Role', async () => {

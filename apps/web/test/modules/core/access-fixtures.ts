@@ -175,6 +175,25 @@ export const viewerRole = role('Viewer', ['planning.productionOrder:read'], {
   holders: [{ user: sara, scope: acme }],
 });
 
+/** core's Company admin, which holds every installed permission. */
+export const companyAdminRole = role(
+  'Company admin',
+  [
+    ...catalogKeys.core,
+    'core.roleAssignment:manage',
+    'core.user:create',
+    'core.user:block',
+    ...catalogKeys.planning,
+  ],
+  { origin: 'MODULE', moduleId: 'core' },
+);
+/** core's Plant admin, which holds every installed permission but the company-level ones. */
+export const plantAdminRole = role(
+  'Plant admin',
+  ['core.role:read', 'core.user:read', 'core.roleAssignment:manage', ...catalogKeys.planning],
+  { origin: 'MODULE', moduleId: 'core' },
+);
+
 /** A role as CoreRoles lists it, without the holders' names. */
 function listed(each: ReturnType<typeof role>) {
   return {

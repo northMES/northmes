@@ -12,6 +12,7 @@ import {
   anna,
   assignment,
   companiesQuery,
+  companyAdminRole,
   forbiddenError,
   plantA,
   rolesQuery,
@@ -185,6 +186,50 @@ describe("a user's access", () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Add role' })),
     );
+  });
+
+  it("E05-S06 Remove of a company's last active Company admin is refused: the dialog shows the server's message and the role stays", async () => {
+    const pointer = userEvent.setup();
+    const all = [...companyAdminRole.permissions];
+    const saraAdmin = user(sara, [assignment(companyAdminRole, acme)]);
+    const message =
+      'Sara Nyberg is the last active Company admin of Acme AB, so Company admin cannot be removed from them. Give Company admin at Acme AB to someone else first.';
+    renderCoreAt(accessHref, [
+      viewerQuery(all, all),
+      companiesQuery(),
+      userQuery(saraAdmin),
+      permissionsQuery(sara, {}),
+      {
+        request: {
+          query: CoreRemoveRoleAssignment,
+          variables: { input: { id: assignment(companyAdminRole, acme).id } },
+        },
+        result: {
+          errors: [
+            {
+              message,
+              path: ['coreRemoveRoleAssignment'],
+              extensions: { code: 'PRECONDITION', errorCode: 'core.last_admin' },
+            },
+          ],
+        },
+      },
+    ]);
+
+    await pointer.click(
+      await screen.findByRole('button', { name: 'Remove Company admin at Acme AB' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await pointer.click(within(dialog).getByRole('button', { name: 'Remove role' }));
+
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      `Could not remove the role. ${message}`,
+    );
+    await pointer.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(bodyRows(screen.getByRole('table', { name: 'Roles of Sara Nyberg' }))).toEqual([
+      ['Company admin', 'Acme AB, all plants', 'Remove'],
+    ]);
   });
 
   it('E05-S06 after Remove, the roles list read before it no longer counts the holder', async () => {

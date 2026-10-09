@@ -6,8 +6,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CoreRoles } from '../../../src/modules/core/roles.graphql.ts';
 import {
   companiesQuery,
+  companyAdminRole,
   forbiddenError,
   planner,
+  plantAdminRole,
   roleQuery,
   rolesQuery,
   shiftLead,
@@ -50,6 +52,27 @@ describe('roles', () => {
     );
     expect(screen.getByRole('link', { name: 'Shift lead' }).getAttribute('href')).toBe(
       coreLinks.roles.role({ plant, roleId: shiftLead.id }).href,
+    );
+  });
+
+  it("E05-S06 the roles list shows core's Company admin and Plant admin like the other default roles", async () => {
+    renderCoreAt(coreLinks.roles({ plant }).href, [
+      managerQuery(),
+      companiesQuery(),
+      rolesQuery([companyAdminRole, plantAdminRole, planner, viewerRole]),
+    ]);
+
+    const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
+    await waitFor(() =>
+      expect(bodyRows(defaults)).toEqual([
+        ['Company admin', 'Core', '9', '0'],
+        ['Plant admin', 'Core', '6', '0'],
+        ['Planner', 'Planning', '3', '0'],
+        ['Viewer', 'Planning', '1', '1'],
+      ]),
+    );
+    expect(screen.getByRole('link', { name: 'Plant admin' }).getAttribute('href')).toBe(
+      coreLinks.roles.role({ plant, roleId: plantAdminRole.id }).href,
     );
   });
 
