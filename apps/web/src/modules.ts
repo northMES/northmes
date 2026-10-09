@@ -13,6 +13,11 @@ export interface MenuLink {
   readonly icon: NavIconName;
   /** Builds the link for a plant, such as the entry planningLinks.board of a link manifest. */
   readonly link: (params: { readonly plant: string }) => { readonly href: string };
+  /**
+   * The permission the entry's page reads with: the sidebar shows the entry only to a user who
+   * holds it at the plant, as D2 draws Administration only for admins.
+   */
+  readonly permission?: string;
 }
 
 /** A module the web is built with, and its group in the sidebar. */
@@ -24,6 +29,8 @@ export interface ShellModule {
   readonly order: number;
   /** The entries of the module's sidebar group, in their order. */
   readonly links?: readonly MenuLink[];
+  /** The module's entries in Administration, the sidebar's last group (D2, C7). */
+  readonly adminLinks?: readonly MenuLink[];
 }
 
 /**
@@ -36,6 +43,10 @@ export const shellModules: readonly ShellModule[] = [
     label: 'Core',
     order: 10,
     links: [{ label: 'Articles', icon: 'Package', link: coreLinks.articles }],
+    adminLinks: [
+      { label: 'Users', icon: 'Users', link: coreLinks.users, permission: 'core.user:read' },
+      { label: 'Roles', icon: 'Shield', link: coreLinks.roles, permission: 'core.role:read' },
+    ],
   },
   {
     module: planningModule,

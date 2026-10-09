@@ -35,7 +35,15 @@ export interface ShellSidebarProps {
   readonly user: ShellUser;
   /** Signs the user out, from the user menu. */
   readonly onSignOut: () => void;
+  /**
+   * The permissions the user holds at the plant, for the entries that need one; until they load,
+   * such entries stay out.
+   */
+  readonly permissions?: ReadonlySet<string>;
 }
+
+/** The id of Administration's label, which names its list. */
+const adminLabelId = 'sidebar-group-administration';
 
 /**
  * How an entry relates to the page on screen: its own page ("page"), a page under it ("true", as
@@ -48,8 +56,9 @@ function currentOf(href: string, pathname: string): 'page' | 'true' | undefined 
 
 /**
  * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the plant
- * switcher, one group per module in their order with its entries, and the user menu at
- * the foot. collapsible="icon" makes it the 64 px rail, where each entry shows its icon and its
+ * switcher, one group per module in their order with its entries, Administration last with the
+ * modules' admin entries (C7), and the user menu at the foot. An entry that needs a permission
+ * shows only to a user who holds it at the plant. collapsible="icon" makes it the 64 px rail, where each entry shows its icon and its
  * label in a tooltip; where the shell is narrow it is the Navigation sheet, whose head holds Close
  * navigation and whose entries close it.
  */
@@ -60,7 +69,11 @@ export function ShellSidebar({
   companies,
   user,
   onSignOut,
+  permissions,
 }: ShellSidebarProps) {
+  const shown = ({ permission }: MenuLink) =>
+    permission === undefined || (permissions?.has(permission) ?? false);
+  const adminLinks = modules.flatMap(({ adminLinks: links = [] }) => links).filter(shown);
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const entry = ({ label, icon, link }: MenuLink) => {
@@ -116,12 +129,26 @@ export function ShellSidebar({
                     aria-labelledby={labelId}
                     className="group-data-[collapsible=icon]:items-center"
                   >
-                    {links.map(entry)}
+                    {links.filter(shown).map(entry)}
                   </SidebarMenu>
                 </SidebarGroup>
               </Fragment>
             );
           })}
+          {adminLinks.length > 0 && (
+            <>
+              <SidebarSeparator />
+              <SidebarGroup>
+                <SidebarGroupLabel id={adminLabelId}>Administration</SidebarGroupLabel>
+                <SidebarMenu
+                  aria-labelledby={adminLabelId}
+                  className="group-data-[collapsible=icon]:items-center"
+                >
+                  {adminLinks.map(entry)}
+                </SidebarMenu>
+              </SidebarGroup>
+            </>
+          )}
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border">
           <ShellUserMenu user={user} onSignOut={onSignOut} />

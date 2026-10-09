@@ -14,7 +14,9 @@ import {
   Package,
   Route,
   Shapes,
+  Shield,
   Table,
+  Users,
   Warehouse,
 } from 'lucide-react';
 import type { NavIconName } from '../../lib/nav-icon-names.ts';
@@ -34,6 +36,8 @@ const icons: Readonly<Record<NavIconName, LucideIcon>> = {
   ClipboardList,
   ListChecks,
   CalendarCog,
+  Users,
+  Shield,
 };
 
 /**

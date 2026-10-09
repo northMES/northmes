@@ -282,7 +282,23 @@ describe('the shell', () => {
                 },
               }
             : operationName === 'CoreCompanies'
-              ? { coreCompanies: [] }
+              ? {
+                  coreCompanies: [
+                    {
+                      __typename: 'Company',
+                      id: '019a0000-0000-7000-8000-0000000ac3e0',
+                      name: 'Acme AB',
+                      plants: [
+                        {
+                          __typename: 'Plant',
+                          id: '019a0000-0000-7000-8000-00000000a1a0',
+                          slug: 'plant-a',
+                          name: 'Plant A',
+                        },
+                      ],
+                    },
+                  ],
+                }
               : undefined;
         if (data === undefined) return new Promise<Response>(() => {});
         return new Response(JSON.stringify({ data }), {
