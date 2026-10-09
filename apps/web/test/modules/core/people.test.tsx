@@ -8,6 +8,8 @@ import { CoreAssignRole } from '../../../src/modules/core/components/assign-role
 import { CoreRemoveRoleAssignment } from '../../../src/modules/core/components/remove-role/remove-role-assignment.graphql.ts';
 import { CorePlantRoleAssignments } from '../../../src/modules/core/screens/people/plant-role-assignments.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/people-add-role/users.graphql.ts';
+import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
+import { CoreUser } from '../../../src/modules/core/user.graphql.ts';
 import {
   acme,
   anna,
@@ -309,6 +311,78 @@ describe('People in plant settings', () => {
     const summary = await screen.findByRole('group', { name: 'Fix 2 fields to add the role' });
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(within(summary).getByRole('link', { name: 'Choose a person.' })).toBeDefined();
+  });
+
+  it("E04-S02 a Plant admin opens a person from People and sees the person's roles per place, Remove only at the plant, and what the person can do at the plant", async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(coreLinks.people({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      peopleQuery([annaViewer, saraLead]),
+      {
+        request: { query: CoreUser, variables: { id: sara.id } },
+        result: {
+          data: {
+            coreUser: userOf(sara, [
+              assignment(viewerRole, acme),
+              assignment(shiftLead, plantA, saraLead.id),
+            ]),
+          },
+        },
+      },
+      rolesQuery([shiftLead, viewerRole], {}),
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: {
+            coreUser: {
+              __typename: 'User',
+              id: sara.id,
+              effectivePermissions: [
+                {
+                  __typename: 'EffectivePermission',
+                  permission: {
+                    __typename: 'Permission',
+                    key: 'planning.productionOrder:release',
+                    installed: true,
+                  },
+                  grantedBy: [
+                    {
+                      __typename: 'RoleAssignment',
+                      id: saraLead.id,
+                      scope: plantA,
+                      role: { __typename: 'Role', id: shiftLead.id, name: 'Shift lead' },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    await user.click(await screen.findByRole('link', { name: 'Sara Nyberg' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' })).toBeDefined();
+    expect(router.state.location.pathname).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    const roles = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
+    await waitFor(() =>
+      expect(bodyRows(roles)).toEqual([
+        ['Shift leadCustom role', 'Plant A', 'Remove'],
+        [
+          'ViewerPlanning, default role',
+          'Acme AB, all plants',
+          'A company admin of Acme AB can remove it.',
+        ],
+      ]),
+    );
+    expect(screen.getByText("Sara Nyberg's roles that apply at Plant A.")).toBeDefined();
+    const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Plant A' });
+    expect(await within(can).findByText('Release production orders to the floor')).toBeDefined();
+    expect(within(can).getByText('Shift lead at Plant A')).toBeDefined();
   });
 
   it('E04-S02 a reader without core.user:read at the plant gets the page No access to People', async () => {

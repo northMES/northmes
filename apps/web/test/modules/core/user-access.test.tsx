@@ -420,6 +420,20 @@ describe("a user's access", () => {
     );
   });
 
+  it("E04-S02 a plant in the Where column links to the person's page in that plant's settings", async () => {
+    renderCoreAt(accessHref, [
+      settingsViewerQuery(reader),
+      companiesQuery(),
+      userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    expect((await screen.findByRole('link', { name: 'Plant A' })).getAttribute('href')).toBe(
+      coreLinks.people.person({ plant: 'plant-a', userId: sara.id }).href,
+    );
+  });
+
   it('E05-S06 a user without a role: the Roles card says so and keeps Add role, and the permissions come from roles', async () => {
     const lena = { ...anna, name: 'Lena Ek' };
     renderCoreAt(
@@ -493,7 +507,7 @@ describe("a user's access", () => {
         companiesQuery(),
         userQuery(saraOfPage),
         rolesQuery([shiftLead, viewerRole]),
-      rolesQuery([shiftLead, viewerRole]),
+        rolesQuery([shiftLead, viewerRole]),
         permissionsQuery(sara, saraGrants),
       ]);
 
