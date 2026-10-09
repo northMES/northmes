@@ -5,7 +5,7 @@ import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
-import { hasErrorCode } from '../../components/article-form/index.ts';
+import { commandFailure, hasErrorCode } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
 import { CoreArchiveArticle } from './archive-article.graphql.ts';
 
@@ -19,8 +19,9 @@ interface ArticleActionProps {
 const pageHeading = () => document.querySelector<HTMLElement>('h1');
 
 /**
- * The message of a refused archive or restore. A stale version reloads the article first, so the
- * next try sends the version the page now shows.
+ * The message of a failed archive or restore. A stale version reloads the article first, so the
+ * next try sends the version the page now shows; another refusal shows the API's message, and no
+ * answer asks to check the connection.
  */
 async function refusal(
   error: unknown,
@@ -33,7 +34,7 @@ async function refusal(
       `Someone changed this article after you opened it. The page now shows the saved article. Check it, then ${verb} it again.`,
     );
   }
-  return new Error(`Could not ${verb} the article. Check the connection, then try again.`);
+  return new Error(commandFailure(error, verb));
 }
 
 /**

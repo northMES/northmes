@@ -12,6 +12,7 @@ import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
   type ArticleValues,
+  commandFailure,
   hasErrorCode,
   showSaveError,
 } from '../../components/article-form/index.ts';
@@ -111,10 +112,8 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
         restored = data.coreRestoreArticle;
         announce(`Article ${restored.code} restored`);
       }
-    } catch {
-      form.setError('root.server', {
-        message: 'Could not restore the article. Check the connection, then try again.',
-      });
+    } catch (error) {
+      form.setError('root.server', { message: commandFailure(error, 'restore') });
       return;
     }
     setArchived(false);
