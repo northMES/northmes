@@ -49,15 +49,21 @@ const EMAIL_TAKEN = 'Another user has this email address. Enter another one, or 
 const USER_ID_NAMESPACE = Buffer.from('6b1f0c2e9d4a4f53a1c7e8b25d3f9a60', 'hex');
 
 /**
- * The id of the user that the command with this client id creates: the name-based uuid (version
- * 5, RFC 9562) of the command id. Better Auth keeps an id it is given only for uuid versions 1 to 5
- * and makes a new one for the uuidv7 that clients send (ADR 0012), so the user's id is derived from
- * the command's id instead of being it, and every run of the command derives the same one.
+ * The id of the user that the command with this client id creates: the first 16 bytes of the
+ * SHA-256 of a fixed namespace and the command id, in the version 4 uuid layout. Better Auth keeps
+ * an id it is given only for uuid versions 1 to 5 and makes a new one for the uuidv7 that clients
+ * send (ADR 0012), so the user's id is derived from the command's id instead of being it, and every
+ * run of the command derives the same one. Version 5 would hash with SHA-1, which code scanning
+ * refuses, so the id takes the version 4 layout with 122 bits of SHA-256.
  */
 export function userIdOf(commandId: string): string {
   const name = Buffer.from(commandId.toLowerCase(), 'utf8');
-  const bytes = createHash('sha1').update(USER_ID_NAMESPACE).update(name).digest().subarray(0, 16);
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x50;
+  const bytes = createHash('sha256')
+    .update(USER_ID_NAMESPACE)
+    .update(name)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
   bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
   const hex = bytes.toString('hex');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
