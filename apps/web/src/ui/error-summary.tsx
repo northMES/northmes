@@ -7,6 +7,8 @@ import { fieldId } from './field.ts';
 export interface SummaryError {
   /** The field's name, a schema path joined with dots; without one the entry is plain text. */
   readonly name?: string;
+  /** The id of the field's input when it is not fieldId(name), such as a TextField with its own id. */
+  readonly fieldId?: string;
   readonly message: string;
 }
 
@@ -50,17 +52,17 @@ export function ErrorSummary({ heading, errors, focusKey }: ErrorSummaryProps) {
         {heading}
       </h2>
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-10">
-        {errors.map(({ name, message }) => (
+        {errors.map(({ name, fieldId: id, message }) => (
           <li key={`${name ?? ''}:${message}`}>
             {name === undefined ? (
               message
             ) : (
               <a
-                href={`#${fieldId(name)}`}
+                href={`#${id ?? fieldId(name)}`}
                 className="underline underline-offset-2 hover:no-underline"
                 onClick={(event) => {
                   event.preventDefault();
-                  document.getElementById(fieldId(name))?.focus();
+                  document.getElementById(id ?? fieldId(name))?.focus();
                 }}
               >
                 {message}
