@@ -485,7 +485,7 @@ describe("a user's access", () => {
           ],
         },
       },
-      permissionsQuery(sara, saraGrants),
+      { ...permissionsQuery(sara, saraGrants), delay: 100 },
     ]);
 
     const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Acme AB' });
@@ -494,6 +494,12 @@ describe("a user's access", () => {
     ).toBeDefined();
     const retry = within(can).getByRole('button', { name: 'Try again' });
     await pointer.click(retry);
+    // While the region reloads, the error stays and Try again keeps focus (AS23).
+    expect(
+      within(can).getByRole('heading', { name: 'Could not load what Sara Nyberg can do' }),
+    ).toBeDefined();
+    expect(document.activeElement).toBe(retry);
+    expect(retry.isConnected).toBe(true);
     expect(
       await within(can).findByRole('table', { name: 'What Sara Nyberg can do at Acme AB' }),
     ).toBeDefined();
