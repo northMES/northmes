@@ -465,11 +465,11 @@ describe('roles', () => {
       catalogQuery(),
     ]);
 
-    const startFrom = await screen.findByRole('combobox', { name: 'Start from' });
+    await userEvent.setup().click(await screen.findByRole('combobox', { name: 'Start from' }));
     expect(
-      within(startFrom)
+      within(await screen.findByRole('listbox'))
         .getAllByRole('option')
-        .map((option) => option.textContent),
+        .map((option) => option.textContent?.split(/(Custom|Planning|Core)/)[0]),
     ).toEqual(['No role', 'Shift lead', 'Planner']);
   });
 });

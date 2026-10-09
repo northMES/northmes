@@ -59,11 +59,12 @@ describe('the role editor', () => {
             variables: ({
               input,
             }: {
-              input: { id: string; name: string; permissions: string[] };
+              input: { id: string; name: string; permissions: string[]; reason?: string };
             }) =>
               uuidv7.test(input.id) &&
               input.name === 'Night planner' &&
-              input.permissions.join() === 'planning.productionOrder:read',
+              input.permissions.join() === 'planning.productionOrder:read' &&
+              input.reason === 'Night shift plans its own orders',
           },
           result: { data: { coreCreateRole: created } },
         } as MockLink.MockedResponse,
@@ -71,10 +72,13 @@ describe('the role editor', () => {
     );
 
     expect(await screen.findByRole('heading', { level: 1, name: 'New role' })).toBeDefined();
-    const startFrom = (await screen.findByRole('combobox', {
-      name: 'Start from',
-    })) as HTMLSelectElement;
-    expect(startFrom.value).toBe(planner.id);
+    const startFrom = await screen.findByRole('combobox', { name: 'Start from' });
+    expect(startFrom.textContent).toContain('Planner');
+    // Start from comes before Role name.
+    const roleName = screen.getByRole('textbox', { name: 'Role name' });
+    expect(
+      startFrom.compareDocumentPosition(roleName) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(
       screen.getByText(
         'The new role copies its permissions once. It does not follow later changes to Planner.',
@@ -144,6 +148,22 @@ describe('the role editor', () => {
       ),
     ).toBeDefined();
 
+    // The side column: who holds the role, the reason and the buttons.
+    const holders = screen.getByRole('region', { name: 'Who holds Night planner' });
+    expect(
+      within(holders).getByText(
+        'Nobody yet. After you create the role, add it to people on their Access tab.',
+      ),
+    ).toBeDefined();
+    const reason = screen.getByRole('textbox', { name: 'Reason (optional)' });
+    expect(reason.getAttribute('placeholder')).toBe('Why you create this role');
+    expect(reason.getAttribute('maxlength')).toBe('500');
+    expect(
+      screen.getByText(
+        "Shown in the role's history. Do not enter personal data. Up to 500 characters.",
+      ),
+    ).toBeDefined();
+    await user.type(reason, 'Night shift plans its own orders');
     await user.click(screen.getByRole('button', { name: 'Create role' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
@@ -151,6 +171,38 @@ describe('the role editor', () => {
       coreLinks.settings.roles.role({ companyId, roleId: created.id }).href,
     );
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
+  });
+
+  it('E05-S06 Start from lists No role, then the custom roles and the default roles, each with its kind, and choosing one copies its permissions once', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
+      settingsViewerQuery(karin),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner, viewerRole]),
+      catalogQuery(),
+    ]);
+
+    const startFrom = await screen.findByRole('combobox', { name: 'Start from' });
+    expect(startFrom.textContent).toContain('No role');
+    expect(
+      screen.getByText('The new role starts with no permissions. Tick the ones it needs below.'),
+    ).toBeDefined();
+    await user.click(startFrom);
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual([
+      'No role',
+      'Shift leadCustom role. 2 permissions.',
+      'PlannerPlanning, default role. 3 permissions.',
+      'ViewerPlanning, default role. 1 permission.',
+    ]);
+    await user.click(within(listbox).getByRole('option', { name: /^Planner/ }));
+
+    await waitFor(() => expect(screen.getByText('3 of 6 selected.')).toBeDefined());
+    expect(screen.getByRole('region', { name: 'Difference from Planner' })).toBeDefined();
   });
 
   it('E05-S06 a role created after the roles list was read shows on the list when the user returns to it', async () => {
