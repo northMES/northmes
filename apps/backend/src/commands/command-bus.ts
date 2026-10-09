@@ -131,11 +131,12 @@ function authorizeAtRow(
 
 /**
  * The permission step (ADR 0010, ADR 0012 step 3), with the load of the target. The principal must
- * hold the contract's permission at the scope of the row the command changes, or, for a command
- * without a target such as a create, at the plant the request names, where the handler writes.
- * Anything else is core.forbidden: a run without a principal, a create from a request without a
- * plant, and a principal whose role assignments do not grant the permission there or at a scope
- * above it.
+ * hold the contract's permission at the scope of the row the command changes. For a command
+ * without a target, such as a create, the scope is the one its scope hook returns, or else the
+ * plant the request names, where the handler writes. Anything else is core.forbidden: a run without
+ * a principal, a scope hook that finds no scope, a command without a scope hook from a request
+ * without a plant, and a principal whose role assignments do not grant the permission there or at
+ * a scope above it.
  *
  * For a command on an existing entity, the bus checks the scope that target.scopeOf reads before
  * target.load locks the row. Row-level security limits the lock to the write scopes, so a row that
@@ -164,6 +165,14 @@ async function authorizeAndLoad<Input, Result, Target extends TargetRow | undefi
     if (!row) throw notFound(entity, id);
     authorizeAtRow(principal, permission, { entity, id, scopeId: row.scope_id });
     return row;
+  }
+  if (command.scope) {
+    const scopeId = await command.scope(input, context);
+    if (scopeId === undefined) throw forbidden(`${name} finds no scope to run at`);
+    if (!can(principal, permission, scopeId)) {
+      throw forbidden(`You need ${permission} at scope ${scopeId}`);
+    }
+    return undefined;
   }
   const { plantId } = principal;
   if (!plantId) {
@@ -228,10 +237,10 @@ function validatorsByCommand({
 /**
  * The command bus of the host. It runs each command in one ScopedDatabase transaction: it checks
  * the contract's permission at the scope of the row a command on an existing entity changes, before
- * and after it locks the row, or at the request's plant, and checks the target's version; for a
- * command with validators it builds the payload, parses it with each validator's copy of the
- * owner's contract and runs the validators, each on its own frozen copy and within its time limit;
- * then it runs the handler (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit
+ * and after it locks the row, or at the scope a command without a target names or the request's
+ * plant, and checks the target's version; for a command with validators it builds the payload,
+ * parses it with each validator's copy of the owner's contract and runs the validators, each on its
+ * own frozen copy and within its time limit; then it runs the handler (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit
  * rejects the command, and the transaction rolls back.
  */
 export class CommandBusImpl implements CommandBus {

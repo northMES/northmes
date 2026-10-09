@@ -8,7 +8,7 @@ import { mutationResolver } from './mutation-field.ts';
 
 /** The server code of a command, in the owning module's AGPL server code. */
 export interface CommandDefinition<Input, Result, Target extends TargetRow | undefined>
-  extends Pick<Command<Input, Result, Target>, 'target' | 'buildPayload' | 'handle'> {
+  extends Pick<Command<Input, Result, Target>, 'target' | 'scope' | 'buildPayload' | 'handle'> {
   /** The GraphQL type of the handler's result, which the mutation returns. */
   readonly returns: ReturnTypeFunc;
 }
@@ -29,8 +29,8 @@ type ParsedInput<Contract extends CommandContract> = z.output<Contract['input']>
 /**
  * Registers a command's server code. Listed in the providers of the module's Nest module, it adds
  * the command's prefixed Mutation field to the schema, so the module writes no resolver for it
- * (ADR 0012). A command on an existing entity without a target, and a contract field the generated
- * input cannot carry, throw here.
+ * (ADR 0012). A command on an existing entity without a target or with a scope hook, and a
+ * contract field the generated input cannot carry, throw here.
  */
 export function defineCommand<
   Contract extends CommandContract,
@@ -41,6 +41,7 @@ export function defineCommand<
   {
     returns,
     target,
+    scope,
     buildPayload,
     handle,
   }: CommandDefinition<ParsedInput<Contract>, Result, Target>,
@@ -50,9 +51,15 @@ export function defineCommand<
       `Command ${contract.name} changes an existing entity, so its definition needs target, which the command bus loads to check expectedVersion (ADR 0012)`,
     );
   }
+  if (contract.target === 'existing' && scope) {
+    throw new Error(
+      `Command ${contract.name} changes an existing entity, whose row names the scope the bus checks its permission at, so its definition takes no scope (ADR 0012)`,
+    );
+  }
   const command: Command<ParsedInput<Contract>, Result, Target> = {
     contract,
     target,
+    scope,
     buildPayload,
     handle,
   };

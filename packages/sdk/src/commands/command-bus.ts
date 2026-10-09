@@ -14,8 +14,8 @@ export interface HandlerContext<Target = unknown> {
   readonly tx: Transaction<unknown>;
   /**
    * The scope id of the plant the principal works at, where a command that creates an entity
-   * writes its row and where the bus checks the permission of a command without a target (ADR 0012
-   * step 3). undefined for a run without a principal.
+   * writes its row and where the bus checks the permission of a command without a target and
+   * without a scope hook (ADR 0012 step 3). undefined for a run without a principal.
    */
   readonly plantId: string | undefined;
   /** The row that target.load returned, or undefined for a command without a target. */
@@ -67,6 +67,17 @@ export interface Command<
   readonly contract: CommandContract;
   /** The entity the command changes, for a contract with target existing. */
   readonly target?: CommandTarget<Target>;
+  /**
+   * The scope id a command without a target writes at, where the bus checks contract.permission
+   * instead of at the request's plant (ADR 0012 step 3). A command that writes above the plant,
+   * such as one that creates a company role, derives it from server-side data, such as the company
+   * of the request's plant, and never from the client's input alone. undefined refuses the command
+   * with core.forbidden. A command with a target takes no scope hook: its row names the scope.
+   */
+  scope?(
+    input: Input,
+    context: Pick<HandlerContext, 'tx' | 'plantId'>,
+  ): Promise<string | undefined>;
   /**
    * Builds the payload that the command validators get. The bus calls it for a validatable
    * command and parses its result with each validator's copy of contract.payload (ADR 0037).
