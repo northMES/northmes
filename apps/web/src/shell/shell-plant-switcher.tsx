@@ -67,8 +67,9 @@ function CompanyMark() {
 
 /** The company over the plant, the text of the switcher and of the static head. */
 function CompanyAndPlant({ company, plant }: { readonly company: string; readonly plant: string }) {
+  // In the rail the text is visually hidden, so the mark alone shows and the words stay (PL38).
   return (
-    <span className="grid min-w-0 flex-1 text-left leading-tight">
+    <span className="grid min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:sr-only">
       <span className="truncate font-medium">{company}</span>
       <span className="truncate text-xs text-muted-foreground">{plant}</span>
     </span>
@@ -101,7 +102,7 @@ export function ShellPlantSwitcher({ companies, plant }: ShellPlantSwitcherProps
   const plants = companies.flatMap(({ plants }) => plants);
   if (plants.length < 2) {
     return (
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-2 text-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-2 text-sm group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <CompanyMark />
         <CompanyAndPlant company={company.name} plant={current.name} />
       </div>
