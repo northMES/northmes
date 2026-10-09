@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Keeps each module's code behind its public api. A module's code lives in apps/<app>/src/modules/<id>,
 // such as apps/web/src/modules/planning. A file there may import another module only through that
-// module's folder, its index file or its api file (api.ts or api/index.ts). An import of any other
-// file of another module is a finding that names the importing file, its line and the import.
+// module's public api: in apps/backend, its public-api.ts (ADR 0070); in apps/web, its folder, its
+// index file or its api file (api.ts or api/index.ts). An import of any other file of another module
+// is a finding that names the importing file, its line and the import.
 //
 // Only relative imports can reach another module's files; a package name goes through the package's
 // exports. Static, type-only and dynamic imports, re-exports and require calls all count.
@@ -26,8 +27,21 @@ const sourceExtension = /\.[cm]?[jt]sx?$/;
 /** A path in a module's folder: the folder, then the path below it, if any. */
 const modulePath = /^(apps\/[^/]+\/src\/modules\/[^/]+)(?:\/(.*))?$/;
 
-/** The paths below a module's folder that make up its public api. */
-const publicApi = /^(?:(?:index|api|api\/index)(?:\.[cm]?[jt]sx?)?)?$/;
+/** The paths below a backend module's folder that make up its public api. */
+const backendPublicApi = /^public-api(?:\.[cm]?[jt]sx?)?$/;
+
+/** The paths below a web module's folder that make up its public api. */
+const webPublicApi = /^(?:(?:index|api|api\/index)(?:\.[cm]?[jt]sx?)?)?$/;
+
+/**
+ * Whether a path below the folder of a module is part of that module's public api.
+ * @param {string} folder The module's folder, such as apps/backend/src/modules/core.
+ * @param {string} below The path below it, empty for the folder itself.
+ */
+function isPublicApi(folder, below) {
+  const publicApi = folder.startsWith('apps/backend/') ? backendPublicApi : webPublicApi;
+  return publicApi.test(below);
+}
 
 /**
  * The findings of files, each a file's path relative to the repository root and its text.
@@ -44,7 +58,9 @@ export function scan(files) {
     for (const { fileName, pos } of ts.preProcessFile(text, true, true).importedFiles) {
       if (!/^\.\.?(\/|$)/.test(fileName)) continue;
       const target = modulePath.exec(posix.join(posix.dirname(path), fileName));
-      if (target === null || target[1] === own || publicApi.test(target[2] ?? '')) continue;
+      if (target === null || target[1] === own || isPublicApi(target[1], target[2] ?? '')) {
+        continue;
+      }
       const line = ts.computeLineAndCharacterOfPosition(lineStarts, pos).line + 1;
       findings.push({ path, line, imported: fileName });
     }

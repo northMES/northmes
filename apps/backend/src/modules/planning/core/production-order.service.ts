@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
-import type { PlanningDatabase } from '../db.ts';
+import type { PlanningDatabase } from '../infrastructure/database.ts';
 
 /** Where a production order stands. */
 export type ProductionOrderStatus = 'planned' | 'released';
 
-/** A production order as planning's API hands it out. */
+/** A production order as planning's service hands it out. */
 export interface ProductionOrderRecord {
   readonly id: string;
   readonly number: string;

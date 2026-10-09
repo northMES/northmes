@@ -2,12 +2,13 @@
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import type { Connection } from '@northmes/sdk/lists';
-import { type ArticleRecord, ArticleService } from './api/article.service.ts';
-import { Article } from './api/article.type.ts';
-import { type ArticleListArgs, articleList } from './api/article-list.ts';
+import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
+import { Article } from '../types/article.type.ts';
+import { type ArticleListArgs, articleList } from './article.list.ts';
 
+/** core's queries on Article. */
 @Resolver(() => Article)
-export class ArticleResolver {
+export class ArticleQueryResolver {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
   /** The article with this id at the request's plant, or null. */

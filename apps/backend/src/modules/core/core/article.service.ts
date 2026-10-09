@@ -2,10 +2,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import type { Connection } from '@northmes/sdk/lists';
-import type { CoreDatabase } from '../db.ts';
-import { type ArticleListArgs, articleList } from './article-list.ts';
+import { type ArticleListArgs, articleList } from '../api/article/queries/article.list.ts';
+import type { CoreDatabase } from '../infrastructure/database.ts';
 
-/** An article as core's API hands it out. */
+/** An article as core's service hands it out. */
 export interface ArticleRecord {
   readonly id: string;
   readonly code: string;

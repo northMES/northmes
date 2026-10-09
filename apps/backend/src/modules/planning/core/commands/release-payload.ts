@@ -2,7 +2,7 @@
 import type { releaseProductionOrder } from '@northmes/planning-contracts';
 import type { Selectable } from 'kysely';
 import type { z } from 'zod';
-import type { ProductionOrderTable } from '../db.ts';
+import type { ProductionOrderTable } from '../../infrastructure/database.ts';
 
 /** What command validators of planning.releaseProductionOrder get, before the bus parses it. */
 export type ReleasePayload = z.input<typeof releaseProductionOrder.payload>;
