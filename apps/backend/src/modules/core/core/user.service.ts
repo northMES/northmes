@@ -20,6 +20,12 @@ export interface UserRecord {
   readonly companyId?: string;
 }
 
+/** What coreUsers narrows its list to: the holders of a role, and blocked or active users. */
+export interface UserFilter {
+  readonly roleId?: string;
+  readonly blocked?: boolean;
+}
+
 /** The columns of core.user_directory that make a UserRecord. */
 const userColumns = ['id', 'name', 'username', 'banned as blocked'] as const;
 
@@ -45,11 +51,35 @@ export function companyUsers(tx: Transaction<CoreDatabase>, companyId: string) {
 export class UserService {
   constructor(@Inject(DATABASE) private readonly db: ScopedDatabase<CoreDatabase>) {}
 
-  /** One page of the users of the request's company, as coreUsers' arguments ask. */
-  async list(args: UserListArgs, companyId?: string): Promise<Connection<UserRecord>> {
+  /**
+   * One page of the users of the request's company, as coreUsers' arguments ask, narrowed by the
+   * filter: the holders of a role of the company at any of its places, and blocked or active users.
+   */
+  async list(
+    args: UserListArgs,
+    companyId?: string,
+    { roleId, blocked }: UserFilter = {},
+  ): Promise<Connection<UserRecord>> {
     const scope = requestScope('core.user:read', companyId);
     const page = await readIn(scope, () =>
-      userList.page(this.db, (tx) => companyUsers(tx, scope.companyId), args),
+      userList.page(
+        this.db,
+        (tx) => {
+          let users = companyUsers(tx, scope.companyId);
+          if (roleId !== undefined) {
+            users = users.where('id', 'in', (holders) =>
+              holders
+                .selectFrom('core.role_assignment')
+                .select('user_id')
+                .where('company_id', '=', scope.companyId)
+                .where('role_id', '=', roleId),
+            );
+          }
+          if (blocked !== undefined) users = users.where('banned', '=', blocked);
+          return users;
+        },
+        args,
+      ),
     );
     // totalCount counts later, in its own resolver, so it reads where the page did.
     return { ...page, count: () => readIn(scope, () => page.count()) };

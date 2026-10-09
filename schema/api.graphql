@@ -243,6 +243,9 @@ type Query {
     after: String
     before: String
 
+    """Only the blocked users when true, only the active ones when false."""
+    blocked: Boolean
+
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
@@ -250,6 +253,11 @@ type Query {
     first: Int = 25
     last: Int
     orderBy: [UserOrderBy!]
+
+    """
+    Only the users who hold this role of the company, at any of its places.
+    """
+    roleId: ID
     search: String
   ): UserConnection!
   coreViewer(
