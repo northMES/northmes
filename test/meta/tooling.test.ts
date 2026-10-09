@@ -242,7 +242,7 @@ describe('tooling', () => {
   it('E04-S01 the UI, form and table libraries are catalog entries that apps/web takes from the catalog', () => {
     // ADR 0020 and the articles slice name these packages. Each pin is the newest release that was
     // outside Renovate's 14-day window on 2026-10-09. culori and its types run the token contrast
-    // test, so they are dev dependencies.
+    // test, and shadcn is the CLI that writes the primitives, so they are dev dependencies.
     const dependencies = {
       '@base-ui/react': '1.8.0',
       '@fontsource/ibm-plex-mono': '5.3.0',
@@ -258,7 +258,7 @@ describe('tooling', () => {
       tailwindcss: '4.3.3',
       uuid: '14.0.2',
     };
-    const devDependencies = { '@types/culori': '4.0.1', culori: '4.0.2' };
+    const devDependencies = { '@types/culori': '4.0.1', culori: '4.0.2', shadcn: '4.21.0' };
     const catalog = readWorkspace().catalog ?? {};
     const web = readJson<PackageJson>('apps/web/package.json');
 
