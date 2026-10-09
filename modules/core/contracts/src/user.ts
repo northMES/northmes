@@ -39,7 +39,8 @@ export const createUser = defineCommandContract({
 
 /**
  * Blocks a user of the company: they cannot sign in, and their next request is refused. It needs
- * core.user:block at the company. Blocking yourself is refused with core.cannot_block_self.
+ * core.user:block at the company and at every other company the user belongs to, since a block
+ * holds everywhere. Blocking yourself is refused with core.cannot_block_self.
  */
 export const blockUser = defineCommandContract({
   name: 'core.blockUser',
@@ -49,7 +50,10 @@ export const blockUser = defineCommandContract({
   reason: 'optional',
 });
 
-/** Unblocks a blocked user of the company, who can sign in again. It needs core.user:block. */
+/**
+ * Unblocks a blocked user of the company, who can sign in again. It needs core.user:block at every
+ * company the user belongs to.
+ */
 export const unblockUser = defineCommandContract({
   name: 'core.unblockUser',
   target: 'none',
