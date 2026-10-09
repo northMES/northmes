@@ -6,9 +6,10 @@ import { Link } from '@tanstack/react-router';
 import { Archive, ArchiveRestore, Pencil } from 'lucide-react';
 import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
-import { commandFailure, hasErrorCode } from '../../components/article-form/index.ts';
+import { commandFailure } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
 import { CoreArchiveArticle } from './archive-article.graphql.ts';
 

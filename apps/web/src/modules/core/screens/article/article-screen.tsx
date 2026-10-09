@@ -3,7 +3,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Archive } from 'lucide-react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
-import { Badge } from '../../../../ui/primitives/badge.tsx';
+import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import type { Article } from '../../article.graphql.ts';
 import { useArticle } from '../../use-article.tsx';
 import { ArticleActions } from './article-actions.tsx';
@@ -58,10 +58,9 @@ export function ArticleScreen() {
     >
       {article?.archivedAt != null && (
         <p>
-          <Badge variant="secondary" className="text-muted-foreground">
-            <Archive aria-hidden />
+          <StatusBadge tone="neutral" icon={Archive}>
             Archived
-          </Badge>
+          </StatusBadge>
         </p>
       )}
       <Identity article={article} />
