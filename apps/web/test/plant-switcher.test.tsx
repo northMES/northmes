@@ -286,19 +286,52 @@ describe('the plant crumb', () => {
 });
 
 describe('a plant the user cannot open', () => {
-  it("E04-S04 a plant slug that is none of the user's plants shows Plant not found with links to the user's plants, without the sidebar", async () => {
+  it("E04-S04 a plant slug that is none of the user's plants shows Page not found with the user's plants by company, without the sidebar (D2 ST29)", async () => {
     renderAt('/plant-x/planning/orders', twoCompanies);
 
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Plant not found' });
-
-    expect(heading).toBeDefined();
-    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+    const main = await screen.findByRole('main');
     expect(
-      screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
+      await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeDefined();
+    expect(document.title).toBe('Page not found · NorthMES');
+    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+    expect(main.textContent).toContain(
+      'There is no plant at /plant-x/planning/orders that you can open. The link may be out of date.',
+    );
+    expect(within(main).getByRole('heading', { level: 2, name: 'Your plants' })).toBeDefined();
+    const lists = within(main).getAllByRole('list');
+    expect(lists.map((list) => list.getAttribute('aria-labelledby'))).toHaveLength(2);
+    expect(
+      lists.map((list) => document.getElementById(list.getAttribute('aria-labelledby') ?? '')),
+    ).toEqual(within(main).getAllByRole('heading', { level: 3 }));
+    expect(
+      within(main)
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(['Demo Works', 'Nordic Tools']);
+    expect(
+      within(main)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([
       ['Plant A', '/plant-a/planning/orders'],
       ['Plant B', '/plant-b/planning/orders'],
       ['Plant C', '/plant-c/planning/orders'],
     ]);
+    expect(main.textContent).toContain('/plant-c');
+  });
+
+  it('E04-S04 the unknown plant page has a top bar with the NorthMES mark and the account menu, so the user can sign out (D2 ST29)', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt('/plant-x/planning/orders', twoCompanies);
+    await screen.findByRole('heading', { level: 1, name: 'Page not found' });
+
+    const banner = screen.getByRole('banner');
+    expect(banner.textContent).toContain('NorthMES');
+    await user.click(within(banner).getByRole('button', { name: 'Alex Lund, alex.lund, account' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    expect(router.state.location.pathname).toBe('/sign-in');
   });
 });
