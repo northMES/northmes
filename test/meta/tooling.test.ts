@@ -349,6 +349,27 @@ describe('tooling', () => {
     expect(resolutions('@better-auth/cli')).toEqual([]);
   });
 
+  it('@nestjs/swagger 12 is pinned exactly and apps/backend takes it from the catalog', () => {
+    // ADR 0064 builds the public API's OpenAPI 3.1 document with @nestjs/swagger 12 and its Standard
+    // Schema converter. 12.0.2 was the newest release outside Renovate's 14-day window on 2026-10-09.
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(catalog['@nestjs/swagger']).toBe('12.0.2');
+    expect(backend.dependencies?.['@nestjs/swagger']).toBe('catalog:');
+  });
+
+  it('pnpm-lock.yaml holds one @nestjs/swagger copy, and the install runs no @scarf/scarf script', () => {
+    // swagger-ui-dist, a dependency of @nestjs/swagger, pulls @scarf/scarf, whose postinstall script
+    // reports the install to a third party, so allowBuilds turns it off.
+    const workspace = parse(readText('pnpm-workspace.yaml')) as WorkspaceConfig & {
+      allowBuilds?: Record<string, boolean>;
+    };
+
+    expect(resolutions('@nestjs/swagger')).toHaveLength(1);
+    expect(workspace.allowBuilds?.['@scarf/scarf']).toBe(false);
+  });
+
   it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {
     // The fonts ship in the web bundle. A package listing them would carry OFL-1.1 files into an
     // MIT package (ADR 0040).
