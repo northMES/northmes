@@ -49,15 +49,15 @@ describe('roles', () => {
         [
           'Custom roles of Acme AB',
           [
-            ['Kanban reader', 'Acme AB', '0 of 61 not installed', 'None'],
-            ['Shift lead', 'Acme AB', '2 of 6', '2 people'],
+            ['Kanban reader', 'Acme AB', '0 of 61 not installed', 'None', ''],
+            ['Shift lead', 'Acme AB', '2 of 6', '2 people', ''],
           ],
         ],
         [
           'Default roles from modules',
           [
-            ['Planner', 'Planning', '3 of 6', 'None'],
-            ['Viewer', 'Planning', '1 of 6', '1 person'],
+            ['Planner', 'Planning', '3 of 6', 'None', ''],
+            ['Viewer', 'Planning', '1 of 6', '1 person', ''],
           ],
         ],
       ]),
@@ -71,7 +71,7 @@ describe('roles', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Role', 'Defined by', 'Permissions', 'Holders']);
+    ).toEqual(['Role', 'Defined by', 'Permissions', 'Holders', 'Actions']);
     expect(
       within(table).getByRole('columnheader', { name: 'Role' }).getAttribute('aria-sort'),
     ).toBe('ascending');
@@ -107,10 +107,10 @@ describe('roles', () => {
         [
           'Default roles from modules',
           [
-            ['Company admin', 'Core', '6 of 6', 'None'],
-            ['Planner', 'Planning', '3 of 6', 'None'],
-            ['Plant admin', 'Core', '5 of 6', 'None'],
-            ['Viewer', 'Planning', '1 of 6', '1 person'],
+            ['Company admin', 'Core', '6 of 6', 'None', ''],
+            ['Planner', 'Planning', '3 of 6', 'None', ''],
+            ['Plant admin', 'Core', '5 of 6', 'None', ''],
+            ['Viewer', 'Planning', '1 of 6', '1 person', ''],
           ],
         ],
       ]),
@@ -183,6 +183,77 @@ describe('roles', () => {
     expect(
       (screen.getByRole('searchbox', { name: 'Search roles' }) as HTMLInputElement).value,
     ).toBe('lead');
+  });
+
+  it('E05-S06 the row menu of a custom role offers Edit role and New role from it: Enter opens it with focus on the first item, the arrows move, and Escape returns focus to its button (RO35)', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+      managerQuery(),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner]),
+      catalogQuery(),
+    ]);
+
+    const actions = await screen.findByRole('button', { name: 'Actions for Shift lead' });
+    expect(actions.getAttribute('aria-haspopup')).toBe('menu');
+    actions.focus();
+    await user.keyboard('{Enter}');
+    const menu = await screen.findByRole('menu');
+    expect(actions.getAttribute('aria-expanded')).toBe('true');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Edit role', 'New role from Shift lead']);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(menu).getByRole('menuitem', { name: 'Edit role' }),
+      ),
+    );
+    await user.keyboard('{ArrowDown}');
+    expect(document.activeElement).toBe(
+      within(menu).getByRole('menuitem', { name: 'New role from Shift lead' }),
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(document.activeElement).toBe(actions);
+  });
+
+  it('E05-S06 the row menu of a default role offers New role from it, which opens New role starting from it; Company admin and a reader without core.role:manage get no menu (RO37)', async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+      managerQuery(),
+      companiesQuery(),
+      rolesQuery([companyAdminRole, planner]),
+      catalogQuery(),
+      rolesQuery([companyAdminRole, planner]),
+      catalogQuery(),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Actions for Planner' }));
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['New role from Planner']);
+    expect(screen.queryByRole('button', { name: 'Actions for Company admin' })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: 'New role from Planner' }));
+    await waitFor(() =>
+      expect(router.state.location.href).toBe(
+        coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href,
+      ),
+    );
+
+    cleanup();
+    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+      settingsViewerQuery(['core.role:read']),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner]),
+      catalogQuery(),
+    ]);
+    expect(await screen.findByRole('link', { name: 'Shift lead' })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
   });
 
   it('E05-S06 a search that matches no role says so and Clear filters shows every role again', async () => {
