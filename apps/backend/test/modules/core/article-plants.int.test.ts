@@ -370,9 +370,9 @@ describe('articles at the company, assigned to plants', () => {
     expect(unassigned.data?.coreCreateArticle).toMatchObject({ allPlants: false, plants: [] });
     expect(forHel.errors).toBeUndefined();
     expect(forHel.data?.coreCreateArticle).toMatchObject({ plants: [{ slug: helSlug }] });
-    expect(
-      await listed(inSettings.client, { companyId: place.company, unassigned: true }),
-    ).toEqual(['CS-1']);
+    expect(await listed(inSettings.client, { companyId: place.company, unassigned: true })).toEqual(
+      ['CS-1'],
+    );
     expect(await listed(atHel.client)).toEqual(['CS-2']);
 
     const assigned = await inSettings.client.send<{ coreSetArticlePlants: Article }>(

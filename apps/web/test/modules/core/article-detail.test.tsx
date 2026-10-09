@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
-import { companiesQuery, forbiddenError } from './access-fixtures.ts';
+import { companiesQuery, forbiddenError, viewerQuery } from './access-fixtures.ts';
 import {
   article,
   articleQuery,
@@ -32,7 +32,10 @@ function definitions(list: HTMLElement): (string | null)[][] {
 
 describe('article page', () => {
   it("E06-S06 an article's page shows its number and name, with Edit", async () => {
-    renderCoreAt(articleHref(axle.id), [articleQuery(axle)]);
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(axle),
+      viewerQuery(['core.article:read', 'core.article:update']),
+    ]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
     expect(document.title).toBe('Article AX-500 · NorthMES');
