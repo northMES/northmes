@@ -42,6 +42,7 @@ import {
   plantHome,
   plantOf,
   plantSettingsLinks,
+  settingsGroupsOf,
   shownTo,
   sidebarId,
   sidebarLinks,
@@ -317,14 +318,14 @@ function PlantLayout({
     .flatMap(plantSettingsLinks)
     .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined);
   const shown = shownTo(permissions);
-  const settingsGroups: SettingsGroup[] = modules
-    .map((module) => ({
-      label: module.module.id === 'core' ? undefined : 'Modules',
+  const settingsGroups: SettingsGroup[] = settingsGroupsOf(
+    modules.map((module) => ({
+      moduleId: module.module.id,
       entries: plantSettingsLinks(module)
         .filter(shown)
         .map(({ label, icon, link }) => ({ label, icon, href: link({ plant }).href })),
-    }))
-    .filter(({ entries }) => entries.length > 0);
+    })),
+  );
   const settingsHome = settingsGroups[0]?.entries[0]?.href;
   const companyId = found?.company.id;
   const companySettings =

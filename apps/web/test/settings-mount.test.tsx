@@ -14,8 +14,8 @@ import {
   isBefore,
   linksIn,
   renderShellAt,
-  setViewport,
   settingsModule,
+  setViewport,
   unreachable,
   viewer,
 } from './settings-fixtures.tsx';
@@ -135,7 +135,8 @@ describe('company settings', () => {
     await waitFor(() =>
       expect(within(main).getAllByRole('heading', { level: 2, name: 'Modules' })).toHaveLength(1),
     );
-    expect(linksIn(within(main).getByRole('list', { name: 'Modules' }))).toEqual([
+    const section = within(main).getByRole('heading', { level: 2, name: 'Modules' }).parentElement;
+    expect(linksIn(within(section ?? main).getByRole('list', { name: 'Modules' }))).toEqual([
       ['Quality rules', `/settings/${companyId}/quality/rules`],
       ['Maintenance rules', `/settings/${companyId}/maintenance/rules`],
     ]);

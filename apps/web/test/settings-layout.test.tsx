@@ -13,8 +13,8 @@ import {
   isBefore,
   linksIn,
   renderShellAt,
-  setViewport,
   settingsModule,
+  setViewport,
   viewer,
 } from './settings-fixtures.tsx';
 
