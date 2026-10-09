@@ -23,8 +23,9 @@ const pageHeading = () => document.querySelector<HTMLElement>('h1');
 
 /**
  * The message of a failed archive or restore. A stale version reloads the article first, so the
- * next try sends the version the page now shows; another refusal shows the API's message, and no
- * answer asks to check the connection.
+ * next try sends the version the page now shows; when that reload fails, the page still shows the
+ * old version and the message says so. Another refusal shows the API's message, and no answer asks
+ * to check the connection.
  */
 async function refusal(
   error: unknown,
@@ -32,7 +33,12 @@ async function refusal(
   reload: () => Promise<Article | undefined>,
 ): Promise<Error> {
   if (hasErrorCode(error, 'core.version_conflict')) {
-    await reload().catch(() => undefined);
+    const saved = await reload().catch(() => undefined);
+    if (saved === undefined) {
+      return new Error(
+        'Someone changed this article after you opened it, and the saved article could not be loaded. Check the connection, then try again.',
+      );
+    }
     return new Error(
       `Someone changed this article after you opened it. The page now shows the saved article. Check it, then ${verb} it again.`,
     );
