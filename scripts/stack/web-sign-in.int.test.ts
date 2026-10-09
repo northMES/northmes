@@ -4,7 +4,7 @@ import { createNorthmesClient } from '@northmes/web-sdk';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createAuthSession } from '../../apps/web/src/auth/auth-session.ts';
 import { CoreArticles } from '../../apps/web/src/modules/core/screens/articles/articles.graphql.ts';
-import { devAdmin, seed, seedScopes } from './seed.mjs';
+import { devAdmin, seed, seedPlants } from './seed.mjs';
 
 /** A Storage in memory, as sessionStorage is for one tab. */
 function memoryStorage(): Storage {
@@ -48,7 +48,7 @@ describe("the web's sign-in against the API", () => {
     const session = createAuthSession({ apiUrl: url, storage });
     const onUnauthenticated = vi.fn();
     const client = createNorthmesClient({
-      plantId: seedScopes.plant,
+      plant: seedPlants[0]?.slug ?? '',
       apiUrl: url,
       auth: { token: () => session.token(), onUnauthenticated },
     });

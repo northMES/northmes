@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { toGraphQLError } from '@northmes/sdk/errors';
 import type { RequestContext } from '@northmes/sdk/graphql';
 import { isAsyncIterable, type Plugin } from 'graphql-yoga';
 import { type Principal, runAs } from '../principal.ts';
@@ -19,13 +20,21 @@ export const noPrincipal: ResolvePrincipal = async () => null;
  * Resolves the principal once per request with `resolve`, from the request's headers, and adds it
  * to the context as `principal`, next to the request's empty loaders (ADR 0011). A request without
  * a valid bearer token gets null, so it reads nothing, and the principal guard refuses its fields.
+ * When `resolve` refuses the request, such as for a plant in x-northmes-plant that the principal
+ * may not open, the request fails with that refusal as its one error and runs no field.
  * The headers come from the HTTP request alone, which for a graphql-ws subscription is its
  * handshake: no NorthMES code reads a socket's connectionParams (ADR 0018).
  */
 export function principalPlugin(resolve: ResolvePrincipal): Plugin<ServerContext> {
   return {
     async onContextBuilding({ context, extendContext }) {
-      extendContext({ principal: await resolve(context.request.headers), loaders: new Map() });
+      let principal: Principal | null;
+      try {
+        principal = await resolve(context.request.headers);
+      } catch (error) {
+        throw toGraphQLError(error) ?? error;
+      }
+      extendContext({ principal, loaders: new Map() });
     },
   };
 }

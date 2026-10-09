@@ -31,7 +31,7 @@ interface EditArticleFormProps {
  * core.version_conflict (ADR 0017), not overwritten.
  */
 function EditArticleForm({ article, reload }: EditArticleFormProps) {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   const navigate = useNavigate();
   // The version the form was filled from; only a save reads it, so it is no render state.
   const expectedVersion = useRef(article.version);
@@ -56,7 +56,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
       if (!data) return;
       announce(`Article ${data.coreUpdateArticle.code} saved`);
       await navigate({
-        to: coreLinks.articles.article({ plant: plantId, articleId: article.id }).href,
+        to: coreLinks.articles.article({ plant, articleId: article.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -130,7 +130,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     <ArticleForm
       form={form}
       onSave={save}
-      cancelHref={coreLinks.articles.article({ plant: plantId, articleId: article.id }).href}
+      cancelHref={coreLinks.articles.article({ plant, articleId: article.id }).href}
       conflict={conflict ? { onReload } : undefined}
       archived={archived ? { onRestore } : undefined}
     />
@@ -145,9 +145,9 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
  * (DE31).
  */
 export function EditArticleScreen() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   const { article, state, reload } = useArticle();
-  const articles = { label: 'Articles', href: coreLinks.articles({ plant: plantId }).href };
+  const articles = { label: 'Articles', href: coreLinks.articles({ plant }).href };
   return (
     <PageFrame
       title={article === undefined ? 'Edit article' : `Edit article ${article.code}`}
@@ -158,7 +158,7 @@ export function EditArticleScreen() {
               articles,
               {
                 label: `Article ${article.code}`,
-                href: coreLinks.articles.article({ plant: plantId, articleId: article.id }).href,
+                href: coreLinks.articles.article({ plant, articleId: article.id }).href,
               },
             ]
       }

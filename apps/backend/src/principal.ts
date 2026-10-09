@@ -22,11 +22,14 @@ export interface Principal {
   /** The user's id, auth.user.id. */
   readonly userId: string;
   /**
-   * The scope id that the request's x-northmes-plant header names, where a command that creates
-   * an entity writes it. The plant check against the role assignments arrives with core.plant.
+   * The scope id of the plant whose slug the request's x-northmes-plant header names, which the
+   * principal may open (ADR 0007). A command that creates an entity writes it there.
    */
   readonly plantId: string | undefined;
-  /** The scope ids a transaction of this principal reads: northmes.read_scopes (ADR 0008). */
+  /**
+   * The scope ids a transaction of this principal reads: northmes.read_scopes (ADR 0008), the
+   * request's plant and its company, or none for a request without a plant.
+   */
   readonly readScopes: readonly string[];
   /** The scope ids a transaction of this principal writes: northmes.write_scopes (ADR 0008). */
   readonly writeScopes: readonly string[];
@@ -42,10 +45,7 @@ export abstract class PrincipalResolver {
   abstract resolve(headers: Headers): Promise<Principal | null>;
 }
 
-/**
- * The header that names a request's plant by its scope id, until plant slugs and the plant check
- * arrive with core.plant.
- */
+/** The header that names a request's plant by its slug, the plant's segment of the web's URLs. */
 export const PLANT_HEADER = 'x-northmes-plant';
 
 /** The metadata key of Public. */

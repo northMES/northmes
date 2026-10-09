@@ -45,12 +45,12 @@ function Identity({ article }: { readonly article: Article | undefined }) {
  * (ST8).
  */
 export function ArticleScreen() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   const { article, state, reload } = useArticle();
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
-      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant: plantId }).href }]}
+      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant }).href }]}
       actions={
         article === undefined ? undefined : <ArticleActions article={article} reload={reload} />
       }

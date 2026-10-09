@@ -51,6 +51,17 @@ const pong = () =>
     headers: { 'content-type': 'application/graphql-response+json' },
   });
 
+/** The calls of fetch that sent the operation named operation. */
+function callsOf(
+  fetch: { mock: { calls: Parameters<typeof globalThis.fetch>[] } },
+  operation: string,
+) {
+  return fetch.mock.calls.filter(
+    ([, init]) =>
+      (JSON.parse(String(init?.body)) as { operationName?: string }).operationName === operation,
+  );
+}
+
 /** Renders the web's router at path with the session, and returns the router. */
 function renderAt(
   path: string,
@@ -86,7 +97,7 @@ describe('sign-in', () => {
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
     expect(session.signIn).toHaveBeenCalledWith('alex.lund', 'correct horse');
-    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('authorization')).toBe(
+    expect(new Headers(callsOf(fetch, 'Ping')[0]?.[1]?.headers).get('authorization')).toBe(
       'Bearer jwt-1',
     );
   });
@@ -225,7 +236,7 @@ describe('sign-in', () => {
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
     await signIn(user, 'alex.lund', 'correct horse');
     await screen.findByRole('heading', { name: 'The API answered pong' });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(callsOf(fetch, 'Ping')).toHaveLength(2);
   });
 
   it('E05-S05 a 401 from the API forgets the session and sends the viewer to sign-in, which returns them to the page', async () => {
@@ -234,7 +245,7 @@ describe('sign-in', () => {
     const fetch = vi
       .fn<typeof globalThis.fetch>()
       .mockResolvedValueOnce(new Response('{}', { status: 401 }))
-      .mockResolvedValue(pong());
+      .mockImplementation(async () => pong());
     renderAt('/plant-a/quality', session, fetch);
 
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });

@@ -27,6 +27,12 @@ enum ArticleSortField {
   NAME
 }
 
+type Company {
+  id: ID!
+  name: String!
+  plants: [Plant!]!
+}
+
 input CoreArchiveArticleInput {
   expectedVersion: Int!
   id: ID!
@@ -75,6 +81,12 @@ input PlanningReleaseProductionOrderInput {
   id: ID!
 }
 
+type Plant {
+  id: ID!
+  name: String!
+  slug: String!
+}
+
 type ProductionOrder {
   article: Article
   id: ID!
@@ -87,6 +99,7 @@ type ProductionOrder {
 type Query {
   coreArticle(id: ID!): Article
   coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
+  coreCompanies: [Company!]!
   planningProductionOrders: [ProductionOrder!]!
 }
 

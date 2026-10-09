@@ -3,3 +3,4 @@
 // forms, validators and plugins read without Nest or React.
 export { archiveArticle, createArticle, restoreArticle, updateArticle } from './article.ts';
 export { coreLinks } from './links.ts';
+export { plantSlug, reservedPlantSlugs } from './plant.ts';

@@ -11,6 +11,7 @@ describe('schemaSdl', () => {
     expect(Object.keys(schema.getQueryType()?.getFields() ?? {})).toEqual([
       'coreArticle',
       'coreArticles',
+      'coreCompanies',
       'planningProductionOrders',
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([

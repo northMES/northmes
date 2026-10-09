@@ -32,7 +32,11 @@ describe('createTestApp', () => {
     const query = testApp.app.get(GraphQLSchemaHost).schema.getQueryType();
 
     // Core's root fields, and none of planning, which the test did not boot.
-    expect(Object.keys(query?.getFields() ?? {})).toEqual(['coreArticle', 'coreArticles']);
+    expect(Object.keys(query?.getFields() ?? {})).toEqual([
+      'coreArticle',
+      'coreArticles',
+      'coreCompanies',
+    ]);
   });
 });
 

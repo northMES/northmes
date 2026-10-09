@@ -41,10 +41,10 @@ const showArchivedId = 'articles-show-archived';
 
 /** The article number, the link to the article's page (IdentifierLink in the design). */
 function ArticleLink({ article }: { readonly article: ArticleRow }) {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   return (
     <Link
-      to={coreLinks.articles.article({ plant: plantId, articleId: article.id }).href}
+      to={coreLinks.articles.article({ plant, articleId: article.id }).href}
       className="font-mono text-link underline underline-offset-2 hover:no-underline"
     >
       {article.code}
@@ -81,9 +81,9 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
 
 /** New article, the page's main action, as a link to the new article page. */
 function NewArticleLink() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   return (
-    <Link to={coreLinks.articles.new({ plant: plantId }).href} className={buttonVariants()}>
+    <Link to={coreLinks.articles.new({ plant }).href} className={buttonVariants()}>
       <Plus aria-hidden />
       New article
     </Link>

@@ -22,7 +22,7 @@ export interface ArticleOfPage {
 
 /** Reads the article that the $articleId segment of the URL names. */
 export function useArticle(): ArticleOfPage {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   const { articleId } = useParams({ strict: false });
   const { data, error, refetch } = useQuery(CoreArticle, { variables: { id: articleId ?? '' } });
   const article = data?.coreArticle ?? undefined;
@@ -47,7 +47,7 @@ export function useArticle(): ArticleOfPage {
         'The link may be out of date, or the article belongs to a plant you have no role in.',
       action: (
         <Link
-          to={coreLinks.articles({ plant: plantId }).href}
+          to={coreLinks.articles({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Articles

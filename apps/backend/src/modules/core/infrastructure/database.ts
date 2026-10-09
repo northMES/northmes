@@ -24,6 +24,25 @@ export interface ScopeTable {
   span: string;
 }
 
+/** core.company: a company, the Better Auth organization at a company node (ADR 0007). */
+export interface CompanyTable {
+  /** The id of the company's node in core.scope. */
+  id: string;
+  organization_id: string;
+  name: string;
+  kind: Generated<'company'>;
+}
+
+/** core.plant: a plant at a plant node, with the slug that names it in URLs (ADR 0007). */
+export interface PlantTable {
+  /** The id of the plant's node in core.scope. */
+  id: string;
+  company_id: string;
+  slug: string;
+  name: string;
+  kind: Generated<'plant'>;
+}
+
 /** core.permission: the permission catalog that northmes migrate writes (ADR 0010). */
 export interface PermissionTable {
   key: string;
@@ -59,6 +78,8 @@ export interface RoleAssignmentTable {
 export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.scope': ScopeTable;
+  'core.company': CompanyTable;
+  'core.plant': PlantTable;
   'core.permission': PermissionTable;
   'core.role': RoleTable;
   'core.role_assignment': RoleAssignmentTable;

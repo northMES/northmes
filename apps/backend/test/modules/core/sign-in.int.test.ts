@@ -33,14 +33,13 @@ describe('sign-in with Better Auth', () => {
     await testApp.app.close();
   });
 
-  /** A user who reads articles at a fresh company's plant, signed in, and that plant. */
+  /** A user who reads articles at a fresh company's plant, signed in, and that plant's slug. */
   async function reader() {
-    const { plants } = await givenCompany(db.ownerUrl);
-    const [plant = ''] = plants;
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
     const user = await signIn(testApp.app, db.ownerUrl, [
-      { scopeId: plant, permissions: ['core.article:read'] },
+      { scopeId: plants[0] ?? '', permissions: ['core.article:read'] },
     ]);
-    return { user, plant };
+    return { user, plant: slugs[0] ?? '' };
   }
 
   it('E05-S05 a user signs in with username and password, and the JWT from /api/auth/token reads the API', async () => {

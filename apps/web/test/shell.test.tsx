@@ -36,8 +36,8 @@ afterEach(() => {
 
 /** A screen whose h1 cannot take focus, as the board stub's. */
 function BoardScreen() {
-  const { plantId } = useShell();
-  return <h1>Board of {plantId}</h1>;
+  const { plant } = useShell();
+  return <h1>Board of {plant}</h1>;
 }
 
 /** A list screen in a page frame, with a page action and a control in its content. */
@@ -51,11 +51,11 @@ function OrdersScreen() {
 
 /** A detail screen in a page frame, under its list's crumb. */
 function OrderScreen() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   return (
     <PageFrame
       title="Order 1001"
-      crumbs={[{ label: 'Production orders', href: `/${plantId}/planning/orders` }]}
+      crumbs={[{ label: 'Production orders', href: `/${plant}/planning/orders` }]}
     >
       <p>Order 1001</p>
     </PageFrame>
@@ -580,8 +580,18 @@ describe('the shell', () => {
     renderShellAt('/plant-b/quality', [quality], { fetch, apiUrl: 'https://api.northmes.test' });
 
     expect(await screen.findByText('The API answered pong')).toBeDefined();
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.northmes.test/graphql');
-    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('x-northmes-plant')).toBe('plant-b');
+    // The shell also reads the user's plants, with a client that names no plant.
+    const plantOf = ([, init]: Parameters<typeof globalThis.fetch>) => [
+      (JSON.parse(String(init?.body)) as { operationName: string }).operationName,
+      new Headers(init?.headers).get('x-northmes-plant'),
+    ];
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.northmes.test/graphql',
+      'https://api.northmes.test/graphql',
+    ]);
+    expect(fetch.mock.calls.map(plantOf).sort()).toEqual([
+      ['CoreCompanies', null],
+      ['Ping', 'plant-b'],
+    ]);
   });
 });
