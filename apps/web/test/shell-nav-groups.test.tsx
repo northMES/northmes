@@ -26,6 +26,9 @@ function page(title: string) {
   return () => <PageFrame title={title}>{null}</PageFrame>;
 }
 
+/** The link builder of the fixture module's Bins entry. */
+const binsLink = ({ plant }: { readonly plant: string }) => ({ href: `/${plant}/stock/bins` });
+
 /**
  * A module whose sidebar group holds a nested group, Registers, with Warehouses and Bins, then the
  * entry Moves, and Stock rules in the plant settings navigation.
@@ -47,7 +50,7 @@ const stock: ShellModule = {
           label: 'Bins',
           icon: 'Package',
           permission: 'stock.bin:read',
-          link: ({ plant }) => ({ href: `/${plant}/stock/bins` }),
+          link: binsLink,
         },
       ],
     },
@@ -150,7 +153,7 @@ describe('a nested group in a module sidebar group (D2 PL5)', () => {
     const registers = within(await stockGroup()).getByRole('button', { name: 'Registers' });
     expect(registers.getAttribute('aria-expanded')).toBe('false');
 
-    await router.navigate({ to: '/plant-a/stock/bins' });
+    await router.navigate({ to: binsLink({ plant: 'plant-a' }).href });
 
     await screen.findByRole('heading', { level: 1, name: 'Bins' });
     expect(registers.getAttribute('aria-expanded')).toBe('true');
