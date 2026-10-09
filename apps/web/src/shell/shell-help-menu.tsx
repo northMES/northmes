@@ -25,7 +25,9 @@ export interface ShellHelpMenuProps {
 
 /** A link item: an app path through the router, any other URL as a plain link. */
 function linkFor(href: string) {
-  return href.startsWith('/') ? <Link to={href} /> : <a href={href} />;
+  if (href.startsWith('/')) return <Link to={href} />;
+  // biome-ignore lint/a11y/useAnchorContent: the menu item renders its label inside the link.
+  return <a href={href} />;
 }
 
 /**
