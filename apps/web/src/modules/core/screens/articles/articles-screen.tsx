@@ -117,6 +117,7 @@ interface StateOptions {
   /** The company's name, where the forbidden state says the permission is missing. */
   readonly companyName: string;
   readonly view: ArticleListSearch;
+  /** The page the list shows: the one loaded, or the one before while the next loads. */
   readonly page: ArticlesPage | undefined;
   readonly error: ErrorLike | undefined;
   readonly retry: () => Promise<unknown>;
@@ -124,9 +125,9 @@ interface StateOptions {
 }
 
 /**
- * The state of the list's data region (design ui-222, row 2): loading while a page has no rows
- * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the forbidden state
- * (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
+ * The state of the list's data region (design ui-222, row 2): loading while the list has no rows
+ * to show yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the
+ * forbidden state (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
  */
 function listState({
   forbidden,
@@ -204,9 +205,11 @@ export function ArticlesScreen() {
   const page = data?.coreArticles;
   const forbidden = page === undefined && isForbidden(error);
   const places = usePlaces({ skip: !forbidden });
-  // While a page loads, the pager keeps the buttons of the page before it, so the button just used
-  // keeps focus.
-  const shownPage = page ?? previousData?.coreArticles;
+  // While the rows of a new search, sort, filter or page load, the list keeps the rows of the view
+  // before and their pager, so focus stays on the control used (design ui-222, LI7). The first load
+  // and a view before without rows show skeleton rows; an error replaces the rows.
+  const previous = previousData?.coreArticles;
+  const shownPage = page ?? (error === undefined && previous?.edges.length ? previous : undefined);
   const show = (next: ArticleListSearch) => {
     navigate({ to: '.', search: next, replace: true });
   };
@@ -214,7 +217,7 @@ export function ArticlesScreen() {
     forbidden,
     companyName: places.company?.name ?? 'the company',
     view,
-    page,
+    page: shownPage,
     error,
     retry: () => refetch(),
     show,
@@ -249,15 +252,16 @@ export function ArticlesScreen() {
       <DataTable
         label="Articles"
         columns={columns}
-        rows={page?.edges.map(({ node }) => node) ?? []}
+        rows={shownPage?.edges.map(({ node }) => node) ?? []}
         getRowId={(article) => article.id}
-        loading={page === undefined}
+        loading={shownPage === undefined}
+        stale={page === undefined && shownPage !== undefined}
         sort={sortOf(view)}
         onSortChange={(sort) => show(sortedBy(view, sort))}
         paging={{
           page: view.page ?? 1,
           pageSize: articlePageSize,
-          totalCount: page?.totalCount,
+          totalCount: shownPage?.totalCount,
           hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
           hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
           onPrevious: () => {

@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-table';
 import { cn } from 'cn';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../primitives/button.tsx';
 import { Skeleton } from '../../primitives/skeleton.tsx';
 import {
@@ -65,6 +65,12 @@ export interface DataTableProps<TRow> {
   readonly paging?: DataTablePaging;
   /** The rows are loading: the header stays, skeleton rows replace the rows, the table is busy. */
   readonly loading?: boolean;
+  /**
+   * The rows are those of the search, sort, filter or page before, while the next ones load (design
+   * ui-222, LI7): the rows and the row range stay, dimmed, the table is busy, and focus stays where
+   * it is.
+   */
+  readonly stale?: boolean;
 }
 
 const features = tableFeatures({ rowSortingFeature });
@@ -78,7 +84,9 @@ const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
  * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
  * ui-222): the header of a sortable column is a button that sorts ascending first and then flips
  * the direction, its aria-sort shows the sort, and the pager has Previous and Next with the row
- * range, such as "Rows 1 to 25 of 63". Focus stays on the control that was used.
+ * range, such as "Rows 1 to 25 of 63". Focus stays on the control that was used. While the next
+ * rows load, the table shows skeleton rows when it has none to show, and otherwise keeps the rows
+ * of the view before, dimmed, so a search, sort, filter or page change does not empty it.
  */
 export function DataTable<TRow extends RowData>({
   label,
@@ -89,6 +97,7 @@ export function DataTable<TRow extends RowData>({
   onSortChange,
   paging,
   loading = false,
+  stale = false,
 }: DataTableProps<TRow>) {
   const tableColumns = useMemo(
     () =>
@@ -125,7 +134,7 @@ export function DataTable<TRow extends RowData>({
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-      <Table aria-busy={loading || undefined}>
+      <Table aria-busy={loading || stale || undefined}>
         <TableCaption className="sr-only">{label}</TableCaption>
         <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
           {table.getHeaderGroups().map((group) => (
@@ -171,7 +180,8 @@ export function DataTable<TRow extends RowData>({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody>
+        {/* The dimming waits a moment, so a quick answer swaps the rows without a flash. */}
+        <TableBody className={cn(stale && 'opacity-60 transition-opacity delay-200 duration-150')}>
           {loading
             ? skeletonRows.map((key) => (
                 <TableRow key={key} className="border-border hover:bg-transparent">
@@ -196,7 +206,9 @@ export function DataTable<TRow extends RowData>({
               ))}
         </TableBody>
       </Table>
-      {paging !== undefined && <Pager paging={paging} rowCount={loading ? 0 : rows.length} />}
+      {paging !== undefined && (
+        <Pager paging={paging} rowCount={loading ? 0 : rows.length} stale={stale} />
+      )}
     </div>
   );
 }
@@ -210,15 +222,21 @@ function rowRange({ page, pageSize, totalCount }: DataTablePaging, rowCount: num
 
 /**
  * Previous and Next with the row range. A disabled button leaves the Tab order; when the button
- * that was just used becomes disabled, focus moves to the other one instead of getting lost.
+ * that was just used becomes disabled, focus moves to the other one instead of getting lost. While
+ * the rows are stale, the range stays that of the rows shown.
  */
 function Pager({
   paging,
   rowCount,
+  stale,
 }: {
   readonly paging: DataTablePaging;
   readonly rowCount: number;
+  readonly stale: boolean;
 }) {
+  const range = rowRange(paging, rowCount);
+  const [shownRange, setShownRange] = useState(range);
+  if (!stale && range !== shownRange) setShownRange(range);
   const { hasPreviousPage, hasNextPage, onPrevious, onNext } = paging;
   const previous = useRef<HTMLButtonElement>(null);
   const next = useRef<HTMLButtonElement>(null);
@@ -234,7 +252,7 @@ function Pager({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-2.5">
-      <p className="text-xs text-muted-foreground">{rowRange(paging, rowCount)}</p>
+      <p className="text-xs text-muted-foreground">{stale ? shownRange : range}</p>
       <div className="flex gap-2">
         <Button
           ref={previous}
