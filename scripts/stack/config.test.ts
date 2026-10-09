@@ -14,9 +14,10 @@ import { DEV_SECRET_MARKER } from '@northmes/sdk/config';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { publishIfMissing, writeDevConfig } from './config.mjs';
 
-// The secret files of ADR 0060 that the database steps read: the superuser's for db bootstrap and
-// one for each login role it creates.
+// The secret files of ADR 0060: the superuser's for db bootstrap, one for each login role it
+// creates, and Better Auth's secret.
 const secretKeys = [
+  'NORTHMES_AUTH_SECRET_FILE',
   'NORTHMES_DB_APP_PASSWORD_FILE',
   'NORTHMES_DB_AUTH_PASSWORD_FILE',
   'NORTHMES_DB_OWNER_PASSWORD_FILE',
@@ -65,6 +66,7 @@ describe('writeDevConfig', () => {
       NORTHMES_DB_OWNER_PASSWORD_FILE: join(dir, 'secrets/db_owner_password'),
       NORTHMES_DB_APP_PASSWORD_FILE: join(dir, 'secrets/db_app_password'),
       NORTHMES_DB_AUTH_PASSWORD_FILE: join(dir, 'secrets/db_auth_password'),
+      NORTHMES_AUTH_SECRET_FILE: join(dir, 'secrets/auth_secret'),
     });
     expect(env).toEqual(devEnv);
   });

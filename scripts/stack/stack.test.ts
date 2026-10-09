@@ -127,7 +127,7 @@ describe('startStack', () => {
       '<pnpm northmes db bootstrap>',
       'Migrating the database: pnpm northmes migrate',
       '<pnpm northmes migrate>',
-      'Seeding the fictional articles and production orders',
+      'Seeding the dev admin and the fictional articles and production orders',
       '<seed>',
     ]);
   });
