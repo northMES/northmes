@@ -272,13 +272,7 @@ export function assignment(
     role:
       of === null
         ? null
-        : {
-            __typename: 'Role',
-            id: of.id,
-            name: of.name,
-            moduleId: of.moduleId,
-            permissions: of.permissions,
-          },
+        : { __typename: 'Role', id: of.id, name: of.name, permissions: of.permissions },
   };
 }
 

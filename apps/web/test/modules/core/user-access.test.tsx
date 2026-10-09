@@ -100,6 +100,7 @@ describe("a user's access", () => {
       settingsViewerQuery(reader),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
     ]);
 
@@ -164,6 +165,7 @@ describe("a user's access", () => {
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
       {
         request: {
@@ -248,6 +250,7 @@ describe("a user's access", () => {
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
     ]);
 
@@ -277,6 +280,7 @@ describe("a user's access", () => {
       settingsViewerQuery(all),
       companiesQuery(),
       userQuery(saraAdmin),
+      rolesQuery([companyAdminRole]),
       permissionsQuery(sara, {}),
       {
         request: {
@@ -332,6 +336,7 @@ describe("a user's access", () => {
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
       refusal('core.forbidden'),
       refusal('core.role_not_held', {
@@ -372,6 +377,7 @@ describe("a user's access", () => {
       rolesQuery([shiftLeadHeld, viewerRole]),
       catalogQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
       {
         request: {
@@ -451,6 +457,7 @@ describe("a user's access", () => {
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       {
         request: { query: CoreUserPermissions, variables: { id: sara.id, companyId } },
         result: {
@@ -485,6 +492,8 @@ describe("a user's access", () => {
         settingsViewerQuery(reader),
         companiesQuery(),
         userQuery(saraOfPage),
+        rolesQuery([shiftLead, viewerRole]),
+      rolesQuery([shiftLead, viewerRole]),
         permissionsQuery(sara, saraGrants),
       ]);
 
@@ -562,6 +571,7 @@ describe("a user's access", () => {
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       permissionsQuery(sara, saraGrants),
     ]);
 
@@ -578,6 +588,7 @@ describe("a user's access", () => {
       settingsViewerQuery(['core.user:read', 'core.user:block']),
       companiesQuery(),
       userQuery(saraOfPage),
+      rolesQuery([shiftLead, viewerRole]),
       {
         request: {
           query: CoreBlockUser,
