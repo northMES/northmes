@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { givenAssignment, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
+import {
+  givenAssignment,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '@northmes/backend/testing';
 import {
   createTestApp,
   emptyTemplateDatabase,
   gqlClient,
-  query,
   type TestApp,
   useTestDatabase,
 } from '@northmes/testing';
@@ -41,11 +46,12 @@ function refusals(answer: { readonly errors?: readonly { extensions?: unknown }[
   });
 }
 
-/** The id of the default role with this key in the company, read as nm_app. */
-async function defaultRoleId(appUrl: string, company: string, key: string): Promise<string> {
-  const [row] = await query<{ id: string }>(
-    appUrl,
-    `select id from core.role where company_id = '${company}' and key = '${key}'`,
+/** The id of the default role with this key in the company, read as core's owner role. */
+async function defaultRoleId(ownerUrl: string, company: string, key: string): Promise<string> {
+  const [row] = await queryAsCore<{ id: string }>(
+    ownerUrl,
+    'select id from core.role where company_id = $1 and key = $2',
+    [company, key],
   );
   if (!row) throw new Error(`the company has no role ${key}`);
   return row.id;
@@ -68,7 +74,7 @@ describe("core's Company admin role", () => {
   async function holderOf(key: string, { company, scopeId, slug }: Place) {
     if (!testApp) throw new Error('the test app did not start');
     const user = await signIn(testApp.app, db.ownerUrl, []);
-    const roleId = await defaultRoleId(db.appUrl, company, key);
+    const roleId = await defaultRoleId(db.ownerUrl, company, key);
     await givenAssignment(db.ownerUrl, { userId: user.userId, roleId, scopeId });
     const client = gqlClient(await testApp.app.getUrl(), {
       headers: { authorization: user.authorization, 'x-northmes-plant': slug },
@@ -112,11 +118,11 @@ describe("core's Company admin role", () => {
       });
 
     const viewer = await assign(
-      await defaultRoleId(db.appUrl, given.company, 'planning-viewer'),
+      await defaultRoleId(db.ownerUrl, given.company, 'planning-viewer'),
       given.company,
     );
     const planner = await assign(
-      await defaultRoleId(db.appUrl, given.company, 'planning-planner'),
+      await defaultRoleId(db.ownerUrl, given.company, 'planning-planner'),
       plantA,
     );
     const custom = await assign(created.data?.coreCreateRole.id ?? '', plantA);
@@ -149,8 +155,8 @@ describe("core's Company admin role", () => {
       createRoleMutation,
       { input: { id: randomUUIDv7(), name: 'Shift lead', permissions: ['core.article:read'] } },
     );
-    const planner = await defaultRoleId(db.appUrl, given.company, 'planning-planner');
-    const companyAdminRole = await defaultRoleId(db.appUrl, given.company, 'core-company-admin');
+    const planner = await defaultRoleId(db.ownerUrl, given.company, 'planning-planner');
+    const companyAdminRole = await defaultRoleId(db.ownerUrl, given.company, 'core-company-admin');
     const assign = (roleId: string, scopeId: string) =>
       jonas.client.send<{ coreAssignRole: { scope: { name: string }; role: { name: string } } }>(
         assignMutation,
@@ -189,13 +195,14 @@ describe("core's Company admin role", () => {
 describe('northmes migrate and the admin roles', () => {
   const db = useTestDatabase({ template: emptyTemplateDatabase });
 
-  /** The permissions of each admin role of the company, read as nm_app. */
+  /** The permissions of each admin role of the company, read as core's owner role. */
   async function adminPermissions(company: string) {
-    const rows = await query<{ key: string; permissions: string[] }>(
-      db.appUrl,
+    const rows = await queryAsCore<{ key: string; permissions: string[] }>(
+      db.ownerUrl,
       `select key, permissions from core.role
-        where company_id = '${company}' and key in ('core-company-admin', 'core-plant-admin')
+        where company_id = $1 and key in ('core-company-admin', 'core-plant-admin')
         order by key`,
+      [company],
     );
     return Object.fromEntries(rows.map(({ key, permissions }) => [key, permissions]));
   }

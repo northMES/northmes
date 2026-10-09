@@ -81,8 +81,9 @@ export class PrincipalService extends PrincipalResolver {
 
   /**
    * The grant rows of a user, one per scope node of the companies where the user holds a role, and
-   * whether the user is blocked, in one transaction. The tables carry no policies, so it runs
-   * without scopes.
+   * whether the user is blocked, in one transaction. It runs without scopes, since they come from
+   * the grants, so it reads core.role through core.principal_grants, which the policy of core.role
+   * does not bind.
    */
   async #grants(userId: string): Promise<{ rows: GrantRow[]; blocked: boolean }> {
     return runAs(null, () =>
@@ -93,26 +94,9 @@ export class PrincipalService extends PrincipalResolver {
           .where('id', '=', userId)
           .executeTakeFirst();
         const { rows } = await sql<GrantRow>`
-          with assigned as (
-            select a.scope_id, r.permissions
-              from core.role_assignment a
-              join core.role r on r.id = a.role_id
-             where a.user_id = ${userId}
-          )
-          select s.id, s.parent_id, pl.slug,
-                 coalesce(
-                   (select array_agg(distinct p.key order by p.key)
-                      from assigned x
-                      cross join lateral unnest(x.permissions) as held (key)
-                      join core.permission p on p.key = held.key and p.installed
-                     where x.scope_id = s.id),
-                   '{}'
-                 ) as permissions
-            from core.scope s
-            left join core.plant pl on pl.id = s.id
-           where s.company_id in (
-                   select c.company_id from core.scope c join assigned x on x.scope_id = c.id
-                 )`.execute(tx);
+          select id, parent_id, slug, permissions from core.principal_grants(${userId})`.execute(
+          tx,
+        );
         return { rows, blocked: user?.banned === true };
       }),
     );

@@ -4,6 +4,7 @@ import {
   givenAssignment,
   givenCompany,
   hostFactory,
+  queryAsCore,
   signIn,
 } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
@@ -55,10 +56,11 @@ describe('every company keeps an active Company admin', () => {
       name: 'Acme AB',
       plantNames: ['Plant A', 'Plant B'],
     });
-    const [role] = await query<{ id: string; version: number; permissions: string[] }>(
-      db.appUrl,
+    const [role] = await queryAsCore<{ id: string; version: number; permissions: string[] }>(
+      db.ownerUrl,
       `select id, version, permissions from core.role
-        where company_id = '${given.company}' and key = 'core-company-admin'`,
+        where company_id = $1 and key = 'core-company-admin'`,
+      [given.company],
     );
     if (!role) throw new Error('Acme AB has no Company admin role');
     const [slugA = ''] = given.slugs;
@@ -151,15 +153,10 @@ describe('every company keeps an active Company admin', () => {
   it('E05-S08 blocking the last active Company admin of another company of the user is refused with core.last_admin, from a plant of the first company', async () => {
     const company = await acme();
     const nordic = await givenCompany(db.ownerUrl, { name: 'Nordic AB' });
-    const [nordicAdmin] = await db.command(
-      { principal: { type: 'user', id: 'e05-s08' }, scopes: [nordic.company], reason: 'probe' },
-      async (tx) =>
-        (
-          await tx.query<{ id: string }>(
-            `select id from core.role where company_id = $1 and key = 'core-company-admin'`,
-            [nordic.company],
-          )
-        ).rows,
+    const [nordicAdmin] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-company-admin'`,
+      [nordic.company],
     );
     // Karin is a Company admin of Acme AB, where Oskar is one too, and the only one of Nordic AB.
     const karin = await person(company, company.company);
@@ -209,7 +206,9 @@ describe('every company keeps an active Company admin', () => {
     expect(refusals(edited)).toEqual(lastAdmin);
     expect(refusals(deleted)).toEqual(lastAdmin);
     expect(
-      await query(db.appUrl, `select version, permissions from core.role where id = '${id}'`),
+      await queryAsCore(db.ownerUrl, 'select version, permissions from core.role where id = $1', [
+        id,
+      ]),
     ).toEqual([{ version, permissions }]);
   });
 

@@ -125,6 +125,18 @@ async function asCoreOwner<Result>(
   }
 }
 
+/**
+ * Runs one statement as core's owner role, which the row-level security policies do not bind, and
+ * returns its rows: for a test that reads core's tables across companies or without scopes.
+ */
+export function queryAsCore<Row extends Record<string, unknown> = Record<string, unknown>>(
+  ownerUrl: string,
+  sql: string,
+  params: readonly unknown[] = [],
+): Promise<Row[]> {
+  return asCoreOwner(ownerUrl, async (client) => (await client.query<Row>(sql, [...params])).rows);
+}
+
 /** A company and its plants, as givenCompany writes them. */
 export interface GivenCompany {
   /** The company's id: its node in core.scope and its core.company row. */

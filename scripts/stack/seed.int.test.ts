@@ -1,6 +1,6 @@
 import { randomUUIDv7 } from 'node:crypto';
-import { hostFactory } from '@northmes/backend/testing';
-import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
+import { hostFactory, queryAsCore } from '@northmes/backend/testing';
+import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { devAdmin, seed, seedCompany, seedPlants } from './seed.mjs';
 
@@ -112,9 +112,10 @@ describe('the seed', () => {
   });
 
   it('E05-S05 a second run of the seed adds no scope, company, plant, role or assignment', async () => {
+    // Core's owner role reads every role; nm_app reads only those of its read scopes.
     const counts = () =>
-      query(
-        db.appUrl,
+      queryAsCore(
+        db.ownerUrl,
         `select (select count(*)::int from core.scope) as scopes,
                 (select count(*)::int from core.company) as companies,
                 (select count(*)::int from core.plant) as plants,

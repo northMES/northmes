@@ -33,6 +33,8 @@ create table core.default_role (
   permissions text[] not null default '{}',
   installed boolean not null default true
 );
+comment on column core.default_role.key is
+  'The role key, such as core-company-admin, that names a default role in every company. Not a secret.';
 
 -- A new company gets a role of origin module for each installed default role. northmes migrate
 -- gives the companies that exist the roles of a module installed later.
@@ -55,15 +57,22 @@ create trigger default_roles after insert on core.company
 -- permission at the company or at the scope it writes at. Every module and in-process plugin
 -- shares nm_app (ADR 0008), so row-level security keeps a write outside the transaction's write
 -- scopes out: a role at its company, an assignment at its scope. A company admin at a plant writes
--- the company and the plant, a plant admin the plant only. nm_app still reads every row, since the
--- server reads them once per request to resolve the principal, before it knows the request's
--- scopes.
+-- the company and the plant, a plant admin the plant only. A transaction reads the roles of the
+-- company in its read scopes only; the server reads a user's grants once per request, before it
+-- knows the request's scopes, through core.principal_grants below. Assignments stay readable
+-- without scopes: they name a user, a scope and a role, and no permission.
 grant select on core.default_role to nm_app;
 grant insert, update, delete on core.role to nm_app;
 grant insert, delete on core.role_assignment to nm_app;
 
+-- The default roles are the modules' catalog, like core.permission, the same for every company:
+-- nm_app reads them all and writes none, since only northmes migrate writes them as core's owner.
+alter table core.default_role enable row level security;
+create policy catalog_select on core.default_role for select to nm_app using (true);
+
 alter table core.role enable row level security;
-create policy principal_select on core.role for select to nm_app using (true);
+create policy scope_select on core.role for select to nm_app
+  using (company_id = any ((select nullif(current_setting('northmes.read_scopes', true), ''))::uuid[]));
 create policy scope_insert on core.role for insert to nm_app
   with check (company_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
 create policy scope_update on core.role for update to nm_app
@@ -102,3 +111,78 @@ create view core.company_user with (security_invoker = true) as
   select company_id, user_id from core.role_assignment;
 
 grant select on core.user_directory, core.company_user to nm_app;
+
+-- What core reads across companies, before or outside the request's scopes, it reads through these
+-- functions. Each runs as core's owner role, which the policies do not bind (ADR 0008), with a
+-- pinned search_path, and answers only what its caller needs. They are on the definer allowlist.
+
+-- The grants of a user (ADR 0010): one row per scope node of the companies where the user holds a
+-- role, with its parent, the plant's slug for a plant node, and the installed permissions of the
+-- roles assigned to the user at the node. PrincipalService resolves the principal from it.
+create function core.principal_grants(p_user_id uuid)
+  returns table (id uuid, parent_id uuid, slug text, permissions text[])
+  language sql stable security definer
+  set search_path = pg_catalog, pg_temp
+as $$
+  with assigned as (
+    select a.scope_id, r.permissions
+      from core.role_assignment a
+      join core.role r on r.id = a.role_id
+     where a.user_id = p_user_id
+  )
+  select s.id, s.parent_id, pl.slug,
+         coalesce(
+           (select array_agg(distinct p.key order by p.key)
+              from assigned x
+              cross join lateral unnest(x.permissions) as held (key)
+              join core.permission p on p.key = held.key and p.installed
+             where x.scope_id = s.id),
+           '{}'
+         ) as permissions
+    from core.scope s
+    left join core.plant pl on pl.id = s.id
+   where s.company_id in (
+           select c.company_id from core.scope c join assigned x on x.scope_id = c.id
+         )
+$$;
+
+-- The companies where the user holds core's Company admin role (core-company-admin, the
+-- companyAdminRoleKey of core's permissions.ts) at the company node, in the order of their ids,
+-- which the last-admin rule locks them in. A block holds in every company of the user, so the rule
+-- checks companies outside the request's scopes.
+create function core.company_admin_companies(p_user_id uuid)
+  returns setof uuid
+  language sql stable security definer
+  set search_path = pg_catalog, pg_temp
+as $$
+  select distinct r.company_id
+    from core.role_assignment a
+    join core.role r on r.id = a.role_id
+   where a.user_id = p_user_id
+     and r.origin = 'module' and r.key = 'core-company-admin'
+     and a.scope_id = r.company_id
+   order by r.company_id
+$$;
+
+-- The number of users other than p_user_id who are not blocked and hold Company admin at the
+-- company node of the company.
+create function core.other_active_company_admins(p_company_id uuid, p_user_id uuid)
+  returns bigint
+  language sql stable security definer
+  set search_path = pg_catalog, pg_temp
+as $$
+  select count(distinct a.user_id)
+    from core.role_assignment a
+    join core.role r on r.id = a.role_id
+    join auth."user" u on u.id = a.user_id
+   where r.company_id = p_company_id
+     and r.origin = 'module' and r.key = 'core-company-admin'
+     and a.scope_id = r.company_id
+     and not coalesce(u.banned, false)
+     and a.user_id <> p_user_id
+$$;
+
+revoke all on function core.principal_grants(uuid), core.company_admin_companies(uuid),
+  core.other_active_company_admins(uuid, uuid) from public;
+grant execute on function core.principal_grants(uuid), core.company_admin_companies(uuid),
+  core.other_active_company_admins(uuid, uuid) to nm_app;

@@ -34,24 +34,17 @@ async function lockCompanyAdmins(tx: Transaction<CoreDatabase>, companyId: strin
   );
 }
 
-/** The number of active Company admins of the company other than the user. */
+/**
+ * The number of active Company admins of the company other than the user. It reads through
+ * core.other_active_company_admins, since a block checks companies outside the request's scopes.
+ */
 async function otherActiveAdmins(
   tx: Transaction<CoreDatabase>,
   { companyId, userId }: { companyId: string; userId: string },
 ): Promise<number> {
-  const row = await tx
-    .selectFrom('core.role_assignment as a')
-    .innerJoin('core.role as r', 'r.id', 'a.role_id')
-    .innerJoin('core.user_directory as u', 'u.id', 'a.user_id')
-    .select((eb) => eb.fn.count<string>('a.user_id').distinct().as('count'))
-    .where('r.company_id', '=', companyId)
-    .where('r.origin', '=', 'module')
-    .where('r.key', '=', companyAdminRoleKey)
-    .whereRef('a.scope_id', '=', 'r.company_id')
-    .where('u.banned', '=', false)
-    .where('a.user_id', '<>', userId)
-    .executeTakeFirstOrThrow();
-  return Number(row.count);
+  const { rows } = await sql<{ count: string }>`
+    select core.other_active_company_admins(${companyId}, ${userId}) as count`.execute(tx);
+  return Number(rows[0]?.count ?? 0);
 }
 
 /** The user's name and whether they are blocked. */
@@ -113,17 +106,11 @@ export async function refuseBlockingLastAdmin(
 ): Promise<void> {
   const user = await userOf(tx, userId);
   if (user.banned) return;
-  const companies = await tx
-    .selectFrom('core.role_assignment as a')
-    .innerJoin('core.role as r', 'r.id', 'a.role_id')
-    .select('r.company_id')
-    .distinct()
-    .where('a.user_id', '=', userId)
-    .where('r.origin', '=', 'module')
-    .where('r.key', '=', companyAdminRoleKey)
-    .whereRef('a.scope_id', '=', 'r.company_id')
-    .orderBy('r.company_id')
-    .execute();
+  // The user's other companies are outside the request's scopes, so the policy of core.role hides
+  // their roles; core.company_admin_companies reads them.
+  const { rows: companies } = await sql<{ company_id: string }>`
+    select company_id from core.company_admin_companies(${userId}) as company_id
+     order by company_id`.execute(tx);
   for (const { company_id } of companies) await lockCompanyAdmins(tx, company_id);
   for (const { company_id } of companies) {
     if ((await otherActiveAdmins(tx, { companyId: company_id, userId })) > 0) continue;
