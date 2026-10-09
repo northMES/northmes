@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SESSION_LIFETIME_SECONDS } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
+import {
+  SESSION_LIFETIME_SECONDS,
+  SESSION_RENEWAL_SECONDS,
+} from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
 import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
 
@@ -156,7 +159,9 @@ describe('sign-in with Better Auth', () => {
     expect((await sessionOf(sessionToken)).user.username).toBe(user.username);
   });
 
-  it('E05-S05 a session lives SESSION_LIFETIME_SECONDS from sign-in', async () => {
+  it('E05-S05 a session lives 12 hours from sign-in and renews after an hour of use, as the maintainer chose', async () => {
+    expect(SESSION_LIFETIME_SECONDS).toBe(12 * 60 * 60);
+    expect(SESSION_RENEWAL_SECONDS).toBe(60 * 60);
     const { user } = await reader();
     const before = Date.now();
 
