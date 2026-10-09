@@ -210,7 +210,7 @@ export function givenCompany(
 
 /** An article as givenArticle and givenArticles write it. */
 export interface GivenArticleOptions {
-  /** The article's id. It defaults to a fresh uuidv7. */
+  /** The article's id. It defaults to one that Postgres makes with uuidv7(). */
   readonly id?: string;
   readonly code: string;
   readonly name: string;
@@ -269,18 +269,23 @@ export async function givenArticles(
     }
     const [only] = assigned;
     const editScope = assigned.length === 1 && !allPlants && only ? only : companyId;
-    return { ...article, id: article.id ?? randomUUIDv7(), companyId, editScope, assigned };
+    return { ...article, companyId, editScope, assigned };
   });
-  await asCoreOwner(ownerUrl, async (client) => {
+  // Postgres makes a missing id with uuidv7(), which grows within one session, so the ids follow
+  // the order of the articles as a list's tie-breaker reads it.
+  return asCoreOwner(ownerUrl, async (client) => {
+    const ids: string[] = [];
     for (const row of rows) {
-      await client.query(
+      const { rows: inserted } = await client.query<{ id: string }>(
         `insert into core.article
            (id, scope_id, company_id, scope_span, edit_scope_id, all_plants, code, name,
             updated_at, archived_at)
-         select $1, s.id, s.company_id, s.span, $3, $4, $5, $6, coalesce($7, now()), $8
-           from core.scope s where s.id = $2`,
+         select coalesce($1::uuid, uuidv7()), s.id, s.company_id, s.span, $3, $4, $5, $6,
+                coalesce($7, now()), $8
+           from core.scope s where s.id = $2
+         returning id`,
         [
-          row.id,
+          row.id ?? null,
           row.companyId,
           row.editScope,
           row.allPlants ?? false,
@@ -290,16 +295,19 @@ export async function givenArticles(
           row.archivedAt ?? null,
         ],
       );
+      const id = inserted[0]?.id;
+      if (!id) throw new Error(`givenArticles: no company ${row.companyId} in core.scope`);
       for (const plant of row.assigned) {
         await client.query(
           `insert into core.article_plant (article_id, plant_id, scope_id, edit_scope_id)
            values ($1, $2, $3, $4)`,
-          [row.id, plant, row.companyId, row.editScope],
+          [id, plant, row.companyId, row.editScope],
         );
       }
+      ids.push(id);
     }
+    return ids;
   });
-  return rows.map(({ id }) => id);
 }
 
 /** Writes one article as givenArticles does and returns its id. */
