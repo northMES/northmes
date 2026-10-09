@@ -351,6 +351,14 @@ const createArticle = defineCommandContract({
   permission: 'core.article:create',
 });
 
+/** Creates a custom role of the company, whatever plant the request names. */
+const createRole = defineCommandContract({
+  name: 'core.createRole',
+  target: 'new',
+  fields: z.object({ key: z.string() }),
+  permission: 'core.role:manage',
+});
+
 /** What the bus refuses a command with when the principal lacks its permission (ADR 0012). */
 const forbidden = { code: 'core.forbidden', status: HttpStatus.FORBIDDEN };
 
@@ -514,6 +522,45 @@ describe('the permission step of CommandBusImpl', () => {
     const run = runAs(creator, () =>
       bus.run({ contract: createArticle, handle }, { id: ORDER_ID, code: 'BR-140' }),
     );
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it("E05-S06 a command whose scope hook names the company is checked there, so a holder of the permission at the request's plant gets FORBIDDEN", async () => {
+    const handle = vi.fn(async ({ id }: { id: string; key: string }) => ({ id }));
+    const scope = vi.fn(async () => COMPANY);
+    const command: Command<{ id: string; key: string }, { id: string }> = {
+      contract: createRole,
+      scope,
+      handle,
+    };
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const input = { id: ORDER_ID, key: 'shift-lead' };
+    // Both principals send their requests at plant A.
+    const plantAAdmin = principalHolding({ [PLANT_A]: ['core.role:manage'] });
+    const companyAdmin = principalHolding({ [COMPANY]: ['core.role:manage'] });
+
+    const atPlantA = runAs(plantAAdmin, () => bus.run(command, input));
+    const atCompany = await runAs(companyAdmin, () => bus.run(command, input));
+
+    expect(await refusalOf(atPlantA)).toEqual(forbidden);
+    expect(atCompany).toEqual({ id: ORDER_ID });
+    expect(handle).toHaveBeenCalledOnce();
+    expect(scope).toHaveBeenCalledWith(input, { tx: { transaction: 1 }, plantId: PLANT_A });
+  });
+
+  it('E05-S06 a command whose scope hook finds no scope gets FORBIDDEN, and its handler does not run', async () => {
+    const handle = vi.fn(async ({ id }: { id: string; key: string }) => ({ id }));
+    const command: Command<{ id: string; key: string }, { id: string }> = {
+      contract: createRole,
+      scope: async () => undefined,
+      handle,
+    };
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const companyAdmin = principalHolding({ [COMPANY]: ['core.role:manage'] });
+
+    const run = runAs(companyAdmin, () => bus.run(command, { id: ORDER_ID, key: 'shift-lead' }));
 
     expect(await refusalOf(run)).toEqual(forbidden);
     expect(handle).not.toHaveBeenCalled();
