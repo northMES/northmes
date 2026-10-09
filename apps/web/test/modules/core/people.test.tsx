@@ -380,6 +380,10 @@ describe('People in plant settings', () => {
       ]),
     );
     expect(screen.getByText("Sara Nyberg's roles that apply at Plant A.")).toBeDefined();
+    // A role's page is in company settings, which a Plant admin cannot read, so no role links there.
+    expect(within(roles).getByText('Shift lead')).toBeDefined();
+    expect(within(roles).queryByRole('link', { name: 'Shift lead' })).toBeNull();
+    expect(within(roles).queryByRole('link', { name: 'Viewer' })).toBeNull();
     const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Plant A' });
     expect(await within(can).findByText('Release production orders to the floor')).toBeDefined();
     expect(within(can).getByText('Shift lead at Plant A')).toBeDefined();
