@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { CombinedGraphQLErrors } from '@apollo/client';
-import { fieldErrorsOf, hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
+import { fieldErrorsOf, hasErrorCode, refusalMessage } from '../../../../ui/lib/graphql-errors.ts';
 import { setServerErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import type { ArticleFields, ArticleValues } from './article-form.tsx';
 
@@ -20,13 +19,11 @@ export function commandFailure(error: unknown, action: 'archive' | 'restore'): s
   if (hasErrorCode(error, 'core.forbidden')) {
     return `You do not have permission to ${action} this article here. ${companyRule}`;
   }
-  if (!CombinedGraphQLErrors.is(error)) {
+  const reasons = refusalMessage(error);
+  if (reasons === undefined) {
     return `Could not ${action} the article. Check the connection, then try again.`;
   }
-  const reasons = error.errors.map(({ message }) =>
-    /[.!?]$/.test(message) ? message : `${message}.`,
-  );
-  return `Could not ${action} the article. ${reasons.join(' ')}`;
+  return `Could not ${action} the article. ${reasons}`;
 }
 
 /**
