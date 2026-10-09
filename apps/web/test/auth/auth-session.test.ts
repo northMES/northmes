@@ -4,10 +4,13 @@ import { createAuthSession } from '../../src/auth/auth-session.ts';
 
 const apiUrl = 'https://api.northmes.test/mes';
 
-/** A JWT whose payload expires at `exp`, in seconds; the signature is not checked here. */
+/**
+ * A JWT issued five minutes before `exp` that expires at `exp`, in seconds, as Better Auth's /token
+ * signs it; the signature is not checked here.
+ */
 function jwtExpiringAt(exp: number, id: string): string {
   const part = (value: object) => btoa(JSON.stringify(value)).replace(/=+$/, '');
-  return `${part({ alg: 'EdDSA' })}.${part({ sub: 'user-1', exp, id })}.signature`;
+  return `${part({ alg: 'EdDSA' })}.${part({ sub: 'user-1', iat: exp - 300, exp, id })}.signature`;
 }
 
 /** A Storage in memory, as sessionStorage is for one tab. */
@@ -181,6 +184,41 @@ describe('the auth session', () => {
     expect(session.user()).toBeUndefined();
     expect(await session.token()).toBeUndefined();
     expect(open().user()).toBeUndefined();
+  });
+
+  it('E05-S05 sign-in, the JWT and sign-out go out without cookies, so the browser keeps no Better Auth cookie past the tab', async () => {
+    const { open, api } = setup();
+    const session = open();
+
+    await session.signIn('alex.lund', 'correct horse');
+    await session.token();
+    await session.signOut();
+
+    const credentials = api.fetch.mock.calls.map(([input, init]) =>
+      input instanceof Request ? input.credentials : init?.credentials,
+    );
+    expect(credentials).toEqual(['omit', 'omit', 'omit']);
+  });
+
+  it("E05-S05 token() times the JWT by the browser's clock from the JWT's lifetime, so a clock behind the server renews it in time", async () => {
+    const { open, api, clock } = setup();
+    // The browser's clock runs two minutes behind the server's, which signs iat and exp.
+    const behind = { now: clock.now - 120_000 };
+    const session = createAuthSession({
+      apiUrl,
+      fetch: api.fetch,
+      storage: memoryStorage(),
+      now: () => behind.now,
+    });
+    await session.signIn('alex.lund', 'correct horse');
+
+    const first = await session.token();
+    clock.now += 271_000;
+    behind.now += 271_000;
+    const next = await session.token();
+
+    expect(idOf(first)).toBe('jwt-1');
+    expect(idOf(next)).toBe('jwt-2');
   });
 
   it('E05-S05 forget() drops the session in this tab without calling the API', async () => {
