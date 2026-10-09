@@ -21,6 +21,18 @@ const createRoleMutation = `mutation ($input: CoreCreateRoleInput!) {
   coreCreateRole(input: $input) { id }
 }`;
 
+const updateRoleMutation = `mutation ($input: CoreUpdateRoleInput!) {
+  coreUpdateRole(input: $input) { id }
+}`;
+
+const createUserMutation = `mutation ($input: CoreCreateUserInput!) {
+  coreCreateUser(input: $input) { user { id } }
+}`;
+
+const blockUserMutation = `mutation ($input: CoreBlockUserInput!) {
+  coreBlockUser(input: $input) { id blocked }
+}`;
+
 /** The errorCode of each error of an answer, with its GraphQL code. */
 function refusals(answer: { readonly errors?: readonly { extensions?: unknown }[] }) {
   return answer.errors?.map(({ extensions }) => {
@@ -118,6 +130,57 @@ describe("core's Company admin role", () => {
     expect(
       [viewer, planner, custom].map(({ data }) => data?.coreAssignRole.role.name),
     ).toEqual(['Viewer', 'Planner', 'Night planner']);
+  });
+
+  it('E05-S06 a Plant admin assigns Planner at its plant, but not Company admin, not at another plant or at the company, and edits no role, creates no user and blocks none', async () => {
+    const given = await givenCompany(db.ownerUrl, {
+      name: 'Acme AB',
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = given.plants;
+    const [slugA = ''] = given.slugs;
+    const at = (scopeId: string) => ({ company: given.company, scopeId, slug: slugA });
+    const companyAdmin = await holderOf('core-company-admin', at(given.company));
+    const jonas = await holderOf('core-plant-admin', at(plantA));
+    const sara = await holderOf('planning-viewer', at(plantA));
+    const shiftLead = await companyAdmin.client.send<{ coreCreateRole: { id: string } }>(
+      createRoleMutation,
+      { input: { id: randomUUIDv7(), name: 'Shift lead', permissions: ['core.article:read'] } },
+    );
+    const planner = await defaultRoleId(db.appUrl, given.company, 'planning-planner');
+    const companyAdminRole = await defaultRoleId(db.appUrl, given.company, 'core-company-admin');
+    const assign = (roleId: string, scopeId: string) =>
+      jonas.client.send<{ coreAssignRole: { scope: { name: string }; role: { name: string } } }>(
+        assignMutation,
+        { input: { id: randomUUIDv7(), userId: sara.userId, roleId, scopeId } },
+      );
+
+    const atPlant = await assign(planner, plantA);
+    const admin = await assign(companyAdminRole, plantA);
+    const otherPlant = await assign(planner, plantB);
+    const atCompany = await assign(planner, given.company);
+    const edited = await jonas.client.send(updateRoleMutation, {
+      input: {
+        id: shiftLead.data?.coreCreateRole.id,
+        expectedVersion: 1,
+        name: 'Shift lead',
+        permissions: [],
+      },
+    });
+    const created = await jonas.client.send(createUserMutation, {
+      input: { username: 'p.sund', name: 'Petra Sund' },
+    });
+    const blocked = await jonas.client.send(blockUserMutation, { input: { id: sara.userId } });
+
+    expect(atPlant.errors).toBeUndefined();
+    expect(atPlant.data?.coreAssignRole).toMatchObject({
+      scope: { name: 'Plant A' },
+      role: { name: 'Planner' },
+    });
+    expect(refusals(admin)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.role_not_held' }]);
+    for (const answer of [otherPlant, atCompany, edited, created, blocked]) {
+      expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    }
   });
 });
 
