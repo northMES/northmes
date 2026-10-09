@@ -110,9 +110,7 @@ describe('boot', () => {
     expect(app).toBeUndefined();
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.error.mock.calls).toEqual([
-      [
-        'refused to start (1 problem)\n- Module beta depends on "quality", which is not installed',
-      ],
+      ['refused to start (1 problem)\n- Module beta depends on "quality", which is not installed'],
     ]);
     expect(log.info).not.toHaveBeenCalled();
   });
@@ -166,7 +164,7 @@ describe('boot', () => {
 
       app = await boot({
         env: { ...env, NORTHMES_CONFIG: file },
-          exit,
+        exit,
         log,
       });
 

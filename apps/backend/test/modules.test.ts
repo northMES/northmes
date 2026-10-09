@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { inRepoCatalog } from '../src/boot/boot.ts';
 import { CoreModule } from '../src/modules/core/core.module.ts';
-import { inRepoModules } from '../src/modules.ts';
 import { PlanningModule } from '../src/modules/planning/planning.module.ts';
+import { inRepoModules } from '../src/modules.ts';
 import { imageVersion } from '../src/version.ts';
 
 const modulesDir = fileURLToPath(new URL('../src/modules/', import.meta.url));
@@ -33,7 +33,12 @@ describe('the in-repo modules', () => {
         migrationsDir,
       })),
     ).toEqual([
-      { id: 'core', version: imageVersion(), kind: 'module', migrationsDir: `${modulesDir}core/migrations` },
+      {
+        id: 'core',
+        version: imageVersion(),
+        kind: 'module',
+        migrationsDir: `${modulesDir}core/migrations`,
+      },
       {
         id: 'planning',
         version: imageVersion(),

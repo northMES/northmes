@@ -77,12 +77,12 @@ export function rangeProblems(entries: readonly CatalogEntry[], imageVersion: st
 }
 
 /**
- * The derived name each kind of manifest key starts with (ADR 0003): permissions and commands the
- * GraphQL name, events the SQL name.
+ * The derived name each kind of manifest key starts with (ADR 0003): permissions the GraphQL name,
+ * events the SQL name. A command's name is its contract's, and its mutation follows the root field
+ * prefix rule.
  */
 const KEY_PREFIXES = [
   { kind: 'permission', field: 'permissions', name: 'gql' },
-  { kind: 'command', field: 'commands', name: 'gql' },
   { kind: 'event', field: 'events', name: 'sql' },
 ] as const satisfies readonly {
   kind: string;
@@ -90,7 +90,7 @@ const KEY_PREFIXES = [
   name: keyof ModuleNames;
 }[];
 
-/** A problem for every permission, command or event key without its module's prefix, naming the key. */
+/** A problem for every permission or event key without its module's prefix, naming the key. */
 export function keyPrefixProblems(entries: readonly CatalogEntry[]): string[] {
   const problems: string[] = [];
   for (const { manifest } of entries) {

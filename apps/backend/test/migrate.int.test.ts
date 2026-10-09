@@ -537,7 +537,12 @@ describe('pnpm northmes migrate with a plugin', () => {
     // The plugin's file is older than every in-repo file, so an order by name would apply it first.
     const audit = writePlugin(
       dir,
-      { id: 'acme-audit', version: '1.2.0', northmes: '>=0.0.0-0 <0.1.0-0', dependsOn: ['planning'] },
+      {
+        id: 'acme-audit',
+        version: '1.2.0',
+        northmes: '>=0.0.0-0 <0.1.0-0',
+        dependsOn: ['planning'],
+      },
       {
         '20200101080000_note.sql':
           '-- migration: expand\ncreate table acme_audit.note (id int primary key);\n',

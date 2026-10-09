@@ -1,37 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { inspect } from 'node:util';
-import type { ModuleManifest } from '@northmes/sdk';
-import type { CommandValidatorProvider } from '@northmes/sdk/commands';
+import type { Type } from '@nestjs/common';
+import type { CommandProvider, CommandValidatorProvider } from '@northmes/sdk/commands';
 import { BootError } from '../boot/boot-error.ts';
+import { moduleProviders, providerClassOf } from '../module-providers.ts';
 import { DEFAULT_VALIDATOR_TIMEOUT_MS, type RegisteredValidator } from './command-bus.ts';
 
-/** The providers that a module's server entry lists in its Nest module. */
-export interface ModuleProviders {
+/** A module or plugin whose Nest module may list commands and command validators. */
+export interface ValidatorScope {
   /** The module's id. */
-  readonly module: string;
-  readonly providers: readonly unknown[];
+  readonly id: string;
+  /** The ids of the modules it depends on. */
+  readonly dependsOn?: readonly string[];
+  /** Its Nest module, whose providers and those of the modules it imports are read. */
+  readonly module: Type;
 }
 
 /**
  * The command validators among the providers of each module, with the id of that module
- * (ADR 0037). `catalog` holds the manifests of the modules with a server entry. A validator may
- * only be on a command that its owner's manifest declares validatable, from a module whose
- * dependsOn names the owner, and its timeoutMs, when it sets one, is a number above 0 and no longer
- * than the command's limit (ADR 0012 step 6). Owners declare no limit per command yet, so that
- * limit is the host's default. Throws one BootError that lists every rule each validator breaks.
+ * (ADR 0037). A validator may only be on a command that another module lists with a validatable
+ * contract (ADR 0017), from a module whose dependsOn names that owner, and its timeoutMs, when it
+ * sets one, is a number above 0 and no longer than the command's limit (ADR 0012 step 6). Owners
+ * declare no limit per command yet, so that limit is the host's default. Throws one BootError that
+ * lists every rule each validator breaks.
  */
-export function discoverValidators(
-  catalog: readonly ModuleManifest[],
-  providers: readonly ModuleProviders[],
-): RegisteredValidator[] {
-  const validators = providers.flatMap(({ module, providers: listed }) =>
-    listed.flatMap((provider) => {
-      const { validator } = (classOf(provider) ?? {}) as Partial<CommandValidatorProvider>;
-      return validator ? [{ module, validator }] : [];
+export function discoverValidators(modules: readonly ValidatorScope[]): RegisteredValidator[] {
+  const listed = modules.map(({ id, module }) => ({
+    id,
+    classes: moduleProviders(module).map(providerClassOf),
+  }));
+  const validators = listed.flatMap(({ id, classes }) =>
+    classes.flatMap((provider) => {
+      const { validator } = (provider ?? {}) as Partial<CommandValidatorProvider>;
+      return validator ? [{ module: id, validator }] : [];
     }),
   );
-  const owners = ownersOfValidatableCommands(catalog);
-  const dependsOn = new Map(catalog.map(({ id, dependsOn = [] }) => [id, dependsOn]));
+  const owners = ownersOfValidatableCommands(listed);
+  const dependsOn = new Map(modules.map(({ id, dependsOn = [] }) => [id, dependsOn]));
   const problems: string[] = [];
   for (const { module, validator } of validators) {
     const command = validator.contract.name;
@@ -65,22 +70,18 @@ function isTimeLimit(timeoutMs: unknown): boolean {
 }
 
 /**
- * The class that Nest instantiates for a listed provider: useClass of a class provider, or the
- * entry itself. A validator listed either way is found, so none is skipped (ADR 0037).
+ * The id of the module that owns each validatable command, by command name: the module that lists
+ * the command's provider, whose contract says validatable (ADR 0017). A validator's own copy of the
+ * contract does not count.
  */
-function classOf(provider: unknown): unknown {
-  if (typeof provider === 'object' && provider !== null && 'useClass' in provider) {
-    return provider.useClass;
-  }
-  return provider;
-}
-
-/** The id of the module that declares each validatable command, by command name. */
-function ownersOfValidatableCommands(catalog: readonly ModuleManifest[]): Map<string, string> {
+function ownersOfValidatableCommands(
+  listed: readonly { readonly id: string; readonly classes: readonly unknown[] }[],
+): Map<string, string> {
   const owners = new Map<string, string>();
-  for (const { id, commands = {} } of catalog) {
-    for (const [name, { validatable }] of Object.entries(commands)) {
-      if (validatable) owners.set(name, id);
+  for (const { id, classes } of listed) {
+    for (const provider of classes) {
+      const { command } = (provider ?? {}) as Partial<CommandProvider<unknown, unknown>>;
+      if (command?.contract.validatable) owners.set(command.contract.name, id);
     }
   }
   return owners;

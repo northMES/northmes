@@ -44,9 +44,7 @@ export function writeConfig(dir: string, plugins: readonly FixturePlugin[]): str
 }
 
 /** The importManifest of boot that returns each plugin's manifest by its specifier. */
-export function importPlugins(
-  ...plugins: readonly FixturePlugin[]
-): BootOptions['importManifest'] {
+export function importPlugins(...plugins: readonly FixturePlugin[]): BootOptions['importManifest'] {
   const bySpecifier = new Map(plugins.map((plugin) => [plugin.manifestUrl, plugin.manifest]));
   return async (specifier) => {
     const manifest = bySpecifier.get(specifier);

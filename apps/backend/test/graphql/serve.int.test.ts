@@ -2,8 +2,8 @@
 import type { INestApplication } from '@nestjs/common';
 import { gqlClient } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { InRepoModule } from '../../src/modules.ts';
 import { boot } from '../../src/boot/boot.ts';
+import type { InRepoModule } from '../../src/modules.ts';
 import { AlphaThings, alpha } from '../fixtures/graphql/alpha.ts';
 import { beta } from '../fixtures/graphql/beta.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';

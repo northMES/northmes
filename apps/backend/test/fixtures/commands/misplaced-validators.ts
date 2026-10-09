@@ -7,8 +7,8 @@ import { Module } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
 import { CommandValidator } from '@northmes/sdk/commands';
 import { z } from 'zod';
-import { releaseJob } from './dispatch.ts';
 import type { InRepoModule } from '../../../src/modules.ts';
+import { releaseJob } from './dispatch.ts';
 
 /**
  * hold-rules' copy of a dispatch contract that says the command is validatable. The contract that

@@ -15,8 +15,8 @@ import {
   Subscription,
 } from '@nestjs/graphql';
 import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
-import { AlphaApiModule, AlphaThings, Thing } from './alpha.ts';
 import type { InRepoModule } from '../../../src/modules.ts';
+import { AlphaApiModule, AlphaThings, Thing } from './alpha.ts';
 
 @ObjectType('Crate')
 export class Crate {

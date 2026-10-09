@@ -2,8 +2,10 @@
 import type { Type } from '@nestjs/common';
 
 /**
- * The static part of a module or plugin. The host reads it without loading Nest code, so the
- * `server` entry is a lazy import. Core modules and plugins use the same shape (ADR 0003).
+ * The static part of a drop-in plugin. The host reads it without loading Nest code, so the
+ * `server` entry is a lazy import (ADR 0003, ADR 0037). The modules that ship in the backend are
+ * plain Nest modules and have no manifest (ADR 0070). The commands a plugin may validate are those
+ * whose contract says validatable (ADR 0017), so a manifest lists no commands.
  */
 export interface ModuleManifest {
   /** kebab-case, [a-z][a-z0-9]*(-[a-z0-9]+)*. Derived names: see moduleNames(). */
@@ -20,8 +22,6 @@ export interface ModuleManifest {
   readonly roles?: Readonly<Record<string, readonly string[]>>;
   /** Event types this module publishes, with payload schema version. */
   readonly events?: Readonly<Record<string, { readonly version: number }>>;
-  /** Commands this module owns; validatable ones accept command validators from dependants. */
-  readonly commands?: Readonly<Record<string, { readonly validatable?: boolean }>>;
   /** Personal-data declarations, used for the GDPR register. */
   readonly personalData?: readonly {
     readonly table: string;

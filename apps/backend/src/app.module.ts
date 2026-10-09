@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { type DynamicModule, Module, type Type } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
-import type { ModuleManifest } from '@northmes/sdk';
 import { DomainErrorFilter } from '@northmes/sdk/errors';
 import { BootError } from './boot/boot-error.ts';
 import { CommandsModule } from './commands/commands.module.ts';
@@ -10,14 +9,16 @@ import { GraphqlModule } from './graphql/graphql.module.ts';
 import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
 import { WebModule } from './web/web.module.ts';
 
-/** A catalog module's server entry, which boot step 6 imports. */
+/**
+ * The Nest module of an in-repo module or of a plugin's server entry, which boot step 6 collects.
+ */
 export interface ServerEntry {
   /** The module's id. */
   readonly id: string;
-  /** The Nest module of the entry, whose resolvers join the one schema. */
+  /** Its Nest module, whose resolvers join the one schema. */
   readonly module: Type;
-  /** The module's manifest. */
-  readonly manifest: ModuleManifest;
+  /** The ids of the modules it depends on. */
+  readonly dependsOn: readonly string[];
 }
 
 /** How AppModule.forRoot builds the app beyond its config and server entries. */
@@ -31,10 +32,10 @@ export interface AppOptions {
 // biome-ignore lint/complexity/noStaticOnlyClass: Nest knows a module by its decorated class.
 export class AppModule {
   /**
-   * Imports config first: the ConfigModule that boot created before it imported any manifest
-   * (ADR 0060). Then the database that `options.database` names (the nm_app pool and the
-   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, every module's
-   * Nest module and the GraphQL module that builds one schema from their resolvers and serves it on
+   * Imports config first: the ConfigModule that boot created before it imported any plugin
+   * manifest (ADR 0060). Then the database that `options.database` names (the nm_app pool and the
+   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the Nest module of
+   * every in-repo module and plugin in boot order, and the GraphQL module that builds one schema from their resolvers and serves it on
    * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
    * module's prefix throws one BootError before Nest builds anything. The SDK's exception filter is
    * registered here and nowhere else (ADR 0012).

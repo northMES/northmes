@@ -27,7 +27,7 @@ class NestedReleaseLimitsModule {}
 class ClassProviderModule {}
 
 describe('discoverValidators', () => {
-  it("E02-S04 a validator on a command whose owner lists it with a validatable contract is registered, with no manifest", () => {
+  it('E02-S04 a validator on a command whose owner lists it with a validatable contract is registered, with no manifest', () => {
     const validators = discoverValidators([dispatch, releaseLimits]);
 
     expect(validators).toEqual([{ module: 'release-limits', validator: QuantityLimit.validator }]);

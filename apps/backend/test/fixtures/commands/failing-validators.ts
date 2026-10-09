@@ -3,8 +3,8 @@
 // its time limit, and BrokenCheck of the fixture module broken-rules throws on every run.
 import { Module } from '@nestjs/common';
 import { CommandValidator } from '@northmes/sdk/commands';
-import { releaseJob } from './dispatch.ts';
 import type { InRepoModule } from '../../../src/modules.ts';
+import { releaseJob } from './dispatch.ts';
 
 /** The time limit of SlowCheck. */
 export const SLOW_CHECK_LIMIT_MS = 50;
