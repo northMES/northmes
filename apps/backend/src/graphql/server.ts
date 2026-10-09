@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { GraphQLSchema } from 'graphql';
 import { createYoga, type YogaServerInstance } from 'graphql-yoga';
+import { plantFreePlugin } from './plant-free.ts';
 import {
   noPrincipal,
   principalPlugin,
@@ -23,7 +24,8 @@ export interface GraphqlServerOptions {
 /**
  * Serves `schema` with GraphQL Yoga at GRAPHQL_PATH over HTTP, and subscriptions over SSE. Errors
  * that a resolver did not throw as a GraphQLError reach the client masked, and every operation
- * runs as the principal that `resolvePrincipal` resolves for its request.
+ * runs as the principal that `resolvePrincipal` resolves for its request. An operation whose
+ * request names no plant runs only plant-free root fields (ADR 0066).
  */
 export function createGraphqlServer(
   schema: GraphQLSchema,
@@ -32,7 +34,7 @@ export function createGraphqlServer(
   return createYoga<Record<string, unknown>, ServerContext>({
     schema,
     graphqlEndpoint: GRAPHQL_PATH,
-    plugins: [principalPlugin(resolvePrincipal), runAsPrincipalPlugin],
+    plugins: [principalPlugin(resolvePrincipal), plantFreePlugin, runAsPrincipalPlugin],
     maskedErrors: true,
     landingPage: false,
     graphiql: false,

@@ -45,6 +45,7 @@ if (false) {
             name
             version
             archivedAt
+            updatedAt
           }
         }
       }

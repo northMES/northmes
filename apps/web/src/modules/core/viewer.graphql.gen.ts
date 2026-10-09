@@ -4,10 +4,12 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
-export type CoreViewerQueryVariables = Exact<{ [key: string]: never; }>;
+export type CoreViewerQueryVariables = Exact<{
+  companyId?: string | number | null | undefined;
+}>;
 
 
 export type CoreViewerQuery = { readonly coreViewer: { readonly __typename: 'Viewer', readonly userId: string, readonly plantPermissions: ReadonlyArray<string>, readonly companyPermissions: ReadonlyArray<string> } };
 
 
-export const CoreViewerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CoreViewer"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreViewer"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"plantPermissions"}},{"kind":"Field","name":{"kind":"Name","value":"companyPermissions"}}]}}]}}]} as unknown as DocumentNode<CoreViewerQuery, CoreViewerQueryVariables>;
+export const CoreViewerDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CoreViewer"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"companyId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreViewer"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"companyId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"companyId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"userId"}},{"kind":"Field","name":{"kind":"Name","value":"plantPermissions"}},{"kind":"Field","name":{"kind":"Name","value":"companyPermissions"}}]}}]}}]} as unknown as DocumentNode<CoreViewerQuery, CoreViewerQueryVariables>;

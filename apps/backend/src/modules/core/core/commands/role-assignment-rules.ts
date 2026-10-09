@@ -5,20 +5,29 @@ import { currentPrincipal } from '../../../../principal.ts';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
 import { forbidden } from '../access/request-scope.ts';
 import type { RoleAssignmentRecord } from '../role-assignment.service.ts';
-import { companyOfPlant } from './company-scope.ts';
+import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 import { refuseUnheldPermissions } from './role-rules.ts';
 import { lockRole } from './role-target.ts';
 
 /**
- * The scopes where a request changes role assignments: its plant and the plant's company, never
- * another plant, as it reads them (ADR 0008). Empty for a request without a plant.
+ * The scopes where a request changes role assignments, as it reads them (ADR 0008): at a plant,
+ * the plant and its company, never another plant; in company settings, the company the input
+ * names and every plant of it (ADR 0066). Empty when the request names neither.
  */
 export async function assignableScopes(
   context: Pick<CoreContext, 'tx' | 'plantId'>,
+  input: { readonly companyId?: string },
 ): Promise<string[]> {
-  const companyId = await companyOfPlant(undefined, context);
-  return context.plantId && companyId ? [companyId, context.plantId] : [];
+  const companyId = await requestCompany(input, context);
+  if (!companyId) return [];
+  if (context.plantId) return [companyId, context.plantId];
+  const plants = await context.tx
+    .selectFrom('core.plant')
+    .select('id')
+    .where('company_id', '=', companyId)
+    .execute();
+  return [companyId, ...plants.map(({ id }) => id)];
 }
 
 /**
@@ -72,6 +81,7 @@ export async function assignmentRecord(
       'a.id',
       'a.role_id as roleId',
       'a.scope_id as scopeId',
+      'a.company_id as companyId',
       's.kind',
       'c.name as companyName',
       'p.name as plantName',
@@ -87,6 +97,13 @@ export async function assignmentRecord(
     id: row.id,
     roleId: row.roleId,
     scope: { id: row.scopeId, kind: row.kind, name: row.companyName ?? row.plantName ?? '' },
-    user: { id: row.userId, name: row.name, username: row.username, blocked: row.banned },
+    user: {
+      id: row.userId,
+      name: row.name,
+      username: row.username,
+      blocked: row.banned,
+      companyId: row.companyId,
+    },
+    companyId: row.companyId,
   };
 }

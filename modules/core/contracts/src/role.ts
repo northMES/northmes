@@ -22,6 +22,12 @@ export const accessReason = z
   .optional();
 
 /**
+ * The company of a command sent from company settings, whose request names no plant (ADR 0066). A
+ * command sent at a plant leaves it out, or names the plant's company.
+ */
+export const settingsCompanyId = z.uuid().optional();
+
+/**
  * The fields a company admin edits on a custom role: its name, unique within the company, and the
  * permissions it holds, from the catalog of the installed modules.
  */
@@ -35,15 +41,15 @@ const roleFields = z.object({
 });
 
 /**
- * Creates a custom role of the company of the request's plant under the client-generated id, so a
- * retry returns the first role (ADR 0012). It needs core.role:manage at the company (ADR 0010). A
+ * Creates a custom role of the company of the request's plant, or of companyId from company
+ * settings, under the client-generated id, so a retry returns the first role (ADR 0012). It needs core.role:manage at the company (ADR 0010). A
  * name that a role of the company has is refused with core.role_name_taken, and a permission the
  * catalog does not hold with core.unknown_permission.
  */
 export const createRole = defineCommandContract({
   name: 'core.createRole',
   target: 'new',
-  fields: roleFields,
+  fields: roleFields.extend({ companyId: settingsCompanyId }),
   permission: 'core.role:manage',
 });
 
@@ -75,7 +81,8 @@ export const deleteRole = defineCommandContract({
 });
 
 /**
- * Gives a user a role of the company at the company or at the request's plant, under the
+ * Gives a user a role of the company at the company or at the request's plant, or from company
+ * settings at the company companyId names or one of its plants, under the
  * client-generated id of the assignment, so a retry returns the first one (ADR 0012). It needs
  * core.roleAssignment:manage at that scope, and every permission of the role held by the assigner
  * there (ADR 0010), else core.role_not_held. A user who holds the role there already is refused
@@ -84,7 +91,12 @@ export const deleteRole = defineCommandContract({
 export const assignRole = defineCommandContract({
   name: 'core.assignRole',
   target: 'new',
-  fields: z.object({ userId: z.uuid(), roleId: z.uuid(), scopeId: z.uuid() }),
+  fields: z.object({
+    userId: z.uuid(),
+    roleId: z.uuid(),
+    scopeId: z.uuid(),
+    companyId: settingsCompanyId,
+  }),
   permission: 'core.roleAssignment:manage',
 });
 

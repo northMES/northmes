@@ -7,13 +7,27 @@ export {
   type CoreUsersQueryVariables,
 } from './users.graphql.gen.ts';
 
-// One page of the company's users by name, each with their roles at the company and at the plant.
+// One page of the company's users by name, each with their roles at the company and its plants.
 // A role the reader may not read comes as null. pnpm gen writes its typed document to
 // users.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
-    query CoreUsers($first: Int, $after: String, $last: Int, $before: String, $search: String) {
-      coreUsers(first: $first, after: $after, last: $last, before: $before, search: $search) {
+    query CoreUsers(
+      $companyId: ID!
+      $first: Int
+      $after: String
+      $last: Int
+      $before: String
+      $search: String
+    ) {
+      coreUsers(
+        companyId: $companyId
+        first: $first
+        after: $after
+        last: $last
+        before: $before
+        search: $search
+      ) {
         totalCount
         pageInfo {
           hasNextPage

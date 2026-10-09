@@ -4,12 +4,14 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
+import { companiesQuery, forbiddenError } from './access-fixtures.ts';
 import {
   articleRange,
   articlesPage,
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
 } from './core-app.tsx';
@@ -17,7 +19,7 @@ import {
 afterEach(cleanup);
 
 describe('articles list', () => {
-  it('E06-S06 the articles list shows the first 25 articles by article number with the row range, each number a link to its article', async () => {
+  it('E06-S06 the articles list shows the first 25 articles, newest change first, with the row range, each number a link to its article', async () => {
     const articles = articleRange(25);
     renderCoreAt(coreLinks.articles({ plant }).href, [
       articlesQuery(firstPage, articlesPage(articles, { totalCount: 60, hasNextPage: true })),
@@ -25,14 +27,15 @@ describe('articles list', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(25));
-    expect(bodyRows(table)[0]).toEqual(['AX-500', 'Axle 500 mm']);
-    expect(bodyRows(table)[24]).toEqual(['AX-524', 'Axle 524 mm']);
+    expect(bodyRows(table)[0]).toEqual(['AX-500', 'Axle 500 mm', lastChangedText]);
+    expect(bodyRows(table)[24]).toEqual(['AX-524', 'Axle 524 mm', lastChangedText]);
     expect(within(table).getByRole('link', { name: 'AX-500' }).getAttribute('href')).toBe(
       coreLinks.articles.article({ plant, articleId: articles[0]?.id ?? '' }).href,
     );
-    expect(
-      within(table).getByRole('columnheader', { name: 'Article number' }).getAttribute('aria-sort'),
-    ).toBe('ascending');
+    const sortOf = (name: string) =>
+      within(table).getByRole('columnheader', { name }).getAttribute('aria-sort');
+    expect(sortOf('Last changed')).toBe('descending');
+    expect(sortOf('Article number')).toBe('none');
     expect(screen.getByText('Rows 1 to 25 of 60')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Previous' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', { name: 'Next' }).hasAttribute('disabled')).toBe(false);
@@ -90,6 +93,33 @@ describe('articles list', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('E06-S06 a reader without core.article:read gets the forbidden state: the permission it needs in the company, and no toolbar, actions or data', async () => {
+    renderCoreAt(coreLinks.articles({ plant }).href, [
+      {
+        request: { query: CoreArticles, variables: firstPage },
+        result: { data: null, errors: [forbiddenError(['coreArticles'])] },
+      },
+      companiesQuery(),
+    ]);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'You need the permission to read articles in Acme AB',
+      }),
+    ).toBeDefined();
+    expect(
+      screen.getByText('Ask your plant admin for a role that can read articles.'),
+    ).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Articles' })).toBeDefined();
+    expect(document.title).toBe('Articles · NorthMES');
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByRole('searchbox', { name: 'Search articles' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Show archived' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'New article' })).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

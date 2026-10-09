@@ -14,6 +14,7 @@ if (false) {
     mutation CoreCreateRole($input: CoreCreateRoleInput!) {
       coreCreateRole(input: $input) {
         id
+        key
         name
         origin
         moduleId

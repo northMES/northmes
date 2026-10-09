@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation } from '@apollo/client/react';
 import { coreLinks, updateRole } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
@@ -11,7 +10,7 @@ import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { RoleForm, type RoleValues, showRoleSaveError } from '../../components/role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { type Role, useRole } from '../../use-role.tsx';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreUpdateRole } from './update-role.graphql.ts';
@@ -33,7 +32,7 @@ interface EditRoleFormProps {
  * overwritten (ADR 0017).
  */
 function EditRoleForm({ role, reload }: EditRoleFormProps) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const places = usePlaces();
   const expectedVersion = useRef(role.version);
@@ -64,7 +63,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
       const saved = data.coreUpdateRole;
       announce(`${saved.name} saved. ${appliesTo(saved.holders.length)}`);
       await navigate({
-        to: coreLinks.roles.role({ plant, roleId: role.id }).href,
+        to: coreLinks.settings.roles.role({ companyId, roleId: role.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -106,7 +105,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
     <RoleForm
       form={form}
       onSave={save}
-      cancelHref={coreLinks.roles.role({ plant, roleId: role.id }).href}
+      cancelHref={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
       saveLabel="Save role"
       failedHeading={`${role.name} was not saved`}
       companyName={companyName}
@@ -127,7 +126,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
  * to Edit role" (RO31).
  */
 export function EditRoleScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
   const { role, state: loaded, reload } = useRole();
@@ -152,7 +151,7 @@ export function EditRoleScreen() {
         'Default roles come from their module and cannot be changed. To change one, make a new role from it.',
     };
   }
-  const roles = { label: 'Roles', href: coreLinks.roles({ plant }).href };
+  const roles = { label: 'Roles', href: coreLinks.settings.roles({ companyId }).href };
   return (
     <PageFrame
       title={
@@ -167,7 +166,10 @@ export function EditRoleScreen() {
           ? [roles]
           : [
               roles,
-              { label: role.name, href: coreLinks.roles.role({ plant, roleId: role.id }).href },
+              {
+                label: role.name,
+                href: coreLinks.settings.roles.role({ companyId, roleId: role.id }).href,
+              },
             ]
       }
       state={state}

@@ -10,8 +10,8 @@ import type {
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError, toDomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
-import { can } from '../modules/core/core/access/access.ts';
-import { currentPrincipal, type Principal } from '../principal.ts';
+import { can, inCompanies } from '../modules/core/core/access/access.ts';
+import { currentPrincipal, type Principal, runAs } from '../principal.ts';
 
 /** A command validator, with the id of the module whose server code registered it. */
 export interface RegisteredValidator {
@@ -235,6 +235,20 @@ function validatorsByCommand({
 }
 
 /**
+ * The principal a command runs its transaction as. A command from company settings, a request
+ * without a plant, reads and writes in the companies where the principal holds the command's
+ * permission at the company node, their nodes and their plants (ADR 0066); a request at a plant
+ * keeps its scope sets.
+ */
+function inSettings(principal: Principal | null, permission: string): Principal | null {
+  if (!principal || principal.plantId !== undefined) return principal;
+  return {
+    ...principal,
+    ...inCompanies(principal, (company) => can(principal, permission, company)),
+  };
+}
+
+/**
  * The command bus of the host. It runs each command in one ScopedDatabase transaction: it checks
  * the contract's permission at the scope of the row a command on an existing entity changes, before
  * and after it locks the row, or at the scope a command without a target names or the request's
@@ -259,6 +273,19 @@ export class CommandBusImpl implements CommandBus {
     const { name } = command.contract;
     const validators = this.#validators.get(name) ?? [];
     const principal = currentPrincipal();
+    return runAs(inSettings(principal, command.contract.permission), () =>
+      this.#run(command, input, principal, validators),
+    );
+  }
+
+  /** The steps of run in one transaction, which reads with the running principal's scope sets. */
+  #run<Input, Result, Target extends TargetRow | undefined>(
+    command: Command<Input, Result, Target>,
+    input: Input,
+    principal: Principal | null,
+    validators: readonly RegisteredValidator[],
+  ): Promise<Result> {
+    const { name } = command.contract;
     return this.#transaction(async (tx) => {
       const plantId = principal?.plantId;
       // A command without a target gets undefined, which its Target type then is.

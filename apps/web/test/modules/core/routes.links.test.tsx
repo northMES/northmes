@@ -28,8 +28,11 @@ function routeFullPaths(): string[] {
 }
 
 describe('core routes', () => {
-  it('E06-S06 every coreLinks entry matches a route fullPath', () => {
-    // The shell's root route and its $plant route, then one route per link entry and no other.
-    expect(routeFullPaths().sort()).toEqual(['/', '/$plant', ...linkPatterns(coreLinks)].sort());
+  it('E06-S06 every coreLinks entry, its settings section included, matches a route fullPath', () => {
+    // The shell's root route, its $plant route and its company settings route, then one route per
+    // link entry, of the plant pages and of the settings section, and no other.
+    expect(routeFullPaths().sort()).toEqual(
+      ['/', '/$plant', '/settings/$companyId', ...linkPatterns(coreLinks)].sort(),
+    );
   });
 });

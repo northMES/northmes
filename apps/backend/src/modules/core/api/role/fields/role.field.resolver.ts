@@ -16,17 +16,18 @@ export class RoleFieldResolver {
   constructor(@Inject(RoleAssignmentService) private readonly assignments: RoleAssignmentService) {}
 
   /**
-   * Who holds the role at the request's company and at its plant, those at the company first, then
-   * by name; never the holders at another plant. The holders of every role in an answer are read in
-   * one query.
+   * Who holds the role where the request runs, those at the company first, then by name: at a
+   * plant, at its company and the plant, never at another plant; in company settings, at the
+   * company and every plant of it. The holders of every role in an answer are read in one query.
    */
   @ResolveField(() => [RoleAssignment])
   holders(
     @Parent() role: RoleRecord,
     @Context() context: RequestContext,
   ): Promise<RoleAssignmentRecord[]> {
-    return loaderFor(context, 'core.roleHolders', (ids: readonly string[]) =>
-      this.assignments.holdersOf(ids),
+    const { companyId } = role;
+    return loaderFor(context, `core.roleHolders:${companyId}`, (ids: readonly string[]) =>
+      this.assignments.holdersOf(ids, companyId),
     ).load(role.id);
   }
 }

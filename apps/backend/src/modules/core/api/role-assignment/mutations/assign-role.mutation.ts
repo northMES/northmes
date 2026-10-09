@@ -10,5 +10,6 @@ import { RoleAssignment } from '../types/role-assignment.type.ts';
  */
 export const AssignRole = defineCommand(assignRole, {
   returns: () => RoleAssignment,
+  plantFree: true,
   ...assignRoleHandler,
 });

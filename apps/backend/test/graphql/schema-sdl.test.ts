@@ -13,6 +13,7 @@ describe('schemaSdl', () => {
       'coreArticles',
       'coreCompanies',
       'corePermissionCatalog',
+      'corePlantRoleAssignments',
       'coreRole',
       'coreRoles',
       'coreUser',
