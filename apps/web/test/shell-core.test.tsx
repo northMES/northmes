@@ -10,6 +10,7 @@ import {
   crumbs,
   equipment,
   fakeApi,
+  isBefore,
   renderShellAt,
   viewer,
 } from './settings-fixtures.tsx';
@@ -27,12 +28,33 @@ function api() {
 const articleId = '019a0000-0000-7000-8000-0000000a0001';
 
 describe("core's pages at the plant root (ADR 0074)", () => {
-  it('E04-S02 the breadcrumb of a core page has no module crumb: Plant A, then the page', async () => {
+  it('E04-S02 the breadcrumb of a core page has no module crumb: Plant A, Master data, then the page', async () => {
     renderShellAt('/plant-a/articles', shellModules, { fetch: api().fetch });
     await screen.findByRole('heading', { level: 1, name: 'Articles' });
 
-    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Articles']));
+    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Master data', 'Articles']));
     expect(document.title).toBe('Articles · Plant A · NorthMES');
+  });
+
+  it('E04-S02 the breadcrumb of a page under Articles reads Plant A, Master data, Articles, then the page', async () => {
+    renderShellAt('/plant-a/articles/new', shellModules, { fetch: api().fetch });
+    await screen.findByRole('heading', { level: 1, name: 'New article' });
+
+    await waitFor(() =>
+      expect(crumbs()).toEqual(['Plant A', 'Master data', 'Articles', 'New article']),
+    );
+  });
+
+  it("E04-S02 Articles sits under Master data in core's sidebar group (D2 PL5, ui-222 LI1)", async () => {
+    renderShellAt('/plant-a/articles', shellModules, { fetch: api().fetch });
+    const sidebar = await screen.findByRole('navigation', { name: 'Main' });
+    const core = within(sidebar).getByRole('list', { name: 'Core' });
+
+    const masterData = within(core).getByRole('button', { name: 'Master data' });
+    expect(masterData.getAttribute('aria-expanded')).toBe('true');
+    const articles = within(core).getByRole('link', { name: 'Articles' });
+    expect(isBefore(masterData, articles)).toBe(true);
+    expect(masterData.closest('li')?.contains(articles)).toBe(true);
   });
 
   it('E04-S02 the breadcrumb of a core plant settings page reads Plant A, Settings, then the page', async () => {

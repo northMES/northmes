@@ -8,6 +8,7 @@ import type { ShellModule } from '../src/modules.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import {
   companies,
+  crumbs,
   fakeApi,
   linksIn,
   renderShellAt,
@@ -192,5 +193,36 @@ describe('a nested group in a module sidebar group (D2 PL5)', () => {
     renderShellAt('/plant-a/stock/moves', [onlyBins], { fetch: api.fetch });
     await screen.findByRole('heading', { level: 1, name: 'Moves' });
     expect(within(await stockGroup()).queryByRole('button', { name: 'Registers' })).toBeNull();
+  });
+});
+
+describe('the breadcrumb of a page in a nested group', () => {
+  it('E04-S02 the breadcrumb names the nested group, as text, between the module and the page', async () => {
+    renderAt('/plant-a/stock/warehouses');
+    await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
+
+    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Stock', 'Registers', 'Warehouses']));
+    const breadcrumb = within(screen.getByRole('banner')).getByRole('navigation', {
+      name: 'Breadcrumb',
+    });
+    expect(within(breadcrumb).queryByRole('link', { name: 'Registers' })).toBeNull();
+    expect(document.title).toBe('Warehouses · Plant A · NorthMES');
+  });
+
+  it("E04-S02 a page under a nested group's entry keeps the group's crumb before the entry's", async () => {
+    renderAt('/plant-a/stock/warehouses/w1');
+    await screen.findByRole('heading', { level: 1, name: 'Warehouse W1' });
+
+    await waitFor(() =>
+      expect(crumbs()).toEqual(['Plant A', 'Stock', 'Registers', 'Warehouses', 'Warehouse W1']),
+    );
+    expect(document.title).toBe('Warehouse W1 · Plant A · NorthMES');
+  });
+
+  it('E04-S02 a page outside the nested group has no group crumb', async () => {
+    renderAt('/plant-a/stock/moves');
+    await screen.findByRole('heading', { level: 1, name: 'Moves' });
+
+    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Stock', 'Moves']));
   });
 });
