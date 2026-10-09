@@ -101,7 +101,7 @@ interface StateOptions {
   readonly view: ArticleListSearch;
   readonly page: ArticlesPage | undefined;
   readonly error: ErrorLike | undefined;
-  readonly retry: () => void;
+  readonly retry: () => Promise<unknown>;
   readonly show: (view: ArticleListSearch) => void;
 }
 
@@ -124,7 +124,7 @@ function listState({ view, page, error, retry, show }: StateOptions): PageState 
     return {
       status: 'error',
       title: 'Could not load articles',
-      description: 'Check the connection, then try again.',
+      error,
       onRetry: retry,
     };
   }
@@ -183,9 +183,7 @@ export function ArticlesScreen() {
     view,
     page,
     error,
-    retry: () => {
-      refetch().catch(() => {});
-    },
+    retry: () => refetch(),
     show,
   });
   return (

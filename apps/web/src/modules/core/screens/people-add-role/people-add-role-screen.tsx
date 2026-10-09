@@ -39,10 +39,8 @@ export function PeopleAddRoleScreen() {
     state = {
       status: 'error',
       title: 'Could not load the people and roles',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        failed.refetch().catch(() => {});
-      },
+      error: failed.error,
+      onRetry: () => failed.refetch(),
     };
   } else if (
     users.data === undefined ||

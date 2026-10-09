@@ -51,7 +51,7 @@ interface CompanySettingsState {
    */
   readonly refused: 'forbidden' | 'failed' | undefined;
   /** Reads the user's companies and permissions again, after a failed read. */
-  readonly retry: () => void;
+  readonly retry: () => Promise<unknown>;
 }
 
 const CompanySettingsContext = createContext<CompanySettingsState | null>(null);
@@ -102,10 +102,10 @@ export function CompanySettingsLayout({
       : isForbidden(error)
         ? 'forbidden'
         : 'failed';
-  const retry = useCallback(() => {
-    refetchCompanies().catch(() => {});
-    refetchViewer().catch(() => {});
-  }, [refetchCompanies, refetchViewer]);
+  const retry = useCallback(
+    () => Promise.allSettled([refetchCompanies(), refetchViewer()]),
+    [refetchCompanies, refetchViewer],
+  );
   const companies = data?.coreCompanies ?? [];
   const company = companies.find(({ id }) => id === companyId)?.name;
   const permissions = useMemo(
@@ -214,7 +214,6 @@ function landingState(state: CompanySettingsState | null): PageState {
     return {
       status: 'error',
       title: 'Could not load company settings',
-      description: 'Check the connection, then try again.',
       onRetry: state.retry,
     };
   }

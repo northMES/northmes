@@ -126,10 +126,8 @@ export function UsersScreen() {
     state = {
       status: 'error',
       title: 'Could not load users',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (page === undefined) {
     state = { status: 'loading' };

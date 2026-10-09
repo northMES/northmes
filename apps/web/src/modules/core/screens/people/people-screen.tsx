@@ -76,10 +76,8 @@ export function PeopleScreen() {
     state = {
       status: 'error',
       title: 'Could not load people',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (assignments === undefined) {
     state = { status: 'loading' };

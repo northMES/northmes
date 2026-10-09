@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { classifyError } from '@northmes/web-sdk';
 import { CircleAlert, Copy, RotateCw } from 'lucide-react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { announce } from '../../lib/announce.ts';
 import { Button } from '../../primitives/button.tsx';
@@ -31,13 +32,20 @@ export type PageState =
       readonly description: string;
       readonly action?: ReactNode;
     }
-  /** The data could not be loaded: the error, the correlation id and Try again. */
+  /**
+   * The data could not be loaded: the error, the correlation id and Try again. The correlation id
+   * comes from the failed request, read by classifyError, unless the page names one.
+   */
   | {
       readonly status: 'error';
       readonly title: string;
-      readonly description: string;
+      /** Without one, ui-222's words: check the connection, try again, and the correlation id. */
+      readonly description?: string;
+      /** The failed request's error, whose correlation id the state shows. */
+      readonly error?: unknown;
       readonly correlationId?: string;
-      readonly onRetry: () => void;
+      /** Sends the request again; Try again stays busy until the promise settles. */
+      readonly onRetry: () => Promise<unknown> | void;
     };
 
 export interface PageFrameProps {
@@ -85,13 +93,39 @@ export function EmptyState({
   );
 }
 
-/** An error state: an alert with the correlation id, Copy correlation id and Try again. */
+/** The props of an error state: the page's error and whether its Try again runs. */
+type ErrorStateProps = Omit<Extract<PageState, { status: 'error' }>, 'status'> & {
+  /** Try again runs: the button shows Trying again with aria-busy and aria-disabled (SE7). */
+  readonly retrying?: boolean;
+};
+
+/** The correlation id of an error state: the page's own, else the failed request's. */
+function correlationIdOf({
+  correlationId,
+  error,
+}: Pick<ErrorStateProps, 'correlationId' | 'error'>) {
+  return correlationId ?? (error === undefined ? undefined : classifyError(error).correlationId);
+}
+
+/**
+ * An error state (design ui-222, ST4 and ST8): an alert with the page's title, ui-222's text, the
+ * correlation id with Copy correlation id, and Try again, which keeps focus in its loading state
+ * while the request runs (shell-306, SE7).
+ */
 export function ErrorState({
   title,
   description,
-  correlationId,
+  error,
+  correlationId: own,
   onRetry,
-}: Omit<Extract<PageState, { status: 'error' }>, 'status'>) {
+  retrying = false,
+}: ErrorStateProps) {
+  const correlationId = correlationIdOf({ correlationId: own, error });
+  const text =
+    description ??
+    (correlationId === undefined
+      ? 'Check the connection, then try again.'
+      : 'Check the connection, then try again. If it fails again, give your plant admin the correlation id.');
   return (
     <Empty role="alert" className={stateCard}>
       <EmptyHeader className="max-w-prose">
@@ -101,7 +135,7 @@ export function ErrorState({
         <EmptyTitle>
           <h2 className="text-base font-semibold">{title}</h2>
         </EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
+        <EmptyDescription>{text}</EmptyDescription>
       </EmptyHeader>
       {correlationId !== undefined && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -125,12 +159,24 @@ export function ErrorState({
           </IconButton>
         </p>
       )}
-      <Button onClick={onRetry}>
-        <RotateCw aria-hidden />
-        Try again
+      {/* The D1 Button loading state: full opacity, the progress label, focus kept (D1 Q8). */}
+      <Button loading={retrying} onClick={() => onRetry()}>
+        {!retrying && <RotateCw aria-hidden />}
+        {retrying ? 'Trying again' : 'Try again'}
       </Button>
     </Empty>
   );
+}
+
+/** The first letter in lower case, so a title reads inside a sentence. */
+function inSentence(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/** A Try again in progress: the error state it started from, and whether its request settled. */
+interface Retry {
+  readonly from: Extract<PageState, { status: 'error' }>;
+  readonly settled: boolean;
 }
 
 /**
@@ -138,9 +184,10 @@ export function ErrorState({
  * focuses after a route change (tabindex -1) and which names the document ("Articles · Plant A ·
  * NorthMES" in the shell, "Articles · NorthMES" outside it), the page actions, the toolbar, and the
  * data region in its state. In the shell the breadcrumb and the page actions render in the top bar
- * (D2), before main in the Tab order. Loading marks the region busy around the content's skeleton; empty and error
- * replace the content. Try again moves focus to the h1, because the error state goes away, and so
- * does an empty state's action that takes the state away without moving focus itself.
+ * (D2), before main in the Tab order. Loading marks the region busy around the content's skeleton;
+ * empty and error replace the content. Try again keeps the error state and its focus while the
+ * request runs, then moves focus to the h1 once the page loads; an empty state's action that takes
+ * the state away without moving focus itself moves focus to the h1 too.
  */
 export function PageFrame({
   title,
@@ -174,6 +221,21 @@ export function PageFrame({
       heading.current?.focus();
     }
   }, [state.status]);
+  // Try again (shell-306, SE7): the error state stays, busy, until the request settles and the
+  // page has its next state. Then focus moves to the h1 when the page loaded, or stays on Try again
+  // when it failed again, and the polite region says so once.
+  const [retry, setRetry] = useState<Retry | undefined>(undefined);
+  useEffect(() => {
+    if (retry === undefined || !retry.settled || state.status === 'loading') return;
+    setRetry(undefined);
+    if (state.status === 'error') {
+      const changed = correlationIdOf(state) === undefined ? '' : ' The correlation id changed.';
+      announce(`Still ${inSentence(state.title)}.${changed}`);
+    } else {
+      requestAnimationFrame(() => heading.current?.focus());
+    }
+  }, [retry, state]);
+  const shown: PageState = retry === undefined ? state : retry.from;
   return (
     <div className="flex flex-col gap-4">
       {topBar?.breadcrumb &&
@@ -193,17 +255,18 @@ export function PageFrame({
         )}
       </div>
       {toolbar}
-      <div aria-busy={state.status === 'loading' || undefined}>
-        {state.status === 'empty' ? (
-          <EmptyState title={state.title} description={state.description} action={state.action} />
-        ) : state.status === 'error' ? (
+      <div aria-busy={shown.status === 'loading' || undefined}>
+        {shown.status === 'empty' ? (
+          <EmptyState title={shown.title} description={shown.description} action={shown.action} />
+        ) : shown.status === 'error' ? (
           <ErrorState
-            title={state.title}
-            description={state.description}
-            correlationId={state.correlationId}
+            {...shown}
+            retrying={retry !== undefined}
             onRetry={() => {
-              state.onRetry();
-              heading.current?.focus();
+              const from = shown;
+              setRetry({ from, settled: false });
+              const settle = () => setRetry({ from, settled: true });
+              Promise.resolve().then(from.onRetry).then(settle, settle);
             }}
           />
         ) : (

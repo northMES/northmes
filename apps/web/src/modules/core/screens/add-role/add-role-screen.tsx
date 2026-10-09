@@ -39,10 +39,8 @@ export function AddRoleScreen() {
     state = {
       status: 'error',
       title: 'Could not load the roles',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (
     userState.status === 'ready' &&

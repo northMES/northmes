@@ -49,10 +49,8 @@ export function useUser(): UserOfPage {
     state = {
       status: 'error',
       title: 'Could not load the user',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (data === undefined) {
     state = { status: 'loading' };

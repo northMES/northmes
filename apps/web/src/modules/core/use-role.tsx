@@ -42,10 +42,8 @@ export function useRole(): RoleOfPage {
     state = {
       status: 'error',
       title: 'Could not load the role',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        reload().catch(() => {});
-      },
+      error,
+      onRetry: () => reload(),
     };
   } else if (data === undefined) {
     state = { status: 'loading' };
