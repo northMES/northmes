@@ -58,11 +58,18 @@ function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
   return assignment.role?.permissions.every(holds) ?? true;
 }
 
-/** The permissions the user loses with the assignment: those no other role of theirs grants. */
+/**
+ * The permissions the user loses with the assignment: those no other role of theirs grants there.
+ * A role at the company grants at each of its plants, so only the user's other roles at the company
+ * keep a permission at the plants other than the request's. A role at the plant is kept by every
+ * other role the page lists, which are at the plant or at its company.
+ */
 function lostWith(assignment: UserAssignment, user: User): string[] {
+  const atCompany = assignment.scope.kind === 'COMPANY';
   const kept = new Set(
     user.roleAssignments
       .filter(({ id }) => id !== assignment.id)
+      .filter(({ scope }) => !atCompany || scope.kind === 'COMPANY')
       .flatMap(({ role }) => role?.permissions ?? []),
   );
   return (assignment.role?.permissions ?? []).filter((key) => !kept.has(key));
