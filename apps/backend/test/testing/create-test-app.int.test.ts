@@ -39,6 +39,8 @@ describe('createTestApp', () => {
       'corePermissionCatalog',
       'coreRole',
       'coreRoles',
+      'coreUser',
+      'coreUsers',
     ]);
   });
 });

@@ -67,6 +67,11 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type EffectivePermission {
+  grantedBy: [RoleAssignment!]!
+  permission: Permission!
+}
+
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
@@ -127,6 +132,8 @@ type Query {
   corePermissionCatalog: [PermissionModule!]!
   coreRole(id: ID!): Role
   coreRoles: [Role!]!
+  coreUser(id: ID!): User
+  coreUsers(after: String, before: String, first: Int = 25, last: Int, orderBy: [UserOrderBy!], search: String): UserConnection!
   planningProductionOrders: [ProductionOrder!]!
 }
 
@@ -165,7 +172,30 @@ enum SortDirection {
 
 type User {
   blocked: Boolean!
+  effectivePermissions: [EffectivePermission!]!
   id: ID!
   name: String!
+  roleAssignments: [RoleAssignment!]!
   username: String!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserEdge {
+  cursor: String!
+  node: User!
+}
+
+input UserOrderBy {
+  direction: SortDirection = ASC
+  field: UserSortField!
+}
+
+enum UserSortField {
+  NAME
+  USERNAME
 }
