@@ -379,6 +379,26 @@ describe('tooling', () => {
     expect(workspace.allowBuilds?.['@scarf/scarf']).toBe(false);
   });
 
+  it('zod-openapi 6 is pinned exactly and apps/backend takes it from the catalog', () => {
+    // ADR 0064 passes a converter built on zod-openapi to the Standard Schema hook of
+    // @nestjs/swagger 12, because Nest's own converter emits OpenAPI 3.0. 6.0.2 was the newest
+    // release outside Renovate's 14-day window on 2026-10-09; it takes zod ^4 as a peer.
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(catalog['zod-openapi']).toBe('6.0.2');
+    expect(backend.dependencies?.['zod-openapi']).toBe('catalog:');
+  });
+
+  it('pnpm-lock.yaml holds one zod-openapi copy, resolved against the catalog zod', () => {
+    // zod-openapi reads the schemas that the contracts build with the catalog zod.
+    const catalog = readWorkspace().catalog ?? {};
+
+    expect(resolutions('zod-openapi')).toEqual([
+      `zod-openapi@${catalog['zod-openapi']}(zod@${catalog.zod})`,
+    ]);
+  });
+
   it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {
     // The fonts ship in the web bundle. A package listing them would carry OFL-1.1 files into an
     // MIT package (ADR 0040).
