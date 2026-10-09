@@ -152,7 +152,7 @@ describe('archive and restore an article', () => {
       ]),
     );
     expect(router.state.location.search).toEqual({ archived: 1 });
-    expect((showArchived as HTMLInputElement).checked).toBe(true);
+    expect(showArchived.getAttribute('aria-checked')).toBe('true');
     expect(document.activeElement).toBe(showArchived);
   });
 
@@ -165,10 +165,8 @@ describe('archive and restore an article', () => {
       ),
       articlesQuery(firstPage, articlesPage([], { totalCount: 0 })),
     ]);
-    const showArchived = (await screen.findByRole('checkbox', {
-      name: 'Show archived',
-    })) as HTMLInputElement;
-    expect(showArchived.checked).toBe(true);
+    const showArchived = await screen.findByRole('checkbox', { name: 'Show archived' });
+    expect(showArchived.getAttribute('aria-checked')).toBe('true');
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(1));
 
@@ -261,7 +259,9 @@ describe('archive and restore an article', () => {
     await user.click(within(summary).getByRole('button', { name: 'Restore article' }));
 
     await waitFor(() => expect(spoken()).toBe('Article AX-500 restored'));
-    await waitFor(() => expect(screen.queryByRole('group')).toBeNull());
+    await waitFor(() =>
+      expect(screen.queryByRole('group', { name: 'This article is archived' })).toBeNull(),
+    );
     expect(
       screen.queryByText('Could not restore the article. Check the connection, then try again.'),
     ).toBeNull();

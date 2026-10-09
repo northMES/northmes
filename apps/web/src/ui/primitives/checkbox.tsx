@@ -1,34 +1,25 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-import { useId } from 'react';
+import { Checkbox as CheckboxPrimitive } from '@base-ui/react/checkbox';
 import { cn } from 'cn';
+import { CheckIcon } from 'lucide-react';
 
-export interface CheckboxProps {
-  /** The visible label, which is also the accessible name. */
-  readonly label: string;
-  readonly checked: boolean;
-  /** Called with the state the person asks for; the caller owns checked. */
-  readonly onCheckedChange: (checked: boolean) => void;
-  readonly className?: string;
-}
-
-/**
- * A checkbox with its label, such as Show archived (design ui-222, Checkbox): a 16 px box in a
- * 24 px hit area, which the label widens. Space toggles it and focus stays on it.
- */
-export function Checkbox({ label, checked, onCheckedChange, className }: CheckboxProps) {
-  const id = useId();
+function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
-    <span className={cn('inline-flex min-h-(--nm-target-min) items-center gap-2', className)}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onCheckedChange(event.currentTarget.checked)}
-        className="size-4 shrink-0 accent-primary"
-      />
-      <label htmlFor={id} className="text-sm text-foreground">
-        {label}
-      </label>
-    </span>
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        'peer relative flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors outline-none group-has-disabled/field:opacity-50 group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:not-data-checked:border-input after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 aria-invalid:aria-checked:border-primary dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground group-has-[:focus-visible]/field-label:data-checked:border-primary dark:data-checked:bg-primary',
+        className,
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
+      >
+        <CheckIcon />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
   );
 }
+
+export { Checkbox };

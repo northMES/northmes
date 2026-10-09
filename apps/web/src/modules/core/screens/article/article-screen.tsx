@@ -87,7 +87,10 @@ export function ArticleScreen() {
     >
       {article?.archivedAt != null && (
         <p>
-          <Badge icon={Archive}>Archived</Badge>
+          <Badge variant="secondary" className="text-muted-foreground">
+            <Archive aria-hidden />
+            Archived
+          </Badge>
         </p>
       )}
       <Identity article={article} />

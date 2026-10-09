@@ -1,8 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { AlertDialog } from '@base-ui/react/alert-dialog';
 import { CircleAlert } from 'lucide-react';
 import { type ReactElement, useEffect, useRef, useState } from 'react';
-import { Button } from '../../primitives/button.tsx';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../primitives/alert-dialog.tsx';
 
 export interface ConfirmDialogProps {
   /** The button that opens the dialog; Cancel and Escape return focus to it. */
@@ -23,9 +32,9 @@ export interface ConfirmDialogProps {
 }
 
 /**
- * ConfirmDialog (design ui-222, DE23 and DE27; WCAG 3.3.4): an alert dialog on Base UI that asks
- * before an action, named by its title and described by its text, with Cancel and the confirm
- * button. Tab stays in the dialog and Escape cancels.
+ * ConfirmDialog (design ui-222, DE23 and DE27; WCAG 3.3.4): shadcn's Alert Dialog that asks before
+ * an action, named by its title and described by its text, with Cancel and the confirm button.
+ * Tab stays in the dialog and Escape cancels.
  */
 export function ConfirmDialog({
   trigger,
@@ -71,7 +80,7 @@ export function ConfirmDialog({
   };
 
   return (
-    <AlertDialog.Root
+    <AlertDialog
       open={open}
       onOpenChange={(next) => {
         if (running) return;
@@ -82,38 +91,32 @@ export function ConfirmDialog({
         setOpen(next);
       }}
     >
-      <AlertDialog.Trigger render={trigger} />
-      <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 bg-foreground/40" />
-        <AlertDialog.Popup
-          finalFocus={() => {
-            // The dialog closed, so the unmount has no focus left to move.
-            const after = confirmed.current;
-            confirmed.current = false;
-            return after ? (focusTarget.current?.() ?? true) : true;
-          }}
-          className="fixed top-1/2 left-1/2 flex w-md max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl border border-border bg-background p-6 text-foreground shadow-lg"
-        >
-          <AlertDialog.Title className="text-base font-semibold">{title}</AlertDialog.Title>
-          <AlertDialog.Description className="text-sm text-muted-foreground">
-            {description}
-          </AlertDialog.Description>
-          {error !== undefined && (
-            <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
-              <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
-              {error}
-            </p>
-          )}
-          <div className="flex flex-wrap justify-end gap-2">
-            <AlertDialog.Close render={<Button variant="outline" disabled={running} />}>
-              Cancel
-            </AlertDialog.Close>
-            <Button loading={running} onClick={confirm}>
-              {confirmLabel}
-            </Button>
-          </div>
-        </AlertDialog.Popup>
-      </AlertDialog.Portal>
-    </AlertDialog.Root>
+      <AlertDialogTrigger render={trigger} />
+      <AlertDialogContent
+        finalFocus={() => {
+          // The dialog closed, so the unmount has no focus left to move.
+          const after = confirmed.current;
+          confirmed.current = false;
+          return after ? (focusTarget.current?.() ?? true) : true;
+        }}
+      >
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        {error !== undefined && (
+          <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
+            <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
+            {error}
+          </p>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={running}>Cancel</AlertDialogCancel>
+          <AlertDialogAction loading={running} onClick={confirm}>
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

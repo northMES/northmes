@@ -11,6 +11,7 @@ import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
+import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import {
   type ArticleListSearch,
   articleListSearch,
@@ -34,6 +35,9 @@ type ArticleRow = ArticlesPage['edges'][number]['node'];
 
 /** The id of the Search articles input, where Clear filters moves focus. */
 const searchFieldId = 'articles-search';
+
+/** The id of the Show archived checkbox, which its label names. */
+const showArchivedId = 'articles-show-archived';
 
 /** The article number, the link to the article's page (IdentifierLink in the design). */
 function ArticleLink({ article }: { readonly article: ArticleRow }) {
@@ -66,7 +70,10 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
       ) : (
         <span className="flex flex-wrap items-center gap-2">
           {article.name}
-          <Badge icon={Archive}>Archived</Badge>
+          <Badge variant="secondary" className="text-muted-foreground">
+            <Archive aria-hidden />
+            Archived
+          </Badge>
         </span>
       ),
   },
@@ -195,11 +202,14 @@ export function ArticlesScreen() {
             onSearch={(text) => show(searchedFor(view, text))}
             className="w-full max-w-sm"
           />
-          <Checkbox
-            label="Show archived"
-            checked={view.archived !== undefined}
-            onCheckedChange={(shown) => show(showingArchived(view, shown))}
-          />
+          <Field orientation="horizontal" className="w-auto">
+            <Checkbox
+              id={showArchivedId}
+              checked={view.archived !== undefined}
+              onCheckedChange={(shown) => show(showingArchived(view, shown))}
+            />
+            <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+          </Field>
         </div>
       }
       state={state}
