@@ -18,5 +18,6 @@ export {
   type LinkSearch,
   linkEntry,
   type ModuleLink,
+  type ModuleLinkSections,
   type ModuleLinks,
 } from './define-module-links.ts';
