@@ -9,6 +9,7 @@ import { CoreRemoveRoleAssignment } from '../../../src/modules/core/components/r
 import { CorePlantRoleAssignments } from '../../../src/modules/core/screens/people/plant-role-assignments.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/people-add-role/users.graphql.ts';
 import {
+  acme,
   anna,
   assignment,
   companiesQuery,
@@ -21,6 +22,8 @@ import {
   rolesQuery,
   sara,
   shiftLead,
+  user as userOf,
+  userQuery,
   viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
@@ -170,6 +173,38 @@ describe('People in plant settings', () => {
         screen.getByRole('button', { name: 'Remove Shift lead at Plant A from Sara Nyberg' }),
       ),
     );
+  });
+
+  it("E04-S02 Remove at this plant names what the person loses there and what the person's other roles keep, read from the person's roles", async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.people({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      peopleQuery([annaViewer, saraLead]),
+      userQuery(
+        userOf(sara, [assignment(viewerRole, acme), assignment(shiftLead, plantA, saraLead.id)]),
+      ),
+    ]);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A from Sara Nyberg' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      await within(dialog).findByText(
+        'From the next action, Sara Nyberg loses these permissions at Plant A:',
+      ),
+    ).toBeDefined();
+    expect(
+      within(dialog)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Release production orders to the floor']);
+    expect(
+      within(dialog).getByText(
+        'Viewer at Acme AB still lets Sara Nyberg read production orders and the planning board.',
+      ),
+    ).toBeDefined();
   });
 
   it('E04-S02 Add role gives a person of the company a role at the plant, locks the roles the plant admin cannot give there, and returns to People', async () => {

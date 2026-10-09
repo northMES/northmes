@@ -244,7 +244,7 @@ describe("a user's access", () => {
     expect(within(dialog).queryByText(/still lets/)).toBeNull();
   });
 
-  it("E05-S06 Remove of a company's last active Company admin is refused: the dialog shows the server's message and the role stays", async () => {
+  it("E05-S06 Remove of a company's last active Company admin is refused: the dialog says why and what to do, in its own words, and the role stays", async () => {
     const pointer = userEvent.setup();
     const all = [...companyAdminRole.permissions];
     const saraAdmin = user(sara, [assignment(companyAdminRole, acme)]);
@@ -279,13 +279,59 @@ describe("a user's access", () => {
     await pointer.click(within(dialog).getByRole('button', { name: 'Remove role' }));
 
     expect((await within(dialog).findByRole('alert')).textContent).toBe(
-      `Could not remove the role. ${message}`,
+      'You cannot remove Company admin at Acme AB from Sara Nyberg, the last Company admin of Acme AB. Give Company admin at Acme AB to another person first.',
     );
     await pointer.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(bodyRows(screen.getByRole('table', { name: 'Roles of Sara Nyberg' }))).toEqual([
       ['Company admin', 'Acme AB, all plants', 'Remove'],
     ]);
+  });
+
+  it('E05-S06 a Remove the API refuses for the assignment permission or the grant rule names the place and who can act, never the server text', async () => {
+    const pointer = userEvent.setup();
+    const refusal = (errorCode: string, details?: Record<string, unknown>) => ({
+      request: {
+        query: CoreRemoveRoleAssignment,
+        variables: { input: { id: assignment(shiftLead, plantA).id } },
+      },
+      result: {
+        errors: [
+          {
+            message: 'server text',
+            path: ['coreRemoveRoleAssignment'],
+            extensions: { code: 'FORBIDDEN', errorCode, ...(details && { details }) },
+          },
+        ],
+      },
+    });
+    renderCoreAt(accessHref, [
+      settingsViewerQuery(assigner),
+      companiesQuery(),
+      userQuery(saraOfPage),
+      permissionsQuery(sara, saraGrants),
+      refusal('core.forbidden'),
+      refusal('core.role_not_held', {
+        scopeId: plantA.id,
+        missingPermissions: ['planning.productionOrder:release'],
+      }),
+    ]);
+
+    await pointer.click(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await pointer.click(within(dialog).getByRole('button', { name: 'Remove role' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'You cannot remove Shift lead at Plant A. Removing a role at Plant A needs the permission to assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to remove it.',
+    );
+    await pointer.click(within(dialog).getByRole('button', { name: 'Remove role' }));
+    await waitFor(() =>
+      expect(within(dialog).getByRole('alert').textContent).toBe(
+        'You cannot remove Shift lead at Plant A. It includes 1 permission you do not hold at Plant A: Release production orders to the floor (planning.productionOrder:release). Ask a company admin of Acme AB to remove it.',
+      ),
+    );
+    expect(within(dialog).queryByText(/server text/)).toBeNull();
   });
 
   it('E05-S06 after Remove, the roles list read before it no longer counts the holder', async () => {
