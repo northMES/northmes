@@ -118,6 +118,9 @@ export function createShellRouter(
   };
   // The plant the user was at last, where company settings lead back to (ADR 0066).
   let lastPlant: string | undefined;
+  // The user's own choice of the main sidebar, kept while company settings replace the plant's
+  // layout, so leaving them returns it (ADR 0066).
+  const sidebarChoice: SidebarChoice = { open: true };
   const ordered = [...modules].sort((a, b) => a.order - b.order);
   const signedIn = ({ location }: { readonly location: { readonly href: string } }) => {
     if (session.user() === undefined) {
@@ -136,6 +139,7 @@ export function createShellRouter(
         onPlant={(plant) => {
           lastPlant = plant;
         }}
+        sidebarChoice={sidebarChoice}
       />
     ),
     plantBeforeLoad: signedIn,
@@ -221,13 +225,23 @@ function shellTrail(
   ];
 }
 
+/** The user's own choice of the main sidebar, open or the rail, for the router's life. */
+interface SidebarChoice {
+  open: boolean;
+}
+
 /**
  * The open state of the main sidebar (ADR 0066): the user's own choice, except on a settings page,
- * where it collapses to the rail on its own. Leaving settings returns it to the user's choice; an
- * expand on a settings page lasts until the user leaves settings. The collapse moves no focus.
+ * where it collapses to the rail on its own. Leaving settings, plant or company, returns it to the
+ * user's choice, which the router keeps; an expand on a settings page lasts until the user leaves
+ * settings. The collapse moves no focus.
  */
-function useSidebarOpen(inSettings: boolean) {
-  const [own, setOwn] = useState(true);
+function useSidebarOpen(inSettings: boolean, choice: SidebarChoice) {
+  const [own, setOwnState] = useState(choice.open);
+  const setOwn = (next: boolean) => {
+    choice.open = next;
+    setOwnState(next);
+  };
   const [visit, setVisit] = useState({ inSettings, open: false });
   // Entering or leaving settings starts a new visit, collapsed.
   if (visit.inSettings !== inSettings) setVisit({ inSettings, open: false });
@@ -248,6 +262,8 @@ interface PlantLayoutProps {
   readonly onSignOut: () => void;
   /** Hears the plant the user is at, which company settings lead back to. */
   readonly onPlant: (plant: string) => void;
+  /** The user's own choice of the main sidebar, which outlives a visit to company settings. */
+  readonly sidebarChoice: SidebarChoice;
 }
 
 /**
@@ -266,6 +282,7 @@ function PlantLayout({
   session,
   onSignOut,
   onPlant,
+  sidebarChoice,
 }: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
@@ -320,7 +337,7 @@ function PlantLayout({
   const settingsTarget = settingsHome ?? companySettings;
   const settingsButton: SettingsButtonTarget | undefined =
     settingsTarget === undefined ? undefined : { href: settingsTarget, current: inSettings };
-  const sidebar = useSidebarOpen(inSettings);
+  const sidebar = useSidebarOpen(inSettings, sidebarChoice);
   const [breadcrumb, setBreadcrumb] = useState<HTMLElement | null>(null);
   const [actions, setActions] = useState<HTMLElement | null>(null);
   const plantName = found?.plant.name ?? plant;

@@ -214,7 +214,9 @@ describe('company settings', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Company settings' });
     const alert = await screen.findByRole('alert');
-    expect(within(alert).getByRole('heading', { name: 'Could not load company settings' })).toBeDefined();
+    expect(
+      within(alert).getByRole('heading', { name: 'Could not load company settings' }),
+    ).toBeDefined();
     expect(within(alert).getByText('Check the connection, then try again.')).toBeDefined();
 
     await user.click(within(alert).getByRole('button', { name: 'Try again' }));

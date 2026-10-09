@@ -42,7 +42,8 @@ export function fakeApi(answers: Answers) {
     if (answer === undefined) return new Promise<Response>(() => {});
     const result = answer(variables);
     if (result === unreachable) throw new TypeError('Failed to fetch');
-    const body = result instanceof Refusal ? { data: null, errors: [result.error] } : { data: result };
+    const body =
+      result instanceof Refusal ? { data: null, errors: [result.error] } : { data: result };
     return new Response(JSON.stringify(body), {
       headers: { 'content-type': 'application/graphql-response+json' },
     });

@@ -4,16 +4,19 @@ import { ApolloProvider, useQuery } from '@apollo/client/react';
 import { companySettingsHref } from '@northmes/web-sdk';
 import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ShellModule } from '../modules.ts';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import {
   PageFrame,
   PageFrameTopBar,
   type PageFrameTopBarValue,
+  type PageState,
 } from '../ui/components/page-frame/index.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
+import { isForbidden } from '../ui/lib/graphql-errors.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
+import { buttonVariants } from '../ui/primitives/button.tsx';
 import { CoreCompanies } from './companies.graphql.ts';
 import {
   companySettingsEntries,
@@ -42,6 +45,13 @@ interface CompanySettingsState {
   readonly groups: readonly SettingsGroup[] | undefined;
   /** The way out of company settings, Back to the plant. */
   readonly back: WayLink;
+  /**
+   * Why the permissions did not load: forbidden when the company is not one of the user's (a stale
+   * bookmark, a removed role, a mistyped id), failed on any other error.
+   */
+  readonly refused: 'forbidden' | 'failed' | undefined;
+  /** Reads the user's companies and permissions again, after a failed read. */
+  readonly retry: () => void;
 }
 
 const CompanySettingsContext = createContext<CompanySettingsState | null>(null);
@@ -77,11 +87,25 @@ export function CompanySettingsLayout({
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { data } = useQuery(CoreCompanies, { client: companiesClient });
-  const { data: viewer } = useQuery(CoreViewer, {
+  const { data, refetch: refetchCompanies } = useQuery(CoreCompanies, { client: companiesClient });
+  const {
+    data: viewer,
+    error,
+    refetch: refetchViewer,
+  } = useQuery(CoreViewer, {
     client: companiesClient,
     variables: { companyId },
   });
+  const refused: CompanySettingsState['refused'] =
+    viewer !== undefined || error === undefined
+      ? undefined
+      : isForbidden(error)
+        ? 'forbidden'
+        : 'failed';
+  const retry = useCallback(() => {
+    refetchCompanies().catch(() => {});
+    refetchViewer().catch(() => {});
+  }, [refetchCompanies, refetchViewer]);
   const companies = data?.coreCompanies ?? [];
   const company = companies.find(({ id }) => id === companyId)?.name;
   const permissions = useMemo(
@@ -119,7 +143,10 @@ export function CompanySettingsLayout({
     }),
     [isLanding, name, landing, breadcrumb, actions],
   );
-  const state = useMemo(() => ({ company, groups, back }), [company, groups, back]);
+  const state = useMemo(
+    () => ({ company, groups, back, refused, retry }),
+    [company, groups, back, refused, retry],
+  );
   return (
     <ApolloProvider client={companiesClient}>
       <CompanySettingsContext.Provider value={state}>
@@ -166,6 +193,44 @@ export function CompanySettingsLayout({
 const rootHref = '/';
 
 /**
+ * The landing's page state: the entries once the permissions load; for a company that is not one
+ * of the user's, that it cannot be opened and the way back (shell-306's not found wording); after a
+ * failed read, the error and Try again (ui-222's wording).
+ */
+function landingState(state: CompanySettingsState | null): PageState {
+  if (state?.refused === 'forbidden') {
+    return {
+      status: 'empty',
+      description:
+        'These company settings do not exist, or you cannot open them. The link may be out of date.',
+      action: (
+        <Link to={state.back.href} className={buttonVariants({ variant: 'outline' })}>
+          {state.back.label}
+        </Link>
+      ),
+    };
+  }
+  if (state?.refused === 'failed') {
+    return {
+      status: 'error',
+      title: 'Could not load company settings',
+      description: 'Check the connection, then try again.',
+      onRetry: state.retry,
+    };
+  }
+  const groups = state?.groups;
+  if (groups === undefined) return { status: 'loading' };
+  if (groups.length === 0) {
+    return {
+      status: 'empty',
+      description:
+        'You hold no permission that opens a company settings page here. Ask a company admin for a role that includes one.',
+    };
+  }
+  return { status: 'ready' };
+}
+
+/**
  * The company landing at /settings/$companyId (design shell-313, C5): the h1 Company settings and
  * the entries of the company settings navigation the user may open, each a row that leads to its
  * page. Its trail ends with the company, and its title reads "Company settings · Acme AB ·
@@ -178,17 +243,7 @@ export function CompanySettingsLanding() {
     <PageFrame
       title="Company settings"
       currentCrumb={state?.company ?? 'Company'}
-      state={
-        groups === undefined
-          ? { status: 'loading' }
-          : groups.length === 0
-            ? {
-                status: 'empty',
-                description:
-                  'You hold no permission that opens a company settings page here. Ask a company admin for a role that includes one.',
-              }
-            : { status: 'ready' }
-      }
+      state={landingState(state)}
     >
       <div className="flex max-w-xl flex-col gap-4">
         {(groups ?? []).map(({ label, entries }, index) => (
