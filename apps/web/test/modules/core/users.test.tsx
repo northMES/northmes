@@ -151,10 +151,30 @@ describe('users', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Create user' }));
 
-    const summary = await screen.findByRole('group', { name: 'Fix 2 fields to create the user' });
+    const summary = await screen.findByRole('group', { name: 'Fix 3 fields to create the user' });
     expect(document.activeElement).toBe(summary);
     expect(field('Username').getAttribute('aria-invalid')).toBe('true');
     expect(field('Name').getAttribute('aria-invalid')).toBe('true');
+    expect(field('Email').getAttribute('aria-invalid')).toBe('true');
+    expect(within(summary).getByRole('link', { name: /^Enter an email address/ })).toBeDefined();
+  });
+
+  it('E05-S08 New user requires Email, the address the user signs in with, and offers no way to leave it empty', async () => {
+    renderCoreAt(coreLinks.users.new({ plant }).href, [
+      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+      companiesQuery(),
+    ]);
+
+    const email = await screen.findByRole('textbox', { name: 'Email' });
+
+    expect(email.getAttribute('type')).toBe('email');
+    expect(screen.getByText('Used to sign in.')).toBeDefined();
+    expect(
+      screen.getByText(
+        'Shown in lists of users. It cannot be changed later, and no one else can ever use it.',
+      ),
+    ).toBeDefined();
+    expect(screen.queryByText(/without email/)).toBeNull();
   });
 
   it('E05-S08 a username that is taken or was used before lands on Username with the typed values kept', async () => {
@@ -165,10 +185,11 @@ describe('users', () => {
       {
         request: {
           query: CoreCreateUser,
-          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
-            uuidv7.test(input.id) &&
+          variables: ({ input }: { input: Record<string, string> }) =>
+            uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
-            input.username === 't.lindqvist',
+            input.username === 't.lindqvist' &&
+            input.email === 'tove.lindqvist@example.test',
         },
         result: {
           data: null,
@@ -195,6 +216,7 @@ describe('users', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
     await user.type(field('Username'), 't.lindqvist');
+    await user.type(field('Email'), 'tove.lindqvist@example.test');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
@@ -215,10 +237,11 @@ describe('users', () => {
       {
         request: {
           query: CoreCreateUser,
-          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
-            uuidv7.test(input.id) &&
+          variables: ({ input }: { input: Record<string, string> }) =>
+            uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
-            input.username === 't.lindqvist',
+            input.username === 't.lindqvist' &&
+            input.email === 'tove.lindqvist@example.test',
         },
         result: {
           data: null,
@@ -239,6 +262,7 @@ describe('users', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
     await user.type(field('Username'), 't.lindqvist');
+    await user.type(field('Email'), 'tove.lindqvist@example.test');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
     const summary = await screen.findByRole('group', { name: 'The user t.lindqvist was created' });
@@ -270,10 +294,11 @@ describe('users', () => {
       {
         request: {
           query: CoreCreateUser,
-          variables: ({ input }: { input: { id: string; name: string; username: string } }) =>
-            uuidv7.test(input.id) &&
+          variables: ({ input }: { input: Record<string, string> }) =>
+            uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
-            input.username === 't.lindqvist',
+            input.username === 't.lindqvist' &&
+            input.email === 'tove.lindqvist@example.test',
         },
         result: {
           data: {
@@ -295,6 +320,7 @@ describe('users', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Name' }), 'Tove Lindqvist');
     await user.type(field('Username'), 'T.Lindqvist');
+    await user.type(field('Email'), 'tove.lindqvist@example.test');
     await user.click(screen.getByRole('button', { name: 'Create user' }));
 
     const dialog = await screen.findByRole('dialog', {
