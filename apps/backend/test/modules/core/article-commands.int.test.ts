@@ -149,7 +149,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns core.plant_forbidden', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN without an errorCode', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const client = gqlClient(await testApp.app.getUrl());
 
@@ -160,8 +160,14 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     expect(answer).toMatchObject({
       status: 200,
       data: null,
-      errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' } }],
+      errors: [
+        {
+          message: 'The request names no plant, so it cannot create an article',
+          extensions: { code: 'FORBIDDEN' },
+        },
+      ],
     });
+    expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
   });
 
   /** Creates an article through coreCreateArticle and returns it. */
@@ -216,7 +222,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it("E06-S06 coreUpdateArticle of an unknown id or another plant's article returns core.not_found", async () => {
+  it("E06-S06 coreUpdateArticle of an unknown id or another plant's article returns NOT_FOUND without an errorCode", async () => {
     const otherPlant = await clientAt(given.plant());
     const { id: otherId } = await create(otherPlant, 'WB-100', 'Wall bracket');
     const client = await clientAt(given.plant());
@@ -233,10 +239,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
           {
             message: `Article ${id} was not found`,
             path: ['coreUpdateArticle'],
-            extensions: { code: 'NOT_FOUND', errorCode: 'core.not_found' },
+            extensions: { code: 'NOT_FOUND' },
           },
         ],
       });
+      expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
     }
     expect(await readArticle(otherPlant, otherId)).toMatchObject({ code: 'WB-100', version: 1 });
   });
