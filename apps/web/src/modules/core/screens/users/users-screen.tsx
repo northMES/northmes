@@ -108,7 +108,8 @@ export function UsersScreen() {
     navigate({ to: '.', search: next, replace: true });
   };
   const forbidden = page === undefined && isForbidden(error);
-  const newUser = viewer.can('core.user:create') ? (
+  // The API checks core.user:create at the company (its scope hook), so a plant role's is not enough.
+  const newUser = viewer.canAtCompany('core.user:create') ? (
     <Link to={coreLinks.users.new({ plant }).href} className={buttonVariants()}>
       <Plus aria-hidden />
       New user

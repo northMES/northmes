@@ -171,10 +171,17 @@ export function NewRoleScreen() {
   const search = newRoleSearch(useSearch({ strict: false }));
   const { data, error, refetch } = useQuery(CoreRoles);
   const roles = data?.coreRoles;
-  const forbidden = viewer.loaded && !viewer.can('core.role:manage');
+  // The API checks core.role:manage at the company (ADR 0010).
+  const forbidden = viewer.loaded && !viewer.canAtCompany('core.role:manage');
+  const companyName = places.company?.name ?? 'the company';
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('New role', 'core.role:manage', places.plant?.name ?? plant);
+    state = noAccessState(
+      'New role',
+      'core.role:manage',
+      companyName,
+      `a company admin of ${companyName}`,
+    );
   } else if (roles === undefined && error !== undefined) {
     state = {
       status: 'error',

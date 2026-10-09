@@ -146,7 +146,8 @@ export function RoleScreen() {
   const { role, state, forbidden } = useRole();
   const places = usePlaces();
   const viewer = useViewer();
-  const canManage = viewer.can('core.role:manage');
+  // The API checks core.role:manage at the company (ADR 0010).
+  const canManage = viewer.canAtCompany('core.role:manage');
   const companyName = places.company?.name ?? 'the company';
   let readOnlyReason: string | undefined;
   if (role?.origin === 'MODULE') {

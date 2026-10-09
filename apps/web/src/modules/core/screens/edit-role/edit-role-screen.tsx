@@ -130,11 +130,17 @@ export function EditRoleScreen() {
   const places = usePlaces();
   const viewer = useViewer();
   const { role, state: loaded, reload } = useRole();
-  const forbidden = viewer.loaded && !viewer.can('core.role:manage');
-  const plantName = places.plant?.name ?? plant;
+  // The API checks core.role:manage at the role's company (ADR 0010).
+  const forbidden = viewer.loaded && !viewer.canAtCompany('core.role:manage');
+  const companyName = places.company?.name ?? 'the company';
   let state: PageState = loaded;
   if (forbidden) {
-    state = noAccessState('Edit role', 'core.role:manage', plantName);
+    state = noAccessState(
+      'Edit role',
+      'core.role:manage',
+      companyName,
+      `a company admin of ${companyName}`,
+    );
   } else if (loaded.status === 'ready' && !viewer.loaded) {
     state = { status: 'loading' };
   } else if (role?.origin === 'MODULE') {

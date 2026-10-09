@@ -75,7 +75,9 @@ export function UserScreen() {
   const places = usePlaces();
   const viewer = useViewer();
   const temporary = useTemporaryPassword(userId);
-  const canBlock = viewer.can('core.user:block') && user !== undefined && user.id !== viewer.userId;
+  // The API checks core.user:block at the company, and at every other company the user belongs to.
+  const canBlock =
+    viewer.canAtCompany('core.user:block') && user !== undefined && user.id !== viewer.userId;
   return (
     <PageFrame
       title={forbidden ? 'No access to Users' : (user?.name ?? 'User')}

@@ -133,10 +133,17 @@ export function NewUserScreen() {
   const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
-  const forbidden = viewer.loaded && !viewer.can('core.user:create');
+  // The API checks core.user:create at the company (its scope hook).
+  const forbidden = viewer.loaded && !viewer.canAtCompany('core.user:create');
+  const companyName = places.company?.name ?? 'the company';
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('New user', 'core.user:create', places.plant?.name ?? plant);
+    state = noAccessState(
+      'New user',
+      'core.user:create',
+      companyName,
+      `a company admin of ${companyName}`,
+    );
   } else if (!viewer.loaded) {
     state = { status: 'loading' };
   }
@@ -146,9 +153,7 @@ export function NewUserScreen() {
       crumbs={[{ label: 'Users', href: coreLinks.users({ plant }).href }]}
       state={state}
     >
-      {viewer.loaded && !forbidden && (
-        <NewUserForm companyName={places.company?.name ?? 'the company'} />
-      )}
+      {viewer.loaded && !forbidden && <NewUserForm companyName={companyName} />}
     </PageFrame>
   );
 }

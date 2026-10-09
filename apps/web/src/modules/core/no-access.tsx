@@ -30,13 +30,20 @@ function GoBack() {
 
 /**
  * The state of a page opened by URL without its permission (design core-304, NO1 and RO31): no
- * data, the permission it needs at the plant, who can give it, and a way out. The page's h1 says
- * "No access to Roles", so the state has no heading of its own.
+ * data, the permission it needs at the place where the API checks it, who can give it, and a way
+ * out. place is the plant's name for a permission checked at the plant, and the company's for one
+ * checked at the company, whose admin then gives it. The page's h1 says "No access to Roles", so
+ * the state has no heading of its own.
  */
-export function noAccessState(page: string, permission: string, plant: string): PageState {
+export function noAccessState(
+  page: string,
+  permission: string,
+  place: string,
+  admin = 'a plant admin',
+): PageState {
   return {
     status: 'empty',
-    description: `Opening ${page} needs ${permissionPhrase(permission)} at ${plant}. Ask a plant admin for a role that includes it.`,
+    description: `Opening ${page} needs ${permissionPhrase(permission)} at ${place}. Ask ${admin} for a role that includes it.`,
     action: <GoBack />,
   };
 }

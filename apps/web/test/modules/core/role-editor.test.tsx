@@ -80,7 +80,9 @@ describe('the role editor', () => {
     const autoplan = checkbox('Run autoplan');
     expect(autoplan.hasAttribute('disabled')).toBe(true);
     expect(autoplan.getAttribute('aria-describedby')).toBeTruthy();
-    expect((await screen.findAllByText('You do not hold it at Plant A.')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('You do not hold it at Plant A.')).length).toBeGreaterThan(
+      0,
+    );
     // The module that is not installed never shows.
     expect(screen.queryByText('kanban.board:read')).toBeNull();
 

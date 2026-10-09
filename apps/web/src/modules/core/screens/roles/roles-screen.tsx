@@ -118,7 +118,8 @@ export function RolesScreen() {
   } else if (roles === undefined) {
     state = { status: 'loading' };
   }
-  const canManage = viewer.can('core.role:manage');
+  // The API checks core.role:manage at the company (ADR 0010).
+  const canManage = viewer.canAtCompany('core.role:manage');
   const columns = useMemo(() => columnsOf(companyName, plantName), [companyName, plantName]);
   const loading = roles === undefined;
   return (
