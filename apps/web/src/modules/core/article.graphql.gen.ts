@@ -9,7 +9,7 @@ export type CoreArticleQueryVariables = Exact<{
 }>;
 
 
-export type CoreArticleQuery = { readonly coreArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: unknown } | null };
+export type CoreArticleQuery = { readonly coreArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: string | null } | null };
 
 
 export const CoreArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CoreArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}}]}}]}}]} as unknown as DocumentNode<CoreArticleQuery, CoreArticleQueryVariables>;

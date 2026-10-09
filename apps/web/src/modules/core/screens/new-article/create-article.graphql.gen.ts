@@ -15,7 +15,7 @@ export type CoreCreateArticleMutationVariables = Exact<{
 }>;
 
 
-export type CoreCreateArticleMutation = { readonly coreCreateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: unknown } };
+export type CoreCreateArticleMutation = { readonly coreCreateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: string | null } };
 
 
 export const CoreCreateArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CoreCreateArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoreCreateArticleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreCreateArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}}]}}]}}]} as unknown as DocumentNode<CoreCreateArticleMutation, CoreCreateArticleMutationVariables>;
