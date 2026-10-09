@@ -10,6 +10,7 @@ const lines: Readonly<Record<string, string>> = {
   'core.article:create': 'Create articles',
   'core.article:update': 'Change articles',
   'core.article:archive': 'Archive and restore articles',
+  'core.article:assign': 'Assign articles to plants',
   'core.user:read': 'Read users and their roles',
   'core.user:create': 'Create users',
   'core.user:block': 'Block users',
