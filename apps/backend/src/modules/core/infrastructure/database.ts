@@ -81,6 +81,8 @@ export interface UserDirectoryView {
   /** '' for a user without a username. */
   username: string;
   banned: boolean;
+  /** True while the user signs in with a temporary password and must set a new one. */
+  must_change_password: boolean;
 }
 
 /** core.company_user: the users of a company, its organization's members and its role holders. */

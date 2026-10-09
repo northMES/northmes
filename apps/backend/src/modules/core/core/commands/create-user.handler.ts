@@ -132,7 +132,7 @@ export const createUserHandler = {
         throw new NotFoundException(`User ${id} was not found`);
       }
       if (first.companyIds.length > 0) throw createdPasswordHidden(username, id);
-      await accounts.setPassword(id, password);
+      await accounts.setPassword(id, password, { temporary: true });
       await accounts.addToOrganization(id, organization_id);
       return { user: await userById(tx, id, companyId), temporaryPassword: password };
     }
@@ -142,15 +142,17 @@ export const createUserHandler = {
       .where('username', '=', username)
       .executeTakeFirst();
     if (taken) throw usernameTaken(username);
-    await accounts.createUser({ id, username, password, name, email }).catch((error: unknown) => {
-      if (!(error instanceof EmailTaken)) throw error;
-      throw new DomainError({
-        code: 'core.email_taken',
-        status: HttpStatus.CONFLICT,
-        message: EMAIL_TAKEN,
-        fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
+    await accounts
+      .createUser({ id, username, password, name, email, temporary: true })
+      .catch((error: unknown) => {
+        if (!(error instanceof EmailTaken)) throw error;
+        throw new DomainError({
+          code: 'core.email_taken',
+          status: HttpStatus.CONFLICT,
+          message: EMAIL_TAKEN,
+          fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
+        });
       });
-    });
     await accounts.addToOrganization(id, organization_id);
     return { user: await userById(tx, id, companyId), temporaryPassword: password };
   },

@@ -39,6 +39,18 @@ export function plantForbidden(plant: string): DomainError {
 }
 
 /**
+ * The refusal of every request of a user who signed in with a temporary password and has not set
+ * a new one (ADR 0051 rule 13, D2 SI16). Only the new password step and sign-out answer them.
+ */
+export function passwordChangeRequired(): DomainError {
+  return new DomainError({
+    code: 'core.password_change_required',
+    status: HttpStatus.FORBIDDEN,
+    message: 'You signed in with a temporary password. Choose a new password to continue.',
+  });
+}
+
+/**
  * Resolves the principal of a request (ADR 0010, ADR 0011): from the JWT in its Authorization
  * header to the user, and from the user's role assignments to its scope tree, permissions and
  * scope sets, in one query per request.
@@ -55,16 +67,18 @@ export class PrincipalService extends PrincipalResolver {
   /**
    * The principal of a request with these headers, or null when it carries no bearer token, one
    * that is not a valid JWT of this API, or the JWT of a blocked user. x-northmes-plant names the
-   * request's plant by its slug.
+   * request's plant by its slug. A user who must set a new password is refused with
+   * core.password_change_required.
    */
   async resolve(headers: Headers): Promise<Principal | null> {
     const token = bearer.exec(headers.get('authorization') ?? '')?.[1];
     if (!token) return null;
     const userId = await this.auth.userOfToken(token);
     if (!userId) return null;
-    const { rows, blocked } = await this.#grants(userId);
+    const { rows, blocked, mustChangePassword } = await this.#grants(userId);
     // A blocked user's JWT may outlive the block by its lifetime; the user's next request fails.
     if (blocked) return null;
+    if (mustChangePassword) throw passwordChangeRequired();
     return this.#principal(userId, rows, headers.get(PLANT_HEADER) ?? undefined);
   }
 
@@ -81,23 +95,29 @@ export class PrincipalService extends PrincipalResolver {
 
   /**
    * The grant rows of a user, one per scope node of the companies where the user holds a role, and
-   * whether the user is blocked, in one transaction. It runs without scopes, since they come from
+   * whether the user is blocked or must set a new password, in one transaction. It runs without scopes, since they come from
    * the grants, so it reads core.role through core.principal_grants, which the policy of core.role
    * does not bind.
    */
-  async #grants(userId: string): Promise<{ rows: GrantRow[]; blocked: boolean }> {
+  async #grants(
+    userId: string,
+  ): Promise<{ rows: GrantRow[]; blocked: boolean; mustChangePassword: boolean }> {
     return runAs(null, () =>
       this.db.transaction(async (tx) => {
         const user = await tx
           .selectFrom('core.user_directory')
-          .select('banned')
+          .select(['banned', 'must_change_password'])
           .where('id', '=', userId)
           .executeTakeFirst();
         const { rows } = await sql<GrantRow>`
           select id, parent_id, slug, permissions from core.principal_grants(${userId})`.execute(
           tx,
         );
-        return { rows, blocked: user?.banned === true };
+        return {
+          rows,
+          blocked: user?.banned === true,
+          mustChangePassword: user?.must_change_password === true,
+        };
       }),
     );
   }

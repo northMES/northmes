@@ -2,11 +2,11 @@
 import { randomUUIDv7 } from 'node:crypto';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
 } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
-import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
 import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
 
