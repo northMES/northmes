@@ -69,9 +69,9 @@ export function createShellRouter(
       void toSignIn({ redirect: router.state.location.href });
     },
   };
-  const clientFor = (plantId: string): ApolloClient => {
-    const client = clients.get(plantId) ?? createNorthmesClient({ plantId, apiUrl, fetch, auth });
-    clients.set(plantId, client);
+  const clientFor = (plant: string): ApolloClient => {
+    const client = clients.get(plant) ?? createNorthmesClient({ plant, apiUrl, fetch, auth });
+    clients.set(plant, client);
     return client;
   };
   const signOut = async () => {
@@ -173,7 +173,7 @@ function shellTrail(
 
 interface PlantLayoutProps {
   readonly modules: readonly ShellModule[];
-  readonly clientFor: (plantId: string) => ApolloClient;
+  readonly clientFor: (plant: string) => ApolloClient;
   readonly session: AuthSession;
   readonly onSignOut: () => void;
 }
@@ -201,7 +201,7 @@ function PlantLayout({ modules, clientFor, session, onSignOut }: PlantLayoutProp
   );
   return (
     <ApolloProvider client={clientFor(plant)}>
-      <ShellProvider value={{ plantId: plant }}>
+      <ShellProvider value={{ plant }}>
         <SkipLink targetId={mainId} />
         <SidebarProvider>
           <ShellSidebar

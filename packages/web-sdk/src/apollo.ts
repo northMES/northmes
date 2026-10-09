@@ -30,8 +30,12 @@ export interface NorthmesClientAuth {
 }
 
 export interface CreateNorthmesClientOptions {
-  /** The plant's scope id. Every HTTP request names it in x-northmes-plant. */
-  readonly plantId: string;
+  /**
+   * The plant's slug, its segment of the web's URLs. Every HTTP request names it in
+   * x-northmes-plant. Without one, requests name no plant, for the queries every plant shares,
+   * such as the user's plants.
+   */
+  readonly plant?: string;
   /**
    * The URL of the API, such as https://mes.example.com or one with a path prefix. The client
    * sends its requests to <apiUrl>/graphql. Without one, it uses the page's origin.
@@ -46,8 +50,8 @@ export interface CreateNorthmesClientOptions {
 }
 
 /**
- * Returns the Apollo client for one plant (ADR 0018). Only the shell calls it, and a plant switch
- * creates a new client.
+ * Returns the Apollo client for one plant (ADR 0018), or for no plant. Only the shell calls it, and
+ * a plant switch creates a new client.
  *
  * Subscriptions run over the client's own graphql-ws connection, which sends no connectionParams:
  * each subscription names its plant in its plantId argument, and the server takes the principal
@@ -56,7 +60,7 @@ export interface CreateNorthmesClientOptions {
 export function createNorthmesClient(options: CreateNorthmesClientOptions): ApolloClient {
   const http = new HttpLink({
     uri: options.apiUrl === undefined ? `/${graphqlPath}` : graphqlUrl(options.apiUrl).href,
-    headers: { 'x-northmes-plant': options.plantId },
+    headers: options.plant === undefined ? {} : { 'x-northmes-plant': options.plant },
     fetch: options.fetch,
   });
   const ws = new GraphQLWsLink(

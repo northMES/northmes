@@ -3,8 +3,8 @@ import { createContext, type ReactNode, useContext } from 'react';
 
 /** State the shell owns and every module reads. */
 export interface ShellState {
-  /** The plant's scope id from the $plant segment. */
-  readonly plantId: string;
+  /** The plant's slug, the $plant segment of the URL, which a module's links take as `plant`. */
+  readonly plant: string;
 }
 
 const ShellContext = createContext<ShellState | null>(null);

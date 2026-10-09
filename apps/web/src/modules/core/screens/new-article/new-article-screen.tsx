@@ -23,7 +23,7 @@ import { CoreCreateArticle } from './create-article.graphql.ts';
  * history, and the polite region says "Article BR-900 created".
  */
 export function NewArticleScreen() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
   const form = useZodForm(createArticle.fields, { defaultValues: { code: '', name: '' } });
@@ -47,7 +47,7 @@ export function NewArticleScreen() {
       const article = data.coreCreateArticle;
       announce(`Article ${article.code} created`);
       await navigate({
-        to: coreLinks.articles.article({ plant: plantId, articleId: article.id }).href,
+        to: coreLinks.articles.article({ plant, articleId: article.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -58,12 +58,12 @@ export function NewArticleScreen() {
   return (
     <PageFrame
       title="New article"
-      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant: plantId }).href }]}
+      crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant }).href }]}
     >
       <ArticleForm
         form={form}
         onSave={save}
-        cancelHref={coreLinks.articles({ plant: plantId }).href}
+        cancelHref={coreLinks.articles({ plant }).href}
       />
     </PageFrame>
   );
