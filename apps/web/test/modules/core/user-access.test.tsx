@@ -203,6 +203,7 @@ describe("a user's access", () => {
   });
 
   it('E05-S06 a reader without core.role:read sees No access in each Role cell, Remove named by the place, no Add role, and the permissions region denied with what it needs', async () => {
+    const pointer = userEvent.setup();
     renderCoreAt(accessHref, [
       viewerQuery(['core.user:read', 'core.roleAssignment:manage']),
       companiesQuery(),
@@ -239,6 +240,18 @@ describe("a user's access", () => {
     expect(
       within(can).getByText('This needs the permission to read roles (core.role:read) at Plant A.'),
     ).toBeDefined();
+
+    // The reader cannot see the role, so the dialog does not claim what the user keeps.
+    await pointer.click(screen.getByRole('button', { name: 'Remove role at Plant A' }));
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'Remove a role at Plant A from Sara Nyberg?',
+    });
+    expect(
+      within(dialog).getByText(
+        'From the next action, Sara Nyberg loses the permissions of this role at Plant A that no other role grants.',
+      ),
+    ).toBeDefined();
+    expect(within(dialog).queryByText(/keeps every permission/)).toBeNull();
   });
 
   it('E05-S08 Block user needs core.user:block at the company: a plant admin who holds it at Plant A only gets no Block user', async () => {
