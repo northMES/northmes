@@ -322,28 +322,37 @@ describe('tooling', () => {
     }
   });
 
-  it('E05-S05 better-auth and @better-auth/api-key are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
+  it('E05-S05 better-auth and its api-key and oauth-provider plugins are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
     // ADR 0010 pins Better Auth 1.7.x exactly. 1.7.6 was the newest 1.7 release outside Renovate's
-    // 14-day window on 2026-10-09. The api-key plugin ships in its own package since 1.5 and must
-    // match better-auth's version; username, organization, admin, jwt and bearer ship inside it.
-    const packages = ['better-auth', '@better-auth/api-key'];
+    // 14-day window on 2026-10-09. The api-key plugin ships in its own package since 1.5, and the
+    // OAuth 2.1 provider since 1.7.0 removed the in-core oidcProvider; each must match
+    // better-auth's version. Username, organization, admin, jwt and bearer ship inside it.
+    const packages = ['better-auth', '@better-auth/api-key', '@better-auth/oauth-provider'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
     expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
       'better-auth': '1.7.6',
       '@better-auth/api-key': '1.7.6',
+      '@better-auth/oauth-provider': '1.7.6',
     });
     for (const name of packages) {
       expect(backend.dependencies?.[name], `apps/backend dependencies ${name}`).toBe('catalog:');
     }
   });
 
-  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core, @better-auth/api-key and kysely, and no @better-auth/cli', () => {
-    // The api-key plugin and the Kysely adapter register against @better-auth/core, and Better
-    // Auth's Kysely adapter shares the kysely copy that the backend queries with. ADR 0040 lists
-    // @better-auth/cli as never installed.
-    for (const name of ['better-auth', '@better-auth/core', '@better-auth/api-key', 'kysely']) {
+  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core, its plugin packages, better-call and kysely, and no @better-auth/cli', () => {
+    // The api-key and oauth-provider plugins and the Kysely adapter register against
+    // @better-auth/core and better-call, and Better Auth's Kysely adapter shares the kysely copy
+    // that the backend queries with. ADR 0040 lists @better-auth/cli as never installed.
+    for (const name of [
+      'better-auth',
+      '@better-auth/core',
+      '@better-auth/api-key',
+      '@better-auth/oauth-provider',
+      'better-call',
+      'kysely',
+    ]) {
       expect(resolutions(name), name).toHaveLength(1);
     }
     expect(resolutions('@better-auth/cli')).toEqual([]);
