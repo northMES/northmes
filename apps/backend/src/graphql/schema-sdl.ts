@@ -13,7 +13,7 @@ import { importServers, inRepoCatalog } from '../boot/boot.ts';
  * listening, then closes it.
  */
 export async function schemaSdl(): Promise<string> {
-  const catalog = await inRepoCatalog((specifier) => import(specifier));
+  const catalog = inRepoCatalog();
   const servers = await importServers(catalog);
   const config = await ConfigModule.forRoot({
     isGlobal: true,
