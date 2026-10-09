@@ -78,8 +78,13 @@ export function ErrorState({
             variant="ghost"
             size="icon-sm"
             onClick={async () => {
-              await navigator.clipboard.writeText(correlationId);
-              announce('Correlation id copied');
+              try {
+                await navigator.clipboard.writeText(correlationId);
+                announce('Correlation id copied');
+              } catch {
+                // The browser refuses without focus, without permission or on an insecure origin.
+                announce('Could not copy the correlation id. Select it and copy it by hand.');
+              }
             }}
           >
             <Copy />
