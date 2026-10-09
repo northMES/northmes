@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { BootError } from '../../src/boot/boot-error.ts';
 import { DEFAULT_VALIDATOR_TIMEOUT_MS } from '../../src/commands/command-bus.ts';
 import { discoverValidators } from '../../src/commands/discover-validators.ts';
-import { dispatch, HoldJob } from '../fixtures/commands/dispatch.ts';
+import { DispatchModule, dispatch, HoldJob } from '../fixtures/commands/dispatch.ts';
 import {
   holdRules,
   looseRules,
@@ -22,6 +22,10 @@ class ReleaseLimitsChecksModule {}
 @Module({ imports: [ReleaseLimitsChecksModule] })
 class NestedReleaseLimitsModule {}
 
+/** release-limits importing the owner's Nest module, as a plugin that calls dispatch's services would. */
+@Module({ imports: [DispatchModule], providers: [QuantityLimit] })
+class ReleaseLimitsImportingDispatchModule {}
+
 /** Lists QuantityCap as a class provider with useClass. */
 @Module({ providers: [{ provide: 'quantity-cap', useClass: QuantityCap }] })
 class ClassProviderModule {}
@@ -37,6 +41,15 @@ describe('discoverValidators', () => {
     const validators = discoverValidators([
       dispatch,
       { ...releaseLimits, module: NestedReleaseLimitsModule },
+    ]);
+
+    expect(validators).toEqual([{ module: 'release-limits', validator: QuantityLimit.validator }]);
+  });
+
+  it("E02-S04 a module that imports the owner's Nest module does not take over the owner's commands", () => {
+    const validators = discoverValidators([
+      dispatch,
+      { ...releaseLimits, module: ReleaseLimitsImportingDispatchModule },
     ]);
 
     expect(validators).toEqual([{ module: 'release-limits', validator: QuantityLimit.validator }]);
