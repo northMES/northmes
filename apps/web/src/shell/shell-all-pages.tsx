@@ -18,8 +18,8 @@ export const PageGroupsProvider = PageGroupsContext.Provider;
 /**
  * The All pages index of a plant (ADR 0021, WCAG 2.4.5), which Help and Page not found lead to:
  * the h1 All pages, then every page the user can open at the plant, one list per module named by
- * its h2 in the sidebar's order, and the plant's settings last. Its title reads "All pages · Plant
- * A · NorthMES".
+ * its h2 in the sidebar's order, and the plant's settings last. Each link is a target at least
+ * --nm-target-min wide and high (WCAG 2.5.8). Its title reads "All pages · Plant A · NorthMES".
  */
 export function ShellAllPages() {
   const groups = useContext(PageGroupsContext);
@@ -34,7 +34,10 @@ export function ShellAllPages() {
             <ul aria-labelledby={`all-pages-${index}`} className="grid gap-1">
               {entries.map(({ label: page, href }) => (
                 <li key={href}>
-                  <Link to={href} className="text-link underline">
+                  <Link
+                    to={href}
+                    className="inline-flex min-h-(--nm-target-min) min-w-(--nm-target-min) items-center text-link underline"
+                  >
                     {page}
                   </Link>
                 </li>
