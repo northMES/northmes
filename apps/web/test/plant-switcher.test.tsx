@@ -193,6 +193,29 @@ describe('the plant switcher', () => {
     ).toEqual(['Plant A', 'Plant B']);
   });
 
+  it('E04-S04 plants of one company render without group labels, also when another company of the user has no plant yet', async () => {
+    const user = userEvent.setup();
+    renderAt('/plant-b/planning/orders', [
+      company('Demo Works', [plantA, plantB]),
+      company('Nordic Tools', []),
+    ]);
+
+    const { menu } = await openSwitcher(user, 'Demo Works, Plant B, switch plant');
+
+    expect(within(menu).queryAllByRole('group')).toEqual([]);
+    expect(menu.textContent).not.toContain('Nordic Tools');
+  });
+
+  it("E04-S04 the company mark shows the company's initial letter, hidden from assistive technology (PL26)", async () => {
+    renderAt('/plant-a/planning/orders', twoCompanies);
+
+    const switcher = await within(await sidebar()).findByRole('button', { name: /switch plant$/ });
+
+    const mark = switcher.querySelector('[aria-hidden="true"]');
+    expect(mark?.textContent).toBe('D');
+    expect(mark?.querySelector('svg')).toBeNull();
+  });
+
   it('E04-S04 with one plant the switcher is not rendered, and the sidebar head names the company and the plant as text', async () => {
     renderAt('/plant-a/planning/orders', [company('Demo Works', [plantA])]);
     const nav = await sidebar();
