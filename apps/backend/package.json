@@ -16,6 +16,7 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
+    "@better-auth/api-key": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -26,6 +27,7 @@
     "@northmes/core-contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
     "@northmes/sdk": "workspace:*",
+    "better-auth": "catalog:",
     "graphql": "catalog:",
     "graphql-subscriptions": "catalog:",
     "graphql-ws": "catalog:",
