@@ -83,6 +83,14 @@ describe("the web's typed documents", () => {
     }
   });
 
+  it('a DateTime field is a string, the ISO 8601 instant the API sends', async () => {
+    const files = await generateFrom(committedSchema);
+    const article = files.find(({ path }) => path === 'src/modules/core/article.graphql.gen.ts');
+
+    expect(committedSchema).toMatch(/^scalar DateTime$/m);
+    expect(article?.content).toContain('readonly archivedAt: string | null');
+  });
+
   it('a field the schema no longer has fails the generation, naming the field', async () => {
     const schema = schemaWith('Article', 'name: String!', '');
 
