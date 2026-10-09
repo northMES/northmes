@@ -63,4 +63,12 @@ describe('core routes', () => {
       await waitFor(() => expect(router.state.location.href).toBe(now));
     },
   );
+
+  it('E04-S02 an old URL keeps its search values and its hash on the way to the new one (ADR 0074)', async () => {
+    const router = renderCoreAt('/plant-a/core/articles?q=fl%C3%A4ns%20dn50#rows', []);
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/articles'));
+    expect(router.state.location.search).toMatchObject({ q: 'fläns dn50' });
+    expect(router.state.location.hash).toBe('rows');
+  });
 });
