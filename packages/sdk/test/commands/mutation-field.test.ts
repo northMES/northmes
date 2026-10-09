@@ -171,6 +171,8 @@ describe('defineCommand', () => {
     class TagModule {}
     const { schema, moduleRef } = await buildSchema([
       { module: FakeCommandsModule, global: true },
+      // Planning's fixture brings the Query root that a schema needs.
+      PlanningModule,
       TagModule,
     ]);
     opened.push(moduleRef);
