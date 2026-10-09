@@ -15,6 +15,7 @@ if (false) {
     query CoreRole($id: ID!, $companyId: ID!) {
       coreRole(id: $id, companyId: $companyId) {
         id
+        key
         name
         origin
         moduleId

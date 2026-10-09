@@ -138,6 +138,14 @@ describe('People in plant settings', () => {
         'From the next action, Anna Berg loses the permissions of this role at Plant A that no other role grants.',
       ),
     ).toBeDefined();
+    const reason = within(dialog).getByRole('textbox', { name: 'Reason (optional)' });
+    expect(reason.getAttribute('placeholder')).toBe('Why you remove this role');
+    expect(reason.getAttribute('maxlength')).toBe('500');
+    expect(
+      within(dialog).getByText(
+        "Shown in the user's history. Do not enter personal data. Up to 500 characters.",
+      ),
+    ).toBeDefined();
     await user.click(within(dialog).getByRole('button', { name: 'Remove role' }));
 
     await waitFor(() =>
@@ -195,7 +203,9 @@ describe('People in plant settings', () => {
     expect(within(roles).getByRole('radio', { name: 'Viewer' }).hasAttribute('data-disabled')).toBe(
       true,
     );
-    expect(screen.getByText('Anna Berg holds it at Plant A already.')).toBeDefined();
+    expect(
+      within(roles).getByText('Planning, default role. Anna Berg already holds it at Plant A.'),
+    ).toBeDefined();
     await user.click(within(roles).getByRole('radio', { name: 'Planner' }));
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 

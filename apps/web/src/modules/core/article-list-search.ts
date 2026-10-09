@@ -5,10 +5,16 @@ import { z } from 'zod';
 export const articlePageSize = 25;
 
 /**
- * The sort of the list in the URL's sort key: a column id, with a leading minus for descending.
- * The default, article number ascending, stays out of the URL.
+ * The sort of the list in the URL's sort key: a column id, with a leading minus for descending
+ * (design ui-222, URL keys). The default, Last changed newest first, stays out of the URL (A5).
  */
-type ArticleSort = '-code' | 'name' | '-name';
+type ArticleSort = 'code' | '-code' | 'name' | '-name' | 'changed';
+
+/** The default sort, Last changed newest first (design ui-222, A5). */
+const defaultSort = '-changed';
+
+/** The sort field of coreArticles behind each column id. */
+const sortFields = { code: 'CODE', name: 'NAME', changed: 'UPDATED_AT' } as const;
 
 /**
  * The view of the articles list that lives in the URL (plan 06, View state in the URL): the search
@@ -38,7 +44,7 @@ const searchKeys = z.object({
     .pipe(z.string().trim().min(1).max(100))
     .optional()
     .catch(undefined),
-  sort: z.enum(['-code', 'name', '-name']).optional().catch(undefined),
+  sort: z.enum(['code', '-code', 'name', '-name', 'changed']).optional().catch(undefined),
   archived: z
     .union([z.literal(1), z.literal('1')])
     .transform(() => 1 as const)
@@ -81,7 +87,7 @@ export function sortedBy(
   { id, desc }: { readonly id: string; readonly desc: boolean },
 ): ArticleListSearch {
   const sort = `${desc ? '-' : ''}${id}`;
-  return query({ ...view, sort: sort === 'code' ? undefined : (sort as ArticleSort) });
+  return query({ ...view, sort: sort === defaultSort ? undefined : (sort as ArticleSort) });
 }
 
 /** The view searching for text, from the first page; an empty text clears the search. */
@@ -112,7 +118,7 @@ export function previousPage(view: ArticleListSearch, startCursor: string): Arti
 
 /** The column and direction of the view's sort, for the table's sort headers. */
 export function sortOf(view: Pick<ArticleListSearch, 'sort'>) {
-  const sort: string = view.sort ?? 'code';
+  const sort: string = view.sort ?? defaultSort;
   const desc = sort.startsWith('-');
   return { id: desc ? sort.slice(1) : sort, desc };
 }
@@ -124,7 +130,7 @@ export function sortOf(view: Pick<ArticleListSearch, 'sort'>) {
  */
 export function articleListVariables(view: ArticleListSearch) {
   const { id, desc } = sortOf(view);
-  const field = id === 'name' ? 'NAME' : 'CODE';
+  const field = sortFields[id as keyof typeof sortFields] ?? 'UPDATED_AT';
   const orderBy = [{ field, direction: desc ? 'DESC' : 'ASC' }] as const;
   const paging =
     view.before !== undefined

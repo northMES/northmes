@@ -66,6 +66,20 @@ export function noAccessState(
   };
 }
 
+/**
+ * The state of a list or a record the API refused with FORBIDDEN, because the user holds no role
+ * that reads it (design ui-222, ST19 and ST23): Lock, the permission named in plain words at the
+ * company, and who can give it; no data and no way on, as the page keeps its h1.
+ */
+export function readForbiddenState(noun: string, company: string): PageState {
+  return {
+    status: 'empty',
+    icon: Lock,
+    title: `You need the permission to read ${noun} in ${company}`,
+    description: `Ask your plant admin for a role that can read ${noun}.`,
+  };
+}
+
 interface ForbiddenRegionProps {
   /** What the region would show, such as "You cannot see what Sara Nyberg can do here". */
   readonly title: string;

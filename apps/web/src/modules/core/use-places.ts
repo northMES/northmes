@@ -23,10 +23,11 @@ export interface Places {
  * The company in the URL of company settings and its plants (ADR 0066), or the plant in the URL
  * of plant settings and its company: the places the access pages read and give roles at (design
  * core-304, assumption: from Plant A the pages read Acme AB and Plant A, never Plant B).
+ * With skip, it reads nothing and answers no place, as for a page that names no place.
  */
-export function usePlaces(): Places {
+export function usePlaces({ skip = false }: { readonly skip?: boolean } = {}): Places {
   const { plant: slug, companyId } = useParams({ strict: false });
-  const { data } = useQuery(CoreCompanies);
+  const { data } = useQuery(CoreCompanies, { skip });
   for (const company of data?.coreCompanies ?? []) {
     const plant = company.plants.find((each) => each.slug === slug);
     if (companyId === undefined ? plant !== undefined : company.id === companyId) {

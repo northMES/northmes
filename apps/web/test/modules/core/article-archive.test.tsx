@@ -16,6 +16,7 @@ import {
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
   spoken,
@@ -228,15 +229,17 @@ describe('archive and restore an article', () => {
       ),
     ]);
     const table = await screen.findByRole('table', { name: 'Articles' });
-    await waitFor(() => expect(bodyRows(table)).toEqual([['AX-400', 'Axle 10 mm']]));
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([['AX-400', 'Axle 10 mm', lastChangedText]]),
+    );
 
     const showArchived = screen.getByRole('checkbox', { name: 'Show archived' });
     await user.click(showArchived);
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-400', 'Axle 10 mm'],
-        ['AX-500', 'Axle 20 mmArchived'],
+        ['AX-400', 'Axle 10 mm', lastChangedText],
+        ['AX-500', 'Axle 20 mmArchived', lastChangedText],
       ]),
     );
     expect(router.state.location.search).toEqual({ archived: 1 });

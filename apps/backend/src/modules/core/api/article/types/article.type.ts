@@ -18,4 +18,6 @@ export class Article {
    * coreArticles unless includeArchived is true, and cannot be changed until it is restored.
    */
   @Field(() => GraphQLISODateTime, { nullable: true }) archivedAt!: Date | null;
+  /** When the article last changed, its creation included; the articles list sorts by it. */
+  @Field(() => GraphQLISODateTime) updatedAt!: Date;
 }
