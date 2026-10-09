@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
 import { PlanningBoard } from './board.graphql.ts';
 import { OrderRow } from './order-row.tsx';
 
@@ -10,6 +11,10 @@ import { OrderRow } from './order-row.tsx';
  * end-to-end specs. Its page frame gives it the h1, the document title, the breadcrumb in the
  * shell's top bar, and the loading and error states. The real board comes with E08.
  */
+/** The keys of the skeleton rows and cells the board draws while its orders load. */
+const skeletonRows = ['skeleton-0', 'skeleton-1', 'skeleton-2'];
+const skeletonCells = ['number', 'article', 'quantity', 'status', 'version', 'action'];
+
 export function BoardScreen() {
   const { data, error, refetch } = useQuery(PlanningBoard);
   let state: PageState = { status: 'ready' };
@@ -40,9 +45,19 @@ export function BoardScreen() {
             </tr>
           </thead>
           <tbody>
-            {data?.planningProductionOrders.map((order) => (
-              <OrderRow key={order.id} order={order} />
-            ))}
+            {state.status === 'loading'
+              ? skeletonRows.map((row) => (
+                  <tr key={row}>
+                    {skeletonCells.map((cell) => (
+                      <td key={cell}>
+                        <Skeleton aria-hidden className="h-3 w-16 motion-reduce:animate-none" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              : data?.planningProductionOrders.map((order) => (
+                  <OrderRow key={order.id} order={order} />
+                ))}
           </tbody>
         </table>
       </section>
