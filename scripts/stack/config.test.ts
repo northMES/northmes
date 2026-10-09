@@ -86,6 +86,34 @@ describe('writeDevConfig', () => {
     expect(written()).toEqual(before);
     expect(second).toEqual({ ...first, NORTHMES_ROLE: 'api' });
   });
+
+  it("E02-S08 a dev.env written before a secret was added gains that secret's _FILE key and keeps every line it had", () => {
+    // A dev.env from before Better Auth's secret, with a key added by hand and one _FILE key
+    // pointed elsewhere by hand.
+    const older = [
+      'NODE_ENV=development',
+      `POSTGRES_PASSWORD_FILE=${join(dir, 'secrets/postgres_password')}`,
+      `NORTHMES_DB_OWNER_PASSWORD_FILE=${join(dir, 'secrets/db_owner_password')}`,
+      `NORTHMES_DB_APP_PASSWORD_FILE=${join(dir, 'elsewhere/db_app_password')}`,
+      `NORTHMES_DB_AUTH_PASSWORD_FILE=${join(dir, 'secrets/db_auth_password')}`,
+      'NORTHMES_ROLE=api',
+      '',
+    ].join('\n');
+    writeFileSync(join(dir, 'dev.env'), older);
+
+    const env = writeDevConfig(dir);
+
+    const devEnv = readFileSync(join(dir, 'dev.env'), 'utf8');
+    expect(devEnv.startsWith(older)).toBe(true);
+    expect(parseEnv(devEnv)).toEqual({
+      ...parseEnv(older),
+      NORTHMES_AUTH_SECRET_FILE: join(dir, 'secrets/auth_secret'),
+    });
+    expect(env).toEqual(parseEnv(devEnv));
+    expect(
+      readFileSync(join(dir, 'secrets/auth_secret'), 'utf8').startsWith(DEV_SECRET_MARKER),
+    ).toBe(true);
+  });
 });
 
 describe('publishIfMissing', () => {
