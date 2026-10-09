@@ -31,6 +31,10 @@
     "./errors": {
       "@northmes/source": "./src/errors/index.ts",
       "default": "./dist/errors/index.js"
+    },
+    "./lists": {
+      "@northmes/source": "./src/lists/index.ts",
+      "default": "./dist/lists/index.js"
     }
   },
   "scripts": {

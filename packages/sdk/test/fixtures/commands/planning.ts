@@ -31,6 +31,8 @@ export class ProductionOrderResolver {
 
 export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   returns: () => ProductionOrder,
+  // The fixture reads no table: every order it is asked for exists at version 1.
+  target: { entity: 'Production order', load: async (id) => ({ id, version: 1 }) },
   async handle({ id }) {
     return { id, status: 'released' };
   },

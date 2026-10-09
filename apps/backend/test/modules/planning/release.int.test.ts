@@ -66,7 +66,7 @@ describe('planningReleaseProductionOrder', () => {
     const id = await writeOrder(plant, '6501');
     const client = await clientAt(plant);
 
-    const answer = await client.send(releaseMutation, { input: { id } });
+    const answer = await client.send(releaseMutation, { input: { id, expectedVersion: 1 } });
 
     expect(answer).toEqual({
       status: 200,
@@ -82,9 +82,9 @@ describe('planningReleaseProductionOrder', () => {
     const plant = given.plant();
     const id = await writeOrder(plant, '6502');
     const client = await clientAt(plant);
-    await client.send(releaseMutation, { input: { id } });
+    await client.send(releaseMutation, { input: { id, expectedVersion: 1 } });
 
-    const answer = await client.send(releaseMutation, { input: { id } });
+    const answer = await client.send(releaseMutation, { input: { id, expectedVersion: 2 } });
 
     expect(answer).toMatchObject({
       status: 200,
@@ -111,7 +111,9 @@ describe('planningReleaseProductionOrder', () => {
     const otherPlant = given.plant();
     const id = await writeOrder(otherPlant, '6503');
 
-    const answer = await (await clientAt(plant)).send(releaseMutation, { input: { id } });
+    const answer = await (await clientAt(plant)).send(releaseMutation, {
+      input: { id, expectedVersion: 1 },
+    });
 
     expect(answer).toMatchObject({
       status: 200,
@@ -125,6 +127,30 @@ describe('planningReleaseProductionOrder', () => {
       ],
     });
     expect(await (await clientAt(otherPlant)).send(ordersQuery)).toEqual({
+      status: 200,
+      data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },
+    });
+  });
+
+  it('E05-S01 releasing an order with a stale expectedVersion returns core.version_conflict and leaves it planned', async () => {
+    const plant = given.plant();
+    const id = await writeOrder(plant, '6504');
+    const client = await clientAt(plant);
+
+    const answer = await client.send(releaseMutation, { input: { id, expectedVersion: 2 } });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `Production order ${id} is at version 1, and the change was made on version 2`,
+          path: ['planningReleaseProductionOrder'],
+          extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+        },
+      ],
+    });
+    expect(await client.send(ordersQuery)).toEqual({
       status: 200,
       data: { planningProductionOrders: [{ id, status: 'planned', version: 1 }] },
     });

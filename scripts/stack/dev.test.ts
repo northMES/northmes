@@ -23,6 +23,7 @@ describe('devPlan', () => {
     ]);
     expect(plan.watch.args.slice(5).sort()).toEqual([
       'apps/backend/tsconfig.build.json',
+      'modules/core/contracts/tsconfig.build.json',
       'modules/planning/contracts/tsconfig.build.json',
       'packages/contracts/tsconfig.build.json',
       'packages/sdk/tsconfig.build.json',

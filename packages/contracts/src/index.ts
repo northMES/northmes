@@ -5,6 +5,7 @@ export {
   type CommandContractOptions,
   type CommandTarget,
   defineCommandContract,
+  version,
 } from './define-command-contract.ts';
 export {
   defineModuleLinks,
