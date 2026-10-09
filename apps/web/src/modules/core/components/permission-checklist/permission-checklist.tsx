@@ -54,8 +54,10 @@ export interface PermissionChecklistProps {
   readonly onChange: (value: string[]) => void;
   /** The role the rows' Added and Removed marks compare with: the one a new role starts from. */
   readonly baseline?: { readonly name: string; readonly permissions: readonly string[] };
-  /** The save refused these permissions: each is marked invalid. */
+  /** The save refused these permissions: each is marked invalid, with the line that says why. */
   readonly refused?: readonly string[];
+  /** Why the save refused them, such as "Refused: you do not hold it at Plant B, where ...". */
+  readonly refusedReason?: string;
   /**
    * The permissions the edited role holds already. Ticking one of them again adds nothing, so it
    * is never locked.
@@ -80,6 +82,8 @@ interface RowProps {
   /** The editor cannot tick it: the row draws a Lock in place of the checkbox. */
   readonly locked: boolean;
   readonly invalid: boolean;
+  /** Why the save refused the permission, shown while it is invalid. */
+  readonly refusedReason?: string;
   readonly lockedReason: string;
   /** Added or Removed against the role the form compares with; removed lines are struck through. */
   readonly mark?: 'added' | 'removed';
@@ -97,6 +101,7 @@ function PermissionRow({
   unheld,
   locked,
   invalid,
+  refusedReason,
   lockedReason,
   mark,
   onCheckedChange,
@@ -104,7 +109,11 @@ function PermissionRow({
   const labelId = useId();
   const idId = useId();
   const reasonId = useId();
-  const describedBy = unheld ? `${idId} ${reasonId}` : idId;
+  const refusedId = useId();
+  const refusedLine = invalid && refusedReason !== undefined;
+  const describedBy = [idId, unheld && !refusedLine ? reasonId : '', refusedLine ? refusedId : '']
+    .filter((id) => id !== '')
+    .join(' ');
   return (
     <li className="flex min-h-9 items-start gap-3 py-1.5">
       {locked ? (
@@ -138,9 +147,14 @@ function PermissionRow({
           <span id={labelId} className={cn(mark === 'removed' && 'line-through')}>
             {permissionLine(permission)}
           </span>
-          {unheld && (
+          {unheld && !refusedLine && (
             <span id={reasonId} className="text-xs text-muted-foreground">
               {lockedReason}
+            </span>
+          )}
+          {refusedLine && (
+            <span id={refusedId} className="text-xs text-destructive">
+              {refusedReason}
             </span>
           )}
         </span>
@@ -163,7 +177,7 @@ function ModuleGroup({
   ...rest
 }: { readonly group: PermissionGroup; readonly value: ReadonlySet<string> } & Pick<
   PermissionChecklistProps,
-  'onChange' | 'refused'
+  'onChange' | 'refused' | 'refusedReason'
 > & {
     /** The first place where the role is assigned and the editor lacks the permission. */
     readonly lackingAt: (key: string) => string | undefined;
@@ -207,6 +221,7 @@ function ModuleGroup({
                 // Removing a permission needs nothing; adding one needs it (ADR 0010).
                 locked={lacking !== undefined && !value.has(key) && !rest.current.has(key)}
                 invalid={rest.refused?.includes(key) ?? false}
+                refusedReason={rest.refusedReason}
                 lockedReason={`You do not hold it at ${lacking ?? ''}.`}
                 mark={markOf(key, value, rest.baseline)}
                 onCheckedChange={(checked) => {
@@ -257,6 +272,7 @@ export function PermissionChecklist({
   onChange,
   baseline,
   refused,
+  refusedReason,
   current = [],
   assigned,
 }: PermissionChecklistProps) {
@@ -317,6 +333,7 @@ export function PermissionChecklist({
           all={all}
           onChange={change}
           refused={refused}
+          refusedReason={refusedReason}
           lackingAt={lackingAt}
           current={currentKeys}
           baseline={baselineKeys}

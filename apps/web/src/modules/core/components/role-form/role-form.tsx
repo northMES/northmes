@@ -4,18 +4,21 @@ import type { ReactNode } from 'react';
 import { Controller } from 'react-hook-form';
 import type { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
-import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
+import { ErrorSummary, type SummaryError } from '../../../../ui/components/error-summary/index.ts';
 import { FormActions } from '../../../../ui/components/form-actions/index.ts';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
+import { permissionWithId } from '../../permission-names.ts';
 import {
   PermissionChecklist,
   type PermissionChecklistProps,
 } from '../permission-checklist/index.ts';
 import { RoleFormDifference } from './role-form-difference.tsx';
+import type { RoleRefusal } from './role-save-errors.ts';
 
 /** The fields of the role form: the name, the permissions and the reason of a change. */
 export type RoleFields = typeof updateRole.fields;
@@ -47,8 +50,10 @@ export interface RoleFormProps {
   readonly side?: ReactNode;
   /** The Save bar says "Changes not saved" while the form has changes; off when a card says it. */
   readonly dirtyLine?: boolean;
-  /** The permissions the last save was refused for, marked invalid in the checklist. */
-  readonly refused?: readonly string[];
+  /** The permissions the last save was refused for, marked invalid with why, and linked. */
+  readonly refusal?: RoleRefusal;
+  /** The saved role's permissions, which the rows' Added and Removed marks compare with. */
+  readonly saved?: readonly string[];
   /** The permissions the edited role holds already, which the editor may tick again. */
   readonly current?: readonly string[];
   /** The edited role's name and the places where it is assigned, where an added permission locks. */
@@ -60,8 +65,15 @@ function Summary({
   form,
   conflict,
   failedHeading,
-}: Pick<RoleFormProps, 'form' | 'conflict' | 'failedHeading'>) {
+  refusal,
+}: Pick<RoleFormProps, 'form' | 'conflict' | 'failedHeading' | 'refusal'>) {
   const errors = summaryErrors(form.formState.errors);
+  // Each refused permission links to its row, whose line repeats why (RO39).
+  const refused: SummaryError[] = (refusal?.keys ?? []).map((key) => ({
+    name: `permissions.${key}`,
+    fieldId: fieldId(`permissions.${key}`),
+    message: `${permissionWithId(key)}. ${refusal?.reason ?? ''}`,
+  }));
   if (conflict !== undefined) {
     return <ConflictSummary noun="role" errors={errors} onReload={conflict.onReload} />;
   }
@@ -70,7 +82,13 @@ function Summary({
     fieldCount === 0
       ? failedHeading
       : `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to save the role`;
-  return <ErrorSummary heading={heading} errors={errors} focusKey={form.formState.submitCount} />;
+  return (
+    <ErrorSummary
+      heading={heading}
+      errors={[...errors, ...refused]}
+      focusKey={form.formState.submitCount}
+    />
+  );
 }
 
 /**
@@ -92,7 +110,8 @@ export function RoleForm({
   reason,
   side,
   dirtyLine = true,
-  refused,
+  refusal,
+  saved,
   current,
   assigned,
 }: RoleFormProps) {
@@ -107,7 +126,7 @@ export function RoleForm({
       className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start"
     >
       <div className="flex min-w-0 flex-col gap-4">
-        <Summary form={form} conflict={conflict} failedHeading={failedHeading} />
+        <Summary form={form} conflict={conflict} failedHeading={failedHeading} refusal={refusal} />
         <FormSection title="Role">
           <div className="grid gap-4 sm:grid-cols-2">
             {startFrom}
@@ -138,8 +157,11 @@ export function RoleForm({
               <PermissionChecklist
                 value={field.value}
                 onChange={field.onChange}
-                baseline={baseline}
-                refused={refused}
+                baseline={
+                  baseline ?? (saved === undefined ? undefined : { name: '', permissions: saved })
+                }
+                refused={refusal?.keys}
+                refusedReason={refusal?.reason}
                 current={current}
                 assigned={assigned}
               />

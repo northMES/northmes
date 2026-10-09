@@ -352,7 +352,7 @@ describe('the role editor', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Shift lead' })).toBeDefined();
     expect(await screen.findByText('Custom role, Acme AB')).toBeDefined();
     // The side column says where the role applies and to whom.
-    const applies = screen.getByRole('region', { name: 'Where Shift lead applies' });
+    const applies = await screen.findByRole('region', { name: 'Where Shift lead applies' });
     expect(
       within(applies).getByText(
         'Assigned to 2 people at Plant A. A saved change applies to them from their next action.',

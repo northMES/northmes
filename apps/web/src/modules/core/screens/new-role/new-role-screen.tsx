@@ -18,7 +18,12 @@ import {
 } from '../../../../ui/primitives/select.tsx';
 import { permissionCount } from '../../access-refusal.ts';
 import { newRoleSearch } from '../../access-search.ts';
-import { RoleForm, type RoleValues, showRoleSaveError } from '../../components/role-form/index.ts';
+import {
+  RoleForm,
+  type RoleRefusal,
+  type RoleValues,
+  showRoleSaveError,
+} from '../../components/role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
 import { CoreRole } from '../../role.graphql.ts';
 import { listRole } from '../../role-cache.ts';
@@ -132,7 +137,7 @@ function NewRoleForm({
   const [startId, setStartId] = useState(() =>
     roles.some((role) => role.id === from && !isCompanyAdmin(role)) ? (from ?? '') : '',
   );
-  const [refused, setRefused] = useState<readonly string[]>([]);
+  const [refusal, setRefusal] = useState<RoleRefusal | undefined>(undefined);
   const start = roles.find((role) => role.id === startId);
   const form = useZodForm(updateRole.fields, {
     defaultValues: { name: '', permissions: [...(start?.permissions ?? [])], reason: undefined },
@@ -154,7 +159,7 @@ function NewRoleForm({
   });
 
   const save = async ({ name, permissions, reason }: RoleValues) => {
-    setRefused([]);
+    setRefusal(undefined);
     try {
       const { data } = await create({
         variables: {
@@ -174,7 +179,7 @@ function NewRoleForm({
         replace: true,
       });
     } catch (error) {
-      setRefused(
+      setRefusal(
         showRoleSaveError(
           form,
           error,
@@ -195,7 +200,7 @@ function NewRoleForm({
       companyName={companyName}
       reason={{ label: 'Reason', placeholder: 'Why you create this role' }}
       side={<WhoHolds name={form.watch('name') ?? ''} />}
-      refused={refused}
+      refusal={refusal}
       baseline={
         start === undefined ? undefined : { name: start.name, permissions: start.permissions }
       }
