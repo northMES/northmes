@@ -55,6 +55,33 @@ function reloadOf(node: ArticleNode): MockLink.MockedResponse {
   };
 }
 
+/** A command on axle with expectedVersion that a validator refuses with its own message. */
+function refusedCommandOf(
+  query: typeof CoreArchiveArticle | typeof CoreRestoreArticle,
+  expectedVersion: number,
+): MockLink.MockedResponse {
+  return commandOf(query, expectedVersion, {
+    data: null,
+    errors: [
+      {
+        message: 'Article AX-500 is on an open production order',
+        extensions: { code: 'PRECONDITION', errorCode: 'core.command_rejected' },
+      },
+    ],
+  });
+}
+
+/** A command on axle with expectedVersion that gets no answer, as when the network is down. */
+function unansweredCommandOf(
+  query: typeof CoreArchiveArticle | typeof CoreRestoreArticle,
+  expectedVersion: number,
+): MockLink.MockedResponse {
+  return {
+    request: { query, variables: { input: { id: axle.id, expectedVersion } } },
+    error: new TypeError('Failed to fetch'),
+  };
+}
+
 describe('archive and restore an article', () => {
   it("E06-S06 Archive on the article's page asks first, then archives it: the page shows Archived and Restore, offers no Edit, focuses the h1 and announces it", async () => {
     const user = userEvent.setup();
@@ -128,6 +155,38 @@ describe('archive and restore an article', () => {
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(screen.getByText('Archived')).toBeDefined();
+  });
+
+  it("E06-S06 an archive the server refuses shows the server's message in the dialog", async () => {
+    const user = userEvent.setup();
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(axle),
+      refusedCommandOf(CoreArchiveArticle, 1),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
+
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'Could not archive the article. Article AX-500 is on an open production order.',
+    );
+  });
+
+  it('E06-S06 an archive that gets no answer asks to check the connection in the dialog', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(axle),
+      unansweredCommandOf(CoreArchiveArticle, 1),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
+
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'Could not archive the article. Check the connection, then try again.',
+    );
   });
 
   it('E06-S06 Show archived lists archived articles with the Archived badge, puts archived=1 in the URL and keeps focus', async () => {
@@ -237,13 +296,13 @@ describe('archive and restore an article', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
   });
 
-  it('E06-S06 on the edit form of an archived article, a Restore article that fails says so, and a later one that goes through clears the failure and focuses Article number', async () => {
+  it('E06-S06 on the edit form of an archived article, a Restore article that gets no answer asks to check the connection, and a later one that goes through clears the failure and focuses Article number', async () => {
     const user = userEvent.setup();
     const restored = article('AX-500', 'Axle 20 mm', 3);
     renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
       articleQuery(archivedAxle),
       reloadOf(archivedAxle),
-      commandOf(CoreRestoreArticle, 2, { errors: [{ message: 'Service unavailable' }] }),
+      unansweredCommandOf(CoreRestoreArticle, 2),
       reloadOf(archivedAxle),
       restoreOf(2, restored),
     ]);
@@ -266,5 +325,27 @@ describe('archive and restore an article', () => {
       screen.queryByText('Could not restore the article. Check the connection, then try again.'),
     ).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Article number' }));
+  });
+
+  it("E06-S06 on the edit form of an archived article, a Restore article the server refuses shows the server's message and keeps the typed values", async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(archivedAxle),
+      reloadOf(archivedAxle),
+      refusedCommandOf(CoreRestoreArticle, 2),
+    ]);
+
+    await user.type(await screen.findByRole('textbox', { name: 'Name' }), ', steel');
+    const summary = await screen.findByRole('group', { name: 'This article is archived' });
+    await user.click(within(summary).getByRole('button', { name: 'Restore article' }));
+
+    expect(
+      await within(summary).findByText(
+        'Could not restore the article. Article AX-500 is on an open production order.',
+      ),
+    ).toBeDefined();
+    expect((screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe(
+      'Axle 20 mm, steel',
+    );
   });
 });
