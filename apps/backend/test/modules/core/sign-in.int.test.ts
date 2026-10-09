@@ -65,6 +65,19 @@ describe('sign-in with Better Auth', () => {
     expect(response.headers.get('set-auth-token')).toBeNull();
   });
 
+  it('E05-S05 a username sign-in is refused with 404: the web signs in with email only', async () => {
+    const { user } = await reader();
+
+    const response = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get('set-auth-token')).toBeNull();
+  });
+
   it('E05-S05 sign-up is disabled', async () => {
     const response = await fetch(`${url}/api/auth/sign-up/email`, {
       method: 'POST',
