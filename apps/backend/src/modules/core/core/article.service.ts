@@ -6,6 +6,7 @@ import {
   restoreArticle,
   setArticlePlants,
   updateArticle,
+  upsertArticle,
 } from '@northmes/core-contracts';
 import { COMMAND_BUS, type CommandBus, parseCommandInput } from '@northmes/sdk/commands';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
@@ -22,6 +23,7 @@ import { CreateArticleCommand } from './commands/create-article.handler.ts';
 import { RestoreArticleCommand } from './commands/restore-article.handler.ts';
 import { SetArticlePlantsCommand } from './commands/set-article-plants.handler.ts';
 import { UpdateArticleCommand } from './commands/update-article.handler.ts';
+import { UpsertArticleCommand } from './commands/upsert-article.handler.ts';
 
 export type { ArticleRecord };
 
@@ -180,6 +182,14 @@ export class ArticleService {
   /** Restores an archived article: core.restoreArticle with this input. */
   restore(input: unknown): Promise<ArticleRecord> {
     return this.bus.run(RestoreArticleCommand.command, parseCommandInput(restoreArticle, input));
+  }
+
+  /**
+   * Creates or changes the article with the input's article number: core.upsertArticle with this
+   * input (ADR 0073).
+   */
+  upsertByCode(input: unknown): Promise<ArticleRecord> {
+    return this.bus.run(UpsertArticleCommand.command, parseCommandInput(upsertArticle, input));
   }
 
   /**

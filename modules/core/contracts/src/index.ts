@@ -8,6 +8,7 @@ export {
   restoreArticle,
   setArticlePlants,
   updateArticle,
+  upsertArticle,
 } from './article.ts';
 export { coreLinks } from './links.ts';
 export { plantSlug, reservedPlantSlugs } from './plant.ts';
