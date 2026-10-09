@@ -71,7 +71,9 @@ describe('the role editor', () => {
         'The new role copies its permissions once. It does not follow later changes to Planner.',
       ),
     ).toBeDefined();
-    expect((await screen.findByRole('status')).textContent).toBe('3 of 6 selected.');
+    // The count is plain text; a change says the new count through the announcer.
+    const count = await screen.findByText('3 of 6 selected.');
+    expect(count.getAttribute('role')).toBeNull();
 
     // Read users, which the editor does not hold, is locked: a disabled checkbox without a Tab
     // stop, described by why.
@@ -86,7 +88,8 @@ describe('the role editor', () => {
     expect(autoplan.getAttribute('aria-checked')).toBe('true');
     await user.click(autoplan);
     expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(true);
-    expect(screen.getByRole('status').textContent).toBe('2 of 6 selected.');
+    expect(screen.getByText('2 of 6 selected.')).toBeDefined();
+    await waitFor(() => expect(spoken()).toBe('2 of 6 selected.'));
     // The module that is not installed never shows.
     expect(screen.queryByText('kanban.board:read')).toBeNull();
 
@@ -97,7 +100,8 @@ describe('the role editor', () => {
 
     expect(document.activeElement).toBe(release);
     expect(release.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByRole('status').textContent).toBe('1 of 6 selected.');
+    expect(screen.getByText('1 of 6 selected.')).toBeDefined();
+    await waitFor(() => expect(spoken()).toBe('1 of 6 selected.'));
     const difference = screen.getByRole('region', { name: 'Difference from Planner' });
     expect(within(difference).getAllByText('Removed')).toHaveLength(2);
     expect(within(difference).getByText('Release production orders to the floor')).toBeDefined();
