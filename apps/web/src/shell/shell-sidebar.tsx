@@ -29,6 +29,8 @@ export interface ShellSidebarProps {
   /** The plant in the URL, whose links the entries are. */
   readonly plant: string;
   readonly user: ShellUser;
+  /** Signs the user out, from the user menu. */
+  readonly onSignOut: () => void;
 }
 
 /**
@@ -47,7 +49,7 @@ function currentOf(href: string, pathname: string): 'page' | 'true' | undefined 
  * label in a tooltip; where the shell is narrow it is the Navigation sheet, whose head holds Close
  * navigation and whose entries close it.
  */
-export function ShellSidebar({ id, modules, plant, user }: ShellSidebarProps) {
+export function ShellSidebar({ id, modules, plant, user, onSignOut }: ShellSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const entry = ({ label, icon, link }: MenuLink) => {
@@ -109,7 +111,7 @@ export function ShellSidebar({ id, modules, plant, user }: ShellSidebarProps) {
           })}
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border">
-          <ShellUserMenu user={user} />
+          <ShellUserMenu user={user} onSignOut={onSignOut} />
         </SidebarFooter>
       </nav>
     </Sidebar>
