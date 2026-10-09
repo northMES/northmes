@@ -56,11 +56,13 @@ function useGroupOpen(holdsCurrent: boolean) {
 /**
  * A nested group in a module's sidebar group (D2 PL5), such as core's Master data. In the
  * labelled sidebar and the sheet it is a disclosure button with its icon, its label and a chevron,
- * with its entries one level down; it opens by default when it holds the page on screen. In the
- * rail it is the group's icon with its label in a tooltip, a button that opens a flyout to its
- * right (KE28): a menu named by the group, headed by the module, whose items are the entries'
- * links, the current one with a check. The icon carries aria-current="true" while the group holds
- * the page on screen, and Escape returns focus to it (KE29). The group has no page of its own.
+ * with its entries one level down; it opens by default when it holds the page on screen. While it
+ * holds that page it carries aria-current="true", and when closed it is marked in --sidebar-accent,
+ * not the --sidebar-primary of the page's own entry. In the rail it is the group's icon with its
+ * label in a tooltip, a button that opens a flyout to its right (KE28): a menu named by the group,
+ * headed by the module, whose items are the entries' links, the current one with a check. The
+ * icon carries aria-current="true" while the group holds the page on screen, and Escape returns
+ * focus to it (KE29). The group has no page of its own.
  */
 export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGroupProps) {
   const { isMobile, state, setOpenMobile } = useSidebar();
@@ -120,7 +122,11 @@ export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGr
   }
   return (
     <Collapsible open={open} onOpenChange={setOpen} render={<SidebarMenuItem />}>
-      <CollapsibleTrigger render={<SidebarMenuButton />}>
+      <CollapsibleTrigger
+        aria-current={holdsCurrent ? 'true' : undefined}
+        render={<SidebarMenuButton />}
+        className={cn(holdsCurrent && !open && 'bg-sidebar-accent text-sidebar-accent-foreground')}
+      >
         <NavIcon name={group.icon} />
         <span className="min-w-0 flex-1 truncate">{group.label}</span>
         <ChevronRight
@@ -134,7 +140,7 @@ export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGr
             <SidebarMenuSubItem key={href}>
               <SidebarMenuSubButton
                 isActive={current !== undefined}
-                className="h-8 data-active:bg-sidebar-primary data-active:font-medium data-active:text-sidebar-primary-foreground data-active:[&>svg]:text-sidebar-primary-foreground"
+                className="h-8"
                 render={
                   <Link
                     to={href}
