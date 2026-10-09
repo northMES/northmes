@@ -117,7 +117,7 @@ function RestoreArticleAction({ article, reload }: ArticleActionProps) {
  * archived one, which cannot be changed until it is restored.
  */
 export function ArticleActions({ article, reload }: ArticleActionProps) {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   if (article.archivedAt !== null) {
     return <RestoreArticleAction article={article} reload={reload} />;
   }
@@ -125,7 +125,7 @@ export function ArticleActions({ article, reload }: ArticleActionProps) {
     <>
       <ArchiveArticleAction article={article} reload={reload} />
       <Link
-        to={coreLinks.articles.article.edit({ plant: plantId, articleId: article.id }).href}
+        to={coreLinks.articles.article.edit({ plant, articleId: article.id }).href}
         className={buttonVariants()}
       >
         <Pencil aria-hidden />
