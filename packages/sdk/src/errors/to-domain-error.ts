@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { HttpStatus } from '@nestjs/common';
 import { DomainError } from './domain-error.ts';
 
 /** The fields of a Postgres error that toDomainError reads, as node-postgres reports them. */
@@ -33,7 +34,7 @@ export function toDomainError(error: unknown): unknown {
   if (error.code === '23505' && error.constraint?.endsWith('_code_key')) {
     return new DomainError({
       code: 'core.code_taken',
-      kind: 'conflict',
+      status: HttpStatus.CONFLICT,
       message: CODE_TAKEN,
       fieldErrors: [{ path: ['code'], message: CODE_TAKEN, code: 'core.code_taken' }],
     });

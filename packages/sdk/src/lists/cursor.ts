@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { HttpStatus } from '@nestjs/common';
 import { DomainError } from '../errors/domain-error.ts';
 
 /** The first element of every cursor: the version of the cursor format (ADR 0016). */
@@ -20,7 +21,7 @@ export function encodeCursor(signature: string, values: readonly string[]): stri
 function invalidCursor(): DomainError {
   return new DomainError({
     code: 'core.list.invalid_cursor',
-    kind: 'validation',
+    status: HttpStatus.BAD_REQUEST,
     message: 'The cursor does not belong to this list and order. Start again from the first page.',
   });
 }

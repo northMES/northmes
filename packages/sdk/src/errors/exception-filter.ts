@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
-import { type ArgumentsHost, Catch } from '@nestjs/common';
+import { type ArgumentsHost, Catch, HttpStatus } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import type { GqlContextType } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
-import { DomainError, type DomainErrorKind } from './domain-error.ts';
+import { DomainError } from './domain-error.ts';
 
-/** The GraphQL extensions.code of each kind (ADR 0012). */
-const graphqlCodes: Readonly<Record<DomainErrorKind, string>> = {
-  validation: 'BAD_USER_INPUT',
-  unauthenticated: 'UNAUTHENTICATED',
-  not_found: 'NOT_FOUND',
-  forbidden: 'FORBIDDEN',
-  conflict: 'CONFLICT',
-  precondition: 'PRECONDITION',
-  unavailable: 'UNAVAILABLE',
-};
+/** The GraphQL extensions.code of each HTTP status an error may carry (ADR 0012). */
+const graphqlCodes: ReadonlyMap<number, string> = new Map([
+  [HttpStatus.BAD_REQUEST, 'BAD_USER_INPUT'],
+  [HttpStatus.UNAUTHORIZED, 'UNAUTHENTICATED'],
+  [HttpStatus.FORBIDDEN, 'FORBIDDEN'],
+  [HttpStatus.NOT_FOUND, 'NOT_FOUND'],
+  [HttpStatus.CONFLICT, 'CONFLICT'],
+  [HttpStatus.PRECONDITION_FAILED, 'PRECONDITION'],
+  [HttpStatus.SERVICE_UNAVAILABLE, 'UNAVAILABLE'],
+]);
 
 /**
  * The one exception filter of the server. The host registers it once as APP_FILTER in its root
@@ -34,7 +34,7 @@ export class DomainErrorFilter extends BaseExceptionFilter {
     if (!(exception instanceof DomainError)) throw exception;
     return new GraphQLError(exception.message, {
       extensions: {
-        code: graphqlCodes[exception.kind],
+        code: graphqlCodes.get(exception.getStatus()),
         errorCode: exception.code,
         details: exception.details,
         fieldErrors: exception.fieldErrors,

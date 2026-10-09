@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { HttpStatus } from '@nestjs/common';
 import { createArticle } from '@northmes/core-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
@@ -17,7 +19,7 @@ export const CreateArticle = defineCommand(createArticle, {
     if (!plantId) {
       throw new DomainError({
         code: 'core.plant_forbidden',
-        kind: 'forbidden',
+        status: HttpStatus.FORBIDDEN,
         message: 'The request names no plant, so it cannot create an article',
       });
     }
@@ -38,7 +40,7 @@ export const CreateArticle = defineCommand(createArticle, {
       // The id is taken at a scope the principal cannot read.
       throw new DomainError({
         code: 'core.not_found',
-        kind: 'not_found',
+        status: HttpStatus.NOT_FOUND,
         message: `Article ${id} was not found`,
       });
     }

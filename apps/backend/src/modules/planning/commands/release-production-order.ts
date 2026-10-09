@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { HttpStatus } from '@nestjs/common';
 import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
@@ -43,7 +45,7 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
     if (order.status !== 'planned') {
       throw new DomainError({
         code: 'planning.production_order.not_planned',
-        kind: 'precondition',
+        status: HttpStatus.PRECONDITION_FAILED,
         message: `Production order ${order.number} is ${order.status}, and only a planned order can be released`,
       });
     }

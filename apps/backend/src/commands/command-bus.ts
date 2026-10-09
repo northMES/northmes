@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { HttpStatus } from '@nestjs/common';
 import type {
   Command,
   CommandBus,
@@ -32,7 +33,7 @@ export class CommandRejected extends DomainError {
   constructor(rejectedBy: string, message: string) {
     super({
       code: 'core.command_rejected',
-      kind: 'precondition',
+      status: HttpStatus.PRECONDITION_FAILED,
       message,
       details: { rejectedBy },
     });
@@ -124,14 +125,14 @@ async function loadTarget<Input, Result, Target extends Versioned | undefined>(
   if (!row) {
     throw new DomainError({
       code: 'core.not_found',
-      kind: 'not_found',
+      status: HttpStatus.NOT_FOUND,
       message: `${entity} ${id} was not found`,
     });
   }
   if (row.version !== expectedVersion) {
     throw new DomainError({
       code: 'core.version_conflict',
-      kind: 'conflict',
+      status: HttpStatus.CONFLICT,
       message: `${entity} ${id} is at version ${row.version}, and the change was made on version ${expectedVersion}`,
     });
   }
@@ -204,7 +205,7 @@ export class CommandBusImpl implements CommandBus {
           if (!parsed.success) {
             throw new DomainError({
               code: 'core.validator_contract_mismatch',
-              kind: 'precondition',
+              status: HttpStatus.PRECONDITION_FAILED,
               message: `The payload of ${name} does not match the contract that validator ${validator.name} of module ${module} was built with`,
             });
           }

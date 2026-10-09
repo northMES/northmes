@@ -10,8 +10,8 @@ import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
-import { faulty } from '../fixtures/graphql/faulty.ts';
 import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
+import { faulty } from '../fixtures/graphql/faulty.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
@@ -133,24 +133,30 @@ describe('the exception filter', () => {
     [409, 'CONFLICT'],
     [412, 'PRECONDITION'],
     [503, 'UNAVAILABLE'],
-  ])('a DomainError with status %i reaches the client as %s with its errorCode, message and details', async (status, code) => {
-    const booted = await bootFixtures(faulty);
-    const client = gqlClient(await booted.getUrl());
+  ])(
+    'a DomainError with status %i reaches the client as %s with its errorCode, message and details',
+    async (status, code) => {
+      const booted = await bootFixtures(faulty);
+      const client = gqlClient(await booted.getUrl());
 
-    const answer = await client.send('query ($status: Int!) { faultyDomainError(status: $status) }', {
-      status,
-    });
-
-    expect(answer).toMatchObject({
-      status: 200,
-      data: null,
-      errors: [
+      const answer = await client.send(
+        'query ($status: Int!) { faultyDomainError(status: $status) }',
         {
-          message: `Refused with status ${status}`,
-          path: ['faultyDomainError'],
-          extensions: { code, errorCode: 'faulty.refused', details: { status } },
+          status,
         },
-      ],
-    });
-  });
+      );
+
+      expect(answer).toMatchObject({
+        status: 200,
+        data: null,
+        errors: [
+          {
+            message: `Refused with status ${status}`,
+            path: ['faultyDomainError'],
+            extensions: { code, errorCode: 'faulty.refused', details: { status } },
+          },
+        ],
+      });
+    },
+  );
 });

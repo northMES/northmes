@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 import 'reflect-metadata';
+import { HttpStatus } from '@nestjs/common';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import type { ScopedDatabase } from '@northmes/sdk/data';
+import { DomainError } from '@northmes/sdk/errors';
 import { defineList } from '@northmes/sdk/lists';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -32,11 +34,13 @@ describe('defineList', () => {
       orderBy: [{ field: 'GROUP' }, { field: 'SIZE' }, { field: 'NAME' }, { field: 'CODE' }],
     });
 
-    await expect(page).rejects.toMatchObject({
+    const error = await page.catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
       code: 'core.list.bad_argument',
-      kind: 'validation',
       message: 'orderBy takes at most 3 entries',
     });
+    expect((error as DomainError).getStatus()).toBe(HttpStatus.BAD_REQUEST);
     expect(transaction).not.toHaveBeenCalled();
   });
 });
