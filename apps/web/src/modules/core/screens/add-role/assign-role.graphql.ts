@@ -25,6 +25,12 @@ if (false) {
           name
           permissions
         }
+        # The role's Holders tab lists the assignment with its user.
+        user {
+          id
+          name
+          username
+        }
       }
     }
   `;

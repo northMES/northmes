@@ -21,6 +21,7 @@ import {
 import { missingPermissionsOf, permissionList } from '../../access-refusal.ts';
 import { permissionPhrase } from '../../no-access.tsx';
 import { permissionLine } from '../../permission-names.ts';
+import { removeHolder } from '../../role-cache.ts';
 import type { Places } from '../../use-places.ts';
 import type { User, UserAssignment } from '../../use-user.tsx';
 import type { Viewer } from '../../use-viewer.ts';
@@ -119,6 +120,7 @@ function RemoveRole({ user, assignment, focusAfter }: RemoveRoleProps) {
           effectivePermissions: (_value, { DELETE }) => DELETE,
         },
       });
+      removeHolder(cache, assignment.role?.id, assignment.id);
     },
   });
   const role = assignment.role?.name;

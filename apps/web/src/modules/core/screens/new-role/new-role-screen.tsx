@@ -18,6 +18,7 @@ import { newRoleSearch } from '../../access-search.ts';
 import { RoleForm, type RoleValues, showRoleSaveError } from '../../components/role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
 import { CoreRole } from '../../role.graphql.ts';
+import { listRole } from '../../role-cache.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
@@ -104,11 +105,13 @@ function NewRoleForm({
   });
   const companyName = places.company?.name ?? 'the company';
   const [create] = useMutation(CoreCreateRole, {
-    // The role's page reads the new role from the cache.
+    // The role's page reads the new role from the cache, and the roles list, Start from and Add
+    // role list it.
     update(cache, { data }) {
       if (!data) return;
       const role = data.coreCreateRole;
       cache.writeQuery({ query: CoreRole, variables: { id: role.id }, data: { coreRole: role } });
+      listRole(cache, role.id);
     },
   });
 

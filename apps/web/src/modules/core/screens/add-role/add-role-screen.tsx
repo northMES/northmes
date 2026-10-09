@@ -21,6 +21,7 @@ import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-grou
 import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
 import { noAccessState, permissionPhrase } from '../../no-access.tsx';
 import { permissionLine } from '../../permission-names.ts';
+import { addHolder } from '../../role-cache.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
 import { type Place, usePlaces } from '../../use-places.ts';
 import { type User, useUser } from '../../use-user.tsx';
@@ -218,6 +219,8 @@ function AddRoleForm({ user, roles, company, plant }: AddRoleFormProps) {
         id: cache.identify({ __typename: 'User', id: user.id }),
         fields: { effectivePermissions: (_value, { DELETE }) => DELETE },
       });
+      const roleId = data.coreAssignRole.role?.id;
+      if (roleId !== undefined) addHolder(cache, roleId, data.coreAssignRole.id);
     },
   });
 
