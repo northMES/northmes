@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
+import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
+
+/** The web app's origin in these tests, as webOrigins in northmes.config.json would list it. */
+const webOrigin = 'http://localhost:5173';
+
+const articlesQuery = '{ coreArticles(first: 5) { edges { node { code } } } }';
+
+describe('sign-in with Better Auth', () => {
+  const db = useTestDatabase();
+  let testApp: TestApp;
+  let url: string;
+
+  beforeAll(async () => {
+    testApp = await createTestApp({
+      modules: ['core'],
+      hostFactory,
+      database: db,
+      webOrigins: [webOrigin],
+    });
+    await testApp.app.listen(0, '127.0.0.1');
+    url = await testApp.app.getUrl();
+  });
+
+  afterAll(async () => {
+    await testApp.app.close();
+  });
+
+  /** A user who reads articles at a fresh company's plant, signed in, and that plant. */
+  async function reader() {
+    const { plants } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const user = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['core.article:read'] },
+    ]);
+    return { user, plant };
+  }
+
+  it('E05-S05 a user signs in with username and password, and the JWT from /api/auth/token reads the API', async () => {
+    const { user, plant } = await reader();
+
+    const answer = await gqlClient(url, {
+      headers: { authorization: user.authorization, 'x-northmes-plant': plant },
+    }).send(articlesQuery);
+
+    expect(answer).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
+  });
+
+  it('E05-S05 a wrong password is refused with 401', async () => {
+    const { user } = await reader();
+
+    const response = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password: `${user.password}x` }),
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('set-auth-token')).toBeNull();
+  });
+
+  it('E05-S05 sign-up is disabled', async () => {
+    const response = await fetch(`${url}/api/auth/sign-up/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'new.user@example.invalid',
+        password: 'a-long-enough-password',
+        name: 'New user',
+      }),
+    });
+
+    expect(response.status).toBe(404);
+  });
+
+  it('E05-S05 a request without a session gets 401 as UNAUTHENTICATED', async () => {
+    const answer = await gqlClient(url).send(articlesQuery);
+
+    expect(answer.data).toBeNull();
+    expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('E05-S05 an expired JWT gets 401 as UNAUTHENTICATED, where the same JWT before it expired reads', async () => {
+    const { user, plant } = await reader();
+    const now = Math.floor(Date.now() / 1000);
+    const { api } = testApp.app.get(BetterAuth).auth;
+    const sign = async (iat: number, exp: number) =>
+      (await api.signJWT({ body: { payload: { sub: user.userId, iat, exp } } })).token;
+    const send = (token: string) =>
+      gqlClient(url, {
+        headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
+      }).send(articlesQuery);
+
+    const live = await send(await sign(now, now + 60));
+    const expired = await send(await sign(now - 360, now - 60));
+
+    expect(live).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
+    expect(expired.data).toBeNull();
+    expect(expired.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('E05-S05 a session token is no bearer token for the API: only the JWT is', async () => {
+    const { user, plant } = await reader();
+    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+
+    const answer = await gqlClient(url, {
+      headers: {
+        authorization: `Bearer ${signedIn.headers.get('set-auth-token')}`,
+        'x-northmes-plant': plant,
+      },
+    }).send(articlesQuery);
+
+    expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('E05-S05 a request from an origin that webOrigins does not list is refused with 403', async () => {
+    const { user } = await reader();
+
+    const signInFromElsewhere = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'https://intranet.example.com' },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+    const graphqlFromElsewhere = await fetch(`${url}/graphql`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        origin: 'https://intranet.example.com',
+        authorization: user.authorization,
+      },
+      body: JSON.stringify({ query: articlesQuery }),
+    });
+
+    expect(signInFromElsewhere.status).toBe(403);
+    expect(signInFromElsewhere.headers.get('set-auth-token')).toBeNull();
+    expect(graphqlFromElsewhere.status).toBe(403);
+    expect(graphqlFromElsewhere.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('E05-S05 the web origin signs in across origins: its preflight passes and it may read the token headers', async () => {
+    const { user } = await reader();
+
+    const preflight = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'OPTIONS',
+      headers: {
+        origin: webOrigin,
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: webOrigin },
+      body: JSON.stringify({ username: user.username, password: user.password }),
+    });
+
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe(webOrigin);
+    expect(preflight.headers.get('access-control-allow-headers')).toContain('authorization');
+    expect(signedIn.status).toBe(200);
+    expect(signedIn.headers.get('access-control-allow-origin')).toBe(webOrigin);
+    expect(signedIn.headers.get('access-control-expose-headers')).toContain('set-auth-token');
+    expect(signedIn.headers.get('set-auth-token')).toBeTruthy();
+  });
+});
