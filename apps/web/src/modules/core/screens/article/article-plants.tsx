@@ -55,9 +55,10 @@ function failureOf(error: unknown, company: string): string {
  * the company: the Plants field filled with the article's plants, and Save plants, which sends
  * core.setArticlePlants with the version the page shows. A plant taken off keeps its orders that
  * use the article. A save without a plant moves focus to the first plant, and a save refused for a
- * stale version shows the saved plants with a message. The page keys the section on the article's
- * id, so a new version does not reset it. No design frame draws this section yet; it follows the
- * form section of design ui-222.
+ * stale version shows the saved plants with a message. A refused save's message shows under the
+ * field and goes to the polite region through announce() (ADR 0021). The page keys the section on
+ * the article's id, so a new version does not reset it. No design frame draws this section yet; it
+ * follows the form section of design ui-222.
  */
 export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
   const places = usePlaces();
@@ -94,7 +95,9 @@ export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
         const saved = await reload().catch(() => undefined);
         if (saved !== undefined) setChoice(choiceOf(saved));
       }
-      setFailure(failureOf(thrown, places.company?.name ?? 'the company'));
+      const message = failureOf(thrown, places.company?.name ?? 'the company');
+      setFailure(message);
+      announce(message);
     }
   };
 
@@ -114,11 +117,7 @@ export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
         error={error}
         disabled={loading}
       />
-      {failure !== undefined && (
-        <p role="alert" className="text-sm text-destructive">
-          {failure}
-        </p>
-      )}
+      {failure !== undefined && <p className="text-sm text-destructive">{failure}</p>}
       <div>
         <Button onClick={save} disabled={loading}>
           Save plants
