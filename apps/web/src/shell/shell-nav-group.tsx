@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from 'cn';
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import type { MenuGroup, MenuLink } from '../modules.ts';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
@@ -10,6 +10,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../ui/primitives/collapsible.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '../ui/primitives/dropdown-menu.tsx';
 import {
   SidebarMenuButton,
   SidebarMenuItem,
@@ -55,7 +63,7 @@ function useGroupOpen(holdsCurrent: boolean) {
  * the page on screen, and Escape returns focus to it (KE29). The group has no page of its own.
  */
 export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGroupProps) {
-  const { setOpenMobile } = useSidebar();
+  const { isMobile, state, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (router) => router.location.pathname });
   const links = entries.map(({ label, icon, link }) => {
     const href = link({ plant }).href;
@@ -63,6 +71,53 @@ export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGr
   });
   const holdsCurrent = links.some(({ current }) => current !== undefined);
   const [open, setOpen] = useGroupOpen(holdsCurrent);
+  if (state === 'collapsed' && !isMobile) {
+    return (
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarMenuButton
+                isActive={holdsCurrent}
+                aria-current={holdsCurrent ? 'true' : undefined}
+                tooltip={{ children: group.label, role: 'tooltip' }}
+                className="data-popup-open:bg-sidebar-accent"
+              />
+            }
+          >
+            <NavIcon name={group.icon} />
+            <span>{group.label}</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="right"
+            align="start"
+            aria-label={group.label}
+            className="min-w-56"
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>{moduleLabel}</DropdownMenuLabel>
+              {links.map(({ label, icon, href, current }) => (
+                <DropdownMenuItem
+                  key={href}
+                  render={
+                    <Link
+                      to={href}
+                      activeOptions={{ exact: true }}
+                      aria-current={current === 'true' ? 'true' : undefined}
+                    />
+                  }
+                >
+                  <NavIcon name={icon} />
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  {current !== undefined && <Check aria-hidden className="ml-auto" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    );
+  }
   return (
     <Collapsible open={open} onOpenChange={setOpen} render={<SidebarMenuItem />}>
       <CollapsibleTrigger render={<SidebarMenuButton />}>
