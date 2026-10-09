@@ -357,15 +357,19 @@ describe('the shell', () => {
       ]),
     );
 
+    // Audit log needs a permission the viewer holds, so it shows once the answer reached the
+    // cache, and only then does a missing Administration say anything.
     cleanup();
-    const fetch = answering(['core.article:read']);
-    renderShellAt('/plant-a/core/articles', shellModules, { fetch });
-    await waitFor(() =>
-      expect(fetch.mock.calls.some(([, init]) => String(init?.body).includes('CoreViewer'))).toBe(
-        true,
-      ),
+    renderShellAt('/plant-a/core/articles', [...shellModules, audit], {
+      fetch: answering(['core.article:read', 'core.audit:read']),
+    });
+    await waitFor(async () =>
+      expect((await sidebarGroups()).flatMap(linksIn)).toContainEqual([
+        'Audit log',
+        '/plant-a/audit',
+      ]),
     );
-    expect((await sidebarGroups()).map(groupLabel)).toEqual(['Core', 'Planning']);
+    expect((await sidebarGroups()).map(groupLabel)).not.toContain('Administration');
   });
 
   it("E05-S06 the shell gives a page the plant's first sidebar entry the user may open, the way out of a page without access", async () => {
