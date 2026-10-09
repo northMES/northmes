@@ -112,6 +112,7 @@ function EditRoleForm({ role, reload }: EditRoleFormProps) {
       companyName={companyName}
       conflict={conflict ? { onReload } : undefined}
       refused={refused}
+      current={role.permissions}
       withReason
     />
   );

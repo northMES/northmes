@@ -41,6 +41,8 @@ export interface RoleFormProps {
   readonly withReason?: boolean;
   /** The permissions the last save was refused for, marked invalid in the checklist. */
   readonly refused?: readonly string[];
+  /** The permissions the edited role holds already, which the editor may tick again. */
+  readonly current?: readonly string[];
 }
 
 /** The error summary: the version conflict, or the errors of the save. */
@@ -79,6 +81,7 @@ export function RoleForm({
   baseline,
   withReason = false,
   refused,
+  current,
 }: RoleFormProps) {
   const { isDirty, isSubmitting } = form.formState;
   return (
@@ -107,6 +110,7 @@ export function RoleForm({
               onChange={field.onChange}
               baseline={baseline}
               refused={refused}
+              current={current}
             />
           )}
         />

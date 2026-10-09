@@ -53,11 +53,19 @@ export interface PermissionChecklistProps {
   readonly baseline?: { readonly name: string; readonly permissions: readonly string[] };
   /** The save refused these permissions: each is marked invalid. */
   readonly refused?: readonly string[];
+  /**
+   * The permissions the edited role holds already. Ticking one of them again adds nothing, so it
+   * is never locked.
+   */
+  readonly current?: readonly string[];
 }
 
 interface RowProps {
   readonly permission: string;
   readonly checked: boolean;
+  /** The editor does not hold the permission: the row says so. */
+  readonly unheld: boolean;
+  /** The editor cannot tick it: the row draws a Lock in place of the checkbox. */
   readonly locked: boolean;
   readonly invalid: boolean;
   readonly lockedReason: string;
@@ -66,12 +74,13 @@ interface RowProps {
 
 /**
  * One permission: a checkbox named by its plain line and described by its id. A permission the
- * editor does not hold at the plant is locked: a Lock in place of the checkbox, aria-disabled and
- * no Tab stop, described by why (design core-304, NO19).
+ * editor does not hold at the plant is described by why; when ticking it would add it, it is
+ * locked: a Lock in place of the checkbox, aria-disabled and no Tab stop (design core-304, NO19).
  */
 function PermissionRow({
   permission,
   checked,
+  unheld,
   locked,
   invalid,
   lockedReason,
@@ -80,7 +89,7 @@ function PermissionRow({
   const labelId = useId();
   const idId = useId();
   const reasonId = useId();
-  const describedBy = locked ? `${idId} ${reasonId}` : idId;
+  const describedBy = unheld ? `${idId} ${reasonId}` : idId;
   return (
     <li className="flex min-h-9 items-start gap-3 py-1.5">
       {locked ? (
@@ -114,7 +123,7 @@ function PermissionRow({
         <span id={idId} className="font-mono text-xs break-all text-muted-foreground">
           {permission}
         </span>
-        {locked && (
+        {unheld && (
           <span id={reasonId} className="text-xs text-muted-foreground">
             {lockedReason}
           </span>
@@ -134,6 +143,8 @@ function ModuleGroup({
   'onChange' | 'refused'
 > & {
     readonly held: (key: string) => boolean;
+    /** Ticking the permission adds nothing: the role holds it already. */
+    readonly current: ReadonlySet<string>;
     readonly lockedReason: string;
     readonly all: readonly string[];
   }) {
@@ -164,7 +175,9 @@ function ModuleGroup({
               key={key}
               permission={key}
               checked={value.has(key)}
-              locked={!rest.held(key)}
+              unheld={!rest.held(key)}
+              // Removing a permission needs nothing; adding one needs it (ADR 0010).
+              locked={!rest.held(key) && !value.has(key) && !rest.current.has(key)}
               invalid={rest.refused?.includes(key) ?? false}
               lockedReason={rest.lockedReason}
               onCheckedChange={(checked) => {
@@ -228,13 +241,16 @@ function Difference({
  * installed permissions grouped by module in the catalog's order, each in plain words with its
  * id, and the count of those ticked as a status ("6 of 36 selected."). Space ticks a permission
  * and focus stays on it; Enter on a module's button opens or closes the module. A permission the
- * editor does not hold at the plant is locked, because the API refuses to add it (ADR 0010).
+ * editor does not hold at the plant can be unticked but not ticked, because the grant rule asks
+ * for it to add it and for nothing to remove it (ADR 0010). One the edited role holds already
+ * can be ticked again.
  */
 export function PermissionChecklist({
   value,
   onChange,
   baseline,
   refused,
+  current = [],
 }: PermissionChecklistProps) {
   const { plant } = useShell();
   const places = usePlaces();
@@ -276,6 +292,7 @@ export function PermissionChecklist({
           onChange={onChange}
           refused={refused}
           held={(key) => viewer.can(key)}
+          current={new Set(current)}
           lockedReason={`You do not hold it at ${plantName}.`}
         />
       ))}
