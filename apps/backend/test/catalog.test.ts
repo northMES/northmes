@@ -215,20 +215,6 @@ describe('checkCatalog', () => {
     ]);
   });
 
-  it("E02-S01 a command key without its module's GraphQL prefix is refused naming the key", () => {
-    // production-start derives the GraphQL name productionStart and the SQL name production_start.
-    const error = refusal([
-      core,
-      inRepoModule('production-start', ['core'], {
-        commands: { 'productionStart.reportQuantity': {}, 'production_start.startJob': {} },
-      }),
-    ]);
-
-    expect(error.problems).toEqual([
-      'Module production-start declares command "production_start.startJob", which must start with "productionStart."',
-    ]);
-  });
-
   it("E02-S01 a permission key without its module's GraphQL prefix is refused naming the key", () => {
     const error = refusal([
       core,

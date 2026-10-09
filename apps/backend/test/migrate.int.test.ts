@@ -7,12 +7,24 @@ import { ModuleRef } from '@nestjs/core';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
 import { Pool } from 'pg';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  onTestFinished,
+  vi,
+} from 'vitest';
 import { bootForMigrate } from '../src/boot/boot.ts';
 import { checkCatalog } from '../src/catalog/check-catalog.ts';
 import { cli } from '../src/cli.ts';
+import { migrateCommand } from '../src/migrate/command.ts';
 import { type MigrateResult, migrate } from '../src/migrate/runner.ts';
 import { imageVersion, inRepoModule, plugin } from './fixtures/catalog.ts';
+import { importPlugins, writeConfig, writePlugin } from './fixtures/plugins/plugin-root.ts';
 import { migrateEnvKeys, useMigrateEnv } from './fixtures/server-env.ts';
 
 /** The folder of a fixture module's migration files. */
@@ -460,7 +472,6 @@ describe('pnpm northmes migrate', () => {
     // The migrate environment holds no nm_app password (ADR 0060).
     const { app } = await bootForMigrate({
       env,
-      importManifest: (specifier) => import(specifier),
       exit: vi.fn<(code: number) => void>(),
       log: { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() },
     });
@@ -504,5 +515,56 @@ describe('pnpm northmes migrate', () => {
       ],
     ]);
     expect(log.info.mock.calls).toEqual([['Modules in boot order: core, planning']]);
+  });
+});
+
+describe('pnpm northmes migrate with a plugin', () => {
+  const db = useTestDatabase({ template: emptyTemplateDatabase });
+  const env = useMigrateEnv({ database: db });
+
+  beforeEach(() => {
+    for (const key of migrateEnvKeys) vi.stubEnv(key, undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("E02-S02 pnpm northmes migrate applies core's files, then planning's, then a plugin's", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'northmes-plugins-'));
+    onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+    vi.stubEnv('NORTHMES_CONFIG', undefined);
+    // The plugin's file is older than every in-repo file, so an order by name would apply it first.
+    const audit = writePlugin(
+      dir,
+      { id: 'acme-audit', version: '1.2.0', northmes: '>=0.0.0-0 <0.1.0-0', dependsOn: ['planning'] },
+      {
+        '20200101080000_note.sql':
+          '-- migration: expand\ncreate table acme_audit.note (id int primary key);\n',
+      },
+    );
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+
+    await migrateCommand({
+      env: { ...env, NORTHMES_CONFIG: writeConfig(dir, [audit]) },
+      importManifest: importPlugins(audit),
+      exit,
+      log,
+    });
+    const applied = log.info.mock.calls
+      .map(([line]) => line)
+      .filter((line) => line.startsWith('Applied '));
+    const modules = applied.map((line) => line.slice('Applied '.length).split('/')[0]);
+
+    expect(log.error).not.toHaveBeenCalled();
+    expect(log.info.mock.calls[0]).toEqual(['Modules in boot order: core, planning, acme-audit']);
+    // Each module's files form one run, in the order of the modules.
+    expect(modules.filter((module, index) => module !== modules[index - 1])).toEqual([
+      'core',
+      'planning',
+      'acme-audit',
+    ]);
+    expect(applied.at(-1)).toBe('Applied acme-audit/20200101080000_note.sql');
   });
 });

@@ -2,9 +2,9 @@
 // Validators of dispatch.releaseJob that fail instead of answering in time: SlowCheck answers after
 // its time limit, and BrokenCheck of the fixture module broken-rules throws on every run.
 import { Module } from '@nestjs/common';
-import { defineModule } from '@northmes/sdk';
 import { CommandValidator } from '@northmes/sdk/commands';
 import { releaseJob } from './dispatch.ts';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 /** The time limit of SlowCheck. */
 export const SLOW_CHECK_LIMIT_MS = 50;
@@ -34,10 +34,8 @@ export const BrokenCheck = CommandValidator(releaseJob, {
 @Module({ providers: [BrokenCheck] })
 export class BrokenRulesModule {}
 
-export const brokenRules = defineModule({
+export const brokenRules: InRepoModule = {
   id: 'broken-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
-  server: async () => ({ default: BrokenRulesModule }),
-});
+  module: BrokenRulesModule,
+};

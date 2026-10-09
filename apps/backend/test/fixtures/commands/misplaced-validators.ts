@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixture modules whose validators the host refuses at boot (ADR 0037): hold-rules validates a
-// command that dispatch does not declare validatable, stray-rules validates dispatch.releaseJob
+// command whose contract dispatch does not make validatable, stray-rules validates dispatch.releaseJob
 // without depending on dispatch, patient-rules gives its validators time limits that the host
 // does not allow, and loose-rules gives its validators time limits that are not numbers.
 import { Module } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
-import { defineModule } from '@northmes/sdk';
 import { CommandValidator } from '@northmes/sdk/commands';
 import { z } from 'zod';
 import { releaseJob } from './dispatch.ts';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 /**
- * hold-rules' copy of a dispatch contract that says the command is validatable. dispatch's
- * manifest does not declare it so.
+ * hold-rules' copy of a dispatch contract that says the command is validatable. The contract that
+ * dispatch's command is defined with does not.
  */
 const holdJob = defineCommandContract({
   name: 'dispatch.holdJob',
@@ -32,13 +32,11 @@ export const HoldCheck = CommandValidator(holdJob, {
 @Module({ providers: [HoldCheck] })
 export class HoldRulesModule {}
 
-export const holdRules = defineModule({
+export const holdRules: InRepoModule = {
   id: 'hold-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
-  server: async () => ({ default: HoldRulesModule }),
-});
+  module: HoldRulesModule,
+};
 
 export const QuantityCap = CommandValidator(releaseJob, {
   name: 'quantity-cap',
@@ -51,12 +49,10 @@ export const QuantityCap = CommandValidator(releaseJob, {
 export class StrayRulesModule {}
 
 /** Validates a command of dispatch, but does not depend on dispatch. */
-export const strayRules = defineModule({
+export const strayRules: InRepoModule = {
   id: 'stray-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
-  server: async () => ({ default: StrayRulesModule }),
-});
+  module: StrayRulesModule,
+};
 
 export const PatientCheck = CommandValidator(releaseJob, {
   name: 'patient-check',
@@ -78,13 +74,11 @@ export const InstantCheck = CommandValidator(releaseJob, {
 export class PatientRulesModule {}
 
 /** Depends on dispatch, but one validator's limit is longer than the host allows, one's is 0. */
-export const patientRules = defineModule({
+export const patientRules: InRepoModule = {
   id: 'patient-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
-  server: async () => ({ default: PatientRulesModule }),
-});
+  module: PatientRulesModule,
+};
 
 // A plugin is plain JavaScript, so nothing but boot stops a time limit that is not a number.
 export const TextCheck = CommandValidator(releaseJob, {
@@ -107,10 +101,8 @@ export const FlagCheck = CommandValidator(releaseJob, {
 export class LooseRulesModule {}
 
 /** Depends on dispatch, but its validators set timeoutMs to a string and to a boolean. */
-export const looseRules = defineModule({
+export const looseRules: InRepoModule = {
   id: 'loose-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
-  server: async () => ({ default: LooseRulesModule }),
-});
+  module: LooseRulesModule,
+};

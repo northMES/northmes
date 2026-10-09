@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Fixture modules release-limits and audit-rules: each vetoes every dispatch.releaseJob.
 import { Module } from '@nestjs/common';
-import { defineModule } from '@northmes/sdk';
 import { CommandValidator } from '@northmes/sdk/commands';
 import { releaseJob } from './dispatch.ts';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 export const QuantityLimit = CommandValidator(releaseJob, {
   name: 'quantity-limit',
@@ -15,13 +15,11 @@ export const QuantityLimit = CommandValidator(releaseJob, {
 @Module({ providers: [QuantityLimit] })
 export class ReleaseLimitsModule {}
 
-export const releaseLimits = defineModule({
+export const releaseLimits: InRepoModule = {
   id: 'release-limits',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch'],
-  server: async () => ({ default: ReleaseLimitsModule }),
-});
+  module: ReleaseLimitsModule,
+};
 
 export const JobAudit = CommandValidator(releaseJob, {
   name: 'job-audit',
@@ -34,10 +32,8 @@ export const JobAudit = CommandValidator(releaseJob, {
 export class AuditRulesModule {}
 
 /** Depends on release-limits, so the catalog boots it after release-limits. */
-export const auditRules = defineModule({
+export const auditRules: InRepoModule = {
   id: 'audit-rules',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['dispatch', 'release-limits'],
-  server: async () => ({ default: AuditRulesModule }),
-});
+  module: AuditRulesModule,
+};

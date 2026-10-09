@@ -46,7 +46,7 @@ describe('the migration check of boot', () => {
        returning module, name`,
     );
 
-    app = await boot({ env, importManifest: (specifier) => import(specifier), exit, log });
+    app = await boot({ env, exit, log });
 
     expect(log.error.mock.calls).toEqual([
       [

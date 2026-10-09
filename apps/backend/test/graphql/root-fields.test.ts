@@ -4,8 +4,8 @@ import { Module } from '@nestjs/common';
 import { Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { describe, expect, it } from 'vitest';
 import { rootFieldProblems } from '../../src/graphql/root-fields.ts';
-import CoreModule from '../../src/modules/core/index.ts';
-import PlanningModule from '../../src/modules/planning/index.ts';
+import { CoreModule } from '../../src/modules/core/core.module.ts';
+import { PlanningModule } from '../../src/modules/planning/planning.module.ts';
 
 @Resolver()
 class ShopFloorResolver {

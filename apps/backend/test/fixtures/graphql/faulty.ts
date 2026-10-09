@@ -7,8 +7,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
-import { defineModule } from '@northmes/sdk';
 import { DomainError, type DomainErrorStatus } from '@northmes/sdk/errors';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 /** The message that faultyServerError and faultyUnknown throw, which no client may read. */
 export const UNKNOWN_ERROR_TEXT = 'connection to 10.0.0.7 refused for user nm_app';
@@ -62,9 +62,7 @@ export class FaultyResolver {
 @Module({ providers: [FaultyResolver] })
 export class FaultyModule {}
 
-export const faulty = defineModule({
+export const faulty: InRepoModule = {
   id: 'faulty',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
-  server: async () => ({ default: FaultyModule }),
-});
+  module: FaultyModule,
+};

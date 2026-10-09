@@ -5,18 +5,18 @@ import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ModulesContainer } from '@nestjs/core';
-import type { ModuleManifest } from '@northmes/sdk';
 import { secretsConfig } from '@northmes/sdk/config';
 import { useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { AppModule } from '../../src/app.module.ts';
-import { boot } from '../../src/boot/boot.ts';
-import { inRepoManifests } from '../../src/modules.ts';
+import { type BootOptions, boot } from '../../src/boot/boot.ts';
 import { imageVersion } from '../../src/version.ts';
-import { core, inRepoModule } from '../fixtures/catalog.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
-import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
+import { alpha } from '../fixtures/graphql/alpha.ts';
+import { beta } from '../fixtures/graphql/beta.ts';
+import { importPlugins, writeConfig, writePlugin } from '../fixtures/plugins/plugin-root.ts';
+import { articleGate, releaseCap } from '../fixtures/plugins/validator-plugins.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 // Boot step 5 reads the migration records of the in-repo modules as nm_app, so the server needs a
@@ -27,15 +27,6 @@ const env = useServerEnv({ database: db });
 // Collects the lines boot writes.
 function recordingLog() {
   return { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
-}
-
-// Imports fixture manifests in place of the in-repo ones, keyed by the specifier boot imports.
-function importFixtures(manifests: Readonly<Record<string, ModuleManifest>>) {
-  return async (specifier: string) => {
-    const manifest = manifests[specifier];
-    if (!manifest) throw new Error(`no fixture manifest for ${specifier}`);
-    return { default: manifest };
-  };
 }
 
 let app: INestApplication | undefined;
@@ -58,7 +49,7 @@ describe('boot', () => {
     const log = recordingLog();
     const exit = vi.fn<(code: number) => void>();
 
-    app = await boot({ env, importManifest: (specifier) => import(specifier), exit, log });
+    app = await boot({ env, exit, log });
     const url = await app?.getUrl();
 
     expect(exit).not.toHaveBeenCalled();
@@ -76,7 +67,6 @@ describe('boot', () => {
 
     app = await boot({
       env,
-      importManifest: (specifier) => import(specifier),
       exit,
       log: recordingLog(),
     });
@@ -106,41 +96,22 @@ describe('boot', () => {
     });
   });
 
-  it('E02-S02 boot resolves each manifest it was given through resolveManifest', async () => {
-    const exit = vi.fn<(code: number) => void>();
-    const specifier = '@northmes/fixture-core/manifest';
-    // A fixture specifier names no package, so import.meta.resolve could not resolve it.
-    const resolveManifest = vi.fn<(specifier: string) => string>(() => import.meta.url);
-
-    app = await boot({
-      env,
-      manifests: [specifier],
-      importManifest: importFixtures({ [specifier]: core.manifest }),
-      resolveManifest,
-      exit,
-      log: recordingLog(),
-    });
-
-    expect(exit).not.toHaveBeenCalled();
-    expect(resolveManifest.mock.calls).toEqual([[specifier]]);
-  });
-
   it('E02-S01 a catalog BootError exits 1 with its message', async () => {
     const log = recordingLog();
     const exit = vi.fn<(code: number) => void>();
-    const [coreSpecifier = '', planningSpecifier = ''] = inRepoManifests;
-    const importManifest = importFixtures({
-      [coreSpecifier]: core.manifest,
-      [planningSpecifier]: inRepoModule('planning', ['core', 'quality']).manifest,
-    });
 
-    app = await boot({ env, importManifest, exit, log });
+    app = await boot({
+      env,
+      modules: [alpha, { ...beta, dependsOn: ['alpha', 'quality'] }],
+      exit,
+      log,
+    });
 
     expect(app).toBeUndefined();
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.error.mock.calls).toEqual([
       [
-        'refused to start (1 problem)\n- Module planning depends on "quality", which is not installed',
+        'refused to start (1 problem)\n- Module beta depends on "quality", which is not installed',
       ],
     ]);
     expect(log.info).not.toHaveBeenCalled();
@@ -158,7 +129,6 @@ describe('boot', () => {
 
     app = await boot({
       env: { ...env, NORTHMES_CONFIG: file },
-      importManifest: (specifier) => import(specifier),
       exit,
       log,
     });
@@ -196,8 +166,7 @@ describe('boot', () => {
 
       app = await boot({
         env: { ...env, NORTHMES_CONFIG: file },
-        importManifest: (specifier) => import(specifier),
-        exit,
+          exit,
         log,
       });
 
@@ -215,13 +184,130 @@ describe('boot', () => {
     const log = recordingLog();
     const exit = vi.fn<(code: number) => void>();
 
-    app = await boot({ env, ...fixtureCatalog(dispatch, strayRules), exit, log });
+    app = await boot({ env, modules: [dispatch, strayRules], exit, log });
 
     expect(app).toBeUndefined();
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.error.mock.calls).toEqual([
       [
         'refused to start (1 problem)\n- Validator quantity-cap of module stray-rules is on dispatch.releaseJob of module dispatch, which is not in the dependsOn of stray-rules',
+      ],
+    ]);
+  });
+});
+
+describe('boot with the in-repo modules as plain Nest modules', () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'northmes-plugins-'));
+    // ConfigModule writes NORTHMES_CONFIG into process.env; unstubAllEnvs takes it out again.
+    vi.stubEnv('NORTHMES_CONFIG', undefined);
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('E02-S01 boot imports no manifest for core and planning and boots them in dependency order', async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+    const importManifest = vi.fn<NonNullable<BootOptions['importManifest']>>(async (specifier) => {
+      throw new Error(`boot imported ${specifier}`);
+    });
+
+    app = await boot({ env, importManifest, exit, log });
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(importManifest).not.toHaveBeenCalled();
+    expect(log.info.mock.calls[0]).toEqual(['Modules in boot order: core, planning']);
+  });
+
+  it("E02-S04 a plugin's manifest still loads after the in-repo modules", async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+    const audit = writePlugin(dir, {
+      id: 'acme-audit',
+      version: '1.2.0',
+      northmes: '>=0.0.0-0 <0.1.0-0',
+      dependsOn: ['core'],
+    });
+
+    app = await boot({
+      env: { ...env, NORTHMES_CONFIG: writeConfig(dir, [audit]) },
+      importManifest: importPlugins(audit),
+      exit,
+      log,
+    });
+
+    expect(exit).not.toHaveBeenCalled();
+    expect(log.info.mock.calls[0]).toEqual(['Modules in boot order: core, planning, acme-audit']);
+  });
+
+  it("E02-S04 a plugin's manifest is still checked: a range without the image's version exits 1", async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+    const audit = writePlugin(dir, {
+      id: 'acme-audit',
+      version: '1.2.0',
+      northmes: '>=9.0.0',
+      dependsOn: ['core', 'quality'],
+    });
+
+    app = await boot({
+      env: { ...env, NORTHMES_CONFIG: writeConfig(dir, [audit]) },
+      importManifest: importPlugins(audit),
+      exit,
+      log,
+    });
+
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        [
+          'refused to start (2 problems)',
+          `- Module acme-audit 1.2.0 runs on NorthMES >=9.0.0, and this image is ${imageVersion()}`,
+          '- Module acme-audit depends on "quality", which is not installed',
+        ].join('\n'),
+      ],
+    ]);
+  });
+
+  it("E02-S04 a plugin validator on planning.releaseProductionOrder boots, because planning's contract says it is validatable", async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+    const plugin = writePlugin(dir, releaseCap);
+
+    app = await boot({
+      env: { ...env, NORTHMES_CONFIG: writeConfig(dir, [plugin]) },
+      importManifest: importPlugins(plugin),
+      exit,
+      log,
+    });
+
+    expect(log.error).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
+    expect(log.info.mock.calls[0]).toEqual(['Modules in boot order: core, planning, release-cap']);
+  });
+
+  it("E02-S04 a plugin validator on core.createArticle exits 1, because core's contract does not say it is validatable", async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+    const plugin = writePlugin(dir, articleGate);
+
+    app = await boot({
+      env: { ...env, NORTHMES_CONFIG: writeConfig(dir, [plugin]) },
+      importManifest: importPlugins(plugin),
+      exit,
+      log,
+    });
+
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        'refused to start (1 problem)\n- Validator article-gate of module article-gate is on core.createArticle, which no module declares validatable',
       ],
     ]);
   });

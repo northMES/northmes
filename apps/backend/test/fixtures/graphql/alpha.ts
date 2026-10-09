@@ -2,8 +2,8 @@
 // Fixture module alpha: owns Thing, and hands out its things through its API module, AlphaApiModule.
 import { Inject, Injectable, Module } from '@nestjs/common';
 import { Args, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
-import { defineModule } from '@northmes/sdk';
 import { GraphQLError } from 'graphql';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 @ObjectType('Thing')
 export class Thing {
@@ -51,9 +51,7 @@ export class ThingResolver {
 @Module({ imports: [AlphaApiModule], providers: [ThingResolver] })
 export class AlphaModule {}
 
-export const alpha = defineModule({
+export const alpha: InRepoModule = {
   id: 'alpha',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
-  server: async () => ({ default: AlphaModule }),
-});
+  module: AlphaModule,
+};
