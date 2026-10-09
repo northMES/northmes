@@ -15,10 +15,11 @@ import type { ServerEnv } from '@northmes/sdk/config';
 export const WEB_ORIGINS = 'northmes.webOrigins';
 
 /**
- * The headers a web origin may read from an answer: the bearer plugin's session token and the jwt
- * plugin's JWT (ADR 0010).
+ * The headers a web origin may read from an answer: the bearer plugin's session token, the jwt
+ * plugin's JWT (ADR 0010), and the seconds a rate-limited request waits. The web sends its
+ * requests without cookies, so the rule never allows credentials.
  */
-const exposedHeaders = 'set-auth-token, set-auth-jwt';
+const exposedHeaders = 'set-auth-token, set-auth-jwt, x-retry-after';
 
 /** The headers a web origin may send. */
 const allowedHeaders = 'authorization, content-type, x-northmes-plant';
