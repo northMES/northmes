@@ -291,7 +291,17 @@ export class CommandBusImpl implements CommandBus {
       // A command without a target gets undefined, which its Target type then is.
       const target = (await authorizeAndLoad(command, input, principal, { tx, plantId })) as Target;
       checkVersion(command, input, target);
-      const context = { tx, plantId, target };
+      const context = {
+        tx,
+        plantId,
+        target,
+        require: (permission: string, scopeId: string) => {
+          // authorizeAndLoad refused a run without a principal before the handler can call it.
+          if (!principal || !can(principal, permission, scopeId)) {
+            throw forbidden(`You need ${permission} at scope ${scopeId}`);
+          }
+        },
+      };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);
         for (const registered of validators) {

@@ -17,8 +17,8 @@ import {
   useTestDatabase,
 } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ArticleService } from '../../../src/modules/core/public-api.ts';
 import { PrincipalService } from '../../../src/modules/core/core/access/principal.service.ts';
+import { ArticleService } from '../../../src/modules/core/public-api.ts';
 import { runAs } from '../../../src/principal.ts';
 
 const articleFields = 'id code name version allPlants plants { slug name } archivedAt';
@@ -40,7 +40,7 @@ const setPlantsMutation = `mutation ($input: CoreSetArticlePlantsInput!) {
 }`;
 
 const listQuery = `query ($companyId: ID, $unassigned: Boolean) {
-  coreArticles(companyId: $companyId, unassigned: $unassigned) { nodes { code } totalCount }
+  coreArticles(companyId: $companyId, unassigned: $unassigned) { edges { node { code } } totalCount }
 }`;
 
 const articleQuery = `query ($id: ID!, $companyId: ID) {
@@ -111,12 +111,12 @@ describe('articles at the company, assigned to plants', () => {
 
   /** The codes that coreArticles lists for this client, with these arguments. */
   async function listed(client: GqlClient, variables: Record<string, unknown> = {}) {
-    const answer = await client.send<{ coreArticles: { nodes: { code: string }[] } }>(
+    const answer = await client.send<{ coreArticles: { edges: { node: { code: string } }[] } }>(
       listQuery,
       variables,
     );
     expect(answer.errors).toBeUndefined();
-    return answer.data?.coreArticles.nodes.map(({ code }) => code);
+    return answer.data?.coreArticles.edges.map(({ node }) => node.code);
   }
 
   /** A code no other test uses. */

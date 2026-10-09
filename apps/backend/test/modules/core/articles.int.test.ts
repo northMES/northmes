@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
+  givenArticles,
   givenCompany,
   hostFactory,
   queryAsCore,
@@ -101,19 +102,11 @@ describe('coreArticles', () => {
     return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
-  /** Writes the articles at `plant`, one statement each and in their order. */
+  /** Writes the articles at `plant`, in their order. */
   async function writeArticles(plant: string, articles: readonly { code: string; name: string }[]) {
-    await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
-      async (tx) => {
-        for (const { code, name } of articles) {
-          await tx.query('insert into core.article (scope_id, code, name) values ($1, $2, $3)', [
-            plant,
-            code,
-            name,
-          ]);
-        }
-      },
+    await givenArticles(
+      db.ownerUrl,
+      articles.map(({ code, name }) => ({ code, name, plants: [plant] })),
     );
   }
 
@@ -358,21 +351,19 @@ describe('coreArticles', () => {
     // 100 characters are allowed, as are 100 rows.
     expect((await list(client, { first: 100, search: 'x'.repeat(100) })).errors).toBeUndefined();
   });
-  /** Writes the articles at `plant` with the time of their last change, one statement each. */
+  /** Writes the articles at `plant` with the time of their last change, in their order. */
   async function writeChangedArticles(
     plant: string,
     articles: readonly { code: string; name: string; updatedAt: string }[],
   ) {
-    await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
-      async (tx) => {
-        for (const { code, name, updatedAt } of articles) {
-          await tx.query(
-            'insert into core.article (scope_id, code, name, updated_at) values ($1, $2, $3, $4)',
-            [plant, code, name, updatedAt],
-          );
-        }
-      },
+    await givenArticles(
+      db.ownerUrl,
+      articles.map(({ code, name, updatedAt }) => ({
+        code,
+        name,
+        plants: [plant],
+        updatedAt: new Date(updatedAt),
+      })),
     );
   }
 
@@ -421,9 +412,11 @@ describe('coreArticles', () => {
     };
     expect(await updatedAt()).toBe('2026-10-01T07:55:00.000Z');
 
-    await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
-      (tx) => tx.query("update core.article set name = 'Shelf board 600'"),
+    await queryAsCore(
+      db.ownerUrl,
+      `update core.article set name = 'Shelf board 600'
+        where id in (select article_id from core.article_plant where plant_id = $1)`,
+      [plant],
     );
 
     expect(Date.parse((await updatedAt()) ?? '')).toBeGreaterThan(
@@ -444,7 +437,7 @@ describe('coreArticles', () => {
     });
     const [row] = await queryAsCore<{ id: string }>(
       db.ownerUrl,
-      'select id from core.article where scope_id = $1',
+      'select id from core.article where edit_scope_id = $1',
       [plant],
     );
 

@@ -51,6 +51,7 @@ describe('roles, role assignments and the permission catalog', () => {
 
     expect(rows).toEqual([
       { key: 'core.article:archive', module_id: 'core', installed: true },
+      { key: 'core.article:assign', module_id: 'core', installed: true },
       { key: 'core.article:create', module_id: 'core', installed: true },
       { key: 'core.article:read', module_id: 'core', installed: true },
       { key: 'core.article:update', module_id: 'core', installed: true },

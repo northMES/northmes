@@ -247,4 +247,9 @@ describe('northmes migrate and the admin roles', () => {
 });
 
 /** The permissions the API checks only at the company, which Plant admin never holds. */
-const companyLevel = ['core.role:manage', 'core.user:block', 'core.user:create'];
+const companyLevel = [
+  'core.article:assign',
+  'core.role:manage',
+  'core.user:block',
+  'core.user:create',
+];

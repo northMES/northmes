@@ -2,14 +2,16 @@
 import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 import { tooLong } from './messages.ts';
+import { plantSlug } from './plant.ts';
 
 /**
- * The fields a person edits on an article: its code, the article number that is unique at its
- * scope, and its name. Both are trimmed and required. 32 characters is the code limit of every
- * register (ADR 0009). Each message states the rule and the fix (design ui-222, Copy), and the
+ * The identity fields a person edits on an article, which core.createArticle and
+ * core.updateArticle share and the web's article form validates: its code, the article number
+ * that is unique within the company (ADR 0073), and its name. Both are trimmed and required. 32
+ * characters is the code limit of every register (ADR 0009). Each message states the rule and the fix (design ui-222, Copy), and the
  * server and the web form give the same one (ADR 0017).
  */
-const articleFields = z.object({
+export const articleFields = z.object({
   code: z
     .string()
     .trim()
@@ -22,22 +24,43 @@ const articleFields = z.object({
     .max(200, { error: tooLong('Name', 200) }),
 });
 
+/** The refusal of All plants together with a list of plants. */
+const plantsOrAllPlants = 'Choose plants or All plants, not both.';
+
 /**
- * Creates an article at the request's plant under the client-generated id in the input, so a retry
- * returns the first article (ADR 0012). A code that another article at the scope uses is refused
- * with core.code_taken.
+ * Where an article is used (ADR 0073): a list of plants by their slugs, or All plants, which also
+ * covers plants the company creates later. A list together with All plants is refused on plants.
+ */
+const articlePlants = z
+  .object({ allPlants: z.boolean(), plants: z.array(plantSlug) })
+  .refine(({ allPlants, plants }) => !(allPlants && plants.length > 0), {
+    error: plantsOrAllPlants,
+    path: ['plants'],
+  });
+
+/**
+ * Creates an article of the company under the client-generated id in the input, so a retry
+ * returns the first article (ADR 0012). It is assigned to the plants or to All plants that the
+ * input names, or else to the request's plant (ADR 0073). A code that another article of the
+ * company uses is refused with core.code_taken, and a slug that names no plant of the company on
+ * plants.
  */
 export const createArticle = defineCommandContract({
   name: 'core.createArticle',
   target: 'new',
-  fields: articleFields,
+  fields: articleFields
+    .extend({ allPlants: z.boolean().optional(), plants: z.array(plantSlug).optional() })
+    .refine(({ allPlants, plants }) => !(allPlants === true && (plants?.length ?? 0) > 0), {
+      error: plantsOrAllPlants,
+      path: ['plants'],
+    }),
   permission: 'core.article:create',
 });
 
 /**
  * Changes the code and name of an article, which the input names by id with the version the change
  * was made on. A stale version is refused with core.version_conflict, and a code that another
- * article at the scope uses with core.code_taken.
+ * article of the company uses with core.code_taken.
  */
 export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',
@@ -67,4 +90,17 @@ export const restoreArticle = defineCommandContract({
   target: 'existing',
   fields: z.object({}),
   permission: 'core.article:archive',
+});
+
+/**
+ * Replaces the plants of an article, which the input names by id with the version the change was
+ * made on: a list of plants, or All plants, or neither for an article that only company views
+ * show (ADR 0073). A plant taken off keeps its rows that use the article, and new rows there can no
+ * longer pick it. It needs core.article:assign at the company.
+ */
+export const setArticlePlants = defineCommandContract({
+  name: 'core.setArticlePlants',
+  target: 'existing',
+  fields: articlePlants,
+  permission: 'core.article:assign',
 });

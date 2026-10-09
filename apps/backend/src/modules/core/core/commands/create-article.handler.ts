@@ -1,41 +1,85 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import type { createArticle } from '@northmes/core-contracts';
+import { NotFoundException } from '@nestjs/common';
+import { createArticle } from '@northmes/core-contracts';
+import { registerCommand } from '@northmes/sdk/commands';
 import type { z } from 'zod';
-import { type ArticleRecord, recordColumns } from '../article.service.ts';
+import { type ArticleRecord, selectArticles } from '../article-record.ts';
+import { companyOfPlant, type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
 import type { CoreContext } from './context.ts';
 
+type CreateArticleInput = z.output<typeof createArticle.input>;
+
+/** True when the input names plants or All plants, rather than leaving them to the default. */
+function namesPlants({ allPlants, plants }: CreateArticleInput): boolean {
+  return allPlants !== undefined || plants !== undefined;
+}
+
 /**
- * The handler of core.createArticle (ADR 0012), which the mutation coreCreateArticle sends through
- * the command bus. It writes the article at the principal's plant under the client's id and returns
- * it with version 1, or returns the article a first run with that id created.
+ * Where a new article is used: the plants or All plants that the input names, or else the
+ * request's plant (ADR 0073). undefined for a request without a plant, which has no company.
+ */
+async function planOf(
+  input: CreateArticleInput,
+  { tx, plantId }: Pick<CoreContext, 'tx' | 'plantId'>,
+): Promise<PlantsPlan | undefined> {
+  if (!plantId) return undefined;
+  const companyId = await companyOfPlant(tx, plantId);
+  if (!companyId) return undefined;
+  if (!namesPlants(input)) {
+    return { companyId, allPlants: false, plantIds: [plantId], editScopeId: plantId };
+  }
+  return planPlants(tx, companyId, input);
+}
+
+/** True when the plan is the request's plant alone, which needs no core.article:assign. */
+function isDefault(plan: PlantsPlan, plantId: string): boolean {
+  return !plan.allPlants && plan.plantIds.length === 1 && plan.plantIds[0] === plantId;
+}
+
+/**
+ * The handler of core.createArticle (ADR 0012). Its scope hook returns the edit scope the new
+ * article will have, where the bus checks core.article:create: the request's plant by default, or
+ * the company for an article of several plants or All plants (ADR 0073). Plants other than the
+ * request's plant also need core.article:assign at the company. It writes the article at its
+ * company's node under the client's id with its plants and returns it with version 1, or returns
+ * the article a first run with that id created.
  */
 export const createArticleHandler = {
-  async handle(
-    { id, code, name }: z.output<typeof createArticle.input>,
-    { tx, plantId }: CoreContext,
-  ): Promise<ArticleRecord> {
-    // The bus refuses a create from a request without a plant before the handler runs.
-    if (!plantId) {
-      throw new ForbiddenException('The request names no plant, so it cannot create an article');
-    }
+  async scope(input: CreateArticleInput, context: Pick<CoreContext, 'tx' | 'plantId'>) {
+    return (await planOf(input, context))?.editScopeId;
+  },
+
+  async handle(input: CreateArticleInput, context: CoreContext): Promise<ArticleRecord> {
+    const { tx, plantId } = context;
+    const plan = await planOf(input, context);
+    // The scope hook found no plan, so the bus refused the command before the handler runs.
+    if (!plan || !plantId) throw new NotFoundException(`Article ${input.id} was not found`);
+    if (!isDefault(plan, plantId)) context.require('core.article:assign', plan.companyId);
     const created = await tx
       .insertInto('core.article')
-      .values({ id, scope_id: plantId, code, name })
+      .values({
+        id: input.id,
+        scope_id: plan.companyId,
+        company_id: plan.companyId,
+        scope_span: tx.selectFrom('core.scope').select('span').where('id', '=', plan.companyId),
+        edit_scope_id: plan.editScopeId,
+        all_plants: plan.allPlants,
+        code: input.code,
+        name: input.name,
+      })
       .onConflict((conflict) => conflict.column('id').doNothing())
-      .returning(recordColumns)
+      .returning('id')
       .executeTakeFirst();
-    if (created) return created;
+    if (created) await writePlants(tx, input.id, plan);
     // A retry after a timeout or a restart finds the article the first run created (ADR 0012).
-    const first = await tx
-      .selectFrom('core.article')
-      .select(recordColumns)
-      .where('id', '=', id)
-      .executeTakeFirst();
-    if (!first) {
-      // The id is taken at a scope the principal cannot read.
-      throw new NotFoundException(`Article ${id} was not found`);
+    const article = await selectArticles(tx).where('id', '=', input.id).executeTakeFirst();
+    if (!article) {
+      // The id is taken in a company the principal cannot read.
+      throw new NotFoundException(`Article ${input.id} was not found`);
     }
-    return first;
+    return article;
   },
 };
+
+/** core.createArticle as the bus runs it, which ArticleService.create sends. */
+export const CreateArticleCommand = registerCommand(createArticle, createArticleHandler);

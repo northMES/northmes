@@ -1,14 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { Inject } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { archiveArticle } from '@northmes/core-contracts';
-import { defineCommand } from '@northmes/sdk/commands';
-import { archiveArticleHandler } from '../../../core/commands/archive-article.handler.ts';
+import { commandInput } from '@northmes/sdk/commands';
+import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
 
+/** The input type of the mutation, registered when the module loads. */
+const ArchiveArticleInput = commandInput(archiveArticle);
+
 /**
- * The mutation coreArchiveArticle, which the SDK generates from the contract of core.archiveArticle
- * and which returns the Article that archiveArticleHandler changes.
+ * The mutation coreArchiveArticle, whose input type the SDK builds from the contract of
+ * core.archiveArticle. It calls ArticleService.archive, which sends the command through the command
+ * bus, as every surface does (ADR 0073).
  */
-export const ArchiveArticle = defineCommand(archiveArticle, {
-  returns: () => Article,
-  ...archiveArticleHandler,
-});
+@Resolver(() => Article)
+export class ArchiveArticleMutation {
+  constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
+
+  /** Archives an article at every plant. */
+  @Mutation(() => Article)
+  coreArchiveArticle(
+    @Args('input', { type: () => ArchiveArticleInput }) input: unknown,
+  ): Promise<ArticleRecord> {
+    return this.articles.archive(input);
+  }
+}

@@ -6,9 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { givenCompany, queryAsCore } from '@northmes/backend/testing';
 import { emptyTemplateDatabase, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { checkCatalog } from '../../../src/catalog/check-catalog.ts';
+import { inRepoCatalog } from '../../../src/boot/boot.ts';
 import { migrate } from '../../../src/migrate/runner.ts';
-import { imageVersion, inRepoModule } from '../../fixtures/catalog.ts';
 
 /** core's migrations folder. */
 const coreMigrations = fileURLToPath(
@@ -41,8 +40,9 @@ describe('the migration that moves articles to the company', () => {
   const db = useTestDatabase({ template: emptyTemplateDatabase });
   let dir = '';
 
+  // core's catalog entry, with its migrations from migrationsDir.
   const catalogIn = (migrationsDir: string) =>
-    checkCatalog([{ ...inRepoModule('core'), migrationsDir }], { imageVersion });
+    inRepoCatalog({ modules: ['core'] }).map((entry) => ({ ...entry, migrationsDir }));
 
   beforeAll(async () => {
     dir = migrationsBeforeMove();
