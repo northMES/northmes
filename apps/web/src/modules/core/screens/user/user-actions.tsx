@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
+import { useCompanyVariables } from '../../use-places.ts';
 import type { User } from '../../use-user.tsx';
 import { CoreBlockUser } from './block-user.graphql.ts';
 import { CoreUnblockUser } from './unblock-user.graphql.ts';
@@ -35,8 +36,13 @@ export function UserBlockAction({ user }: { readonly user: User }) {
   const field = useRef<HTMLTextAreaElement>(null);
   const [block] = useMutation(CoreBlockUser);
   const [unblock] = useMutation(CoreUnblockUser);
+  const company = useCompanyVariables();
   const verb = user.blocked ? 'unblock' : 'block';
-  const input = { id: user.id, ...(reason.trim() !== '' && { reason: reason.trim() }) };
+  const input = {
+    id: user.id,
+    ...company,
+    ...(reason.trim() !== '' && { reason: reason.trim() }),
+  };
   return (
     <ConfirmDialog
       trigger={

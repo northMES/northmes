@@ -12,16 +12,17 @@ import {
   anna,
   assignment,
   companiesQuery,
+  companyId,
   forbiddenError,
   idOf,
   plantA,
   sara,
+  settingsViewerQuery,
   shiftLead,
   user,
-  viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, plant, renderCoreAt } from './core-app.tsx';
+import { bodyRows, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -31,7 +32,7 @@ const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 /** coreUsers' first page with these users. */
 function usersQuery(nodes: readonly ReturnType<typeof user>[]): MockLink.MockedResponse {
   return {
-    request: { query: CoreUsers, variables: { first: 25 } },
+    request: { query: CoreUsers, variables: { companyId, first: 25 } },
     result: {
       data: {
         coreUsers: {
@@ -66,9 +67,9 @@ function field(name: string): HTMLInputElement {
 }
 
 describe('users', () => {
-  it('E05-S08 the users list shows each user with their username, their roles per place and their status, and New user for a user who may create users', async () => {
-    renderCoreAt(coreLinks.users({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+  it('E04-S02 the users list in company settings shows each user with their username, their roles per place and their status, and New user for a user who may create users', async () => {
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       usersQuery([
         user(anna, [], true),
@@ -89,22 +90,22 @@ describe('users', () => {
         within(table)
           .getAllByRole('columnheader')
           .map((header) => header.textContent),
-      ).toEqual(['Name', 'Username', 'Roles at Acme AB and Plant A', 'Status']),
+      ).toEqual(['Name', 'Username', 'Roles', 'Status']),
     );
     expect(screen.getByRole('link', { name: 'Sara Nyberg' }).getAttribute('href')).toBe(
-      coreLinks.users.user({ plant, userId: sara.id }).href,
+      coreLinks.settings.users.user({ companyId, userId: sara.id }).href,
     );
     expect((await screen.findByRole('link', { name: 'New user' })).getAttribute('href')).toBe(
-      coreLinks.users.new({ plant }).href,
+      coreLinks.settings.users.new({ companyId }).href,
     );
   });
 
-  it('E05-S08 a reader without core.user:read gets the page No access to Users', async () => {
-    renderCoreAt(coreLinks.users({ plant }).href, [
-      viewerQuery([]),
+  it('E05-S08 a reader without core.user:read at the company gets the page No access to Users', async () => {
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery([]),
       companiesQuery(),
       {
-        request: { query: CoreUsers, variables: { first: 25 } },
+        request: { query: CoreUsers, variables: { companyId, first: 25 } },
         result: { data: null, errors: [forbiddenError(['coreUsers'])] },
       },
     ]);
@@ -114,15 +115,15 @@ describe('users', () => {
     ).toBeDefined();
     expect(
       await screen.findByText(
-        'Opening Users needs the permission to read users and their roles (core.user:read) at Plant A. Ask a plant admin for a role that includes it.',
+        'Opening Users needs the permission to read users and their roles (core.user:read) at Acme AB. Ask a company admin of Acme AB for a role that includes it.',
       ),
     ).toBeDefined();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('E05-S08 New user needs core.user:create at the company: a plant admin who holds it at Plant A only gets the page No access to New user, and the list shows no New user', async () => {
-    const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create']),
+  it('E05-S08 New user needs core.user:create at the company: a reader of users without it gets the page No access to New user, and the list shows no New user', async () => {
+    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       usersQuery([user(sara, [])]),
     ]);
@@ -137,15 +138,15 @@ describe('users', () => {
     ).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
 
-    await router.navigate({ to: coreLinks.users({ plant }).href });
+    await router.navigate({ to: coreLinks.settings.users({ companyId }).href });
     expect(await screen.findByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'New user' })).toBeNull();
   });
 
   it('E05-S08 Create user with empty fields shows each message in the summary, which takes focus, and sends nothing', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);
 
@@ -160,8 +161,8 @@ describe('users', () => {
   });
 
   it('E05-S08 New user requires Email, the address the user signs in with, and offers no way to leave it empty', async () => {
-    renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);
 
@@ -179,8 +180,8 @@ describe('users', () => {
 
   it('E05-S08 a username that is taken or was used before lands on Username with the typed values kept', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
         request: {
@@ -189,7 +190,8 @@ describe('users', () => {
             uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
             input.username === 't.lindqvist' &&
-            input.email === 'tove.lindqvist@example.test',
+            input.email === 'tove.lindqvist@example.test' &&
+            input.companyId === companyId,
         },
         result: {
           data: null,
@@ -231,8 +233,8 @@ describe('users', () => {
   it("E05-S08 a retry whose first run created the user says the user was created without a password to show and opens the user's page", async () => {
     const user = userEvent.setup();
     const tove = idOf('tove');
-    const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
         request: {
@@ -241,7 +243,8 @@ describe('users', () => {
             uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
             input.username === 't.lindqvist' &&
-            input.email === 'tove.lindqvist@example.test',
+            input.email === 'tove.lindqvist@example.test' &&
+            input.companyId === companyId,
         },
         result: {
           data: null,
@@ -274,7 +277,7 @@ describe('users', () => {
 
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(
-        coreLinks.users.user({ plant, userId: tove }).href,
+        coreLinks.settings.users.user({ companyId, userId: tove }).href,
       ),
     );
     expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -288,8 +291,8 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    const router = renderCoreAt(coreLinks.users.new({ plant }).href, [
-      viewerQuery(['core.user:read', 'core.user:create'], ['core.user:create']),
+    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
         request: {
@@ -298,7 +301,8 @@ describe('users', () => {
             uuidv7.test(input.id ?? '') &&
             input.name === 'Tove Lindqvist' &&
             input.username === 't.lindqvist' &&
-            input.email === 'tove.lindqvist@example.test',
+            input.email === 'tove.lindqvist@example.test' &&
+            input.companyId === companyId,
         },
         result: {
           data: {
@@ -311,7 +315,7 @@ describe('users', () => {
         },
       },
       {
-        request: { query: CoreUserPermissions, variables: { id: tove.id } },
+        request: { query: CoreUserPermissions, variables: { id: tove.id, companyId } },
         result: {
           data: { coreUser: { __typename: 'User', id: tove.id, effectivePermissions: [] } },
         },
@@ -327,7 +331,7 @@ describe('users', () => {
       name: 'Temporary password for Tove Lindqvist',
     });
     expect(router.state.location.pathname).toBe(
-      coreLinks.users.user({ plant, userId: tove.id }).href,
+      coreLinks.settings.users.user({ companyId, userId: tove.id }).href,
     );
     expect(
       (within(dialog).getByRole('textbox', { name: 'Temporary password' }) as HTMLInputElement)

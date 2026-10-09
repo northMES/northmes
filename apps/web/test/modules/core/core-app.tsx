@@ -35,13 +35,26 @@ function PlantStub() {
   );
 }
 
+/** The company settings route's component of the tests: the page alone, without a plant. */
+function SettingsStub() {
+  return (
+    <main>
+      <Outlet />
+    </main>
+  );
+}
+
 /**
- * Renders the core module's routes at href, with a MockedProvider that answers each of mocks once,
+ * Renders the core module's routes at href, at a plant or in company settings, with a MockedProvider that answers each of mocks once,
  * and returns the router, whose state.location shows the URL.
  */
 export function renderCoreAt(href: string, mocks: readonly MockLink.MockedResponse[]) {
   const router = createRouter({
-    routeTree: createShellRoutes({ modules: [coreModule], plantComponent: PlantStub }),
+    routeTree: createShellRoutes({
+      modules: [coreModule],
+      plantComponent: PlantStub,
+      settingsComponent: SettingsStub,
+    }),
     history: createMemoryHistory({ initialEntries: [href] }),
   });
   render(

@@ -47,6 +47,7 @@ input CoreArchiveArticleInput {
 }
 
 input CoreAssignRoleInput {
+  companyId: String
   id: ID!
   roleId: ID!
   scopeId: ID!
@@ -54,6 +55,7 @@ input CoreAssignRoleInput {
 }
 
 input CoreBlockUserInput {
+  companyId: String
   id: ID!
   reason: String
 }
@@ -65,12 +67,14 @@ input CoreCreateArticleInput {
 }
 
 input CoreCreateRoleInput {
+  companyId: String
   id: ID!
   name: String!
   permissions: [String!]!
 }
 
 input CoreCreateUserInput {
+  companyId: String
   email: String!
   id: ID!
   name: String!
@@ -93,6 +97,7 @@ input CoreRestoreArticleInput {
 }
 
 input CoreUnblockUserInput {
+  companyId: String
   id: ID!
   reason: String
 }
@@ -192,12 +197,52 @@ type Query {
   coreArticle(id: ID!): Article
   coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
   coreCompanies: [Company!]!
-  corePermissionCatalog: [PermissionModule!]!
-  coreRole(id: ID!): Role
-  coreRoles: [Role!]!
-  coreUser(id: ID!): User
-  coreUsers(after: String, before: String, first: Int = 25, last: Int, orderBy: [UserOrderBy!], search: String): UserConnection!
-  coreViewer: Viewer!
+  corePermissionCatalog(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): [PermissionModule!]!
+  corePlantRoleAssignments: [RoleAssignment!]!
+  coreRole(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): Role
+  coreRoles(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): [Role!]!
+  coreUser(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): User
+  coreUsers(
+    after: String
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    last: Int
+    orderBy: [UserOrderBy!]
+    search: String
+  ): UserConnection!
+  coreViewer(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): Viewer!
   planningProductionOrders: [ProductionOrder!]!
 }
 

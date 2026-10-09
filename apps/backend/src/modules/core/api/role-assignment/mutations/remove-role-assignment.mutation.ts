@@ -11,5 +11,6 @@ import { RoleAssignment } from '../types/role-assignment.type.ts';
  */
 export const RemoveRoleAssignment = defineCommand(removeRoleAssignment, {
   returns: () => RoleAssignment,
+  plantFree: true,
   ...removeRoleAssignmentHandler,
 });

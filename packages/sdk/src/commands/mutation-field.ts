@@ -2,6 +2,7 @@
 import { Inject, type Type } from '@nestjs/common';
 import {
   Args,
+  Extensions,
   Field,
   Float,
   ID,
@@ -15,6 +16,7 @@ import type { CommandContract } from '@northmes/contracts';
 import { GraphQLError } from 'graphql';
 import { z } from 'zod';
 import type { FieldError } from '../errors/domain-error.ts';
+import { PLANT_FREE } from '../graphql/plant-free.ts';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
 
 function capitalize(name: string): string {
@@ -144,9 +146,13 @@ function parseInput(contract: CommandContract, input: unknown): unknown {
 /**
  * A resolver class with the command's Mutation field. Its one argument, input, has the input type
  * built from the contract, and the field parses the input with the contract and sends the result
- * to the command bus.
+ * to the command bus. A plant-free command's field carries the plant-free mark (ADR 0066).
  */
-export function mutationResolver(command: Command, returns: ReturnTypeFunc): Type {
+export function mutationResolver(
+  command: Command,
+  returns: ReturnTypeFunc,
+  { plantFree }: { readonly plantFree?: true } = {},
+): Type {
   const fieldName = mutationFieldName(command.contract.name);
   const fields = inputFields(command.contract);
   const Input = inputType(fields, `${capitalize(fieldName)}Input`);
@@ -156,6 +162,7 @@ export function mutationResolver(command: Command, returns: ReturnTypeFunc): Typ
     constructor(@Inject(COMMAND_BUS) private readonly bus: CommandBus) {}
 
     @Mutation(returns, { name: fieldName })
+    @Extensions({ [PLANT_FREE]: plantFree === true })
     run(@Args('input', { type: () => Input }) input: unknown): Promise<unknown> {
       return this.bus.run(command, parseInput(command.contract, withoutNulls(fields, input)));
     }

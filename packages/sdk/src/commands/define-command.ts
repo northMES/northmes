@@ -11,6 +11,11 @@ export interface CommandDefinition<Input, Result, Target extends TargetRow | und
   extends Pick<Command<Input, Result, Target>, 'target' | 'scope' | 'buildPayload' | 'handle'> {
   /** The GraphQL type of the handler's result, which the mutation returns. */
   readonly returns: ReturnTypeFunc;
+  /**
+   * Marks the mutation plant-free, so company settings may send it without x-northmes-plant
+   * (ADR 0066). The command then finds its company in its input or its target row.
+   */
+  readonly plantFree?: true;
 }
 
 /** What defineCommand returns: a provider for the module's Nest module. */
@@ -40,6 +45,7 @@ export function defineCommand<
   contract: Contract,
   {
     returns,
+    plantFree,
     target,
     scope,
     buildPayload,
@@ -63,5 +69,5 @@ export function defineCommand<
     buildPayload,
     handle,
   };
-  return Object.assign(mutationResolver(command, returns), { command });
+  return Object.assign(mutationResolver(command, returns, { plantFree }), { command });
 }

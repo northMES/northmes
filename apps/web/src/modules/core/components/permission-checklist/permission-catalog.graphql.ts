@@ -12,8 +12,8 @@ export {
 // permission-catalog.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
-    query CorePermissionCatalog {
-      corePermissionCatalog {
+    query CorePermissionCatalog($companyId: ID!) {
+      corePermissionCatalog(companyId: $companyId) {
         moduleId
         resources {
           resource

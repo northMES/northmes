@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks, updateRole } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
@@ -21,7 +20,7 @@ import { CoreRole } from '../../role.graphql.ts';
 import { listRole } from '../../role-cache.ts';
 import { isCompanyAdmin } from '../../role-kind.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreCreateRole } from './create-role.graphql.ts';
 
@@ -93,7 +92,7 @@ function NewRoleForm({
   readonly roles: readonly StartRole[];
   readonly from?: string;
 }) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const places = usePlaces();
   const [id] = useState(() => uuidv7());
@@ -112,7 +111,11 @@ function NewRoleForm({
     update(cache, { data }) {
       if (!data) return;
       const role = data.coreCreateRole;
-      cache.writeQuery({ query: CoreRole, variables: { id: role.id }, data: { coreRole: role } });
+      cache.writeQuery({
+        query: CoreRole,
+        variables: { id: role.id, companyId },
+        data: { coreRole: role },
+      });
       listRole(cache, role.id);
     },
   });
@@ -120,11 +123,13 @@ function NewRoleForm({
   const save = async ({ name, permissions }: RoleValues) => {
     setRefused([]);
     try {
-      const { data } = await create({ variables: { input: { id, name, permissions } } });
+      const { data } = await create({
+        variables: { input: { id, name, permissions, companyId } },
+      });
       if (!data) return;
       announce(`${data.coreCreateRole.name} created.`);
       await navigate({
-        to: coreLinks.roles.role({ plant, roleId: data.coreCreateRole.id }).href,
+        to: coreLinks.settings.roles.role({ companyId, roleId: data.coreCreateRole.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -138,7 +143,7 @@ function NewRoleForm({
     <RoleForm
       form={form}
       onSave={save}
-      cancelHref={coreLinks.roles({ plant }).href}
+      cancelHref={coreLinks.settings.roles({ companyId }).href}
       saveLabel="Create role"
       failedHeading="The role was not created"
       companyName={companyName}
@@ -170,11 +175,11 @@ function NewRoleForm({
  * core.role:manage gets the page "No access to New role" (RO31).
  */
 export function NewRoleScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const places = usePlaces();
   const viewer = useViewer();
   const search = newRoleSearch(useSearch({ strict: false }));
-  const { data, error, refetch } = useQuery(CoreRoles);
+  const { data, error, refetch } = useQuery(CoreRoles, { variables: { companyId } });
   const roles = data?.coreRoles;
   // The API checks core.role:manage at the company (ADR 0010).
   const forbidden = viewer.loaded && !viewer.canAtCompany('core.role:manage');
@@ -202,7 +207,7 @@ export function NewRoleScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to New role' : 'New role'}
-      crumbs={[{ label: 'Roles', href: coreLinks.roles({ plant }).href }]}
+      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ companyId }).href }]}
       state={state}
     >
       {roles !== undefined && viewer.loaded && !forbidden && (

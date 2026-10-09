@@ -25,4 +25,20 @@ describe('defineModuleLinks', () => {
     // @ts-expect-error the manifest has no lines entry
     links.orders.lines({ plant: 'plant-a' });
   });
+
+  it('E04-S02 a settings section builder takes a company id and no plant', () => {
+    const core = defineModuleLinks(
+      'core',
+      { articles: { path: 'articles' } },
+      { settings: { users: { path: 'users' } } },
+    );
+
+    expectTypeOf(core.settings.users).parameter(0).toEqualTypeOf<{
+      readonly companyId: string;
+    }>();
+    // @ts-expect-error a settings page takes no plant
+    core.settings.users({ plant: 'plant-a' });
+    // @ts-expect-error a manifest without a settings section has none
+    links.settings;
+  });
 });

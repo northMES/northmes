@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Copy, Info, Pencil, Users } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
@@ -13,7 +12,7 @@ import { permissionPhrase } from '../../no-access.tsx';
 import { groupsOfKeys } from '../../permission-groups.ts';
 import { permissionLine } from '../../permission-names.ts';
 import { isCompanyAdmin, roleKind } from '../../role-kind.ts';
-import { type Place, usePlaces } from '../../use-places.ts';
+import { type Places, useCompanyId, usePlaces } from '../../use-places.ts';
 import { type Role, useRole } from '../../use-role.tsx';
 import { useViewer } from '../../use-viewer.ts';
 
@@ -97,14 +96,14 @@ function holdersLine(count: number, role: string, place: string): string {
 type Holder = Role['holders'][number];
 
 /** The person, a link to the Access tab of the person's page, and the username (RO21). */
-function holderColumns(plant: string): readonly DataTableColumn<Holder>[] {
+function holderColumns(companyId: string): readonly DataTableColumn<Holder>[] {
   return [
     {
       id: 'person',
       header: 'Person',
       cell: ({ user }) => (
         <Link
-          to={coreLinks.users.user({ plant, userId: user.id }, { tab: 'access' }).href}
+          to={coreLinks.settings.users.user({ companyId, userId: user.id }, { tab: 'access' }).href}
           className="text-link underline underline-offset-2 hover:no-underline"
         >
           {user.name}
@@ -136,7 +135,7 @@ function HoldersAt({
   readonly applies: string;
   readonly holders: readonly Holder[];
 }) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   if (holders.length === 0) {
     return (
       <Card title={title} description={applies}>
@@ -153,7 +152,7 @@ function HoldersAt({
     <Card title={title} description={holdersLine(holders.length, role.name, name)}>
       <DataTable
         label={`Holders of ${role.name} at ${name}`}
-        columns={holderColumns(plant)}
+        columns={holderColumns(companyId)}
         rows={holders}
         getRowId={(holder) => holder.id}
       />
@@ -162,23 +161,14 @@ function HoldersAt({
 }
 
 /**
- * Who holds the role at the company and at the plant (design core-304, RO21 and RO25), read only:
- * a card per place, then a note that the other plants list their own holders and that roles are
- * given and taken on a person's Access tab.
+ * Who holds the role at the company and at each of its plants (design core-304, RO21 and RO25),
+ * read only: a card per place, then a note that People in each plant's settings lists the plant's
+ * holders and that roles are given and taken on a person's Access tab.
  */
-function HoldersTab({
-  role,
-  company,
-  plant,
-}: {
-  readonly role: Role;
-  readonly company: Place | undefined;
-  readonly plant: Place | undefined;
-}) {
-  const { plant: slug } = useShell();
-  const companyName = company?.name ?? 'the company';
-  const plantName = plant?.name ?? slug;
-  const at = (kind: 'COMPANY' | 'PLANT') => role.holders.filter(({ scope }) => scope.kind === kind);
+function HoldersTab({ role, places }: { readonly role: Role; readonly places: Places }) {
+  const companyId = useCompanyId() ?? '';
+  const companyName = places.company?.name ?? 'the company';
+  const at = (scopeId: string) => role.holders.filter(({ scope }) => scope.id === scopeId);
   return (
     <div className="flex flex-col gap-4">
       <HoldersAt
@@ -186,19 +176,22 @@ function HoldersTab({
         title={`At ${companyName}, all plants`}
         name={companyName}
         applies={`A role assigned here applies to every plant of ${companyName}, also plants created later.`}
-        holders={at('COMPANY')}
+        holders={at(places.company?.id ?? companyId)}
       />
-      <HoldersAt
-        role={role}
-        title={`At ${plantName}`}
-        name={plantName}
-        applies={`A role assigned here applies at ${plantName} only.`}
-        holders={at('PLANT')}
-      />
+      {places.plants.map((plant) => (
+        <HoldersAt
+          key={plant.id}
+          role={role}
+          title={`At ${plant.name}`}
+          name={plant.name}
+          applies={`A role assigned here applies at ${plant.name} only.`}
+          holders={at(plant.id)}
+        />
+      ))}
       <p className="flex items-start gap-2 rounded-lg bg-info-subtle px-4 py-3 text-sm">
         <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-info" />
-        Holders at the other plants of {companyName} are listed in the Administration of each plant.
-        To add or remove a role, open the person and use the Access tab.
+        People in each plant's settings lists who holds a role at that plant. To add or remove a
+        role, open the person and use the Access tab.
       </p>
     </div>
   );
@@ -211,7 +204,7 @@ function HoldersTab({
  * Holders, the open one in the URL's tab. History comes with the audit trail.
  */
 export function RoleScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const search = rolePageSearch(useSearch({ strict: false }));
   const { role, state, forbidden } = useRole();
@@ -234,7 +227,7 @@ export function RoleScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to Roles' : (role?.name ?? 'Role')}
-      crumbs={[{ label: 'Roles', href: coreLinks.roles({ plant }).href }]}
+      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ companyId }).href }]}
       meta={
         role === undefined ? undefined : (
           <span>{role.moduleId === null ? `Custom role, ${companyName}` : roleKind(role)}</span>
@@ -246,7 +239,7 @@ export function RoleScreen() {
             {/* Question 34 of the design asks whether New role may start from Company admin. */}
             {!companyAdmin && (
               <Link
-                to={coreLinks.roles.new({ plant }, { from: role.id }).href}
+                to={coreLinks.settings.roles.new({ companyId }, { from: role.id }).href}
                 className={buttonVariants({ variant: 'outline' })}
               >
                 <Copy aria-hidden />
@@ -255,7 +248,7 @@ export function RoleScreen() {
             )}
             {role.origin === 'CUSTOM' && (
               <Link
-                to={coreLinks.roles.role.edit({ plant, roleId: role.id }).href}
+                to={coreLinks.settings.roles.role.edit({ companyId, roleId: role.id }).href}
                 className={buttonVariants()}
               >
                 <Pencil aria-hidden />
@@ -283,7 +276,7 @@ export function RoleScreen() {
             {
               value: 'holders',
               label: 'Holders',
-              content: <HoldersTab role={role} company={places.company} plant={places.plant} />,
+              content: <HoldersTab role={role} places={places} />,
             },
           ]}
         />

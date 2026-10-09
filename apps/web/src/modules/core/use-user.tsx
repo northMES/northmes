@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
@@ -10,7 +9,7 @@ import { noAccessState } from './no-access.tsx';
 import { usePlaces } from './use-places.ts';
 import { CoreUser, type CoreUserQuery } from './user.graphql.ts';
 
-/** A user with the roles they hold at the company and at the plant. */
+/** A user with the roles they hold at the company and at its plants. */
 export type User = NonNullable<CoreUserQuery['coreUser']>;
 
 /** One of the user's roles at a place; its role is null when the reader may not read roles. */
@@ -29,22 +28,23 @@ export interface UserOfPage {
 }
 
 /**
- * Reads the user that the $userId segment of the URL names. A role the reader may not read comes
- * as null beside a FORBIDDEN error, so the answer keeps its data (errorPolicy all).
+ * Reads the user that the $userId segment of the URL names, in the company of company settings
+ * (ADR 0066). A role the reader may not read comes as null beside a FORBIDDEN error, so the answer
+ * keeps its data (errorPolicy all).
  */
 export function useUser(): UserOfPage {
-  const { plant } = useShell();
   const places = usePlaces();
-  const { userId } = useParams({ strict: false });
+  const { userId, companyId = '' } = useParams({ strict: false });
   const { data, error, refetch } = useQuery(CoreUser, {
-    variables: { id: userId ?? '' },
+    variables: { id: userId ?? '', companyId },
     errorPolicy: 'all',
   });
   const user = data?.coreUser ?? undefined;
   const forbidden = user === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('Users', 'core.user:read', places.plant?.name ?? plant);
+    const company = places.company?.name ?? 'the company';
+    state = noAccessState('Users', 'core.user:read', company, `a company admin of ${company}`);
   } else if (data === undefined && error !== undefined) {
     state = {
       status: 'error',
@@ -63,7 +63,7 @@ export function useUser(): UserOfPage {
       description: 'The link may be out of date, or the user belongs to another company.',
       action: (
         <Link
-          to={coreLinks.users({ plant }).href}
+          to={coreLinks.settings.users({ companyId }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Users

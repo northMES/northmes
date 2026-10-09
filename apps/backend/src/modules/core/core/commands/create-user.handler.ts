@@ -8,7 +8,7 @@ import type { z } from 'zod';
 import { EmailTaken } from '../access/auth.service.ts';
 import { userAccounts } from '../access/user-accounts.ts';
 import type { UserRecord } from '../user.service.ts';
-import { companyOfPlant } from './company-scope.ts';
+import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 import { temporaryPassword, userById } from './user-rules.ts';
 
@@ -88,7 +88,8 @@ async function firstRunUser(tx: CoreContext['tx'], id: string) {
 
 /**
  * The handler of core.createUser (ADR 0012), which the mutation coreCreateUser sends through the
- * command bus after it checked core.user:create at the company of the request's plant. It creates
+ * command bus after it checked core.user:create at the company of the request's plant, or in
+ * company settings at the company the input names (ADR 0066). It creates
  * the user under the id that userIdOf derives from the command's id, with a temporary password,
  * through Better Auth's server API, makes the user a member of the company's organization, and
  * returns the user with the password, which is not stored anywhere NorthMES can read it again.
@@ -104,14 +105,15 @@ async function firstRunUser(tx: CoreContext['tx'], id: string) {
  * NOT_FOUND.
  */
 export const createUserHandler = {
-  scope: companyOfPlant,
+  scope: requestCompany,
   async handle(
-    { id: commandId, username, name, email }: z.output<typeof createUser.input>,
+    input: z.output<typeof createUser.input>,
     context: CoreContext,
   ): Promise<CreatedUserRecord> {
+    const { id: commandId, username, name, email } = input;
     const { tx } = context;
     const id = userIdOf(commandId);
-    const companyId = (await companyOfPlant(undefined, context)) ?? '';
+    const companyId = (await requestCompany(input, context)) ?? '';
     // Two runs with one id wait for each other, so only one of them writes the user.
     await sql`select pg_advisory_xact_lock(hashtextextended(${`core.create-user:${id}`}, 0))`.execute(
       tx,
@@ -132,7 +134,7 @@ export const createUserHandler = {
       if (first.companyIds.length > 0) throw createdPasswordHidden(username, id);
       await accounts.setPassword(id, password);
       await accounts.addToOrganization(id, organization_id);
-      return { user: await userById(tx, id), temporaryPassword: password };
+      return { user: await userById(tx, id, companyId), temporaryPassword: password };
     }
     const taken = await tx
       .selectFrom('core.user_directory')
@@ -150,6 +152,6 @@ export const createUserHandler = {
       });
     });
     await accounts.addToOrganization(id, organization_id);
-    return { user: await userById(tx, id), temporaryPassword: password };
+    return { user: await userById(tx, id, companyId), temporaryPassword: password };
   },
 };

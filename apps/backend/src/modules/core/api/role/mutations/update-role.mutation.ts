@@ -10,5 +10,6 @@ import { Role } from '../types/role.type.ts';
  */
 export const UpdateRole = defineCommand(updateRole, {
   returns: () => Role,
+  plantFree: true,
   ...updateRoleHandler,
 });

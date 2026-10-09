@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
@@ -10,7 +9,7 @@ import { noAccessState } from './no-access.tsx';
 import { CoreRole, type CoreRoleQuery } from './role.graphql.ts';
 import { usePlaces } from './use-places.ts';
 
-/** A role of the company with who holds it at the company and at the plant. */
+/** A role of the company with who holds it at the company and at its plants. */
 export type Role = NonNullable<CoreRoleQuery['coreRole']>;
 
 /** What the role pages read of the role in the URL. */
@@ -25,18 +24,20 @@ export interface RoleOfPage {
   readonly reload: () => Promise<Role | undefined>;
 }
 
-/** Reads the role that the $roleId segment of the URL names. */
+/** Reads the role that the $roleId segment of the URL names, in company settings (ADR 0066). */
 export function useRole(): RoleOfPage {
-  const { plant } = useShell();
   const places = usePlaces();
-  const { roleId } = useParams({ strict: false });
-  const { data, error, refetch } = useQuery(CoreRole, { variables: { id: roleId ?? '' } });
+  const { roleId, companyId = '' } = useParams({ strict: false });
+  const { data, error, refetch } = useQuery(CoreRole, {
+    variables: { id: roleId ?? '', companyId },
+  });
   const role = data?.coreRole ?? undefined;
   const reload = async () => (await refetch()).data?.coreRole ?? undefined;
   const forbidden = data === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState('Roles', 'core.role:read', places.plant?.name ?? plant);
+    const company = places.company?.name ?? 'the company';
+    state = noAccessState('Roles', 'core.role:read', company, `a company admin of ${company}`);
   } else if (data === undefined && error !== undefined) {
     state = {
       status: 'error',
@@ -55,7 +56,7 @@ export function useRole(): RoleOfPage {
       description: 'The link may be out of date, or the role belongs to another company.',
       action: (
         <Link
-          to={coreLinks.roles({ plant }).href}
+          to={coreLinks.settings.roles({ companyId }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Roles
