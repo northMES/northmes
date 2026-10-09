@@ -6,8 +6,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
-import { fieldId } from '../../../../ui/primitives/field.ts';
 import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,

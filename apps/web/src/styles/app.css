@@ -23,6 +23,13 @@
 @source "..";
 
 @layer base {
+  /* The shadcn primitives draw a bare `border` in --border, as shadcn's own stylesheet sets it. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);

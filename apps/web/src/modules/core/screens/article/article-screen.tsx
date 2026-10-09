@@ -4,7 +4,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
-import { buttonVariants } from '../../../../ui/primitives/button-variants.ts';
+import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
 import { useArticle } from '../../use-article.tsx';
 

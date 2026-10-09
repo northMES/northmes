@@ -4,7 +4,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
-import { buttonVariants } from '../../ui/primitives/button-variants.ts';
+import { buttonVariants } from '../../ui/primitives/button.tsx';
 import { type Article, CoreArticle } from './article.graphql.ts';
 
 /** What the article and edit pages read of the article in the URL. */

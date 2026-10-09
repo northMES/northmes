@@ -2,7 +2,16 @@
 import { CircleAlert, Copy, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { announce } from '../../lib/announce.ts';
-import { Button, IconButton } from '../../primitives/button.tsx';
+import { Button } from '../../primitives/button.tsx';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '../../primitives/empty.tsx';
+import { IconButton } from '../icon-button/index.ts';
 
 /** What a page's data region shows (plan 06, Page states). */
 export type PageState =
@@ -37,8 +46,7 @@ export interface PageFrameProps {
   readonly children: ReactNode;
 }
 
-const stateCard =
-  'flex flex-col items-center gap-3 rounded-xl border border-border bg-card px-6 py-16 text-center';
+const stateCard = 'gap-3 rounded-xl border border-solid bg-card px-6 py-16';
 
 /** An empty state: a heading, its text and the action that leads on. */
 export function EmptyState({
@@ -47,11 +55,15 @@ export function EmptyState({
   action,
 }: Omit<Extract<PageState, { status: 'empty' }>, 'status'>) {
   return (
-    <div className={stateCard}>
-      <h2 className="text-base font-semibold">{title}</h2>
-      <p className="max-w-prose text-sm text-muted-foreground">{description}</p>
-      {action}
-    </div>
+    <Empty className={stateCard}>
+      <EmptyHeader className="max-w-prose">
+        <EmptyTitle>
+          <h2 className="text-base font-semibold">{title}</h2>
+        </EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+      {action !== undefined && <EmptyContent>{action}</EmptyContent>}
+    </Empty>
   );
 }
 
@@ -63,12 +75,16 @@ export function ErrorState({
   onRetry,
 }: Omit<Extract<PageState, { status: 'error' }>, 'status'>) {
   return (
-    <div role="alert" className={stateCard}>
-      <span className="flex size-10 items-center justify-center rounded-full bg-destructive-subtle text-destructive">
-        <CircleAlert aria-hidden className="size-5" />
-      </span>
-      <h2 className="text-base font-semibold">{title}</h2>
-      <p className="max-w-prose text-sm text-muted-foreground">{description}</p>
+    <Empty role="alert" className={stateCard}>
+      <EmptyHeader className="max-w-prose">
+        <EmptyMedia className="size-10 rounded-full bg-destructive-subtle text-destructive">
+          <CircleAlert aria-hidden className="size-5" />
+        </EmptyMedia>
+        <EmptyTitle>
+          <h2 className="text-base font-semibold">{title}</h2>
+        </EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
       {correlationId !== undefined && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           Correlation id
@@ -95,7 +111,7 @@ export function ErrorState({
         <RotateCw aria-hidden />
         Try again
       </Button>
-    </div>
+    </Empty>
   );
 }
 
