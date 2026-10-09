@@ -63,6 +63,12 @@ export interface PageFrameProps {
    * landing is "Company settings", and its trail ends with the company (design shell-313, C5).
    */
   readonly currentCrumb?: string;
+  /**
+   * The part of the document title between the title and the shell's, when the page names one,
+   * such as the module of a module page not found: "Page not found · Equipment · Plant A ·
+   * NorthMES" (D2 ST5).
+   */
+  readonly titleSection?: string;
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
   readonly state?: PageState;
@@ -196,6 +202,7 @@ export function PageFrame({
   actions,
   crumbs = [],
   currentCrumb = title,
+  titleSection,
   toolbar,
   state = { status: 'ready' },
   children,
@@ -205,13 +212,13 @@ export function PageFrame({
   const titleContext = topBar?.titleContext;
   // The page names the document while it shows; a page without a frame gets the plain name.
   useEffect(() => {
-    document.title = [title, titleContext, 'NorthMES']
+    document.title = [title, titleSection, titleContext, 'NorthMES']
       .filter((part) => part !== undefined)
       .join(' · ');
     return () => {
       document.title = 'NorthMES';
     };
-  }, [title, titleContext]);
+  }, [title, titleSection, titleContext]);
   // The action of an empty or error state, such as Go to the first page, removes the state and
   // the focused button with it. Unless the action moved focus itself, focus moves to the h1.
   const shownStatus = useRef(state.status);
