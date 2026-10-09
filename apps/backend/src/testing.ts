@@ -286,6 +286,8 @@ export async function givenUser(ownerUrl: string, grants: readonly Grant[]): Pro
 export interface SignedIn {
   readonly userId: string;
   readonly username: string;
+  /** The email the user signs in with, under the reserved .test domain. */
+  readonly email: string;
   readonly password: string;
   /** The Authorization header of its requests: Bearer and the JWT for the web. */
   readonly authorization: string;
@@ -293,7 +295,7 @@ export interface SignedIn {
 
 /**
  * Creates a user with a password through Better Auth, grants it roles, and signs it in the way the
- * web does (ADR 0010): POST /api/auth/sign-in/username, then GET /api/auth/token with the session
+ * web does (ADR 0010): POST /api/auth/sign-in/email, then GET /api/auth/token with the session
  * token from set-auth-token as its bearer token, which answers with a JWT. The app must listen.
  */
 export async function signIn(
@@ -302,14 +304,15 @@ export async function signIn(
   grants: readonly Grant[],
 ): Promise<SignedIn> {
   const username = `user_${randomBytes(6).toString('hex')}`;
+  const email = `${username}@example.test`;
   const password = randomBytes(16).toString('hex');
-  const { user } = await app.get(AuthService).createUser({ username, password });
+  const { user } = await app.get(AuthService).createUser({ username, email, password });
   await grantRoles(ownerUrl, user.id, grants);
   const url = await app.getUrl();
-  const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+  const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   const sessionToken = signedIn.headers.get('set-auth-token');
   if (!signedIn.ok || !sessionToken) {
@@ -322,7 +325,7 @@ export async function signIn(
     throw new Error(`signIn: /api/auth/token answered ${token.status}: ${await token.text()}`);
   }
   const { token: jwt } = (await token.json()) as { token: string };
-  return { userId: user.id, username, password, authorization: `Bearer ${jwt}` };
+  return { userId: user.id, username, email, password, authorization: `Bearer ${jwt}` };
 }
 
 /**

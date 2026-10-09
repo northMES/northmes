@@ -22,10 +22,10 @@ describe('the seed', () => {
 
   /** The dev admin's JWT, signed in through Better Auth with the seed's password. */
   async function adminToken(): Promise<string> {
-    const signedIn = await fetch(`${url}/api/auth/sign-in/username`, {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username: devAdmin.username, password: devAdmin.password }),
+      body: JSON.stringify({ email: devAdmin.email, password: devAdmin.password }),
     });
     expect(signedIn.status).toBe(200);
     const sessionToken = signedIn.headers.get('set-auth-token');
