@@ -23,6 +23,15 @@ afterEach(cleanup);
 /** Whether Deviations throws while it renders, as a fault in a module's code does. */
 const deviations = { broken: true };
 
+/** Whether Inspections, the first entry of Quality, throws while it renders. */
+const inspections = { broken: false };
+
+function InspectionsScreen() {
+  if (inspections.broken)
+    throw new TypeError("Cannot read properties of undefined (reading 'plan')");
+  return <PageFrame title="Inspections">{null}</PageFrame>;
+}
+
 function DeviationsScreen() {
   if (deviations.broken) throw new TypeError("Cannot read properties of undefined (reading 'id')");
   return (
@@ -45,7 +54,10 @@ function AuditsScreen() {
   );
 }
 
-/** A module whose second page throws while it renders, and whose third throws after a click. */
+/**
+ * A module whose second page throws while it renders, whose third throws after a click, and whose
+ * first throws when a test says so.
+ */
 const quality: ShellModule = {
   label: 'Quality',
   order: 30,
@@ -75,7 +87,7 @@ const quality: ShellModule = {
         createRoute({
           getParentRoute: () => qualityRoute,
           path: 'inspections',
-          component: () => <PageFrame title="Inspections">{null}</PageFrame>,
+          component: InspectionsScreen,
         }),
         createRoute({
           getParentRoute: () => qualityRoute,
@@ -92,13 +104,13 @@ const quality: ShellModule = {
   }),
 };
 
-/** Renders the shell at path with Equipment and Quality, for a user of Acme AB. */
-function renderAt(path: string) {
+/** Renders the shell at path with the modules, Equipment and Quality unless named, for a user of Acme AB. */
+function renderAt(path: string, modules: readonly ShellModule[] = [equipment, quality]) {
   const api = fakeApi({
     CoreCompanies: companies,
     CoreViewer: () => viewer([], ['core.user:read']),
   });
-  return renderShellAt(path, [equipment, quality], { fetch: api.fetch });
+  return renderShellAt(path, modules, { fetch: api.fetch });
 }
 
 /** The label and value of each row of a description list. */
@@ -183,6 +195,7 @@ describe('an unknown path', () => {
 describe('a page that throws while it renders', () => {
   afterEach(() => {
     deviations.broken = true;
+    inspections.broken = false;
   });
 
   it('E04-S02 the error panel replaces the page inside the shell, with the correlation id, the stage and the code (D2 ST6)', async () => {
@@ -217,6 +230,27 @@ describe('a page that throws while it renders', () => {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(document.activeElement).toBe(document.body);
   });
+
+  it.each([
+    ['the first module', [quality]],
+    ['a later module', [equipment, quality]],
+  ])(
+    'E04-S02 the error panel of the first entry of %s leads out to See all pages, never to the page itself (shell-306 LS3)',
+    async (_, modules) => {
+      inspections.broken = true;
+      renderAt('/plant-a/quality/inspections', modules);
+
+      const main = await screen.findByRole('main');
+      await within(main).findByRole('heading', {
+        level: 1,
+        name: 'Inspections could not be shown',
+      });
+      expect(within(main).getByRole('link', { name: 'See all pages' }).getAttribute('href')).toBe(
+        '/plant-a/all-pages',
+      );
+      expect(within(main).queryByRole('link', { name: /^Go to / })).toBeNull();
+    },
+  );
 
   it('E04-S02 a page that throws after a click on the same path moves focus to the error panel h1 (D2 ST6)', async () => {
     const user = userEvent.setup();
