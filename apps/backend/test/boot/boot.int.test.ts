@@ -152,6 +152,11 @@ describe('boot', () => {
       content: '{ "plugins": "plugins/scrap-rules" }',
       problem: /^plugins: Invalid input: expected array, received string$/,
     },
+    {
+      reason: 'lists a web origin with a path',
+      content: '{ "plugins": [], "webOrigins": ["https://mes.example.com/app"] }',
+      problem: /^webOrigins\.0: must be an origin with no path$/,
+    },
   ])(
     'E02-S04 a northmes.config.json that $reason exits 1 naming the file',
     async ({ content, problem }) => {
