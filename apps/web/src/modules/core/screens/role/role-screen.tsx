@@ -162,8 +162,8 @@ function HoldersAt({
 
 /**
  * Who holds the role at the company and at each of its plants (design core-304, RO21 and RO25),
- * read only: a card per place, then a note that the other plants list their own holders and that
- * roles are given and taken on a person's Access tab.
+ * read only: a card per place, then a note that People in each plant's settings lists the plant's
+ * holders and that roles are given and taken on a person's Access tab.
  */
 function HoldersTab({ role, places }: { readonly role: Role; readonly places: Places }) {
   const companyId = useCompanyId() ?? '';
@@ -190,8 +190,8 @@ function HoldersTab({ role, places }: { readonly role: Role; readonly places: Pl
       ))}
       <p className="flex items-start gap-2 rounded-lg bg-info-subtle px-4 py-3 text-sm">
         <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-info" />
-        Holders at the other plants of {companyName} are listed in the Administration of each plant.
-        To add or remove a role, open the person and use the Access tab.
+        People in each plant's settings lists who holds a role at that plant. To add or remove a
+        role, open the person and use the Access tab.
       </p>
     </div>
   );
