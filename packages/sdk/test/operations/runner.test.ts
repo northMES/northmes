@@ -197,7 +197,9 @@ describe('runOperation', () => {
     const values = (result.value as { nodes: { code: unknown; note: unknown }[] }).nodes.flatMap(
       ({ code, note }) => [code, note],
     );
-    expect(values.slice(0, 50).every((value) => (value as { text: string }).text !== '')).toBe(true);
+    expect(values.slice(0, 50).every((value) => (value as { text: string }).text !== '')).toBe(
+      true,
+    );
     expect(values.slice(50)).toEqual([
       { untrusted: true, text: '' },
       { untrusted: true, text: '' },
@@ -313,7 +315,7 @@ describe('runOperation', () => {
     });
   });
 
-  it("ADR0073-W3 the permission gate runs before the handler and its refusal is the answer", async () => {
+  it('ADR0073-W3 the permission gate runs before the handler and its refusal is the answer', async () => {
     const handle = vi.fn(async () => storedGauge());
     const { ports: given } = ports({
       authorize: (permission) => {
@@ -330,7 +332,11 @@ describe('runOperation', () => {
     expect(handle).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       ok: false,
-      error: { status: 403, code: 'core.forbidden', message: 'You need tools.gauge:read at plant p' },
+      error: {
+        status: 403,
+        code: 'core.forbidden',
+        message: 'You need tools.gauge:read at plant p',
+      },
     });
   });
 
@@ -396,7 +402,11 @@ describe('runOperation', () => {
 
     expect(result).toMatchObject({
       ok: false,
-      error: { status: 404, code: 'core.not_found', message: 'tools.createGauge has no webmcp tool' },
+      error: {
+        status: 404,
+        code: 'core.not_found',
+        message: 'tools.createGauge has no webmcp tool',
+      },
     });
   });
 });

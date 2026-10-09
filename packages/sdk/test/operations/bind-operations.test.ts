@@ -59,14 +59,14 @@ describe('bindOperations', () => {
   });
 
   it('ADR0073-W3 a missing or an unknown handler throws naming the operation', () => {
-    expect(() =>
-      bindOperations(gaugeOperations, {} as Parameters<typeof bindOperations>[1]),
-    ).toThrow('Operation tools.gauges.get has no handler');
+    expect(() => bindOperations(gaugeOperations, {} as never)).toThrow(
+      'Operation tools.gauges.get has no handler',
+    );
     expect(() =>
       bindOperations(gaugeOperations, {
         get: async () => ({ id: GAUGE_ID, code: 'G-1' }),
         archive: async () => undefined,
-      } as Parameters<typeof bindOperations>[1]),
+      } as never),
     ).toThrow('Handler archive of tools.gauges is not one of its operations');
   });
 });
