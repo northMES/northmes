@@ -14,15 +14,15 @@ export const AUTH_BASE_PATH = '/api/auth';
 export const JWT_LIFETIME = '5m';
 
 /**
- * How long a session lives after sign-in, in seconds. The session token from set-auth-token is the
- * web's long-lived credential: it mints new JWTs from /api/auth/token until the session expires or
- * is revoked. These are Better Auth's defaults, seven days renewed once a day of use, until the
- * maintainer sets NorthMES's own.
+ * How long a session lives after sign-in or its last renewal, in seconds. The session token from
+ * set-auth-token is the web's refresh token: it only mints the five-minute JWTs from
+ * /api/auth/token, until the session expires or is revoked. The maintainer chose 12 hours, about a
+ * shift, so an idle session ends while one in use stays open.
  */
-export const SESSION_LIFETIME_SECONDS = 7 * 24 * 60 * 60;
+export const SESSION_LIFETIME_SECONDS = 12 * 60 * 60;
 
-/** How old a session gets before a request renews its expiry, in seconds. */
-export const SESSION_RENEWAL_SECONDS = 24 * 60 * 60;
+/** How old a session gets before a request renews its expiry, in seconds: an hour of use. */
+export const SESSION_RENEWAL_SECONDS = 60 * 60;
 
 /**
  * The paths of the admin and api-key plugins. NorthMES calls them only on the server, through
