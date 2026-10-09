@@ -15,6 +15,7 @@ import {
   PermissionChecklist,
   type PermissionChecklistProps,
 } from '../permission-checklist/index.ts';
+import { RoleFormDifference } from './role-form-difference.tsx';
 
 /** The fields of the role form: the name, the permissions and the reason of a change. */
 export type RoleFields = typeof updateRole.fields;
@@ -103,9 +104,16 @@ export function RoleForm({
         />
         {startFrom}
       </FormSection>
+      {baseline !== undefined && (
+        <RoleFormDifference
+          name={form.watch('name') ?? ''}
+          baseline={baseline}
+          value={form.watch('permissions') ?? []}
+        />
+      )}
       <FormSection
         title="Permissions"
-        description="Grouped by module. Each line says what the permission allows; its id is for docs and support."
+        description="Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support."
       >
         <Controller
           control={form.control}

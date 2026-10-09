@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
+import { cn } from 'cn';
 import { ChevronDown, Info, Lock } from 'lucide-react';
 import { useId } from 'react';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
@@ -51,7 +52,7 @@ export interface PermissionChecklistProps {
   /** The ticked permission keys. */
   readonly value: readonly string[];
   readonly onChange: (value: string[]) => void;
-  /** The role the new role starts from, whose permissions the difference compares with. */
+  /** The role the rows' Added and Removed marks compare with: the one a new role starts from. */
   readonly baseline?: { readonly name: string; readonly permissions: readonly string[] };
   /** The save refused these permissions: each is marked invalid. */
   readonly refused?: readonly string[];
@@ -80,6 +81,8 @@ interface RowProps {
   readonly locked: boolean;
   readonly invalid: boolean;
   readonly lockedReason: string;
+  /** Added or Removed against the role the form compares with; removed lines are struck through. */
+  readonly mark?: 'added' | 'removed';
   readonly onCheckedChange: (checked: boolean) => void;
 }
 
@@ -95,6 +98,7 @@ function PermissionRow({
   locked,
   invalid,
   lockedReason,
+  mark,
   onCheckedChange,
 }: RowProps) {
   const labelId = useId();
@@ -129,16 +133,24 @@ function PermissionRow({
           aria-invalid={invalid || undefined}
         />
       )}
-      <span className="flex min-w-0 flex-col gap-0.5 text-sm">
-        <span id={labelId}>{permissionLine(permission)}</span>
-        <span id={idId} className="font-mono text-xs break-all text-muted-foreground">
-          {permission}
-        </span>
-        {unheld && (
-          <span id={reasonId} className="text-xs text-muted-foreground">
-            {lockedReason}
+      <span className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-0.5 text-sm">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span id={labelId} className={cn(mark === 'removed' && 'line-through')}>
+            {permissionLine(permission)}
           </span>
-        )}
+          {unheld && (
+            <span id={reasonId} className="text-xs text-muted-foreground">
+              {lockedReason}
+            </span>
+          )}
+        </span>
+        <span className="flex items-center gap-2">
+          <span id={idId} className="font-mono text-xs break-all text-muted-foreground">
+            {permission}
+          </span>
+          {mark === 'added' && <StatusBadge tone="success">Added</StatusBadge>}
+          {mark === 'removed' && <StatusBadge tone="destructive">Removed</StatusBadge>}
+        </span>
       </span>
     </li>
   );
@@ -158,12 +170,15 @@ function ModuleGroup({
     /** Ticking the permission adds nothing: the role holds it already. */
     readonly current: ReadonlySet<string>;
     readonly all: readonly string[];
+    /** The permissions of the role the form compares with, which the marks follow. */
+    readonly baseline?: ReadonlySet<string>;
   }) {
   const headingId = useId();
   const selected = group.keys.filter((key) => value.has(key)).length;
   return (
+    // A module with nothing ticked starts closed, its count on its button (RO13).
     <Collapsible
-      defaultOpen
+      defaultOpen={selected > 0}
       render={<section aria-labelledby={headingId} />}
       className="border-t border-border pt-2"
     >
@@ -193,6 +208,7 @@ function ModuleGroup({
                 locked={lacking !== undefined && !value.has(key) && !rest.current.has(key)}
                 invalid={rest.refused?.includes(key) ?? false}
                 lockedReason={`You do not hold it at ${lacking ?? ''}.`}
+                mark={markOf(key, value, rest.baseline)}
                 onCheckedChange={(checked) => {
                   const next = new Set(value);
                   if (checked) next.add(key);
@@ -212,42 +228,14 @@ function ModuleGroup({
   );
 }
 
-/** What the new role adds to and removes from the role it starts from (design core-304, RO13). */
-function Difference({
-  baseline,
-  value,
-}: {
-  readonly baseline: NonNullable<PermissionChecklistProps['baseline']>;
-  readonly value: readonly string[];
-}) {
-  const headingId = useId();
-  const added = value.filter((key) => !baseline.permissions.includes(key));
-  const removed = baseline.permissions.filter((key) => !value.includes(key));
-  return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h3 id={headingId} className="text-sm font-semibold">
-        Difference from {baseline.name}
-      </h3>
-      {added.length === 0 && removed.length === 0 ? (
-        <p className="text-sm text-muted-foreground">The same permissions as {baseline.name}.</p>
-      ) : (
-        <ul className="flex flex-col gap-1 text-sm">
-          {added.map((key) => (
-            <li key={key} className="flex flex-wrap items-center gap-2">
-              <StatusBadge tone="success">Added</StatusBadge>
-              {permissionLine(key)}
-            </li>
-          ))}
-          {removed.map((key) => (
-            <li key={key} className="flex flex-wrap items-center gap-2">
-              <StatusBadge tone="destructive">Removed</StatusBadge>
-              {permissionLine(key)}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
+/** Added or Removed for a permission against the role the form compares with, else none. */
+function markOf(
+  key: string,
+  value: ReadonlySet<string>,
+  baseline: ReadonlySet<string> | undefined,
+): 'added' | 'removed' | undefined {
+  if (baseline === undefined || value.has(key) === baseline.has(key)) return undefined;
+  return value.has(key) ? 'added' : 'removed';
 }
 
 /** The count of the ticked permissions, such as "6 of 36 selected.". */
@@ -300,6 +288,7 @@ export function PermissionChecklist({
   // of its plants too (ADR 0066).
   const lackingAt = (key: string) => (viewer.can(key) ? undefined : assigned?.places[0]?.name);
   const currentKeys = new Set(current);
+  const baselineKeys = baseline === undefined ? undefined : new Set(baseline.permissions);
   const anyLocked = all.some((key) => lackingAt(key) !== undefined && !currentKeys.has(key));
   // The count changes only through a tick, so the tick says the new count.
   const change = (next: string[]) => {
@@ -330,9 +319,9 @@ export function PermissionChecklist({
           refused={refused}
           lackingAt={lackingAt}
           current={currentKeys}
+          baseline={baselineKeys}
         />
       ))}
-      {baseline !== undefined && <Difference baseline={baseline} value={value} />}
     </div>
   );
 }
