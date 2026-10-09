@@ -132,6 +132,22 @@ describe('upsert of an article by its article number', () => {
     });
   });
 
+  it('ADR0073-W3 concurrent upserts of one new article number create it once and both answer it', async () => {
+    const place = await givenHelAndSto();
+    const { helAdmin } = await admins(place);
+    const number = code('RACE');
+
+    const answers = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        upsert(helAdmin, { id: randomUUIDv7(), code: number, name: 'Bolt' }),
+      ),
+    );
+
+    expect(answers.flatMap((answer) => refusals(answer) ?? [])).toEqual([]);
+    const ids = new Set(answers.map((answer) => answer.data?.coreUpsertArticle.id));
+    expect(ids.size).toBe(1);
+  });
+
   it('ADR0073-W3 an upsert from company settings without plants creates an unassigned article', async () => {
     const place = await givenHelAndSto();
     const { companyAdmin } = await admins(place);
