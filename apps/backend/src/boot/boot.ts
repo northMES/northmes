@@ -179,14 +179,14 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
   const servers: ServerEntry[] = [];
   for (const entry of catalog) {
     const { manifest } = entry;
-    const dependsOn = manifest.dependsOn ?? [];
+    const { dependsOn = [], permissions = {} } = manifest;
     if (entry.module) {
-      servers.push({ id: manifest.id, module: entry.module, dependsOn });
+      servers.push({ id: manifest.id, module: entry.module, dependsOn, permissions });
       continue;
     }
     if (!manifest.server) continue;
     const { default: module } = await importServer(entry, manifest.server);
-    servers.push({ id: manifest.id, module, dependsOn });
+    servers.push({ id: manifest.id, module, dependsOn, permissions });
   }
   return servers;
 }

@@ -446,7 +446,7 @@ describe('the permission step of CommandBusImpl', () => {
   });
 
   it('E05-S06 a create from a request that names no plant gets FORBIDDEN', async () => {
-    const handle = vi.fn(async ({ id }: { id: string }) => ({ id }));
+    const handle = vi.fn(async ({ id }: { id: string; code: string }) => ({ id }));
     const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
     const creator = {
       ...principalHolding({ [COMPANY]: ['core.article:create'] }),

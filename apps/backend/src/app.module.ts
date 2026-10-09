@@ -20,6 +20,11 @@ export interface ServerEntry {
   readonly module: Type;
   /** The ids of the modules it depends on. */
   readonly dependsOn: readonly string[];
+  /**
+   * The permissions it declares, resource to actions. Its commands may check only these
+   * (ADR 0010).
+   */
+  readonly permissions?: Readonly<Record<string, readonly string[]>>;
 }
 
 /** How AppModule.forRoot builds the app beyond its config and Nest modules. */
