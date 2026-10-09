@@ -59,7 +59,7 @@ describe('.claude/launch.json', () => {
       },
     });
     expect(plan.boardUrl).toBe(
-      'http://127.0.0.1:4567/019a0000-0000-7000-8000-00000000a001/planning/board',
+      'http://127.0.0.1:4567/plant-a/planning/board',
     );
   });
 });
