@@ -184,9 +184,10 @@ export async function importServers(catalog: readonly CatalogEntry[]): Promise<S
 }
 
 /**
- * Imports the server entry of one catalog entry. An entry that throws while it loads stops the
- * boot with a BootError naming the module or plugin: boot never skips it, because a skipped server
- * part would drop its validators and its resolvers (ADR 0002).
+ * Imports a plugin's server entry. A plugin whose entry throws while it loads stops the boot with a
+ * BootError naming it: boot never skips it, because a skipped server part would drop its validators
+ * and its resolvers (ADR 0002). The in-repo modules load with the process through modules.ts, so a
+ * throw in one of them stops the process before boot runs.
  */
 async function importServer(
   { manifest, kind }: CatalogEntry,
