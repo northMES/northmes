@@ -53,13 +53,24 @@ export interface ArticleNode {
   readonly code: string;
   readonly name: string;
   readonly version: number;
+  readonly archivedAt: string | null;
 }
 
-/** A fictional article with an id made from its code. */
-export function article(code: string, name: string, version = 1): ArticleNode {
+/** A fictional article with an id made from its code, active unless archivedAt says otherwise. */
+export function article(
+  code: string,
+  name: string,
+  version = 1,
+  archivedAt: string | null = null,
+): ArticleNode {
   const digits = [...code].map((char) => char.charCodeAt(0).toString(16)).join('');
   const id = `019a0000-0000-7000-8000-${digits.padStart(12, '0').slice(-12)}`;
-  return { __typename: 'Article', id, code, name, version };
+  return { __typename: 'Article', id, code, name, version, archivedAt };
+}
+
+/** The polite live region's text. */
+export function spoken(): string | null | undefined {
+  return document.querySelector('[aria-live="polite"]')?.textContent;
 }
 
 /** count fictional articles, from AX-500 on, as one page of a list sorted by article number. */
