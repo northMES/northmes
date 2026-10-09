@@ -2,7 +2,7 @@
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ChevronDown, Plus, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Copy, Ellipsis, Pencil, Plus, SlidersHorizontal } from 'lucide-react';
 import { useId, useMemo } from 'react';
 import {
   DataTable,
@@ -17,6 +17,7 @@ import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
@@ -36,6 +37,7 @@ import {
 } from '../../components/permission-checklist/permission-catalog.graphql.ts';
 import { noAccessState, permissionPhrase } from '../../no-access.tsx';
 import { moduleName } from '../../permission-names.ts';
+import { isCompanyAdmin } from '../../role-kind.ts';
 import { type RoleListSearch, roleListSearch, rolesOfView } from '../../role-list-search.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
 import { useCompanyId, usePlaces } from '../../use-places.ts';
@@ -79,13 +81,14 @@ function installedOf(catalog: CorePermissionCatalogQuery['corePermissionCatalog'
  * it for the permissions of modules that are not installed (RO1). Until the catalog loads, the
  * count alone.
  */
-function PermissionCount({
-  role,
-  installed,
-}: {
-  readonly role: RoleRow;
-  readonly installed: Installed | undefined;
-}) {
+function PermissionCount({ role }: { readonly role: RoleRow }) {
+  const companyId = useCompanyId() ?? '';
+  const catalog = useQuery(CorePermissionCatalog, { variables: { companyId } }).data
+    ?.corePermissionCatalog;
+  const installed = useMemo(
+    () => (catalog === undefined ? undefined : installedOf(catalog)),
+    [catalog],
+  );
   if (installed === undefined) return <span className="font-mono">{role.permissions.length}</span>;
   const held = role.permissions.filter((key) => installed.installed.has(key)).length;
   const missing = role.permissions.filter((key) => installed.notInstalled.has(key)).length;
@@ -108,36 +111,85 @@ function holdersCount(role: RoleRow): string {
   return `${people} ${people === 1 ? 'person' : 'people'}`;
 }
 
-/**
- * The columns of a group of roles: Defined by names the company or the role's module, Permissions
- * counts the installed permissions the role holds, and Holders counts the people who hold the role
- * at the company or at one of its plants.
- */
-function columnsOf(
-  companyName: string,
-  installed: Installed | undefined,
-): readonly DataTableColumn<RoleRow>[] {
-  return [
-    {
-      id: 'name',
-      header: 'Role',
-      sortable: true,
-      sticky: true,
-      cell: (role) => <RoleLink role={role} />,
-    },
-    {
-      id: 'definedBy',
-      header: 'Defined by',
-      cell: (role) => (role.moduleId === null ? companyName : moduleName(role.moduleId)),
-    },
-    {
-      id: 'permissions',
-      header: 'Permissions',
-      cell: (role) => <PermissionCount role={role} installed={installed} />,
-    },
-    { id: 'holders', header: 'Holders', cell: holdersCount },
-  ];
+/** Who defines the role: the company for a custom role, else its module. */
+function DefinedBy({ role }: { readonly role: RoleRow }) {
+  const places = usePlaces();
+  return role.moduleId === null ? (places.company?.name ?? '') : moduleName(role.moduleId);
 }
+
+/**
+ * The columns of the list: Defined by names the company or the role's module, Permissions counts
+ * the installed permissions the role holds, and Holders counts the people who hold the role at
+ * the company or at one of its plants. They are constants, because a new cell renderer would
+ * mount every cell again, and an open row menu with it.
+ */
+const columns: readonly DataTableColumn<RoleRow>[] = [
+  {
+    id: 'name',
+    header: 'Role',
+    sortable: true,
+    sticky: true,
+    cell: (role) => <RoleLink role={role} />,
+  },
+  { id: 'definedBy', header: 'Defined by', cell: (role) => <DefinedBy role={role} /> },
+  { id: 'permissions', header: 'Permissions', cell: (role) => <PermissionCount role={role} /> },
+  { id: 'holders', header: 'Holders', cell: holdersCount },
+];
+
+/**
+ * The row menu of a role (design core-304, RO35 to RO38): "Actions for Shift lead" opens a menu
+ * with focus on its first item. A custom role offers Edit role and New role from it, a default
+ * role New role from it. Company admin gets none while question 34 is open.
+ */
+function RoleActions({ role }: { readonly role: RoleRow }) {
+  const companyId = useCompanyId() ?? '';
+  const navigate = useNavigate();
+  if (isCompanyAdmin(role)) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" aria-label={`Actions for ${role.name}`}>
+            <Ellipsis aria-hidden />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" className="w-62">
+        {role.origin === 'CUSTOM' && (
+          <DropdownMenuItem
+            onClick={() =>
+              navigate({
+                to: coreLinks.settings.roles.role.edit({ companyId, roleId: role.id }).href,
+              })
+            }
+          >
+            <Pencil aria-hidden />
+            Edit role
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onClick={() =>
+            navigate({ to: coreLinks.settings.roles.new({ companyId }, { from: role.id }).href })
+          }
+        >
+          <Copy aria-hidden />
+          New role from {role.name}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The columns with the row menus, for a reader who may create and edit roles. */
+const columnsWithActions: readonly DataTableColumn<RoleRow>[] = [
+  ...columns,
+  {
+    id: 'actions',
+    header: 'Actions',
+    headerHidden: true,
+    cell: (role) => <RoleActions role={role} />,
+  },
+];
 
 /** The id of Search roles, where Clear filters moves focus. */
 const searchFieldId = 'roles-search';
@@ -278,12 +330,6 @@ export function RolesScreen() {
   const viewer = useViewer();
   const { data, error, refetch } = useQuery(CoreRoles, { variables: { companyId } });
   const roles = data?.coreRoles;
-  const catalog = useQuery(CorePermissionCatalog, { variables: { companyId } }).data
-    ?.corePermissionCatalog;
-  const installed = useMemo(
-    () => (catalog === undefined ? undefined : installedOf(catalog)),
-    [catalog],
-  );
   const companyName = places.company?.name ?? 'the company';
   const forbidden = roles === undefined && isForbidden(error);
   const show = (next: RoleListSearch) => {
@@ -328,7 +374,6 @@ export function RolesScreen() {
   }
   // The API checks core.role:manage at the company (ADR 0010).
   const canManage = viewer.canAtCompany('core.role:manage');
-  const columns = useMemo(() => columnsOf(companyName, installed), [companyName, installed]);
   const custom = shown.filter(({ origin }) => origin === 'CUSTOM');
   const defaults = shown.filter(({ origin }) => origin === 'MODULE');
   const groups: DataTableGroup<RoleRow>[] = [];
@@ -419,7 +464,7 @@ export function RolesScreen() {
     >
       <DataTable
         label="Roles"
-        columns={columns}
+        columns={canManage ? columnsWithActions : columns}
         rows={[]}
         groups={groups}
         getRowId={(role) => role.id}
