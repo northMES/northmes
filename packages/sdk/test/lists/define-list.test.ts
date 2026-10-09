@@ -2,11 +2,11 @@
 import 'reflect-metadata';
 import { HttpStatus, Module } from '@nestjs/common';
 import { Args, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
-import type { ScopedDatabase } from '@northmes/sdk/data';
 import { defineListDeclaration } from '@northmes/contracts';
+import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError } from '@northmes/sdk/errors';
 import { defineList, type ListArgs } from '@northmes/sdk/lists';
-import { type GraphQLArgument, getNullableType } from 'graphql';
+import { type GraphQLArgument, getNullableType, isEnumType } from 'graphql';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { buildSchema } from '../fixtures/graphql/schema.ts';
@@ -134,9 +134,13 @@ describe('defineList', () => {
     const { schema, moduleRef } = await buildSchema([ListsModule]);
     await moduleRef.close();
 
-    const sortField = schema.getType('BoltSortField') as { getValues(): { name: string }[] };
+    const sortField = schema.getType('BoltSortField');
+    if (!isEnumType(sortField)) throw new Error('BoltSortField is not an enum');
     expect(sortField.getValues().map(({ name }) => name)).toEqual(['CODE', 'UPDATED_AT']);
-    const args = schema.getQueryType()?.getFields().bolts?.args.map(({ name }) => name);
+    const args = schema
+      .getQueryType()
+      ?.getFields()
+      .bolts?.args.map(({ name }) => name);
     expect(args).toContain('includeArchived');
   });
 

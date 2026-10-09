@@ -11,6 +11,7 @@ import {
   Resolver,
   registerEnumType,
 } from '@nestjs/graphql';
+import type { ListDeclaration as ListContract } from '@northmes/contracts';
 import { type SelectQueryBuilder, type SqlBool, sql, type Transaction } from 'kysely';
 import type { ScopedDatabase } from '../data/database.ts';
 import { DomainError } from '../errors/domain-error.ts';
@@ -81,6 +82,52 @@ export interface Connection<Node> {
    * totalCount, so the count runs only when a query selects that field (ADR 0016).
    */
   count(): Promise<number>;
+}
+
+/**
+ * What a list's operation input asks of a page (ADR 0073): the fields that defineListQueryContract
+ * derives, with orderBy as camelCase sort fields, each optionally prefixed with - for descending.
+ */
+export interface ListInput {
+  readonly first?: number | undefined;
+  readonly after?: string | undefined;
+  readonly orderBy?: readonly string[] | undefined;
+  readonly search?: string | undefined;
+  readonly includeArchived?: boolean | undefined;
+}
+
+/** What a list's operation answers: the connection without edges (ADR 0073). */
+export interface ListPage<Node> {
+  readonly nodes: Node[];
+  readonly pageInfo: { readonly hasNextPage: boolean; readonly endCursor: string | null };
+}
+
+/** The GraphQL name of a camelCase sort field: updatedAt is UPDATED_AT. */
+function graphqlName(field: string): string {
+  return field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
+}
+
+/** The orderBy entry of a sort field as an operation names it, such as -updatedAt. */
+function orderOf(entry: string): OrderBy<string> {
+  const descending = entry.startsWith('-');
+  return {
+    field: graphqlName(descending ? entry.slice(1) : entry),
+    direction: descending ? SortDirection.DESC : SortDirection.ASC,
+  };
+}
+
+/** The kit's declaration of a list that a contracts package declares, with its GraphQL node. */
+function fromContract(list: ListContract, node: () => Type): ListDeclaration<string> {
+  return {
+    name: list.name,
+    node,
+    sortFields: Object.fromEntries(
+      Object.entries(list.sortFields).map(([field, column]) => [graphqlName(field), column]),
+    ),
+    defaultOrderBy: list.defaultOrderBy.map(orderOf),
+    search: list.search,
+    ...(list.archivable === undefined ? {} : { archivable: list.archivable }),
+  };
 }
 
 /** The page size of a call without first or last. */
@@ -227,7 +274,31 @@ function afterValues(keys: readonly Key[], values: readonly string[]) {
  */
 export function defineList<const SortField extends string>(
   declaration: ListDeclaration<SortField>,
-) {
+): ListKit<SortField>;
+/**
+ * Declares the list that a contracts package declares (ADR 0073), with the GraphQL type of its
+ * node. Its sort fields are camelCase there and upper snake case in GraphQL: updatedAt is
+ * UPDATED_AT.
+ */
+export function defineList(
+  list: ListContract,
+  options: { readonly node: () => Type },
+): ListKit<string>;
+export function defineList(
+  declaration: ListDeclaration<string> | ListContract,
+  options?: { readonly node: () => Type },
+): ListKit<string> {
+  return listKit(
+    options
+      ? fromContract(declaration as ListContract, options.node)
+      : (declaration as ListDeclaration<string>),
+  );
+}
+
+/** What defineList returns. */
+export type ListKit<SortField extends string> = ReturnType<typeof listKit<SortField>>;
+
+function listKit<const SortField extends string>(declaration: ListDeclaration<SortField>) {
   const { name, node, sortFields } = declaration;
 
   const SortFieldEnum = Object.fromEntries(Object.keys(sortFields).map((field) => [field, field]));
@@ -356,6 +427,28 @@ export function defineList<const SortField extends string>(
             )}) as list`.execute(tx);
             return Number(rows[0]?.count);
           }),
+      };
+    },
+    /**
+     * Reads one page as a list's operation input asks (ADR 0073): page with first, after, orderBy
+     * of camelCase sort fields, search and includeArchived, answered as nodes and pageInfo. The
+     * module's service applies the list's filter fields in `query`.
+     */
+    async find<DB, TB extends keyof DB, Row extends { readonly id: string }>(
+      db: ScopedDatabase<DB>,
+      query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
+      input: ListInput,
+    ): Promise<ListPage<Row>> {
+      const { edges, pageInfo } = await this.page(db, query, {
+        first: input.first ?? null,
+        after: input.after ?? null,
+        orderBy: (input.orderBy?.map(orderOf) as OrderBy<SortField>[] | undefined) ?? null,
+        search: input.search ?? null,
+        includeArchived: input.includeArchived ?? null,
+      });
+      return {
+        nodes: edges.map(({ node }) => node),
+        pageInfo: { hasNextPage: pageInfo.hasNextPage, endCursor: pageInfo.endCursor },
       };
     },
   };
