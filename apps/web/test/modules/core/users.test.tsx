@@ -22,7 +22,7 @@ import {
   user,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, renderCoreAt } from './core-app.tsx';
+import { bodyRows, renderCoreAt, watchForSkeletonRows } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -128,6 +128,33 @@ describe('users', () => {
 
     await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
     expect(table.getAttribute('aria-busy')).toBeNull();
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 a new search from No users match this search keeps that state, busy, until its users arrive, with no skeleton rows in between', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read']),
+      companiesQuery(),
+      usersQuery([user(anna, []), user(sara, [])]),
+      usersQuery([], 'zz'),
+      usersQuery([user(sara, [])], 'sara', 200),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    const search = screen.getByRole('searchbox', { name: 'Search users' });
+    await events.type(search, 'zz');
+    const noMatch = () =>
+      screen.getByRole('heading', { level: 2, name: 'No users match this search' });
+    await screen.findByRole('heading', { level: 2, name: 'No users match this search' });
+    const skeletonRowsShown = watchForSkeletonRows();
+
+    await events.type(search, '{Backspace}{Backspace}sara');
+
+    await waitFor(() => expect(noMatch().closest('[aria-busy="true"]')).not.toBeNull());
+    const users = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(users).map(([name]) => name)).toEqual(['Sara Nyberg']));
+    expect(skeletonRowsShown()).toBe(false);
     expect(document.activeElement).toBe(search);
   });
 

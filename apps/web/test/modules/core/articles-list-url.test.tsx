@@ -13,6 +13,7 @@ import {
   lastChangedText,
   plant,
   renderCoreAt,
+  watchForSkeletonRows,
 } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -256,6 +257,37 @@ describe('articles list URL state', () => {
     expect(router.state.location.href).toBe(listHref());
     const search = screen.getByRole('searchbox', { name: 'Search articles' });
     expect((search as HTMLInputElement).value).toBe('');
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 a new search from No articles match these filters keeps that state, busy, until its answer arrives, with no skeleton rows in between', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref({ q: 'zz-404' }), [
+      articlesQuery({ ...firstPage, search: 'zz-404' }, articlesPage([], { totalCount: 0 })),
+      articlesQuery({ ...firstPage, search: 'zz-4045' }, articlesPage([], { totalCount: 0 }), 200),
+      articlesQuery(
+        { ...firstPage, search: 'zz-40' },
+        articlesPage(articleRange(2), { totalCount: 2 }),
+        200,
+      ),
+    ]);
+    const noMatch = () =>
+      screen.getByRole('heading', { level: 2, name: 'No articles match these filters' });
+    await screen.findByRole('heading', { level: 2, name: 'No articles match these filters' });
+    const skeletonRowsShown = watchForSkeletonRows();
+    const search = screen.getByRole('searchbox', { name: 'Search articles' });
+
+    await user.type(search, '5');
+
+    await waitFor(() => expect(noMatch().closest('[aria-busy="true"]')).not.toBeNull());
+    await waitFor(() => expect(noMatch().closest('[aria-busy]')).toBeNull());
+
+    await user.type(search, '{Backspace}{Backspace}');
+
+    await waitFor(() => expect(noMatch().closest('[aria-busy="true"]')).not.toBeNull());
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(skeletonRowsShown()).toBe(false);
     expect(document.activeElement).toBe(search);
   });
 
