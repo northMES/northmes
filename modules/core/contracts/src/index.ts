@@ -14,4 +14,4 @@ export {
   settingsCompanyId,
   updateRole,
 } from './role.ts';
-export { blockUser, createUser, unblockUser, username } from './user.ts';
+export { blockUser, createUser, resetPassword, unblockUser, username } from './user.ts';

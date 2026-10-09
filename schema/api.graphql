@@ -91,6 +91,12 @@ input CoreRemoveRoleAssignmentInput {
   reason: String
 }
 
+input CoreResetPasswordInput {
+  companyId: String
+  id: ID!
+  reason: String
+}
+
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
@@ -141,6 +147,7 @@ type Mutation {
   coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
   coreDeleteRole(input: CoreDeleteRoleInput!): Role!
   coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
+  coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
@@ -153,6 +160,11 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type PasswordReset {
+  temporaryPassword: String!
+  user: User!
 }
 
 type Permission {

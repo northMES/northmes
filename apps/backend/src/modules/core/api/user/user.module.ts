@@ -5,6 +5,7 @@ import { UserServiceModule } from '../../core/user-service.module.ts';
 import { UserFieldResolver } from './fields/user.field.resolver.ts';
 import { BlockUser } from './mutations/block-user.mutation.ts';
 import { CreateUser } from './mutations/create-user.mutation.ts';
+import { ResetPassword } from './mutations/reset-password.mutation.ts';
 import { UnblockUser } from './mutations/unblock-user.mutation.ts';
 import { userList } from './queries/user.list.ts';
 import { UserQueryResolver } from './queries/user.query.resolver.ts';
@@ -19,6 +20,7 @@ import { UserQueryResolver } from './queries/user.query.resolver.ts';
     CreateUser,
     BlockUser,
     UnblockUser,
+    ResetPassword,
   ],
 })
 export class UserModule {}

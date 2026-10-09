@@ -2,7 +2,10 @@
 import { randomInt } from 'node:crypto';
 import { NotFoundException } from '@nestjs/common';
 import type { Transaction } from 'kysely';
+import { currentPrincipal } from '../../../../principal.ts';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
+import { can } from '../access/access.ts';
+import { forbidden } from '../access/request-scope.ts';
 import { companyUsers, type UserRecord } from '../user.service.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
@@ -44,4 +47,31 @@ export function userById(
   companyId: string,
 ): Promise<UserRecord> {
   return companyUsers(tx, companyId).where('id', '=', id).executeTakeFirstOrThrow();
+}
+
+/**
+ * Refuses with core.forbidden unless the principal holds `permission` at every company the user
+ * belongs to (ADR 0011): a block or a new password holds in every company, so an admin of one
+ * company cannot lock the user out of another, lift a block that another company's admin set, or
+ * take over the account of a user of another company.
+ */
+export async function refuseOtherCompanies(
+  context: Pick<CoreContext, 'tx'>,
+  id: string,
+  permission: 'core.user:block' | 'core.user:resetPassword',
+): Promise<void> {
+  const principal = currentPrincipal();
+  if (!principal) throw forbidden('Users are changed only by a signed-in user');
+  const companies = await context.tx
+    .selectFrom('core.company_user')
+    .select('company_id')
+    .distinct()
+    .where('user_id', '=', id)
+    .execute();
+  if (companies.every(({ company_id }) => can(principal, permission, company_id))) return;
+  throw forbidden(
+    permission === 'core.user:block'
+      ? 'The user also belongs to a company where you cannot block users. Ask an admin of each of their companies.'
+      : 'The user also belongs to a company where you cannot reset passwords. Ask an admin of each of their companies.',
+  );
 }

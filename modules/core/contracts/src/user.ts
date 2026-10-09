@@ -70,3 +70,19 @@ export const unblockUser = defineCommandContract({
   permission: 'core.user:block',
   reason: 'optional',
 });
+
+/**
+ * Gives a user of the company a new temporary password, which the answer shows once (design
+ * core-304, US15 to US18). The old password stops working and every session of the user ends, and
+ * the user must choose a new password at the next sign-in (ADR 0051 rule 13). It needs
+ * core.user:resetPassword at the company and at every other company the user belongs to, which
+ * only Company admin holds of the default roles. Resetting your own password is refused with
+ * core.cannot_reset_own_password, and a blocked user's with core.user_blocked.
+ */
+export const resetPassword = defineCommandContract({
+  name: 'core.resetPassword',
+  target: 'none',
+  fields: z.object({ id: z.uuid(), reason: accessReason, companyId: settingsCompanyId }),
+  permission: 'core.user:resetPassword',
+  reason: 'optional',
+});
