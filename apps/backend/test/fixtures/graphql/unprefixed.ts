@@ -3,7 +3,7 @@
 // refuses.
 import { Module } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
-import { defineModule } from '@northmes/sdk';
+import type { InRepoModule } from '../../../src/modules.ts';
 
 @Resolver()
 export class GammaResolver {
@@ -16,9 +16,7 @@ export class GammaResolver {
 @Module({ providers: [GammaResolver] })
 export class GammaModule {}
 
-export const gamma = defineModule({
+export const gamma: InRepoModule = {
   id: 'gamma',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
-  server: async () => ({ default: GammaModule }),
-});
+  module: GammaModule,
+};

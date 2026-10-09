@@ -13,7 +13,7 @@ The web is one Vite React app in `apps/web`, built once to static files. Each mo
 - `routes.tsx`: `planningRoutes(plantRoute)`. Each route's path comes from `linkEntry(planningLinks...)`, the top route's from the manifest itself (ADR 0062). Each component is `lazyRouteComponent(() => import('./screens.ts'), '<Screen>')`.
 - `screens.ts`: re-exports every screen from its folder's `index.ts`, so the build puts them in one chunk.
 - `screens/board/`: `board-screen.tsx`, its row `order-row.tsx`, and the typed documents `board.graphql.ts` and `release.graphql.ts`, `gql` from `@apollo/client` as a `TypedDocumentNode`.
-- `apps/web/src/modules.ts`: one `{ module, label, order }` entry per module. `label` and `order` repeat the web block of the module's manifest.
+- `apps/web/src/modules.ts`: one `{ module, label, order }` entry per module. It is the only source of the menu's label and order; the backend modules carry no manifest (ADR 0070).
 - `apps/web/src/config.ts`: `loadWebConfig` reads `/config.json` at boot. `{ "apiUrl": "https://mes.example.com" }` sends the client's requests to `<apiUrl>/graphql`; without the file the API is on the page's origin.
 - `apps/web/components.json`: the shadcn CLI's config (Base UI, Tailwind 4, the `#ui/*` alias of `apps/web/package.json`). A primitive in `apps/web/src/ui/primitives` comes from `pnpm -C apps/web exec shadcn add <component>`, never written by hand; its helpers and hooks land in `apps/web/src/ui/lib`.
 - `apps/web/vite.config.ts`: in dev, proxies `/graphql` and `/api` to `NORTHMES_API_ORIGIN`, WebSockets included, and resolves workspace packages to their source (ADR 0058).
@@ -69,7 +69,7 @@ Behaviour:
 
 1. Declare the module's link manifest in its contracts package with `defineModuleLinks('<id>', entries)` and export it from `src/index.ts`.
 2. Write `apps/web/src/modules/<id>/routes.tsx`, `screens.ts`, `index.ts` and a folder per screen, as [Naming and folders](#naming-and-folders) lays them out. Add the contracts package to `apps/web/package.json` (`workspace:*`) and run `pnpm install`.
-3. Add the module to `apps/web/src/modules.ts` with the label and order of its manifest's web block.
+3. Add the module to `apps/web/src/modules.ts` with its menu label and order.
 4. Test the routes against the link manifest and each screen with `MockedProvider`. Start each test name with the story id.
 5. Add the module's screens chunk to `apps/web/test/build.test.ts`.
 

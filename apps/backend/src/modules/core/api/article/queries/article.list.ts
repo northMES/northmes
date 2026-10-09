@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { defineList } from '@northmes/sdk/lists';
-import { Article } from './article.type.ts';
+import { Article } from '../types/article.type.ts';
 
 /**
  * The list of a plant's articles: coreArticles, by code unless orderBy says otherwise (ADR 0016).

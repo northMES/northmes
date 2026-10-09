@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { describe, expect, it } from 'vitest';
-import { releasePayload } from '../../../src/modules/planning/commands/release-payload.ts';
+import { releasePayload } from '../../../src/modules/planning/core/commands/release-payload.ts';
 
 const ORDER_ID = '01920000-0000-7000-8000-0000000000c1';
 const PLANT_ID = '01920000-0000-7000-8000-0000000000c2';

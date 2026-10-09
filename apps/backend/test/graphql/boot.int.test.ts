@@ -2,13 +2,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { INestApplication } from '@nestjs/common';
 import { emptyTemplateDatabase, query, useTestDatabase } from '@northmes/testing';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
 import { migrateCommand } from '../../src/migrate/command.ts';
-import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { gamma } from '../fixtures/graphql/unprefixed.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
@@ -45,7 +43,7 @@ describe('boot with a root field outside its module prefix', () => {
 
     app = await boot({
       env,
-      ...fixtureCatalog(gamma),
+      modules: [gamma],
       exit,
       log,
     });
@@ -63,9 +61,8 @@ describe('pnpm northmes migrate with a root field outside its module prefix', ()
 
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), 'northmes-migrate-'));
-    // The package of gamma's manifest, with one migration file.
+    // gamma's migrations folder, with one migration file.
     mkdirSync(join(dir, 'gamma', 'migrations'), { recursive: true });
-    writeFileSync(join(dir, 'gamma', 'package.json'), '{}\n');
     writeFileSync(
       join(dir, 'gamma', 'migrations', '20260110080000_ping.sql'),
       'create table gamma.ping (id int primary key);\n',
@@ -102,8 +99,7 @@ describe('pnpm northmes migrate with a root field outside its module prefix', ()
   it('E02-S03 northmes migrate with a root field outside its module prefix exits 1 before its first file', async () => {
     const run = migrateCommand({
       env: migrateEnv(),
-      ...fixtureCatalog(gamma),
-      resolveManifest: () => pathToFileURL(join(dir, 'gamma', 'manifest.js')).href,
+      modules: [{ ...gamma, migrationsDir: join(dir, 'gamma', 'migrations') }],
       exit: vi.fn<(code: number) => void>(),
       log: recordingLog(),
     });

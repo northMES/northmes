@@ -66,6 +66,60 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/backend/src/modules/*/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@nestjs/graphql": "A module's core/ holds domain services and command handlers and does not depend on GraphQL; put GraphQL types and resolvers in its api/ (ADR 0070)."
+                },
+                "patterns": [
+                  {
+                    "group": ["@nestjs/graphql/**"],
+                    "message": "A module's core/ holds domain services and command handlers and does not depend on GraphQL; put GraphQL types and resolvers in its api/ (ADR 0070)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["apps/backend/src/modules/*/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@northmes/sdk/data": "A module's api/ never touches the database; call a service in its core/ (ADR 0070).",
+                  "kysely": "A module's api/ never touches the database; call a service in its core/ (ADR 0070).",
+                  "pg": "A module's api/ never touches the database; call a service in its core/ (ADR 0070)."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "**/infrastructure/**",
+                      "**/db/**",
+                      "@northmes/sdk/data/**",
+                      "kysely/**",
+                      "pg/**"
+                    ],
+                    "message": "A module's api/ never touches the database; call a service in its core/ (ADR 0070)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

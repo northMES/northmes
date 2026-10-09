@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { Type } from '@nestjs/common';
 import type { ModuleManifest } from '@northmes/sdk';
 import { BootError } from '../boot/boot-error.ts';
 import {
@@ -9,12 +10,21 @@ import {
   slotProblems,
 } from './rules.ts';
 
-/** An installed module: its manifest, and whether it ships in the repository or as a plugin. */
+/**
+ * An installed module: what the catalog checks read of it, and whether it ships in the repository
+ * or as a plugin.
+ */
 export interface CatalogEntry {
+  /**
+   * A plugin's manifest. An in-repo module has none of its own, so boot gives it one with its id,
+   * its dependsOn and the backend's version, which the checks read like a plugin's.
+   */
   readonly manifest: ModuleManifest;
   readonly kind: 'module' | 'plugin';
   /** The folder that holds the module's migration files. Without one, the module has none. */
   readonly migrationsDir?: string;
+  /** The Nest module of an in-repo module. A plugin's comes from its manifest's server entry. */
+  readonly module?: Type;
 }
 
 export interface CatalogOptions {

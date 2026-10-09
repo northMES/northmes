@@ -7,7 +7,7 @@ export const imageVersion = '0.0.0';
 
 /** The manifest fields a test sets. Without northmes, the range holds imageVersion. */
 export type ManifestOptions = Partial<
-  Pick<ModuleManifest, 'northmes' | 'permissions' | 'commands' | 'events' | 'web'>
+  Pick<ModuleManifest, 'northmes' | 'permissions' | 'events' | 'web'>
 >;
 
 function manifest(id: string, dependsOn: readonly string[], options: ManifestOptions) {

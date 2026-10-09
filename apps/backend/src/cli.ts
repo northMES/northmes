@@ -7,17 +7,15 @@ import { migrateCommand } from './migrate/command.ts';
 import { MigrationError } from './migrate/migration-error.ts';
 
 /** What main.ts hands a command: process.exit and console. A test also passes an environment. */
-export type CliContext = Omit<BootOptions, 'importManifest'>;
+export type CliContext = Pick<BootOptions, 'env' | 'exit' | 'log'>;
 
 /** The commands of pnpm northmes, by their words. */
 const commands: Readonly<Record<string, (context: CliContext) => Promise<void>>> = {
   serve: async (context) => {
-    await boot({ ...context, importManifest: (specifier) => import(specifier) });
+    await boot(context);
   },
   'db bootstrap': dbBootstrap,
-  migrate: async (context) => {
-    await migrateCommand({ ...context, importManifest: (specifier) => import(specifier) });
-  },
+  migrate: migrateCommand,
 };
 
 /**

@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { createArticle } from '@northmes/core-contracts';
-import { defineCommand } from '@northmes/sdk/commands';
-import { type ArticleRecord, recordColumns } from '../api/article.service.ts';
-import { Article } from '../api/article.type.ts';
+import type { createArticle } from '@northmes/core-contracts';
+import type { z } from 'zod';
+import { type ArticleRecord, recordColumns } from '../article.service.ts';
 import type { CoreContext } from './context.ts';
 
 /**
- * core.createArticle, whose mutation coreCreateArticle the SDK generates from the contract. It
- * writes the article at the principal's plant under the client's id and returns it with version 1,
- * or returns the article a first run with that id created.
+ * The handler of core.createArticle (ADR 0012), which the mutation coreCreateArticle sends through
+ * the command bus. It writes the article at the principal's plant under the client's id and returns
+ * it with version 1, or returns the article a first run with that id created.
  */
-export const CreateArticle = defineCommand(createArticle, {
-  returns: () => Article,
-  async handle({ id, code, name }, { tx, plantId }: CoreContext): Promise<ArticleRecord> {
+export const createArticleHandler = {
+  async handle(
+    { id, code, name }: z.output<typeof createArticle.input>,
+    { tx, plantId }: CoreContext,
+  ): Promise<ArticleRecord> {
     if (!plantId) {
       throw new ForbiddenException('The request names no plant, so it cannot create an article');
     }
@@ -36,4 +37,4 @@ export const CreateArticle = defineCommand(createArticle, {
     }
     return first;
   },
-});
+};

@@ -14,8 +14,8 @@ import {
   Resolver,
   Subscription,
 } from '@nestjs/graphql';
-import { defineModule } from '@northmes/sdk';
 import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
+import type { InRepoModule } from '../../../src/modules.ts';
 import { AlphaApiModule, AlphaThings, Thing } from './alpha.ts';
 
 @ObjectType('Crate')
@@ -64,10 +64,8 @@ export class CrateResolver {
 @Module({ imports: [AlphaApiModule], providers: [CrateResolver] })
 export class BetaModule {}
 
-export const beta = defineModule({
+export const beta: InRepoModule = {
   id: 'beta',
-  version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
   dependsOn: ['alpha'],
-  server: async () => ({ default: BetaModule }),
-});
+  module: BetaModule,
+};

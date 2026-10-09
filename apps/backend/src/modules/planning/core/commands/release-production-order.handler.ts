@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { HttpStatus } from '@nestjs/common';
-import { releaseProductionOrder } from '@northmes/planning-contracts';
-import { defineCommand } from '@northmes/sdk/commands';
+import type { releaseProductionOrder } from '@northmes/planning-contracts';
 import { DomainError } from '@northmes/sdk/errors';
 import type { Selectable, Transaction } from 'kysely';
-import { type ProductionOrderRecord, recordColumns } from '../api/production-order.service.ts';
-import type { PlanningDatabase, ProductionOrderTable } from '../db.ts';
-import { ProductionOrder } from '../production-order.resolver.ts';
+import type { z } from 'zod';
+import type { PlanningDatabase, ProductionOrderTable } from '../../infrastructure/database.ts';
+import { type ProductionOrderRecord, recordColumns } from '../production-order.service.ts';
 import { releasePayload } from './release-payload.ts';
 
 /**
@@ -19,17 +18,17 @@ interface ReleaseContext {
 }
 
 /**
- * planning.releaseProductionOrder, whose mutation planningReleaseProductionOrder the SDK generates
- * from the contract. It returns the released order with its new version.
+ * The handler of planning.releaseProductionOrder (ADR 0012), which the mutation
+ * planningReleaseProductionOrder sends through the command bus. It returns the released order with
+ * its new version.
  */
-export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
-  returns: () => ProductionOrder,
+export const releaseProductionOrderHandler = {
   // The bus reads the order and locks its row until the command's transaction ends, so the version
   // check, the validators and the handler see the same order and a second release waits for the
   // first. An order outside the principal's scopes is not found, like one that does not exist.
   target: {
     entity: 'Production order',
-    load: (id, { tx }: Pick<ReleaseContext, 'tx'>) =>
+    load: (id: string, { tx }: Pick<ReleaseContext, 'tx'>) =>
       tx
         .selectFrom('planning.production_order')
         .selectAll()
@@ -37,10 +36,13 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
         .forUpdate()
         .executeTakeFirst(),
   },
-  async buildPayload(_input, { target }: ReleaseContext) {
+  async buildPayload(_input: unknown, { target }: ReleaseContext) {
     return releasePayload(target);
   },
-  async handle({ id }, { tx, target: order }: ReleaseContext): Promise<ProductionOrderRecord> {
+  async handle(
+    { id }: z.output<typeof releaseProductionOrder.input>,
+    { tx, target: order }: ReleaseContext,
+  ): Promise<ProductionOrderRecord> {
     if (order.status !== 'planned') {
       throw new DomainError({
         code: 'planning.production_order.not_planned',
@@ -56,4 +58,4 @@ export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
       .returning(recordColumns)
       .executeTakeFirstOrThrow();
   },
-});
+};

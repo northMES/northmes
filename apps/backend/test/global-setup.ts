@@ -101,7 +101,7 @@ export default async function setup(project: TestProject): Promise<void> {
     auth: randomBytes(32).toString('hex'),
   };
   await bootstrapRoles(emptyTemplateUrl(pg), passwords);
-  const catalog = await inRepoCatalog((specifier) => import(specifier));
+  const catalog = inRepoCatalog();
   const { name } = await migrateTemplate({
     superuser: pg,
     ownerPassword: passwords.owner,

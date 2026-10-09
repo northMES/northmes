@@ -3,8 +3,8 @@ import { Module } from '@nestjs/common';
 import { ArticleService } from './article.service.ts';
 
 /**
- * Core's public service API: plain providers and no resolvers (ADR 0003). Other modules import
- * it through core's api/index.ts.
+ * Provides core's ArticleService: plain providers and no resolvers. core's article surface imports
+ * it, and other modules import it through core's public-api.ts (ADR 0003).
  */
 @Module({ providers: [ArticleService], exports: [ArticleService] })
-export class CoreApiModule {}
+export class ArticleServiceModule {}

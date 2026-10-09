@@ -19,7 +19,7 @@ import { AppModule, type AppOptions, type ServerEntry } from '../app.module.ts';
 import { type CatalogEntry, checkCatalog } from '../catalog/check-catalog.ts';
 import { migrationsDirOf } from '../migrate/files.ts';
 import { checkPending, type MigrationCheckMode } from '../migrate/pending.ts';
-import { inRepoManifests, inRepoMigrationsDir } from '../modules.ts';
+import { type InRepoModule, inRepoMigrationsDir, inRepoModules } from '../modules.ts';
 import { pluginManifestUrl } from '../plugins/manifest-url.ts';
 import { installResolveHook } from '../plugins/resolve-hook.ts';
 import { imageVersion } from '../version.ts';
@@ -31,15 +31,13 @@ import { defaultConfigFile, readConfigFile } from './config-file.ts';
 export interface BootOptions {
   /** The environment the server runs with. Without it, loadEnv reads process.env (ADR 0060). */
   readonly env?: Readonly<Record<string, string | undefined>>;
-  /** The import specifiers of the manifests boot loads. Without it, boot loads inRepoManifests. */
-  readonly manifests?: readonly string[];
-  /** Imports the manifest module that a specifier names. main.ts passes a dynamic import. */
-  readonly importManifest: (specifier: string) => Promise<{ default: ModuleManifest }>;
+  /** The in-repo modules boot imports, in dependency order. Without it, inRepoModules. */
+  readonly modules?: readonly InRepoModule[];
   /**
-   * Resolves each manifest specifier, so boot finds the migrations folder of its package. Without
-   * it, boot finds the migrations of an in-repo module in src/modules/<id>/migrations.
+   * Imports the manifest of a plugin that northmes.config.json lists, by its file URL. Without it,
+   * boot imports the file.
    */
-  readonly resolveManifest?: ResolveManifest;
+  readonly importManifest?: (specifier: string) => Promise<{ default: ModuleManifest }>;
   /** Ends the process with an exit code. main.ts passes process.exit. */
   readonly exit: (code: number) => void;
   /** Where boot writes its lines: progress to info, problems to error. main.ts passes console. */
@@ -123,25 +121,34 @@ export async function bootForMigrate(options: BootOptions): Promise<Booted<Migra
   );
 }
 
-/** Returns the file URL that a manifest specifier resolves to, or of another file in its package. */
-export type ResolveManifest = (specifier: string) => string;
-
 /**
- * Boot step 3: imports the manifest of every module, or of every plugin when kind says so. No Nest
- * code of a module loads. migrationsOf names the folder of each specifier's migration files.
+ * Boot step 3 for the plugins: imports the manifest of every plugin. No Nest code of a plugin
+ * loads. A plugin's migrations are in the migrations folder of its package (ADR 0037).
  */
-async function importManifests(
+async function importPluginManifests(
   specifiers: readonly string[],
-  importManifest: BootOptions['importManifest'],
-  migrationsOf: (specifier: string) => string,
-  kind: CatalogEntry['kind'] = 'module',
+  importManifest: NonNullable<BootOptions['importManifest']>,
 ): Promise<CatalogEntry[]> {
   const entries: CatalogEntry[] = [];
   for (const specifier of specifiers) {
     const { default: manifest } = await importManifest(specifier);
-    entries.push({ manifest, kind, migrationsDir: migrationsOf(specifier) });
+    entries.push({ manifest, kind: 'plugin', migrationsDir: migrationsDirOf(specifier) });
   }
   return entries;
+}
+
+/**
+ * The catalog entries of in-repo modules. Each gets the manifest the catalog checks read: its id,
+ * its dependsOn, and the backend's version, which is also the only NorthMES version it runs on.
+ */
+function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
+  const version = imageVersion();
+  return modules.map(({ id, module, dependsOn, migrationsDir }) => ({
+    manifest: { id, version, northmes: version, ...(dependsOn ? { dependsOn } : {}) },
+    kind: 'module',
+    module,
+    migrationsDir: migrationsDir ?? inRepoMigrationsDir(id),
+  }));
 }
 
 export interface InRepoCatalogOptions {
@@ -149,38 +156,38 @@ export interface InRepoCatalogOptions {
   readonly modules?: readonly string[];
 }
 
-/**
- * Boot steps 3 and 4: the in-repo modules' manifests and migration folders, checked and in boot
- * order.
- */
-export async function inRepoCatalog(
-  importManifest: BootOptions['importManifest'],
-  { modules }: InRepoCatalogOptions = {},
-): Promise<CatalogEntry[]> {
-  const entries = await importManifests(inRepoManifests, importManifest, inRepoMigrationsDir);
-  const kept = modules ? entries.filter(({ manifest }) => modules.includes(manifest.id)) : entries;
-  return checkCatalog(kept, { imageVersion: imageVersion() });
+/** Boot steps 3 and 4 for the in-repo modules alone: their catalog, checked and in boot order. */
+export function inRepoCatalog({ modules }: InRepoCatalogOptions = {}): CatalogEntry[] {
+  const kept = modules ? inRepoModules.filter(({ id }) => modules.includes(id)) : inRepoModules;
+  return checkCatalog(inRepoEntries(kept), { imageVersion: imageVersion() });
 }
 
 /**
- * Boot step 6: imports the server entry of every module that has one, in boot order.
+ * Boot step 6: the Nest module of every catalog entry, in boot order. An in-repo module's is in its
+ * entry; a plugin's is the default export of its manifest's server entry, which this step imports.
  * createTestApp's host factory runs the same step.
  */
 export async function importServers(catalog: readonly CatalogEntry[]): Promise<ServerEntry[]> {
   const servers: ServerEntry[] = [];
   for (const entry of catalog) {
     const { manifest } = entry;
+    const dependsOn = manifest.dependsOn ?? [];
+    if (entry.module) {
+      servers.push({ id: manifest.id, module: entry.module, dependsOn });
+      continue;
+    }
     if (!manifest.server) continue;
     const { default: module } = await importServer(entry, manifest.server);
-    servers.push({ id: manifest.id, module, manifest });
+    servers.push({ id: manifest.id, module, dependsOn });
   }
   return servers;
 }
 
 /**
- * Imports the server entry of one catalog entry. An entry that throws while it loads stops the
- * boot with a BootError naming the module or plugin: boot never skips it, because a skipped server
- * part would drop its validators and its resolvers (ADR 0002).
+ * Imports a plugin's server entry. A plugin whose entry throws while it loads stops the boot with a
+ * BootError naming it: boot never skips it, because a skipped server part would drop its validators
+ * and its resolvers (ADR 0002). The in-repo modules load with the process through modules.ts, so a
+ * throw in one of them stops the process before boot runs.
  */
 async function importServer(
   { manifest, kind }: CatalogEntry,
@@ -221,11 +228,10 @@ async function bootSteps<
 >(
   env: Env,
   {
-    manifests = inRepoManifests,
-    importManifest,
-    resolveManifest,
+    modules = inRepoModules,
+    importManifest = (specifier) => import(specifier),
     log,
-  }: Pick<BootOptions, 'manifests' | 'importManifest' | 'resolveManifest' | 'log'>,
+  }: Pick<BootOptions, 'modules' | 'importManifest' | 'log'>,
   appOptions: AppOptions = {},
   mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
@@ -236,12 +242,9 @@ async function bootSteps<
   installResolveHook(pluginRoots);
   // A plugin's manifest is a file of its own, so its URL is a specifier and a file of its package.
   const pluginManifests = pluginRoots.map(pluginManifestUrl);
-  const moduleMigrations = resolveManifest
-    ? (specifier: string) => migrationsDirOf(resolveManifest(specifier))
-    : inRepoMigrationsDir;
   const entries = [
-    ...(await importManifests(manifests, importManifest, moduleMigrations)),
-    ...(await importManifests(pluginManifests, importManifest, migrationsDirOf, 'plugin')),
+    ...inRepoEntries(modules),
+    ...(await importPluginManifests(pluginManifests, importManifest)),
   ];
   const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
   const pending = await checkPending(migrationCheckUrl(env.DATABASE_URL, mode, secrets), catalog, {

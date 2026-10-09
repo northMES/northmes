@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { Transaction } from 'kysely';
-import type { CoreDatabase } from '../db.ts';
+import type { CoreDatabase } from '../../infrastructure/database.ts';
 
 /**
  * What the command bus hands a core command (ADR 0012): the transaction it opened for this run of

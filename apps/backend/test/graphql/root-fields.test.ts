@@ -4,8 +4,8 @@ import { Module } from '@nestjs/common';
 import { Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { describe, expect, it } from 'vitest';
 import { rootFieldProblems } from '../../src/graphql/root-fields.ts';
-import CoreModule from '../../src/modules/core/index.ts';
-import PlanningModule from '../../src/modules/planning/index.ts';
+import { CoreModule } from '../../src/modules/core/core.module.ts';
+import { PlanningModule } from '../../src/modules/planning/planning.module.ts';
 
 @Resolver()
 class ShopFloorResolver {
@@ -53,6 +53,20 @@ describe('the root field prefix rule', () => {
     const problems = rootFieldProblems([
       { id: 'core', module: CoreModule },
       { id: 'planning', module: PlanningModule },
+    ]);
+
+    expect(problems).toEqual([]);
+  });
+
+  it("E02-S03 a module that imports another module's Nest module is not charged with that module's root fields", () => {
+    // A plugin that imports PlanningModule to call its services declares no root field itself.
+    @Module({ imports: [PlanningModule] })
+    class PlanningAddOnModule {}
+
+    const problems = rootFieldProblems([
+      { id: 'core', module: CoreModule },
+      { id: 'planning', module: PlanningModule },
+      { id: 'planning-add-on', module: PlanningAddOnModule },
     ]);
 
     expect(problems).toEqual([]);

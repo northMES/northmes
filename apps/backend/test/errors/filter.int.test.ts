@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { INestApplication } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
-import type { ModuleManifest } from '@northmes/sdk';
 import { DomainErrorFilter } from '@northmes/sdk/errors';
 import { given, gqlClient, useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import type { InRepoModule } from '../../src/modules.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
-import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { faulty, UNKNOWN_ERROR_TEXT } from '../fixtures/graphql/faulty.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
@@ -35,9 +34,9 @@ describe('the exception filter', () => {
   });
 
   /** Boots the server with the fixture modules in place of the in-repo ones. */
-  async function bootFixtures(...manifests: readonly ModuleManifest[]): Promise<INestApplication> {
+  async function bootFixtures(...modules: readonly InRepoModule[]): Promise<INestApplication> {
     const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
-    app = await boot({ env, ...fixtureCatalog(...manifests), exit: vi.fn(), log });
+    app = await boot({ env, modules, exit: vi.fn(), log });
     if (!app) throw new Error(`boot exited: ${log.error.mock.calls.join('\n')}`);
     return app;
   }

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { INestApplication } from '@nestjs/common';
-import type { ModuleManifest } from '@northmes/sdk';
 import { gqlClient } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
+import type { InRepoModule } from '../../src/modules.ts';
 import { AlphaThings, alpha } from '../fixtures/graphql/alpha.ts';
 import { beta } from '../fixtures/graphql/beta.ts';
-import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 const env = useServerEnv();
@@ -26,10 +25,10 @@ afterEach(async () => {
 });
 
 /** Boots the server with the fixture modules in place of the in-repo ones and returns its URL. */
-async function bootFixtures(...manifests: readonly ModuleManifest[]) {
+async function bootFixtures(...modules: readonly InRepoModule[]) {
   const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
   const exit = vi.fn<(code: number) => void>();
-  app = await boot({ env, ...fixtureCatalog(...manifests), exit, log });
+  app = await boot({ env, modules, exit, log });
   if (!app) throw new Error(`boot exited: ${log.error.mock.calls.join('\n')}`);
   return { url: await app.getUrl(), log };
 }
