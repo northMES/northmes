@@ -86,6 +86,7 @@ describe('the role editor', () => {
 
     // A new role is assigned nowhere, so the server asks for no permission to create it: nothing
     // is locked, also Read users and Run autoplan, which the editor does not hold.
+    await user.click(screen.getByRole('button', { name: /^Core/ }));
     expect(checkbox('Read users and their roles').hasAttribute('disabled')).toBe(false);
     expect(screen.queryByText('You do not hold it at Acme AB.')).toBeNull();
     const autoplan = checkbox('Run autoplan');
@@ -106,10 +107,42 @@ describe('the role editor', () => {
     expect(release.getAttribute('aria-checked')).toBe('false');
     expect(screen.getByText('1 of 6 selected.')).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('1 of 6 selected.'));
+    // The difference is a card above Permissions: a summary line, then what is added and removed,
+    // each with its line and id; the rows carry the same marks, a removed line struck through.
     const difference = screen.getByRole('region', { name: 'Difference from Planner' });
-    expect(within(difference).getAllByText('Removed')).toHaveLength(2);
-    expect(within(difference).getByText('Release production orders to the floor')).toBeDefined();
-    expect(within(difference).getByText('Run autoplan')).toBeDefined();
+    const permissions = screen.getByRole('region', { name: 'Permissions' });
+    expect(
+      difference.compareDocumentPosition(permissions) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      within(difference).getByText(
+        "Night planner holds 1 permission: Planner's 3, with 0 added and 2 removed.",
+      ),
+    ).toBeDefined();
+    expect(within(difference).getByRole('heading', { name: 'Added (0)' })).toBeDefined();
+    const removed = within(difference).getByRole('list', { name: 'Removed (2)' });
+    expect(
+      within(removed)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Release production orders to the floorplanning.productionOrder:release',
+      'Run autoplanplanning.autoplan:run',
+    ]);
+    const autoplanRow = checkbox('Run autoplan').closest('li') as HTMLElement;
+    expect(within(autoplanRow).getByText('Removed')).toBeDefined();
+    expect(within(autoplanRow).getByText('Run autoplan').className).toContain('line-through');
+    // Modules come in the order of the sidebar, each id beside its line.
+    expect(
+      within(permissions)
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent?.replace(/\d+ of \d+$/, '')),
+    ).toEqual(['Core', 'Planning']);
+    expect(
+      within(permissions).getByText(
+        'Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support.',
+      ),
+    ).toBeDefined();
 
     await user.click(screen.getByRole('button', { name: 'Create role' }));
 
@@ -183,6 +216,7 @@ describe('the role editor', () => {
 
     const autoplan = await screen.findByRole('checkbox', { name: 'Run autoplan' });
     expect(autoplan.hasAttribute('disabled')).toBe(true);
+    await userEvent.setup().click(screen.getByRole('button', { name: /^Core/ }));
     expect(screen.getAllByText('You do not hold it at Plant A.')).toHaveLength(2);
     expect(checkbox('Read roles').hasAttribute('disabled')).toBe(false);
     expect(
@@ -206,7 +240,7 @@ describe('the role editor', () => {
     expect(screen.queryByText(/only when you hold it/)).toBeNull();
   });
 
-  it('E05-S06 Enter on a module button closes and opens the module, and focus stays on it', async () => {
+  it('E05-S06 a module with nothing ticked starts closed, and Enter on its button opens and closes it with focus kept', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
       settingsViewerQuery(karin),
@@ -215,15 +249,20 @@ describe('the role editor', () => {
       catalogQuery(),
     ]);
 
+    // A module with nothing ticked starts closed, with its count.
     const planning = await screen.findByRole('button', { name: /^Planning/ });
-    expect(planning.getAttribute('aria-expanded')).toBe('true');
+    expect(planning.getAttribute('aria-expanded')).toBe('false');
+    expect(planning.textContent).toContain('0 of 3');
     expect(planning.closest('h3')).not.toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Run autoplan' })).toBeNull();
     planning.focus();
     await user.keyboard('{Enter}');
 
-    expect(planning.getAttribute('aria-expanded')).toBe('false');
+    expect(planning.getAttribute('aria-expanded')).toBe('true');
     expect(document.activeElement).toBe(planning);
-    expect(screen.queryByRole('checkbox', { name: 'Run autoplan' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Run autoplan' })).toBeDefined();
+    await user.keyboard('{Enter}');
+    expect(planning.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('E05-S06 Edit role saves the ticks and the reason with the version it started from, opens the role and says whom it applies to', async () => {
