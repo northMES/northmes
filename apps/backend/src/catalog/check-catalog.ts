@@ -25,6 +25,12 @@ export interface CatalogEntry {
   readonly migrationsDir?: string;
   /** The Nest module of an in-repo module. A plugin's comes from its manifest's server entry. */
   readonly module?: Type;
+  /**
+   * Further schemas that an in-repo module's owner role owns besides its own, such as core's auth
+   * schema for Better Auth's tables (ADR 0010). migrate creates them; their grants are in the
+   * module's migration files. A plugin has none.
+   */
+  readonly schemas?: readonly string[];
 }
 
 export interface CatalogOptions {

@@ -29,6 +29,8 @@ const lockTimeout = '1min';
  */
 interface ModuleFiles {
   readonly names: ModuleNames;
+  /** The further schemas its owner role owns, which CatalogEntry.schemas names. */
+  readonly schemas: readonly string[];
   readonly files: readonly MigrationFile[];
   /** The recorded sha256 by file name. */
   readonly recorded: ReadonlyMap<string, string>;
@@ -58,13 +60,14 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
     ]);
     if (problems.length > 0) throw new MigrationError(problems);
     const applied: string[] = [];
-    for (const { names, files, recorded } of modules) {
+    for (const { names, schemas, files, recorded } of modules) {
       const pending = files.filter((file) => !recorded.has(file.name));
       for (const [index, file] of pending.entries()) {
-        await applyFile(client, names, file, { createOwner: index === 0 });
+        await applyFile(client, names, file, { createOwner: index === 0, schemas });
         applied.push(`${names.id}/${file.name}`);
       }
     }
+    await syncPermissionCatalog(client, catalog);
     return { applied };
   } finally {
     await client.end();
@@ -79,12 +82,12 @@ async function readModuleFiles(
   const { rows } = await client.query<{ module: string; name: string; sha256: string }>(
     'select module, name, sha256 from northmes_meta.migration',
   );
-  return catalog.map(({ manifest, migrationsDir }) => {
+  return catalog.map(({ manifest, migrationsDir, schemas = [] }) => {
     const names = moduleNames(manifest.id);
     const recorded = new Map(
       rows.filter((row) => row.module === names.id).map((row) => [row.name, row.sha256]),
     );
-    return { names, files: readMigrationFiles(migrationsDir), recorded };
+    return { names, schemas, files: readMigrationFiles(migrationsDir), recorded };
   });
 }
 
@@ -131,11 +134,16 @@ async function createMigrationTable(client: Client): Promise<void> {
 
 /**
  * Creates the module's NOLOGIN owner role and its schema unless they exist, and lets nm_app and
- * nm_ext use the schema. It runs in the transaction of the module's first pending file, and
+ * nm_ext use the schema. The further schemas that `schemas` names are created owned by the same
+ * role. It runs in the transaction of the module's first pending file, and
  * leaves that transaction under SET LOCAL ROLE of the owner role. Roles belong to the server, so
  * the role may come from a run on another database; the grants are given again either way.
  */
-async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Promise<void> {
+async function createOwnerRoleAndSchema(
+  client: Client,
+  names: ModuleNames,
+  schemas: readonly string[],
+): Promise<void> {
   const role = client.escapeIdentifier(names.ownerRole);
   const schema = client.escapeIdentifier(names.sql);
   const existing = await client.query('select 1 from pg_roles where rolname = $1', [
@@ -148,6 +156,13 @@ async function createOwnerRoleAndSchema(client: Client, names: ModuleNames): Pro
   // The module role uses the REFERENCES grants that other modules give nm_ext (ADR 0006).
   await client.query(`grant nm_ext to ${role} with inherit true, set false`);
   await client.query(`create schema if not exists ${schema} authorization ${role}`);
+  // A further schema gets no grant here: its module's migration files decide who may use it, as
+  // core's do for auth, which nm_app may not use (ADR 0010).
+  for (const further of schemas) {
+    await client.query(
+      `create schema if not exists ${client.escapeIdentifier(further)} authorization ${role}`,
+    );
+  }
   // Only the schema's owner may grant on it, since nm_owner inherits none of its rights. The
   // module's migration files grant nm_app its rights on each table.
   await client.query(`set local role ${role}`);
@@ -170,7 +185,7 @@ async function applyFile(
   client: Client,
   names: ModuleNames,
   file: MigrationFile,
-  { createOwner }: { readonly createOwner: boolean },
+  { createOwner, schemas }: { readonly createOwner: boolean; readonly schemas: readonly string[] },
 ): Promise<void> {
   try {
     await client.query('begin');
@@ -178,13 +193,63 @@ async function applyFile(
       'insert into northmes_meta.migration (module, name, sha256) values ($1, $2, $3)',
       [names.id, file.name, file.sha256],
     );
-    if (createOwner) await createOwnerRoleAndSchema(client, names);
+    if (createOwner) await createOwnerRoleAndSchema(client, names, schemas);
     await client.query(`set local role ${client.escapeIdentifier(names.ownerRole)}`);
     await client.query(file.sql);
     await client.query('commit');
   } catch (error) {
     throw new MigrationError([
       `${names.id}/${file.name} failed as ${names.ownerRole} and was rolled back: ${(error as Error).message}`,
+    ]);
+  }
+}
+
+/** Every permission key of the catalog's manifests, as `<resource>:<action>`, with its module. */
+function permissionKeys(catalog: readonly CatalogEntry[]): { key: string; module: string }[] {
+  return catalog.flatMap(({ manifest }) =>
+    Object.entries(manifest.permissions ?? {}).flatMap(([resource, actions]) =>
+      actions.map((action) => ({ key: `${resource}:${action}`, module: manifest.id })),
+    ),
+  );
+}
+
+/**
+ * Writes the permission catalog, core.permission, from the permissions that the catalog's modules
+ * declare (ADR 0010): each declared key is installed, and a key that no installed module declares
+ * any more stays with installed false, so a role that holds it keeps it. It runs in one transaction
+ * as core's owner role, and does nothing on a database without core.permission, such as one that
+ * only fixture modules migrate.
+ */
+async function syncPermissionCatalog(
+  client: Client,
+  catalog: readonly CatalogEntry[],
+): Promise<void> {
+  const { rows } = await client.query<{ exists: boolean }>(
+    // nm_owner has no USAGE on core, so the table is looked up in the catalog, not by to_regclass.
+    `select exists (
+       select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'core' and c.relname = 'permission'
+     ) as exists`,
+  );
+  if (!rows[0]?.exists) return;
+  const keys = permissionKeys(catalog);
+  await client.query('begin');
+  try {
+    await client.query(`set local role ${client.escapeIdentifier(moduleNames('core').ownerRole)}`);
+    await client.query(
+      `insert into core.permission (key, module_id, installed)
+       select key, module_id, true from unnest($1::text[], $2::text[]) as p (key, module_id)
+       on conflict (key) do update set module_id = excluded.module_id, installed = true`,
+      [keys.map(({ key }) => key), keys.map(({ module }) => module)],
+    );
+    await client.query('update core.permission set installed = false where key <> all ($1::text[])', [
+      keys.map(({ key }) => key),
+    ]);
+    await client.query('commit');
+  } catch (error) {
+    await client.query('rollback').catch(() => {});
+    throw new MigrationError([
+      `The permission catalog could not be written as ${moduleNames('core').ownerRole}: ${(error as Error).message}`,
     ]);
   }
 }

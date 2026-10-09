@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Type } from '@nestjs/common';
 import { CoreModule } from './modules/core/core.module.ts';
+import { corePermissions } from './modules/core/permissions.ts';
 import { PlanningModule } from './modules/planning/planning.module.ts';
+import { planningPermissions } from './modules/planning/permissions.ts';
 
 /**
  * A module that ships in the backend: a plain Nest module in src/modules/<id>, with no manifest. It
@@ -18,6 +20,13 @@ export interface InRepoModule {
   readonly dependsOn?: readonly string[];
   /** The folder of its migration files. Without it, src/modules/<id>/migrations. */
   readonly migrationsDir?: string;
+  /**
+   * The permissions it declares, resource to actions, which northmes migrate writes into the
+   * permission catalog, core.permission (ADR 0010). Resource keys start with its GraphQL name.
+   */
+  readonly permissions?: Readonly<Record<string, readonly string[]>>;
+  /** Further schemas its owner role owns, which migrate creates (see CatalogEntry.schemas). */
+  readonly schemas?: readonly string[];
 }
 
 /**
@@ -25,8 +34,19 @@ export interface InRepoModule {
  * in this order, and migrate applies their migrations in it, before any plugin (ADR 0002).
  */
 export const inRepoModules: readonly InRepoModule[] = [
-  { id: 'core', module: CoreModule },
-  { id: 'planning', module: PlanningModule, dependsOn: ['core'] },
+  {
+    id: 'core',
+    module: CoreModule,
+    permissions: corePermissions,
+    // Better Auth's tables, which core's migrations create (ADR 0010).
+    schemas: ['auth'],
+  },
+  {
+    id: 'planning',
+    module: PlanningModule,
+    dependsOn: ['core'],
+    permissions: planningPermissions,
+  },
 ];
 
 /** src/modules/ of the backend. The build copies no .sql file, so dist/ holds no migrations. */

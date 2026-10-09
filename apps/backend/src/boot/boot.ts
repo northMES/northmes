@@ -139,15 +139,23 @@ async function importPluginManifests(
 
 /**
  * The catalog entries of in-repo modules. Each gets the manifest the catalog checks read: its id,
- * its dependsOn, and the backend's version, which is also the only NorthMES version it runs on.
+ * its dependsOn, its permissions, and the backend's version, which is also the only NorthMES
+ * version it runs on.
  */
 function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
   const version = imageVersion();
-  return modules.map(({ id, module, dependsOn, migrationsDir }) => ({
-    manifest: { id, version, northmes: version, ...(dependsOn ? { dependsOn } : {}) },
+  return modules.map(({ id, module, dependsOn, migrationsDir, permissions, schemas }) => ({
+    manifest: {
+      id,
+      version,
+      northmes: version,
+      ...(dependsOn ? { dependsOn } : {}),
+      ...(permissions ? { permissions } : {}),
+    },
     kind: 'module',
     module,
     migrationsDir: migrationsDir ?? inRepoMigrationsDir(id),
+    ...(schemas ? { schemas } : {}),
   }));
 }
 
