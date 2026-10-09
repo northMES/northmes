@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PageFrame, type PageState } from '../../../src/ui/components/page-frame/index.ts';
+import { politeRegionId } from '../../../src/ui/lib/announce.ts';
 import { Button } from '../../../src/ui/primitives/button.tsx';
 
 afterEach(cleanup);
@@ -266,6 +267,56 @@ describe('PageFrame', () => {
       ),
     );
   });
+
+  it.each([
+    {
+      id: 'a new',
+      next: '01J9Z7A0B1C2D3E4F5G6H7J8K9',
+      announced: 'Still could not load articles. The correlation id changed.',
+    },
+    {
+      id: 'the same',
+      next: '01J9Z6M2PQ7R4T8V1W3X5Y6Z8A',
+      announced: 'Still could not load articles.',
+    },
+  ])(
+    'E04-S07 a Try again that fails with $id correlation id says the id changed only when it did (shell-306 Announcements)',
+    async ({ next, announced }) => {
+      const user = userEvent.setup();
+      let failed: (state: PageState) => void = () => {};
+      function FailingPage() {
+        const [state, setState] = useState<PageState>({
+          status: 'error',
+          title: 'Could not load articles',
+          correlationId: '01J9Z6M2PQ7R4T8V1W3X5Y6Z8A',
+          onRetry: async () => {
+            setState({ status: 'loading' });
+            setState(await new Promise<PageState>((resolve) => (failed = resolve)));
+          },
+        });
+        return (
+          <PageFrame title="Articles" state={state}>
+            <p>Rows</p>
+          </PageFrame>
+        );
+      }
+      render(<FailingPage />);
+      await user.click(screen.getByRole('button', { name: 'Try again' }));
+      // An earlier test's message may still be in the region, so the test starts from an empty one.
+      document.getElementById(politeRegionId)?.replaceChildren();
+
+      failed({
+        status: 'error',
+        title: 'Could not load articles',
+        correlationId: next,
+        onRetry: vi.fn(),
+      });
+
+      await waitFor(() =>
+        expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(announced),
+      );
+    },
+  );
 
   it('E04-S07 the alert holds only the heading and the text, so Try again and a new correlation id leave it unchanged (shell-306 E22)', async () => {
     const user = userEvent.setup();
