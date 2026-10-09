@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@better-auth/api-key": "catalog:",
+    "@better-auth/oauth-provider": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
