@@ -6,14 +6,25 @@ import { defaultClientConditions, defineConfig } from 'vite';
 /** The API paths that the dev server forwards to the backend. */
 const apiPaths = ['/graphql', '/api'];
 
+/** One path that the dev server forwards. */
+interface ProxiedPath {
+  target: string;
+  ws: true;
+  headers: { origin: string };
+}
+
 /**
  * The dev server's proxy: pnpm dev names the backend's origin in NORTHMES_API_ORIGIN, so the
  * browser reaches the API through the web's origin (ADR 0058). Each path forwards WebSockets too,
- * as /graphql carries subscriptions.
+ * as /graphql carries subscriptions. The forwarded request names the API's origin as its Origin:
+ * the API refuses an origin that northmes.config.json does not list, and the dev server's port
+ * changes from run to run.
  */
-function devProxy(apiOrigin: string | undefined): Record<string, { target: string; ws: true }> {
+function devProxy(apiOrigin: string | undefined): Record<string, ProxiedPath> {
   if (!apiOrigin) return {};
-  return Object.fromEntries(apiPaths.map((path) => [path, { target: apiOrigin, ws: true }]));
+  return Object.fromEntries(
+    apiPaths.map((path) => [path, { target: apiOrigin, ws: true, headers: { origin: apiOrigin } }]),
+  );
 }
 
 /**

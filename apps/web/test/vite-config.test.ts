@@ -7,15 +7,23 @@ afterEach(() => {
 });
 
 describe("the web's dev server", () => {
-  it('E02-S08 the web dev server proxies /graphql and /api to NORTHMES_API_ORIGIN, WebSockets included', () => {
+  it("E02-S08 the web dev server proxies /graphql and /api to NORTHMES_API_ORIGIN, WebSockets included, as a request from the API's own origin", () => {
     // What pnpm dev hands the web's dev server: the origin of the backend on the stack's PORT.
     vi.stubEnv('NORTHMES_API_ORIGIN', 'http://127.0.0.1:41001');
 
     const { server } = config({ command: 'serve', mode: 'development' });
 
     expect(server?.proxy).toEqual({
-      '/graphql': { target: 'http://127.0.0.1:41001', ws: true },
-      '/api': { target: 'http://127.0.0.1:41001', ws: true },
+      '/graphql': {
+        target: 'http://127.0.0.1:41001',
+        ws: true,
+        headers: { origin: 'http://127.0.0.1:41001' },
+      },
+      '/api': {
+        target: 'http://127.0.0.1:41001',
+        ws: true,
+        headers: { origin: 'http://127.0.0.1:41001' },
+      },
     });
   });
 
