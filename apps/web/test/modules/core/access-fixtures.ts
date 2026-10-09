@@ -29,6 +29,12 @@ export const plantA = {
   name: 'Plant A',
 } as const;
 
+/** The company of company settings in the tests, as /settings/$companyId names it. */
+export const companyId = acme.id;
+
+/** The variables that name the company in a read of company settings. */
+export const inCompany = { companyId } as const;
+
 /** The signed-in user of every test. */
 export const viewerId = idOf('jonas');
 
@@ -40,7 +46,29 @@ export function forbiddenError(
   return { message, path, extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } };
 }
 
-/** coreViewer with these permissions at the plant and at the company. */
+/**
+ * coreViewer in company settings, with these permissions at the company: the access pages read
+ * them as the permissions at every plant of it too (ADR 0066).
+ */
+export function settingsViewerQuery(
+  companyPermissions: readonly string[],
+): MockLink.MockedResponse {
+  return {
+    request: { query: CoreViewer, variables: inCompany },
+    result: {
+      data: {
+        coreViewer: {
+          __typename: 'Viewer',
+          userId: viewerId,
+          plantPermissions: [],
+          companyPermissions,
+        },
+      },
+    },
+  };
+}
+
+/** coreViewer at the plant, People's, with these permissions at the plant and at the company. */
 export function viewerQuery(
   plantPermissions: readonly string[],
   companyPermissions: readonly string[] = [],
@@ -103,7 +131,7 @@ export function catalogQuery(): MockLink.MockedResponse {
     ],
   });
   return {
-    request: { query: CorePermissionCatalog },
+    request: { query: CorePermissionCatalog, variables: inCompany },
     result: {
       data: {
         corePermissionCatalog: [
@@ -206,15 +234,21 @@ function listed(each: ReturnType<typeof role>) {
   };
 }
 
-/** coreRoles with these roles. */
-export function rolesQuery(roles: readonly ReturnType<typeof role>[]): MockLink.MockedResponse {
-  return { request: { query: CoreRoles }, result: { data: { coreRoles: roles.map(listed) } } };
+/** coreRoles with these roles, in company settings unless variables say otherwise. */
+export function rolesQuery(
+  roles: readonly ReturnType<typeof role>[],
+  variables: Record<string, string> = inCompany,
+): MockLink.MockedResponse {
+  return {
+    request: { query: CoreRoles, variables },
+    result: { data: { coreRoles: roles.map(listed) } },
+  };
 }
 
 /** coreRole for the role. */
 export function roleQuery(each: ReturnType<typeof role>): MockLink.MockedResponse {
   return {
-    request: { query: CoreRole, variables: { id: each.id } },
+    request: { query: CoreRole, variables: { id: each.id, companyId } },
     result: { data: { coreRole: each } },
   };
 }
@@ -251,7 +285,7 @@ export function userQuery(
   errors?: readonly ReturnType<typeof forbiddenError>[],
 ): MockLink.MockedResponse {
   return {
-    request: { query: CoreUser, variables: { id: of.id } },
+    request: { query: CoreUser, variables: { id: of.id, companyId } },
     result: { data: { coreUser: of }, ...(errors !== undefined && { errors }) },
   };
 }

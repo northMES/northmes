@@ -23,9 +23,16 @@ function routeFullPaths(): string[] {
 
 describe('planning routes', () => {
   it('E02-S05 every planningLinks entry matches a route fullPath', () => {
-    // The shell's root route and its $plant route, then one route per link entry and no other.
+    // The shell's root route, its $plant route and company settings with their landing, then one
+    // route per link entry and no other.
     expect(routeFullPaths().sort()).toEqual(
-      ['/', '/$plant', ...linkPatterns(planningLinks)].sort(),
+      [
+        '/',
+        '/$plant',
+        '/settings/$companyId',
+        '/settings/$companyId/',
+        ...linkPatterns(planningLinks),
+      ].sort(),
     );
   });
 });

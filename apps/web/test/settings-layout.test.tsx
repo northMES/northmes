@@ -94,7 +94,7 @@ describe('plant settings', () => {
 
   it("E04-S02 leaving settings returns the main sidebar to the user's own state, and an expand on a settings page lasts that visit", async () => {
     const user = userEvent.setup();
-    const { fetch } = api([]);
+    const { fetch } = api(['equipment.calendar:read']);
     renderShellAt('/plant-a/equipment/tools', [equipment], { fetch });
     await screen.findByRole('heading', { level: 1, name: 'Tools' });
 
@@ -145,7 +145,7 @@ describe('the Settings button', () => {
     renderShellAt('/plant-a/equipment/tools', [equipment], { fetch });
     await screen.findByRole('heading', { level: 1, name: 'Tools' });
 
-    const button = await within(screen.getByRole('banner')).findByRole('link', {
+    const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
     expect(button.getAttribute('href')).toBe('/plant-a/equipment/machines');
@@ -156,7 +156,7 @@ describe('the Settings button', () => {
     const companyOnly = api(['core.article:read'], ['core.role:read']);
     renderShellAt('/plant-a/core/articles', shellModules, { fetch: companyOnly.fetch });
 
-    const button = await within(screen.getByRole('banner')).findByRole('link', {
+    const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
     expect(button.getAttribute('href')).toBe(`/settings/${companyId}`);
@@ -164,6 +164,7 @@ describe('the Settings button', () => {
     cleanup();
     const neither = api(['core.article:read'], ['core.article:read']);
     renderShellAt('/plant-a/core/articles', shellModules, { fetch: neither.fetch });
+    await screen.findByRole('banner');
     await waitFor(() =>
       expect(neither.seen.map(({ operationName }) => operationName)).toContain('CoreViewer'),
     );
@@ -175,7 +176,7 @@ describe('the Settings button', () => {
     const { fetch } = api(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/core/articles', shellModules, { fetch });
 
-    const button = await within(screen.getByRole('banner')).findByRole('link', {
+    const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
     expect(button.getAttribute('href')).toBe('/plant-a/core/people');
