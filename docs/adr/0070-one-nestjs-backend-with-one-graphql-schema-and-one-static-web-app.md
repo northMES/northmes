@@ -36,6 +36,7 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 * `@nestjs/graphql` 14.0.2 code-first builds one schema at `/graphql`, which GraphQL Yoga 5.24.1 serves over HTTP, graphql-ws and SSE. A small driver mounts Yoga until `@graphql-yoga/nestjs` 4.0.0 can be adopted on 2026-10-19.
 * A field across modules is a `@ResolveField` calling the owner's public api through `loaderFor`. graphql-js refuses duplicate type names; shared types come only from `@northmes/sdk`.
 * Boot exits 1 naming the field when a root field does not start with its module's GraphQL name followed by an upper-case letter.
+* Errors use `@nestjs/common`. `DomainError` extends Nest's `HttpException` and carries an `HttpStatus` with its `code`, `fieldErrors` and `details`; code that needs no NorthMES code throws Nest's built-in exceptions such as `NotFoundException`. The one exception filter maps every `HttpException` by its status.
 * Kept from ADR 0015: masked errors, the graphql-armor limits, blocked suggestions, no introspection without a session, the permission guard with `@Public()`, the persisted-documents manifest, and GraphQL Inspector on `schema/api.graphql`, the one snapshot under `pnpm gen --check`. Hive `demandControl` goes.
 
 ### Modules and boundaries
@@ -74,6 +75,10 @@ Role `api` serves the one schema and no web files. Boot runs the root-field chec
 #### Changes to ADR 0003
 
 Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go.
+
+#### Changes to ADR 0012
+
+`DomainError` extends `HttpException` from `@nestjs/common` and takes a `status` (`HttpStatus`) instead of `kind`; `defineErrors` declares a status per code. The seven kinds map to 400, 401, 403, 404, 409, 412 and 503, and GraphQL `extensions.code` comes from the status. Code that needs no NorthMES code throws Nest's built-in exceptions, such as `NotFoundException` or `ForbiddenException`, and the filter answers them like a `DomainError` without `errorCode`.
 
 #### Changes to ADR 0016
 
@@ -149,6 +154,7 @@ The plant's presentation values leave the module list; their carrier is open.
 * Revisit when one module's requests must scale alone, or a customer needs plugin screens without a rebuild.
 
 [adr-0002]: 0002-modular-monolith-with-module-owned-schemas-and-process-roles.md
+[adr-0012]: 0012-commands-as-the-single-write-path.md
 [adr-0015]: 0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md
 [adr-0017]: 0017-zod-contracts-as-the-single-source-for-inputs.md
 [adr-0018]: 0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md
