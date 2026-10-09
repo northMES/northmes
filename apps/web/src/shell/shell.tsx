@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ApolloClient } from '@apollo/client';
-import { ApolloProvider } from '@apollo/client/react';
+import { ApolloProvider, useQuery } from '@apollo/client/react';
 import { createNorthmesClient, createShellRoutes, ShellProvider } from '@northmes/web-sdk';
 import {
   createRoute,
   createRouter,
+  Link,
   Outlet,
   type RouterHistory,
   redirect,
@@ -13,7 +14,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import type { AuthSession } from '../auth/auth-session.ts';
 import { returnPathOf, signInPath, signInSearch } from '../auth/sign-in-link.ts';
 import { SignInScreen } from '../auth/sign-in-screen/index.ts';
@@ -26,6 +27,7 @@ import {
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { SidebarInset, SidebarProvider } from '../ui/primitives/sidebar.tsx';
+import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { ShellSidebar } from './shell-sidebar.tsx';
 import { ShellTopBar } from './shell-top-bar.tsx';
 import type { ShellUser } from './shell-user-menu.tsx';
@@ -69,6 +71,10 @@ export function createShellRouter(
       void toSignIn({ redirect: router.state.location.href });
     },
   };
+  // The user's companies and plants are the same at every plant, so one client without a plant
+  // reads them, and its cache serves every plant switch.
+  const companiesClient = createNorthmesClient({ apiUrl, fetch, auth });
+  clients.set('', companiesClient);
   const clientFor = (plant: string): ApolloClient => {
     const client = clients.get(plant) ?? createNorthmesClient({ plant, apiUrl, fetch, auth });
     clients.set(plant, client);
@@ -82,7 +88,13 @@ export function createShellRouter(
   const routeTree = createShellRoutes({
     modules: modules.map(({ module }) => module),
     plantComponent: () => (
-      <PlantLayout modules={ordered} clientFor={clientFor} session={session} onSignOut={signOut} />
+      <PlantLayout
+        modules={ordered}
+        clientFor={clientFor}
+        companiesClient={companiesClient}
+        session={session}
+        onSignOut={signOut}
+      />
     ),
     plantBeforeLoad: ({ location }) => {
       if (session.user() === undefined) {
@@ -149,31 +161,58 @@ function useFocusPageHeading() {
   return main;
 }
 
+/** The href of the first sidebar entry of a module, at a plant. */
+function firstHref(module: ShellModule | undefined, plant: string): string | undefined {
+  return module?.links?.[0]?.link({ plant }).href;
+}
+
+/** The href of a plant's first page, the first entry of the sidebar, until a plant has a home page. */
+function plantHome(modules: readonly ShellModule[], plant: string): string | undefined {
+  return firstHref(
+    modules.find(({ links = [] }) => links.length > 0),
+    plant,
+  );
+}
+
+/** The company and the plant of the user's companies that a slug names. */
+function plantOf(companies: readonly ShellCompany[], slug: string) {
+  for (const company of companies) {
+    const plant = company.plants.find((each) => each.slug === slug);
+    if (plant !== undefined) return { company, plant };
+  }
+  return undefined;
+}
+
 /**
- * The crumbs the shell puts before a page's own (ADR 0067): the plant, linked to the first entry of
- * the sidebar until the plant has a home page, then the module of the page, linked to its first
- * entry. A crumb whose page is the one on screen is plain text.
+ * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
+ * plants span two or more companies; the plant by its name, or its slug until the plants load,
+ * linked to the plant's first page; then the module of the page, linked to its first entry. A
+ * crumb whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
   plant: string,
+  companies: readonly ShellCompany[],
   pathname: string,
 ): readonly Crumb[] {
-  const firstHref = (module: ShellModule | undefined) => module?.links?.[0]?.link({ plant }).href;
   const crumb = (label: string, href: string | undefined): Crumb =>
     href === undefined || href === pathname ? { label } : { label, href };
   const moduleId = pathname.split('/')[2];
   const current = modules.find(({ module }) => module.id === moduleId);
-  const plantHref = firstHref(modules.find(({ links = [] }) => links.length > 0));
+  const found = plantOf(companies, plant);
+  const spansCompanies = companies.filter(({ plants }) => plants.length > 0).length > 1;
   return [
-    crumb(plant, plantHref),
-    ...(current === undefined ? [] : [crumb(current.label, firstHref(current))]),
+    ...(found !== undefined && spansCompanies ? [{ label: found.company.name }] : []),
+    crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
+    ...(current === undefined ? [] : [crumb(current.label, firstHref(current, plant))]),
   ];
 }
 
 interface PlantLayoutProps {
   readonly modules: readonly ShellModule[];
   readonly clientFor: (plant: string) => ApolloClient;
+  /** The client without a plant, which reads the user's companies and plants. */
+  readonly companiesClient: ApolloClient;
   readonly session: AuthSession;
   readonly onSignOut: () => void;
 }
@@ -181,24 +220,40 @@ interface PlantLayoutProps {
 /**
  * The $plant route's component, the D2 planner shell: the skip link, the sidebar, the top bar with
  * the breadcrumb and the page actions, and main with the route, inside the shell state and Apollo
- * client of the plant. The DOM order is the focus order: skip link, sidebar, top bar, main.
+ * client of the plant. The DOM order is the focus order: skip link, sidebar, top bar, main. Once
+ * the user's plants have loaded, a slug that names none of them gets the page of an unknown plant
+ * (ADR 0007, D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows
+ * the slug.
  */
-function PlantLayout({ modules, clientFor, session, onSignOut }: PlantLayoutProps) {
+function PlantLayout({
+  modules,
+  clientFor,
+  companiesClient,
+  session,
+  onSignOut,
+}: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
+  const { data } = useQuery(CoreCompanies, { client: companiesClient });
+  const loaded = data?.coreCompanies;
+  const companies = loaded ?? [];
+  const found = plantOf(companies, plant);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [breadcrumb, setBreadcrumb] = useState<HTMLElement | null>(null);
   const [actions, setActions] = useState<HTMLElement | null>(null);
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
-      trail: shellTrail(modules, plant, pathname),
-      titleContext: plant,
+      trail: shellTrail(modules, plant, companies, pathname),
+      titleContext: found?.plant.name ?? plant,
       breadcrumb,
       actions,
     }),
-    [modules, plant, pathname, breadcrumb, actions],
+    [modules, plant, companies, found, pathname, breadcrumb, actions],
   );
+  if (loaded !== undefined && found === undefined) {
+    return <UnknownPlant modules={modules} plant={plant} companies={companies} main={main} />;
+  }
   return (
     <ApolloProvider client={clientFor(plant)}>
       <ShellProvider value={{ plant }}>
@@ -208,6 +263,7 @@ function PlantLayout({ modules, clientFor, session, onSignOut }: PlantLayoutProp
             id={sidebarId}
             modules={modules}
             plant={plant}
+            companies={companies}
             user={session.user() ?? nobody}
             onSignOut={onSignOut}
           />
@@ -231,5 +287,67 @@ function PlantLayout({ modules, clientFor, session, onSignOut }: PlantLayoutProp
         </SidebarProvider>
       </ShellProvider>
     </ApolloProvider>
+  );
+}
+
+interface UnknownPlantProps {
+  readonly modules: readonly ShellModule[];
+  readonly plant: string;
+  readonly companies: readonly ShellCompany[];
+  readonly main: RefObject<HTMLElement | null>;
+}
+
+/**
+ * The page of a plant slug that names none of the user's plants (D2 ST29): no sidebar and no
+ * crumbs, the h1 Plant not found, and links to the first page of each of the user's plants, under
+ * their company's name when they span two or more companies. It never says whether the plant
+ * exists.
+ */
+function UnknownPlant({ modules, plant, companies, main }: UnknownPlantProps) {
+  const withPlants = companies.filter(({ plants }) => plants.length > 0);
+  const title = 'Plant not found';
+  useEffect(() => {
+    document.title = `${title} · NorthMES`;
+  }, []);
+  const links = (company: ShellCompany) => (
+    <ul className="grid gap-1">
+      {company.plants.map((each) => (
+        <li key={each.slug}>
+          <Link to={plantHome(modules, each.slug) ?? '.'} className="text-link underline">
+            {each.name}
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <main
+      id={mainId}
+      ref={main}
+      tabIndex={-1}
+      className="mx-auto grid max-w-xl gap-4 px-4 py-10 focus-visible:outline-offset-[-4px]"
+    >
+      <h1 tabIndex={-1} className="text-2xl font-semibold">
+        {title}
+      </h1>
+      <p>
+        {plant} is not a plant you can open.{' '}
+        {withPlants.length > 0 ? 'Choose one of your plants.' : 'You have no plant to open yet.'}
+      </p>
+      {withPlants.length > 1
+        ? withPlants.map((company) => (
+            <section
+              key={company.id}
+              aria-labelledby={`company-${company.id}`}
+              className="grid gap-2"
+            >
+              <h2 id={`company-${company.id}`} className="text-lg font-medium">
+                {company.name}
+              </h2>
+              {links(company)}
+            </section>
+          ))
+        : withPlants.map((company) => <div key={company.id}>{links(company)}</div>)}
+    </main>
   );
 }

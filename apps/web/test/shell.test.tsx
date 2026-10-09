@@ -580,8 +580,18 @@ describe('the shell', () => {
     renderShellAt('/plant-b/quality', [quality], { fetch, apiUrl: 'https://api.northmes.test' });
 
     expect(await screen.findByText('The API answered pong')).toBeDefined();
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0]?.[0]).toBe('https://api.northmes.test/graphql');
-    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).get('x-northmes-plant')).toBe('plant-b');
+    // The shell also reads the user's plants, with a client that names no plant.
+    const plantOf = ([, init]: Parameters<typeof globalThis.fetch>) => [
+      (JSON.parse(String(init?.body)) as { operationName: string }).operationName,
+      new Headers(init?.headers).get('x-northmes-plant'),
+    ];
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.northmes.test/graphql',
+      'https://api.northmes.test/graphql',
+    ]);
+    expect(fetch.mock.calls.map(plantOf).sort()).toEqual([
+      ['CoreCompanies', null],
+      ['Ping', 'plant-b'],
+    ]);
   });
 });

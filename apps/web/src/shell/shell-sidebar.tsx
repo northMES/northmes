@@ -19,6 +19,8 @@ import {
   SidebarSeparator,
   useSidebar,
 } from '../ui/primitives/sidebar.tsx';
+import type { ShellCompany } from './companies.graphql.ts';
+import { ShellPlantSwitcher } from './shell-plant-switcher.tsx';
 import { type ShellUser, ShellUserMenu } from './shell-user-menu.tsx';
 
 export interface ShellSidebarProps {
@@ -26,8 +28,10 @@ export interface ShellSidebarProps {
   readonly id: string;
   /** The modules in their sidebar order. */
   readonly modules: readonly ShellModule[];
-  /** The plant in the URL, whose links the entries are. */
+  /** The slug of the plant in the URL, whose links the entries are. */
   readonly plant: string;
+  /** The user's companies and plants, for the plant switcher; empty until they load. */
+  readonly companies: readonly ShellCompany[];
   readonly user: ShellUser;
   /** Signs the user out, from the user menu. */
   readonly onSignOut: () => void;
@@ -43,13 +47,20 @@ function currentOf(href: string, pathname: string): 'page' | 'true' | undefined 
 }
 
 /**
- * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the slot of
- * the plant switcher, one group per module in their order with its entries, and the user menu at
+ * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the plant
+ * switcher, one group per module in their order with its entries, and the user menu at
  * the foot. collapsible="icon" makes it the 64 px rail, where each entry shows its icon and its
  * label in a tooltip; where the shell is narrow it is the Navigation sheet, whose head holds Close
  * navigation and whose entries close it.
  */
-export function ShellSidebar({ id, modules, plant, user, onSignOut }: ShellSidebarProps) {
+export function ShellSidebar({
+  id,
+  modules,
+  plant,
+  companies,
+  user,
+  onSignOut,
+}: ShellSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const entry = ({ label, icon, link }: MenuLink) => {
@@ -79,8 +90,10 @@ export function ShellSidebar({ id, modules, plant, user, onSignOut }: ShellSideb
     <Sidebar id={id} collapsible="icon">
       <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
         <SidebarHeader className="h-14 flex-row items-center border-b border-sidebar-border">
-          {/* The plant switcher of #392 goes here, the first item of the sidebar (ADR 0067). */}
-          <div className="min-w-0 flex-1" />
+          {/* The plant switcher is the first item of the sidebar (ADR 0067). */}
+          <div className="flex min-w-0 flex-1">
+            <ShellPlantSwitcher companies={companies} plant={plant} />
+          </div>
           {isMobile && (
             // A plain icon button: a tooltip that opens on focus would take the first Escape,
             // which closes the sheet (KE12).

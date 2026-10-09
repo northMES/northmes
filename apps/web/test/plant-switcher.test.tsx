@@ -123,7 +123,8 @@ async function openSwitcher(user: ReturnType<typeof userEvent.setup>, name: RegE
   const switcher = await within(await sidebar()).findByRole('button', { name });
   switcher.focus();
   await user.keyboard('{Enter}');
-  return { switcher, menu: await screen.findByRole('menu', { name: 'Switch plant' }) };
+  // The menu takes its name from the switcher that opens it.
+  return { switcher, menu: await screen.findByRole('menu', { name: /switch plant$/ }) };
 }
 
 /** The text and href of each plant link in a menu group. */
@@ -234,7 +235,7 @@ describe('the plant switcher', () => {
     await waitFor(() => expect(document.activeElement).toBe(switcher));
 
     await user.keyboard('{Enter}');
-    await screen.findByRole('menu', { name: 'Switch plant' });
+    await screen.findByRole('menu', { name: /switch plant$/ });
     await waitFor(() => expect(document.activeElement?.textContent).toBe('Plant B'));
     await user.keyboard('{End}{Enter}');
 
