@@ -8,6 +8,7 @@ packages:
 pmOnFail: ignore
 
 allowBuilds:
+  '@scarf/scarf': false
   cpu-features: false
   protobufjs: false
   ssh2: false
@@ -34,6 +35,7 @@ catalog:
   '@nestjs/core': 12.1.0
   '@nestjs/graphql': 14.0.2
   '@nestjs/platform-express': 12.1.0
+  '@nestjs/swagger': 12.0.2
   '@nestjs/terminus': 12.1.0
   '@nestjs/testing': 12.1.0
   '@playwright/test': 1.63.0
