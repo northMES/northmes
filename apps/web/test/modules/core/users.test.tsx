@@ -11,6 +11,7 @@ import {
   acme,
   anna,
   assignment,
+  catalogQuery,
   companiesQuery,
   companyId,
   forbiddenError,
@@ -714,6 +715,25 @@ describe('users', () => {
     await events.type(field('Email'), 'tove.lindqvist@example.test');
   }
 
+  /** Opens the Role combobox of the section and returns its listbox. */
+  async function openRoles(
+    events: ReturnType<typeof userEvent.setup>,
+    section: HTMLElement,
+  ): Promise<HTMLElement> {
+    await events.click(within(section).getByRole('combobox', { name: 'Role' }));
+    return screen.findByRole('listbox');
+  }
+
+  /** An option of the Role listbox by the role's name. */
+  function roleOption(listbox: HTMLElement, name: string): HTMLElement {
+    return within(listbox).getByRole('option', { name: new RegExp(`^${name}`) });
+  }
+
+  /** The role the Role combobox of the section shows as chosen. */
+  function chosenRole(section: HTMLElement): string {
+    return (within(section).getByRole('combobox', { name: 'Role' }) as HTMLInputElement).value;
+  }
+
   it('E05-S08 New user gives the user a first role at the place chosen under Where, with the roles the creator cannot give locked', async () => {
     const events = userEvent.setup();
     const tove = {
@@ -726,6 +746,7 @@ describe('users', () => {
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
       {
         request: {
           query: CoreCreateUser,
@@ -754,9 +775,9 @@ describe('users', () => {
         'Roles that need permissions you do not hold at Plant A stay in the list, with what they need.',
       ),
     ).toBeDefined();
-    const shift = within(section).getByRole('radio', { name: 'Shift lead' });
-    expect(shift.getAttribute('aria-disabled')).toBe('true');
-    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    const roles = await openRoles(events, section);
+    expect(roleOption(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
+    await events.click(roleOption(roles, 'Viewer'));
     await events.click(screen.getByRole('button', { name: 'Create user' }));
 
     expect(
@@ -770,6 +791,7 @@ describe('users', () => {
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
       {
         request: {
           query: CoreCreateUser,
@@ -796,7 +818,7 @@ describe('users', () => {
     const section = await screen.findByRole('region', { name: 'Role and place' });
     await typeTove(events);
     await events.click(within(section).getByRole('radio', { name: 'Acme AB, all plants' }));
-    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
     await events.click(screen.getByRole('button', { name: 'Create user' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
@@ -804,11 +826,7 @@ describe('users', () => {
     expect(within(summary).getByRole('link').textContent).toMatch(
       /^You cannot assign Viewer at Acme AB\./,
     );
-    expect(
-      (within(section).getByRole('radio', { name: 'Viewer' }) as HTMLElement).getAttribute(
-        'aria-checked',
-      ),
-    ).toBe('true');
+    expect(chosenRole(section)).toBe('Viewer');
     expect(field('Name').value).toBe('Tove Lindqvist');
   });
 
@@ -818,21 +836,18 @@ describe('users', () => {
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
     ]);
 
     const section = await screen.findByRole('region', { name: 'Role and place' });
     await typeTove(events);
-    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
     await events.click(screen.getByRole('button', { name: 'Create user' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(within(summary).getByRole('link').textContent).toBe('Choose where the role applies.');
-    expect(
-      (within(section).getByRole('radio', { name: 'Viewer' }) as HTMLElement).getAttribute(
-        'aria-checked',
-      ),
-    ).toBe('true');
+    expect(chosenRole(section)).toBe('Viewer');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
