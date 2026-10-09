@@ -164,4 +164,26 @@ describe('DataTable', () => {
     expect(within(grid).queryByText('AX-20411')).toBeNull();
     expect(within(grid).getAllByRole('row', { hidden: true }).length).toBeGreaterThan(1);
   });
+
+  it('E06-S06 a stale table keeps the rows and row range it shows and is busy, with focus on the header used, until the next rows arrive (ui-222, LI7)', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(table({ paging: paging() }));
+    await user.click(screen.getByRole('button', { name: 'Article number' }));
+    const used = document.activeElement;
+
+    rerender(table({ stale: true, paging: paging({ page: 2, totalCount: undefined }) }));
+
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    expect(grid.getAttribute('aria-busy')).toBe('true');
+    expect(bodyRows().map(([code]) => code)).toEqual(['AX-20411', 'AX-20410', 'AX-31007']);
+    expect(screen.getByText('Rows 1 to 3 of 8')).toBeDefined();
+    expect(document.activeElement).toBe(used);
+
+    rerender(table({ rows: articles.slice(2), paging: paging({ page: 2, totalCount: 4 }) }));
+
+    expect(grid.getAttribute('aria-busy')).toBeNull();
+    expect(bodyRows().map(([code]) => code)).toEqual(['AX-31007']);
+    expect(screen.getByText('Rows 4 to 4 of 4')).toBeDefined();
+    expect(document.activeElement).toBe(used);
+  });
 });

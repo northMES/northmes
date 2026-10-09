@@ -3,6 +3,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 import {
   articleRange,
   articlesPage,
@@ -122,6 +123,57 @@ describe('articles list URL state', () => {
     expect(router.state.location.href).toBe(listHref({ q: 'hinge' }));
     expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
     expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 while a search loads, the table keeps the rows it shows and is busy, with focus in the field, until the matching rows replace them (ui-222, LI7)', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(3), { totalCount: 3 })),
+      articlesQuery(
+        { ...firstPage, search: 'hinge' },
+        articlesPage(articleRange(1, 900), { totalCount: 1 }),
+        200,
+      ),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+
+    const search = screen.getByRole('searchbox', { name: 'Search articles' });
+    await user.type(search, 'hinge');
+
+    await waitFor(() => expect(table.getAttribute('aria-busy')).toBe('true'));
+    expect(screen.getByRole('table', { name: 'Articles' })).toBe(table);
+    expect(bodyRows(table).map(([code]) => code)).toEqual(['AX-500', 'AX-501', 'AX-502']);
+    expect(screen.getByText('Rows 1 to 3 of 3')).toBeDefined();
+    expect(document.activeElement).toBe(search);
+
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm', lastChangedText]]),
+    );
+    expect(table.getAttribute('aria-busy')).toBeNull();
+    expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 a search that fails shows Could not load articles in place of the rows it kept', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(3), { totalCount: 3 })),
+      {
+        request: { query: CoreArticles, variables: { ...firstPage, search: 'hinge' } },
+        error: new Error('Network down'),
+        delay: 50,
+      },
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search articles' }), 'hinge');
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Could not load articles' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('table')).toBeNull();
   });
 
   it('E06-S06 Next adds page and after to the URL and Previous returns to the first page, with focus on the button used', async () => {
