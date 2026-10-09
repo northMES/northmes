@@ -91,7 +91,7 @@ Yoga sets `x-northmes-build` with the schema hash. The module list reload trigge
 
 #### Changes to ADR 0020
 
-Module routes join the one router at build time. Code-based routes and the one Apollo cache stay.
+Module routes join the one router at build time. Code-based routes and the one Apollo cache stay. GraphQL Code Generator reads the one printed schema instead of a closure schema per web package. Each operation sits in its own `<operation>.graphql.ts` file, as the web naming rules ask, and its typed document is generated next to it as `<operation>.graphql.gen.ts`. Enums are string-literal unions until a shared base-types output can hold const enums once for every operation file, and data masking comes with the first colocated fragment.
 
 #### Changes to ADR 0037
 
