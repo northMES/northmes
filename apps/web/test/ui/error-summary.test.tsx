@@ -77,6 +77,25 @@ describe('ErrorSummary', () => {
     expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Name' }));
   });
 
+  it('E04-S07 a summary link reaches a field rendered with its own id', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <ErrorSummary
+          heading="Fix 1 field to save the article"
+          errors={[{ name: 'code', fieldId: 'article-code', message: 'Enter an article number.' }]}
+        />
+        <TextField label="Article number" name="code" id="article-code" />
+      </>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Enter an article number.' });
+    await user.click(link);
+
+    expect(link.getAttribute('href')).toBe('#article-code');
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Article number' }));
+  });
+
   it('E04-S07 the summary takes focus again on the next failed submit and lists server errors without a field as text', async () => {
     const user = userEvent.setup();
     const save = vi.fn(async () => [

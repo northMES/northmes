@@ -76,4 +76,41 @@ describe('SearchField', () => {
     ).toBe('');
     expect(onSearch).not.toHaveBeenCalled();
   });
+
+  it('E04-S07 a new search from outside while typing waits for the pause cancels the waiting search', async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    const { rerender } = render(
+      <SearchField label="Search articles" value="" onSearch={onSearch} />,
+    );
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search articles' }), 'hyd');
+    // Clear filters or Back sets another search before the pause ends.
+    rerender(<SearchField label="Search articles" value="bolt" onSearch={onSearch} />);
+    await afterThePause();
+
+    expect(onSearch).not.toHaveBeenCalled();
+    expect(
+      (screen.getByRole('searchbox', { name: 'Search articles' }) as HTMLInputElement).value,
+    ).toBe('bolt');
+  });
+
+  it("E04-S07 the field's own search coming back as its value keeps the text typed since", async () => {
+    const user = userEvent.setup();
+    const onSearch = vi.fn();
+    const { rerender } = render(
+      <SearchField label="Search articles" value="" onSearch={onSearch} />,
+    );
+    const field = screen.getByRole('searchbox', { name: 'Search articles' }) as HTMLInputElement;
+
+    await user.type(field, 'hyd');
+    await waitFor(() => expect(onSearch).toHaveBeenCalledWith('hyd'));
+    await user.type(field, 'r');
+    // The URL now holds the first search, while "r" still waits for the pause.
+    rerender(<SearchField label="Search articles" value="hyd" onSearch={onSearch} />);
+    await afterThePause();
+
+    expect(field.value).toBe('hydr');
+    expect(onSearch.mock.calls).toEqual([['hyd'], ['hydr']]);
+  });
 });

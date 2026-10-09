@@ -99,6 +99,35 @@ describe('PageFrame', () => {
     );
   });
 
+  it('E04-S07 when the browser refuses the copy, the polite region says the correlation id was not copied', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+      new DOMException('Write permission denied.', 'NotAllowedError'),
+    );
+    render(
+      <PageFrame
+        title="Articles"
+        state={{
+          status: 'error',
+          title: 'Could not load articles',
+          description: 'Check the connection, then try again.',
+          correlationId: '01J9Z6M2PQ7R4T8V1W3X5Y6Z8A',
+          onRetry: vi.fn(),
+        }}
+      >
+        <p>Rows</p>
+      </PageFrame>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Copy correlation id' }));
+
+    await waitFor(() =>
+      expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(
+        'Could not copy the correlation id. Select it and copy it by hand.',
+      ),
+    );
+  });
+
   it('E04-S07 Try again retries and moves focus to the h1', async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
