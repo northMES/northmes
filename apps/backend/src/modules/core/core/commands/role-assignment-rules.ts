@@ -8,6 +8,7 @@ import type { RoleAssignmentRecord } from '../role-assignment.service.ts';
 import { companyOfPlant } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 import { refuseUnheldPermissions } from './role-rules.ts';
+import { lockRole } from './role-target.ts';
 
 /**
  * The scopes where a request changes role assignments: its plant and the plant's company, never
@@ -23,7 +24,9 @@ export async function assignableScopes(
 /**
  * The grant rule of ADR 0010 for an assignment of `roleId` at `scopeId`: the principal must hold
  * every installed permission of the role there, or at a scope above it, else core.role_not_held. A
- * permission whose module is not installed grants nothing, so it is not handed out either.
+ * permission whose module is not installed grants nothing, so it is not handed out either. It takes
+ * the role's lock first, so it waits for a change to the role in flight and reads the role that
+ * change leaves, and a change waits for this assignment or removal.
  */
 export async function refuseRoleNotHeld(
   tx: Transaction<CoreDatabase>,
@@ -31,6 +34,7 @@ export async function refuseRoleNotHeld(
 ): Promise<void> {
   const principal = currentPrincipal();
   if (!principal) throw forbidden('Role assignments change only for a signed-in user');
+  await lockRole(tx, roleId);
   const role = await tx
     .selectFrom('core.role')
     .select('permissions')
