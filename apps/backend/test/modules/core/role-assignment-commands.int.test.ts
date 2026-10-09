@@ -299,12 +299,8 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
     });
     const plantBRemoval = await admin.client.send(removeMutation, { input: { id: atPlantB } });
 
-    expect(refusals(companyRemoval)).toEqual([
-      { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-    ]);
-    expect(plantBRemoval.errors?.map(({ extensions }) => extensions?.code)).toEqual([
-      'NOT_FOUND',
-    ]);
+    expect(refusals(companyRemoval)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    expect(plantBRemoval.errors?.map(({ extensions }) => extensions?.code)).toEqual(['NOT_FOUND']);
   });
 
   it('E05-S06 an assignment waits for a change to its role that is in flight, and the grant rule reads the role as that change left it', async () => {

@@ -288,9 +288,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(refusals(blockedByAcme)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
     expect(statusAfterRefusal).toBe(200);
     expect(blockedByBoth.errors).toBeUndefined();
-    expect(refusals(unblockedByAcme)).toEqual([
-      { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-    ]);
+    expect(refusals(unblockedByAcme)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
     expect(await signInStatus(planner.username, planner.password)).not.toBe(200);
   });
 
