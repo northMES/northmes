@@ -140,17 +140,15 @@ export const createUserHandler = {
       .where('username', '=', username)
       .executeTakeFirst();
     if (taken) throw usernameTaken(username);
-    await accounts
-      .createUser({ id, username, password, name, email })
-      .catch((error: unknown) => {
-        if (!(error instanceof EmailTaken)) throw error;
-        throw new DomainError({
-          code: 'core.email_taken',
-          status: HttpStatus.CONFLICT,
-          message: EMAIL_TAKEN,
-          fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
-        });
+    await accounts.createUser({ id, username, password, name, email }).catch((error: unknown) => {
+      if (!(error instanceof EmailTaken)) throw error;
+      throw new DomainError({
+        code: 'core.email_taken',
+        status: HttpStatus.CONFLICT,
+        message: EMAIL_TAKEN,
+        fieldErrors: [{ path: ['email'], message: EMAIL_TAKEN, code: 'core.email_taken' }],
       });
+    });
     await accounts.addToOrganization(id, organization_id);
     return { user: await userById(tx, id), temporaryPassword: password };
   },
