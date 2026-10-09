@@ -10,6 +10,7 @@ import {
   companyAdminRole,
   companyId,
   forbiddenError,
+  groupedRows,
   inCompany,
   planner,
   plantAdminRole,
@@ -18,6 +19,7 @@ import {
   rolesQuery,
   sara,
   settingsViewerQuery,
+  setViewport,
   shiftLead,
   viewerRole,
 } from './access-fixtures.ts';
@@ -32,7 +34,7 @@ const managerQuery = () => settingsViewerQuery(['core.role:read', 'core.role:man
 const kanbanReader = role('Kanban reader', ['kanban.board:read']);
 
 describe('roles', () => {
-  it('E05-S06 the roles list shows the custom roles, then the default roles, with who defines them, how many of the installed permissions they hold and how many people hold them here, and New role for a user who may manage roles', async () => {
+  it('E05-S06 the roles list is one table with the custom roles of the company, then the default roles from modules, each group with its count, who defines each role, how many of the installed permissions it holds and how many people hold it, a footer, and New role for a user who may manage roles', async () => {
     renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
       managerQuery(),
       companiesQuery(),
@@ -41,24 +43,39 @@ describe('roles', () => {
     ]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Roles' })).toBeDefined();
-    const custom = await screen.findByRole('table', { name: 'Custom roles of Acme AB' });
+    const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
-      expect(bodyRows(custom)).toEqual([
-        ['Kanban reader', 'Acme AB', '0 of 61 not installed', 'None'],
-        ['Shift lead', 'Acme AB', '2 of 6', '2 people'],
+      expect(groupedRows(table)).toEqual([
+        [
+          'Custom roles of Acme AB',
+          [
+            ['Kanban reader', 'Acme AB', '0 of 61 not installed', 'None'],
+            ['Shift lead', 'Acme AB', '2 of 6', '2 people'],
+          ],
+        ],
+        [
+          'Default roles from modules',
+          [
+            ['Planner', 'Planning', '3 of 6', 'None'],
+            ['Viewer', 'Planning', '1 of 6', '1 person'],
+          ],
+        ],
       ]),
     );
-    await waitFor(() =>
-      expect(
-        within(custom)
-          .getAllByRole('columnheader')
-          .map((header) => header.textContent),
-      ).toEqual(['Role', 'Defined by', 'Permissions', 'Holders']),
-    );
-    expect(bodyRows(screen.getByRole('table', { name: 'Default roles from modules' }))).toEqual([
-      ['Planner', 'Planning', '3 of 6', 'None'],
-      ['Viewer', 'Planning', '1 of 6', '1 person'],
-    ]);
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Custom roles of Acme AB2 roles', 'Default roles from modules2 roles']);
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Role', 'Defined by', 'Permissions', 'Holders']);
+    expect(
+      within(table).getByRole('columnheader', { name: 'Role' }).getAttribute('aria-sort'),
+    ).toBe('ascending');
+    expect(screen.getByText('2 groups, 4 roles')).toBeDefined();
     expect(await screen.findByText('4 roles at Acme AB')).toBeDefined();
     expect((await screen.findByRole('link', { name: 'New role' })).getAttribute('href')).toBe(
       coreLinks.settings.roles.new({ companyId }).href,
@@ -76,18 +93,132 @@ describe('roles', () => {
       catalogQuery(),
     ]);
 
-    const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
+    const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
-      expect(bodyRows(defaults)).toEqual([
-        ['Company admin', 'Core', '6 of 6', 'None'],
-        ['Plant admin', 'Core', '5 of 6', 'None'],
-        ['Planner', 'Planning', '3 of 6', 'None'],
-        ['Viewer', 'Planning', '1 of 6', '1 person'],
+      expect(groupedRows(table)).toEqual([
+        ['Custom roles of Acme AB', [['No custom roles yet']]],
+        [
+          'Default roles from modules',
+          [
+            ['Company admin', 'Core', '6 of 6', 'None'],
+            ['Plant admin', 'Core', '5 of 6', 'None'],
+            ['Planner', 'Planning', '3 of 6', 'None'],
+            ['Viewer', 'Planning', '1 of 6', '1 person'],
+          ],
+        ],
       ]),
     );
     expect(screen.getByRole('link', { name: 'Plant admin' }).getAttribute('href')).toBe(
       coreLinks.settings.roles.role({ companyId, roleId: plantAdminRole.id }).href,
     );
+  });
+
+  it('E05-S06 Search roles, Defined by and the sort on Role filter and order the groups, and live in the URL, which opens the same view again', async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+      managerQuery(),
+      companiesQuery(),
+      rolesQuery([kanbanReader, shiftLead, planner, viewerRole]),
+      catalogQuery(),
+    ]);
+
+    const table = await screen.findByRole('table', { name: 'Roles' });
+    await user.type(screen.getByRole('searchbox', { name: 'Search roles' }), 'er');
+    await waitFor(() => expect(router.state.location.search).toEqual({ q: 'er' }));
+    await waitFor(() =>
+      expect(
+        groupedRows(table).map(([group, rows]) => [group, rows.map(([name]) => name)]),
+      ).toEqual([
+        ['Custom roles of Acme AB', ['Kanban reader']],
+        ['Default roles from modules', ['Planner', 'Viewer']],
+      ]),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Defined by' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Planning' }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ q: 'er', definedBy: 'planning' }),
+    );
+    expect(groupedRows(table).map(([group]) => group)).toEqual(['Default roles from modules']);
+    expect(screen.getByText('1 group, 2 roles')).toBeDefined();
+
+    const sort = within(table).getByRole('button', { name: 'Role' });
+    await user.click(sort);
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        q: 'er',
+        definedBy: 'planning',
+        sort: '-name',
+      }),
+    );
+    expect(
+      within(table).getByRole('columnheader', { name: 'Role' }).getAttribute('aria-sort'),
+    ).toBe('descending');
+    expect(groupedRows(table)[0]?.[1].map(([name]) => name)).toEqual(['Viewer', 'Planner']);
+    expect(document.activeElement).toBe(sort);
+
+    cleanup();
+    renderCoreAt(
+      `${coreLinks.settings.roles({ companyId }).href}?q=lead&definedBy=custom&sort=-name`,
+      [
+        managerQuery(),
+        companiesQuery(),
+        rolesQuery([kanbanReader, shiftLead, planner, viewerRole]),
+        catalogQuery(),
+      ],
+    );
+    const again = await screen.findByRole('table', { name: 'Roles' });
+    await waitFor(() =>
+      expect(
+        groupedRows(again).map(([group, rows]) => [group, rows.map(([name]) => name)]),
+      ).toEqual([['Custom roles of Acme AB', ['Shift lead']]]),
+    );
+    expect(
+      (screen.getByRole('searchbox', { name: 'Search roles' }) as HTMLInputElement).value,
+    ).toBe('lead');
+  });
+
+  it('E05-S06 a search that matches no role says so and Clear filters shows every role again', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(`${coreLinks.settings.roles({ companyId }).href}?q=zz`, [
+      managerQuery(),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner]),
+      catalogQuery(),
+    ]);
+
+    expect(await screen.findByText('No roles match these filters')).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    const table = await screen.findByRole('table', { name: 'Roles' });
+    expect(groupedRows(table).map(([group]) => group)).toEqual([
+      'Custom roles of Acme AB',
+      'Default roles from modules',
+    ]);
+    expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Search roles' }));
+  });
+
+  it('E05-S06 at 320 px Filters opens a sheet with Defined by, and the table scrolls sideways in its own region (NO11)', async () => {
+    const user = userEvent.setup();
+    setViewport(320, 640);
+    try {
+      const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+        managerQuery(),
+        companiesQuery(),
+        rolesQuery([shiftLead, planner, viewerRole]),
+        catalogQuery(),
+      ]);
+
+      const region = await screen.findByRole('region', { name: 'Roles table, scrolls sideways' });
+      expect(region.getAttribute('tabindex')).toBe('0');
+      expect(within(region).getByRole('table', { name: 'Roles' })).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Defined by' })).toBeNull();
+      await user.click(screen.getByRole('button', { name: 'Filters' }));
+      const sheet = await screen.findByRole('dialog', { name: 'Filters' });
+      await user.click(within(sheet).getByRole('radio', { name: 'Acme AB' }));
+      await waitFor(() => expect(router.state.location.search).toEqual({ definedBy: 'custom' }));
+    } finally {
+      setViewport(1440, 900);
+    }
   });
 
   it('E05-S06 a reader without core.role:manage at Acme AB gets no New role, and a line says what it needs', async () => {

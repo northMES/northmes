@@ -11,6 +11,7 @@ import {
   catalogQuery,
   companiesQuery,
   companyId,
+  groupedRows,
   planner,
   role,
   roleQuery,
@@ -19,7 +20,7 @@ import {
   shiftLead,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, renderCoreAt, spoken } from './core-app.tsx';
+import { renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -146,9 +147,7 @@ describe('the role editor', () => {
 
     expect(await screen.findByText('4 roles at Acme AB')).toBeDefined();
     expect(
-      bodyRows(screen.getByRole('table', { name: 'Custom roles of Acme AB' })).map(
-        ([name]) => name,
-      ),
+      groupedRows(screen.getByRole('table', { name: 'Roles' }))[0]?.[1].map(([name]) => name),
     ).toEqual(['Night planner', 'Shift lead']);
   });
 

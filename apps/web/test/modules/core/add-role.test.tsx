@@ -14,6 +14,7 @@ import {
   companiesQuery,
   companyAdminRole,
   companyId,
+  groupedRows,
   planner,
   plantA,
   plantAdminRole,
@@ -25,7 +26,7 @@ import {
   userQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, renderCoreAt, spoken } from './core-app.tsx';
+import { renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -153,9 +154,9 @@ describe('Add role', () => {
 
     // The roles list read before the assignment counts the new holder.
     await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
-    const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
+    const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
-      expect(bodyRows(defaults)).toEqual([
+      expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([
         ['Planner', 'Planning', '3 of 6', 'None'],
         ['Viewer', 'Planning', '1 of 6', '2 people'],
       ]),
