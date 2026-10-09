@@ -8,7 +8,13 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShellModule } from '../../src/modules.ts';
 import { createShellRouter } from '../../src/shell/index.ts';
-import { alexEmail, fakeSession, rateLimitedEmail } from './fake-session.ts';
+import {
+  alexEmail,
+  fakeSession,
+  rateLimitedEmail,
+  toveEmail,
+  toveTemporaryPassword,
+} from './fake-session.ts';
 
 afterEach(() => {
   cleanup();
@@ -301,5 +307,120 @@ describe('sign-in', () => {
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
     expect(screen.queryByRole('group', { name: 'Your session ended' })).toBeNull();
     expect(document.activeElement).toBe(document.body);
+  });
+
+  it('E05-S08 after a sign-in with a temporary password the new password step shows, with focus in New password', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    const { fetch } = renderAt('/plant-a/quality', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+
+    await signIn(user, toveEmail, toveTemporaryPassword);
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Set a new password' });
+    const field = screen.getByLabelText('New password');
+    await waitFor(() => expect(document.activeElement).toBe(field));
+    expect(document.title).toBe('Set a new password · NorthMES');
+    expect(
+      screen.getByText(
+        'You signed in with a temporary password. Choose a new password to continue.',
+      ),
+    ).toBeDefined();
+    expect(screen.getByText('tove.lindqvist')).toBeDefined();
+    const account = heading
+      .closest('main')
+      ?.querySelector<HTMLInputElement>('input[autocomplete="username"]');
+    expect([account?.value, account?.readOnly, account?.tabIndex]).toEqual([toveEmail, true, -1]);
+    expect([field.getAttribute('type'), field.getAttribute('autocomplete')]).toEqual([
+      'password',
+      'new-password',
+    ]);
+    expect(screen.getByText('Use at least 8 characters.')).toBeDefined();
+    const show = screen.getByRole('button', { name: 'Show password' });
+    await user.click(show);
+    expect([field.getAttribute('type'), show.getAttribute('aria-pressed')]).toEqual([
+      'text',
+      'true',
+    ]);
+    expect(screen.getByRole('button', { name: 'Save and continue' })).toBeDefined();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('E05-S08 Sign out on the new password step returns to sign-in without saving', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    renderAt('/plant-a/quality', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, toveEmail, toveTemporaryPassword);
+    await user.type(await screen.findByLabelText('New password'), 'a password of mine');
+
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' }),
+    ).toBeDefined();
+    expect(session.signOut).toHaveBeenCalledOnce();
+    expect(session.setNewPassword).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('New password')).toBeNull();
+  });
+
+  it('E05-S08 after saving a new password the user lands on the return path, and a refused one stays on the step with its error', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    renderAt('/plant-a/quality?tab=open', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, toveEmail, toveTemporaryPassword);
+    const field = await screen.findByLabelText('New password');
+
+    await user.type(field, toveTemporaryPassword);
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to continue' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(
+      screen.getAllByText('Choose a password other than the temporary one.').length,
+    ).toBeGreaterThan(0);
+    await user.clear(field);
+    await user.type(field, 'a password of mine');
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+
+    expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
+    expect(session.setNewPassword).toHaveBeenLastCalledWith(
+      toveTemporaryPassword,
+      'a password of mine',
+    );
+  });
+
+  it('E05-S08 a core.password_change_required answer mid-session, as after a reset, ends the session and sends the user to sign in again, then to the new password step and back to the page', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession();
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: null,
+            errors: [
+              {
+                message: 'Choose a new password to continue.',
+                extensions: { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
+              },
+            ],
+          }),
+          { headers: { 'content-type': 'application/graphql-response+json' } },
+        ),
+      )
+      .mockImplementation(async () => pong());
+    const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    expect(session.signOut).toHaveBeenCalledOnce();
+    expect(router.state.location.search).toEqual({ redirect: '/plant-a/quality?tab=open' });
+    await signIn(user, toveEmail, toveTemporaryPassword);
+    await user.type(await screen.findByLabelText('New password'), 'a password of mine');
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+
+    expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
+    expect(router.state.location.href).toBe('/plant-a/quality?tab=open');
   });
 });

@@ -68,6 +68,15 @@ function betterAuth(clock: { now: number }) {
         if (sent.email === 'banned.user@example.test') {
           return json({ code: 'BANNED_USER', message: 'You have been banned' }, { status: 403 });
         }
+        if (sent.email === 'tove.lindqvist@example.test' && sent.password === 'Rk7qTm3vXp9w') {
+          return json(
+            {
+              token: 'session-1',
+              user: { ...user, name: 'Tove Lindqvist', username: 'tove', mustChangePassword: true },
+            },
+            { headers: { 'set-auth-token': 'session-1' } },
+          );
+        }
         if (sent.email !== user.email || sent.password !== 'correct horse') {
           return json({ code: 'INVALID_USERNAME_OR_PASSWORD' }, { status: 401 });
         }
@@ -79,6 +88,18 @@ function betterAuth(clock: { now: number }) {
         return json({ token: jwtExpiringAt(clock.now / 1000 + 300, `jwt-${minted}`) });
       case '/mes/api/auth/sign-out':
         return json({ success: true });
+      case '/mes/api/account/password': {
+        if (!/^Bearer \S+\.\S+\.signature$/.test(headers.get('authorization') ?? '')) {
+          return json({ errorCode: 'core.unauthenticated' }, { status: 401 });
+        }
+        if (sent.newPassword.length < 8) {
+          return json({ errorCode: 'core.password_too_short' }, { status: 400 });
+        }
+        if (sent.newPassword === sent.currentPassword) {
+          return json({ errorCode: 'core.password_unchanged' }, { status: 400 });
+        }
+        return json({ ok: true });
+      }
       default:
         return json({ message: 'Not found' }, { status: 404 });
     }
@@ -252,5 +273,40 @@ describe('the auth session', () => {
     expect(api.fetch.mock.calls.length).toBe(before);
     expect(session.user()).toBeUndefined();
     expect(open().user()).toBeUndefined();
+  });
+
+  it('E05-S08 a sign-in with a temporary password says that the user must set a new password', async () => {
+    const { open } = setup();
+    const session = open();
+
+    const temporary = await session.signIn('tove.lindqvist@example.test', 'Rk7qTm3vXp9w');
+    const usual = await open().signIn('alex.lund@example.test', 'correct horse');
+
+    expect(temporary).toEqual({ ok: true, newPasswordRequired: true });
+    expect(usual).toEqual({ ok: true });
+  });
+
+  it('E05-S08 setNewPassword sends the temporary and the new password with the JWT, without cookies, and words a refusal by its code', async () => {
+    const { open, api } = setup();
+    const session = open();
+    await session.signIn('tove.lindqvist@example.test', 'Rk7qTm3vXp9w');
+
+    const short = await session.setNewPassword('Rk7qTm3vXp9w', 'short');
+    const unchanged = await session.setNewPassword('Rk7qTm3vXp9w', 'Rk7qTm3vXp9w');
+    const saved = await session.setNewPassword('Rk7qTm3vXp9w', 'a password of mine');
+
+    expect([short, unchanged, saved]).toEqual([
+      { ok: false, reason: 'too-short' },
+      { ok: false, reason: 'unchanged' },
+      { ok: true },
+    ]);
+    const [input, init] = api.calls('/api/account/password').at(-1) ?? [];
+    expect(String(input)).toBe('https://api.northmes.test/mes/api/account/password');
+    expect(init?.method).toBe('POST');
+    expect(init?.credentials).toBe('omit');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      currentPassword: 'Rk7qTm3vXp9w',
+      newPassword: 'a password of mine',
+    });
   });
 });
