@@ -3,14 +3,15 @@ import { HttpStatus, NotFoundException } from '@nestjs/common';
 import type {
   Command,
   CommandBus,
+  TargetRow,
   Validator,
   ValidatorVerdict,
-  Versioned,
 } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError, toDomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
-import { currentPrincipal } from '../principal.ts';
+import { can } from '../modules/core/core/access/access.ts';
+import { currentPrincipal, type Principal } from '../principal.ts';
 
 /** A command validator, with the id of the module whose server code registered it. */
 export interface RegisteredValidator {
@@ -108,31 +109,81 @@ interface ExistingInput {
 }
 
 /**
- * Loads the target of a command on an existing entity and checks its version (ADR 0012 steps 3 and
- * 5): Nest's NotFoundException when no row with the input's id is at the principal's scopes,
- * and core.version_conflict when the row's version is not the input's expectedVersion. A command
- * without a target gets undefined.
+ * Loads the target of a command on an existing entity (ADR 0012 step 3): Nest's NotFoundException
+ * when no row with the input's id is at the principal's scopes. A command without a target gets
+ * undefined.
  */
-async function loadTarget<Input, Result, Target extends Versioned | undefined>(
+async function loadTarget<Input, Result, Target extends TargetRow | undefined>(
   command: Command<Input, Result, Target>,
   input: Input,
   context: { readonly tx: Transaction<unknown>; readonly plantId: string | undefined },
 ): Promise<Target | undefined> {
   if (!command.target) return undefined;
   const { entity, load } = command.target;
-  const { id, expectedVersion } = input as ExistingInput;
+  const { id } = input as ExistingInput;
   const row = await load(id, context);
   if (!row) {
     throw new NotFoundException(`${entity} ${id} was not found`);
   }
-  if (row.version !== expectedVersion) {
+  return row;
+}
+
+/** The refusal of a command whose permission the principal does not hold where it runs. */
+function forbidden(message: string): DomainError {
+  return new DomainError({ code: 'core.forbidden', status: HttpStatus.FORBIDDEN, message });
+}
+
+/**
+ * The permission step (ADR 0010, ADR 0012 step 3): the principal must hold the contract's
+ * permission at the scope of the row the command changes, or, for a command without a target such
+ * as a create, at the plant the request names, where the handler writes. Anything else is
+ * core.forbidden: a run without a principal, a create from a request without a plant, and a
+ * principal whose role assignments do not grant the permission there or at a scope above it.
+ */
+function authorize<Input, Result, Target extends TargetRow | undefined>(
+  command: Command<Input, Result, Target>,
+  input: Input,
+  principal: Principal | null,
+  target: TargetRow | undefined,
+): void {
+  const { name, permission } = command.contract;
+  if (!principal) {
+    throw forbidden(`${name} runs only for a signed-in user`);
+  }
+  if (command.target && target) {
+    if (!can(principal, permission, target.scope_id)) {
+      const { id } = input as ExistingInput;
+      throw forbidden(`You need ${permission} at the scope of ${command.target.entity} ${id}`);
+    }
+    return;
+  }
+  const { plantId } = principal;
+  if (!plantId) {
+    throw forbidden(`The request names no plant, so ${name} has no scope to run at`);
+  }
+  if (!can(principal, permission, plantId)) {
+    throw forbidden(`You need ${permission} at plant ${plantId}`);
+  }
+}
+
+/**
+ * The version step (ADR 0012 step 5): core.version_conflict when the target's version is not the
+ * input's expectedVersion.
+ */
+function checkVersion<Input, Result, Target extends TargetRow | undefined>(
+  command: Command<Input, Result, Target>,
+  input: Input,
+  target: TargetRow | undefined,
+): void {
+  if (!command.target || !target) return;
+  const { id, expectedVersion } = input as ExistingInput;
+  if (target.version !== expectedVersion) {
     throw new DomainError({
       code: 'core.version_conflict',
       status: HttpStatus.CONFLICT,
-      message: `${entity} ${id} is at version ${row.version}, and the change was made on version ${expectedVersion}`,
+      message: `${command.target.entity} ${id} is at version ${target.version}, and the change was made on version ${expectedVersion}`,
     });
   }
-  return row;
 }
 
 /**
@@ -167,7 +218,9 @@ function validatorsByCommand({
 
 /**
  * The command bus of the host. It runs each command in one ScopedDatabase transaction: for a
- * command on an existing entity it loads the target and checks its version, for a command with
+ * command on an existing entity it loads the target, it checks the contract's permission at the
+ * target's scope or at the request's plant, for a command on an existing entity it checks the
+ * target's version, for a command with
  * validators it builds the payload, parses it with each validator's copy of the owner's contract
  * and runs the validators, each on its own frozen copy and within its time limit, then it runs the
  * handler (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit rejects the command,
@@ -182,16 +235,19 @@ export class CommandBusImpl implements CommandBus {
     this.#validators = validatorsByCommand(options);
   }
 
-  run<Input, Result, Target extends Versioned | undefined>(
+  run<Input, Result, Target extends TargetRow | undefined>(
     command: Command<Input, Result, Target>,
     input: Input,
   ): Promise<Result> {
     const { name } = command.contract;
     const validators = this.#validators.get(name) ?? [];
+    const principal = currentPrincipal();
     return this.#transaction(async (tx) => {
-      const plantId = currentPrincipal()?.plantId;
+      const plantId = principal?.plantId;
       // A command without a target gets undefined, which its Target type then is.
       const target = (await loadTarget(command, input, { tx, plantId })) as Target;
+      authorize(command, input, principal, target);
+      checkVersion(command, input, target);
       const context = { tx, plantId, target };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);

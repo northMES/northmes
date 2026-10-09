@@ -8,7 +8,7 @@ import {
   type Command,
   type CommandBus,
   defineCommand,
-  type Versioned,
+  type TargetRow,
 } from '@northmes/sdk/commands';
 import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
 import type { Transaction } from 'kysely';
@@ -26,7 +26,7 @@ const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
-  async run<Input, Result, Target extends Versioned | undefined>(
+  async run<Input, Result, Target extends TargetRow | undefined>(
     command: Command<Input, Result, Target>,
     input: Input,
   ): Promise<Result> {
@@ -161,6 +161,7 @@ describe('defineCommand', () => {
         name: 'planning.flagProductionOrders',
         target: 'none',
         fields,
+        permission: 'planning.productionOrder:flag',
       });
       expect(
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
@@ -176,6 +177,7 @@ describe('defineCommand', () => {
       name: 'planning.flagProductionOrder',
       target: 'existing',
       fields: z.object({}),
+      permission: 'planning.productionOrder:flag',
     });
 
     expect(() =>

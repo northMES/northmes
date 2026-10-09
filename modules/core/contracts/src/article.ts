@@ -36,6 +36,7 @@ export const createArticle = defineCommandContract({
   name: 'core.createArticle',
   target: 'new',
   fields: articleFields,
+  permission: 'core.article:create',
 });
 
 /**
@@ -47,6 +48,7 @@ export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',
   target: 'existing',
   fields: articleFields,
+  permission: 'core.article:update',
 });
 
 /**

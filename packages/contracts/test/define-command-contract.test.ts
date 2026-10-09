@@ -19,6 +19,7 @@ describe('defineCommandContract', () => {
       name: 'planning.releaseProductionOrder',
       target: 'existing',
       fields: releaseFields,
+      permission: 'planning.productionOrder:release',
     });
     const input = { id: ORDER_ID, expectedVersion: 3, note: '', quantity: 120 };
 
@@ -41,6 +42,7 @@ describe('defineCommandContract', () => {
       name: 'planning.createProductionOrder',
       target: 'new',
       fields: z.object({ number: z.string() }),
+      permission: 'planning.productionOrder:create',
     });
 
     expect(contract.input.parse({ id: ORDER_ID, number: '4711' })).toEqual({
@@ -55,6 +57,7 @@ describe('defineCommandContract', () => {
       name: 'planning.recalculateSchedule',
       target: 'none',
       fields: z.object({ horizonDays: z.number() }),
+      permission: 'planning.schedule:recalculate',
     });
 
     expect(contract.input.parse({ id: ORDER_ID, horizonDays: 14 })).toEqual({ horizonDays: 14 });
@@ -65,6 +68,7 @@ describe('defineCommandContract', () => {
       name: 'planning.releaseProductionOrder',
       target: 'existing',
       fields: z.object({}),
+      permission: 'planning.productionOrder:release',
       validatable: true,
     } as const;
 

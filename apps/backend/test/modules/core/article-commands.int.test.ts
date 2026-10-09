@@ -153,7 +153,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN without an errorCode', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.forbidden', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
     const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
@@ -167,12 +167,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       data: null,
       errors: [
         {
-          message: 'The request names no plant, so it cannot create an article',
-          extensions: { code: 'FORBIDDEN' },
+          message: 'The request names no plant, so core.createArticle has no scope to run at',
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
         },
       ],
     });
-    expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
   });
 
   /** Creates an article through coreCreateArticle and returns it. */

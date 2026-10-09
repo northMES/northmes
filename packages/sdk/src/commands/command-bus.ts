@@ -14,23 +14,30 @@ export interface HandlerContext<Target = unknown> {
   readonly tx: Transaction<unknown>;
   /**
    * The scope id of the plant the principal works at, where a command that creates an entity
-   * writes its row (ADR 0012 step 3). undefined for a run without a principal.
+   * writes its row and where the bus checks the permission of a command without a target (ADR 0012
+   * step 3). undefined for a run without a principal.
    */
   readonly plantId: string | undefined;
   /** The row that target.load returned, or undefined for a command without a target. */
   readonly target: Target;
 }
 
-/** What the bus reads of a command's target: the version the command's change is checked on. */
-export interface Versioned {
+/**
+ * What the bus reads of a command's target: the scope it checks the command's permission at, and
+ * the version the command's change is checked on (ADR 0012 steps 3 and 5).
+ */
+export interface TargetRow {
+  /** The scope id of the row, where can() checks contract.permission (ADR 0010). */
+  readonly scope_id: string;
   readonly version: number;
 }
 
 /**
  * The entity a command on an existing entity changes (contract target existing). The bus loads it
  * before the validators and the handler run, and refuses the command with Nest's
- * NotFoundException when load finds no row, or with core.version_conflict when the row's version is not the input's
- * expectedVersion (ADR 0012 steps 3 and 5).
+ * NotFoundException when load finds no row, with core.forbidden when the principal does not hold
+ * the contract's permission at the row's scope_id, or with core.version_conflict when the row's
+ * version is not the input's expectedVersion (ADR 0012 steps 3 and 5).
  */
 export interface CommandTarget<Target> {
   /** The entity's name in the messages of those errors, such as Article. */
@@ -47,7 +54,7 @@ export interface CommandTarget<Target> {
 export interface Command<
   Input = unknown,
   Result = unknown,
-  Target extends Versioned | undefined = Versioned | undefined,
+  Target extends TargetRow | undefined = TargetRow | undefined,
 > {
   readonly contract: CommandContract;
   /** The entity the command changes, for a contract with target existing. */
@@ -67,7 +74,7 @@ export interface Command<
  */
 export interface CommandBus {
   /** Runs `command` with an input that its contract parsed, and returns the handler's result. */
-  run<Input, Result, Target extends Versioned | undefined>(
+  run<Input, Result, Target extends TargetRow | undefined>(
     command: Command<Input, Result, Target>,
     input: Input,
   ): Promise<Result>;

@@ -18,6 +18,7 @@ const holdJob = defineCommandContract({
   name: 'dispatch.holdJob',
   target: 'existing',
   fields: z.object({}),
+  permission: 'dispatch.job:hold',
   validatable: true,
   payload: z.object({ jobId: z.uuid() }),
 });

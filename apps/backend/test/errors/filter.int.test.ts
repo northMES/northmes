@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
 import type { InRepoModule } from '../../src/modules.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
+import { dispatcher } from '../fixtures/commands/dispatcher.ts';
 import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
@@ -73,7 +74,7 @@ describe('the exception filter', () => {
   });
 
   it('E02-S04 a veto reaches the client with code, errorCode core.command_rejected and details.rejectedBy', async () => {
-    const booted = await bootFixtures(dispatch, releaseLimits, auditRules);
+    const booted = await bootFixtures(dispatch, dispatcher, releaseLimits, auditRules);
     const client = gqlClient(await booted.getUrl(), {
       headers: { 'x-northmes-plant': given.plant() },
     });
@@ -104,7 +105,7 @@ describe('the exception filter', () => {
   });
 
   it('E02-S04 a throwing validator reaches the client as Unexpected error.', async () => {
-    const booted = await bootFixtures(dispatch, brokenRules);
+    const booted = await bootFixtures(dispatch, dispatcher, brokenRules);
     const client = gqlClient(await booted.getUrl(), {
       headers: { 'x-northmes-plant': given.plant() },
     });

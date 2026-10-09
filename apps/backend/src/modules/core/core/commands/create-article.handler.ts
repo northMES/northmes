@@ -15,6 +15,7 @@ export const createArticleHandler = {
     { id, code, name }: z.output<typeof createArticle.input>,
     { tx, plantId }: CoreContext,
   ): Promise<ArticleRecord> {
+    // The bus refuses a create from a request without a plant before the handler runs.
     if (!plantId) {
       throw new ForbiddenException('The request names no plant, so it cannot create an article');
     }

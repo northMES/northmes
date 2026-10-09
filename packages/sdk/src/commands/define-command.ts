@@ -3,11 +3,11 @@ import type { Type } from '@nestjs/common';
 import type { ReturnTypeFunc } from '@nestjs/graphql';
 import type { CommandContract } from '@northmes/contracts';
 import type { z } from 'zod';
-import type { Command, Versioned } from './command-bus.ts';
+import type { Command, TargetRow } from './command-bus.ts';
 import { mutationResolver } from './mutation-field.ts';
 
 /** The server code of a command, in the owning module's AGPL server code. */
-export interface CommandDefinition<Input, Result, Target extends Versioned | undefined>
+export interface CommandDefinition<Input, Result, Target extends TargetRow | undefined>
   extends Pick<Command<Input, Result, Target>, 'target' | 'buildPayload' | 'handle'> {
   /** The GraphQL type of the handler's result, which the mutation returns. */
   readonly returns: ReturnTypeFunc;
@@ -17,7 +17,7 @@ export interface CommandDefinition<Input, Result, Target extends Versioned | und
 export type CommandProvider<
   Input,
   Result,
-  Target extends Versioned | undefined = Versioned | undefined,
+  Target extends TargetRow | undefined = TargetRow | undefined,
 > = Type & {
   /** The command the generated mutation field sends to the bus. */
   readonly command: Command<Input, Result, Target>;
@@ -35,7 +35,7 @@ type ParsedInput<Contract extends CommandContract> = z.output<Contract['input']>
 export function defineCommand<
   Contract extends CommandContract,
   Result,
-  Target extends Versioned | undefined = undefined,
+  Target extends TargetRow | undefined = undefined,
 >(
   contract: Contract,
   {
