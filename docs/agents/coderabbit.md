@@ -6,16 +6,16 @@ CodeRabbit is a GitHub App (`coderabbitai[bot]`) that reviews pull requests to `
 
 CodeRabbit reviews a pull request when it opens and again after every push, with no pause after a number of reviewed commits. It skips drafts, release PRs (`chore(main): release`) and PRs from `renovate[bot]` and `dependabot[bot]`. While the repository has fewer than 10 stars, CodeRabbit reviews only after an `@coderabbitai review` comment. The review profile is `chill`.
 
-It does not review the lockfiles (`pnpm-lock.yaml`, `skills-lock.json`), the committed GraphQL snapshots (`schema/*.graphql`, `modules/*/schema.graphql`), `pnpm gen` output (`*.gen.ts`, `*.gen.css`, `modules/*/web/links.snapshot.json`), Vitest snapshots, generated reference docs under `apps/docs/reference`, `CHANGELOG.md`, the vendored skills in `.claude/skills`, or the internal research material, which is gitignored and filtered only in case a file is committed. CodeRabbit's own defaults also skip images (including `*.svg`), `*.csv`, `*.map` and directories named `generated`, `__generated__` or `gen`.
+It does not review the lockfiles (`pnpm-lock.yaml`, `skills-lock.json`), the committed GraphQL snapshot (`schema/*.graphql`), `pnpm gen` output (`*.gen.ts`), Vitest snapshots, generated reference docs under `apps/docs/reference`, `CHANGELOG.md`, the vendored skills in `.claude/skills`, or the internal research material, which is gitignored and filtered only in case a file is committed. CodeRabbit's own defaults also skip images (including `*.svg`), `*.csv`, `*.map` and directories named `generated`, `__generated__` or `gen`.
 
 Path instructions tell it what to flag per area:
 
 | Path | What CodeRabbit flags |
 |---|---|
-| `modules/*/server/**` | Writes outside a registered command handler, a write path without `can()` at the target's scope, writes outside the command's audit context, queries outside the scoped transaction helper, SQL on another module's schema, `sql.raw` and friends, `Date` query parameters, AI SDK calls outside `modules/ai/server/model-call.ts` |
-| `modules/*/domain/**`, `modules/*/server/domain/**` | Imports of Nest, Kysely or `pg`, and use of `process.env` |
+| `apps/backend/src/modules/**` | Writes outside a registered command handler, a write path without `can()` at the target's scope, writes outside the command's audit context, queries outside the scoped transaction helper, SQL on another module's schema, `sql.raw` and friends, `Date` query parameters, AI SDK calls outside `apps/backend/src/modules/ai/model-call.ts` |
+| `modules/*/domain/**`, `apps/backend/src/modules/*/domain/**` | Imports of Nest, Kysely or `pg`, and use of `process.env` |
 | `**/migrations/**/*.sql` outside `docs/sources` | Missing expand or contract marker, a new table without row-level security and split policies, `FOR ALL` policies, write policies wider than the read policy, `TRUNCATE` grants, missing audit trigger or uuid `id`, secret-like columns, `CREATE INDEX CONCURRENTLY` advice |
-| `modules/*/web/**`, `packages/ui/**` | WCAG 2.2 AA gaps (keyboard, single-pointer alternative to drag, 24 px targets, state by color alone, missing names and labels, focus hidden), live regions outside `announce()`, direct `@base-ui/*` or Radix imports, values that are not tokens |
+| `apps/web/src/**`, `packages/ui/**` | WCAG 2.2 AA gaps (keyboard, single-pointer alternative to drag, 24 px targets, state by color alone, missing names and labels, focus hidden), live regions outside `announce()`, direct `@base-ui/*` or Radix imports, values that are not tokens |
 | MIT packages (`packages/contracts`, `sdk`, `web-sdk`, `ui`, `testing`, `modules/*/contracts`) | Imports of AGPL code, a license field that is not MIT, breaking changes without `!` in the PR title |
 | `**/*.test.{ts,tsx}`, `**/e2e/**` | A behaviour change without a test, a shared database instead of `@testcontainers/postgresql`, real AI calls outside `*.ai.test.ts` files and `pnpm test:e2e:ai` runs |
 | `docs/adr/**` | Missing MADR front matter, a new ADR with a status other than `proposed`, Confirmation items that name no test, lint rule or CI check |

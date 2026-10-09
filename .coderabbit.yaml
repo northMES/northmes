@@ -85,10 +85,8 @@ reviews:
     - '!skills-lock.json'
     # Committed GraphQL snapshots written by `northmes schema print`.
     - '!schema/*.graphql'
-    - '!modules/*/schema.graphql'
-    # pnpm gen output: Kysely types (db.gen.ts), typed documents, CSS sources.
+    # pnpm gen output: Kysely types (db.gen.ts) and typed documents.
     - '!**/*.gen.ts'
-    - '!**/*.gen.css'
     - '!**/__snapshots__/**'
     - '!apps/docs/reference/**'
     - '!**/CHANGELOG.md'
@@ -147,15 +145,15 @@ reviews:
         - Flag bytea columns and columns whose name contains secret, ciphertext, password, token or key unless the PR declares them secret.
         - The file runs inside a transaction, so CREATE INDEX CONCURRENTLY is not available. Do not suggest it.
 
-    - path: 'modules/*/web/**'
+    - path: 'apps/web/src/**'
       instructions: |
-        Module web remote (React, Module Federation). WCAG 2.2 AA:
+        The web app and every module's screens (React, one static Vite build). WCAG 2.2 AA:
         - Every interactive element works by keyboard, and every drag has a single-pointer alternative (2.5.7).
-        - Pointer targets are at least 24 by 24 CSS px (2.5.8); sizes come from the --nm-target-min token through @northmes/ui.
+        - Pointer targets are at least 24 by 24 CSS px (2.5.8); sizes come from the --nm-target-min token.
         - State is never shown by color alone (1.4.1); pair color with text, an icon or a pattern.
         - Every control has an accessible name and a visible label. Focus stays visible and is not hidden by sticky regions (2.4.11).
-        - Status changes are announced through announce() from @northmes/web-sdk, not ad hoc aria-live regions.
-        Build screens from @northmes/ui components. Flag direct imports of @base-ui/* or Radix, raw colors or sizes that are not tokens, and dynamic class names. A remote ships no CSS of its own.
+        - Status changes are announced through the app's announce() helper, not ad hoc aria-live regions.
+        Build screens from the app's shared UI components. Flag direct imports of @base-ui/* or Radix outside those components, raw colors or sizes that are not tokens, and dynamic class names.
 
     - path: 'packages/ui/**'
       instructions: |
@@ -163,7 +161,7 @@ reviews:
 
     - path: 'packages/{contracts,sdk,web-sdk,ui,testing}/**'
       instructions: |
-        MIT-licensed package. It must not import AGPL code: flag any import or package.json dependency on @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or any path under modules/*/server, modules/*/web, modules/*/domain or apps/. The package.json license field stays MIT. A changed or removed export is a breaking change: the PR title needs ! and the docs change in the same PR.
+        MIT-licensed package. It must not import AGPL code: flag any import or package.json dependency on @northmes/backend, @northmes/web, @northmes/planning-domain, @northmes/example-validator, or any path under modules/*/domain or apps/. The package.json license field stays MIT. A changed or removed export is a breaking change: the PR title needs ! and the docs change in the same PR.
 
     - path: 'modules/*/contracts/**'
       instructions: |
@@ -236,8 +234,8 @@ reviews:
           packages/web-sdk, packages/ui, packages/testing
           and modules/*/contracts. Fail if any of them adds an import, a
           re-export or a package.json dependency that points at
-          @northmes/module-*, @northmes/*-web, @northmes/planning-domain, or a
-          path under modules/*/server, modules/*/web, modules/*/domain or
+          @northmes/backend, @northmes/web, @northmes/planning-domain,
+          @northmes/example-validator, or a path under modules/*/domain or
           apps/. Fail if a package.json license field in that scope changes
           from MIT. Pass otherwise, including when no file in scope changed.
       - name: Row-level security on new tables
@@ -254,9 +252,9 @@ reviews:
       - name: Behaviour change has a test
         mode: warning
         instructions: >-
-          Scope: changed files under modules/, packages/ and examples/,
+          Scope: changed files under apps/, modules/, packages/ and examples/,
           migrations and contracts included, excluding docs directories,
-          generated files (*.gen.ts, *.gen.css, schema.graphql) and test
+          generated files (*.gen.ts, schema/*.graphql) and test
           files. Test files are files named *.test.ts, *.test.tsx or
           *.int.test.ts and files under an e2e directory. Fail if at least one
           file in scope changed and the PR adds or changes no test file. Pass
