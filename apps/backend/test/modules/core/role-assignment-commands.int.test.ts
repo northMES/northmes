@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
+import {
+  type Grant,
+  givenAssignment,
+  givenCompany,
+  hostFactory,
+  signIn,
+} from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -265,6 +271,39 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
         errorCode: 'core.role_not_held',
         details: { scopeId: plantA, missingPermissions: ['core.article:update'] },
       },
+    ]);
+  });
+
+  it('E05-S06 a plant admin cannot remove an assignment at the company, and an assignment at another plant is not found', async () => {
+    const { company: companyId, admin, roleId, sara, plantA, plantB, slugA } = await company();
+    const atCompany = await admin.client.send<{ coreAssignRole: Assignment }>(assignMutation, {
+      input: { id: randomUUIDv7(), userId: sara.userId, roleId, scopeId: companyId },
+    });
+    const atPlantB = await givenAssignment(db.ownerUrl, {
+      userId: sara.userId,
+      roleId,
+      scopeId: plantB,
+    });
+    const plantAdmin = await signedIn(
+      [
+        {
+          scopeId: plantA,
+          permissions: [...assigner, 'core.article:read', 'core.article:update'],
+        },
+      ],
+      slugA,
+    );
+
+    const companyRemoval = await plantAdmin.client.send(removeMutation, {
+      input: { id: atCompany.data?.coreAssignRole.id },
+    });
+    const plantBRemoval = await admin.client.send(removeMutation, { input: { id: atPlantB } });
+
+    expect(refusals(companyRemoval)).toEqual([
+      { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+    ]);
+    expect(plantBRemoval.errors?.map(({ extensions }) => extensions?.code)).toEqual([
+      'NOT_FOUND',
     ]);
   });
 

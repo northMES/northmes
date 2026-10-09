@@ -224,6 +224,38 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(await signInStatus(operator.username, operator.password)).toBe(200);
   });
 
+  it('E05-S08 blocking and unblocking need core.user:block at the company: a plant admin and a reader without it are refused', async () => {
+    const { company: companyId, plants, slugs, admin } = await company();
+    const operator = await signedIn(
+      [{ scopeId: companyId, permissions: ['core.article:read'] }],
+      slugs[0] ?? '',
+    );
+    const plantAdmin = await signedIn(
+      [{ scopeId: plants[0] ?? '', permissions: userAdmin }],
+      slugs[0] ?? '',
+    );
+    const reader = await signedIn(
+      [{ scopeId: companyId, permissions: ['core.user:read'] }],
+      slugs[0] ?? '',
+    );
+    const input = { id: operator.userId };
+
+    const blocks = [
+      await plantAdmin.client.send(blockMutation, { input }),
+      await reader.client.send(blockMutation, { input }),
+    ];
+    await admin.client.send(blockMutation, { input });
+    const unblocks = [
+      await plantAdmin.client.send(unblockMutation, { input }),
+      await reader.client.send(unblockMutation, { input }),
+    ];
+
+    for (const answer of [...blocks, ...unblocks]) {
+      expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    }
+    expect(await signInStatus(operator.username, operator.password)).not.toBe(200);
+  });
+
   it('E05-S08 an admin of one company cannot block or unblock a user who also belongs to another company, since a block holds everywhere', async () => {
     const acme = await company();
     const nordic = await company();

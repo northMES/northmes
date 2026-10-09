@@ -181,4 +181,35 @@ describe('the roles of a company and the permission catalog', () => {
       'core.user',
     ]);
   });
+
+  it("E05-S06 coreRole reads a role of the request's company, and a role of another company as null", async () => {
+    const acme = await givenCompany(db.ownerUrl, { name: 'Acme AB' });
+    const nordic = await givenCompany(db.ownerUrl, { name: 'Nordic Tools AB' });
+    const acmeReader = await clientWith(
+      [{ scopeId: acme.company, permissions: ['core.role:read'] }],
+      acme.slugs[0] ?? '',
+    );
+    const nordicReader = await clientWith(
+      [{ scopeId: nordic.company, permissions: ['core.role:read'] }],
+      nordic.slugs[0] ?? '',
+    );
+    const roleOf = async (client: GqlClient) =>
+      (await client.send<{ coreRoles: RoleAnswer[] }>(rolesQuery)).data?.coreRoles.find(
+        ({ key }) => key === 'core-company-admin',
+      )?.id ?? '';
+    const acmeRole = await roleOf(acmeReader);
+    const nordicRole = await roleOf(nordicReader);
+    const roleQuery = 'query ($id: ID!) { coreRole(id: $id) { id } }';
+
+    const own = await acmeReader.send<{ coreRole: { id: string } | null }>(roleQuery, {
+      id: acmeRole,
+    });
+    const other = await acmeReader.send<{ coreRole: { id: string } | null }>(roleQuery, {
+      id: nordicRole,
+    });
+
+    expect(own.data?.coreRole).toEqual({ id: acmeRole });
+    expect(other.errors).toBeUndefined();
+    expect(other.data?.coreRole).toBeNull();
+  });
 });
