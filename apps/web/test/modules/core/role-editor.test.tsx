@@ -8,14 +8,17 @@ import { CoreRole } from '../../../src/modules/core/role.graphql.ts';
 import { CoreUpdateRole } from '../../../src/modules/core/screens/edit-role/update-role.graphql.ts';
 import { CoreCreateRole } from '../../../src/modules/core/screens/new-role/create-role.graphql.ts';
 import {
+  acme,
   catalogQuery,
   companiesQuery,
   companyId,
   groupedRows,
   planner,
+  plantA,
   role,
   roleQuery,
   rolesQuery,
+  sara,
   settingsViewerQuery,
   shiftLead,
   viewerRole,
@@ -347,10 +350,34 @@ describe('the role editor', () => {
     ]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Shift lead' })).toBeDefined();
+    expect(await screen.findByText('Custom role, Acme AB')).toBeDefined();
+    // The side column says where the role applies and to whom.
+    const applies = screen.getByRole('region', { name: 'Where Shift lead applies' });
+    expect(
+      within(applies).getByText(
+        'Assigned to 2 people at Plant A. A saved change applies to them from their next action.',
+      ),
+    ).toBeDefined();
+    expect(
+      within(applies)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Sara NybergPlant A', 'Anna BergPlant A']);
+    expect(screen.queryByRole('region', { name: 'Changes not saved' })).toBeNull();
     await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
-    expect(screen.getByText('Changes not saved')).toBeDefined();
+    // Changes not saved lists what differs from the saved role, and the row says Added.
+    const changes = screen.getByRole('region', { name: 'Changes not saved' });
+    expect(
+      within(changes)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Added: Run autoplanplanning.autoplan:run']);
+    const autoplanRow = screen.getByRole('checkbox', { name: 'Run autoplan' }).closest('li');
+    expect(within(autoplanRow as HTMLElement).getByText('Added')).toBeDefined();
+    const reason = screen.getByRole('textbox', { name: 'Reason for change (optional)' });
+    expect(reason.getAttribute('placeholder')).toBe('Why you change this role');
     await user.type(
-      screen.getByRole('textbox', { name: 'Reason (optional)' }),
+      screen.getByRole('textbox', { name: 'Reason for change (optional)' }),
       'Night shift plans too',
     );
     await user.click(screen.getByRole('button', { name: 'Save role' }));
@@ -358,6 +385,90 @@ describe('the role editor', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Shift lead' })).toBeDefined();
     await waitFor(() =>
       expect(spoken()).toBe('Shift lead saved. It applies to 2 people from their next action.'),
+    );
+    // The role page repeats the announcement in a note (RO41).
+    expect(screen.getByRole('note').textContent).toBe(
+      'Shift lead saved. It applies to 2 people from their next action.',
+    );
+  });
+
+  it('E05-S06 a saved role nobody holds says only that it was saved, and one person who holds it at two places counts once', async () => {
+    const user = userEvent.setup();
+    const both = role('Report checker', ['planning.productionOrder:read'], {
+      holders: [
+        { user: sara, scope: acme },
+        { user: sara, scope: plantA },
+      ],
+    });
+    const nobody = role('Night planner', ['planning.productionOrder:read']);
+    const update = (of: ReturnType<typeof role>) => ({
+      request: {
+        query: CoreUpdateRole,
+        variables: (variables: { input: { id: string } }) => variables.input.id === of.id,
+      },
+      result: { data: { coreUpdateRole: { ...of, version: 2 } } },
+    });
+    const router = renderCoreAt(
+      coreLinks.settings.roles.role.edit({ companyId, roleId: both.id }).href,
+      [
+        settingsViewerQuery(karin),
+        companiesQuery(),
+        roleQuery(both),
+        catalogQuery(),
+        update(both) as MockLink.MockedResponse,
+        roleQuery(nobody),
+        update(nobody) as MockLink.MockedResponse,
+      ],
+    );
+
+    await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
+    await user.click(screen.getByRole('button', { name: 'Save role' }));
+    await waitFor(() =>
+      expect(spoken()).toBe('Report checker saved. It applies to 1 person from their next action.'),
+    );
+
+    await router.navigate({
+      to: coreLinks.settings.roles.role.edit({ companyId, roleId: nobody.id }).href,
+    });
+    await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
+    await user.click(screen.getByRole('button', { name: 'Save role' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
+    await waitFor(() => expect(spoken()).toBe('Night planner saved.'));
+    expect(screen.getByRole('note').textContent).toBe('Night planner saved.');
+  });
+
+  it('E05-S06 a Save refused without core.role:manage at the company says who can make the change (RO39)', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
+      settingsViewerQuery(karin),
+      companiesQuery(),
+      roleQuery(shiftLead),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreUpdateRole,
+          variables: (variables: Record<string, unknown>) => variables.input !== undefined,
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'x',
+              path: ['coreUpdateRole'],
+              extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+            },
+          ],
+        },
+      } as MockLink.MockedResponse,
+    ]);
+
+    expect(await screen.findByText('Unique within Acme AB.')).toBeDefined();
+    await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
+    await user.click(screen.getByRole('button', { name: 'Save role' }));
+
+    const summary = await screen.findByRole('group', { name: 'Shift lead was not saved' });
+    expect(within(summary).getByRole('listitem').textContent).toBe(
+      'Changing a role of Acme AB needs the permission to create and edit roles (core.role:manage) at Acme AB. A company admin of Acme AB has it and can make the change.',
     );
   });
 
@@ -390,7 +501,7 @@ describe('the role editor', () => {
               extensions: {
                 code: 'FORBIDDEN',
                 errorCode: 'core.role_not_held',
-                details: { scopeId: 'x', missingPermissions: ['planning.autoplan:run'] },
+                details: { scopeId: plantA.id, missingPermissions: ['planning.autoplan:run'] },
               },
             },
           ],
@@ -401,20 +512,31 @@ describe('the role editor', () => {
     // The refusal names the company, so the places load first.
     expect(await screen.findByText('Unique within Acme AB.')).toBeDefined();
     await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
-    await user.type(screen.getByRole('textbox', { name: 'Reason (optional)' }), 'Night shift');
+    await user.type(
+      screen.getByRole('textbox', { name: 'Reason for change (optional)' }),
+      'Night shift',
+    );
     await user.click(screen.getByRole('button', { name: 'Save role' }));
 
     const summary = await screen.findByRole('group', { name: 'Shift lead was not saved' });
     await waitFor(() => expect(document.activeElement).toBe(summary));
-    expect(within(summary).queryByRole('link')).toBeNull();
-    expect(within(summary).getByRole('listitem').textContent).toBe(
-      'You do not hold 1 permission of Shift lead where it applies: Run autoplan (planning.autoplan:run). A role can only get permissions you hold. Ask a company admin of Acme AB to change it.',
+    // Each refused permission is a link that leads to its row, whose line says why.
+    const link = within(summary).getByRole('link');
+    expect(link.textContent).toBe(
+      'Run autoplan (planning.autoplan:run). Refused: you do not hold it at Plant A, where Shift lead is assigned.',
     );
+    expect(
+      screen.getByText('Refused: you do not hold it at Plant A, where Shift lead is assigned.'),
+    ).toBeDefined();
+    link.focus();
+    await user.keyboard('{Enter}');
+    expect(document.activeElement).toBe(checkbox('Run autoplan'));
     const autoplan = checkbox('Run autoplan');
     expect(autoplan.getAttribute('aria-checked')).toBe('true');
     expect(autoplan.getAttribute('aria-invalid')).toBe('true');
     expect(
-      (screen.getByRole('textbox', { name: 'Reason (optional)' }) as HTMLTextAreaElement).value,
+      (screen.getByRole('textbox', { name: 'Reason for change (optional)' }) as HTMLTextAreaElement)
+        .value,
     ).toBe('Night shift');
   });
 
