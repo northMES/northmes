@@ -59,11 +59,13 @@ function cells(row: HTMLElement): (string | null)[] {
 }
 
 describe('BoardScreen', () => {
-  it('E02-S05 the board stub says it is loading the production orders until they arrive', async () => {
+  it('E02-S05 the board stub marks its data region busy until the production orders arrive', async () => {
     renderBoard([{ ...boardQuery(order('PO-1', '40.000000', 'planned', 'Hinge', 1)), delay: 50 }]);
 
-    expect(screen.getByText('Loading the production orders')).toBeTruthy();
-    await waitFor(() => expect(screen.queryByText('Loading the production orders')).toBeNull());
+    const region = () => screen.getByTestId('board-screen').closest('[aria-busy="true"]');
+    expect(region()).not.toBeNull();
+    await screen.findByTestId('order-PO-1');
+    expect(region()).toBeNull();
   });
 
   it('E02-S05 the board stub lists production orders with their article names', async () => {
@@ -95,12 +97,23 @@ describe('BoardScreen', () => {
     expect(within(board).getByTestId('status-7102').textContent).toBe('released');
   });
 
-  it('E02-S05 the board stub shows the error when its query fails', async () => {
-    renderBoard([{ request: { query: PlanningBoard }, error: new Error('The API is not ready.') }]);
+  it("E02-S05 the board stub shows the page frame's error state when its query fails, and Try again loads the orders", async () => {
+    renderBoard([
+      { request: { query: PlanningBoard }, error: new Error('The API is not ready.') },
+      boardQuery(order('7101', '40.000000', 'planned', 'Bracket 40 mm', 1)),
+    ]);
 
-    expect((await screen.findByRole('alert')).textContent).toBe(
-      'The production orders could not be loaded: The API is not ready.',
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { level: 2 }).textContent).toBe(
+      'Could not load the production orders',
     );
+    expect(alert.textContent).toContain('Check the connection, then try again.');
+    expect(screen.queryByTestId('board-screen')).toBeNull();
+
+    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByTestId('order-7101')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('E02-S05 the Release button sends planningReleaseProductionOrder and the row shows released', async () => {
