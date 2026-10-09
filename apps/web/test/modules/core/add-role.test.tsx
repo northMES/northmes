@@ -10,6 +10,7 @@ import {
   acme,
   anna,
   assignment,
+  catalogQuery,
   companiesQuery,
   companyAdminRole,
   planner,
@@ -64,6 +65,11 @@ function assignOf(
   } as MockLink.MockedResponse;
 }
 
+/** The text of the label of the radio with this id. */
+function labelOf(id: string): string | null | undefined {
+  return document.querySelector(`label[for="${id}"]`)?.textContent;
+}
+
 describe('Add role', () => {
   it('E05-S06 the roles the assigner cannot give at the plant stay in the list, disabled, with what they need; Add role gives Viewer, opens the Access tab and announces it', async () => {
     const user = userEvent.setup();
@@ -72,6 +78,7 @@ describe('Add role', () => {
       companiesQuery(),
       userQuery(annaOfPage),
       rolesQuery([operator, shiftLead, planner, viewerRole]),
+      catalogQuery(),
       assignOf(viewerRole, plantA, {
         data: { coreAssignRole: { ...assignment(viewerRole, plantA), user: anna } },
       }),
@@ -90,18 +97,46 @@ describe('Add role', () => {
     expect(
       within(where).getByRole('radio', { name: 'Plant A only' }).getAttribute('aria-checked'),
     ).toBe('true');
+    expect(within(where).getByText('Applies at Plant A.')).toBeDefined();
+    expect(
+      within(where).getByText('Applies to every plant of Acme AB, also plants created later.'),
+    ).toBeDefined();
     const roles = screen.getByRole('radiogroup', { name: 'Role' });
+    const assignable = within(roles).getByRole('group', {
+      name: 'You can assign these at Plant A',
+    });
+    const locked = within(roles).getByRole('group', {
+      name: 'Needs permissions you do not hold at Plant A',
+    });
+    expect(
+      within(assignable)
+        .getAllByRole('radio')
+        .map(({ id }) => labelOf(id)),
+    ).toEqual(['Operator', 'Viewer']);
+    expect(
+      within(locked)
+        .getAllByRole('radio')
+        .map(({ id }) => labelOf(id)),
+    ).toEqual(['Shift lead', 'Planner']);
     const shift = within(roles).getByRole('radio', { name: 'Shift lead' });
     expect(shift.hasAttribute('data-disabled')).toBe(true);
     expect(
-      screen.getByText(
-        'You do not hold 1 permission of it at Plant A: Release production orders to the floor (planning.productionOrder:release).',
+      within(roles).getByText(
+        'Custom role. Needs 1 permission you do not hold at Plant A: Release production orders to the floor (planning.productionOrder:release).',
+      ),
+    ).toBeDefined();
+    expect(
+      within(roles).getByText(
+        'Planning, default role. Needs 2 permissions you do not hold at Plant A: Release production orders to the floor (planning.productionOrder:release) and Run autoplan (planning.autoplan:run).',
       ),
     ).toBeDefined();
     expect(
       within(roles).getByRole('radio', { name: 'Operator' }).hasAttribute('data-disabled'),
     ).toBe(true);
-    expect(screen.getByText('Anna Berg holds it at Plant A already.')).toBeDefined();
+    expect(
+      within(roles).getByText('Custom role. Anna Berg already holds it at Plant A.'),
+    ).toBeDefined();
+    expect(within(roles).getByText('Planning, default role. 1 permission.')).toBeDefined();
 
     await user.click(within(roles).getByRole('radio', { name: 'Viewer' }));
     expect(screen.getByRole('region', { name: 'Permissions of Viewer' })).toBeDefined();
@@ -121,8 +156,8 @@ describe('Add role', () => {
     const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
     await waitFor(() =>
       expect(bodyRows(defaults)).toEqual([
-        ['Planner', 'Planning', '3', '0'],
-        ['Viewer', 'Planning', '1', '2'],
+        ['Planner', 'Planning', '3 of 6', 'None'],
+        ['Viewer', 'Planning', '1 of 6', '2 people'],
       ]),
     );
   });
@@ -190,5 +225,35 @@ describe('Add role', () => {
     link.focus();
     await user.keyboard('{Enter}');
     expect(document.activeElement).toBe(viewer);
+  });
+
+  it('E05-S06 a refusal because the assigner may not assign at the company names the assignment permission there and who can act', async () => {
+    const user = userEvent.setup();
+    // Jonas Holm reads production orders at Acme AB but may not assign roles there.
+    renderCoreAt(addRoleHref, [
+      viewerQuery(plantAdmin, ['planning.productionOrder:read']),
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([operator, viewerRole]),
+      assignOf(viewerRole, acme, {
+        data: null,
+        errors: [
+          {
+            message: 'You need core.roleAssignment:manage at scope x',
+            path: ['coreAssignRole'],
+            extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+          },
+        ],
+      }),
+    ]);
+
+    await user.click(await screen.findByRole('radio', { name: 'Acme AB, all plants' }));
+    await user.click(screen.getByRole('radio', { name: 'Viewer' }));
+    await user.click(screen.getByRole('button', { name: 'Add role' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to add the role' });
+    expect(within(summary).getByRole('link').textContent).toBe(
+      'You cannot assign Viewer at Acme AB. Assigning at Acme AB needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.',
+    );
   });
 });

@@ -125,6 +125,8 @@ export const sara = person('Sara Nyberg', 's.nyberg');
 export const anna = person('Anna Berg', 'a.berg');
 
 interface RoleOptions {
+  /** The role's key; a module role's key names it in every company, such as core-company-admin. */
+  readonly key?: string;
   readonly origin?: 'CUSTOM' | 'MODULE';
   readonly moduleId?: string | null;
   readonly version?: number;
@@ -137,9 +139,11 @@ interface RoleOptions {
 /** A role as CoreRole returns it. */
 export function role(name: string, permissions: readonly string[], options: RoleOptions = {}) {
   const { origin = 'CUSTOM', moduleId = null, version = 1, holders = [] } = options;
+  const key = options.key ?? `custom-${idOf(name).slice(-12)}`;
   return {
     __typename: 'Role',
     id: idOf(name),
+    key,
     name,
     origin,
     moduleId,
@@ -185,23 +189,24 @@ export const companyAdminRole = role(
     'core.user:block',
     ...catalogKeys.planning,
   ],
-  { origin: 'MODULE', moduleId: 'core' },
+  { origin: 'MODULE', moduleId: 'core', key: 'core-company-admin' },
 );
 /** core's Plant admin, which holds every installed permission but the company-level ones. */
 export const plantAdminRole = role(
   'Plant admin',
   ['core.role:read', 'core.user:read', 'core.roleAssignment:manage', ...catalogKeys.planning],
-  { origin: 'MODULE', moduleId: 'core' },
+  { origin: 'MODULE', moduleId: 'core', key: 'core-plant-admin' },
 );
 
-/** A role as CoreRoles lists it, without the holders' names. */
+/** A role as CoreRoles lists it, with only the id of each holder. */
 function listed(each: ReturnType<typeof role>) {
   return {
     ...each,
-    holders: each.holders.map(({ id, scope }) => ({
+    holders: each.holders.map(({ id, scope, user }) => ({
       __typename: 'RoleAssignment',
       id,
       scope: { __typename: 'AccessScope', id: scope.id, kind: scope.kind },
+      user: { __typename: 'User', id: user.id },
     })),
   };
 }

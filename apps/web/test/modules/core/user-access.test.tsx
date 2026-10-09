@@ -11,6 +11,7 @@ import {
   acme,
   anna,
   assignment,
+  catalogQuery,
   companiesQuery,
   companyAdminRole,
   forbiddenError,
@@ -158,8 +159,23 @@ describe("a user's access", () => {
         'From the next action, Sara Nyberg loses these permissions at Plant A:',
       ),
     ).toBeDefined();
-    expect(within(dialog).getByText('Release production orders to the floor')).toBeDefined();
+    expect(
+      within(dialog)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Release production orders to the floor']);
+    expect(
+      within(dialog).getByText(
+        'Viewer at Acme AB still lets Sara Nyberg read production orders and the planning board.',
+      ),
+    ).toBeDefined();
     const reason = within(dialog).getByRole('textbox', { name: 'Reason (optional)' });
+    expect(reason.getAttribute('placeholder')).toBe('Why you remove this role');
+    expect(
+      within(dialog).getByText(
+        "Shown in the user's history. Do not enter personal data. Up to 500 characters.",
+      ),
+    ).toBeDefined();
     await waitFor(() => expect(document.activeElement).toBe(reason));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
@@ -210,6 +226,8 @@ describe("a user's access", () => {
     ).toBeDefined();
     expect(within(dialog).getByText('Read production orders and the planning board')).toBeDefined();
     expect(within(dialog).queryByText(/keeps every permission/)).toBeNull();
+    // Shift lead at Plant A keeps the permission at Plant A only, not at the other plants.
+    expect(within(dialog).queryByText(/still lets/)).toBeNull();
   });
 
   it("E05-S06 Remove of a company's last active Company admin is refused: the dialog shows the server's message and the role stays", async () => {
@@ -269,6 +287,7 @@ describe("a user's access", () => {
       viewerQuery(plantAdmin),
       companiesQuery(),
       rolesQuery([shiftLeadHeld, viewerRole]),
+      catalogQuery(),
       userQuery(saraOfPage),
       permissionsQuery(sara, saraGrants),
       {
@@ -289,7 +308,9 @@ describe("a user's access", () => {
     ]);
 
     const custom = await screen.findByRole('table', { name: 'Custom roles of Acme AB' });
-    await waitFor(() => expect(bodyRows(custom)).toEqual([['Shift lead', 'Acme AB', '2', '2']]));
+    await waitFor(() =>
+      expect(bodyRows(custom)).toEqual([['Shift lead', 'Acme AB', '2 of 6', '2 people']]),
+    );
     await router.navigate({ to: accessHref });
     await user.click(await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }));
     await user.click(
@@ -301,7 +322,7 @@ describe("a user's access", () => {
 
     await waitFor(() =>
       expect(bodyRows(screen.getByRole('table', { name: 'Custom roles of Acme AB' }))).toEqual([
-        ['Shift lead', 'Acme AB', '2', '1'],
+        ['Shift lead', 'Acme AB', '2 of 6', '1 person'],
       ]),
     );
   });
