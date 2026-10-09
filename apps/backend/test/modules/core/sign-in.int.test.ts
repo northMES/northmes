@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
@@ -233,5 +233,26 @@ describe('sign-in with Better Auth', () => {
     // The web sends no cookies, so the API does not let a web origin send them.
     expect(preflight.headers.get('access-control-allow-credentials')).toBeNull();
     expect(signedIn.headers.get('access-control-allow-credentials')).toBeNull();
+  });
+
+  it('signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
+    const { plants } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const realFetch = globalThis.fetch;
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation((input, init) =>
+        String(input).endsWith('/api/auth/token')
+          ? Promise.resolve(new Response('{"message":"refused"}', { status: 401 }))
+          : realFetch(input, init),
+      );
+
+    try {
+      await expect(
+        signIn(testApp.app, db.ownerUrl, [{ scopeId: plant, permissions: ['core.article:read'] }]),
+      ).rejects.toThrow('signIn: /api/auth/token answered 401: {"message":"refused"}');
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
