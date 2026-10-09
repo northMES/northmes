@@ -578,3 +578,36 @@ describe('the permission step of CommandBusImpl', () => {
     expect(handle).not.toHaveBeenCalled();
   });
 });
+
+describe('context.require of CommandBusImpl', () => {
+  it('ADR0073-W2 a handler that requires a permission the principal holds at the company runs on, and one it lacks there gets FORBIDDEN and rolls the command back', async () => {
+    const database = new FakeScopedDatabase();
+    const command: Command<{ id: string; code: string }, { id: string }> = {
+      contract: createArticle,
+      handle: async ({ id }, context) => {
+        context.require('core.article:assign', COMPANY);
+        return { id };
+      },
+    };
+    const bus = new CommandBusImpl(database, { modules: ['core'], validators: [] });
+    const input = { id: ORDER_ID, code: 'BR-140' };
+    // Both principals create at plant A.
+    const plantCreator = principalHolding({
+      [PLANT_A]: ['core.article:create', 'core.article:assign'],
+    });
+    const companyAssigner = principalHolding({
+      [PLANT_A]: ['core.article:create'],
+      [COMPANY]: ['core.article:assign'],
+    });
+
+    const refused = runAs(plantCreator, () => bus.run(command, input));
+    const allowed = await runAs(companyAssigner, () => bus.run(command, input));
+
+    expect(await refusalOf(refused)).toEqual(forbidden);
+    expect(allowed).toEqual({ id: ORDER_ID });
+    expect(database.transactions.map(({ outcome }) => outcome)).toEqual([
+      'rolled back',
+      'committed',
+    ]);
+  });
+});

@@ -11,7 +11,7 @@ export {
 /** An article with the fields the articles pages show and the version an edit sends. */
 export type Article = NonNullable<CoreArticleQuery['coreArticle']>;
 
-// The article with this id at the plant, or null. The article's page, the edit page and the new
+// The article with this id among the articles of the company, or null. The article's page, the edit page and the new
 // article page's cache update all read it. pnpm gen writes its typed document to
 // article.graphql.gen.ts; this block never runs, so the bundle holds only the generated document.
 if (false) {
@@ -23,6 +23,12 @@ if (false) {
         name
         version
         archivedAt
+        allPlants
+        plants {
+          id
+          slug
+          name
+        }
       }
     }
   `;

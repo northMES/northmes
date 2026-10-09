@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory, signInAt, statementsDuring } from '@northmes/backend/testing';
+import { givenArticle, hostFactory, signInAt, statementsDuring } from '@northmes/backend/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -56,17 +56,9 @@ describe('planningProductionOrders', () => {
     return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
-  /** Writes an article at `plant` and returns its id. */
-  async function writeArticle(plant: string, code: string, name: string): Promise<string> {
-    const { rows } = await db.command(fixtureAt(plant), (tx) =>
-      tx.query<{ id: string }>(
-        'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
-        [plant, code, name],
-      ),
-    );
-    const id = rows[0]?.id;
-    if (!id) throw new Error('the article insert returned no id');
-    return id;
+  /** Writes an article assigned to `plant` and returns its id. */
+  function writeArticle(plant: string, code: string, name: string): Promise<string> {
+    return givenArticle(db.ownerUrl, { code, name, plants: [plant] });
   }
 
   /** Writes a planned production order at `plant` for `quantity` of the article `articleId`. */

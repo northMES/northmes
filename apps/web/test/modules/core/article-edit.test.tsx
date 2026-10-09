@@ -6,6 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { CoreUpdateArticle } from '../../../src/modules/core/screens/edit-article/update-article.graphql.ts';
+import { viewerQuery } from './access-fixtures.ts';
 import { article, articleQuery, plant, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -55,6 +56,7 @@ describe('edit article', () => {
     const user = userEvent.setup();
     const router = renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
       articleQuery(axle),
+      viewerQuery(['core.article:read', 'core.article:update']),
       updateOf(
         { expectedVersion: 1, code: 'AX-500', name: 'Axle 20 mm, steel' },
         { data: { coreUpdateArticle: { ...axle, name: 'Axle 20 mm, steel', version: 2 } } },

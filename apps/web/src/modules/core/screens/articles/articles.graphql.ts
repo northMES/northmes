@@ -7,8 +7,8 @@ export {
   type CoreArticlesQueryVariables,
 } from './articles.graphql.gen.ts';
 
-// One page of the articles of the plant that the client's x-northmes-plant header names: the active
-// ones, and the archived ones too with includeArchived. pnpm gen writes its typed document to
+// One page of the articles assigned to the plant that the client's x-northmes-plant header names, or
+// to All plants: the active ones, and the archived ones too with includeArchived. pnpm gen writes its typed document to
 // articles.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
@@ -45,6 +45,12 @@ if (false) {
             name
             version
             archivedAt
+            allPlants
+            plants {
+              id
+              slug
+              name
+            }
             updatedAt
           }
         }

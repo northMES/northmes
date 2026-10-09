@@ -1,29 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { archiveArticle } from '@northmes/core-contracts';
+import { archiveArticle } from '@northmes/core-contracts';
+import { registerCommand } from '@northmes/sdk/commands';
 import { sql } from 'kysely';
 import type { z } from 'zod';
-import { type ArticleRecord, recordColumns } from '../article.service.ts';
+import { type ArticleRecord, selectArticles } from '../article-record.ts';
 import { type ArticleRow, articleTarget, refuseArchived } from './article-target.ts';
 import type { CoreContext } from './context.ts';
 
 /**
- * The handler of core.archiveArticle (ADR 0012), which the mutation coreArchiveArticle sends
- * through the command bus. It sets the article's archived_at to the transaction's time and returns
- * the article with its new version. An archived article is refused with core.archived.
+ * The handler of core.archiveArticle (ADR 0012), which the bus checks at the article's edit scope
+ * (ADR 0073). It sets the article's archived_at to the transaction's time, at every plant, and
+ * returns the article with its new version. An archived article is refused with core.archived.
  */
 export const archiveArticleHandler = {
   target: articleTarget,
-  handle(
+  async handle(
     { id }: z.output<typeof archiveArticle.input>,
     { tx, target }: CoreContext<ArticleRow>,
   ): Promise<ArticleRecord> {
     refuseArchived(target);
     // The version trigger of core.article bumps version with the update.
-    return tx
+    await tx
       .updateTable('core.article')
       .set({ archived_at: sql<Date>`now()` })
       .where('id', '=', id)
-      .returning(recordColumns)
-      .executeTakeFirstOrThrow();
+      .execute();
+    return selectArticles(tx).where('id', '=', id).executeTakeFirstOrThrow();
   },
 };
+
+/** core.archiveArticle as the bus runs it, which ArticleService.archive sends. */
+export const ArchiveArticleCommand = registerCommand(archiveArticle, archiveArticleHandler);

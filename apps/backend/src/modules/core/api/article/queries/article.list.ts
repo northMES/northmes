@@ -3,7 +3,7 @@ import { defineList } from '@northmes/sdk/lists';
 import { Article } from '../types/article.type.ts';
 
 /**
- * The list of a plant's articles: coreArticles, by code unless orderBy says otherwise, such as
+ * The list of articles: coreArticles, by code unless orderBy says otherwise, such as
  * UPDATED_AT descending for the most recent change first, without the archived ones unless
  * includeArchived asks for them (ADR 0016).
  */

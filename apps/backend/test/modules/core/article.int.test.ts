@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory, signInAt } from '@northmes/backend/testing';
+import { givenArticle, hostFactory, signInAt } from '@northmes/backend/testing';
 import {
   createTestApp,
   given,
@@ -60,22 +60,12 @@ describe('core.article', () => {
     return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
-  /** Writes an article at `plant` and returns its id. */
-  async function writeArticle(plant: string, code: string, name: string): Promise<string> {
-    const { rows } = await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
-      (tx) =>
-        tx.query<{ id: string }>(
-          'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
-          [plant, code, name],
-        ),
-    );
-    const id = rows[0]?.id;
-    if (!id) throw new Error('the article insert returned no id');
-    return id;
+  /** Writes an article assigned to `plant`, the one plant of a fresh company, and returns its id. */
+  function writeArticle(plant: string, code: string, name: string): Promise<string> {
+    return givenArticle(db.ownerUrl, { code, name, plants: [plant] });
   }
 
-  it("E02-S04 coreArticle returns an article written at the request's plant and null for another plant's", async () => {
+  it("E02-S04 coreArticle returns an article of the request's company and null for another company's", async () => {
     const plant = given.plant();
     const otherPlant = given.plant();
     const own = await writeArticle(plant, 'BR-410', 'Wall bracket');

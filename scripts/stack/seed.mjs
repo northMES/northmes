@@ -227,8 +227,8 @@ async function seedAccess(ownerUrl) {
 /**
  * Writes the seed: first the company, its plants and the dev admin as core's owner role
  * (seedAccess), then the articles and orders in one transaction as the role appUrl logs in as,
- * nm_app, with both plants as its read and write scopes, so the row-level security policies apply
- * as they do in the server (ADR 0008). A record that exists, also one a person changed since, is
+ * nm_app, with the company and both plants as its read and write scopes, so the row-level security
+ * policies apply as they do in the server (ADR 0008). A record that exists, also one a person changed since, is
  * left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
  * installed since the last run.
  * @param {{ appUrl: string, ownerUrl: string }} urls
@@ -242,13 +242,22 @@ export async function seed({ appUrl, ownerUrl }) {
     await client.query(
       `select set_config('northmes.read_scopes', $1::uuid[]::text, true),
               set_config('northmes.write_scopes', $1::uuid[]::text, true)`,
-      [[plantA, plantB]],
+      [[seedCompany.id, plantA, plantB]],
     );
+    // Each article belongs to the company and is assigned to its one plant, which is its edit
+    // scope (ADR 0073).
     for (const { id, plant, code, name } of articles) {
-      await client.query(
-        `insert into core.article (id, scope_id, code, name) values ($1, $2, $3, $4)
+      const { rowCount } = await client.query(
+        `insert into core.article (id, scope_id, company_id, scope_span, edit_scope_id, code, name)
+         select $1, s.id, s.company_id, s.span, $3, $4, $5 from core.scope s where s.id = $2
          on conflict (id) do nothing`,
-        [id, plant, code, name],
+        [id, seedCompany.id, plant, code, name],
+      );
+      if (rowCount === 0) continue;
+      await client.query(
+        `insert into core.article_plant (article_id, plant_id, scope_id, edit_scope_id)
+         values ($1, $2, $3, $2)`,
+        [id, plant, seedCompany.id],
       );
     }
     for (const { id, plant, number, articleId, quantity } of orders) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { createArticle, updateArticle } from '@northmes/core-contracts';
+import { createArticle, setArticlePlants, updateArticle } from '@northmes/core-contracts';
 import { describe, expect, it } from 'vitest';
 
 const ARTICLE_ID = '01920000-0000-7000-8000-0000000a0001';
@@ -70,5 +70,39 @@ describe('article contracts', () => {
       ...fields,
     });
     expect(updateArticle.input.safeParse({ id: ARTICLE_ID, ...fields }).success).toBe(false);
+  });
+
+  it('ADR0073-W2 createArticle takes optional plants as plant slugs or allPlants, and refuses both at once on plants', () => {
+    const base = { id: ARTICLE_ID, code: 'BR-140', name: 'Wall bracket' };
+
+    expect(createArticle.input.parse(base)).toEqual(base);
+    expect(createArticle.input.parse({ ...base, plants: ['hel', 'sto'] })).toEqual({
+      ...base,
+      plants: ['hel', 'sto'],
+    });
+    expect(createArticle.input.parse({ ...base, allPlants: true, plants: [] })).toEqual({
+      ...base,
+      allPlants: true,
+      plants: [],
+    });
+    expect(
+      issuesOf(createArticle.input.safeParse({ ...base, allPlants: true, plants: ['hel'] })),
+    ).toEqual([{ path: ['plants'], code: 'custom' }]);
+    expect(issuesOf(createArticle.input.safeParse({ ...base, plants: ['Not a slug'] }))).toEqual([
+      { path: ['plants', 0], code: 'invalid_format' },
+    ]);
+  });
+
+  it('ADR0073-W2 setArticlePlants is a core command on an existing article that needs core.article:assign and takes allPlants and plants', () => {
+    expect(setArticlePlants).toMatchObject({
+      name: 'core.setArticlePlants',
+      target: 'existing',
+      permission: 'core.article:assign',
+    });
+    const input = { id: ARTICLE_ID, expectedVersion: 3, allPlants: false, plants: ['hel'] };
+    expect(setArticlePlants.input.parse(input)).toEqual(input);
+    expect(
+      issuesOf(setArticlePlants.input.safeParse({ ...input, allPlants: true, plants: ['hel'] })),
+    ).toEqual([{ path: ['plants'], code: 'custom' }]);
   });
 });
