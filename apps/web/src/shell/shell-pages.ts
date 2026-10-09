@@ -2,7 +2,7 @@
 import { companySettingsHref, coreModuleId } from '@northmes/web-sdk';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
-import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
+import type { MenuGroup, MenuItem, MenuLink, SettingsLink, ShellModule } from '../modules.ts';
 import type { ShellCompany } from './companies.graphql.ts';
 import type { SettingsEntry, SettingsGroup } from './shell-settings-nav.tsx';
 
@@ -52,14 +52,34 @@ export function shownTo(permissions: ReadonlySet<string> | undefined) {
     permission === undefined || (permissions?.has(permission) ?? false);
 }
 
-/** The entries of the main sidebar of a module: those outside the plant settings navigation. */
+/** Whether an item of a module's links is a nested group of entries. */
+export function isMenuGroup(item: MenuItem): item is MenuGroup {
+  return 'links' in item;
+}
+
+/** Every entry of a module, those of its nested groups in their place. */
+export function menuLinks(module: ShellModule): readonly MenuLink[] {
+  return (module.links ?? []).flatMap((item): readonly MenuLink[] =>
+    isMenuGroup(item) ? item.links : [item],
+  );
+}
+
+/** The items of the main sidebar of a module: its entries and nested groups outside settings. */
+export function sidebarItems(module: ShellModule): readonly MenuItem[] {
+  return (module.links ?? []).filter((item) => isMenuGroup(item) || item.area !== 'settings');
+}
+
+/**
+ * The entries of the main sidebar of a module: those outside the plant settings navigation, those
+ * of its nested groups in their place.
+ */
 export function sidebarLinks(module: ShellModule): readonly MenuLink[] {
-  return (module.links ?? []).filter(({ area }) => area !== 'settings');
+  return menuLinks(module).filter(({ area }) => area !== 'settings');
 }
 
 /** The entries of the plant settings navigation of a module (ADR 0066). */
 export function plantSettingsLinks(module: ShellModule): readonly MenuLink[] {
-  return (module.links ?? []).filter(({ area }) => area === 'settings');
+  return menuLinks(module).filter(({ area }) => area === 'settings');
 }
 
 /** The href of the first sidebar entry of a module, at a plant. */
@@ -139,8 +159,8 @@ export interface PagePlace {
 /** Every entry of the modules at a place: the sidebar and plant settings, or company settings. */
 function entriesAt(modules: readonly ShellModule[], { plant, companyId }: PagePlace): PageEntry[] {
   if (plant !== undefined) {
-    return modules.flatMap(({ links = [] }) =>
-      links.map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    return modules.flatMap((module) =>
+      menuLinks(module).map(({ label, link }) => ({ label, href: link({ plant }).href })),
     );
   }
   if (companyId !== undefined) {

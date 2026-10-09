@@ -46,6 +46,7 @@ import {
   firstHref,
   isCore,
   mainId,
+  menuLinks,
   moduleOfPath,
   plantHome,
   plantOf,
@@ -331,8 +332,9 @@ function PlantLayout({
   const { data } = useQuery(CoreCompanies, { client: companiesClient });
   // The permissions at the plant and its company, read only when an entry needs one.
   const gated = modules.some(
-    ({ links = [], settingsLinks = [] }) =>
-      links.some(({ permission }) => permission !== undefined) || settingsLinks.length > 0,
+    (module) =>
+      menuLinks(module).some(({ permission }) => permission !== undefined) ||
+      (module.settingsLinks ?? []).length > 0,
   );
   const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
   const permissions = useMemo(

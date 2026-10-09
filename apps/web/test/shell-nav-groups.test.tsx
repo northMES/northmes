@@ -132,9 +132,9 @@ describe('a nested group in a module sidebar group (D2 PL5)', () => {
         ['Moves', '/plant-a/stock/moves'],
       ]),
     );
-    expect(within(group).getByRole('link', { name: 'Warehouses' }).getAttribute('aria-current')).toBe(
-      'page',
-    );
+    expect(
+      within(group).getByRole('link', { name: 'Warehouses' }).getAttribute('aria-current'),
+    ).toBe('page');
 
     await user.click(registers);
 
