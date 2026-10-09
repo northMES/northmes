@@ -13,9 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import { RemoveRole } from '../../components/remove-role/index.ts';
+import { RemoveRole, roleLoss } from '../../components/remove-role/index.ts';
 import { permissionPhrase } from '../../no-access.tsx';
-import { permissionLine } from '../../permission-names.ts';
 import { type Places, useCompanyId } from '../../use-places.ts';
 import type { User, UserAssignment } from '../../use-user.tsx';
 import type { Viewer } from '../../use-viewer.ts';
@@ -44,50 +43,6 @@ function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
   const holds = assignment.scope.kind === 'COMPANY' ? viewer.canAtCompany : viewer.can;
   if (!holds('core.roleAssignment:manage')) return false;
   return assignment.role?.permissions.every(holds) ?? true;
-}
-
-/**
- * The user's other assignments that keep a permission where the assignment applies: a role at the
- * company grants at each of its plants, so only the user's other roles at the company keep its
- * permissions at every plant. A role at a plant is kept by the user's other roles at that plant or
- * at the company.
- */
-function keepersOf(assignment: UserAssignment, user: User): UserAssignment[] {
-  const atCompany = assignment.scope.kind === 'COMPANY';
-  return user.roleAssignments
-    .filter(({ id }) => id !== assignment.id)
-    .filter(
-      ({ scope }) => scope.kind === 'COMPANY' || (!atCompany && scope.id === assignment.scope.id),
-    );
-}
-
-/** The permissions the user loses with the assignment: those no keeper grants. */
-function lostWith(assignment: UserAssignment, user: User): string[] {
-  const kept = new Set(keepersOf(assignment, user).flatMap(({ role }) => role?.permissions ?? []));
-  return (assignment.role?.permissions ?? []).filter((key) => !kept.has(key));
-}
-
-/** "a", "a, and b" or "a, b, and c": permission lines in running text, which may hold an "and". */
-function linesOf(items: readonly string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')}, and ${items.at(-1)}`;
-}
-
-/**
- * What each keeper still lets the user do of the removed role's permissions (AS7): "Viewer at Acme
- * AB still lets Sara Nyberg read production orders and the planning board, and read job orders."
- */
-function keptSentences(assignment: UserAssignment, user: User): string[] {
-  const removed = assignment.role?.permissions ?? [];
-  return keepersOf(assignment, user).flatMap(({ role, scope }) => {
-    const kept = removed.filter((key) => role?.permissions.includes(key));
-    if (role == null || kept.length === 0) return [];
-    const lines = kept.map((key) => {
-      const line = permissionLine(key);
-      return `${line.charAt(0).toLowerCase()}${line.slice(1)}`;
-    });
-    return [`${role.name} at ${scope.name} still lets ${user.name} ${linesOf(lines)}.`];
-  });
 }
 
 /** The id of a role link in the table, which takes focus after the row above it was removed. */
@@ -186,8 +141,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
                       <RemoveRole
                         person={user}
                         assignment={assignment}
-                        lost={lostWith(assignment, user)}
-                        kept={keptSentences(assignment, user)}
+                        {...roleLoss(assignment, user.roleAssignments, user.name)}
                         focusAfter={() =>
                           (next === undefined ? null : document.getElementById(roleLinkId(next))) ??
                           document.getElementById(addRoleId) ??
