@@ -25,6 +25,7 @@
     "@tanstack/react-table": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
+    "cn": "catalog:",
     "graphql": "catalog:",
     "graphql-ws": "catalog:",
     "lucide-react": "catalog:",
@@ -35,6 +36,7 @@
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
     "temporal-polyfill": "catalog:",
+    "tw-animate-css": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
   },

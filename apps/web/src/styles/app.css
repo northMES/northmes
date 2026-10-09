@@ -1,11 +1,14 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 
 /*
- * The web's one stylesheet: Tailwind 4 through @tailwindcss/vite, the D1 tokens and their theme,
+ * The web's one stylesheet: Tailwind 4 through @tailwindcss/vite, the animations and variants that
+ * the shadcn primitives use (tw-animate-css and shadcn/tailwind.css), the D1 tokens and their theme,
  * and IBM Plex Sans and Mono from Fontsource, bundled so the app makes no CDN calls. Tailwind reads
  * class names from src and index.html only.
  */
 @import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 @import "./theme.css";
 @import "./tokens.css";
 @import "@fontsource/ibm-plex-sans/400.css";
