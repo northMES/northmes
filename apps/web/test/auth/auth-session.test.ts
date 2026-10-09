@@ -147,6 +147,18 @@ describe('the auth session', () => {
     expect(await session.signIn('banned.user', 'x')).toEqual({ ok: false, reason: 'blocked' });
   });
 
+  it('E05-S05 a sign-in that never reaches the API failed, so the page asks the user to check the connection', async () => {
+    const { api, open } = setup();
+    const session = open();
+    api.fetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    expect(await session.signIn('alex.lund', 'correct horse')).toEqual({
+      ok: false,
+      reason: 'failed',
+    });
+    expect(session.user()).toBeUndefined();
+  });
+
   it('E05-S05 token() mints a JWT with the session token, reuses it, and mints the next one 30 seconds before it expires', async () => {
     const { open, api, clock } = setup();
     const session = open();
