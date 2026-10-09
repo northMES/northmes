@@ -3,7 +3,6 @@
   "compilerOptions": {
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "allowJs": true,
     "types": ["node", "vite/client"],
     "jsx": "react-jsx"
   },
