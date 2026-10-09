@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { cn } from '../lib/cn.ts';
+import { cn } from 'cn';
 
 /** The D1 Input look: a 36 px control on the card surface with an --input border. */
 export const inputClassName = cn(

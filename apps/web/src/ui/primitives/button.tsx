@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Button as BaseButton } from '@base-ui/react/button';
+import { cn } from 'cn';
 import { LoaderCircle } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { cn } from '../lib/cn.ts';
 import { type ButtonSize, type ButtonVariant, buttonVariants } from './button-variants.ts';
 
 export interface ButtonProps

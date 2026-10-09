@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { cn } from 'cn';
 import { Search, X } from 'lucide-react';
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
-import { cn } from '../lib/cn.ts';
 import { IconButton } from './button.tsx';
 import { inputClassName } from './field.ts';
 

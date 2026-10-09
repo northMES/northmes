@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Field } from '@base-ui/react/field';
+import { cn } from 'cn';
 import { CircleAlert } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
-import { cn } from '../lib/cn.ts';
 import { fieldId, inputClassName } from './field.ts';
 
 export interface TextFieldProps extends Omit<ComponentProps<'input'>, 'className' | 'type'> {

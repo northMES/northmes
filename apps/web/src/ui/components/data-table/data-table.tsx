@@ -7,9 +7,9 @@ import {
   tableFeatures,
   useTable,
 } from '@tanstack/react-table';
+import { cn } from 'cn';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
-import { cn } from '../../lib/cn.ts';
 import { Button } from '../../primitives/button.tsx';
 
 /** One column of a DataTable. */
