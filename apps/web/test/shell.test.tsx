@@ -266,6 +266,66 @@ describe('the shell', () => {
     ]);
   });
 
+  it('E05-S06 Administration, the last group, lists Users and Roles for a viewer who holds the permission to read each at the plant', async () => {
+    /** Answers the viewer's permissions and the companies, and leaves the screen's query open. */
+    const answering = (plantPermissions: readonly string[]) =>
+      vi.fn<typeof globalThis.fetch>(async (_url, init) => {
+        const { operationName } = JSON.parse(String(init?.body)) as { operationName: string };
+        const data =
+          operationName === 'CoreViewer'
+            ? {
+                coreViewer: {
+                  __typename: 'Viewer',
+                  userId: '019a0000-0000-7000-8000-00000000a1e0',
+                  plantPermissions,
+                  companyPermissions: [],
+                },
+              }
+            : operationName === 'CoreCompanies'
+              ? { coreCompanies: [] }
+              : undefined;
+        if (data === undefined) return new Promise<Response>(() => {});
+        return new Response(JSON.stringify({ data }), {
+          headers: { 'content-type': 'application/graphql-response+json' },
+        });
+      });
+
+    renderShellAt('/plant-a/core/articles', shellModules, {
+      fetch: answering(['core.role:read', 'core.user:read']),
+    });
+
+    await waitFor(async () =>
+      expect((await sidebarGroups()).map(groupLabel)).toEqual([
+        'Core',
+        'Planning',
+        'Administration',
+      ]),
+    );
+    const groups = await sidebarGroups();
+    expect(linksIn(groups[2] as HTMLElement)).toEqual([
+      ['Users', '/plant-a/core/users'],
+      ['Roles', '/plant-a/core/roles'],
+    ]);
+
+    cleanup();
+    renderShellAt('/plant-a/core/articles', shellModules, { fetch: answering(['core.role:read']) });
+    await waitFor(async () =>
+      expect(linksIn((await sidebarGroups())[2] as HTMLElement)).toEqual([
+        ['Roles', '/plant-a/core/roles'],
+      ]),
+    );
+
+    cleanup();
+    const fetch = answering(['core.article:read']);
+    renderShellAt('/plant-a/core/articles', shellModules, { fetch });
+    await waitFor(() =>
+      expect(fetch.mock.calls.some(([, init]) => String(init?.body).includes('CoreViewer'))).toBe(
+        true,
+      ),
+    );
+    expect((await sidebarGroups()).map(groupLabel)).toEqual(['Core', 'Planning']);
+  });
+
   it('E04-S02 every nav entry shows an icon hidden from assistive technology, also for a name the web does not know', async () => {
     renderShellAt('/plant-a/planning/board', [quality, planning]);
 
