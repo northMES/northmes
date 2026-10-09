@@ -27,7 +27,15 @@ export interface NorthmesClientAuth {
   readonly token: () => Promise<string | undefined>;
   /** Called when the API answers 401 or with an UNAUTHENTICATED GraphQL error. */
   readonly onUnauthenticated: () => void;
+  /**
+   * Called when the API refuses a request with core.password_change_required: the user signed in
+   * with a temporary password, such as one an admin set by a reset, and must set a new one first.
+   */
+  readonly onPasswordChangeRequired?: () => void;
 }
+
+/** The NorthMES code of a request whose user must set a new password first (issue #416). */
+const passwordChangeRequired = 'core.password_change_required';
 
 export interface CreateNorthmesClientOptions {
   /**
@@ -95,7 +103,8 @@ function webSocketUrl(url: URL): string {
 
 /**
  * The links that sign an HTTP request in: the first puts auth.token() in the authorization header,
- * the second calls auth.onUnauthenticated when the API refuses the request as unauthenticated.
+ * the second calls auth.onUnauthenticated when the API refuses the request as unauthenticated, and
+ * auth.onPasswordChangeRequired when the user must set a new password first.
  */
 function authLink(auth: NorthmesClientAuth): ApolloLink {
   const bearer = new SetContextLink(async ({ headers }) => {
@@ -104,6 +113,7 @@ function authLink(auth: NorthmesClientAuth): ApolloLink {
   });
   const refused = new ErrorLink(({ error }) => {
     if (isUnauthenticated(error)) auth.onUnauthenticated();
+    else if (needsNewPassword(error)) auth.onPasswordChangeRequired?.();
   });
   return ApolloLink.from([refused, bearer]);
 }
@@ -114,5 +124,13 @@ function isUnauthenticated(error: ErrorLike): boolean {
   return (
     CombinedGraphQLErrors.is(error) &&
     error.errors.some(({ extensions }) => extensions?.code === 'UNAUTHENTICATED')
+  );
+}
+
+/** A GraphQL error with the code core.password_change_required. */
+function needsNewPassword(error: ErrorLike): boolean {
+  return (
+    CombinedGraphQLErrors.is(error) &&
+    error.errors.some(({ extensions }) => extensions?.errorCode === passwordChangeRequired)
   );
 }

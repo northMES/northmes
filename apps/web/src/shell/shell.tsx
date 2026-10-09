@@ -92,7 +92,7 @@ const nobody: ShellUser = { name: 'Not signed in', username: '' };
  * plant in the URL around the screen; company settings render their own layout without a plant,
  * with the client that names no plant. A viewer without a session who opens a plant or settings
  * page goes to sign-in with the page as the return path, and so does one whose request the API
- * refuses with 401.
+ * refuses with 401, or with core.password_change_required, whose session ends first.
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
@@ -117,6 +117,14 @@ export function createShellRouter(
       session.forget();
       // The URL keeps only the return path (SO1); the history entry says the session ended.
       void toSignIn({ redirect: router.state.location.href }, { sessionEnded: true });
+    },
+    onPasswordChangeRequired: () => {
+      // The user signed in with a temporary password and must set a new one, as after an admin's
+      // reset: only the temporary password lets them, so the session ends and they sign in with it
+      // again, which leads to the new password step and then back to this page (issue #416).
+      if (session.user() === undefined) return;
+      const redirect = router.state.location.href;
+      void session.signOut().then(() => toSignIn({ redirect }, { sessionEnded: true }));
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
