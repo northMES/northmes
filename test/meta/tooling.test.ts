@@ -84,7 +84,11 @@ function readDevDependencies(): Record<string, string> {
 }
 
 interface RdjsonReport {
-  diagnostics?: { code?: { value?: string }; location?: { path?: string }; severity?: string }[];
+  diagnostics?: {
+    code?: { value?: string };
+    location?: { path?: string; range?: { start?: { line?: number } } };
+    severity?: string;
+  }[];
 }
 
 const biomeBin = createRequire(import.meta.url).resolve('@biomejs/biome/bin/biome');
@@ -92,6 +96,17 @@ const biomeBin = createRequire(import.meta.url).resolve('@biomejs/biome/bin/biom
 // Biome's stdin mode prints no diagnostics, so the sources go into a temporary folder under their
 // repository paths, next to a copy of the root biome.json, and Biome lints that folder.
 function processEnvErrors(sources: Record<string, string>): string[] {
+  return lintErrors(sources, 'lint/style/noProcessEnv').map(({ path }) => path);
+}
+
+/** One error of a Biome rule: the file and the line it is on. */
+interface LintError {
+  readonly path: string;
+  readonly line: number;
+}
+
+// The errors of one Biome rule in the sources, sorted by file and line.
+function lintErrors(sources: Record<string, string>, rule: string): LintError[] {
   const dir = mkdtempSync(join(tmpdir(), 'northmes-biome-'));
   try {
     writeFileSync(join(dir, 'biome.json'), readText('biome.json'));
@@ -107,9 +122,9 @@ function processEnvErrors(sources: Record<string, string>): string[] {
     const report = JSON.parse(result.stdout) as RdjsonReport;
 
     return (report.diagnostics ?? [])
-      .filter((d) => d.code?.value === 'lint/style/noProcessEnv' && d.severity === 'ERROR')
-      .map((d) => d.location?.path ?? '')
-      .sort();
+      .filter((d) => d.code?.value === rule && d.severity === 'ERROR')
+      .map((d) => ({ path: d.location?.path ?? '', line: d.location?.range?.start?.line ?? 0 }))
+      .sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -366,6 +381,47 @@ describe('tooling', () => {
     const sources = Object.fromEntries([...failing, ...passing].map((path) => [path, read]));
 
     expect(processEnvErrors(sources)).toEqual([...failing].sort());
+  });
+
+  it("E02-S01 style/noRestrictedImports fails when a module's core/ imports @nestjs/graphql, and passes in its api/ and outside modules", () => {
+    const graphql = "import { Field } from '@nestjs/graphql';\nexport { Field };\n";
+    const failing = [
+      'apps/backend/src/modules/quality/core/inspection.service.ts',
+      'apps/backend/src/modules/quality/core/commands/record-inspection.handler.ts',
+    ];
+    const passing = [
+      'apps/backend/src/modules/quality/api/inspection/types/inspection.type.ts',
+      'apps/backend/src/graphql/root-fields.ts',
+    ];
+    const sources = Object.fromEntries([...failing, ...passing].map((path) => [path, graphql]));
+
+    expect(lintErrors(sources, 'lint/style/noRestrictedImports')).toEqual(
+      failing.sort().map((path) => ({ path, line: 1 })),
+    );
+  });
+
+  it("E02-S01 style/noRestrictedImports fails when a module's api/ imports the database, and passes in its core/ and infrastructure/", () => {
+    const database = [
+      "import { DATABASE } from '@northmes/sdk/data';",
+      "import type { Transaction } from 'kysely';",
+      "import { Pool } from 'pg';",
+      "import type { QualityDatabase } from '../../../infrastructure/database.ts';",
+      "import { DatabaseModule } from '../../../../../db/database.module.ts';",
+      'export type { QualityDatabase, Transaction };',
+      'export { DATABASE, DatabaseModule, Pool };',
+      '',
+    ].join('\n');
+    const failing =
+      'apps/backend/src/modules/quality/api/inspection/queries/inspection.query.resolver.ts';
+    const passing = [
+      'apps/backend/src/modules/quality/core/commands/inspection.service.ts',
+      'apps/backend/src/modules/quality/infrastructure/clients/lims.client.ts',
+    ];
+    const sources = Object.fromEntries([failing, ...passing].map((path) => [path, database]));
+
+    expect(lintErrors(sources, 'lint/style/noRestrictedImports')).toEqual(
+      [1, 2, 3, 4, 5].map((line) => ({ path: failing, line })),
+    );
   });
 
   it('E02-S01 pnpm-lock.yaml holds one @nestjs/core and one @nestjs/graphql resolution', () => {
