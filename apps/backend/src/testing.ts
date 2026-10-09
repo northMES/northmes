@@ -208,6 +208,82 @@ export function givenCompany(
   });
 }
 
+/** An article as givenArticle writes it. */
+export interface GivenArticleOptions {
+  /** The article's id. It defaults to a fresh uuidv7. */
+  readonly id?: string;
+  readonly code: string;
+  readonly name: string;
+  /**
+   * The scope ids of the plants the article is assigned to. A plant that core.plant does not hold
+   * becomes the one plant of a fresh company, as signInAt does.
+   */
+  readonly plants?: readonly string[];
+  /** Assigns the article to All plants of its company. */
+  readonly allPlants?: boolean;
+  /** The article's company, which an article without plants needs. */
+  readonly company?: string;
+  /** When the article last changed. It defaults to the time of the insert. */
+  readonly updatedAt?: Date;
+  /** When the article was archived. It defaults to null, an active article. */
+  readonly archivedAt?: Date;
+}
+
+/**
+ * Writes an article as core's owner role (ADR 0073): at its company's node, assigned to `plants`
+ * or to All plants, with its edit scope at the one plant it is assigned to and at the company
+ * otherwise. Returns its id.
+ */
+export async function givenArticle(
+  ownerUrl: string,
+  {
+    id = randomUUIDv7(),
+    code,
+    name,
+    plants = [],
+    allPlants = false,
+    company,
+    updatedAt,
+    archivedAt,
+  }: GivenArticleOptions,
+): Promise<string> {
+  const companies: string[] = [];
+  for (const plant of plants) {
+    const [row] = await queryAsCore<{ company_id: string }>(
+      ownerUrl,
+      'select company_id from core.plant where id = $1',
+      [plant],
+    );
+    companies.push(
+      row?.company_id ?? (await givenCompany(ownerUrl, { plantIds: [plant] })).company,
+    );
+  }
+  const companyId = company ?? companies[0];
+  if (!companyId) throw new Error('givenArticle: an article without plants needs its company');
+  if (companies.some((each) => each !== companyId)) {
+    throw new Error('givenArticle: the plants of an article belong to its company');
+  }
+  const editScope = plants.length === 1 && !allPlants ? (plants[0] ?? companyId) : companyId;
+  await asCoreOwner(ownerUrl, async (client) => {
+    await client.query(
+      `insert into core.article
+         (id, scope_id, company_id, scope_span, edit_scope_id, all_plants, code, name, updated_at,
+          archived_at)
+       select $1, s.id, s.company_id, s.span, $3, $4, $5, $6, coalesce($7, now()), $8
+         from core.scope s where s.id = $2`,
+      [id, companyId, editScope, allPlants, code, name, updatedAt ?? null, archivedAt ?? null],
+    );
+    for (const plant of plants) {
+      await client.query(
+        `insert into core.article_plant (article_id, plant_id, scope_id, edit_scope_id)
+         values ($1, $2, $3, $4)`,
+        [id, plant, companyId, editScope],
+      );
+    }
+  });
+  return id;
+}
+
 /** A role a test user holds: the permission keys of a role assigned at one scope node. */
 export interface Grant {
   readonly scopeId: string;
