@@ -365,6 +365,24 @@ describe('the shell', () => {
     expect(document.title).toBe('Order 1001 · plant-a · NorthMES');
   });
 
+  it('E04-S02 only the current page carries aria-current in the breadcrumb, also when a crumb links to a page above it', async () => {
+    // The plant and module crumbs link to the first entry, Production orders, which is above the
+    // order's page, as Articles is above an article.
+    const ordersFirst: ShellModule = { ...planning, links: [...(planning.links ?? [])].reverse() };
+    renderShellAt('/plant-a/planning/orders/1001', [ordersFirst]);
+    await screen.findByRole('heading', { level: 1, name: 'Order 1001' });
+
+    const breadcrumb = within(screen.getByRole('banner')).getByRole('navigation', {
+      name: 'Breadcrumb',
+    });
+    expect(
+      [...breadcrumb.querySelectorAll('[aria-current]')].map((element) => [
+        element.textContent,
+        element.getAttribute('aria-current'),
+      ]),
+    ).toEqual([['Order 1001', 'page']]);
+  });
+
   it('E04-S02 at 320 px the breadcrumb keeps the plant and the current page and leaves out the crumbs between, so it fits beside the page actions', async () => {
     setViewport(320, 640);
     renderShellAt('/plant-a/planning/orders/1001', [planning]);
