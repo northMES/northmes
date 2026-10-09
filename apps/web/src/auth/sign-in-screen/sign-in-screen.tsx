@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { CircleCheck } from 'lucide-react';
+import { CircleCheck, Info } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { ErrorSummary, type SummaryError } from '../../ui/components/error-summary/index.ts';
 import { SkipLink } from '../../ui/components/skip-link/index.ts';
 import { TextField } from '../../ui/components/text-field/index.ts';
 import { announce } from '../../ui/lib/announce.ts';
-import { Alert, AlertTitle } from '../../ui/primitives/alert.tsx';
+import { Alert, AlertDescription, AlertTitle } from '../../ui/primitives/alert.tsx';
 import { Button } from '../../ui/primitives/button.tsx';
 import { Card, CardContent, CardHeader } from '../../ui/primitives/card.tsx';
 import type { AuthSession, SignInResult } from '../auth-session.ts';
@@ -16,12 +16,20 @@ export interface SignInScreenProps {
   readonly session: Pick<AuthSession, 'signIn'>;
   /** Shows "You are signed out" and moves focus to the h1, after Sign out (SI19). */
   readonly signedOut?: boolean;
+  /**
+   * Shows "Your session ended" and moves focus to the h1, when the API refused the tab's session
+   * (shell-306, SO1).
+   */
+  readonly sessionEnded?: boolean;
   /** Called once the user is signed in. */
   readonly onSignedIn: () => void;
 }
 
 /** The id of main, which the skip link moves focus to. */
 const mainId = 'main';
+
+/** The id of the h2 that names the session ended box. */
+const sessionEndedId = 'session-ended';
 
 /** A sign-in that the API refused. */
 type Refusal = Exclude<SignInResult, { ok: true }>;
@@ -105,7 +113,12 @@ function refusalSummary(refusal: Refusal): { heading: string; errors: SummaryErr
  * password. After Sign out, focus goes to the h1 and the polite region says "You are signed out."
  * once.
  */
-export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInScreenProps) {
+export function SignInScreen({
+  session,
+  signedOut = false,
+  sessionEnded = false,
+  onSignedIn,
+}: SignInScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [problem, setProblem] = useState<Problem | undefined>(undefined);
@@ -120,11 +133,11 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
   }, []);
 
   useEffect(() => {
-    if (!signedOut || announced.current) return;
+    if ((!signedOut && !sessionEnded) || announced.current) return;
     announced.current = true;
     heading.current?.focus();
-    announce('You are signed out.');
-  }, [signedOut]);
+    announce(signedOut ? 'You are signed out.' : 'Your session ended. Sign in again to continue.');
+  }, [signedOut, sessionEnded]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -195,6 +208,22 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
               <Alert role="none" className="border-success bg-success-subtle text-foreground">
                 <CircleCheck aria-hidden className="text-success" />
                 <AlertTitle>You are signed out</AlertTitle>
+              </Alert>
+            )}
+            {sessionEnded && !signedOut && problem === undefined && (
+              // A group named by its h2; the polite region says it once, so it has no live role.
+              <Alert
+                role="group"
+                aria-labelledby={sessionEndedId}
+                className="gap-1 border-info bg-info-subtle px-3.5 py-3 text-foreground"
+              >
+                <Info aria-hidden className="text-info" />
+                <h2 id={sessionEndedId} className="font-semibold text-info">
+                  Your session ended
+                </h2>
+                <AlertDescription className="text-foreground">
+                  Sign in again to go back to the page you were on.
+                </AlertDescription>
               </Alert>
             )}
             {summary !== undefined && (

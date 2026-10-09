@@ -40,10 +40,8 @@ export function useArticle(): ArticleOfPage {
     state = {
       status: 'error',
       title: 'Could not load the article',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        reload().catch(() => {});
-      },
+      error,
+      onRetry: () => reload(),
     };
   } else if (data === undefined) {
     state = { status: 'loading' };

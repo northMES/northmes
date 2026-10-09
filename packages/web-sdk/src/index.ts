@@ -4,6 +4,7 @@ export {
   createNorthmesClient,
   type NorthmesClientAuth,
 } from './apollo.ts';
+export { type ClassifiedError, classifyError, type ErrorPage } from './classify-error.ts';
 export {
   companySettingsHref,
   createShellRoutes,
@@ -15,4 +16,4 @@ export {
   settingsPath,
 } from './routes.ts';
 export { ShellProvider, type ShellState, useShell } from './shell-context.tsx';
-export { defineWebModule, type WebModule } from './web-module.ts';
+export { defineWebModule, type HelpEntry, type WebModule } from './web-module.ts';

@@ -185,10 +185,8 @@ export function RolesScreen() {
     state = {
       status: 'error',
       title: 'Could not load roles',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (roles === undefined) {
     state = { status: 'loading' };

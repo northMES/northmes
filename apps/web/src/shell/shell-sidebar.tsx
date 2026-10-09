@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useRouterState } from '@tanstack/react-router';
 import { X } from 'lucide-react';
-import { Fragment } from 'react';
+import { Fragment, type ReactNode, useEffect } from 'react';
 import type { MenuLink, ShellModule } from '../modules.ts';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import { Button } from '../ui/primitives/button.tsx';
@@ -41,6 +41,8 @@ export interface ShellSidebarProps {
    * such entries stay out.
    */
   readonly permissions?: ReadonlySet<string>;
+  /** The Help menu, which the footer row holds beside the user button where the sidebar is the sheet. */
+  readonly help?: ReactNode;
 }
 
 /**
@@ -50,7 +52,9 @@ export interface ShellSidebarProps {
  * the plant settings navigation stays out (ADR 0066), as administration does: it lives in the
  * settings area behind the Settings button. collapsible="icon" makes it the 64 px rail, where each
  * entry shows its icon and its label in a tooltip; where the shell is narrow it is the Navigation
- * sheet, whose head holds Close navigation and whose entries close it.
+ * sheet, whose head holds Close navigation and whose entries close it. Any path change closes the
+ * sheet too, such as All pages chosen from Help in its footer, so focus can move to the new h1 (D2
+ * KE13).
  */
 export function ShellSidebar({
   id,
@@ -60,10 +64,13 @@ export function ShellSidebar({
   user,
   onSignOut,
   permissions,
+  help,
 }: ShellSidebarProps) {
   const shown = shownTo(permissions);
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // Each new path closes the sheet, whatever link inside it led there.
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
   const entry = ({ label, icon, link }: MenuLink) => {
     const href = link({ plant }).href;
     const current = currentOf(href, pathname);
@@ -125,8 +132,12 @@ export function ShellSidebar({
             );
           })}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <ShellUserMenu user={user} onSignOut={onSignOut} />
+        <SidebarFooter className="flex-row items-center border-t border-sidebar-border">
+          {/* One footer row (D2 Sheet): the user button, then Help in the 320 px sheet. */}
+          <div className="min-w-0 flex-1">
+            <ShellUserMenu user={user} onSignOut={onSignOut} />
+          </div>
+          {help}
         </SidebarFooter>
       </nav>
     </Sidebar>

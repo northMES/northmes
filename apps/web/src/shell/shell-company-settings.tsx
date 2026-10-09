@@ -18,6 +18,7 @@ import { isForbidden } from '../ui/lib/graphql-errors.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { buttonVariants } from '../ui/primitives/button.tsx';
 import { CoreCompanies } from './companies.graphql.ts';
+import { ShellHelpMenu } from './shell-help-menu.tsx';
 import {
   companySettingsEntries,
   mainId,
@@ -52,7 +53,7 @@ interface CompanySettingsState {
    */
   readonly refused: 'forbidden' | 'failed' | undefined;
   /** Reads the user's companies and permissions again, after a failed read. */
-  readonly retry: () => void;
+  readonly retry: () => Promise<unknown>;
 }
 
 const CompanySettingsContext = createContext<CompanySettingsState | null>(null);
@@ -103,10 +104,10 @@ export function CompanySettingsLayout({
       : isForbidden(error)
         ? 'forbidden'
         : 'failed';
-  const retry = useCallback(() => {
-    refetchCompanies().catch(() => {});
-    refetchViewer().catch(() => {});
-  }, [refetchCompanies, refetchViewer]);
+  const retry = useCallback(
+    () => Promise.allSettled([refetchCompanies(), refetchViewer()]),
+    [refetchCompanies, refetchViewer],
+  );
   const companies = data?.coreCompanies ?? [];
   const company = companies.find(({ id }) => id === companyId)?.name;
   const permissions = useMemo(
@@ -152,6 +153,7 @@ export function CompanySettingsLayout({
             breadcrumbRef={setBreadcrumb}
             actionsRef={setActions}
             settings={{ href: landing, current: true }}
+            help={<ShellHelpMenu modules={modules} />}
             account={<ShellAccountMenu user={user} onSignOut={onSignOut} />}
           />
           <PageFrameTopBar value={topBar}>
@@ -210,7 +212,6 @@ function landingState(state: CompanySettingsState | null): PageState {
     return {
       status: 'error',
       title: 'Could not load company settings',
-      description: 'Check the connection, then try again.',
       onRetry: state.retry,
     };
   }

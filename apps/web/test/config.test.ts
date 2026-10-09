@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it, vi } from 'vitest';
-import { loadWebConfig } from '../src/config.ts';
+import { loadWebConfig, ServerUnavailable } from '../src/config.ts';
 
 const pageOrigin = 'https://web.northmes.test';
 
@@ -57,5 +57,25 @@ describe('loadWebConfig', () => {
     await expect(loadWebConfig(fetch, pageOrigin)).rejects.toThrow(
       'config.json: apiUrl must be an absolute http or https URL, got /api',
     );
+  });
+
+  it('E04-S02 a config.json that answers 502, 503 or 504 is no answer: NorthMES may be restarting (shell-306 BO6)', async () => {
+    for (const status of [502, 503, 504]) {
+      await expect(
+        loadWebConfig(
+          answering(() => new Response('', { status })),
+          pageOrigin,
+        ),
+      ).rejects.toBeInstanceOf(ServerUnavailable);
+    }
+  });
+
+  it('E04-S02 a config.json that answers with a server error stops the web (shell-306 BO3)', async () => {
+    await expect(
+      loadWebConfig(
+        answering(() => new Response('', { status: 500 })),
+        pageOrigin,
+      ),
+    ).rejects.toThrow('config.json: the server answered 500');
   });
 });

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { companySettingsHref } from '@northmes/web-sdk';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
@@ -100,6 +101,96 @@ export function companySettingsEntries(
       .filter(shown)
       .map(({ label, icon, link }) => ({ label, icon, href: link({ companyId }).href })),
   }));
+}
+
+/** An entry of a navigation as a page: its label and its href. */
+export interface PageEntry {
+  readonly label: string;
+  readonly href: string;
+}
+
+/** Where a page lives: a plant, by its slug, or company settings, by the company id. */
+export interface PagePlace {
+  readonly plant?: string;
+  readonly companyId?: string;
+}
+
+/** Every entry of the modules at a place: the sidebar and plant settings, or company settings. */
+function entriesAt(modules: readonly ShellModule[], { plant, companyId }: PagePlace): PageEntry[] {
+  if (plant !== undefined) {
+    return modules.flatMap(({ links = [] }) =>
+      links.map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    );
+  }
+  if (companyId !== undefined) {
+    return modules.flatMap(({ settingsLinks = [] }) =>
+      settingsLinks.map(({ label, link }) => ({ label, href: link({ companyId }).href })),
+    );
+  }
+  return [];
+}
+
+/**
+ * The entry of the page on screen: the one whose page it is, or the nearest one above it, as
+ * Articles for an article. Its label stands in for the route title where the route itself cannot
+ * give one, such as on its error panel.
+ */
+export function entryAt(
+  modules: readonly ShellModule[],
+  place: PagePlace,
+  pathname: string,
+): PageEntry | undefined {
+  return entriesAt(modules, place)
+    .filter(({ href }) => currentOf(href, pathname) !== undefined)
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/** The way out of a page that failed: the link's text, such as Go to Tools, and its href. */
+export interface WayOut {
+  readonly label: string;
+  readonly href: string;
+}
+
+/** The way out to an entry, unless the entry is the page itself. */
+function goTo(entry: MenuLink | undefined, plant: string, pathname: string): WayOut | undefined {
+  if (entry === undefined) return undefined;
+  const href = entry.link({ plant }).href;
+  return href === pathname ? undefined : { label: `Go to ${entry.label}`, href };
+}
+
+/**
+ * The way out of a page that failed (D2 ST6, shell-306 SE): Go to the first sidebar entry of its
+ * module, or See all pages when the page is that entry or the module has none (shell-306 LS3).
+ * Outside a module, Go to the plant's first page; in company settings, Go to Company settings.
+ * Never the page itself.
+ */
+export function wayOutOf(
+  modules: readonly ShellModule[],
+  { plant, companyId }: PagePlace,
+  pathname: string,
+): WayOut | undefined {
+  if (companyId !== undefined) {
+    const href = companySettingsHref(companyId);
+    return href === pathname ? undefined : { label: 'Go to Company settings', href };
+  }
+  if (plant === undefined) return undefined;
+  const moduleId = pathname.split('/')[2];
+  const module = modules.find((each) => each.module.id === moduleId);
+  if (module === undefined) return goTo(modules.flatMap(sidebarLinks)[0], plant, pathname);
+  return (
+    goTo(sidebarLinks(module)[0], plant, pathname) ?? {
+      label: 'See all pages',
+      href: allPagesHref(plant),
+    }
+  );
+}
+
+/** The path segment of the All pages index under a plant, the shell's own route. */
+export const allPagesPath = 'all-pages';
+
+/** The href of a plant's All pages index (ADR 0021, WCAG 2.4.5). */
+export function allPagesHref(plant: string): string {
+  return `/${plant}/${allPagesPath}`;
 }
 
 /**

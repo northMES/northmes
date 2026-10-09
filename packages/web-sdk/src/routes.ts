@@ -81,6 +81,8 @@ export interface ShellRoutesOptions extends MountComponents {
   readonly modules: readonly WebModule[];
   /** The shell's routes outside any plant, such as the sign-in page, built under the root route. */
   readonly outsidePlantRoutes?: (rootRoute: RootRoute) => readonly AnyRoute[];
+  /** The shell's own routes in every plant, such as All pages, built under the $plant route. */
+  readonly plantShellRoutes?: (plantRoute: PlantRoute) => readonly AnyRoute[];
 }
 
 /** A module's settings routes, whose top route must have the module id as its path. */
@@ -103,12 +105,13 @@ function settingsRoutesOf(module: WebModule, settingsRoute: SettingsRoute): AnyR
  * settingsRoutes(settingsRoute) at /settings/$companyId/<id> (ADR 0066), and the shell's own routes
  * outside any plant beside them. A module whose settings routes sit at another path than its id
  * throws. plantBeforeLoad guards every path under /$plant, and settingsBeforeLoad every path under
- * /settings/$companyId. The root, $plant and settings components render their child route through
+ * /settings/$companyId. The shell's own plant routes go beside the modules'. The root, $plant and settings components render their child route through
  * Outlet; the shell's $plant component renders ShellProvider for the plant in the URL.
  */
 export function createShellRoutes({
   modules,
   outsidePlantRoutes,
+  plantShellRoutes,
   settingsIndexComponent,
   ...components
 }: ShellRoutesOptions) {
@@ -119,7 +122,10 @@ export function createShellRoutes({
     component: settingsIndexComponent,
   });
   return rootRoute.addChildren([
-    plantRoute.addChildren(modules.map((module) => module.routes(plantRoute))),
+    plantRoute.addChildren([
+      ...modules.map((module) => module.routes(plantRoute)),
+      ...(plantShellRoutes?.(plantRoute) ?? []),
+    ]),
     settingsRoute.addChildren([
       landing,
       ...modules.flatMap((module) => settingsRoutesOf(module, settingsRoute)),

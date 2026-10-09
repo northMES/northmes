@@ -107,7 +107,7 @@ describe('article page', () => {
     expect(
       within(alert).getByRole('heading', { name: 'Could not load the article' }),
     ).toBeDefined();
-    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined(),

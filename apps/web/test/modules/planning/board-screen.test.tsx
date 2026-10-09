@@ -116,7 +116,7 @@ describe('BoardScreen', () => {
     expect(alert.textContent).toContain('Check the connection, then try again.');
     expect(screen.queryByTestId('board-screen')).toBeNull();
 
-    await userEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await screen.findByTestId('order-7101')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();

@@ -196,10 +196,8 @@ export function NewRoleScreen() {
     state = {
       status: 'error',
       title: 'Could not load the roles to start from',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (roles === undefined || !viewer.loaded) {
     state = { status: 'loading' };

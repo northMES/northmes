@@ -351,7 +351,7 @@ describe('the shell', () => {
     expect(focusedName()).toBe('Search orders');
   });
 
-  it('E04-S02 Tab moves through the skip link, the sidebar, the user button, the sidebar trigger, the breadcrumb, the page actions and then the page', async () => {
+  it('E04-S02 Tab moves through the skip link, the sidebar, the user button, the sidebar trigger, the breadcrumb, the page actions, Help and then the page', async () => {
     const user = userEvent.setup();
     renderShellAt('/plant-a/planning/orders', [quality, planning]);
     await screen.findByRole('heading', { level: 1, name: 'Production orders' });
@@ -359,7 +359,7 @@ describe('the shell', () => {
     (document.activeElement as HTMLElement | null)?.blur();
 
     const names: string[] = [];
-    for (let stop = 0; stop < 11; stop++) {
+    for (let stop = 0; stop < 12; stop++) {
       await user.tab();
       names.push(focusedName());
     }
@@ -375,6 +375,7 @@ describe('the shell', () => {
       'plant-a',
       'Planning',
       'New order',
+      'Help',
       'Search orders',
     ]);
   });

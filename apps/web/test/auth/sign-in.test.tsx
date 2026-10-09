@@ -273,4 +273,33 @@ describe('sign-in', () => {
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
   });
+
+  it('E05-S05 after a 401 the sign-in page says the session ended, focuses its h1 and announces it once, with only the return path in the URL (shell-306 SO1)', async () => {
+    const session = fakeSession();
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(new Response('{}', { status: 401 }))
+      .mockImplementation(async () => pong());
+    const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    const box = screen.getByRole('group', { name: 'Your session ended' });
+    expect(box.textContent).toContain('Sign in again to go back to the page you were on.');
+    expect(box.getAttribute('aria-live')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    await waitFor(() =>
+      expect(document.getElementById('announcer-polite')?.textContent).toBe(
+        'Your session ended. Sign in again to continue.',
+      ),
+    );
+    expect(router.state.location.search).toEqual({ redirect: '/plant-a/quality?tab=open' });
+  });
+
+  it('E05-S05 a viewer who opens a page without a session gets no session ended box, and nothing takes focus', async () => {
+    renderAt('/plant-a/quality', fakeSession({ signedIn: false }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    expect(screen.queryByRole('group', { name: 'Your session ended' })).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+  });
 });

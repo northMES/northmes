@@ -22,10 +22,8 @@ export function BoardScreen() {
     state = {
       status: 'error',
       title: 'Could not load the production orders',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (data === undefined) {
     state = { status: 'loading' };
