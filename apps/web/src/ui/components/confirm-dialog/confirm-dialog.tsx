@@ -21,12 +21,19 @@ import {
 } from '../../primitives/alert-dialog.tsx';
 
 export interface ConfirmDialogProps {
-  /** The button that opens the dialog; Cancel and Escape return focus to it. */
-  readonly trigger: ReactElement;
+  /**
+   * The button that opens the dialog; Cancel and Escape return focus to it. Without one, open and
+   * onOpenChange control the dialog, as from a row menu's item.
+   */
+  readonly trigger?: ReactElement;
+  /** Opens the dialog without a trigger; onOpenChange hears every change. */
+  readonly open?: boolean;
   /** The question that names the dialog, such as "Archive article AX-500?". */
   readonly title: string;
   /** What the action does, which describes the dialog. */
   readonly description: string;
+  /** A second line of the description, such as what stays after the action. */
+  readonly details?: string;
   /** The confirm button's text, such as "Archive article". */
   readonly confirmLabel: string;
   /**
@@ -54,8 +61,10 @@ export interface ConfirmDialogProps {
  */
 export function ConfirmDialog({
   trigger,
+  open: controlledOpen,
   title,
   description,
+  details,
   confirmLabel,
   onConfirm,
   focusAfterConfirm,
@@ -64,7 +73,12 @@ export function ConfirmDialog({
   onOpenChange,
   children,
 }: ConfirmDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onOpenChange?.(next);
+  };
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // Whether the action ran or is running; only the close and the unmount read it, so it is no
@@ -109,10 +123,9 @@ export function ConfirmDialog({
           setError(undefined);
         }
         setOpen(next);
-        onOpenChange?.(next);
       }}
     >
-      <AlertDialogTrigger render={trigger} />
+      {trigger !== undefined && <AlertDialogTrigger render={trigger} />}
       <AlertDialogContent
         initialFocus={initialFocus}
         finalFocus={() => {
@@ -124,7 +137,14 @@ export function ConfirmDialog({
       >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          {details === undefined ? (
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          ) : (
+            <AlertDialogDescription render={<div />} className="flex flex-col gap-2">
+              <p className="text-foreground">{description}</p>
+              <p>{details}</p>
+            </AlertDialogDescription>
+          )}
         </AlertDialogHeader>
         {children}
         {error !== undefined && (
