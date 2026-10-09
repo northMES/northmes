@@ -217,13 +217,12 @@ function validatorsByCommand({
 }
 
 /**
- * The command bus of the host. It runs each command in one ScopedDatabase transaction: for a
- * command on an existing entity it loads the target, it checks the contract's permission at the
- * target's scope or at the request's plant, for a command on an existing entity it checks the
- * target's version, for a command with
- * validators it builds the payload, parses it with each validator's copy of the owner's contract
- * and runs the validators, each on its own frozen copy and within its time limit, then it runs the
- * handler (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit rejects the command,
+ * The command bus of the host. It runs each command in one ScopedDatabase transaction: it loads the
+ * target of a command on an existing entity, checks the contract's permission at the target's
+ * scope or at the request's plant, and checks the target's version; for a command with validators
+ * it builds the payload, parses it with each validator's copy of the owner's contract and runs the
+ * validators, each on its own frozen copy and within its time limit; then it runs the handler
+ * (ADR 0012, ADR 0037). The first refusal, veto, throw or missed limit rejects the command,
  * and the transaction rolls back.
  */
 export class CommandBusImpl implements CommandBus {
