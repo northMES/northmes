@@ -10,6 +10,8 @@ export interface ArticleTable {
   name: string;
   /** lower(code), which the unique index of the code per scope holds. */
   code_key: GeneratedAlways<string>;
+  /** When the article was archived, or null while it is active (ADR 0006). */
+  archived_at: Date | null;
 }
 
 /**

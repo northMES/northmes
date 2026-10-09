@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
+import { Field, GraphQLISODateTime, ID, Int, ObjectType } from '@nestjs/graphql';
 
 /**
  * Something the company makes or consumes, identified by its article number (GLOSSARY.md). Core
@@ -13,4 +13,9 @@ export class Article {
   @Field(() => String) name!: string;
   /** Grows by one with every change to the article; an update sends it as expectedVersion. */
   @Field(() => Int) version!: number;
+  /**
+   * When the article was archived, or null while it is active. An archived article is hidden from
+   * coreArticles unless includeArchived is true, and cannot be changed until it is restored.
+   */
+  @Field(() => GraphQLISODateTime, { nullable: true }) archivedAt!: Date | null;
 }

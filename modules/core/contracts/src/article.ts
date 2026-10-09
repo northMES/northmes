@@ -48,3 +48,24 @@ export const updateArticle = defineCommandContract({
   target: 'existing',
   fields: articleFields,
 });
+
+/**
+ * Archives an article, which the input names by id with the version the change was made on.
+ * Lists hide an archived article, it keeps its code, and it cannot be changed until it is
+ * restored (ADR 0006). An archived article is refused with core.archived.
+ */
+export const archiveArticle = defineCommandContract({
+  name: 'core.archiveArticle',
+  target: 'existing',
+  fields: z.object({}),
+});
+
+/**
+ * Restores an archived article, so lists show it and it can be changed again. An article that is
+ * not archived is refused with core.not_archived.
+ */
+export const restoreArticle = defineCommandContract({
+  name: 'core.restoreArticle',
+  target: 'existing',
+  fields: z.object({}),
+});
