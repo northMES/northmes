@@ -42,7 +42,7 @@ function checkbox(name: string): HTMLElement {
 }
 
 describe('the role editor', () => {
-  it('E05-S06 New role from Planner copies its permissions once and shows the difference; a permission the editor does not hold can be removed but not added; Create role opens the new role and announces it', async () => {
+  it('E05-S06 New role from Planner copies its permissions once and shows the difference, with no lock, since a new role is assigned nowhere; Create role opens the new role and announces it', async () => {
     const user = userEvent.setup();
     const created = role('Night planner', ['planning.productionOrder:read']);
     const router = renderCoreAt(
@@ -83,19 +83,14 @@ describe('the role editor', () => {
     const count = await screen.findByText('3 of 6 selected.');
     expect(count.getAttribute('role')).toBeNull();
 
-    // Read users, which the editor does not hold, is locked: a disabled checkbox without a Tab
-    // stop, described by why.
-    const users = checkbox('Read users and their roles');
-    expect(users.hasAttribute('disabled')).toBe(true);
-    expect(users.getAttribute('aria-describedby')).toBeTruthy();
-    expect((await screen.findAllByText('You do not hold it at Acme AB.')).length).toBe(2);
-    // Run autoplan, which he does not hold either, comes ticked from Planner: removing it needs
-    // nothing, so it stays a checkbox, and once removed it is locked, since adding it needs it.
+    // A new role is assigned nowhere, so the server asks for no permission to create it: nothing
+    // is locked, also Read users and Run autoplan, which the editor does not hold.
+    expect(checkbox('Read users and their roles').hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByText('You do not hold it at Acme AB.')).toBeNull();
     const autoplan = checkbox('Run autoplan');
-    expect(autoplan.hasAttribute('disabled')).toBe(false);
     expect(autoplan.getAttribute('aria-checked')).toBe('true');
     await user.click(autoplan);
-    expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(true);
+    expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(false);
     expect(screen.getByText('2 of 6 selected.')).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('2 of 6 selected.'));
     // The module that is not installed never shows.
@@ -177,6 +172,39 @@ describe('the role editor', () => {
       'true',
     );
     expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('E05-S06 Edit role locks adding a permission the editor does not hold where the role is assigned, says where, and the note above the checklist says why', async () => {
+    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
+      settingsViewerQuery(jonas),
+      companiesQuery(),
+      roleQuery(shiftLead),
+      catalogQuery(),
+    ]);
+
+    const autoplan = await screen.findByRole('checkbox', { name: 'Run autoplan' });
+    expect(autoplan.hasAttribute('disabled')).toBe(true);
+    expect(screen.getAllByText('You do not hold it at Plant A.')).toHaveLength(2);
+    expect(checkbox('Read roles').hasAttribute('disabled')).toBe(false);
+    expect(
+      screen.getByText(
+        'You can add a permission to Shift lead only when you hold it at Plant A, where Shift lead is assigned. The others show a lock.',
+      ),
+    ).toBeDefined();
+  });
+
+  it('E05-S06 Edit role of a role nobody holds locks nothing, since adding a permission there needs none', async () => {
+    const nightPlanner = role('Night planner', ['planning.productionOrder:read']);
+    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: nightPlanner.id }).href, [
+      settingsViewerQuery(jonas),
+      companiesQuery(),
+      roleQuery(nightPlanner),
+      catalogQuery(),
+    ]);
+
+    const autoplan = await screen.findByRole('checkbox', { name: 'Run autoplan' });
+    expect(autoplan.hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByText(/only when you hold it/)).toBeNull();
   });
 
   it('E05-S06 Enter on a module button closes and opens the module, and focus stays on it', async () => {

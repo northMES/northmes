@@ -182,6 +182,25 @@ describe('Add role', () => {
     expect(within(roles).getByRole('radio', { name: 'Viewer' })).toBeDefined();
   });
 
+  it('E05-S06 a permission of a module that is not installed locks no role, since the API grants and checks only installed permissions', async () => {
+    const user = userEvent.setup();
+    const kanbanReader = role('Kanban reader', ['kanban.board:read']);
+    renderCoreAt(addRoleHref, [
+      settingsViewerQuery([...companyAdminRole.permissions]),
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([kanbanReader, operator, viewerRole]),
+      catalogQuery(),
+    ]);
+
+    await user.click(await screen.findByRole('radio', { name: 'Plant A only' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('radio', { name: 'Kanban reader' }).hasAttribute('data-disabled'),
+      ).toBe(false),
+    );
+  });
+
   it('E05-S06 a refusal of the API at the company lands on Role: the summary takes focus with the message, the choices stay, and its link leads to Role', async () => {
     const user = userEvent.setup();
     renderCoreAt(addRoleHref, [
