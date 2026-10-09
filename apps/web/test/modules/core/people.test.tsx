@@ -14,6 +14,7 @@ import {
   companiesQuery,
   companyAdminRole,
   forbiddenError,
+  person,
   planner,
   plantA,
   plantAdminRole,
@@ -49,14 +50,20 @@ function peopleQuery(
 }
 
 /** coreUsers of the plant's company, the people Add role offers. */
-function companyUsersQuery(people: readonly (typeof sara)[]): MockLink.MockedResponse {
+function companyUsersQuery(
+  people: readonly { readonly id: string; readonly name: string; readonly username: string }[],
+  search?: string,
+): MockLink.MockedResponse {
   return {
-    request: { query: CoreUsers },
+    request: { query: CoreUsers, variables: search === undefined ? {} : { search } },
     result: {
       data: {
         coreUsers: {
           __typename: 'UserConnection',
-          edges: people.map((node) => ({ __typename: 'UserEdge', node })),
+          edges: people.map((node) => ({
+            __typename: 'UserEdge',
+            node: { blocked: false, ...node },
+          })),
         },
       },
     },
@@ -194,7 +201,10 @@ describe('People in plant settings', () => {
     ).toBeDefined();
     expect(await screen.findByText('The role applies at Plant A.')).toBeDefined();
     expect(screen.queryByRole('radiogroup', { name: 'Where' })).toBeNull();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Person' }), anna.id);
+    await user.click(screen.getByRole('combobox', { name: 'Person' }));
+    await user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /^Anna Berg/ }),
+    );
 
     await user.click(screen.getByRole('combobox', { name: 'Role' }));
     const roles = await screen.findByRole('listbox');
@@ -215,6 +225,38 @@ describe('People in plant settings', () => {
         "Planner at Plant A added for Anna Berg. It applies from Anna Berg's next action.",
       ),
     );
+  });
+
+  it('E04-S02 Person searches the users of the company, so a user past the first page is found by name, and each option shows the username, so two people with one name are told apart', async () => {
+    const user = userEvent.setup();
+    const erik = person('Erik Lind', 'e.lind');
+    const annaTwo = { ...person('Anna Berg', 'a.berg2'), blocked: true };
+    renderCoreAt(coreLinks.people.addRole({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      companyUsersQuery([anna, annaTwo, sara]),
+      rolesQuery([planner], {}),
+      peopleQuery([]),
+      companyUsersQuery([erik], 'Lind'),
+    ]);
+
+    const field = await screen.findByRole('combobox', { name: 'Person' });
+    await user.click(field);
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Anna Berga.berg', 'Anna Berga.berg2Blocked', 'Sara Nybergs.nyberg']);
+
+    await user.type(field, 'Lind');
+    const found = await within(await screen.findByRole('listbox')).findByRole('option', {
+      name: /^Erik Lind/,
+    });
+    await user.click(found);
+    expect((field as HTMLInputElement).value).toBe('Erik Lind');
+    const card = await screen.findByRole('region', { name: 'Erik Lind' });
+    expect(within(card).getByText('e.lind')).toBeDefined();
   });
 
   it('E04-S02 Add role without a person lands on Person in the summary and sends nothing', async () => {
