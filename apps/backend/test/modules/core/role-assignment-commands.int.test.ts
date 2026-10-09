@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
-import {
-  createTestApp,
-  gqlClient,
-  type TestApp,
-  useTestDatabase,
-} from '@northmes/testing';
+import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const assignmentFields = 'id scope { kind name } user { id username } role { name }';
