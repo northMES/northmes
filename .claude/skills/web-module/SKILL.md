@@ -15,6 +15,7 @@ The web is one Vite React app in `apps/web`, built once to static files. Each mo
 - `screens/board/`: `board-screen.tsx`, its row `order-row.tsx`, and the typed documents `board.graphql.ts` and `release.graphql.ts`, `gql` from `@apollo/client` as a `TypedDocumentNode`.
 - `apps/web/src/modules.ts`: one `{ module, label, order }` entry per module. `label` and `order` repeat the web block of the module's manifest.
 - `apps/web/src/config.ts`: `loadWebConfig` reads `/config.json` at boot. `{ "apiUrl": "https://mes.example.com" }` sends the client's requests to `<apiUrl>/graphql`; without the file the API is on the page's origin.
+- `apps/web/components.json`: the shadcn CLI's config (Base UI, Tailwind 4, the `#ui/*` alias of `apps/web/package.json`). A primitive in `apps/web/src/ui/primitives` comes from `pnpm -C apps/web exec shadcn add <component>`, never written by hand; its helpers and hooks land in `apps/web/src/ui/lib`.
 - `apps/web/vite.config.ts`: in dev, proxies `/graphql` and `/api` to `NORTHMES_API_ORIGIN`, WebSockets included, and resolves workspace packages to their source (ADR 0058).
 
 Tests:

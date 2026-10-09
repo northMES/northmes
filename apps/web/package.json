@@ -4,6 +4,9 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
+  "imports": {
+    "#ui/*": "./src/ui/*"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -25,6 +28,7 @@
     "@tanstack/react-table": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
+    "cn": "catalog:",
     "graphql": "catalog:",
     "graphql-ws": "catalog:",
     "lucide-react": "catalog:",
@@ -35,6 +39,7 @@
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
     "temporal-polyfill": "catalog:",
+    "tw-animate-css": "catalog:",
     "uuid": "catalog:",
     "zod": "catalog:"
   },
@@ -49,6 +54,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "culori": "catalog:",
+    "shadcn": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
