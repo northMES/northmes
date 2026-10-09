@@ -15,7 +15,9 @@ import {
   companyId,
   forbiddenError,
   idOf,
+  person,
   plantA,
+  rolesQuery,
   sara,
   settingsViewerQuery,
   shiftLead,
@@ -23,23 +25,28 @@ import {
   viewerRole,
 } from './access-fixtures.ts';
 import { bodyRows, renderCoreAt, watchForSkeletonRows } from './core-app.tsx';
+import { resetPasswordMutation, temporaryPassword, userAdmin } from './user-fixtures.ts';
 
 afterEach(cleanup);
 
 /** A uuidv7: version 7 in the third group, variant 10 in the fourth. */
 const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-/** coreUsers' first page with these users, for the search when there is one, after delay ms. */
+/**
+ * coreUsers' first page with these users, for the search when there is one, after delay ms, with
+ * the filters and the sort of `more`.
+ */
 function usersQuery(
   nodes: readonly ReturnType<typeof user>[],
   search?: string,
   delay?: number,
+  more: Record<string, unknown> = {},
 ): MockLink.MockedResponse {
   return {
     delay,
     request: {
       query: CoreUsers,
-      variables: { companyId, first: 25, ...(search !== undefined && { search }) },
+      variables: { companyId, first: 25, ...(search !== undefined && { search }), ...more },
     },
     result: {
       data: {
@@ -422,5 +429,201 @@ describe('users', () => {
     router.history.back();
     router.history.forward();
     expect(screen.queryByText('fictional-temp-4821')).toBeNull();
+  });
+
+  /** The signed-in user, Jonas Holm, whose own row has no menu. */
+  const jonas = person('Jonas Holm', 'jonas');
+
+  /** The users of the row menu tests: Anna Berg is blocked, Sara Nyberg and Jonas Holm active. */
+  const listed = [user(anna, [], true), user(jonas, []), user(sara, [])];
+
+  /** The names of the items of the open menu. */
+  function itemsOf(menu: HTMLElement): string[] {
+    return within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => item.textContent ?? '');
+  }
+
+  it("E05-S08 each user's row has an Actions menu that opens with focus on its first item and closes with Escape back on its button, and your own row has none", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(userAdmin),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      usersQuery(listed),
+    ]);
+
+    const button = await screen.findByRole('button', { name: 'Actions for Sara Nyberg' });
+    expect(button.getAttribute('aria-haspopup')).toBe('menu');
+    button.focus();
+    await events.keyboard('{Enter}');
+    const menu = await screen.findByRole('menu', { name: 'Actions for Sara Nyberg' });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(menu).getByRole('menuitem', { name: 'Reset password' }),
+      ),
+    );
+    expect(itemsOf(menu)).toEqual(['Reset password', 'Block user']);
+    await events.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(button));
+
+    await events.click(screen.getByRole('button', { name: 'Actions for Anna Berg' }));
+    expect(itemsOf(await screen.findByRole('menu', { name: 'Actions for Anna Berg' }))).toEqual([
+      'Unblock user',
+    ]);
+    expect(screen.queryByRole('button', { name: 'Actions for Jonas Holm' })).toBeNull();
+  });
+
+  it('E05-S08 the row menu shows each item by permission, and a reader who may do neither gets no menu', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.user:block']),
+      companiesQuery(),
+      usersQuery(listed),
+    ]);
+
+    await events.click(await screen.findByRole('button', { name: 'Actions for Sara Nyberg' }));
+    expect(itemsOf(await screen.findByRole('menu'))).toEqual(['Block user']);
+    cleanup();
+
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read']),
+      companiesQuery(),
+      usersQuery(listed),
+    ]);
+    expect(await screen.findByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
+  });
+
+  it("E05-S08 Reset password from a row's menu opens the same dialogs as the user's page, and Done returns focus to the row's Actions button", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(userAdmin),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      usersQuery(listed),
+      resetPasswordMutation(sara),
+    ]);
+
+    const button = await screen.findByRole('button', { name: 'Actions for Sara Nyberg' });
+    await events.click(button);
+    await events.click(await screen.findByRole('menuitem', { name: 'Reset password' }));
+    const confirm = await screen.findByRole('alertdialog', {
+      name: 'Reset the password of Sara Nyberg?',
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(confirm).getByRole('textbox', { name: 'Reason (optional)' }),
+      ),
+    );
+    await events.click(within(confirm).getByRole('button', { name: 'Reset password' }));
+    const shown = await screen.findByRole('dialog', { name: 'Temporary password for Sara Nyberg' });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(shown).getByRole('button', { name: 'Copy password' }),
+      ),
+    );
+    expect(
+      (within(shown).getByRole('textbox', { name: 'Temporary password' }) as HTMLInputElement)
+        .value,
+    ).toBe(temporaryPassword);
+    await events.click(within(shown).getByRole('button', { name: 'Done' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Actions for Sara Nyberg' }),
+      ),
+    );
+  });
+
+  it('E05-S08 the Role and Status filters narrow the list and live in the URL', async () => {
+    const events = userEvent.setup();
+    const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read', 'core.role:read']),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      usersQuery([user(anna, [], true), user(sara, [assignment(shiftLead, plantA)])]),
+      usersQuery([user(sara, [assignment(shiftLead, plantA)])], undefined, undefined, {
+        roleId: shiftLead.id,
+      }),
+      usersQuery([], undefined, undefined, { roleId: shiftLead.id, blocked: true }),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+
+    await events.click(screen.getByRole('button', { name: 'Role' }));
+    await events.click(await screen.findByRole('menuitemradio', { name: 'Shift lead' }));
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
+    expect(router.state.location.search).toEqual({ role: shiftLead.id });
+    expect(screen.getByRole('button', { name: 'Role: Shift lead' })).toBeDefined();
+
+    await events.click(screen.getByRole('button', { name: 'Status' }));
+    await events.click(await screen.findByRole('menuitemradio', { name: 'Blocked' }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ role: shiftLead.id, status: 'blocked' }),
+    );
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'No users match these filters' }),
+    ).toBeDefined();
+  });
+
+  it('E05-S08 Name sorts ascending by default, and Username sorts the list either way, kept in the URL', async () => {
+    const events = userEvent.setup();
+    const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(['core.user:read']),
+      companiesQuery(),
+      usersQuery([user(anna, []), user(sara, [])]),
+      usersQuery([user(sara, []), user(anna, [])], undefined, undefined, {
+        orderBy: [{ field: 'USERNAME', direction: 'ASC' }],
+      }),
+      usersQuery([user(anna, []), user(sara, [])], undefined, undefined, {
+        orderBy: [{ field: 'USERNAME', direction: 'DESC' }],
+      }),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    const header = (name: string) =>
+      within(table).getByRole('columnheader', { name: new RegExp(`^${name}`) });
+    expect(header('Name').getAttribute('aria-sort')).toBe('ascending');
+
+    await events.click(within(header('Username')).getByRole('button'));
+    await waitFor(() =>
+      expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg', 'Anna Berg']),
+    );
+    expect(header('Username').getAttribute('aria-sort')).toBe('ascending');
+    expect(router.state.location.search).toEqual({ sort: 'username' });
+    await events.click(within(header('Username')).getByRole('button'));
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ sort: '-username' }));
+    await waitFor(() =>
+      expect(bodyRows(table).map(([name]) => name)).toEqual(['Anna Berg', 'Sara Nyberg']),
+    );
+  });
+
+  it('E05-S08 a URL with a role, a status and a sort opens the list filtered and sorted that way', async () => {
+    renderCoreAt(
+      `${coreLinks.settings.users({ companyId }).href}?role=${shiftLead.id}&status=active&sort=-name`,
+      [
+        settingsViewerQuery(['core.user:read', 'core.role:read']),
+        companiesQuery(),
+        rolesQuery([shiftLead, viewerRole]),
+        usersQuery([user(sara, [assignment(shiftLead, plantA)])], undefined, undefined, {
+          orderBy: [{ field: 'NAME', direction: 'DESC' }],
+          roleId: shiftLead.id,
+          blocked: false,
+        }),
+      ],
+    );
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
+    expect(await screen.findByRole('button', { name: 'Role: Shift lead' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Status: Active' })).toBeDefined();
+    expect(
+      within(table).getByRole('columnheader', { name: /^Name/ }).getAttribute('aria-sort'),
+    ).toBe('descending');
   });
 });
