@@ -51,12 +51,34 @@ $$;
 create trigger default_roles after insert on core.company
   for each row execute function core.company_default_roles();
 
--- core's commands write roles and assignments as nm_app. The tables keep no row-level security
--- policies (see the access migration); each command checks the principal's permission at the
--- company or at the scope it writes at.
+-- core's commands write roles and assignments as nm_app, and each checks the principal's
+-- permission at the company or at the scope it writes at. Every module and in-process plugin
+-- shares nm_app (ADR 0008), so row-level security keeps a write outside the transaction's write
+-- scopes out: a role at its company, an assignment at its scope. A company admin at a plant writes
+-- the company and the plant, a plant admin the plant only. nm_app still reads every row, since the
+-- server reads them once per request to resolve the principal, before it knows the request's
+-- scopes.
 grant select on core.default_role to nm_app;
 grant insert, update, delete on core.role to nm_app;
 grant insert, delete on core.role_assignment to nm_app;
+
+alter table core.role enable row level security;
+create policy principal_select on core.role for select to nm_app using (true);
+create policy scope_insert on core.role for insert to nm_app
+  with check (company_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
+create policy scope_update on core.role for update to nm_app
+  using      (company_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]))
+  with check (company_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
+create policy scope_delete on core.role for delete to nm_app
+  using (company_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
+
+-- nm_app has no UPDATE on assignments, so they need no update policy.
+alter table core.role_assignment enable row level security;
+create policy principal_select on core.role_assignment for select to nm_app using (true);
+create policy scope_insert on core.role_assignment for insert to nm_app
+  with check (scope_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
+create policy scope_delete on core.role_assignment for delete to nm_app
+  using (scope_id = any ((select nullif(current_setting('northmes.write_scopes', true), ''))::uuid[]));
 
 -- nm_app reads users only through these views, which run with its own rights: the columns a list
 -- of users shows and the organization memberships (ADR 0010). It has no right on auth.account,
