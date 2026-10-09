@@ -289,10 +289,9 @@ describe('a plant the user cannot open', () => {
   it("E04-S04 a plant slug that is none of the user's plants shows Page not found with the user's plants by company, without the sidebar (D2 ST29)", async () => {
     renderAt('/plant-x/planning/orders', twoCompanies);
 
-    const main = await screen.findByRole('main');
-    expect(
-      await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
-    ).toBeDefined();
+    // The shell shows the slug while the plants load, then the page of an unknown plant.
+    await screen.findByRole('heading', { level: 1, name: 'Page not found' });
+    const main = screen.getByRole('main');
     expect(document.title).toBe('Page not found · NorthMES');
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
     expect(main.textContent).toContain(

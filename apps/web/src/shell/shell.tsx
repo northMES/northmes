@@ -11,7 +11,6 @@ import {
   createRoute,
   createRouter,
   type HistoryState,
-  Link,
   Outlet,
   type RouterHistory,
   redirect,
@@ -20,7 +19,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router';
-import { type RefObject, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AuthSession } from '../auth/auth-session.ts';
 import { returnPathOf, signInPath, signInSearch } from '../auth/sign-in-link.ts';
 import { SignInScreen } from '../auth/sign-in-screen/index.ts';
@@ -58,6 +57,7 @@ import {
 } from './shell-settings-nav.tsx';
 import { ShellSidebar } from './shell-sidebar.tsx';
 import { type SettingsButtonTarget, ShellTopBar } from './shell-top-bar.tsx';
+import { ShellUnknownPlant } from './shell-unknown-plant.tsx';
 import type { ShellUser } from './shell-user-menu.tsx';
 import { CoreViewer } from './viewer.graphql.ts';
 
@@ -380,7 +380,15 @@ function PlantLayout({
     [modules, plant, companies, pathname, inSettings, settingsHome, plantName, breadcrumb, actions],
   );
   if (loaded !== undefined && found === undefined) {
-    return <UnknownPlant modules={modules} plant={plant} companies={companies} main={main} />;
+    return (
+      <ShellUnknownPlant
+        modules={modules}
+        companies={companies}
+        user={session.user() ?? nobody}
+        onSignOut={onSignOut}
+        main={main}
+      />
+    );
   }
   const page = inSettings ? (
     <ShellSettingsLayout
@@ -438,67 +446,5 @@ function PlantLayout({
         </SidebarProvider>
       </ShellProvider>
     </ApolloProvider>
-  );
-}
-
-interface UnknownPlantProps {
-  readonly modules: readonly ShellModule[];
-  readonly plant: string;
-  readonly companies: readonly ShellCompany[];
-  readonly main: RefObject<HTMLElement | null>;
-}
-
-/**
- * The page of a plant slug that names none of the user's plants (D2 ST29): no sidebar and no
- * crumbs, the h1 Plant not found, and links to the first page of each of the user's plants, under
- * their company's name when they span two or more companies. It never says whether the plant
- * exists.
- */
-function UnknownPlant({ modules, plant, companies, main }: UnknownPlantProps) {
-  const withPlants = companies.filter(({ plants }) => plants.length > 0);
-  const title = 'Plant not found';
-  useEffect(() => {
-    document.title = `${title} · NorthMES`;
-  }, []);
-  const links = (company: ShellCompany) => (
-    <ul className="grid gap-1">
-      {company.plants.map((each) => (
-        <li key={each.slug}>
-          <Link to={plantHome(modules, each.slug) ?? '.'} className="text-link underline">
-            {each.name}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-  return (
-    <main
-      id={mainId}
-      ref={main}
-      tabIndex={-1}
-      className="mx-auto grid max-w-xl gap-4 px-4 py-10 focus-visible:outline-offset-[-4px]"
-    >
-      <h1 tabIndex={-1} className="text-2xl font-semibold">
-        {title}
-      </h1>
-      <p>
-        {plant} is not a plant you can open.{' '}
-        {withPlants.length > 0 ? 'Choose one of your plants.' : 'You have no plant to open yet.'}
-      </p>
-      {withPlants.length > 1
-        ? withPlants.map((company) => (
-            <section
-              key={company.id}
-              aria-labelledby={`company-${company.id}`}
-              className="grid gap-2"
-            >
-              <h2 id={`company-${company.id}`} className="text-lg font-medium">
-                {company.name}
-              </h2>
-              {links(company)}
-            </section>
-          ))
-        : withPlants.map((company) => <div key={company.id}>{links(company)}</div>)}
-    </main>
   );
 }
