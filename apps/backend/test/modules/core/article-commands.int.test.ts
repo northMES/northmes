@@ -160,7 +160,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.plant_forbidden', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant and without companyId returns FORBIDDEN with errorCode core.forbidden', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
     const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
@@ -169,13 +169,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       input: { id: randomUUIDv7(), code: 'PN-305', name: 'Side panel' },
     });
 
-    // coreCreateArticle is not plant-free, so the operation runs no field (ADR 0066).
-    expect(answer.data).toBeUndefined();
+    // coreCreateArticle is plant-free (ADR 0073), and without a plant it needs the company that
+    // companyId names, so it finds no scope to run at.
+    expect(answer.data).toBeNull();
     expect(answer.errors).toMatchObject([
-      {
-        message: 'The request names no plant. Choose one of your plants.',
-        extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' },
-      },
+      { extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } },
     ]);
   });
 

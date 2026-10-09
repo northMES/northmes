@@ -158,7 +158,7 @@ describe('companies, plants and the request plant', () => {
     expect(withoutPlant.errors?.[0]?.extensions?.errorCode).toBe('core.forbidden');
   });
 
-  it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is NOT_FOUND and keeps its version', async () => {
+  it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is FORBIDDEN and keeps its version', async () => {
     const { plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
     const [plantA = '', plantB = ''] = plants;
     const articleB = await articleAt(plantB, 'PB-2');
@@ -172,7 +172,10 @@ describe('companies, plants and the request plant', () => {
     });
     const atB = await send(user.authorization, slugs[1], articleQuery, { id: articleB });
 
-    expect(atA).toMatchObject({ data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(atA).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } }],
+    });
     expect(atB.data).toEqual({ coreArticle: { code: 'PB-2', name: 'PB-2', version: 1 } });
   });
 });
