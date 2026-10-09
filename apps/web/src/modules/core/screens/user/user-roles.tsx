@@ -67,6 +67,20 @@ function lostWith(assignment: UserAssignment, user: User): string[] {
   return (assignment.role?.permissions ?? []).filter((key) => !kept.has(key));
 }
 
+/**
+ * What the Remove dialog says the user loses. A reader who may not read the role does not know
+ * its permissions, so the dialog names none and claims nothing about what the user keeps (NO5).
+ */
+function removalDescription(user: User, assignment: UserAssignment, lost: readonly string[]) {
+  const place = placeOf(assignment);
+  if (assignment.role === null) {
+    return `From the next action, ${user.name} loses the permissions of this role at ${place} that no other role grants.`;
+  }
+  return lost.length === 0
+    ? `${user.name} keeps every permission through other roles.`
+    : `From the next action, ${user.name} loses these permissions at ${place}:`;
+}
+
 /** The message of a refused removal: the grant rule's, or the API's own, or the connection. */
 function removalFailure(error: unknown, assignment: UserAssignment): Error {
   const missing = missingPermissionsOf(error);
@@ -123,11 +137,7 @@ function RemoveRole({ user, assignment, focusAfter }: RemoveRoleProps) {
           ? `Remove a role at ${place} from ${user.name}?`
           : `Remove ${role} at ${place} from ${user.name}?`
       }
-      description={
-        lost.length === 0
-          ? `${user.name} keeps every permission through other roles.`
-          : `From the next action, ${user.name} loses these permissions at ${place}:`
-      }
+      description={removalDescription(user, assignment, lost)}
       confirmLabel="Remove role"
       destructive
       initialFocus={field}
