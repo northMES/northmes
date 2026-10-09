@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Link } from '@tanstack/react-router';
-import { Fragment } from 'react';
+import { createLink } from '@tanstack/react-router';
+import { type ComponentProps, Fragment } from 'react';
 import { useIsMobile } from '../../lib/use-mobile.ts';
 import {
   Breadcrumb,
@@ -11,6 +11,18 @@ import {
   BreadcrumbSeparator,
 } from '../../primitives/breadcrumb.tsx';
 import type { Crumb } from './page-frame-top-bar.tsx';
+
+/**
+ * A router link that never claims aria-current: the router marks a link active when the page is
+ * under its href, as the plant crumb is on every page below the first entry, and in the trail only
+ * the current page is the current page.
+ */
+const CrumbLink = createLink(function CrumbAnchor({
+  'aria-current': _current,
+  ...props
+}: ComponentProps<'a'>) {
+  return <a {...props} />;
+});
 
 /**
  * The trail in the top bar (D2, ADR 0067): the crumbs as links, or as text when a crumb has no
@@ -39,7 +51,7 @@ export function PageFrameBreadcrumb({
                 <span className="truncate">{crumb.label}</span>
               ) : (
                 <BreadcrumbLink
-                  render={<Link to={crumb.href} />}
+                  render={<CrumbLink to={crumb.href} />}
                   className="inline-flex min-h-(--nm-target-min) min-w-0 items-center rounded-sm"
                 >
                   <span className="truncate">{crumb.label}</span>
