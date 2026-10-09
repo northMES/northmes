@@ -21,28 +21,38 @@ describe('coreLinks', () => {
     );
   });
 
-  it("E05-S06 coreLinks builds the hrefs of a plant's users, a user's access and Add role, and the roles and the role editor", () => {
-    const plant = 'plant-a';
+  it("E04-S02 coreLinks' settings section builds the hrefs of a company's users, a user's access and Add role, and the roles and the role editor", () => {
+    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
     const userId = '01920000-0000-7000-8000-0000000b0001';
     const roleId = '01920000-0000-7000-8000-0000000c0001';
+    const users = `/settings/${companyId}/core/users`;
+    const roles = `/settings/${companyId}/core/roles`;
 
-    expect(coreLinks.users({ plant }).href).toBe('/plant-a/core/users');
-    expect(coreLinks.users.new({ plant }).href).toBe('/plant-a/core/users/new');
-    expect(coreLinks.users.user({ plant, userId }, { tab: 'access' }).href).toBe(
-      `/plant-a/core/users/${userId}?tab=access`,
+    expect(coreLinks.settings.users({ companyId }).href).toBe(users);
+    expect(coreLinks.settings.users.new({ companyId }).href).toBe(`${users}/new`);
+    expect(coreLinks.settings.users.user({ companyId, userId }, { tab: 'access' }).href).toBe(
+      `${users}/${userId}?tab=access`,
     );
-    expect(coreLinks.users.user.addRole({ plant, userId }).href).toBe(
-      `/plant-a/core/users/${userId}/roles/new`,
+    expect(coreLinks.settings.users.user.addRole({ companyId, userId }).href).toBe(
+      `${users}/${userId}/roles/new`,
     );
-    expect(coreLinks.roles({ plant }).href).toBe('/plant-a/core/roles');
-    expect(coreLinks.roles.new({ plant }, { from: roleId }).href).toBe(
-      `/plant-a/core/roles/new?from=${roleId}`,
+    expect(coreLinks.settings.roles({ companyId }).href).toBe(roles);
+    expect(coreLinks.settings.roles.new({ companyId }, { from: roleId }).href).toBe(
+      `${roles}/new?from=${roleId}`,
     );
-    expect(coreLinks.roles.role({ plant, roleId }, { tab: 'holders' }).href).toBe(
-      `/plant-a/core/roles/${roleId}?tab=holders`,
+    expect(coreLinks.settings.roles.role({ companyId, roleId }, { tab: 'holders' }).href).toBe(
+      `${roles}/${roleId}?tab=holders`,
     );
-    expect(coreLinks.roles.role.edit({ plant, roleId }).href).toBe(
-      `/plant-a/core/roles/${roleId}/edit`,
+    expect(coreLinks.settings.roles.role.edit({ companyId, roleId }).href).toBe(
+      `${roles}/${roleId}/edit`,
     );
+  });
+
+  it('E04-S02 coreLinks builds the hrefs of the people of a plant and their Add role, and has no plant users or roles', () => {
+    expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/core/people');
+    expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/core/people/roles/new',
+    );
+    expect(Object.keys(coreLinks)).toEqual(['articles', 'people', 'settings']);
   });
 });
