@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { setArticlePlants } from '@northmes/core-contracts';
 import { commandInput } from '@northmes/sdk/commands';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
 
@@ -20,6 +21,7 @@ export class SetArticlePlantsMutation {
 
   /** Replaces the plants an article is assigned to, or assigns it to All plants. */
   @Mutation(() => Article)
+  @PlantFree()
   coreSetArticlePlants(
     @Args('input', { type: () => SetArticlePlantsInput }) input: unknown,
   ): Promise<ArticleRecord> {

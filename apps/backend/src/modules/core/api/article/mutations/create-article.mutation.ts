@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { createArticle } from '@northmes/core-contracts';
 import { commandInput } from '@northmes/sdk/commands';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
 
@@ -19,10 +20,12 @@ export class CreateArticleMutation {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
   /**
-   * Creates an article. A user at a plant creates it for that plant, or for the plants or All
-   * plants that the input names.
+   * Creates an article. A user at a plant creates it for that plant, and in company settings for no
+   * plant of the company that companyId names, or for the plants or All plants that the input
+   * names.
    */
   @Mutation(() => Article)
+  @PlantFree()
   coreCreateArticle(
     @Args('input', { type: () => CreateArticleInput }) input: unknown,
   ): Promise<ArticleRecord> {

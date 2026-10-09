@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { restoreArticle } from '@northmes/core-contracts';
 import { commandInput } from '@northmes/sdk/commands';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
 
@@ -20,6 +21,7 @@ export class RestoreArticleMutation {
 
   /** Restores an archived article. */
   @Mutation(() => Article)
+  @PlantFree()
   coreRestoreArticle(
     @Args('input', { type: () => RestoreArticleInput }) input: unknown,
   ): Promise<ArticleRecord> {

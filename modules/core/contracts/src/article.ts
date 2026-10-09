@@ -3,6 +3,7 @@ import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 import { tooLong } from './messages.ts';
 import { plantSlug } from './plant.ts';
+import { settingsCompanyId } from './role.ts';
 
 /**
  * The identity fields a person edits on an article, which core.createArticle and
@@ -41,15 +42,19 @@ const articlePlants = z
 /**
  * Creates an article of the company under the client-generated id in the input, so a retry
  * returns the first article (ADR 0012). It is assigned to the plants or to All plants that the
- * input names, or else to the request's plant (ADR 0073). A code that another article of the
- * company uses is refused with core.code_taken, and a slug that names no plant of the company on
- * plants.
+ * input names, or else to the request's plant, or to no plant from company settings, where the
+ * input names the company in companyId (ADR 0073). A code that another article of the company
+ * uses is refused with core.code_taken, and a slug that names no plant of the company on plants.
  */
 export const createArticle = defineCommandContract({
   name: 'core.createArticle',
   target: 'new',
   fields: articleFields
-    .extend({ allPlants: z.boolean().optional(), plants: z.array(plantSlug).optional() })
+    .extend({
+      allPlants: z.boolean().optional(),
+      plants: z.array(plantSlug).optional(),
+      companyId: settingsCompanyId,
+    })
     .refine(({ allPlants, plants }) => !(allPlants === true && (plants?.length ?? 0) > 0), {
       error: plantsOrAllPlants,
       path: ['plants'],

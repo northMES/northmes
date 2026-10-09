@@ -27,20 +27,6 @@ export function editScopeOf(companyId: string, allPlants: boolean, plantIds: rea
   return !allPlants && plantIds.length === 1 && only !== undefined ? only : companyId;
 }
 
-/** The company of the plant at `plantId`, or undefined for a scope that is not a plant. */
-export async function companyOfPlant(
-  tx: Transaction<CoreDatabase>,
-  plantId: string,
-): Promise<string | undefined> {
-  return (
-    await tx
-      .selectFrom('core.plant')
-      .select('company_id')
-      .where('id', '=', plantId)
-      .executeTakeFirst()
-  )?.company_id;
-}
-
 /**
  * The plan of the plants that `input` names in the company: All plants, or the plants by slug. A
  * slug that names no plant of the company is refused with BAD_USER_INPUT on its place in plants.

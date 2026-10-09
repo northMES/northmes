@@ -65,6 +65,7 @@ input CoreBlockUserInput {
 input CoreCreateArticleInput {
   allPlants: Boolean
   code: String!
+  companyId: String
   id: ID!
   name: String!
   plants: [String!]

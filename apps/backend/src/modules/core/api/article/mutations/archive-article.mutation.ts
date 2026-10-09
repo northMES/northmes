@@ -3,6 +3,7 @@ import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { archiveArticle } from '@northmes/core-contracts';
 import { commandInput } from '@northmes/sdk/commands';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
 
@@ -20,6 +21,7 @@ export class ArchiveArticleMutation {
 
   /** Archives an article at every plant. */
   @Mutation(() => Article)
+  @PlantFree()
   coreArchiveArticle(
     @Args('input', { type: () => ArchiveArticleInput }) input: unknown,
   ): Promise<ArticleRecord> {

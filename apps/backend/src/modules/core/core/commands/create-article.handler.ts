@@ -4,7 +4,8 @@ import { createArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import type { z } from 'zod';
 import { type ArticleRecord, selectArticles } from '../article-record.ts';
-import { companyOfPlant, type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
+import { type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
+import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 
 type CreateArticleInput = z.output<typeof createArticle.input>;
@@ -16,31 +17,35 @@ function namesPlants({ allPlants, plants }: CreateArticleInput): boolean {
 
 /**
  * Where a new article is used: the plants or All plants that the input names, or else the
- * request's plant (ADR 0073). undefined for a request without a plant, which has no company.
+ * request's plant, or no plant in company settings, a request without a plant (ADR 0073).
+ * undefined when the request names no company, or one other than its plant's.
  */
 async function planOf(
   input: CreateArticleInput,
-  { tx, plantId }: Pick<CoreContext, 'tx' | 'plantId'>,
+  context: Pick<CoreContext, 'tx' | 'plantId'>,
 ): Promise<PlantsPlan | undefined> {
-  if (!plantId) return undefined;
-  const companyId = await companyOfPlant(tx, plantId);
+  const companyId = await requestCompany(input, context);
   if (!companyId) return undefined;
-  if (!namesPlants(input)) {
-    return { companyId, allPlants: false, plantIds: [plantId], editScopeId: plantId };
-  }
-  return planPlants(tx, companyId, input);
+  if (namesPlants(input)) return planPlants(context.tx, companyId, input);
+  const plantIds = context.plantId ? [context.plantId] : [];
+  return { companyId, allPlants: false, plantIds, editScopeId: plantIds[0] ?? companyId };
 }
 
-/** True when the plan is the request's plant alone, which needs no core.article:assign. */
-function isDefault(plan: PlantsPlan, plantId: string): boolean {
-  return !plan.allPlants && plan.plantIds.length === 1 && plan.plantIds[0] === plantId;
+/**
+ * True when the plan is the default, the request's plant alone or no plant in company settings,
+ * which needs no core.article:assign.
+ */
+function isDefault(plan: PlantsPlan, plantId: string | undefined): boolean {
+  if (plan.allPlants) return false;
+  if (!plantId) return plan.plantIds.length === 0;
+  return plan.plantIds.length === 1 && plan.plantIds[0] === plantId;
 }
 
 /**
  * The handler of core.createArticle (ADR 0012). Its scope hook returns the edit scope the new
  * article will have, where the bus checks core.article:create: the request's plant by default, or
- * the company for an article of several plants or All plants (ADR 0073). Plants other than the
- * request's plant also need core.article:assign at the company. It writes the article at its
+ * the company for an article of several plants, of All plants or, from company settings, of none
+ * (ADR 0073). Plants other than that default also need core.article:assign at the company. It writes the article at its
  * company's node under the client's id with its plants and returns it with version 1, or returns
  * the article a first run with that id created.
  */
@@ -53,7 +58,7 @@ export const createArticleHandler = {
     const { tx, plantId } = context;
     const plan = await planOf(input, context);
     // The scope hook found no plan, so the bus refused the command before the handler runs.
-    if (!plan || !plantId) throw new NotFoundException(`Article ${input.id} was not found`);
+    if (!plan) throw new NotFoundException(`Article ${input.id} was not found`);
     if (!isDefault(plan, plantId)) context.require('core.article:assign', plan.companyId);
     const created = await tx
       .insertInto('core.article')

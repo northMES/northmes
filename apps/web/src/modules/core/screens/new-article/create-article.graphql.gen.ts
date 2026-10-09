@@ -7,6 +7,7 @@ import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
 export type CoreCreateArticleInput = {
   readonly allPlants?: boolean | null | undefined;
   readonly code: string;
+  readonly companyId?: string | null | undefined;
   readonly id: string | number;
   readonly name: string;
   readonly plants?: ReadonlyArray<string> | null | undefined;
