@@ -173,7 +173,7 @@ describe('an unknown path', () => {
   });
 
   it('E04-S02 an unknown path in company settings renders Page not found in the settings layout, with Go to Company settings (NF3)', async () => {
-    renderAt(`/settings/${companyId}/core/reports`);
+    renderAt(`/settings/${companyId}/reports`);
 
     const main = await screen.findByRole('main');
     expect(
@@ -182,7 +182,7 @@ describe('an unknown path', () => {
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
     await waitFor(() =>
       expect(main.textContent).toContain(
-        `Acme AB has no page at /settings/${companyId}/core/reports. The link may be out of date.`,
+        `Acme AB has no page at /settings/${companyId}/reports. The link may be out of date.`,
       ),
     );
     expect(
