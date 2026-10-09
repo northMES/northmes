@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation } from '@apollo/client/react';
-import { coreLinks, updateArticle } from '@northmes/core-contracts';
+import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
@@ -13,6 +13,7 @@ import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
   type ArticleValues,
+  articleFormFields,
   commandFailure,
   showSaveError,
 } from '../../components/article-form/index.ts';
@@ -38,7 +39,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const [conflict, setConflict] = useState(false);
   // An archived article refuses changes, so its form offers Restore article (DE31).
   const [archived, setArchived] = useState(article.archivedAt !== null);
-  const form = useZodForm(updateArticle.fields, {
+  const form = useZodForm(articleFormFields, {
     defaultValues: { code: article.code, name: article.name },
   });
   const [update] = useMutation(CoreUpdateArticle);
@@ -47,10 +48,11 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const save = async (values: ArticleValues) => {
     setConflict(false);
     setArchived(false);
+    const { code, name } = values;
     try {
       const { data } = await update({
         variables: {
-          input: { id: article.id, expectedVersion: expectedVersion.current, ...values },
+          input: { id: article.id, expectedVersion: expectedVersion.current, code, name },
         },
       });
       if (!data) return;
@@ -139,7 +141,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
 
 /**
  * The edit page of an article (design ui-222, DE7): the article form filled in, validated with
- * the contract of core.updateArticle. A saved change opens the article's page in place of the form
+ * the identity fields of core.updateArticle. A saved change opens the article's page in place of the form
  * and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values and
  * offers Reload article (DE19), and an archived article keeps them and offers Restore article
  * (DE31).

@@ -75,7 +75,7 @@ export function ArticleScreen() {
       )}
       <Identity article={article} />
       {assigns && article !== undefined && article.archivedAt === null && (
-        <ArticlePlants key={`${article.id}-${article.version}`} article={article} reload={reload} />
+        <ArticlePlants key={article.id} article={article} reload={reload} />
       )}
     </PageFrame>
   );

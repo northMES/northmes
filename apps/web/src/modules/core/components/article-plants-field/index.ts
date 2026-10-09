@@ -5,4 +5,5 @@ export {
   type PlantOption,
   type PlantsChoice,
   plantsChoiceError,
+  plantsChoiceField,
 } from './article-plants-field.tsx';

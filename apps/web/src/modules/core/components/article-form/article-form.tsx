@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { articleFields } from '@northmes/core-contracts';
+import { articleFields } from '@northmes/core-contracts';
 import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
@@ -9,12 +9,18 @@ import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
+import { plantsChoiceField } from '../article-plants-field/index.ts';
 
 /**
- * The fields of the article form, the identity fields that core.createArticle and
- * core.updateArticle share, the same for a new and an existing article (ADR 0017).
+ * The fields of the article form: the identity fields that core.createArticle and
+ * core.updateArticle share, the same for a new and an existing article (ADR 0017), and on a new
+ * article the Plants field, whose choice must name a plant or All plants (ADR 0073). One parse
+ * checks them all, so a failed save lists every field to fix.
  */
-export type ArticleFields = typeof articleFields;
+export const articleFormFields = articleFields.extend({ plants: plantsChoiceField.optional() });
+
+/** The schema of the article form. */
+export type ArticleFields = typeof articleFormFields;
 
 /** The values a save receives: the article fields as the contract parses them, trimmed. */
 export type ArticleValues = z.output<ArticleFields>;

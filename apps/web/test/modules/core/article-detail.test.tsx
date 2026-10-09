@@ -45,7 +45,7 @@ describe('article page', () => {
       ['Name', 'Axle 20 mm'],
       ['Plants', 'Plant A'],
     ]);
-    expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
+    expect((await screen.findByRole('link', { name: 'Edit' })).getAttribute('href')).toBe(
       coreLinks.articles.article.edit({ plant, articleId: axle.id }).href,
     );
   });

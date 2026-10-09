@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useId } from 'react';
+import { z } from 'zod';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Label } from '../../../../ui/primitives/label.tsx';
@@ -28,20 +29,33 @@ export interface ArticlePlantsFieldProps {
   readonly disabled?: boolean;
 }
 
+/** The message of a choice that names no plant. */
+const noPlant = 'Choose at least one plant, or All plants.';
+
 /**
  * The message of a choice that names no plant, or undefined for one that names a plant or All
  * plants. A plant's pages show only the articles assigned to it, so the web never creates an
  * article that no plant shows.
  */
 export function plantsChoiceError({ allPlants, plants }: PlantsChoice): string | undefined {
-  return allPlants || plants.length > 0 ? undefined : 'Choose at least one plant, or All plants.';
+  return allPlants || plants.length > 0 ? undefined : noPlant;
 }
+
+/**
+ * The Plants field as a form field: a choice that names a plant or All plants, refused with the
+ * message of plantsChoiceError, so the form's error summary lists it with the other fields.
+ */
+export const plantsChoiceField = z
+  .object({ allPlants: z.boolean(), plants: z.array(z.string()) })
+  .refine((choice) => plantsChoiceError(choice) === undefined, { error: noPlant });
 
 /**
  * The Plants field of an article (ADR 0073), for a user who holds core.article:assign at the
  * company: Chosen plants with a checkbox per plant of the company, or All plants, which also
- * covers plants the company adds later. No design frame draws it yet; it follows the radio and
- * checkbox patterns of design core-304.
+ * covers plants the company adds later. The first plant's checkbox has the id fieldId('plants'),
+ * where an error summary's link and a refused save move focus, and every checkbox is described by
+ * the error. No design frame draws it yet; it follows the radio and checkbox patterns of design
+ * core-304.
  */
 export function ArticlePlantsField({
   options,
@@ -84,8 +98,8 @@ export function ArticlePlantsField({
           </div>
           {!value.allPlants && (
             <ul className="ml-7 flex flex-col gap-2">
-              {options.map((option) => {
-                const id = `${fieldId('plants')}-${option.slug}`;
+              {options.map((option, index) => {
+                const id = index === 0 ? fieldId('plants') : `${fieldId('plants')}-${option.slug}`;
                 const checked = value.plants.includes(option.slug);
                 return (
                   <li key={option.slug} className="flex items-center gap-3 text-sm">
@@ -94,6 +108,7 @@ export function ArticlePlantsField({
                       checked={checked}
                       disabled={disabled}
                       aria-invalid={error !== undefined || undefined}
+                      aria-describedby={describedBy}
                       onCheckedChange={(next) =>
                         onChange({
                           allPlants: false,

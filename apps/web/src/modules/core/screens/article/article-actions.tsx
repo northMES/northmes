@@ -9,8 +9,10 @@ import { announce } from '../../../../ui/lib/announce.ts';
 import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
+import { editedAtPlant } from '../../article-plants.ts';
 import { commandFailure } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
+import { useViewer } from '../../use-viewer.ts';
 import { CoreArchiveArticle } from './archive-article.graphql.ts';
 
 interface ArticleActionProps {
@@ -115,23 +117,33 @@ function RestoreArticleAction({ article, reload }: ArticleActionProps) {
 
 /**
  * The article page's actions: Archive and Edit for an active article (DE1), Restore alone for an
- * archived one, which cannot be changed until it is restored.
+ * archived one, which cannot be changed until it is restored. Each shows to a user who holds its
+ * permission where the article is changed (ADR 0073): at the plant for an article that only this
+ * plant uses, at the company for any other. The API checks again.
  */
 export function ArticleActions({ article, reload }: ArticleActionProps) {
   const { plant } = useShell();
+  const viewer = useViewer();
+  const atPlant = editedAtPlant(article, plant);
+  const may = (permission: string) =>
+    atPlant ? viewer.can(permission) : viewer.canAtCompany(permission);
   if (article.archivedAt !== null) {
-    return <RestoreArticleAction article={article} reload={reload} />;
+    return may('core.article:archive') ? (
+      <RestoreArticleAction article={article} reload={reload} />
+    ) : null;
   }
   return (
     <>
-      <ArchiveArticleAction article={article} reload={reload} />
-      <Link
-        to={coreLinks.articles.article.edit({ plant, articleId: article.id }).href}
-        className={buttonVariants()}
-      >
-        <Pencil aria-hidden />
-        Edit
-      </Link>
+      {may('core.article:archive') && <ArchiveArticleAction article={article} reload={reload} />}
+      {may('core.article:update') && (
+        <Link
+          to={coreLinks.articles.article.edit({ plant, articleId: article.id }).href}
+          className={buttonVariants()}
+        >
+          <Pencil aria-hidden />
+          Edit
+        </Link>
+      )}
     </>
   );
 }

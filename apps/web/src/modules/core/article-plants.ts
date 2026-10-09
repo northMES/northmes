@@ -17,3 +17,18 @@ export function plantsLabel({ allPlants, plants }: ArticlePlants): string {
   if (plants.length <= 2) return plants.map(({ name }) => name).join(', ');
   return `${plants.length} plants`;
 }
+
+/**
+ * True when the article is changed at the plant `slug`: it is assigned to that plant alone and not
+ * to All plants, so its edit scope is the plant. Any other article is changed at the company, and
+ * changing it needs the permission there (ADR 0073).
+ */
+export function editedAtPlant(
+  {
+    allPlants,
+    plants,
+  }: { readonly allPlants: boolean; readonly plants: readonly { readonly slug: string }[] },
+  slug: string | undefined,
+): boolean {
+  return !allPlants && plants.length === 1 && plants[0]?.slug === slug;
+}

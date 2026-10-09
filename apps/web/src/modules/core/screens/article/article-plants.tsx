@@ -3,6 +3,7 @@ import { useMutation } from '@apollo/client/react';
 import { useState } from 'react';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
@@ -21,7 +22,7 @@ interface ArticlePlantsProps {
 }
 
 /** The choice that the article's saved plants make. */
-function choiceOf(article: Article): PlantsChoice {
+function choiceOf(article: Pick<Article, 'allPlants' | 'plants'>): PlantsChoice {
   return { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) };
 }
 
@@ -37,8 +38,10 @@ function failureOf(error: unknown): string {
  * The Plants section of an article's page (ADR 0073), for a user who holds core.article:assign at
  * the company: the Plants field filled with the article's plants, and Save plants, which sends
  * core.setArticlePlants with the version the page shows. A plant taken off keeps its orders that
- * use the article. No design frame draws this section yet; it follows the form section of design
- * ui-222.
+ * use the article. A save without a plant moves focus to the first plant, and a save refused for a
+ * stale version shows the saved plants with a message. The page keys the section on the article's
+ * id, so a new version does not reset it. No design frame draws this section yet; it follows the
+ * form section of design ui-222.
  */
 export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
   const places = usePlaces();
@@ -51,9 +54,14 @@ export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
     setFailure(undefined);
     const invalid = plantsChoiceError(choice);
     setError(invalid);
-    if (invalid !== undefined) return;
+    if (invalid !== undefined) {
+      // The first plant's checkbox, which the message describes, takes focus after the render
+      // that shows the message, so a screen reader reads both.
+      requestAnimationFrame(() => document.getElementById(fieldId('plants'))?.focus());
+      return;
+    }
     try {
-      await setPlants({
+      const { data } = await setPlants({
         variables: {
           input: {
             id: article.id,
@@ -63,6 +71,7 @@ export function ArticlePlants({ article, reload }: ArticlePlantsProps) {
           },
         },
       });
+      if (data) setChoice(choiceOf(data.coreSetArticlePlants));
       announce(`Plants of article ${article.code} saved`);
     } catch (thrown) {
       if (hasErrorCode(thrown, 'core.version_conflict')) {
