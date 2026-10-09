@@ -212,4 +212,41 @@ describe('DataTable', () => {
     expect(screen.getByText('Rows 4 to 4 of 4')).toBeDefined();
     expect(document.activeElement).toBe(used);
   });
+
+  it('E05-S06 a grouped table draws one header row per group with its name and count, its rows under it, an empty group with its line, and a footer', () => {
+    render(
+      table({
+        rows: [],
+        groups: [
+          { id: 'flanges', label: 'Flanges', count: '2 articles', rows: articles.slice(0, 2) },
+          { id: 'hoses', label: 'Hoses', count: '1 article', rows: articles.slice(2) },
+          { id: 'seals', label: 'Seals', count: '0 articles', rows: [], empty: 'No seals yet' },
+        ],
+        footer: '3 groups, 3 articles',
+      }),
+    );
+
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    const groupHeaders = within(grid)
+      .getAllByRole('rowheader')
+      .map((cell) => [cell.textContent, cell.getAttribute('scope'), cell.getAttribute('colspan')]);
+    expect(groupHeaders).toEqual([
+      ['Flanges2 articles', 'rowgroup', '3'],
+      ['Hoses1 article', 'rowgroup', '3'],
+      ['Seals0 articles', 'rowgroup', '3'],
+    ]);
+    const rowgroups = within(grid).getAllByRole('rowgroup').slice(1);
+    expect(
+      rowgroups.map((group) =>
+        within(group)
+          .queryAllByRole('cell')
+          .map((cell) => cell.textContent),
+      ),
+    ).toEqual([
+      ['AX-20411', 'Fläns DN80 rostfri', 'Flanges', 'AX-20410', 'Fläns DN50 rostfri', 'Flanges'],
+      ['AX-31007', 'Hydraulslang 12 mm', 'Hoses'],
+      ['No seals yet'],
+    ]);
+    expect(screen.getByText('3 groups, 3 articles')).toBeDefined();
+  });
 });

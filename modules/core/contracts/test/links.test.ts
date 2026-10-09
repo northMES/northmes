@@ -51,6 +51,9 @@ describe('coreLinks', () => {
   it('E04-S02 coreLinks builds the hrefs of the people of a plant and their Add role, and has no plant users or roles', () => {
     expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/people');
     expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe('/plant-a/people/roles/new');
+    expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
+      '/plant-a/people/u1/roles/new',
+    );
     expect(Object.keys(coreLinks)).toEqual(['articles', 'people', 'settings']);
   });
 });

@@ -8,18 +8,24 @@ import { CoreAssignRole } from '../../../src/modules/core/components/assign-role
 import { CoreRemoveRoleAssignment } from '../../../src/modules/core/components/remove-role/remove-role-assignment.graphql.ts';
 import { CorePlantRoleAssignments } from '../../../src/modules/core/screens/people/plant-role-assignments.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/people-add-role/users.graphql.ts';
+import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
+import { CoreUser } from '../../../src/modules/core/user.graphql.ts';
 import {
+  acme,
   anna,
   assignment,
   companiesQuery,
   companyAdminRole,
   forbiddenError,
+  person,
   planner,
   plantA,
   plantAdminRole,
   rolesQuery,
   sara,
   shiftLead,
+  user as userOf,
+  userQuery,
   viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
@@ -49,14 +55,20 @@ function peopleQuery(
 }
 
 /** coreUsers of the plant's company, the people Add role offers. */
-function companyUsersQuery(people: readonly (typeof sara)[]): MockLink.MockedResponse {
+function companyUsersQuery(
+  people: readonly { readonly id: string; readonly name: string; readonly username: string }[],
+  search?: string,
+): MockLink.MockedResponse {
   return {
-    request: { query: CoreUsers },
+    request: { query: CoreUsers, variables: search === undefined ? {} : { search } },
     result: {
       data: {
         coreUsers: {
           __typename: 'UserConnection',
-          edges: people.map((node) => ({ __typename: 'UserEdge', node })),
+          edges: people.map((node) => ({
+            __typename: 'UserEdge',
+            node: { blocked: false, ...node },
+          })),
         },
       },
     },
@@ -165,6 +177,38 @@ describe('People in plant settings', () => {
     );
   });
 
+  it("E04-S02 Remove at this plant names what the person loses there and what the person's other roles keep, read from the person's roles", async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.people({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      peopleQuery([annaViewer, saraLead]),
+      userQuery(
+        userOf(sara, [assignment(viewerRole, acme), assignment(shiftLead, plantA, saraLead.id)]),
+      ),
+    ]);
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A from Sara Nyberg' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    expect(
+      await within(dialog).findByText(
+        'From the next action, Sara Nyberg loses these permissions at Plant A:',
+      ),
+    ).toBeDefined();
+    expect(
+      within(dialog)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Release production orders to the floor']);
+    expect(
+      within(dialog).getByText(
+        'Viewer at Acme AB still lets Sara Nyberg read production orders and the planning board.',
+      ),
+    ).toBeDefined();
+  });
+
   it('E04-S02 Add role gives a person of the company a role at the plant, locks the roles the plant admin cannot give there, and returns to People', async () => {
     const user = userEvent.setup();
     const given = { ...heldAtPlant(planner, anna), id: '019a0000-0000-7000-8000-0000000000a9' };
@@ -194,19 +238,21 @@ describe('People in plant settings', () => {
     ).toBeDefined();
     expect(await screen.findByText('The role applies at Plant A.')).toBeDefined();
     expect(screen.queryByRole('radiogroup', { name: 'Where' })).toBeNull();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Person' }), anna.id);
-
-    const roles = screen.getByRole('radiogroup', { name: 'Role' });
-    expect(
-      within(roles).getByRole('radio', { name: 'Company admin' }).hasAttribute('data-disabled'),
-    ).toBe(true);
-    expect(within(roles).getByRole('radio', { name: 'Viewer' }).hasAttribute('data-disabled')).toBe(
-      true,
+    await user.click(screen.getByRole('combobox', { name: 'Person' }));
+    await user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: /^Anna Berg/ }),
     );
+
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    const roles = await screen.findByRole('listbox');
+    const option = (name: string) =>
+      within(roles).getByRole('option', { name: new RegExp(`^${name}`) });
+    expect(option('Company admin').getAttribute('aria-disabled')).toBe('true');
+    expect(option('Viewer').getAttribute('aria-disabled')).toBe('true');
     expect(
       within(roles).getByText('Planning, default role. Anna Berg already holds it at Plant A.'),
     ).toBeDefined();
-    await user.click(within(roles).getByRole('radio', { name: 'Planner' }));
+    await user.click(option('Planner'));
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'People' })).toBeDefined();
@@ -216,6 +262,38 @@ describe('People in plant settings', () => {
         "Planner at Plant A added for Anna Berg. It applies from Anna Berg's next action.",
       ),
     );
+  });
+
+  it('E04-S02 Person searches the users of the company, so a user past the first page is found by name, and each option shows the username, so two people with one name are told apart', async () => {
+    const user = userEvent.setup();
+    const erik = person('Erik Lind', 'e.lind');
+    const annaTwo = { ...person('Anna Berg', 'a.berg2'), blocked: true };
+    renderCoreAt(coreLinks.people.addRole({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      companyUsersQuery([anna, annaTwo, sara]),
+      rolesQuery([planner], {}),
+      peopleQuery([]),
+      companyUsersQuery([erik], 'Lind'),
+    ]);
+
+    const field = await screen.findByRole('combobox', { name: 'Person' });
+    await user.click(field);
+    const listbox = await screen.findByRole('listbox');
+    expect(
+      within(listbox)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Anna Berga.berg', 'Anna Berga.berg2Blocked', 'Sara Nybergs.nyberg']);
+
+    await user.type(field, 'Lind');
+    const found = await within(await screen.findByRole('listbox')).findByRole('option', {
+      name: /^Erik Lind/,
+    });
+    await user.click(found);
+    expect((field as HTMLInputElement).value).toBe('Erik Lind');
+    const card = await screen.findByRole('region', { name: 'Erik Lind' });
+    expect(within(card).getByText('e.lind')).toBeDefined();
   });
 
   it('E04-S02 Add role without a person lands on Person in the summary and sends nothing', async () => {
@@ -233,6 +311,156 @@ describe('People in plant settings', () => {
     const summary = await screen.findByRole('group', { name: 'Fix 2 fields to add the role' });
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(within(summary).getByRole('link', { name: 'Choose a person.' })).toBeDefined();
+  });
+
+  it("E04-S02 a Plant admin opens a person from People and sees the person's roles per place, Remove only at the plant, and what the person can do at the plant", async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(coreLinks.people({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      peopleQuery([annaViewer, saraLead]),
+      {
+        request: { query: CoreUser, variables: { id: sara.id } },
+        result: {
+          data: {
+            coreUser: userOf(sara, [
+              assignment(viewerRole, acme),
+              assignment(shiftLead, plantA, saraLead.id),
+            ]),
+          },
+        },
+      },
+      rolesQuery([shiftLead, viewerRole], {}),
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: {
+            coreUser: {
+              __typename: 'User',
+              id: sara.id,
+              effectivePermissions: [
+                {
+                  __typename: 'EffectivePermission',
+                  permission: {
+                    __typename: 'Permission',
+                    key: 'planning.productionOrder:release',
+                    installed: true,
+                  },
+                  grantedBy: [
+                    {
+                      __typename: 'RoleAssignment',
+                      id: saraLead.id,
+                      scope: plantA,
+                      role: { __typename: 'Role', id: shiftLead.id, name: 'Shift lead' },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    await user.click(await screen.findByRole('link', { name: 'Sara Nyberg' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' })).toBeDefined();
+    expect(router.state.location.pathname).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    const roles = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
+    await waitFor(() =>
+      expect(bodyRows(roles)).toEqual([
+        ['Shift leadCustom role', 'Plant A', 'Remove'],
+        [
+          'ViewerPlanning, default role',
+          'Acme AB, all plants',
+          'A company admin of Acme AB can remove it.',
+        ],
+      ]),
+    );
+    expect(screen.getByText("Sara Nyberg's roles that apply at Plant A.")).toBeDefined();
+    // A role's page is in company settings, which a Plant admin cannot read, so no role links there.
+    expect(within(roles).getByText('Shift lead')).toBeDefined();
+    expect(within(roles).queryByRole('link', { name: 'Shift lead' })).toBeNull();
+    expect(within(roles).queryByRole('link', { name: 'Viewer' })).toBeNull();
+    const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Plant A' });
+    expect(await within(can).findByText('Release production orders to the floor')).toBeDefined();
+    expect(within(can).getByText('Shift lead at Plant A')).toBeDefined();
+  });
+
+  it("E04-S02 Add role on a person's page is for that person: its title names them, it asks no Person, and the added role returns to the person's page", async () => {
+    const user = userEvent.setup();
+    const given = { ...heldAtPlant(planner, sara), id: '019a0000-0000-7000-8000-0000000000b1' };
+    const saraAtPlant = userOf(sara, [assignment(shiftLead, plantA, saraLead.id)]);
+    const router = renderCoreAt(coreLinks.people.person({ plant, userId: sara.id }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      {
+        request: { query: CoreUser, variables: { id: sara.id } },
+        result: { data: { coreUser: saraAtPlant } },
+      },
+      rolesQuery([shiftLead, planner, viewerRole], {}),
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: { coreUser: { __typename: 'User', id: sara.id, effectivePermissions: [] } },
+        },
+      },
+      {
+        request: {
+          query: CoreAssignRole,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            uuidv7.test(input.id ?? '') &&
+            input.userId === sara.id &&
+            input.roleId === planner.id &&
+            input.scopeId === plantA.id,
+        },
+        result: { data: { coreAssignRole: given } },
+      } as MockLink.MockedResponse,
+      {
+        request: { query: CoreUserPermissions, variables: { id: sara.id } },
+        result: {
+          data: { coreUser: { __typename: 'User', id: sara.id, effectivePermissions: [] } },
+        },
+      },
+    ]);
+
+    const add = await screen.findByRole('link', { name: 'Add role' });
+    expect(add.getAttribute('href')).toBe(
+      coreLinks.people.person.addRole({ plant, userId: sara.id }).href,
+    );
+    await user.click(add);
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Add role for Sara Nyberg' }),
+    ).toBeDefined();
+    expect((await screen.findByRole('link', { name: 'Cancel' })).getAttribute('href')).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    expect(screen.queryByRole('combobox', { name: 'Person' })).toBeNull();
+    await user.click(screen.getByRole('combobox', { name: 'Role' }));
+    const roles = await screen.findByRole('listbox');
+    expect(
+      within(roles)
+        .getByRole('option', { name: /^Shift lead/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
+    await user.click(within(roles).getByRole('option', { name: /^Planner/ }));
+    await user.click(screen.getByRole('button', { name: 'Add role' }));
+
+    // The shell moves focus to the h1 on the path change (shell-pages), outside this harness.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' })).toBeDefined();
+    expect(router.state.location.pathname).toBe(
+      coreLinks.people.person({ plant, userId: sara.id }).href,
+    );
+    await waitFor(() =>
+      expect(spoken()).toBe(
+        "Planner at Plant A added for Sara Nyberg. It applies from Sara Nyberg's next action.",
+      ),
+    );
+    const table = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
+    await waitFor(() => expect(within(table).getByText('Planner')).toBeDefined());
   });
 
   it('E04-S02 a reader without core.user:read at the plant gets the page No access to People', async () => {

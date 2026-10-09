@@ -3,6 +3,7 @@ import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { AssignRoleForm } from '../../components/assign-role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
@@ -23,15 +24,23 @@ export function PeopleAddRoleScreen() {
   const navigate = useNavigate();
   const places = usePlaces();
   const viewer = useViewer();
-  const users = useQuery(CoreUsers);
+  const [search, setSearch] = useState('');
+  const users = useQuery(CoreUsers, {
+    variables: search === '' ? {} : { search },
+  });
+  // The results of the last search stay while the next ones load.
+  const shownUsers = users.data ?? users.previousData;
   const roles = useQuery(CoreRoles);
   const held = useQuery(CorePlantRoleAssignments, { errorPolicy: 'all' });
   const plantName = places.plant?.name ?? plant;
   const people = coreLinks.people({ plant }).href;
   const forbidden = viewer.loaded && !viewer.can('core.roleAssignment:manage');
-  const failed = [users, roles].find(
-    ({ data, error }) => data === undefined && error !== undefined,
-  );
+  const failed =
+    shownUsers === undefined && users.error !== undefined
+      ? users
+      : roles.data === undefined && roles.error !== undefined
+        ? roles
+        : undefined;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
     state = noAccessState('Add role', 'core.roleAssignment:manage', plantName);
@@ -43,7 +52,7 @@ export function PeopleAddRoleScreen() {
       onRetry: () => failed.refetch(),
     };
   } else if (
-    users.data === undefined ||
+    shownUsers === undefined ||
     roles.data === undefined ||
     !viewer.loaded ||
     places.plant === undefined
@@ -57,11 +66,15 @@ export function PeopleAddRoleScreen() {
       state={state}
     >
       {state.status === 'ready' &&
-        users.data !== undefined &&
+        shownUsers !== undefined &&
         roles.data !== undefined &&
         places.plant !== undefined && (
           <AssignRoleForm
-            people={users.data.coreUsers.edges.map(({ node }) => node)}
+            people={[]}
+            personSearch={{
+              results: shownUsers.coreUsers.edges.map(({ node }) => node),
+              onSearch: setSearch,
+            }}
             places={[{ ...places.plant, kind: 'PLANT' }]}
             companyName={places.company?.name ?? 'the company'}
             roles={roles.data.coreRoles}

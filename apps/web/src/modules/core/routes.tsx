@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-router';
 import { newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch } from './article-list-search.ts';
+import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 
 /** A screen of screens.ts as a route component, which loads the screens' chunk on first use. */
@@ -93,6 +94,20 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.people.addRole).path,
     component: lazyScreen('PeopleAddRoleScreen'),
   });
+  const personRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: linkEntry(coreLinks.people.person).path,
+  });
+  const personDetailRoute = createRoute({
+    getParentRoute: () => personRoute,
+    path: '/',
+    component: lazyScreen('PersonScreen'),
+  });
+  const personAddRoleRoute = createRoute({
+    getParentRoute: () => personRoute,
+    path: linkEntry(coreLinks.people.person.addRole).path,
+    component: lazyScreen('PersonAddRoleScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     articlesRoute.addChildren([
@@ -100,7 +115,11 @@ export function coreRoutes(plantRoute: PlantRoute) {
       newArticleRoute,
       articleRoute.addChildren([articleDetailRoute, editArticleRoute]),
     ]),
-    peopleRoute.addChildren([peopleListRoute, peopleAddRoleRoute]),
+    peopleRoute.addChildren([
+      peopleListRoute,
+      peopleAddRoleRoute,
+      personRoute.addChildren([personDetailRoute, personAddRoleRoute]),
+    ]),
   ]);
 }
 
@@ -150,6 +169,8 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const roleListRoute = createRoute({
     getParentRoute: () => rolesRoute,
     path: '/',
+    // Search, Defined by and the sort live in the URL; a key that does not apply falls back.
+    validateSearch: roleListSearch,
     component: lazyScreen('RolesScreen'),
   });
   const newRoleRoute = createRoute({
