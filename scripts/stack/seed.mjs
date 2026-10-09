@@ -1,22 +1,30 @@
-// The seed of the stack script (E02-S08, E05-S05): the scope tree of one company and one plant, a
-// dev admin who signs in with a dev-only password, and fictional articles and production orders at
-// the plant, so the board has orders to list and the article list has pages. Every code, name,
-// number and quantity here is made up.
-// The planner and the operator join the seed with their roles (E05-S05); core.plant, the company
-// as a Better Auth organization and a second plant arrive with the plant switcher.
+// The seed of the stack script (E02-S08, E05-S03, E05-S05): one company with two plants, a dev
+// admin who signs in with a dev-only password, and fictional articles and production orders at
+// the plants, so the board has orders to list, the article list has pages and the plant switcher
+// has two plants. Every code, name, number and quantity here is made up.
+// The planner and the operator join the seed with their roles (E05-S05).
 
 import { randomBytes, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
 import pg from 'pg';
 
 /**
- * The scope ids of the seed: the company, the root of the scope tree, and its one plant, where the
- * seed writes every record.
+ * The seed's company: a Better Auth organization, whose slug is the company's id (ADR 0066), and
+ * the root of the scope tree.
  */
-export const seedScopes = {
-  company: '019a0000-0000-7000-8000-00000000c001',
-  plant: '019a0000-0000-7000-8000-00000000a001',
+export const seedCompany = {
+  id: '019a0000-0000-7000-8000-00000000c001',
+  organizationId: '019a0000-0000-7000-8000-00000000c002',
+  name: 'Demo Works',
 };
+
+/** The seed's plants, plant number 1 first: each one's scope id, URL slug and name. */
+export const seedPlants = [
+  { id: '019a0000-0000-7000-8000-00000000a001', slug: 'plant-a', name: 'Plant A' },
+  { id: '019a0000-0000-7000-8000-00000000a002', slug: 'plant-b', name: 'Plant B' },
+];
+
+const [plantA, plantB] = seedPlants.map(({ id }) => id);
 
 /**
  * The dev admin, who holds every permission at the seed company. The password is for development
@@ -60,14 +68,17 @@ function articleId(n) {
   return `019a0000-0000-7000-8000-0000000a${n.toString(16).padStart(4, '0')}`;
 }
 
-/** The three articles the orders make. */
+/** The three articles the orders make, each at the plant of its orders. */
 const orderArticles = [
-  { id: articleId(1), code: 'BR-140', name: 'Wall bracket' },
-  { id: articleId(2), code: 'PN-305', name: 'Side panel' },
-  { id: articleId(3), code: 'CW-220', name: 'Caster wheel' },
+  { id: articleId(1), plant: plantA, code: 'BR-140', name: 'Wall bracket' },
+  { id: articleId(2), plant: plantA, code: 'PN-305', name: 'Side panel' },
+  { id: articleId(3), plant: plantB, code: 'CW-220', name: 'Caster wheel' },
 ];
 
-/** Families of further articles, three sizes each, so the article list has pages to walk. */
+/**
+ * Families of further articles, three sizes each, so the article list of each plant has pages to
+ * walk: the first ten families at plant A, the others at plant B.
+ */
 const families = [
   ['AX', 'Axle', ['20 mm', '25 mm', '30 mm']],
   ['BL', 'Hex bolt', ['M6', 'M8', 'M10']],
@@ -95,6 +106,7 @@ const articles = [
   ...families.flatMap(([prefix, name, sizes], family) =>
     sizes.map((size, index) => ({
       id: articleId(4 + family * sizes.length + index),
+      plant: family < 10 ? plantA : plantB,
       code: `${prefix}-${500 + index * 10}`,
       name: `${name} ${size}`,
     })),
@@ -103,27 +115,32 @@ const articles = [
 
 const [bracket, panel, caster] = orderArticles.map(({ id }) => id);
 
+/** The production orders, each at the plant of its article. */
 const orders = [
   {
     id: '019a0000-0000-7000-8000-0000000b0001',
+    plant: plantA,
     number: 'DEV-1001',
     articleId: bracket,
     quantity: '500',
   },
   {
     id: '019a0000-0000-7000-8000-0000000b0002',
+    plant: plantA,
     number: 'DEV-1002',
     articleId: panel,
     quantity: '80',
   },
   {
     id: '019a0000-0000-7000-8000-0000000b0003',
+    plant: plantB,
     number: 'DEV-1003',
     articleId: caster,
     quantity: '1200',
   },
   {
     id: '019a0000-0000-7000-8000-0000000b0004',
+    plant: plantA,
     number: 'DEV-1004',
     articleId: bracket,
     quantity: '150',
@@ -131,8 +148,9 @@ const orders = [
 ];
 
 /**
- * Writes the scope tree and the dev admin in one transaction as core's owner role, on a connection
- * that ownerUrl logs in as nm_owner: the company and the plant in core.scope, the admin in
+ * Writes the company, its plants and the dev admin in one transaction as core's owner role, on a
+ * connection that ownerUrl logs in as nm_owner: the company's Better Auth organization, its node in
+ * core.scope and its core.company row, each plant's node and core.plant row, the admin in
  * auth.user with a password account, a role that holds every installed permission, and its
  * assignment at the company (ADR 0007, ADR 0010).
  * @param {string} ownerUrl
@@ -144,12 +162,34 @@ async function seedAccess(ownerUrl) {
     await client.query('begin');
     await client.query('set local role nm_mod_core');
     await client.query(
-      `insert into core.scope (id, company_id, parent_id, kind, span)
-       values ($1, $1, null, 'company', '(,)'),
-              ($2, $1, $1, 'plant', int8range(1::int8 << 32, 2::int8 << 32))
+      `insert into auth.organization (id, name, slug, "createdAt") values ($1, $2, $3, now())
        on conflict (id) do nothing`,
-      [seedScopes.company, seedScopes.plant],
+      [seedCompany.organizationId, seedCompany.name, seedCompany.id],
     );
+    await client.query(
+      `insert into core.scope (id, company_id, parent_id, kind, span)
+       values ($1, $1, null, 'company', '(,)')
+       on conflict (id) do nothing`,
+      [seedCompany.id],
+    );
+    await client.query(
+      `insert into core.company (id, organization_id, name) values ($1, $2, $3)
+       on conflict (id) do nothing`,
+      [seedCompany.id, seedCompany.organizationId, seedCompany.name],
+    );
+    for (const [index, { id, slug, name }] of seedPlants.entries()) {
+      await client.query(
+        `insert into core.scope (id, company_id, parent_id, kind, span)
+         values ($1, $2, $2, 'plant', int8range($3::int8 << 32, ($3::int8 + 1) << 32))
+         on conflict (id) do nothing`,
+        [id, seedCompany.id, index + 1],
+      );
+      await client.query(
+        `insert into core.plant (id, company_id, slug, name) values ($1, $2, $3, $4)
+         on conflict (id) do nothing`,
+        [id, seedCompany.id, slug, name],
+      );
+    }
     const { id, username, password, name, email } = devAdmin;
     await client.query(
       `insert into auth."user" (id, name, email, "emailVerified", username, "displayUsername")
@@ -170,13 +210,13 @@ async function seedAccess(ownerUrl) {
        select $1, $2, 'admin', 'Admin', coalesce(array_agg(key order by key), '{}'), 'custom'
          from core.permission where installed
        on conflict (id) do update set permissions = excluded.permissions`,
-      [adminRoleId, seedScopes.company],
+      [adminRoleId, seedCompany.id],
     );
     await client.query(
       `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
        values ($1, $2, $2, $3)
        on conflict (user_id, scope_id, role_id) do nothing`,
-      [id, seedScopes.company, adminRoleId],
+      [id, seedCompany.id, adminRoleId],
     );
     await client.query('commit');
   } finally {
@@ -185,10 +225,10 @@ async function seedAccess(ownerUrl) {
 }
 
 /**
- * Writes the seed: first the scope tree and the dev admin as core's owner role (seedAccess), then
- * the articles and orders in one transaction as the role appUrl logs in as, nm_app, with the seed
- * plant as its read and write scope, so the row-level security policies apply as they do in the
- * server (ADR 0008). A record that exists, also one a person changed since, is left as it is, so a
+ * Writes the seed: first the company, its plants and the dev admin as core's owner role
+ * (seedAccess), then the articles and orders in one transaction as the role appUrl logs in as,
+ * nm_app, with both plants as its read and write scopes, so the row-level security policies apply
+ * as they do in the server (ADR 0008). A record that exists, also one a person changed since, is left as it is, so a
  * second run adds nothing; the admin's role takes up a permission installed since the last run.
  * @param {{ appUrl: string, ownerUrl: string }} urls
  */
@@ -201,21 +241,21 @@ export async function seed({ appUrl, ownerUrl }) {
     await client.query(
       `select set_config('northmes.read_scopes', $1::uuid[]::text, true),
               set_config('northmes.write_scopes', $1::uuid[]::text, true)`,
-      [[seedScopes.plant]],
+      [[plantA, plantB]],
     );
-    for (const { id, code, name } of articles) {
+    for (const { id, plant, code, name } of articles) {
       await client.query(
         `insert into core.article (id, scope_id, code, name) values ($1, $2, $3, $4)
          on conflict (id) do nothing`,
-        [id, seedScopes.plant, code, name],
+        [id, plant, code, name],
       );
     }
-    for (const { id, number, articleId, quantity } of orders) {
+    for (const { id, plant, number, articleId, quantity } of orders) {
       await client.query(
         `insert into planning.production_order (id, scope_id, number, article_id, quantity)
          values ($1, $2, $3, $4, $5)
          on conflict (id) do nothing`,
-        [id, seedScopes.plant, number, articleId, quantity],
+        [id, plant, number, articleId, quantity],
       );
     }
     await client.query('commit');

@@ -63,9 +63,7 @@ describe('devPlan', () => {
     const plan = await devPlan(ports);
 
     // The seed plant's board on the web's origin, which the browser opens.
-    expect(plan.boardUrl).toBe(
-      'http://127.0.0.1:41002/plant-a/planning/board',
-    );
+    expect(plan.boardUrl).toBe('http://127.0.0.1:41002/plant-a/planning/board');
     expect(new URL(plan.boardUrl).pathname).toBe(
       planningLinks.board({ plant: seedPlants[0]?.slug ?? '' }).href,
     );
