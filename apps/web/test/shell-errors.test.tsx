@@ -43,7 +43,7 @@ const quality: ShellModule = {
     },
     {
       label: 'Deviations',
-      icon: 'TriangleAlert',
+      icon: 'ClipboardList',
       link: ({ plant }) => ({ href: `/${plant}/quality/deviations` }),
     },
   ],
@@ -88,7 +88,9 @@ describe('an unknown path', () => {
     renderAt('/plant-a/reports');
 
     const main = await screen.findByRole('main');
-    expect(await within(main).findByRole('heading', { level: 1, name: 'Page not found' })).toBeDefined();
+    expect(
+      await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeDefined();
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeDefined();
     await waitFor(() =>
       expect(main.textContent).toContain(
@@ -116,7 +118,9 @@ describe('an unknown path', () => {
     renderAt(`/settings/${companyId}/core/reports`);
 
     const main = await screen.findByRole('main');
-    expect(await within(main).findByRole('heading', { level: 1, name: 'Page not found' })).toBeDefined();
+    expect(
+      await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeDefined();
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
     await waitFor(() =>
       expect(main.textContent).toContain(
@@ -157,9 +161,9 @@ describe('a page that throws while it renders', () => {
       ['Code', 'web.render_error'],
     ]);
     expect(within(main).getByRole('button', { name: 'Copy correlation id' })).toBeDefined();
-    expect(
-      within(main).getByRole('link', { name: 'Go to Inspections' }).getAttribute('href'),
-    ).toBe('/plant-a/quality/inspections');
+    expect(within(main).getByRole('link', { name: 'Go to Inspections' }).getAttribute('href')).toBe(
+      '/plant-a/quality/inspections',
+    );
     await waitFor(() =>
       expect(document.title).toBe('Deviations could not be shown · Plant A · NorthMES'),
     );

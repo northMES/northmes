@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { companySettingsHref } from '@northmes/web-sdk';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
@@ -99,4 +100,69 @@ export function companySettingsEntries(
       .filter(shown)
       .map(({ label, icon, link }) => ({ label, icon, href: link({ companyId }).href })),
   }));
+}
+
+/** An entry of a navigation as a page: its label and its href. */
+export interface PageEntry {
+  readonly label: string;
+  readonly href: string;
+}
+
+/** Where a page lives: a plant, by its slug, or company settings, by the company id. */
+export interface PagePlace {
+  readonly plant?: string;
+  readonly companyId?: string;
+}
+
+/** Every entry of the modules at a place: the sidebar and plant settings, or company settings. */
+function entriesAt(modules: readonly ShellModule[], { plant, companyId }: PagePlace): PageEntry[] {
+  if (plant !== undefined) {
+    return modules.flatMap(({ links = [] }) =>
+      links.map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    );
+  }
+  if (companyId !== undefined) {
+    return modules.flatMap(({ settingsLinks = [] }) =>
+      settingsLinks.map(({ label, link }) => ({ label, href: link({ companyId }).href })),
+    );
+  }
+  return [];
+}
+
+/**
+ * The entry of the page on screen: the one whose page it is, or the nearest one above it, as
+ * Articles for an article. Its label stands in for the route title where the route itself cannot
+ * give one, such as on its error panel.
+ */
+export function entryAt(
+  modules: readonly ShellModule[],
+  place: PagePlace,
+  pathname: string,
+): PageEntry | undefined {
+  return entriesAt(modules, place)
+    .filter(({ href }) => currentOf(href, pathname) !== undefined)
+    .sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/**
+ * The way out of a page that failed (D2 ST6, shell-306 SE): the first sidebar entry of its module,
+ * else the plant's first page; in company settings, the company landing. Never the page itself.
+ */
+export function wayOutOf(
+  modules: readonly ShellModule[],
+  { plant, companyId }: PagePlace,
+  pathname: string,
+): PageEntry | undefined {
+  if (companyId !== undefined) {
+    const href = companySettingsHref(companyId);
+    return href === pathname ? undefined : { label: 'Company settings', href };
+  }
+  if (plant === undefined) return undefined;
+  const moduleId = pathname.split('/')[2];
+  const module = modules.find((each) => each.module.id === moduleId);
+  const candidates = [
+    ...(module === undefined ? [] : sidebarLinks(module).slice(0, 1)),
+    ...modules.flatMap(sidebarLinks).slice(0, 1),
+  ].map(({ label, link }) => ({ label, href: link({ plant }).href }));
+  return candidates.find(({ href }) => href !== pathname);
 }

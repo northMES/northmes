@@ -34,6 +34,7 @@ import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { SidebarInset, SidebarProvider } from '../ui/primitives/sidebar.tsx';
 import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { CompanySettingsLanding, CompanySettingsLayout } from './shell-company-settings.tsx';
+import { ShellNotFound } from './shell-not-found.tsx';
 import {
   companySettingsEntries,
   currentOf,
@@ -47,6 +48,7 @@ import {
   sidebarLinks,
   useFocusPageHeading,
 } from './shell-pages.ts';
+import { ShellRouteError } from './shell-route-error.tsx';
 import {
   type SettingsGroup,
   ShellSettingsLayout,
@@ -163,7 +165,13 @@ export function createShellRouter(
       }),
     ],
   });
-  const router = createRouter({ routeTree, history });
+  const router = createRouter({
+    routeTree,
+    history,
+    // Both render in the nearest layout: the plant's or company settings' (shell-306, NF1, NF3).
+    defaultNotFoundComponent: () => <ShellNotFound modules={ordered} />,
+    defaultErrorComponent: (props) => <ShellRouteError {...props} modules={ordered} />,
+  });
   return router;
 }
 
