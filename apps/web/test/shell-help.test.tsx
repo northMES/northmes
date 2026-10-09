@@ -154,6 +154,22 @@ describe('the Help menu', () => {
     expect(isBefore(account, help)).toBe(true);
   });
 
+  it('E04-S02 at 320 px All pages chosen from Help in the sheet closes the sheet and focus moves to its h1 (D2 KE13)', async () => {
+    const user = userEvent.setup();
+    setViewport(320, 640);
+    renderAt('/plant-a/equipment/tools');
+    await screen.findByRole('heading', { level: 1, name: 'Tools' });
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Navigation' });
+    const { menu } = await openHelp(user, sheet);
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'All pages' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).toBeNull());
+    const heading = await screen.findByRole('heading', { level: 1, name: 'All pages' });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
+
   it('E04-S02 the unknown plant page and company settings have Help before the account menu, without All pages', async () => {
     const user = userEvent.setup();
     renderAt('/plant-x/equipment/tools');

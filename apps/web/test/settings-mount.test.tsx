@@ -220,7 +220,7 @@ describe('company settings', () => {
     ).toBeDefined();
     expect(within(alert).getByText('Check the connection, then try again.')).toBeDefined();
 
-    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     const list = await screen.findByRole('list', { name: 'Company settings entries' });
     expect(linksIn(list)).toEqual([['Users', `/settings/${companyId}/core/users`]]);

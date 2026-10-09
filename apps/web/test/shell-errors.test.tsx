@@ -3,6 +3,7 @@ import { defineWebModule } from '@northmes/web-sdk';
 import { createRoute } from '@tanstack/react-router';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ShellModule } from '../src/modules.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
@@ -31,7 +32,20 @@ function DeviationsScreen() {
   );
 }
 
-/** A module whose second page throws while it renders. */
+/** A page that throws while it renders once Open audit has been chosen, on the same path. */
+function AuditsScreen() {
+  const [opened, setOpened] = useState(false);
+  if (opened) throw new TypeError("Cannot read properties of undefined (reading 'lines')");
+  return (
+    <PageFrame title="Audits">
+      <button type="button" onClick={() => setOpened(true)}>
+        Open audit
+      </button>
+    </PageFrame>
+  );
+}
+
+/** A module whose second page throws while it renders, and whose third throws after a click. */
 const quality: ShellModule = {
   label: 'Quality',
   order: 30,
@@ -45,6 +59,11 @@ const quality: ShellModule = {
       label: 'Deviations',
       icon: 'ClipboardList',
       link: ({ plant }) => ({ href: `/${plant}/quality/deviations` }),
+    },
+    {
+      label: 'Audits',
+      icon: 'ListChecks',
+      link: ({ plant }) => ({ href: `/${plant}/quality/audits` }),
     },
   ],
   module: defineWebModule({
@@ -62,6 +81,11 @@ const quality: ShellModule = {
           getParentRoute: () => qualityRoute,
           path: 'deviations',
           component: DeviationsScreen,
+        }),
+        createRoute({
+          getParentRoute: () => qualityRoute,
+          path: 'audits',
+          component: AuditsScreen,
         }),
       ]);
     },
@@ -102,6 +126,28 @@ describe('an unknown path', () => {
     );
     expect(crumbs()).toEqual(['Plant A', 'Page not found']);
     expect(document.title).toBe('Page not found · Plant A · NorthMES');
+  });
+
+  it('E04-S02 an unknown path under a loaded module renders the module page not found, with Go to its first entry and See all pages (D2 ST5)', async () => {
+    renderAt('/plant-a/equipment/gauges');
+
+    const main = await screen.findByRole('main');
+    expect(
+      await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeDefined();
+    await waitFor(() =>
+      expect(main.textContent).toContain(
+        'Equipment has no page at /plant-a/equipment/gauges. The link may be out of date.',
+      ),
+    );
+    expect(within(main).getByRole('link', { name: 'Go to Tools' }).getAttribute('href')).toBe(
+      '/plant-a/equipment/tools',
+    );
+    expect(within(main).getByRole('link', { name: 'See all pages' }).getAttribute('href')).toBe(
+      '/plant-a/all-pages',
+    );
+    expect(crumbs()).toEqual(['Plant A', 'Equipment', 'Page not found']);
+    expect(document.title).toBe('Page not found · Equipment · Plant A · NorthMES');
   });
 
   it('E04-S02 a link to an unknown path moves focus to the h1 Page not found', async () => {
@@ -167,6 +213,23 @@ describe('a page that throws while it renders', () => {
     await waitFor(() =>
       expect(document.title).toBe('Deviations could not be shown · Plant A · NorthMES'),
     );
+    // The first load moves no focus, so the first Tab reaches the skip link (D2, Focus rules).
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('E04-S02 a page that throws after a click on the same path moves focus to the error panel h1 (D2 ST6)', async () => {
+    const user = userEvent.setup();
+    renderAt('/plant-a/quality/audits');
+    await screen.findByRole('heading', { level: 1, name: 'Audits' });
+
+    await user.click(screen.getByRole('button', { name: 'Open audit' }));
+
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Audits could not be shown',
+    });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
   it('E04-S02 Try again renders the page again, and focus moves to its h1', async () => {

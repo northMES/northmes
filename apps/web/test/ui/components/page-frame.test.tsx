@@ -96,7 +96,7 @@ describe('PageFrame', () => {
     expect(screen.queryByText('Rows')).toBeNull();
   });
 
-  it('E04-S07 an error page frame is an alert with the correlation id, which Copy correlation id copies and announces', async () => {
+  it('E04-S07 an error page frame is an alert with the correlation id below it, which Copy correlation id copies and announces', async () => {
     const user = userEvent.setup();
     render(
       <PageFrame
@@ -118,9 +118,9 @@ describe('PageFrame', () => {
     expect(
       within(alert).getByRole('heading', { level: 2, name: 'Could not load articles' }),
     ).toBeDefined();
-    expect(within(alert).getByText('01J9Z6M2PQ7R4T8V1W3X5Y6Z8A')).toBeDefined();
+    expect(screen.getByText('01J9Z6M2PQ7R4T8V1W3X5Y6Z8A')).toBeDefined();
     expect(screen.queryByText('Rows')).toBeNull();
-    await user.click(within(alert).getByRole('button', { name: 'Copy correlation id' }));
+    await user.click(screen.getByRole('button', { name: 'Copy correlation id' }));
 
     expect(await navigator.clipboard.readText()).toBe('01J9Z6M2PQ7R4T8V1W3X5Y6Z8A');
     await waitFor(() =>
@@ -186,7 +186,7 @@ describe('PageFrame', () => {
     expect(alert.textContent).toContain(
       'Check the connection, then try again. If it fails again, give your plant admin the correlation id.',
     );
-    expect(within(alert).getByText('0199c4e2-7b1d-7a52-8f3e-5d21c6a9b04e')).toBeDefined();
+    expect(screen.getByText('0199c4e2-7b1d-7a52-8f3e-5d21c6a9b04e')).toBeDefined();
   });
 
   it('E04-S07 without a correlation id the error state only asks to check the connection and try again', () => {
@@ -265,6 +265,47 @@ describe('PageFrame', () => {
         'Still could not load articles.',
       ),
     );
+  });
+
+  it('E04-S07 the alert holds only the heading and the text, so Try again and a new correlation id leave it unchanged (shell-306 E22)', async () => {
+    const user = userEvent.setup();
+    let failed: (state: PageState) => void = () => {};
+    function FailingPage() {
+      const [state, setState] = useState<PageState>({
+        status: 'error',
+        title: 'Could not load articles',
+        correlationId: '01J9Z6M2PQ7R4T8V1W3X5Y6Z8A',
+        onRetry: async () => {
+          setState({ status: 'loading' });
+          setState(await new Promise<PageState>((resolve) => (failed = resolve)));
+        },
+      });
+      return (
+        <PageFrame title="Articles" state={state}>
+          <p>Rows</p>
+        </PageFrame>
+      );
+    }
+    render(<FailingPage />);
+    const alert = screen.getByRole('alert');
+    const announced = alert.textContent;
+    expect(within(alert).queryByRole('button')).toBeNull();
+    expect(announced).not.toContain('01J9Z6M2PQ7R4T8V1W3X5Y6Z8A');
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByRole('button', { name: 'Trying again' })).toBeDefined();
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert.textContent).toBe(announced);
+    failed({
+      status: 'error',
+      title: 'Could not load articles',
+      correlationId: '01J9Z7A0B1C2D3E4F5G6H7J8K9',
+      onRetry: vi.fn(),
+    });
+
+    await screen.findByText('01J9Z7A0B1C2D3E4F5G6H7J8K9');
+    expect(screen.getByRole('alert')).toBe(alert);
+    expect(alert.textContent).toBe(announced);
   });
 
   it('E06-S06 when the action of an empty state takes the state and the focus away, focus moves to the h1', async () => {

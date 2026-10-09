@@ -86,7 +86,7 @@ describe('articles list', () => {
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByRole('heading', { name: 'Could not load articles' })).toBeDefined();
     expect(within(alert).getByText('Check the connection, then try again.')).toBeDefined();
-    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
