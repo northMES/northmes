@@ -108,7 +108,7 @@ describe('an unknown path', () => {
     const router = renderAt('/plant-a/equipment/tools');
     await screen.findByRole('heading', { level: 1, name: 'Tools' });
 
-    await router.navigate({ href: '/plant-a/equipment/gauges' });
+    router.history.push('/plant-a/equipment/gauges');
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Page not found' });
     await waitFor(() => expect(document.activeElement).toBe(heading));
