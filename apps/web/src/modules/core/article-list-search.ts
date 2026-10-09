@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { z } from 'zod';
-import type { ArticleSortField, ArticlesVariables } from './articles.graphql.ts';
+import type { ArticleSortField, ArticlesVariables } from './screens/articles/index.ts';
 
 /** The page size of the list (design ui-222, open question 15). */
 export const articlePageSize = 25;

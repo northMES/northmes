@@ -3,7 +3,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CoreArticle } from '../../../src/modules/core/articles.graphql.ts';
+import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import {
   article,
   articleQuery,

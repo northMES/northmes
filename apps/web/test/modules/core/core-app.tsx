@@ -10,8 +10,9 @@ import {
   useParams,
 } from '@tanstack/react-router';
 import { render, within } from '@testing-library/react';
-import { CoreArticle, CoreArticles } from '../../../src/modules/core/articles.graphql.ts';
+import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
+import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 
 /** The plant of every test, as the $plant segment names it. */
 export const plant = 'plant-a';

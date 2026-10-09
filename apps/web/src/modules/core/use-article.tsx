@@ -3,9 +3,9 @@ import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
-import { buttonVariants } from '../../ui/button-variants.ts';
-import type { PageState } from '../../ui/page-frame.tsx';
-import { type Article, CoreArticle } from './articles.graphql.ts';
+import type { PageState } from '../../ui/components/page-frame/index.ts';
+import { buttonVariants } from '../../ui/primitives/button-variants.ts';
+import { type Article, CoreArticle } from './article.graphql.ts';
 
 /** What the article and edit pages read of the article in the URL. */
 export interface ArticleOfPage {
