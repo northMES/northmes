@@ -127,9 +127,11 @@ describe("core's Company admin role", () => {
       undefined,
       undefined,
     ]);
-    expect(
-      [viewer, planner, custom].map(({ data }) => data?.coreAssignRole.role.name),
-    ).toEqual(['Viewer', 'Planner', 'Night planner']);
+    expect([viewer, planner, custom].map(({ data }) => data?.coreAssignRole.role.name)).toEqual([
+      'Viewer',
+      'Planner',
+      'Night planner',
+    ]);
   });
 
   it('E05-S06 a Plant admin assigns Planner at its plant, but not Company admin, not at another plant or at the company, and edits no role, creates no user and blocks none', async () => {

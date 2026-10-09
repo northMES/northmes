@@ -165,9 +165,9 @@ describe('every company keeps an active Company admin', () => {
 
     expect(refusals(edited)).toEqual(lastAdmin);
     expect(refusals(deleted)).toEqual(lastAdmin);
-    expect(await query(db.appUrl, `select version, permissions from core.role where id = '${id}'`)).toEqual([
-      { version, permissions },
-    ]);
+    expect(
+      await query(db.appUrl, `select version, permissions from core.role where id = '${id}'`),
+    ).toEqual([{ version, permissions }]);
   });
 
   it('E05-S06 with two Company admins one may remove the other', async () => {

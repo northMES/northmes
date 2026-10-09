@@ -33,7 +33,9 @@ export const companyAdminRoleKey = 'core-company-admin';
  * permission except the company-level ones, so at its plant it can assign any role but Company
  * admin.
  */
-export function coreRoles(installed: readonly string[]): Readonly<Record<string, readonly string[]>> {
+export function coreRoles(
+  installed: readonly string[],
+): Readonly<Record<string, readonly string[]>> {
   return {
     'company-admin': [...installed],
     'plant-admin': installed.filter((key) => !companyPermissions.includes(key)),

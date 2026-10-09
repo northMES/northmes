@@ -235,7 +235,10 @@ function roleName(key: string): string {
  * declare roles of one name, with its permission keys sorted. A module whose roles depend on the
  * installed permissions gets every key in `installed`.
  */
-function defaultRoles(catalog: readonly CatalogEntry[], installed: readonly string[]): DefaultRole[] {
+function defaultRoles(
+  catalog: readonly CatalogEntry[],
+  installed: readonly string[],
+): DefaultRole[] {
   return catalog.flatMap(({ manifest, rolesOf }) =>
     Object.entries(rolesOf?.(installed) ?? manifest.roles ?? {}).map(([role, permissions]) => ({
       key: `${manifest.id}-${role}`,
