@@ -8,7 +8,7 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import { CircleAlert, RotateCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ShellModule } from '../modules.ts';
 import { PageFrame } from '../ui/components/page-frame/index.ts';
 import { StatePanel, type StateRow } from '../ui/components/state-panel/index.ts';
@@ -47,6 +47,13 @@ export function ShellRouteError({
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // The docs name no source for the correlation id of a render error, so the browser makes one.
   const [renderId] = useState(() => crypto.randomUUID());
+  // The panel replaces a page that threw, also on the same path after a click, where the focused
+  // control went with the page: its h1 takes focus one frame after it renders (D2 ST6). The first
+  // load moves no focus, so the first Tab reaches the skip link.
+  useEffect(() => {
+    if (router.state.resolvedLocation === undefined) return;
+    focusNextHeading();
+  }, [router]);
   const routeTitle = entryAt(modules, place, pathname)?.label ?? 'This page';
   const wayOut = wayOutOf(modules, place, pathname);
   const failure = classifyError(error);
