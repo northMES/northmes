@@ -10,6 +10,7 @@ import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { BROKEN_CHECK_ERROR, brokenRules } from '../fixtures/commands/failing-validators.ts';
 import { auditRules, releaseLimits } from '../fixtures/commands/validators.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
+import { faulty } from '../fixtures/graphql/faulty.ts';
 import { fixtureCatalog } from '../fixtures/graphql/catalog.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
@@ -122,5 +123,34 @@ describe('the exception filter', () => {
       errors: [{ message: 'Unexpected error.', path: ['dispatchReleaseJob'] }],
     });
     expect(JSON.stringify(answer)).not.toContain(BROKEN_CHECK_ERROR);
+  });
+
+  it.each([
+    [400, 'BAD_USER_INPUT'],
+    [401, 'UNAUTHENTICATED'],
+    [403, 'FORBIDDEN'],
+    [404, 'NOT_FOUND'],
+    [409, 'CONFLICT'],
+    [412, 'PRECONDITION'],
+    [503, 'UNAVAILABLE'],
+  ])('a DomainError with status %i reaches the client as %s with its errorCode, message and details', async (status, code) => {
+    const booted = await bootFixtures(faulty);
+    const client = gqlClient(await booted.getUrl());
+
+    const answer = await client.send('query ($status: Int!) { faultyDomainError(status: $status) }', {
+      status,
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `Refused with status ${status}`,
+          path: ['faultyDomainError'],
+          extensions: { code, errorCode: 'faulty.refused', details: { status } },
+        },
+      ],
+    });
   });
 });
