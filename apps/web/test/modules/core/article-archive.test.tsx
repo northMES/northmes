@@ -238,4 +238,33 @@ describe('archive and restore an article', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
   });
+
+  it('E06-S06 on the edit form of an archived article, a Restore article that fails says so, and a later one that goes through clears the failure and focuses Article number', async () => {
+    const user = userEvent.setup();
+    const restored = article('AX-500', 'Axle 20 mm', 3);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(archivedAxle),
+      reloadOf(archivedAxle),
+      commandOf(CoreRestoreArticle, 2, { errors: [{ message: 'Service unavailable' }] }),
+      reloadOf(archivedAxle),
+      restoreOf(2, restored),
+    ]);
+
+    const summary = await screen.findByRole('group', { name: 'This article is archived' });
+    await user.click(within(summary).getByRole('button', { name: 'Restore article' }));
+    expect(
+      await within(summary).findByText(
+        'Could not restore the article. Check the connection, then try again.',
+      ),
+    ).toBeDefined();
+
+    await user.click(within(summary).getByRole('button', { name: 'Restore article' }));
+
+    await waitFor(() => expect(spoken()).toBe('Article AX-500 restored'));
+    await waitFor(() => expect(screen.queryByRole('group')).toBeNull());
+    expect(
+      screen.queryByText('Could not restore the article. Check the connection, then try again.'),
+    ).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Article number' }));
+  });
 });
