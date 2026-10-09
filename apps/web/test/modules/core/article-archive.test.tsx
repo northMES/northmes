@@ -157,6 +157,35 @@ describe('archive and restore an article', () => {
     expect(screen.getByText('Archived')).toBeDefined();
   });
 
+  it('E06-S06 an archive refused for a stale version whose reload gets no answer says the saved article could not be loaded, and keeps the page as it was', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(axle),
+      commandOf(CoreArchiveArticle, 1, {
+        data: null,
+        errors: [
+          {
+            message: `Article ${axle.id} is at version 2, and the change was made on version 1`,
+            extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+          },
+        ],
+      }),
+      {
+        request: { query: CoreArticle, variables: { id: axle.id } },
+        error: new TypeError('Failed to fetch'),
+      },
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Archive' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
+
+    expect((await within(dialog).findByRole('alert')).textContent).toBe(
+      'Someone changed this article after you opened it, and the saved article could not be loaded. Check the connection, then try again.',
+    );
+    expect(screen.getByText('Axle 20 mm')).toBeDefined();
+  });
+
   it("E06-S06 an archive the server refuses shows the server's message in the dialog", async () => {
     const user = userEvent.setup();
     renderCoreAt(articleHref(axle.id), [
