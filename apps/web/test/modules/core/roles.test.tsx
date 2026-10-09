@@ -184,7 +184,7 @@ describe('roles', () => {
     expect(within(holders).queryByRole('button')).toBeNull();
     expect(
       within(holders).getByText(
-        'Holders at the other plants of Acme AB are listed in the Administration of each plant. To add or remove a role, open the person and use the Access tab.',
+        "People in each plant's settings lists who holds a role at that plant. To add or remove a role, open the person and use the Access tab.",
       ),
     ).toBeDefined();
   });
