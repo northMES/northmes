@@ -399,6 +399,47 @@ describe('tooling', () => {
     ]);
   });
 
+  it('E12-S04 @modelcontextprotocol/server and @modelcontextprotocol/client are pinned exactly at one 2.x version, the server a dependency and the client a dev dependency of apps/backend', () => {
+    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. 2.1.0 was the
+    // newest 2.x release outside Renovate's 14-day window on 2026-10-09. Both packages pin the
+    // same @modelcontextprotocol/core, so they move together.
+    const packages = ['@modelcontextprotocol/server', '@modelcontextprotocol/client'];
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
+      '@modelcontextprotocol/server': '2.1.0',
+      '@modelcontextprotocol/client': '2.1.0',
+    });
+    expect(backend.dependencies?.['@modelcontextprotocol/server']).toBe('catalog:');
+    expect(backend.devDependencies?.['@modelcontextprotocol/client']).toBe('catalog:');
+    expect(backend.dependencies?.['@modelcontextprotocol/client']).toBeUndefined();
+  });
+
+  it('E12-S04 pnpm-lock.yaml holds one copy each of the MCP SDK v2 packages, on the catalog zod, and no workspace package takes the v1 @modelcontextprotocol/sdk', () => {
+    // The v2 packages validate tool schemas with zod 4, so they must share the copy that the
+    // contracts define schemas with. The v1 SDK arrives only through the shadcn CLI in apps/web.
+    const lockfile = parse(readText('pnpm-lock.yaml')) as {
+      importers?: Record<string, PackageJson>;
+      snapshots?: Record<string, { dependencies?: Record<string, string> } | undefined>;
+    };
+    const zod = readWorkspace().catalog?.zod;
+
+    for (const name of [
+      '@modelcontextprotocol/server',
+      '@modelcontextprotocol/client',
+      '@modelcontextprotocol/core',
+    ]) {
+      const keys = resolutions(name);
+      expect(keys, name).toHaveLength(1);
+      expect(lockfile.snapshots?.[keys[0] ?? '']?.dependencies?.zod, `${name} zod`).toBe(zod);
+    }
+    for (const [importer, manifest] of Object.entries(lockfile.importers ?? {})) {
+      expect(manifest.dependencies?.['@modelcontextprotocol/sdk'], importer).toBeUndefined();
+      expect(manifest.devDependencies?.['@modelcontextprotocol/sdk'], importer).toBeUndefined();
+    }
+  });
+
   it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {
     // The fonts ship in the web bundle. A package listing them would carry OFL-1.1 files into an
     // MIT package (ADR 0040).
