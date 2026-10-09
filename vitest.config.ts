@@ -69,6 +69,9 @@ export default defineConfig({
           name: 'web',
           environment: 'happy-dom',
           include: ['**/*.test.tsx'],
+          setupFiles: ['./apps/web/test/setup.ts'],
+          // Several findBy waits of up to 5 s each fit in one test.
+          testTimeout: 20_000,
           exclude: ignored,
         },
       },
