@@ -113,13 +113,18 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current) return;
-    setSubmits((count) => count + 1);
+    // The summary takes focus when submits changes, so it changes together with the problem: a
+    // screen reader then reads the new error, not the one before it.
+    const failWith = (next: Problem) => {
+      setProblem(next);
+      setSubmits((count) => count + 1);
+    };
     const empty = {
       ...(login.trim() === '' ? { login: 'Enter your username or email.' } : {}),
       ...(password === '' ? { password: 'Enter your password.' } : {}),
     };
     if (Object.keys(empty).length > 0) {
-      setProblem({ kind: 'fields', ...empty });
+      failWith({ kind: 'fields', ...empty });
       return;
     }
     busy.current = true;
@@ -130,7 +135,7 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
       onSignedIn();
       return;
     }
-    setProblem({ kind: 'refused', refusal: result });
+    failWith({ kind: 'refused', refusal: result });
     if (result.reason === 'wrong-credentials') {
       setPassword('');
       setPasswordWrong(true);
