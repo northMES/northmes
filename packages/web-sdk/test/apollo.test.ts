@@ -120,4 +120,91 @@ describe('createNorthmesClient', () => {
     expect(sockets[0]?.url).toBe('wss://api.northmes.test/mes/graphql');
     subscription.unsubscribe();
   });
+
+  it('E05-S05 with auth, each HTTP request carries the token that auth.token gives as its bearer token', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
+    const tokens = ['jwt-1', 'jwt-2'];
+    const client = createNorthmesClient({
+      plantId: 'plant-a',
+      fetch,
+      auth: { token: async () => tokens.shift(), onUnauthenticated: () => {} },
+    });
+
+    await client.query({ query: gql`query Ping { ping }`, fetchPolicy: 'network-only' });
+    await client.query({ query: gql`query Ping { ping }`, fetchPolicy: 'network-only' });
+
+    const authorizations = fetch.mock.calls.map(([, init]) =>
+      new Headers(init?.headers).get('authorization'),
+    );
+    expect(authorizations).toEqual(['Bearer jwt-1', 'Bearer jwt-2']);
+  });
+
+  it('E05-S05 with auth and no token, the request goes without an authorization header', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
+    const client = createNorthmesClient({
+      plantId: 'plant-a',
+      fetch,
+      auth: { token: async () => undefined, onUnauthenticated: () => {} },
+    });
+
+    await client.query({ query: gql`query Ping { ping }` });
+
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).has('authorization')).toBe(false);
+  });
+
+  it('E05-S05 a 401 answer calls auth.onUnauthenticated, and the query fails', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(
+          JSON.stringify({
+            errors: [{ message: 'Unauthorized', extensions: { code: 'UNAUTHENTICATED' } }],
+          }),
+          { status: 401, headers: { 'content-type': 'application/json' } },
+        ),
+    );
+    const onUnauthenticated = vi.fn();
+    const client = createNorthmesClient({
+      plantId: 'plant-a',
+      fetch,
+      auth: { token: async () => 'jwt-1', onUnauthenticated },
+    });
+
+    const answer = await client.query({ query: gql`query Ping { ping }`, errorPolicy: 'all' });
+
+    expect(answer.error).toBeDefined();
+    expect(onUnauthenticated).toHaveBeenCalledOnce();
+  });
+
+  it('E05-S05 an UNAUTHENTICATED GraphQL error calls auth.onUnauthenticated, and another error does not', async () => {
+    const answerWith = (code: string) =>
+      new Response(
+        JSON.stringify({ data: null, errors: [{ message: code, extensions: { code } }] }),
+        {
+          headers: { 'content-type': 'application/graphql-response+json' },
+        },
+      );
+    const fetch = vi
+      .fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(answerWith('FORBIDDEN'))
+      .mockResolvedValueOnce(answerWith('UNAUTHENTICATED'));
+    const onUnauthenticated = vi.fn();
+    const client = createNorthmesClient({
+      plantId: 'plant-a',
+      fetch,
+      auth: { token: async () => 'jwt-1', onUnauthenticated },
+    });
+    const ping = () =>
+      client.query({
+        query: gql`query Ping { ping }`,
+        fetchPolicy: 'network-only',
+        errorPolicy: 'all',
+      });
+
+    await ping();
+    const callsAfterForbidden = onUnauthenticated.mock.calls.length;
+    await ping();
+
+    expect(callsAfterForbidden).toBe(0);
+    expect(onUnauthenticated).toHaveBeenCalledOnce();
+  });
 });
