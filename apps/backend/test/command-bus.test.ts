@@ -415,6 +415,23 @@ describe('the permission step of CommandBusImpl', () => {
     expect(handle).not.toHaveBeenCalled();
   });
 
+  it("E05-S06 a principal who holds the command's permission at a plant gets FORBIDDEN on a row at the company above it", async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, buildPayload, handle } = releaseOfOrderAt(COMPANY);
+    // The request names plant A, where the planner holds the release, so only the row's scope
+    // refuses it.
+    const plantAPlanner = principalHolding({ [PLANT_A]: ['planning.productionOrder:release'] });
+
+    const run = runAs(plantAPlanner, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(buildPayload).not.toHaveBeenCalled();
+    expect(check).not.toHaveBeenCalled();
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
   it('E05-S06 the permission is checked before the version, so a stale expectedVersion without the permission gets FORBIDDEN', async () => {
     const { bus } = busWithPassingValidator(new FakeScopedDatabase());
     const { command } = releaseOfOrderAt(PLANT_A, 2);
