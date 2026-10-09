@@ -2,7 +2,7 @@
 import { useQuery } from '@apollo/client/react';
 import { cn } from 'cn';
 import { ChevronDown, Info, Lock } from 'lucide-react';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
@@ -189,10 +189,18 @@ function ModuleGroup({
   }) {
   const headingId = useId();
   const selected = group.keys.filter((key) => value.has(key)).length;
+  // A module with nothing ticked starts closed, its count on its button (RO13). A closed module
+  // gets ticks only from outside, such as a role chosen in Start from, and then it opens.
+  const [open, setOpen] = useState(selected > 0);
+  const [seen, setSeen] = useState(selected);
+  if (seen !== selected) {
+    setSeen(selected);
+    if (seen === 0 && selected > 0) setOpen(true);
+  }
   return (
-    // A module with nothing ticked starts closed, its count on its button (RO13).
     <Collapsible
-      defaultOpen={selected > 0}
+      open={open}
+      onOpenChange={setOpen}
       render={<section aria-labelledby={headingId} />}
       className="border-t border-border pt-2"
     >
