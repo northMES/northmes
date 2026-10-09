@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { type ArgumentsHost, Catch, HttpStatus } from '@nestjs/common';
+import { type ArgumentsHost, Catch, HttpException, HttpStatus } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import type { GqlContextType } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
@@ -19,10 +19,12 @@ const graphqlCodes: ReadonlyMap<number, string> = new Map([
 /**
  * The one exception filter of the server. The host registers it once as APP_FILTER in its root
  * module, and modules and plugins register no filter of their own (ADR 0012). It catches every
- * exception. A DomainError thrown in a resolver becomes a GraphQL error whose extensions carry
- * code (from its kind), errorCode, details and fieldErrors, in the shape of a Zod failure's. Any
- * other exception in a resolver passes on as it was thrown. Outside GraphQL it leaves the answer to Nest's default filter, until REST routes
- * answer with problem details.
+ * exception. An HttpException thrown in a resolver, such as Nest's NotFoundException, becomes a
+ * GraphQL error with its message and the extensions.code of its status. A DomainError adds
+ * errorCode, details and fieldErrors, in the shape of a Zod failure's. Any other exception in a
+ * resolver, and an HttpException of a status without a GraphQL code, passes on as it was thrown,
+ * so GraphQL Yoga masks it. Outside GraphQL it leaves the answer to Nest's default filter, until
+ * REST routes answer with problem details.
  */
 @Catch()
 export class DomainErrorFilter extends BaseExceptionFilter {
@@ -31,10 +33,15 @@ export class DomainErrorFilter extends BaseExceptionFilter {
       super.catch(exception, host);
       return undefined;
     }
-    if (!(exception instanceof DomainError)) throw exception;
+    if (!(exception instanceof HttpException)) throw exception;
+    const code = graphqlCodes.get(exception.getStatus());
+    if (!code) throw exception;
+    if (!(exception instanceof DomainError)) {
+      return new GraphQLError(exception.message, { extensions: { code } });
+    }
     return new GraphQLError(exception.message, {
       extensions: {
-        code: graphqlCodes.get(exception.getStatus()),
+        code,
         errorCode: exception.code,
         details: exception.details,
         fieldErrors: exception.fieldErrors,
