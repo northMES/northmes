@@ -42,7 +42,8 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 ### Modules and boundaries
 
 * Module web code lives in `apps/web/src/modules/<id>`. Module schemas, owner roles, row-level security and the command bus stay; the MIT contracts packages stay separate packages.
-* A CI check in `pnpm check` fails when a module imports another module's code other than its public api.
+* A CI check in `pnpm check` fails when a module imports another module's code other than its public api, which is `public-api.ts` at the module's root.
+* Inside `apps/backend/src/modules/<id>`, code splits by direction: `api/` for the inbound GraphQL surface (one folder per entity, its files grouped by kind), `core/` for domain services and command handlers, and `infrastructure/` for the database types and clients of other systems. `core/` never imports `@nestjs/graphql`, and `api/` never touches the database. `migrations/` stays at the module root.
 * NorthMES's own modules carry no manifest. `AppModule` imports `CoreModule`, `PlanningModule` and the rest as plain Nest modules in dependency order, they take the backend's version, boot reads their migrations from `src/modules/<id>/migrations`, and the command contract's `validatable` flag ([ADR 0017][adr-0017]) marks the commands a plugin may validate. `defineModule` and the catalog check stay for drop-in plugins ([ADR 0037][adr-0037]).
 
 ### Web
