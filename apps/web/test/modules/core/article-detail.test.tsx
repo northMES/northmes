@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
+import { companiesQuery, forbiddenError } from './access-fixtures.ts';
 import {
   article,
   articleQuery,
@@ -13,7 +14,6 @@ import {
   plant,
   renderCoreAt,
 } from './core-app.tsx';
-import { companiesQuery, forbiddenError } from './access-fixtures.ts';
 
 afterEach(cleanup);
 

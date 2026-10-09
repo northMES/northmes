@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { CircleAlert, Copy, RotateCw } from 'lucide-react';
+import { CircleAlert, Copy, type LucideIcon, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { announce } from '../../lib/announce.ts';
@@ -27,6 +27,8 @@ export type PageState =
    */
   | {
       readonly status: 'empty';
+      /** An icon above the heading, such as Lock on a forbidden state (design ui-222, ST19). */
+      readonly icon?: LucideIcon;
       readonly title?: string;
       readonly description: string;
       readonly action?: ReactNode;
@@ -59,8 +61,9 @@ export interface PageFrameProps {
 
 const stateCard = 'gap-3 rounded-xl border border-solid bg-card px-6 py-16';
 
-/** An empty state: a heading, its text and the action that leads on. */
+/** An empty state: its icon, a heading, its text and the action that leads on. */
 export function EmptyState({
+  icon: Icon,
   title,
   description,
   action,
@@ -68,6 +71,11 @@ export function EmptyState({
   return (
     <Empty className={stateCard}>
       <EmptyHeader className="max-w-prose">
+        {Icon !== undefined && (
+          <EmptyMedia className="size-10 rounded-full bg-muted text-muted-foreground">
+            <Icon aria-hidden className="size-5" />
+          </EmptyMedia>
+        )}
         {title !== undefined && (
           <EmptyTitle>
             <h2 className="text-base font-semibold">{title}</h2>
@@ -189,7 +197,12 @@ export function PageFrame({
       {toolbar}
       <div aria-busy={state.status === 'loading' || undefined}>
         {state.status === 'empty' ? (
-          <EmptyState title={state.title} description={state.description} action={state.action} />
+          <EmptyState
+            icon={state.icon}
+            title={state.title}
+            description={state.description}
+            action={state.action}
+          />
         ) : state.status === 'error' ? (
           <ErrorState
             title={state.title}
