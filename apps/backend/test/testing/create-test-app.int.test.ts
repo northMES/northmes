@@ -36,6 +36,9 @@ describe('createTestApp', () => {
       'coreArticle',
       'coreArticles',
       'coreCompanies',
+      'corePermissionCatalog',
+      'coreRole',
+      'coreRoles',
     ]);
   });
 });

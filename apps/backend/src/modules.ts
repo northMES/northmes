@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Type } from '@nestjs/common';
 import { CoreModule } from './modules/core/core.module.ts';
-import { corePermissions } from './modules/core/permissions.ts';
-import { planningPermissions } from './modules/planning/permissions.ts';
+import { corePermissions, coreRoles } from './modules/core/permissions.ts';
+import { planningPermissions, planningRoles } from './modules/planning/permissions.ts';
 import { PlanningModule } from './modules/planning/planning.module.ts';
 
 /**
@@ -25,6 +25,12 @@ export interface InRepoModule {
    * permission catalog, core.permission (ADR 0010). Resource keys start with its GraphQL name.
    */
   readonly permissions?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Its default roles, role key to permission keys, which northmes migrate gives every company as
+   * roles of origin module (ADR 0010). A role's name is its key in words, so company-admin is
+   * Company admin.
+   */
+  readonly roles?: Readonly<Record<string, readonly string[]>>;
   /** Further schemas its owner role owns, which migrate creates (see CatalogEntry.schemas). */
   readonly schemas?: readonly string[];
 }
@@ -38,6 +44,7 @@ export const inRepoModules: readonly InRepoModule[] = [
     id: 'core',
     module: CoreModule,
     permissions: corePermissions,
+    roles: coreRoles,
     // Better Auth's tables, which core's migrations create (ADR 0010).
     schemas: ['auth'],
   },
@@ -46,6 +53,7 @@ export const inRepoModules: readonly InRepoModule[] = [
     module: PlanningModule,
     dependsOn: ['core'],
     permissions: planningPermissions,
+    roles: planningRoles,
   },
 ];
 

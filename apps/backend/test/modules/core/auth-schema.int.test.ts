@@ -39,7 +39,19 @@ describe("Better Auth's tables", () => {
       [{ n: 0 }],
     );
     await expect(query(db.appUrl, 'select count(*) from auth.account')).rejects.toThrow(
-      /permission denied for schema auth/,
+      /permission denied for table account/,
+    );
+    await expect(query(db.appUrl, 'select count(*) from auth.session')).rejects.toThrow(
+      /permission denied for table session/,
+    );
+  });
+
+  it('E05-S08 nm_app reads users through core.user_directory, and no other column of auth.user', async () => {
+    await expect(
+      query(db.appUrl, 'select id, name, username, banned from core.user_directory limit 1'),
+    ).resolves.toEqual([]);
+    await expect(query(db.appUrl, 'select email from auth."user"')).rejects.toThrow(
+      /permission denied for table user/,
     );
   });
 });

@@ -1,3 +1,9 @@
+type AccessScope {
+  id: ID!
+  kind: ScopeKind!
+  name: String!
+}
+
 type Article {
   archivedAt: DateTime
   code: String!
@@ -76,6 +82,24 @@ type PageInfo {
   startCursor: String
 }
 
+type Permission {
+  action: String!
+  installed: Boolean!
+  key: String!
+  moduleId: String!
+  resource: String!
+}
+
+type PermissionModule {
+  moduleId: String!
+  resources: [PermissionResource!]!
+}
+
+type PermissionResource {
+  permissions: [Permission!]!
+  resource: String!
+}
+
 input PlanningReleaseProductionOrderInput {
   expectedVersion: Int!
   id: ID!
@@ -100,10 +124,48 @@ type Query {
   coreArticle(id: ID!): Article
   coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
   coreCompanies: [Company!]!
+  corePermissionCatalog: [PermissionModule!]!
+  coreRole(id: ID!): Role
+  coreRoles: [Role!]!
   planningProductionOrders: [ProductionOrder!]!
+}
+
+type Role {
+  holders: [RoleAssignment!]!
+  id: ID!
+  key: String!
+  moduleId: String
+  name: String!
+  origin: RoleOrigin!
+  permissions: [String!]!
+  version: Int!
+}
+
+type RoleAssignment {
+  id: ID!
+  role: Role
+  scope: AccessScope!
+  user: User!
+}
+
+enum RoleOrigin {
+  CUSTOM
+  MODULE
+}
+
+enum ScopeKind {
+  COMPANY
+  PLANT
 }
 
 enum SortDirection {
   ASC
   DESC
+}
+
+type User {
+  blocked: Boolean!
+  id: ID!
+  name: String!
+  username: String!
 }

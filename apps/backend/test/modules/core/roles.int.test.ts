@@ -106,7 +106,9 @@ describe('the roles of a company and the permission catalog', () => {
       {
         permissions: ['core.role:read'],
         moduleId: null,
-        holders: [{ scope: { kind: 'COMPANY', name: 'Acme AB' }, user: { username: client.username } }],
+        holders: [
+          { scope: { kind: 'COMPANY', name: 'Acme AB' }, user: { username: client.username } },
+        ],
       },
     ]);
   });

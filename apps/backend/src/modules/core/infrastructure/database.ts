@@ -59,6 +59,32 @@ export interface RoleTable {
   permissions: Generated<string[]>;
   origin: 'module' | 'custom';
   module_id: string | null;
+  /** Grows by one with every change to the role. */
+  version: Generated<number>;
+}
+
+/** core.default_role: a module's default role, which northmes migrate writes (ADR 0010). */
+export interface DefaultRoleTable {
+  key: string;
+  module_id: string;
+  name: string;
+  permissions: string[];
+  installed: Generated<boolean>;
+}
+
+/** core.user_directory: the columns of auth.user that nm_app reads (ADR 0010). */
+export interface UserDirectoryView {
+  id: string;
+  name: string;
+  /** '' for a user without a username. */
+  username: string;
+  banned: boolean;
+}
+
+/** core.company_user: the users of a company, its organization's members and its role holders. */
+export interface CompanyUserView {
+  company_id: string;
+  user_id: string;
 }
 
 /** core.role_assignment: a user's role at a scope node (ADR 0010). */
@@ -83,4 +109,7 @@ export interface CoreDatabase {
   'core.permission': PermissionTable;
   'core.role': RoleTable;
   'core.role_assignment': RoleAssignmentTable;
+  'core.default_role': DefaultRoleTable;
+  'core.user_directory': UserDirectoryView;
+  'core.company_user': CompanyUserView;
 }

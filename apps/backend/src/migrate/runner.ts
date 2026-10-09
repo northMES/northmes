@@ -213,25 +213,107 @@ function permissionKeys(catalog: readonly CatalogEntry[]): { key: string; module
   );
 }
 
+/** A module's default role as northmes migrate writes it into core.default_role. */
+interface DefaultRole {
+  readonly key: string;
+  readonly module: string;
+  readonly name: string;
+  readonly permissions: readonly string[];
+}
+
+/**
+ * The name of a default role from its key: the key's words, the first capitalized, so
+ * company-admin is Company admin.
+ */
+function roleName(key: string): string {
+  const words = key.split('-').join(' ');
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+}
+
+/**
+ * Every default role of the catalog's manifests, keyed `<module>-<role>` so that two modules may
+ * declare roles of one name, with its permission keys sorted.
+ */
+function defaultRoles(catalog: readonly CatalogEntry[]): DefaultRole[] {
+  return catalog.flatMap(({ manifest }) =>
+    Object.entries(manifest.roles ?? {}).map(([role, permissions]) => ({
+      key: `${manifest.id}-${role}`,
+      module: manifest.id,
+      name: roleName(role),
+      permissions: [...new Set(permissions)].sort(),
+    })),
+  );
+}
+
+/** True when core's schema holds the table, looked up in the catalog since nm_owner has no USAGE. */
+async function coreTableExists(client: Client, table: string): Promise<boolean> {
+  const { rows } = await client.query<{ exists: boolean }>(
+    `select exists (
+       select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'core' and c.relname = $1
+     ) as exists`,
+    [table],
+  );
+  return rows[0]?.exists === true;
+}
+
+/**
+ * Writes the default roles that the catalog's modules declare (ADR 0010): each into
+ * core.default_role as installed, one no installed module declares any more with installed false,
+ * and each installed one into core.role of every company as a role of origin module. A company's
+ * role takes the default role's name and permissions; a custom role of the same key is left alone.
+ */
+async function syncDefaultRoles(client: Client, roles: readonly DefaultRole[]): Promise<void> {
+  const keys = roles.map(({ key }) => key);
+  await client.query(
+    `insert into core.default_role (key, module_id, name, permissions, installed)
+     select r.key, r.module_id, r.name, array(select jsonb_array_elements_text(r.permissions)), true
+       from jsonb_to_recordset($1::jsonb) as r (key text, module_id text, name text, permissions jsonb)
+     on conflict (key) do update
+       set module_id = excluded.module_id, name = excluded.name,
+           permissions = excluded.permissions, installed = true`,
+    [
+      JSON.stringify(
+        roles.map(({ key, module, name, permissions }) => ({
+          key,
+          module_id: module,
+          name,
+          permissions,
+        })),
+      ),
+    ],
+  );
+  await client.query(
+    'update core.default_role set installed = false where key <> all ($1::text[])',
+    [keys],
+  );
+  await client.query(
+    `insert into core.role (company_id, key, name, permissions, origin, module_id)
+     select c.id, d.key, d.name, d.permissions, 'module', d.module_id
+       from core.company c cross join core.default_role d
+      where d.installed
+     on conflict (company_id, key) do update
+       set name = excluded.name, permissions = excluded.permissions
+       where core.role.origin = 'module'
+         and (core.role.name, core.role.permissions)
+             is distinct from (excluded.name, excluded.permissions)`,
+  );
+}
+
 /**
  * Writes the permission catalog, core.permission, from the permissions that the catalog's modules
  * declare (ADR 0010): each declared key is installed, and a key that no installed module declares
- * any more stays with installed false, so a role that holds it keeps it. It runs in one transaction
- * as core's owner role, and does nothing on a database without core.permission, such as one that
- * only fixture modules migrate.
+ * any more stays with installed false, so a role that holds it keeps it. Then it writes the
+ * modules' default roles (syncDefaultRoles). It runs in one transaction as core's owner role, and
+ * does nothing on a database without core.permission, such as one that only fixture modules
+ * migrate.
  */
 async function syncPermissionCatalog(
   client: Client,
   catalog: readonly CatalogEntry[],
 ): Promise<void> {
-  const { rows } = await client.query<{ exists: boolean }>(
-    // nm_owner has no USAGE on core, so the table is looked up in the catalog, not by to_regclass.
-    `select exists (
-       select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
-        where n.nspname = 'core' and c.relname = 'permission'
-     ) as exists`,
-  );
-  if (!rows[0]?.exists) return;
+  if (!(await coreTableExists(client, 'permission'))) return;
+  const withDefaultRoles = await coreTableExists(client, 'default_role');
   const keys = permissionKeys(catalog);
   await client.query('begin');
   try {
@@ -246,6 +328,7 @@ async function syncPermissionCatalog(
       'update core.permission set installed = false where key <> all ($1::text[])',
       [keys.map(({ key }) => key)],
     );
+    if (withDefaultRoles) await syncDefaultRoles(client, defaultRoles(catalog));
     await client.query('commit');
   } catch (error) {
     await client.query('rollback').catch(() => {});

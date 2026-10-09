@@ -12,6 +12,9 @@ describe('schemaSdl', () => {
       'coreArticle',
       'coreArticles',
       'coreCompanies',
+      'corePermissionCatalog',
+      'coreRole',
+      'coreRoles',
       'planningProductionOrders',
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([

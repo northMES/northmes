@@ -144,13 +144,14 @@ async function importPluginManifests(
  */
 function inRepoEntries(modules: readonly InRepoModule[]): CatalogEntry[] {
   const version = imageVersion();
-  return modules.map(({ id, module, dependsOn, migrationsDir, permissions, schemas }) => ({
+  return modules.map(({ id, module, dependsOn, migrationsDir, permissions, roles, schemas }) => ({
     manifest: {
       id,
       version,
       northmes: version,
       ...(dependsOn ? { dependsOn } : {}),
       ...(permissions ? { permissions } : {}),
+      ...(roles ? { roles } : {}),
     },
     kind: 'module',
     module,
