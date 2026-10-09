@@ -11,7 +11,7 @@ function moduleClassOf(entry: unknown): Type | undefined {
 /**
  * The providers that a Nest module and the modules it imports list in their @Module decorators, as
  * listed: a class, or a provider object such as { provide, useClass }. A module imported twice is
- * read once.
+ * read once, and a module already in `seen` is not read, which lets a caller stop the walk there.
  */
 export function moduleProviders(module: Type, seen = new Set<Type>()): unknown[] {
   if (seen.has(module)) return [];

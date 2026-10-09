@@ -58,6 +58,20 @@ describe('the root field prefix rule', () => {
     expect(problems).toEqual([]);
   });
 
+  it("E02-S03 a module that imports another module's Nest module is not charged with that module's root fields", () => {
+    // A plugin that imports PlanningModule to call its services declares no root field itself.
+    @Module({ imports: [PlanningModule] })
+    class PlanningAddOnModule {}
+
+    const problems = rootFieldProblems([
+      { id: 'core', module: CoreModule },
+      { id: 'planning', module: PlanningModule },
+      { id: 'planning-add-on', module: PlanningAddOnModule },
+    ]);
+
+    expect(problems).toEqual([]);
+  });
+
   it('E02-S03 a root field without its module prefix and an upper-case letter is a problem naming the field and the module', () => {
     const problems = rootFieldProblems([{ id: 'shop-floor', module: ShopFloorModule }]);
 

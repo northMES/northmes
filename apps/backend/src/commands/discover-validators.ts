@@ -12,7 +12,10 @@ export interface ValidatorScope {
   readonly id: string;
   /** The ids of the modules it depends on. */
   readonly dependsOn?: readonly string[];
-  /** Its Nest module, whose providers and those of the modules it imports are read. */
+  /**
+   * Its Nest module, whose providers and those of the modules it imports are read, up to the Nest
+   * module of another scope.
+   */
   readonly module: Type;
 }
 
@@ -25,9 +28,14 @@ export interface ValidatorScope {
  * lists every rule each validator breaks.
  */
 export function discoverValidators(modules: readonly ValidatorScope[]): RegisteredValidator[] {
+  // Each module's walk stops at the Nest module of another module or plugin, so a provider counts
+  // for the module that declares it, also when another one imports that module to use its services.
+  const roots = modules.map(({ module }) => module);
   const listed = modules.map(({ id, module }) => ({
     id,
-    classes: moduleProviders(module).map(providerClassOf),
+    classes: moduleProviders(module, new Set(roots.filter((root) => root !== module))).map(
+      providerClassOf,
+    ),
   }));
   const validators = listed.flatMap(({ id, classes }) =>
     classes.flatMap((provider) => {
