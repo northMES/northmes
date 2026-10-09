@@ -322,7 +322,7 @@ describe('tooling', () => {
     }
   });
 
-  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core and kysely, and no @better-auth/cli', () => {
+  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core, @better-auth/api-key and kysely, and no @better-auth/cli', () => {
     // The api-key plugin and the Kysely adapter register against @better-auth/core, and Better
     // Auth's Kysely adapter shares the kysely copy that the backend queries with. ADR 0040 lists
     // @better-auth/cli as never installed.
