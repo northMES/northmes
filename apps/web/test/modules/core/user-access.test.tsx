@@ -193,6 +193,14 @@ describe("a user's access", () => {
     let dialog = await screen.findByRole('alertdialog', {
       name: 'Remove Shift lead at Plant A from Sara Nyberg?',
     });
+    // The dialog is described by the permissions lost and kept, not by the lead sentence alone.
+    expect(
+      screen.getByRole('alertdialog', {
+        description: (text) =>
+          text.replace(/\s+/g, ' ').trim() ===
+          'From the next action, Sara Nyberg loses these permissions at Plant A: Release production orders to the floor Viewer at Acme AB still lets Sara Nyberg read production orders and the planning board.',
+      }),
+    ).toBe(dialog);
     expect(
       within(dialog).getByText(
         'From the next action, Sara Nyberg loses these permissions at Plant A:',
