@@ -64,12 +64,17 @@ function roleLinkId(assignment: UserAssignment): string {
 /** The id of Add role, which takes focus after the last row was removed. */
 const addRoleId = 'user-add-role';
 
-/** The role of an assignment: its link with its kind under it, or No access (NO5). */
+/**
+ * The role of an assignment: its name with its kind under it, or No access (NO5). The name links to
+ * the role's page in company settings for a reader who holds core.role:read at the company, which
+ * that page needs; for anyone else, such as a Plant admin on a person's page, it is plain text.
+ */
 function RoleCell({
   assignment,
   companyName,
   kindOf,
   companyId,
+  linked,
 }: {
   readonly assignment: UserAssignment;
   readonly companyName: string;
@@ -77,6 +82,8 @@ function RoleCell({
   readonly kindOf: (roleId: string) => string | undefined;
   /** The company whose settings hold the role's page. */
   readonly companyId: string;
+  /** The reader may open the role's page in company settings. */
+  readonly linked: boolean;
 }) {
   const { role } = assignment;
   if (role === null) {
@@ -92,13 +99,20 @@ function RoleCell({
   }
   return (
     <span className="flex flex-col">
-      <Link
-        id={roleLinkId(assignment)}
-        to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
-        className="text-link underline underline-offset-2 hover:no-underline"
-      >
-        {role.name}
-      </Link>
+      {linked ? (
+        <Link
+          id={roleLinkId(assignment)}
+          to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
+          className="text-link underline underline-offset-2 hover:no-underline"
+        >
+          {role.name}
+        </Link>
+      ) : (
+        // Focus lands here after Remove of the row above, so the name takes focus by script.
+        <span id={roleLinkId(assignment)} tabIndex={-1} className="self-start">
+          {role.name}
+        </span>
+      )}
       <span className="text-xs text-muted-foreground">{kindOf(role.id)}</span>
     </span>
   );
@@ -160,6 +174,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
     return role === undefined ? undefined : roleKind(role);
   };
   const companyName = places.company?.name ?? 'the company';
+  const linked = viewer.canAtCompany('core.role:read');
   // In plant settings the page reads the plant and its company (design core-304, AS1).
   const plantName = places.plant?.name;
   const canAdd =
@@ -226,6 +241,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
               companyName={companyName}
               kindOf={kindOf}
               companyId={companyId}
+              linked={linked}
             />
             <WhereCell assignment={assignment} places={places} userId={user.id} />
             <span className="self-start">{action(assignment, index)}</span>
@@ -255,6 +271,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
                   companyName={companyName}
                   kindOf={kindOf}
                   companyId={companyId}
+                  linked={linked}
                 />
               </TableCell>
               <TableCell>
