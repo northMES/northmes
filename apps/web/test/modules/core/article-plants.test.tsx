@@ -379,7 +379,7 @@ describe("an article's plants", () => {
     expect(plantA.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
   });
 
-  it('ADR0073-W2 Save plants refused for a stale version says so and shows the saved plants', async () => {
+  it('ADR0073-W2 Save plants refused for a stale version says so in the section and through the polite region, and shows the saved plants', async () => {
     const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm', 3);
     const saved = withPlants({ ...axle, version: 4 }, false, [plants.a, plants.c]);
@@ -417,9 +417,11 @@ describe("an article's plants", () => {
     await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
     await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
 
-    expect((await within(plantsSection).findByRole('alert')).textContent).toBe(
-      'Someone changed this article after you opened it. The page now shows the saved plants. Check them, then save again.',
-    );
+    const conflict =
+      'Someone changed this article after you opened it. The page now shows the saved plants. Check them, then save again.';
+    expect(await within(plantsSection).findByText(conflict)).toBeDefined();
+    await waitFor(() => expect(spoken()).toBe(conflict));
+    expect(within(plantsSection).queryByRole('alert')).toBeNull();
     const checked = (name: string) =>
       within(plantsSection).getByRole('checkbox', { name }).getAttribute('aria-checked');
     expect([checked('Plant A'), checked('Plant B'), checked('Plant C')]).toEqual([
