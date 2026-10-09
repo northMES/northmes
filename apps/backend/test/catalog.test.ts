@@ -184,6 +184,27 @@ describe('checkCatalog', () => {
     ]);
   });
 
+  it('E04-S02 module ids that are top-level web path segments of core or the shell are refused as reserved, and the message names the id (ADR 0074)', () => {
+    const error = refusal([
+      core,
+      inRepoModule('articles', ['core']),
+      plugin('people', ['core']),
+      inRepoModule('users', ['core']),
+      plugin('roles', ['core']),
+      inRepoModule('all-pages', ['core']),
+      plugin('settings', ['core']),
+    ]);
+
+    expect(error.problems).toEqual([
+      'Module id "articles" is reserved: /$plant/articles is a core web path segment',
+      'Module id "people" is reserved: /$plant/people is a core web path segment',
+      'Module id "users" is reserved: /settings/$companyId/users is a core web path segment',
+      'Module id "roles" is reserved: /settings/$companyId/roles is a core web path segment',
+      'Module id "all-pages" is reserved: /$plant/all-pages is a shell web path segment',
+      'Module id "settings" is reserved: /settings is a shell web path segment',
+    ]);
+  });
+
   it('E02-S01 two modules whose derived names collide are refused naming both ids', () => {
     // Both ids derive the GraphQL name press2.
     const error = refusal([core, inRepoModule('press-2', ['core']), plugin('press2', ['core'])]);

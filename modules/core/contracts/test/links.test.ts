@@ -8,16 +8,16 @@ describe('coreLinks', () => {
   it("E06-S06 coreLinks builds the hrefs of a plant's articles list, new article, article and edit pages", () => {
     const plant = 'plant-a';
 
-    expect(coreLinks.articles({ plant }).href).toBe('/plant-a/core/articles');
+    expect(coreLinks.articles({ plant }).href).toBe('/plant-a/articles');
     expect(coreLinks.articles({ plant }, { q: 'hinge', sort: '-name' }).href).toBe(
-      '/plant-a/core/articles?q=hinge&sort=-name',
+      '/plant-a/articles?q=hinge&sort=-name',
     );
-    expect(coreLinks.articles.new({ plant }).href).toBe('/plant-a/core/articles/new');
+    expect(coreLinks.articles.new({ plant }).href).toBe('/plant-a/articles/new');
     expect(coreLinks.articles.article({ plant, articleId: ARTICLE_ID }).href).toBe(
-      `/plant-a/core/articles/${ARTICLE_ID}`,
+      `/plant-a/articles/${ARTICLE_ID}`,
     );
     expect(coreLinks.articles.article.edit({ plant, articleId: ARTICLE_ID }).href).toBe(
-      `/plant-a/core/articles/${ARTICLE_ID}/edit`,
+      `/plant-a/articles/${ARTICLE_ID}/edit`,
     );
   });
 
@@ -25,8 +25,8 @@ describe('coreLinks', () => {
     const companyId = '01920000-0000-7000-8000-0000000ac3e0';
     const userId = '01920000-0000-7000-8000-0000000b0001';
     const roleId = '01920000-0000-7000-8000-0000000c0001';
-    const users = `/settings/${companyId}/core/users`;
-    const roles = `/settings/${companyId}/core/roles`;
+    const users = `/settings/${companyId}/users`;
+    const roles = `/settings/${companyId}/roles`;
 
     expect(coreLinks.settings.users({ companyId }).href).toBe(users);
     expect(coreLinks.settings.users.new({ companyId }).href).toBe(`${users}/new`);
@@ -49,10 +49,8 @@ describe('coreLinks', () => {
   });
 
   it('E04-S02 coreLinks builds the hrefs of the people of a plant and their Add role, and has no plant users or roles', () => {
-    expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/core/people');
-    expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe(
-      '/plant-a/core/people/roles/new',
-    );
+    expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/people');
+    expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe('/plant-a/people/roles/new');
     expect(Object.keys(coreLinks)).toEqual(['articles', 'people', 'settings']);
   });
 });

@@ -44,7 +44,9 @@ import {
   companySettingsEntries,
   currentOf,
   firstHref,
+  isCore,
   mainId,
+  moduleOfPath,
   plantHome,
   plantOf,
   plantSettingsLinks,
@@ -234,8 +236,9 @@ function firstOpenPage(
  * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
  * linked to the plant's first page; then the module of the page, linked to its first entry, or on
- * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066). A
- * crumb whose page is the one on screen is plain text.
+ * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
+ * Core's pages sit at the plant root and have no module crumb (ADR 0074). A crumb whose page is the
+ * one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
@@ -253,11 +256,12 @@ function shellTrail(
     crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
   ];
   if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
-  const moduleId = pathname.split('/')[2];
-  const current = modules.find(({ module }) => module.id === moduleId);
+  const current = moduleOfPath(modules, pathname);
   return [
     ...head,
-    ...(current === undefined ? [] : [crumb(current.label, firstHref(current, plant))]),
+    ...(current === undefined || isCore(current)
+      ? []
+      : [crumb(current.label, firstHref(current, plant))]),
   ];
 }
 

@@ -16,15 +16,22 @@ export interface HelpEntry {
  * has no nav list (ADR 0062).
  */
 export interface WebModule {
-  /** Equals the module's manifest id and its path segment under /$plant. */
+  /**
+   * Equals the module's manifest id and its path segment under /$plant. Core's pages sit at the
+   * plant root without it (ADR 0074).
+   */
   readonly id: string;
   /** Equals the module's manifest version. */
   readonly version: string;
-  /** Returns the module's route subtree, whose top route has the module id as its path. */
+  /**
+   * Returns the module's route subtree, whose top route has the module id as its path. Core's top
+   * route is pathless (ADR 0074).
+   */
   routes(plantRoute: PlantRoute): AnyRoute;
   /**
    * Returns the module's company settings subtree under /settings/$companyId, whose top route has
-   * the module id as its path (ADR 0066). Only core has one in release 1.
+   * the module id as its path (ADR 0066), or for core no path (ADR 0074). Only core has one in
+   * release 1.
    */
   settingsRoutes?(settingsRoute: SettingsRoute): AnyRoute;
   /** The module's entries in the help menu; a module never adds a help menu of its own. */

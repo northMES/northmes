@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { companySettingsHref } from '@northmes/web-sdk';
+import { companySettingsHref, coreModuleId } from '@northmes/web-sdk';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
@@ -74,6 +74,27 @@ export function plantHome(modules: readonly ShellModule[], plant: string): strin
     modules.find((module) => sidebarLinks(module).length > 0),
     plant,
   );
+}
+
+/**
+ * The module a path under a plant lies in: the module other than core whose id is the path's first
+ * segment under the plant, or else core, whose pages sit at the plant root (ADR 0074), when it is
+ * loaded.
+ */
+export function moduleOfPath(
+  modules: readonly ShellModule[],
+  pathname: string,
+): ShellModule | undefined {
+  const segment = pathname.split('/')[2];
+  return (
+    modules.find(({ module }) => module.id !== coreModuleId && module.id === segment) ??
+    modules.find(({ module }) => module.id === coreModuleId)
+  );
+}
+
+/** Whether a module is core, which has no crumb of its own and no page-not-found of its own. */
+export function isCore(module: ShellModule | undefined): boolean {
+  return module?.module.id === coreModuleId;
 }
 
 /** The company and the plant of the user's companies that a slug names. */
@@ -160,9 +181,9 @@ function goTo(entry: MenuLink | undefined, plant: string, pathname: string): Way
 
 /**
  * The way out of a page that failed (D2 ST6, shell-306 SE): Go to the first sidebar entry of its
- * module, or See all pages when the page is that entry or the module has none (shell-306 LS3).
- * Outside a module, Go to the plant's first page; in company settings, Go to Company settings.
- * Never the page itself.
+ * module, or See all pages when the page is that entry or the module has none (shell-306 LS3). A
+ * page at the plant root is core's (ADR 0074). Outside a module, Go to the plant's first page; in
+ * company settings, Go to Company settings. Never the page itself.
  */
 export function wayOutOf(
   modules: readonly ShellModule[],
@@ -174,8 +195,7 @@ export function wayOutOf(
     return href === pathname ? undefined : { label: 'Go to Company settings', href };
   }
   if (plant === undefined) return undefined;
-  const moduleId = pathname.split('/')[2];
-  const module = modules.find((each) => each.module.id === moduleId);
+  const module = moduleOfPath(modules, pathname);
   if (module === undefined) return goTo(modules.flatMap(sidebarLinks)[0], plant, pathname);
   return (
     goTo(sidebarLinks(module)[0], plant, pathname) ?? {
@@ -204,13 +224,13 @@ export function settingsGroupsOf(
   const groups: SettingsGroup[] = [
     {
       entries: perModule
-        .filter(({ moduleId }) => moduleId === 'core')
+        .filter(({ moduleId }) => moduleId === coreModuleId)
         .flatMap(({ entries }) => entries),
     },
     {
       label: 'Modules',
       entries: perModule
-        .filter(({ moduleId }) => moduleId !== 'core')
+        .filter(({ moduleId }) => moduleId !== coreModuleId)
         .flatMap(({ entries }) => entries),
     },
   ];
