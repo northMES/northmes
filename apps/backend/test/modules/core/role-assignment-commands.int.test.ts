@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
-import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
+import { Client } from 'pg';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const assignmentFields = 'id scope { kind name } user { id username } role { name }';
 
@@ -265,5 +266,63 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
         details: { scopeId: plantA, missingPermissions: ['core.article:update'] },
       },
     ]);
+  });
+
+  it('E05-S06 an assignment waits for a change to its role that is in flight, and the grant rule reads the role as that change left it', async () => {
+    const { roleId, sara, plantA, slugA } = await company();
+    const plantAdmin = await signedIn(
+      [
+        {
+          scopeId: plantA,
+          permissions: [...assigner, 'core.article:read', 'core.article:update'],
+        },
+      ],
+      slugA,
+    );
+    // A change to the role, as coreUpdateRole makes it: it holds the role's lock while it adds a
+    // permission that the plant admin does not hold.
+    const change = new Client({ connectionString: db.ownerUrl });
+    await change.connect();
+    try {
+      await change.query('begin');
+      await change.query('set local role nm_mod_core');
+      await change.query(
+        `select pg_advisory_xact_lock(hashtextextended('core.role:' || $1::text, 0))`,
+        [roleId],
+      );
+      await change.query(
+        `update core.role set permissions = array_append(permissions, 'core.article:archive')
+          where id = $1`,
+        [roleId],
+      );
+
+      const pending = plantAdmin.client.send(assignMutation, {
+        input: { id: randomUUIDv7(), userId: sara.userId, roleId, scopeId: plantA },
+      });
+      await vi.waitFor(
+        async () => {
+          const waiting = await query(
+            db.ownerUrl,
+            `select pid from pg_locks
+              where locktype = 'advisory' and not granted
+                and database = (select oid from pg_database where datname = current_database())`,
+          );
+          expect(waiting).toHaveLength(1);
+        },
+        { timeout: 2000, interval: 50 },
+      );
+      await change.query('commit');
+      const answer = await pending;
+
+      expect(refusals(answer)).toEqual([
+        {
+          code: 'FORBIDDEN',
+          errorCode: 'core.role_not_held',
+          details: { scopeId: plantA, missingPermissions: ['core.article:archive'] },
+        },
+      ]);
+    } finally {
+      await change.end();
+    }
   });
 });
