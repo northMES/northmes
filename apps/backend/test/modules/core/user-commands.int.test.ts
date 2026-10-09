@@ -129,6 +129,38 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     });
   });
 
+  /** Signs in by email as the web does and answers a client of the JWT that names no plant. */
+  async function clientOf(email: string, password: string): Promise<GqlClient> {
+    const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const sessionToken = signedIn.headers.get('set-auth-token') ?? '';
+    const minted = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const { token } = (await minted.json()) as { token: string };
+    return gqlClient(url, { headers: { authorization: `Bearer ${token}` } });
+  }
+
+  it('E05-S08 core.createUser marks the new user as needing a new password', async () => {
+    const { admin } = await company();
+    const created = await createUser(admin.client, {
+      id: randomUUIDv7(),
+      username: 'e.holm',
+      name: 'Eva Holm',
+      email: 'eva.holm@example.test',
+    });
+
+    const client = await clientOf('eva.holm@example.test', created.temporaryPassword);
+    const answer = await client.send('{ coreCompanies { id } }');
+
+    expect(refusals(answer)).toEqual([
+      { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
+    ]);
+  });
+
   it('E05-S08 coreCreateUser refuses a username that is taken and an email another user has', async () => {
     const { admin } = await company();
     await createUser(admin.client, {
