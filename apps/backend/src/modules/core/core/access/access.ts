@@ -51,6 +51,18 @@ export function can(principal: Pick<Access, 'scopes'>, permission: string, scope
 }
 
 /**
+ * Every permission the principal holds at scopeId (ADR 0010): those its role assignments grant at
+ * the scope and at each scope above it, sorted. can() answers true for each of them there.
+ */
+export function heldAt(principal: Pick<Access, 'scopes'>, scopeId: string): string[] {
+  const held = new Set<string>();
+  for (const node of ancestorsOrSelf(principal.scopes, scopeId)) {
+    for (const permission of node.permissions) held.add(permission);
+  }
+  return [...held].sort();
+}
+
+/**
  * The access of a principal whose role assignments grant `nodes` (ADR 0008): it reads every scope
  * at or below an assignment and every scope above one, so a plant planner reads company rows; it
  * writes every scope at or below an assignment of a role with a write permission. A principal

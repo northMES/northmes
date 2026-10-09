@@ -194,6 +194,7 @@ type Query {
   coreRoles: [Role!]!
   coreUser(id: ID!): User
   coreUsers(after: String, before: String, first: Int = 25, last: Int, orderBy: [UserOrderBy!], search: String): UserConnection!
+  coreViewer: Viewer!
   planningProductionOrders: [ProductionOrder!]!
 }
 
@@ -258,4 +259,10 @@ input UserOrderBy {
 enum UserSortField {
   NAME
   USERNAME
+}
+
+type Viewer {
+  companyPermissions: [String!]!
+  plantPermissions: [String!]!
+  userId: ID!
 }

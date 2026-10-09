@@ -6,6 +6,7 @@ import { CompanyModule } from './api/company/company.module.ts';
 import { RoleModule } from './api/role/role.module.ts';
 import { RoleAssignmentModule } from './api/role-assignment/role-assignment.module.ts';
 import { UserModule } from './api/user/user.module.ts';
+import { ViewerModule } from './api/viewer/viewer.module.ts';
 
 /**
  * The core module's Nest module, which AppModule imports: sign-in and the principal guard, and one
@@ -19,6 +20,7 @@ import { UserModule } from './api/user/user.module.ts';
     RoleModule,
     RoleAssignmentModule,
     UserModule,
+    ViewerModule,
   ],
 })
 export class CoreModule {}

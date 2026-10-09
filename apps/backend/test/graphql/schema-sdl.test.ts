@@ -17,6 +17,7 @@ describe('schemaSdl', () => {
       'coreRoles',
       'coreUser',
       'coreUsers',
+      'coreViewer',
       'planningProductionOrders',
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
