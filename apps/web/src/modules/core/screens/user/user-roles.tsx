@@ -308,7 +308,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
             to={
               plantSlug === undefined
                 ? coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href
-                : coreLinks.people.addRole({ plant: plantSlug }).href
+                : coreLinks.people.person.addRole({ plant: plantSlug, userId: user.id }).href
             }
             className={buttonVariants({ variant: 'outline' })}
           >
