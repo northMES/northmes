@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation } from '@apollo/client/react';
-import { Archive, ArchiveRestore } from 'lucide-react';
+import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
+import { Link } from '@tanstack/react-router';
+import { Archive, ArchiveRestore, Pencil } from 'lucide-react';
 import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
-import { Button } from '../../../../ui/primitives/button.tsx';
+import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import type { Article } from '../../article.graphql.ts';
 import { commandFailure, hasErrorCode } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
@@ -42,7 +45,7 @@ async function refusal(
  * command core.archiveArticle archives the article with the version the page shows. Focus moves to
  * the h1, where the page now offers Restore, and the polite region says "Article AX-500 archived".
  */
-export function ArchiveArticleAction({ article, reload }: ArticleActionProps) {
+function ArchiveArticleAction({ article, reload }: ArticleActionProps) {
   const [archive] = useMutation(CoreArchiveArticle);
   return (
     <ConfirmDialog
@@ -75,7 +78,7 @@ export function ArchiveArticleAction({ article, reload }: ArticleActionProps) {
  * command core.restoreArticle restores the article, the page offers Edit again, and the polite
  * region says "Article AX-500 restored".
  */
-export function RestoreArticleAction({ article, reload }: ArticleActionProps) {
+function RestoreArticleAction({ article, reload }: ArticleActionProps) {
   const [restore] = useMutation(CoreRestoreArticle);
   return (
     <ConfirmDialog
@@ -100,5 +103,28 @@ export function RestoreArticleAction({ article, reload }: ArticleActionProps) {
         announce(`Article ${article.code} restored`);
       }}
     />
+  );
+}
+
+/**
+ * The article page's actions: Archive and Edit for an active article (DE1), Restore alone for an
+ * archived one, which cannot be changed until it is restored.
+ */
+export function ArticleActions({ article, reload }: ArticleActionProps) {
+  const { plantId } = useShell();
+  if (article.archivedAt !== null) {
+    return <RestoreArticleAction article={article} reload={reload} />;
+  }
+  return (
+    <>
+      <ArchiveArticleAction article={article} reload={reload} />
+      <Link
+        to={coreLinks.articles.article.edit({ plant: plantId, articleId: article.id }).href}
+        className={buttonVariants()}
+      >
+        <Pencil aria-hidden />
+        Edit
+      </Link>
+    </>
   );
 }
