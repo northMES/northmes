@@ -1,24 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { gql, type TypedDocumentNode } from '@apollo/client';
 import type { Article } from '../../article.graphql.ts';
+import type { ArticlesVariables } from '../../article-list-search.ts';
 
-// Hand-written types of the list query, until GraphQL codegen writes them.
-
-/** A sort field of coreArticles (ADR 0016). */
-export type ArticleSortField = 'CODE' | 'NAME';
-
-/** The arguments of coreArticles: one page forward (first, after) or backward (last, before). */
-export interface ArticlesVariables {
-  readonly first?: number;
-  readonly after?: string;
-  readonly last?: number;
-  readonly before?: string;
-  readonly orderBy: readonly {
-    readonly field: ArticleSortField;
-    readonly direction: 'ASC' | 'DESC';
-  }[];
-  readonly search?: string;
-}
+// Hand-written types of the list query, until GraphQL codegen writes them. The variables live
+// with the list's URL search, which builds them.
 
 /** One page of the plant's articles. */
 export interface ArticlesPage {

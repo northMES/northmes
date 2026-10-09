@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { z } from 'zod';
-import type { ArticleSortField, ArticlesVariables } from './screens/articles/index.ts';
+
+/** A sort field of coreArticles (ADR 0016). */
+export type ArticleSortField = 'CODE' | 'NAME';
+
+/** The arguments of coreArticles: one page forward (first, after) or backward (last, before). */
+export interface ArticlesVariables {
+  readonly first?: number;
+  readonly after?: string;
+  readonly last?: number;
+  readonly before?: string;
+  readonly orderBy: readonly {
+    readonly field: ArticleSortField;
+    readonly direction: 'ASC' | 'DESC';
+  }[];
+  readonly search?: string;
+}
 
 /** The page size of the list (design ui-222, open question 15). */
 export const articlePageSize = 25;
