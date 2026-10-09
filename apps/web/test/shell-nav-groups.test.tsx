@@ -226,3 +226,69 @@ describe('the breadcrumb of a page in a nested group', () => {
     await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Stock', 'Moves']));
   });
 });
+
+describe('a nested group in the rail (D2 KE28, KE29)', () => {
+  /** Renders the shell at path with the sidebar collapsed to the rail. */
+  async function renderRailAt(path: string, heading: string) {
+    const user = userEvent.setup();
+    renderAt(path);
+    await screen.findByRole('heading', { level: 1, name: heading });
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    return user;
+  }
+
+  it('E04-S02 in the rail a nested group is its icon, a button that opens a flyout headed by the module with focus on its first entry, and Escape returns focus to the icon', async () => {
+    const user = await renderRailAt('/plant-a/stock/bins', 'Bins');
+    const group = await stockGroup();
+
+    const registers = within(group).getByRole('button', { name: 'Registers' });
+    expect(registers.getAttribute('aria-haspopup')).toBe('menu');
+    expect(registers.getAttribute('aria-expanded')).toBe('false');
+    expect(registers.getAttribute('aria-current')).toBe('true');
+    expect(within(group).queryByRole('link', { name: 'Bins' })).toBeNull();
+    registers.focus();
+    expect(await screen.findByRole('tooltip', { name: 'Registers' })).toBeDefined();
+
+    await user.keyboard('{Enter}');
+
+    const flyout = await screen.findByRole('menu', { name: 'Registers' });
+    const items = within(flyout).getAllByRole('menuitem');
+    expect(
+      items.map((item) => [
+        item.textContent,
+        item.getAttribute('href'),
+        item.getAttribute('aria-current'),
+      ]),
+    ).toEqual([
+      ['Warehouses', '/plant-a/stock/warehouses', null],
+      ['Bins', '/plant-a/stock/bins', 'page'],
+    ]);
+    expect(items[1]?.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(2);
+    expect(within(flyout).getByText('Stock')).toBeDefined();
+    expect(registers.getAttribute('aria-expanded')).toBe('true');
+    await waitFor(() => expect(document.activeElement).toBe(items[0]));
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(document.activeElement).toBe(registers);
+  });
+
+  it('E04-S02 an entry chosen in the flyout opens its page, and focus moves to its h1', async () => {
+    const user = await renderRailAt('/plant-a/stock/moves', 'Moves');
+    const registers = within(await stockGroup()).getByRole('button', { name: 'Registers' });
+    expect(registers.getAttribute('aria-current')).toBeNull();
+    registers.focus();
+    await user.keyboard('{Enter}');
+    const flyout = await screen.findByRole('menu', { name: 'Registers' });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(within(flyout).getAllByRole('menuitem')[0]),
+    );
+
+    await user.keyboard('{Enter}');
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+});
