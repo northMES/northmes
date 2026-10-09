@@ -65,9 +65,12 @@ function assignOf(
   } as MockLink.MockedResponse;
 }
 
-/** The text of the label of the radio with this id. */
-function labelOf(id: string): string | null | undefined {
-  return document.querySelector(`label[for="${id}"]`)?.textContent;
+/** The names of the radios of a group, in their order, read from the label above each line. */
+function radioNames(group: HTMLElement): (string | null | undefined)[] {
+  return within(group)
+    .getAllByRole('radio')
+    .map((radio) => document.getElementById(radio.getAttribute('aria-describedby') ?? ''))
+    .map((line) => line?.previousElementSibling?.textContent);
 }
 
 describe('Add role', () => {
@@ -108,16 +111,8 @@ describe('Add role', () => {
     const locked = within(roles).getByRole('group', {
       name: 'Needs permissions you do not hold at Plant A',
     });
-    expect(
-      within(assignable)
-        .getAllByRole('radio')
-        .map(({ id }) => labelOf(id)),
-    ).toEqual(['Operator', 'Viewer']);
-    expect(
-      within(locked)
-        .getAllByRole('radio')
-        .map(({ id }) => labelOf(id)),
-    ).toEqual(['Shift lead', 'Planner']);
+    expect(radioNames(assignable)).toEqual(['Operator', 'Viewer']);
+    expect(radioNames(locked)).toEqual(['Shift lead', 'Planner']);
     const shift = within(roles).getByRole('radio', { name: 'Shift lead' });
     expect(shift.hasAttribute('data-disabled')).toBe(true);
     expect(

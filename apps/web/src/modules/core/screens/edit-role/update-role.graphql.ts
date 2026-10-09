@@ -14,6 +14,7 @@ if (false) {
     mutation CoreUpdateRole($input: CoreUpdateRoleInput!) {
       coreUpdateRole(input: $input) {
         id
+        key
         name
         origin
         moduleId

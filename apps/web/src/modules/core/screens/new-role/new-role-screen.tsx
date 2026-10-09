@@ -19,6 +19,7 @@ import { RoleForm, type RoleValues, showRoleSaveError } from '../../components/r
 import { noAccessState } from '../../no-access.tsx';
 import { CoreRole } from '../../role.graphql.ts';
 import { listRole } from '../../role-cache.ts';
+import { isCompanyAdmin } from '../../role-kind.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
@@ -38,7 +39,8 @@ interface StartFromProps {
 
 /**
  * Start from (design core-304, RO11 and RO13): No role, the default, then the custom roles and
- * the default roles of the company. Choosing a role copies its permissions once.
+ * the default roles of the company. Choosing a role copies its permissions once. Company admin is
+ * left out while question 34 of the design is open.
  */
 function StartFrom({ roles, value, onChange }: StartFromProps) {
   const chosen = roles.find(({ id }) => id === value);
@@ -66,7 +68,7 @@ function StartFrom({ roles, value, onChange }: StartFromProps) {
         </NativeSelectOptGroup>
         <NativeSelectOptGroup label="Default roles">
           {roles
-            .filter(({ origin }) => origin === 'MODULE')
+            .filter((role) => role.origin === 'MODULE' && !isCompanyAdmin(role))
             .map((role) => (
               <NativeSelectOption key={role.id} value={role.id}>
                 {role.name}
@@ -96,7 +98,7 @@ function NewRoleForm({
   const places = usePlaces();
   const [id] = useState(() => uuidv7());
   const [startId, setStartId] = useState(() =>
-    roles.some((role) => role.id === from) ? (from ?? '') : '',
+    roles.some((role) => role.id === from && !isCompanyAdmin(role)) ? (from ?? '') : '',
   );
   const [refused, setRefused] = useState<readonly string[]>([]);
   const start = roles.find((role) => role.id === startId);

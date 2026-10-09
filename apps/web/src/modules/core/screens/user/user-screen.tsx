@@ -83,14 +83,18 @@ export function UserScreen() {
       title={forbidden ? 'No access to Users' : (user?.name ?? 'User')}
       crumbs={[{ label: 'Users', href: coreLinks.users({ plant }).href }]}
       actions={canBlock ? <UserBlockAction user={user} /> : undefined}
+      meta={
+        user === undefined ? undefined : (
+          <>
+            <UserStatus blocked={user.blocked} />
+            <span className="font-mono">{user.username}</span>
+          </>
+        )
+      }
       state={state}
     >
       {user !== undefined && (
         <>
-          <p className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-mono text-muted-foreground">{user.username}</span>
-            <UserStatus blocked={user.blocked} />
-          </p>
           <DetailTabs
             label={user.name}
             value={search.tab ?? 'general'}
