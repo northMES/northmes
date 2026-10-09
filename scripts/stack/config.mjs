@@ -2,7 +2,7 @@
 // secret files under .northmes/secrets/, which every process the stack starts reads.
 
 import { randomBytes } from 'node:crypto';
-import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 
@@ -74,8 +74,9 @@ export function publishIfMissing(path, content, mode) {
  * Writes the dev secret files under dir/secrets/, each with a random value that starts with the
  * dev marker and with mode 0600, and dir/dev.env, which sets NODE_ENV to development and points the
  * _FILE keys at the secret files. A file that exists is kept as it is, so the database roles keep
- * the passwords they were created with and an edit to dev.env stays. Returns the environment that
- * dev.env holds.
+ * the passwords they were created with and an edit to dev.env stays. A dev.env written before a
+ * secret was added gains that secret's _FILE key at its end, so a checkout that updates still
+ * starts. Returns the environment that dev.env holds.
  * @param {string} dir The stack's state directory, .northmes/ at the repository root.
  * @returns {Record<string, string>}
  */
@@ -92,5 +93,15 @@ export function writeDevConfig(dir) {
   const devEnvFile = join(dir, 'dev.env');
   const lines = Object.entries(env).map(([key, value]) => `${key}=${value}\n`);
   if (publishIfMissing(devEnvFile, `${devEnvHeader}${lines.join('')}`)) return env;
-  return /** @type {Record<string, string>} */ (parseEnv(readFileSync(devEnvFile, 'utf8')));
+  const written = readFileSync(devEnvFile, 'utf8');
+  const present = parseEnv(written);
+  const missing = Object.entries(env).filter(([key]) => !(key in present));
+  if (missing.length > 0) {
+    const start = written === '' || written.endsWith('\n') ? '' : '\n';
+    appendFileSync(
+      devEnvFile,
+      `${start}${missing.map(([key, value]) => `${key}=${value}\n`).join('')}`,
+    );
+  }
+  return /** @type {Record<string, string>} */ ({ ...present, ...Object.fromEntries(missing) });
 }
