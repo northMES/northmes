@@ -194,8 +194,11 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
       email: 'bo.sjo@example.test',
     });
 
-    expect(without.data ?? null).toBeNull();
-    expect(without.errors?.map(({ extensions }) => extensions?.code)).toEqual(['BAD_USER_INPUT']);
+    // GraphQL refuses the input before the command runs: email is a String!.
+    expect(without.status).toBe(400);
+    expect(without.errors?.map(({ message }) => message)).toEqual([
+      expect.stringContaining('Field "email" of required type "String!" was not provided.'),
+    ]);
     expect(refusals(empty)).toEqual([
       {
         code: 'BAD_USER_INPUT',
@@ -330,7 +333,12 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     );
 
     const answer = await plantAdmin.client.send(createMutation, {
-      input: { id: randomUUIDv7(), username: 'plant.user', name: 'Plant user' },
+      input: {
+        id: randomUUIDv7(),
+        username: 'plant.user',
+        name: 'Plant user',
+        email: 'plant.user@example.test',
+      },
     });
 
     expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
