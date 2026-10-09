@@ -8,7 +8,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShellModule } from '../../src/modules.ts';
 import { createShellRouter } from '../../src/shell/index.ts';
-import { fakeSession } from './fake-session.ts';
+import { alexEmail, fakeSession, rateLimitedEmail } from './fake-session.ts';
 
 afterEach(() => {
   cleanup();
@@ -77,9 +77,9 @@ function renderAt(
   return { router, fetch };
 }
 
-/** Types the login and password into the sign-in form and presses Sign in. */
-async function signIn(user: ReturnType<typeof userEvent.setup>, login: string, password: string) {
-  if (login !== '') await user.type(screen.getByLabelText('Username or email'), login);
+/** Types the email and password into the sign-in form and presses Sign in. */
+async function signIn(user: ReturnType<typeof userEvent.setup>, email: string, password: string) {
+  if (email !== '') await user.type(screen.getByLabelText('Email'), email);
   if (password !== '') await user.type(screen.getByLabelText('Password'), password);
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 }
@@ -93,10 +93,10 @@ describe('sign-in', () => {
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
     expect(document.title).toBe('Sign in · NorthMES');
     expect(fetch).not.toHaveBeenCalled();
-    await signIn(user, 'alex.lund', 'correct horse');
+    await signIn(user, alexEmail, 'correct horse');
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
-    expect(session.signIn).toHaveBeenCalledWith('alex.lund', 'correct horse');
+    expect(session.signIn).toHaveBeenCalledWith(alexEmail, 'correct horse');
     expect(new Headers(callsOf(fetch, 'Ping')[0]?.[1]?.headers).get('authorization')).toBe(
       'Bearer jwt-1',
     );
@@ -105,16 +105,18 @@ describe('sign-in', () => {
   it('E05-S05 the sign-in form names its fields for password managers', async () => {
     renderAt('/sign-in', fakeSession({ signedIn: false }));
 
-    const login = await screen.findByLabelText('Username or email');
+    const email = await screen.findByLabelText('Email');
     const password = screen.getByLabelText('Password');
 
     expect([
-      login.getAttribute('autocomplete'),
-      login.getAttribute('autocapitalize'),
-      login.getAttribute('spellcheck'),
+      email.getAttribute('type'),
+      email.getAttribute('autocomplete'),
+      email.getAttribute('autocapitalize'),
+      email.getAttribute('spellcheck'),
       password.getAttribute('type'),
       password.getAttribute('autocomplete'),
-    ]).toEqual(['username', 'none', 'false', 'password', 'current-password']);
+    ]).toEqual(['email', 'username', 'none', 'false', 'password', 'current-password']);
+    expect(screen.queryByLabelText('Username or email')).toBeNull();
     expect(screen.getByText('Forgot your password? Ask a plant admin to reset it.')).toBeDefined();
   });
 
@@ -132,28 +134,47 @@ describe('sign-in', () => {
       within(summary)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Enter your username or email', 'Enter your password']);
-    expect(screen.getByLabelText('Username or email').getAttribute('aria-invalid')).toBe('true');
+    ).toEqual(['Enter your email', 'Enter your password']);
+    expect(screen.getByLabelText('Email').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Enter your email.')).toBeDefined();
     expect(screen.getByText('Enter your password.')).toBeDefined();
     expect(session.signIn).not.toHaveBeenCalled();
   });
 
-  it('E05-S05 a wrong password keeps the username, clears and marks the password, and focuses the summary', async () => {
+  it('E05-S05 a username in Email is refused on the page with the email field error, and the API is not asked', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    renderAt('/sign-in', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+
+    await signIn(user, 'alex.lund', 'correct horse');
+
+    const summary = screen.getByRole('group', { name: 'Fix 1 field to sign in' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(
+      within(summary)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Enter an email address, such as name@example.com']);
+    expect(screen.getByLabelText('Email').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Enter an email address, such as name@example.com.')).toBeDefined();
+    expect(session.signIn).not.toHaveBeenCalled();
+  });
+
+  it('E05-S05 a wrong password keeps the email, clears and marks the password, and focuses the summary', async () => {
     const user = userEvent.setup();
     renderAt('/sign-in', fakeSession({ signedIn: false }));
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
 
-    await signIn(user, 'alex.lund', 'Correct horse');
+    await signIn(user, alexEmail, 'Correct horse');
 
     const summary = await screen.findByRole('group', {
-      name: 'The username or password is wrong',
+      name: 'The email or password is wrong',
     });
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(within(summary).getByText('Passwords are case-sensitive.')).toBeDefined();
     const password = screen.getByLabelText('Password') as HTMLInputElement;
-    expect((screen.getByLabelText('Username or email') as HTMLInputElement).value).toBe(
-      'alex.lund',
-    );
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe(alexEmail);
     expect(password.value).toBe('');
     expect(password.getAttribute('aria-invalid')).toBe('true');
     expect(
@@ -163,27 +184,25 @@ describe('sign-in', () => {
     expect(document.activeElement).toBe(password);
   });
 
-  it('E05-S05 a rate-limited sign-in says how long to wait and keeps the username', async () => {
+  it('E05-S05 a rate-limited sign-in says how long to wait and keeps the email', async () => {
     const user = userEvent.setup();
     renderAt('/sign-in', fakeSession({ signedIn: false }));
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
 
-    await signIn(user, 'rate.limited', 'anything');
+    await signIn(user, rateLimitedEmail, 'anything');
 
     const summary = await screen.findByRole('group', { name: 'Too many sign-in attempts' });
     expect(within(summary).getByText('Wait 7 seconds, then sign in again.')).toBeDefined();
-    expect((screen.getByLabelText('Username or email') as HTMLInputElement).value).toBe(
-      'rate.limited',
-    );
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe(rateLimitedEmail);
   });
 
   it('E05-S05 a second refusal moves focus to the summary once it names the new refusal, so a screen reader reads the new error', async () => {
     const user = userEvent.setup();
     renderAt('/sign-in', fakeSession({ signedIn: false }));
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
-    await signIn(user, 'alex.lund', 'Correct horse');
-    await screen.findByRole('group', { name: 'The username or password is wrong' });
-    await user.clear(screen.getByLabelText('Username or email'));
+    await signIn(user, alexEmail, 'Correct horse');
+    await screen.findByRole('group', { name: 'The email or password is wrong' });
+    await user.clear(screen.getByLabelText('Email'));
 
     // The heading the summary holds each time it takes focus.
     const focused: string[] = [];
@@ -194,7 +213,7 @@ describe('sign-in', () => {
       }
     };
     document.addEventListener('focusin', record);
-    await signIn(user, 'rate.limited', 'anything');
+    await signIn(user, rateLimitedEmail, 'anything');
 
     const summary = await screen.findByRole('group', { name: 'Too many sign-in attempts' });
     await waitFor(() => expect(document.activeElement).toBe(summary));
@@ -234,7 +253,7 @@ describe('sign-in', () => {
     // The next user who signs in and opens the page reads it from the API, not from the cache.
     router.history.push('/plant-a/quality');
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
-    await signIn(user, 'alex.lund', 'correct horse');
+    await signIn(user, alexEmail, 'correct horse');
     await screen.findByRole('heading', { name: 'The API answered pong' });
     expect(callsOf(fetch, 'Ping')).toHaveLength(2);
   });
@@ -250,7 +269,7 @@ describe('sign-in', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
     expect(session.forget).toHaveBeenCalled();
-    await signIn(user, 'alex.lund', 'correct horse');
+    await signIn(user, alexEmail, 'correct horse');
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
   });
