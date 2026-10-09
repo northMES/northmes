@@ -1,4 +1,4 @@
--- migration: expand
+-- migration: contract
 -- Every article belongs to its company and is assigned to plants (ADR 0073): core.article moves
 -- to the company's node, core.article_plant lists the plants an article is assigned to, and
 -- all_plants assigns it to every plant of the company, those created later included. An
