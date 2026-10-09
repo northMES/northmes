@@ -259,6 +259,9 @@ export async function signIn(
   const token = await fetch(`${url}/api/auth/token`, {
     headers: { authorization: `Bearer ${sessionToken}` },
   });
+  if (!token.ok) {
+    throw new Error(`signIn: /api/auth/token answered ${token.status}: ${await token.text()}`);
+  }
   const { token: jwt } = (await token.json()) as { token: string };
   return { userId: user.id, username, password, authorization: `Bearer ${jwt}` };
 }
