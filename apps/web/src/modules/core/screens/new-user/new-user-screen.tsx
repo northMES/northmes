@@ -83,7 +83,8 @@ interface CreatedBefore {
 /**
  * The New user form (design core-304, US5 to US8): Person with Name, Username and Email, Password,
  * which says the password is temporary and must be replaced at the first sign-in, and the optional
- * Reason for change, then Create user. Create user sends the values under
+ * Reason for change, then Create user. A role without a place under Where, or a place without a
+ * role, lands on the empty field and sends nothing. Create user sends the values under
  * a uuidv7 the form made once (ADR 0012). A retry after a first try that failed before its answer
  * finishes the creation. A retry after a first try that created the user, whose answer with the
  * temporary password was lost, is refused with core.user_created_password_hidden: the form says the
@@ -120,13 +121,20 @@ function NewUserForm({
 
   const save = async (values: UserValues) => {
     setCreatedBefore(undefined);
+    const { reason, ...rest } = values;
+    // With one place, Where shows no choice: the role applies there.
+    const [onlyPlace] = firstRole?.places.length === 1 ? firstRole.places : [];
+    const scopeId = rest.scopeId ?? (rest.roleId === undefined ? undefined : onlyPlace?.id);
+    if (rest.roleId !== undefined && scopeId === undefined) {
+      form.setError('scopeId', { type: 'validate', message: 'Choose where the role applies.' });
+      return;
+    }
+    if (rest.roleId === undefined && scopeId !== undefined) {
+      form.setError('roleId', { type: 'validate', message: 'Choose a role.' });
+      return;
+    }
     try {
-      const { reason, ...rest } = values;
-      if (rest.roleId === undefined || rest.scopeId === undefined) {
-        rest.roleId = undefined;
-        rest.scopeId = undefined;
-      }
-      const input = { ...rest, ...(reason ? { reason } : {}), id, companyId };
+      const input = { ...rest, scopeId, ...(reason ? { reason } : {}), id, companyId };
       const { data } = await create({ variables: { input } });
       if (!data) return;
       const { user, temporaryPassword } = data.coreCreateUser;
@@ -227,7 +235,10 @@ function NewUserForm({
             roles={firstRole.roles}
             holds={firstRole.holds}
             where={form.watch('scopeId') ?? ''}
-            onWhereChange={(scopeId) => form.setValue('scopeId', scopeId, { shouldDirty: true })}
+            onWhereChange={(scopeId) => {
+              form.clearErrors('scopeId');
+              form.setValue('scopeId', scopeId, { shouldDirty: true });
+            }}
             roleId={form.watch('roleId') ?? ''}
             onRoleChange={(roleId) => {
               form.clearErrors('roleId');
