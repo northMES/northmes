@@ -346,11 +346,9 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     const [plantA = '', plantB = ''] = plants;
     const planner = await clientAt(plantA);
     const { id } = await create(planner, 'KN-300', 'Cabinet knob');
-    // The bus loads the article with select for update, which row-level security limits to the
-    // write scopes, so the user writes at plant A through core.article:create. The user updates
-    // articles at plant B only.
+    // The user reads articles at plant A and updates them at plant B only.
     const plantBEditor = await clientWith(plantA, [
-      { scopeId: plantA, permissions: ['core.article:read', 'core.article:create'] },
+      { scopeId: plantA, permissions: ['core.article:read'] },
       { scopeId: plantB, permissions: ['core.article:read', 'core.article:update'] },
     ]);
 
@@ -360,6 +358,38 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
 
     expect(answer).toMatchObject(updateForbidden(id));
     expect(await readArticle(planner, id)).toMatchObject({ code: 'KN-300', version: 1 });
+  });
+
+  /** Writes an article at `scopeId`, such as the company, and returns its id. */
+  async function writeArticleAt(scopeId: string, code: string, name: string): Promise<string> {
+    const { rows } = await db.command(
+      { principal: { type: 'system', id: 'fixture' }, scopes: [scopeId], reason: 'fixture' },
+      (tx) =>
+        tx.query<{ id: string }>(
+          'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
+          [scopeId, code, name],
+        ),
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error('the fixture wrote no article');
+    return id;
+  }
+
+  it('E05-S06 a plant planner who updates articles at the plant gets FORBIDDEN core.forbidden on an article at the company, which the planner reads', async () => {
+    const { company, plants } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const id = await writeArticleAt(company, 'FR-500', 'Frame rail');
+    const plantPlanner = await clientWith(plant, [
+      { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+    expect(await readArticle(plantPlanner, id)).toMatchObject({ code: 'FR-500', version: 1 });
+
+    const answer = await plantPlanner.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'FR-501', name: 'Frame rail, long' },
+    });
+
+    expect(answer).toMatchObject(updateForbidden(id));
+    expect(await readArticle(plantPlanner, id)).toMatchObject({ code: 'FR-500', version: 1 });
   });
 
   it('E05-S06 a user without core.article:create at the plant gets FORBIDDEN core.forbidden from coreCreateArticle', async () => {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
 import { type Command, CommandValidator, type TargetRow } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
@@ -315,18 +315,16 @@ const releaseInput = { id: ORDER_ID, expectedVersion: 1 };
 
 /** The release command on an order at `scopeId` with `version`, whose spies record what ran. */
 function releaseOfOrderAt(scopeId: string, version = 1) {
+  const load = vi.fn(async (id: string) => ({ id, version, scope_id: scopeId }));
   const buildPayload = vi.fn(async () => ({ quantity: { value: 1500, unit: 'pcs' } }));
   const handle = vi.fn(async () => ({ released: true }));
   const command: Command<typeof releaseInput, { released: boolean }, TargetRow> = {
     contract: releaseProductionOrder,
-    target: {
-      entity: 'Production order',
-      load: async (id) => ({ id, version, scope_id: scopeId }),
-    },
+    target: { entity: 'Production order', scopeOf: async () => scopeId, load },
     buildPayload,
     handle,
   };
-  return { command, buildPayload, handle };
+  return { command, load, buildPayload, handle };
 }
 
 /** A bus whose one validator of the release passes, and the spy of that validator's check. */
@@ -430,6 +428,49 @@ describe('the permission step of CommandBusImpl', () => {
     expect(check).not.toHaveBeenCalled();
     expect(handle).not.toHaveBeenCalled();
     expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it('E05-S06 the permission is checked on the scope the principal reads before the row is locked, so a refused command locks nothing', async () => {
+    const { bus } = busWithPassingValidator(new FakeScopedDatabase());
+    const { command, load } = releaseOfOrderAt(PLANT_A);
+    const viewer = principalHolding({ [PLANT_A]: ['planning.productionOrder:read'] });
+
+    const run = runAs(viewer, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 a row whose scope changed between the check and the lock is checked again at its new scope', async () => {
+    const database = new FakeScopedDatabase();
+    const { bus } = busWithPassingValidator(database);
+    const { command, handle } = releaseOfOrderAt(PLANT_B);
+    const plantAPlanner = principalHolding({ [PLANT_A]: ['planning.productionOrder:release'] });
+    // The order was at plant A when the bus read its scope, and at plant B once it was locked.
+    const movedCommand = {
+      ...command,
+      target: { ...command.target, scopeOf: async () => PLANT_A },
+    } as typeof command;
+
+    const run = runAs(plantAPlanner, () => bus.run(movedCommand, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 a row the principal does not read is not found, and the bus does not lock it', async () => {
+    const { bus } = busWithPassingValidator(new FakeScopedDatabase());
+    const { command, load } = releaseOfOrderAt(PLANT_A);
+    const unread = {
+      ...command,
+      target: { ...command.target, scopeOf: async () => undefined },
+    } as typeof command;
+
+    const run = asReleaser(() => bus.run(unread, releaseInput));
+
+    await expect(run).rejects.toBeInstanceOf(NotFoundException);
+    await expect(run).rejects.toThrow(`Production order ${ORDER_ID} was not found`);
+    expect(load).not.toHaveBeenCalled();
   });
 
   it('E05-S06 the permission is checked before the version, so a stale expectedVersion without the permission gets FORBIDDEN', async () => {
