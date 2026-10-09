@@ -5,10 +5,16 @@ import { Archive } from 'lucide-react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import type { Article } from '../../article.graphql.ts';
+import { plantsLabel } from '../../article-plants.ts';
 import { useArticle } from '../../use-article.tsx';
+import { useViewer } from '../../use-viewer.ts';
 import { ArticleActions } from './article-actions.tsx';
+import { ArticlePlants } from './article-plants.tsx';
 
-/** The article's Identity section (design ui-222, DE1): a card with its number and name. */
+/**
+ * The article's Identity section (design ui-222, DE1): a card with its number, its name and its
+ * plants (ADR 0073).
+ */
 function Identity({ article }: { readonly article: Article | undefined }) {
   const value = (text: string | undefined, className?: string) =>
     text === undefined ? (
@@ -32,6 +38,8 @@ function Identity({ article }: { readonly article: Article | undefined }) {
         <dd>{value(article?.code, 'font-mono')}</dd>
         <dt className="text-muted-foreground">Name</dt>
         <dd>{value(article?.name)}</dd>
+        <dt className="text-muted-foreground">Plants</dt>
+        <dd>{value(article === undefined ? undefined : plantsLabel(article))}</dd>
       </dl>
     </section>
   );
@@ -40,13 +48,15 @@ function Identity({ article }: { readonly article: Article | undefined }) {
 /**
  * An article's page (design ui-222, DE1): its number in the h1 and the Identity section, with
  * Archive and Edit in the page actions; an archived article carries the Archived badge and offers
- * Restore. While it loads the h1 reads Article (A12); an article that does not exist, or that the
+ * Restore. A user who holds core.article:assign at the company also gets the Plants section of an
+ * active article (ADR 0073). While it loads the h1 reads Article (A12); an article that does not exist, or that the
  * plant cannot see, shows the not-found state (ST7), and a failed load an error with Try again
  * (ST8).
  */
 export function ArticleScreen() {
   const { plant } = useShell();
   const { article, state, reload } = useArticle();
+  const assigns = useViewer().canAtCompany('core.article:assign');
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
@@ -64,6 +74,9 @@ export function ArticleScreen() {
         </p>
       )}
       <Identity article={article} />
+      {assigns && article !== undefined && article.archivedAt === null && (
+        <ArticlePlants key={`${article.id}-${article.version}`} article={article} reload={reload} />
+      )}
     </PageFrame>
   );
 }

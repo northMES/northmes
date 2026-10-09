@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { createArticle } from '@northmes/core-contracts';
+import type { articleFields } from '@northmes/core-contracts';
+import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
 import { ErrorSummary, ErrorSummaryAction } from '../../../../ui/components/error-summary/index.ts';
@@ -9,8 +10,11 @@ import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 
-/** The fields of the article form, the same for a new and an existing article (ADR 0017). */
-export type ArticleFields = typeof createArticle.fields;
+/**
+ * The fields of the article form, the identity fields that core.createArticle and
+ * core.updateArticle share, the same for a new and an existing article (ADR 0017).
+ */
+export type ArticleFields = typeof articleFields;
 
 /** The values a save receives: the article fields as the contract parses them, trimmed. */
 export type ArticleValues = z.output<ArticleFields>;
@@ -31,6 +35,8 @@ export interface ArticleFormProps {
    * restores it, and the typed values stay for the next save (DE31).
    */
   readonly archived?: { readonly onRestore: () => Promise<void> };
+  /** Further field groups after Identity, such as Plants on a new article (ADR 0073). */
+  readonly children?: ReactNode;
 }
 
 /** The summary's heading: the number of fields to fix, or that the save failed. */
@@ -69,12 +75,19 @@ function Summary({
 
 /**
  * The article form (design ui-222, DE5 and DE7): the error summary, the Identity field group with
- * Article number and Name, then the sticky Save bar with Save article and Cancel. The summary takes
+ * Article number and Name, any further field groups, then the sticky Save bar with Save article and Cancel. The summary takes
  * focus after each failed save, and the typed values stay (WCAG 3.3.7); after a version conflict it
  * says so and offers Reload article (DE19), and for an archived article it offers Restore article
  * (DE31). Leaving the form with changes asks first.
  */
-export function ArticleForm({ form, onSave, cancelHref, conflict, archived }: ArticleFormProps) {
+export function ArticleForm({
+  form,
+  onSave,
+  cancelHref,
+  conflict,
+  archived,
+  children,
+}: ArticleFormProps) {
   const { isDirty, isSubmitting } = form.formState;
   return (
     <form noValidate onSubmit={form.handleSubmit(onSave)} className="flex max-w-190 flex-col gap-4">
@@ -88,6 +101,7 @@ export function ArticleForm({ form, onSave, cancelHref, conflict, archived }: Ar
         />
         <TextField label="Name" autoComplete="off" {...fieldProps(form, 'name')} />
       </FormSection>
+      {children}
       <FormActions
         saveLabel="Save article"
         saving={isSubmitting}

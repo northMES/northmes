@@ -7,7 +7,8 @@ export {
   type CoreCreateArticleMutationVariables,
 } from './create-article.graphql.gen.ts';
 
-// Creates an article at the plant through the command core.createArticle. pnpm gen writes its
+// Creates an article of the company through the command core.createArticle, assigned to the plant
+// or to the plants the input names. pnpm gen writes its
 // typed document to create-article.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
@@ -18,6 +19,12 @@ if (false) {
         name
         version
         archivedAt
+        allPlants
+        plants {
+          id
+          slug
+          name
+        }
       }
     }
   `;

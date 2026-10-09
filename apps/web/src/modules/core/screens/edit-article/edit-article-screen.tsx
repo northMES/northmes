@@ -99,7 +99,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   // values stay, so no form.reset clears the failure of an earlier try: clearErrors does.
   const onRestore = async () => {
     form.clearErrors('root.server');
-    let restored: Article | undefined;
+    let restored: Pick<Article, 'code' | 'name' | 'version'> | undefined;
     try {
       const saved = await reload();
       if (saved === undefined) return;
