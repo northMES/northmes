@@ -8,6 +8,7 @@ export {
   version,
 } from './define-command-contract.ts';
 export {
+  defineCoreLinks,
   defineModuleLinks,
   type LinkBuilder,
   type LinkEntry,

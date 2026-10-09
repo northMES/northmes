@@ -7,6 +7,7 @@ export {
 export { type ClassifiedError, classifyError, type ErrorPage } from './classify-error.ts';
 export {
   companySettingsHref,
+  coreModuleId,
   createShellRoutes,
   type PlantBeforeLoad,
   type PlantRoute,
