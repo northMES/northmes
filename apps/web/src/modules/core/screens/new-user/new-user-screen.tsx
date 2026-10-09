@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useMutation } from '@apollo/client/react';
+import { useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks, createUser } from '@northmes/core-contracts';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -12,14 +12,21 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
-import { detailsOf, fieldErrorsOf } from '../../../../ui/lib/graphql-errors.ts';
+import { detailsOf, fieldErrorsOf, hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import {
   fieldProps,
   setServerErrors,
   summaryErrors,
   useZodForm,
 } from '../../../../ui/lib/use-zod-form.ts';
+import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
+import {
+  type AssignPlace,
+  AssignRoleFormFields,
+  type PickRole,
+} from '../../components/assign-role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
+import { CoreRoles } from '../../roles.graphql.ts';
 import { handOverTemporaryPassword } from '../../temporary-password.ts';
 import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
@@ -32,6 +39,39 @@ type UserValues = z.output<typeof createUser.fields>;
 function summaryHeading(fieldCount: number): string {
   if (fieldCount === 0) return 'Could not create the user';
   return `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to create the user`;
+}
+
+/** The permission to assign roles, as a refusal names it. */
+const assignPermission = 'Assign and remove roles (core.roleAssignment:manage)';
+
+/**
+ * The message on Role when the API refuses the first role at the place (design core-304, AS5): the
+ * permissions of the role the creator lacks there, and the assignment permission when that is what
+ * is missing, then who can act.
+ */
+function roleRefusal(
+  error: unknown,
+  role: PickRole | undefined,
+  at: AssignPlace | undefined,
+  companyName: string,
+): string | undefined {
+  if (role === undefined || at === undefined) return undefined;
+  const missing = missingPermissionsOf(error);
+  let reason: string | undefined;
+  if (missing !== undefined) {
+    reason = `It includes ${permissionCount(missing.length)} you do not hold at ${at.name}: ${permissionList(missing)}.`;
+  } else if (hasErrorCode(error, 'core.forbidden')) {
+    reason = `Assigning at ${at.name} needs ${assignPermission} there.`;
+  }
+  if (reason === undefined) return undefined;
+  return `You cannot assign ${role.name} at ${at.name}. ${reason} Ask a company admin of ${companyName} to assign it.`;
+}
+
+/** What New user offers for the first role: the company's roles and places, and the creator's rights. */
+interface FirstRoleChoices {
+  readonly roles: readonly PickRole[];
+  readonly places: readonly AssignPlace[];
+  readonly holds: (permission: string, place: AssignPlace) => boolean;
 }
 
 /** A user that an earlier try of Create user created, whose temporary password is not known. */
@@ -49,7 +89,14 @@ interface CreatedBefore {
  * temporary password was lost, is refused with core.user_created_password_hidden: the form says the
  * user was created and offers Open user, since NorthMES cannot show the password again.
  */
-function NewUserForm() {
+function NewUserForm({
+  companyName,
+  firstRole,
+}: {
+  readonly companyName: string;
+  /** The roles and places of Role and place, for a creator who may assign roles. */
+  readonly firstRole: FirstRoleChoices | undefined;
+}) {
   const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
@@ -75,6 +122,10 @@ function NewUserForm() {
     setCreatedBefore(undefined);
     try {
       const { reason, ...rest } = values;
+      if (rest.roleId === undefined || rest.scopeId === undefined) {
+        rest.roleId = undefined;
+        rest.scopeId = undefined;
+      }
       const input = { ...rest, ...(reason ? { reason } : {}), id, companyId };
       const { data } = await create({ variables: { input } });
       if (!data) return;
@@ -100,6 +151,16 @@ function NewUserForm() {
       );
       if (fieldErrors.length > 0) {
         setServerErrors(form, fieldErrors);
+        return;
+      }
+      const refused = roleRefusal(
+        error,
+        firstRole?.roles.find(({ id }) => id === values.roleId),
+        firstRole?.places.find(({ id }) => id === values.scopeId),
+        companyName,
+      );
+      if (refused !== undefined) {
+        form.setError('roleId', { type: 'server', message: refused });
         return;
       }
       form.setError('root.server', {
@@ -159,6 +220,25 @@ function NewUserForm() {
           error={form.getFieldState('email', form.formState).error?.message}
         />
       </FormSection>
+      {firstRole !== undefined && (
+        <FormSection title="Role and place">
+          <AssignRoleFormFields
+            places={firstRole.places}
+            roles={firstRole.roles}
+            holds={firstRole.holds}
+            where={form.watch('scopeId') ?? ''}
+            onWhereChange={(scopeId) => form.setValue('scopeId', scopeId, { shouldDirty: true })}
+            roleId={form.watch('roleId') ?? ''}
+            onRoleChange={(roleId) => {
+              form.clearErrors('roleId');
+              form.setValue('roleId', roleId, { shouldDirty: true });
+            }}
+            whereError={form.getFieldState('scopeId', form.formState).error?.message}
+            roleError={form.getFieldState('roleId', form.formState).error?.message}
+            names={{ where: 'scopeId', role: 'roleId' }}
+          />
+        </FormSection>
+      )}
       <FormSection title="Password">
         <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold">Password</p>
@@ -190,7 +270,8 @@ function NewUserForm() {
 }
 
 /**
- * New user (design core-304, US5 to US10): Name, Username and Email, then Create user. Every user
+ * New user (design core-304, US5 to US10): Name, Username and Email, Role and place for a creator
+ * who may assign roles, Password and Reason, then Create user. Every user
  * signs in with their email; the maintainer's decision supersedes the design's frames of an
  * operator without email (US5, US6), who signs in with a badge at the operator station instead.
  * The created user's page replaces the form in the history and shows the temporary password once.
@@ -204,6 +285,21 @@ export function NewUserScreen() {
   // The API checks core.user:create at the company (its scope hook).
   const forbidden = viewer.loaded && !viewer.canAtCompany('core.user:create');
   const companyName = places.company?.name ?? 'the company';
+  // Role and place shows to a creator who may read roles and assign them at the company or a plant.
+  const assigns = viewer.canAtCompany('core.role:read') && viewer.can('core.roleAssignment:manage');
+  const roles = useQuery(CoreRoles, { variables: { companyId }, skip: !assigns });
+  const firstRole: FirstRoleChoices | undefined =
+    assigns && roles.data !== undefined && places.company !== undefined
+      ? {
+          roles: roles.data.coreRoles,
+          places: [
+            ...places.plants.map((plant) => ({ ...plant, kind: 'PLANT' as const })),
+            { ...places.company, kind: 'COMPANY' as const },
+          ],
+          holds: (key, place) =>
+            place.kind === 'COMPANY' ? viewer.canAtCompany(key) : viewer.can(key),
+        }
+      : undefined;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
     state = noAccessState(
@@ -221,7 +317,9 @@ export function NewUserScreen() {
       crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
       state={state}
     >
-      {viewer.loaded && !forbidden && <NewUserForm />}
+      {viewer.loaded && !forbidden && (
+        <NewUserForm companyName={companyName} firstRole={firstRole} />
+      )}
     </PageFrame>
   );
 }

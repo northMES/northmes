@@ -754,12 +754,8 @@ describe('users', () => {
         'Roles that need permissions you do not hold at Plant A stay in the list, with what they need.',
       ),
     ).toBeDefined();
-    expect(
-      (
-        within(section).getByRole('radio', { name: 'Shift lead' }) as HTMLButtonElement
-      ).getAttribute('aria-disabled') ??
-        within(section).getByRole('radio', { name: 'Shift lead' }).hasAttribute('data-disabled'),
-    ).toBeTruthy();
+    const shift = within(section).getByRole('radio', { name: 'Shift lead' });
+    expect(shift.getAttribute('aria-disabled')).toBe('true');
     await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
     await events.click(screen.getByRole('button', { name: 'Create user' }));
 
