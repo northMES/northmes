@@ -14,6 +14,7 @@ import {
   isBefore,
   linksIn,
   renderShellAt,
+  settingsModule,
   setViewport,
   unreachable,
   viewer,
@@ -119,6 +120,26 @@ describe('company settings', () => {
     );
     expect(main.contains(heading)).toBe(true);
     expect(crumbs()).toEqual(['Settings', 'Acme AB']);
+  });
+
+  it('E04-S02 the company landing puts the entries of every module other than core under one Modules heading, in module order', async () => {
+    const { fetch } = companyAdmin(['core.user:read']);
+    const modules = [
+      ...shellModules,
+      settingsModule('quality', 'Quality', 30),
+      settingsModule('maintenance', 'Maintenance', 40),
+    ];
+    renderShellAt(`/settings/${companyId}`, modules, { fetch });
+
+    const main = await screen.findByRole('main');
+    await waitFor(() =>
+      expect(within(main).getAllByRole('heading', { level: 2, name: 'Modules' })).toHaveLength(1),
+    );
+    const section = within(main).getByRole('heading', { level: 2, name: 'Modules' }).parentElement;
+    expect(linksIn(within(section ?? main).getByRole('list', { name: 'Modules' }))).toEqual([
+      ['Quality rules', `/settings/${companyId}/quality/rules`],
+      ['Maintenance rules', `/settings/${companyId}/maintenance/rules`],
+    ]);
   });
 
   it('E04-S02 Back to the plant leads to the plant the user came from, through the Settings button', async () => {

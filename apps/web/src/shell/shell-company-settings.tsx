@@ -24,6 +24,7 @@ import {
   mainId,
   plantHome,
   plantOf,
+  settingsGroupsOf,
   useFocusPageHeading,
 } from './shell-pages.ts';
 import {
@@ -117,12 +118,7 @@ export function CompanySettingsLayout({
     () =>
       viewer === undefined
         ? undefined
-        : companySettingsEntries(modules, permissions, companyId)
-            .map(({ moduleId, entries }) => ({
-              label: moduleId === 'core' ? undefined : 'Modules',
-              entries,
-            }))
-            .filter(({ entries }) => entries.length > 0),
+        : settingsGroupsOf(companySettingsEntries(modules, permissions, companyId)),
     [viewer, modules, permissions, companyId],
   );
   const landing = companySettingsHref(companyId);

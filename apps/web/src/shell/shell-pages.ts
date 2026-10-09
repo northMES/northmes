@@ -4,6 +4,7 @@ import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { MenuLink, SettingsLink, ShellModule } from '../modules.ts';
 import type { ShellCompany } from './companies.graphql.ts';
+import type { SettingsEntry, SettingsGroup } from './shell-settings-nav.tsx';
 
 /** The id of main, which the skip link moves focus to outside settings. */
 export const mainId = 'main';
@@ -173,4 +174,28 @@ export const allPagesPath = 'all-pages';
 /** The href of a plant's All pages index (ADR 0021, WCAG 2.4.5). */
 export function allPagesHref(plant: string): string {
   return `/${plant}/${allPagesPath}`;
+}
+
+/**
+ * The groups of a settings navigation from each module's entries (design shell-313, C2): core's
+ * entries first without a label, then the entries of every other module in one group labelled
+ * Modules, in module order. A group without entries is left out.
+ */
+export function settingsGroupsOf(
+  perModule: readonly { readonly moduleId: string; readonly entries: readonly SettingsEntry[] }[],
+): SettingsGroup[] {
+  const groups: SettingsGroup[] = [
+    {
+      entries: perModule
+        .filter(({ moduleId }) => moduleId === 'core')
+        .flatMap(({ entries }) => entries),
+    },
+    {
+      label: 'Modules',
+      entries: perModule
+        .filter(({ moduleId }) => moduleId !== 'core')
+        .flatMap(({ entries }) => entries),
+    },
+  ];
+  return groups.filter(({ entries }) => entries.length > 0);
 }
