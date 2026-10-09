@@ -39,13 +39,16 @@ export function companyOf(principal: Pick<Principal, 'scopes'>, scopeId: string)
  * plant, the principal must hold it at the plant, and a companyId, when one is given, must be the
  * plant's company. Without a plant, the request is in company settings (ADR 0066), or acts at the
  * company its principal names (ADR 0073): it must name a company, where the principal must hold the
- * permission, and its reads run with the read scopes of that company and its plants. Anything else
- * is core.forbidden.
+ * permission, and its reads run with the read scopes of that company and its plants. A companyId
+ * other than the company the principal acts at, and anything else, is core.forbidden.
  */
 export function requestScope(permission: string, asked?: string): RequestScope {
   const principal = currentPrincipal();
   if (!principal) throw forbidden(`Only a signed-in user can use ${permission}`);
   const { plantId } = principal;
+  if (asked !== undefined && principal.companyId !== undefined && asked !== principal.companyId) {
+    throw forbidden(`Company ${asked} is not the company the request acts at`);
+  }
   const companyId = asked ?? principal.companyId;
   if (plantId) {
     if (!can(principal, permission, plantId)) {

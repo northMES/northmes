@@ -188,12 +188,18 @@ export class ArticleService {
   }
 
   /**
-   * The article with this id among the articles of the company, as byId reads it, or Nest's
-   * NotFoundException when there is none (ADR 0073).
+   * The article with this id among the articles of the company, as byId reads it, or
+   * core.not_found when there is none (ADR 0073).
    */
   async byIdOrThrow(id: string): Promise<ArticleRecord> {
     const article = await this.byId(id);
-    if (!article) throw new NotFoundException(`Article ${id} was not found`);
+    if (!article) {
+      throw new DomainError({
+        code: 'core.not_found',
+        status: HttpStatus.NOT_FOUND,
+        message: `Article ${id} was not found`,
+      });
+    }
     return article;
   }
 
