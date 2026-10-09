@@ -176,7 +176,7 @@ describe('the role editor', () => {
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
   });
 
-  it('E05-S06 Start from lists No role, then the custom roles and the default roles, each with its kind, and choosing one copies its permissions once', async () => {
+  it('E05-S06 Start from lists No role, then the custom roles and the default roles, each with its kind, and choosing one copies its permissions once and opens the modules it ticks', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
       settingsViewerQuery(karin),
@@ -190,6 +190,9 @@ describe('the role editor', () => {
     expect(
       screen.getByText('The new role starts with no permissions. Tick the ones it needs below.'),
     ).toBeDefined();
+    // From No role, Planning has nothing ticked, so it is closed.
+    const closed = await screen.findByRole('button', { name: /^Planning/ });
+    expect(closed.getAttribute('aria-expanded')).toBe('false');
     await user.click(startFrom);
     const listbox = await screen.findByRole('listbox');
     expect(
@@ -206,6 +209,10 @@ describe('the role editor', () => {
 
     await waitFor(() => expect(screen.getByText('3 of 6 selected.')).toBeDefined());
     expect(screen.getByRole('region', { name: 'Difference from Planner' })).toBeDefined();
+    // The module that Planner gives ticks opens, as it does when New role opens from Planner (RO13).
+    const planning = screen.getByRole('button', { name: /^Planning/ });
+    expect(planning.getAttribute('aria-expanded')).toBe('true');
+    expect(planning.textContent).toContain('3 of 3');
   });
 
   it('E05-S06 a role created after the roles list was read shows on the list when the user returns to it', async () => {
