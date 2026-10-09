@@ -812,6 +812,30 @@ describe('users', () => {
     expect(field('Name').value).toBe('Tove Lindqvist');
   });
 
+  it('E05-S08 a role chosen with Where left empty lands on Where with the role kept, and New user sends nothing', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Viewer' }));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(within(summary).getByRole('link').textContent).toBe('Choose where the role applies.');
+    expect(
+      (within(section).getByRole('radio', { name: 'Viewer' }) as HTMLElement).getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('true');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('E05-S08 New user shows no Role and place to a creator who may not assign roles', async () => {
     renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
