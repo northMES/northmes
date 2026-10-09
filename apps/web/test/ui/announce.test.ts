@@ -6,8 +6,9 @@ import { announce } from '../../src/ui/announce.ts';
 
 /** The body of the web's index.html before the app renders, without the app's script. */
 function indexBody(): string {
-  const body = /<body>([\s\S]*)<\/body>/.exec(indexHtml)?.[1] ?? '';
-  return body.replace(/<script[\s\S]*?<\/script>/g, '');
+  const page = new DOMParser().parseFromString(indexHtml, 'text/html');
+  for (const script of page.querySelectorAll('script')) script.remove();
+  return page.body.innerHTML;
 }
 
 /** The text of the polite region after each timer, with repeats in a row folded into one. */
