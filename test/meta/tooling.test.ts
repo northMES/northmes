@@ -383,8 +383,13 @@ describe('tooling', () => {
     expect(processEnvErrors(sources)).toEqual([...failing].sort());
   });
 
-  it("E02-S01 style/noRestrictedImports fails when a module's core/ imports @nestjs/graphql, and passes in its api/ and outside modules", () => {
-    const graphql = "import { Field } from '@nestjs/graphql';\nexport { Field };\n";
+  it("E02-S01 style/noRestrictedImports fails when a module's core/ imports @nestjs/graphql or one of its subpaths, and passes in its api/ and outside modules", () => {
+    const graphql = [
+      "import { Field } from '@nestjs/graphql';",
+      "import { TypeMetadataStorage } from '@nestjs/graphql/dist/schema-builder/storages/type-metadata.storage.js';",
+      'export { Field, TypeMetadataStorage };',
+      '',
+    ].join('\n');
     const failing = [
       'apps/backend/src/modules/quality/core/inspection.service.ts',
       'apps/backend/src/modules/quality/core/commands/record-inspection.handler.ts',
@@ -396,19 +401,21 @@ describe('tooling', () => {
     const sources = Object.fromEntries([...failing, ...passing].map((path) => [path, graphql]));
 
     expect(lintErrors(sources, 'lint/style/noRestrictedImports')).toEqual(
-      failing.sort().map((path) => ({ path, line: 1 })),
+      failing.sort().flatMap((path) => [1, 2].map((line) => ({ path, line }))),
     );
   });
 
-  it("E02-S01 style/noRestrictedImports fails when a module's api/ imports the database, and passes in its core/ and infrastructure/", () => {
+  it("E02-S01 style/noRestrictedImports fails when a module's api/ imports the database or a subpath of its packages, and passes in its core/ and infrastructure/", () => {
     const database = [
       "import { DATABASE } from '@northmes/sdk/data';",
       "import type { Transaction } from 'kysely';",
       "import { Pool } from 'pg';",
       "import type { QualityDatabase } from '../../../infrastructure/database.ts';",
       "import { DatabaseModule } from '../../../../../db/database.module.ts';",
+      "import { sql } from 'kysely/helpers/postgres';",
+      "import { types } from 'pg/lib/index.js';",
       'export type { QualityDatabase, Transaction };',
-      'export { DATABASE, DatabaseModule, Pool };',
+      'export { DATABASE, DatabaseModule, Pool, sql, types };',
       '',
     ].join('\n');
     const failing =
@@ -420,7 +427,7 @@ describe('tooling', () => {
     const sources = Object.fromEntries([failing, ...passing].map((path) => [path, database]));
 
     expect(lintErrors(sources, 'lint/style/noRestrictedImports')).toEqual(
-      [1, 2, 3, 4, 5].map((line) => ({ path: failing, line })),
+      [1, 2, 3, 4, 5, 6, 7].map((line) => ({ path: failing, line })),
     );
   });
 
