@@ -6,7 +6,7 @@ import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';
 import { bootBuilt } from '@northmes/testing';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { seedScopes } from './seed.mjs';
+import { seedPlants } from './seed.mjs';
 import { prepareDatabase, startStack } from './stack.mjs';
 
 /** Runs a pnpm northmes command on the built server, which the test run builds once. */
@@ -48,8 +48,8 @@ function loginAs(role: string, key: string): string {
   return url.href;
 }
 
-/** Runs sql as nm_app with the seed plant as its read scope, as a request at that plant does. */
-async function readAtSeedPlant(sql: string): Promise<Record<string, unknown>[]> {
+/** Runs sql as nm_app with both seed plants as its read scopes. */
+async function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]> {
   const client = new pg.Client({
     connectionString: loginAs('nm_app', 'NORTHMES_DB_APP_PASSWORD_FILE'),
   });
@@ -57,7 +57,7 @@ async function readAtSeedPlant(sql: string): Promise<Record<string, unknown>[]> 
   try {
     await client.query('begin');
     await client.query("select set_config('northmes.read_scopes', $1::uuid[]::text, true)", [
-      [seedScopes.plant],
+      seedPlants.map(({ id }) => id),
     ]);
     const { rows } = await client.query(sql);
     await client.query('commit');
@@ -69,7 +69,7 @@ async function readAtSeedPlant(sql: string): Promise<Record<string, unknown>[]> 
 
 /**
  * What the database steps leave behind: the migration records, read as nm_owner, and the ids of the
- * seed plant's articles and orders.
+ * seed plants' articles and orders.
  */
 async function databaseState() {
   const owner = new pg.Client({
@@ -82,8 +82,8 @@ async function databaseState() {
     );
     return {
       migrations: migrations.rows,
-      articles: await readAtSeedPlant('select id from core.article order by id'),
-      orders: await readAtSeedPlant('select id from planning.production_order order by id'),
+      articles: await readAtSeedPlants('select id from core.article order by id'),
+      orders: await readAtSeedPlants('select id from planning.production_order order by id'),
     };
   } finally {
     await owner.end();
@@ -91,8 +91,8 @@ async function databaseState() {
 }
 
 describe('the stack script', () => {
-  it('E02-S08 the stack bootstraps the roles, migrates and seeds fictional production orders with their articles at the seed plant', async () => {
-    const orders = await readAtSeedPlant(
+  it('E02-S08 the stack bootstraps the roles, migrates and seeds fictional production orders with their articles at the seed plants', async () => {
+    const orders = await readAtSeedPlants(
       `select o.number, o.quantity::text, o.status, a.code, a.name
          from planning.production_order o
          join core.article a on a.id = o.article_id
@@ -131,8 +131,8 @@ describe('the stack script', () => {
     ]);
   });
 
-  it('E06-S02 the seed holds 60 articles with distinct codes at the seed plant, so the article list pages', async () => {
-    const [counts] = await readAtSeedPlant(
+  it('E06-S02 the seed holds 60 articles with distinct codes at the seed plants, so the article list pages', async () => {
+    const [counts] = await readAtSeedPlants(
       'select count(*)::int as articles, count(distinct code_key)::int as codes from core.article',
     );
 

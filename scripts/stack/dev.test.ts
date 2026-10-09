@@ -2,7 +2,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { describe, expect, it, vi } from 'vitest';
 import { completedBuild, devPlan, superviseDev } from './dev.mjs';
 import type { run, start } from './processes.mjs';
-import { seedScopes } from './seed.mjs';
+import { seedPlants } from './seed.mjs';
 
 // The ports the stack hands pnpm dev: the server's PORT and a port for the web's dev server, which
 // freePorts takes apart from the server's.
@@ -64,10 +64,10 @@ describe('devPlan', () => {
 
     // The seed plant's board on the web's origin, which the browser opens.
     expect(plan.boardUrl).toBe(
-      'http://127.0.0.1:41002/019a0000-0000-7000-8000-00000000a001/planning/board',
+      'http://127.0.0.1:41002/plant-a/planning/board',
     );
     expect(new URL(plan.boardUrl).pathname).toBe(
-      planningLinks.board({ plant: seedScopes.plant }).href,
+      planningLinks.board({ plant: seedPlants[0]?.slug ?? '' }).href,
     );
   });
 
