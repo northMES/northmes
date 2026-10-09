@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { useId, useState } from 'react';
-import { Controller } from 'react-hook-form';
+import { useState } from 'react';
+import { Controller, useController } from 'react-hook-form';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
@@ -14,43 +14,19 @@ import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { summaryErrors, useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { Label } from '../../../../ui/primitives/label.tsx';
 import { NativeSelect, NativeSelectOption } from '../../../../ui/primitives/native-select.tsx';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
-import {
-  listOf,
-  missingPermissionsOf,
-  permissionCount,
-  permissionList,
-} from '../../access-refusal.ts';
+import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
 import { permissionLine, permissionWithId } from '../../permission-names.ts';
 import { addHolder } from '../../role-cache.ts';
-import { roleKind } from '../../role-kind.ts';
-import type { CoreRolesQuery } from '../../roles.graphql.ts';
 import { useCompanyVariables } from '../../use-places.ts';
 import { CoreAssignRole, type CoreAssignRoleMutation } from './assign-role.graphql.ts';
-
-/** A role of the company, as the picker lists it. */
-export type PickRole = CoreRolesQuery['coreRoles'][number];
-
-/** A person a role is given to. */
-export interface AssignPerson {
-  readonly id: string;
-  readonly name: string;
-}
-
-/** A place where a role is given: the company, for all its plants, or one plant. */
-export interface AssignPlace {
-  readonly id: string;
-  readonly name: string;
-  readonly kind: 'COMPANY' | 'PLANT';
-}
-
-/** A role a person holds at a place already. */
-export interface HeldRole {
-  readonly roleId: string;
-  readonly scopeId: string;
-}
+import {
+  type AssignPerson,
+  type AssignPlace,
+  AssignRoleFormFields,
+  type HeldRole,
+  type PickRole,
+} from './assign-role-form-fields.tsx';
 
 /** The assignment the API returned. */
 export type AssignedRole = CoreAssignRoleMutation['coreAssignRole'];
@@ -63,165 +39,6 @@ const addRoleFields = z.object({
 });
 
 type AddRoleValues = z.output<typeof addRoleFields>;
-
-/** The id of a role's radio, which a summary link to Role may lead to. */
-function radioIdOf(roleId: string): string {
-  return `add-role-${roleId}`;
-}
-
-/** What the form reads to tell whether a role can be given at a place. */
-interface LockContext {
-  readonly person: AssignPerson | undefined;
-  readonly place: AssignPlace | undefined;
-  readonly held: readonly HeldRole[];
-  readonly holds: (permission: string, place: AssignPlace) => boolean;
-}
-
-/** How a role of the picker reads at the place: its line, and whether it can be added there. */
-interface RoleOption {
-  /**
-   * The line under the role's name (AS3): "Custom role. 9 permissions.", or what keeps it from
-   * being added, such as "Custom role. Needs 3 permissions you do not hold at Plant A: ...".
-   */
-  readonly line: string;
-  /** The role cannot be added at the place: the person holds it there, or it needs permissions. */
-  readonly locked: boolean;
-  /** The role needs permissions the assigner does not hold at the place. */
-  readonly needsPermissions: boolean;
-}
-
-/**
- * The role as the picker lists it at the place, for the person and the assigner. Before a place
- * is chosen, no role is locked and the line names the role's kind and permission count.
- */
-function optionOf(role: PickRole, { person, place, held, holds }: LockContext): RoleOption {
-  const kind = `${roleKind(role)}.`;
-  const count = `${permissionCount(role.permissions.length)}.`;
-  if (place === undefined) {
-    return { line: `${kind} ${count}`, locked: false, needsPermissions: false };
-  }
-  const holdsIt =
-    person !== undefined &&
-    held.some(({ roleId, scopeId }) => roleId === role.id && scopeId === place.id);
-  const missing = role.permissions.filter((key) => !holds(key, place));
-  const parts = [kind];
-  if (holdsIt) parts.push(`${person.name} already holds it at ${place.name}.`);
-  if (missing.length > 0) {
-    const named = missing.slice(0, 3).map(permissionWithId);
-    const more = missing.length > 3 ? `, and ${missing.length - 3} more` : '';
-    parts.push(
-      `Needs ${permissionCount(missing.length)} you do not hold at ${place.name}: ${listOf(named)}${more}.`,
-    );
-  }
-  if (!holdsIt && missing.length === 0) parts.push(count);
-  return {
-    line: parts.join(' '),
-    locked: holdsIt || missing.length > 0,
-    needsPermissions: missing.length > 0,
-  };
-}
-
-interface RolePickerProps {
-  readonly roles: readonly PickRole[];
-  readonly value: string;
-  readonly onChange: (roleId: string) => void;
-  readonly optionOf: (role: PickRole) => RoleOption;
-  readonly error?: string;
-  /** The chosen place, which names the two groups; undefined until Where is chosen. */
-  readonly placeName: string | undefined;
-}
-
-/**
- * Role (design core-304, AS3): one radio group in two groups, the roles the assigner can give at
- * the place and the roles that need permissions the assigner does not hold there, each with the
- * custom roles first and then the default roles, by name, and a line under each role. A role that
- * cannot be added stays in the list, disabled, with what keeps it. Until a place is chosen, the
- * groups are the custom roles and the default roles. One Tab stop; the arrow keys choose.
- */
-function RolePicker({ roles, value, onChange, optionOf, error, placeName }: RolePickerProps) {
-  const labelId = useId();
-  const hintId = useId();
-  const errorId = useId();
-  const options = roles.map((role) => ({ role, option: optionOf(role) }));
-  const group = (title: string, listed: typeof options) => {
-    if (listed.length === 0) return null;
-    return (
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-xs font-semibold text-muted-foreground">{title}</legend>
-        {listed.map(({ role, option }) => {
-          const lineId = `${radioIdOf(role.id)}-line`;
-          return (
-            <div key={role.id} className="flex min-h-9 items-start gap-3 py-1 text-sm">
-              <RadioGroupItem
-                id={radioIdOf(role.id)}
-                value={role.id}
-                disabled={option.locked}
-                aria-describedby={lineId}
-                aria-invalid={error !== undefined || undefined}
-                className="mt-0.5"
-              />
-              <span className="flex flex-col">
-                <Label htmlFor={radioIdOf(role.id)} className="font-normal">
-                  {role.name}
-                </Label>
-                <span id={lineId} className="text-xs text-muted-foreground">
-                  {option.line}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </fieldset>
-    );
-  };
-  return (
-    <div className="flex flex-col gap-2">
-      <p id={labelId} className="text-xs font-semibold">
-        Role
-      </p>
-      <p id={hintId} className="text-xs text-muted-foreground">
-        Roles that need permissions you do not hold at {placeName ?? 'the place you choose'} stay in
-        the list, with what they need.
-      </p>
-      <RadioGroup
-        aria-labelledby={labelId}
-        aria-describedby={[error === undefined ? '' : errorId, hintId].join(' ').trim()}
-        value={value}
-        onValueChange={(next) => onChange(String(next))}
-        className="flex flex-col gap-3"
-      >
-        {placeName === undefined ? (
-          <>
-            {group(
-              'Custom roles',
-              options.filter(({ role }) => role.origin === 'CUSTOM'),
-            )}
-            {group(
-              'Default roles',
-              options.filter(({ role }) => role.origin === 'MODULE'),
-            )}
-          </>
-        ) : (
-          <>
-            {group(
-              `You can assign these at ${placeName}`,
-              options.filter(({ option }) => !option.needsPermissions),
-            )}
-            {group(
-              `Needs permissions you do not hold at ${placeName}`,
-              options.filter(({ option }) => option.needsPermissions),
-            )}
-          </>
-        )}
-      </RadioGroup>
-      {error !== undefined && (
-        <p id={errorId} className="text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
 
 /** The permissions of the chosen role and whether the assigner holds each at the place (AS3). */
 function ChosenRole({
@@ -248,16 +65,6 @@ function ChosenRole({
       </ul>
     </FormSection>
   );
-}
-
-/** "Plant A only" or "Acme AB, all plants", and its hint (AS3). */
-function placeLabel({ kind, name }: AssignPlace) {
-  return kind === 'COMPANY'
-    ? {
-        label: `${name}, all plants`,
-        hint: `Applies to every plant of ${name}, also plants created later.`,
-      }
-    : { label: `${name} only`, hint: `Applies at ${name}.` };
 }
 
 /** "Assign and remove roles (core.roleAssignment:manage)", the permission an assignment needs. */
@@ -335,17 +142,12 @@ export function AssignRoleForm({
     defaultValues: { userId: onlyPerson?.id ?? '', where: onlyPlace?.id ?? '', roleId: '' },
   });
   const userId = form.watch('userId');
-  const where = form.watch('where');
-  const roleId = form.watch('roleId');
+  const whereField = useController({ control: form.control, name: 'where' });
+  const roleField = useController({ control: form.control, name: 'roleId' });
+  const where = whereField.field.value;
+  const roleId = roleField.field.value;
   const person = people.find((each) => each.id === userId);
   const place = places.find((each) => each.id === where);
-  const lock: LockContext = {
-    person,
-    place,
-    held: person === undefined ? [] : heldBy(person.id),
-    holds,
-  };
-  const optionAt = (role: PickRole) => optionOf(role, lock);
   const chosen = roles.find((role) => role.id === roleId);
   const { isDirty, isSubmitting } = form.formState;
   const [assign] = useMutation(CoreAssignRole, {
@@ -390,17 +192,7 @@ export function AssignRoleForm({
     }
   };
 
-  // A summary link to Role leads to the chosen role's radio, or the first one the user can choose.
-  const roleTarget = chosen?.id ?? roles.find((role) => !optionAt(role).locked)?.id ?? roles[0]?.id;
-  const errors = summaryErrors(form.formState.errors).map((entry) => {
-    if (entry.name === 'roleId' && roleTarget !== undefined) {
-      return { ...entry, fieldId: radioIdOf(roleTarget) };
-    }
-    if (entry.name === 'where' && places[0] !== undefined) {
-      return { ...entry, fieldId: `${fieldId('where')}-${places[0].id}` };
-    }
-    return entry;
-  });
+  const errors = summaryErrors(form.formState.errors);
   const fieldCount = errors.filter(({ name }) => name !== undefined).length;
   return (
     <form noValidate onSubmit={form.handleSubmit(save)} className="flex max-w-190 flex-col gap-4">
@@ -455,70 +247,21 @@ export function AssignRoleForm({
             )}
           />
         )}
-        {onlyPlace === undefined ? (
-          <Controller
-            control={form.control}
-            name="where"
-            render={({ field, fieldState }) => (
-              <div className="flex flex-col gap-2">
-                <p id="add-role-where" className="text-xs font-semibold">
-                  Where
-                </p>
-                <RadioGroup
-                  aria-labelledby="add-role-where"
-                  value={field.value}
-                  onValueChange={(next) => {
-                    field.onChange(next);
-                    form.clearErrors('roleId');
-                  }}
-                  className="flex flex-col gap-2"
-                >
-                  {places.map((each) => {
-                    const { label, hint } = placeLabel(each);
-                    const radioId = `${fieldId('where')}-${each.id}`;
-                    return (
-                      <div key={each.id} className="flex items-start gap-3 text-sm">
-                        <RadioGroupItem
-                          id={radioId}
-                          value={each.id}
-                          aria-describedby={`${radioId}-hint`}
-                          aria-invalid={fieldState.error !== undefined || undefined}
-                          className="mt-0.5"
-                        />
-                        <span className="flex flex-col">
-                          <Label htmlFor={radioId} className="font-normal">
-                            {label}
-                          </Label>
-                          <span id={`${radioId}-hint`} className="text-xs text-muted-foreground">
-                            {hint}
-                          </span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </RadioGroup>
-                {fieldState.error !== undefined && (
-                  <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                )}
-              </div>
-            )}
-          />
-        ) : (
-          <p className="text-sm">The role applies at {onlyPlace.name}.</p>
-        )}
-        <Controller
-          control={form.control}
-          name="roleId"
-          render={({ field, fieldState }) => (
-            <RolePicker
-              roles={roles}
-              value={field.value}
-              onChange={field.onChange}
-              optionOf={optionAt}
-              error={fieldState.error?.message}
-              placeName={place?.name}
-            />
-          )}
+        <AssignRoleFormFields
+          places={places}
+          roles={roles}
+          holds={holds}
+          person={person}
+          held={person === undefined ? [] : heldBy(person.id)}
+          where={where}
+          onWhereChange={(next) => {
+            whereField.field.onChange(next);
+            form.clearErrors('roleId');
+          }}
+          roleId={roleId}
+          onRoleChange={roleField.field.onChange}
+          whereError={whereField.fieldState.error?.message}
+          roleError={roleField.fieldState.error?.message}
         />
       </FormSection>
       {chosen !== undefined && place !== undefined && (
