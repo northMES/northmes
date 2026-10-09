@@ -14,6 +14,7 @@ import {
   companiesQuery,
   forbiddenError,
   plantA,
+  rolesQuery,
   sara,
   shiftLead,
   user,
@@ -183,6 +184,56 @@ describe("a user's access", () => {
     );
     await waitFor(() =>
       expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Add role' })),
+    );
+  });
+
+  it('E05-S06 after Remove, the roles list read before it no longer counts the holder', async () => {
+    const user = userEvent.setup();
+    // Sara Nyberg's assignment is the same row in the role's holders and in her roles.
+    const shiftLeadHeld = {
+      ...shiftLead,
+      holders: shiftLead.holders.map((holder) =>
+        holder.user.id === sara.id ? { ...holder, id: assignment(shiftLead, plantA).id } : holder,
+      ),
+    };
+    const router = renderCoreAt(coreLinks.roles({ plant }).href, [
+      viewerQuery(plantAdmin),
+      companiesQuery(),
+      rolesQuery([shiftLeadHeld, viewerRole]),
+      userQuery(saraOfPage),
+      permissionsQuery(sara, saraGrants),
+      {
+        request: {
+          query: CoreRemoveRoleAssignment,
+          variables: { input: { id: assignment(shiftLead, plantA).id } },
+        },
+        result: {
+          data: {
+            coreRemoveRoleAssignment: {
+              __typename: 'RoleAssignment',
+              id: assignment(shiftLead, plantA).id,
+            },
+          },
+        },
+      },
+      permissionsQuery(sara, { 'planning.productionOrder:read': [assignment(viewerRole, acme)] }),
+    ]);
+
+    const custom = await screen.findByRole('table', { name: 'Custom roles of Acme AB' });
+    await waitFor(() => expect(bodyRows(custom)).toEqual([['Shift lead', 'Acme AB', '2', '2']]));
+    await router.navigate({ to: accessHref });
+    await user.click(await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Remove role' }),
+    );
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+
+    await router.navigate({ to: coreLinks.roles({ plant }).href });
+
+    await waitFor(() =>
+      expect(bodyRows(screen.getByRole('table', { name: 'Custom roles of Acme AB' }))).toEqual([
+        ['Shift lead', 'Acme AB', '2', '1'],
+      ]),
     );
   });
 

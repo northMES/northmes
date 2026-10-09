@@ -18,7 +18,7 @@ import {
   viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { plant, renderCoreAt, spoken } from './core-app.tsx';
+import { bodyRows, plant, renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -110,6 +110,39 @@ describe('the role editor', () => {
       coreLinks.roles.role({ plant, roleId: created.id }).href,
     );
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
+  });
+
+  it('E05-S06 a role created after the roles list was read shows on the list when the user returns to it', async () => {
+    const user = userEvent.setup();
+    const created = role('Night planner', []);
+    const router = renderCoreAt(coreLinks.roles({ plant }).href, [
+      viewerQuery(jonas, ['core.role:manage']),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateRole,
+          variables: ({ input }: { input: { name: string } }) => input.name === 'Night planner',
+        },
+        result: { data: { coreCreateRole: created } },
+      } as MockLink.MockedResponse,
+    ]);
+
+    expect(await screen.findByText('3 roles at Acme AB')).toBeDefined();
+    await user.click(await screen.findByRole('link', { name: 'New role' }));
+    await user.type(await screen.findByRole('textbox', { name: 'Role name' }), 'Night planner');
+    await user.click(screen.getByRole('button', { name: 'Create role' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
+
+    await router.navigate({ to: coreLinks.roles({ plant }).href });
+
+    expect(await screen.findByText('4 roles at Acme AB')).toBeDefined();
+    expect(
+      bodyRows(screen.getByRole('table', { name: 'Custom roles of Acme AB' })).map(
+        ([name]) => name,
+      ),
+    ).toEqual(['Night planner', 'Shift lead']);
   });
 
   it('E05-S06 Edit role lets the editor untick a permission of the role he does not hold and tick it again, since the role holds it already', async () => {

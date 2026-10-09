@@ -21,7 +21,7 @@ import {
   viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { plant, renderCoreAt, spoken } from './core-app.tsx';
+import { bodyRows, plant, renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -71,7 +71,7 @@ describe('Add role', () => {
       userQuery(annaOfPage),
       rolesQuery([operator, shiftLead, planner, viewerRole]),
       assignOf(viewerRole, plantA, {
-        data: { coreAssignRole: assignment(viewerRole, plantA) },
+        data: { coreAssignRole: { ...assignment(viewerRole, plantA), user: anna } },
       }),
       {
         request: { query: CoreUserPermissions, variables: { id: anna.id } },
@@ -113,6 +113,16 @@ describe('Add role', () => {
       ),
     );
     expect(await screen.findByRole('link', { name: 'Viewer' })).toBeDefined();
+
+    // The roles list read before the assignment counts the new holder.
+    await router.navigate({ to: coreLinks.roles({ plant }).href });
+    const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
+    await waitFor(() =>
+      expect(bodyRows(defaults)).toEqual([
+        ['Planner', 'Planning', '3', '0'],
+        ['Viewer', 'Planning', '1', '2'],
+      ]),
+    );
   });
 
   it('E05-S06 a refusal of the API at the company lands on Role: the summary takes focus with the message, the choices stay, and its link leads to Role', async () => {
