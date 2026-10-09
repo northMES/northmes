@@ -131,7 +131,7 @@ describe('subscriptions on /graphql', () => {
   it('E02-S03 an upgrade request to another path gets 404 and its socket closes', async () => {
     const url = await bootFixtures(alpha, beta);
 
-    const answer = await upgradeAnswer(url, '/api/v1/web/modules');
+    const answer = await upgradeAnswer(url, '/api/v1/unknown');
 
     expect(answer).toMatch(/^HTTP\/1\.1 404 Not Found\r\n/);
   });

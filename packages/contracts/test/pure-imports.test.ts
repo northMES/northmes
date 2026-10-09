@@ -50,9 +50,9 @@ process.stdout.write(JSON.stringify(resolved));
 `;
 
 /**
- * Imports `entries` the way a web remote or a plugin bundle reads them: plain Node, workspace
- * packages resolved to their source through the @northmes/source condition. Returns the URL of
- * every module that resolved.
+ * Imports `entries` the way a plugin bundle reads them: plain Node, workspace packages resolved to
+ * their source through the @northmes/source condition. Returns the URL of every module that
+ * resolved.
  */
 function resolvedInFreshProcess(entries: readonly string[]): string[] {
   const child = spawnSync(

@@ -93,9 +93,8 @@ describe('defineModuleLinks', () => {
   });
 
   it("E02-S05 linkEntry of a second copy of @northmes/contracts reads the entries the first copy's defineModuleLinks built", async () => {
-    // Every remote bundles its own copy of @northmes/contracts, and the shell's @northmes/web-sdk
-    // reads the remote's manifest with the shell's copy (ADR 0062). The query gives a second
-    // instance of the module.
+    // A plugin bundle carries its own copy of @northmes/contracts, and the web app reads the
+    // plugin's manifest with its own copy. The query gives a second instance of the module.
     const copyPath: string = '../src/define-module-links.ts?copy';
     const copy: typeof import('../src/define-module-links.ts') = await import(
       /* @vite-ignore */ copyPath

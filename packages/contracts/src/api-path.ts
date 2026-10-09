@@ -4,8 +4,8 @@
 export const API_MAJOR = 1;
 
 /**
- * The path of a REST route, built from the value the server uses, so the shell, the stations and
- * the remotes never write the version by hand. apiPath('web', 'modules') is /api/v1/web/modules.
+ * The path of a REST route, built from the value the server uses, so the web app, the stations and
+ * plugins never write the version by hand. apiPath('planning', 'orders') is /api/v1/planning/orders.
  * Each segment is percent-encoded, so an id with / ? or # stays one path segment. An empty, . or ..
  * segment throws, because URL parsing would drop it or climb out of the route.
  */
