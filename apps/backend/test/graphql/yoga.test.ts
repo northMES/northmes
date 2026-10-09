@@ -3,9 +3,24 @@ import type { RequestContext } from '@northmes/sdk/graphql';
 import { given } from '@northmes/testing';
 import { GraphQLInt, GraphQLObjectType, GraphQLSchema, GraphQLString } from 'graphql';
 import { describe, expect, it } from 'vitest';
-import { PLANT_HEADER } from '../../src/graphql/principal.ts';
 import { createGraphqlServer, GRAPHQL_PATH } from '../../src/graphql/server.ts';
-import { currentPrincipal } from '../../src/principal.ts';
+import { currentPrincipal, PLANT_HEADER, type Principal } from '../../src/principal.ts';
+
+/**
+ * Stands in for core's PrincipalResolver: a request that names a plant acts as a principal at that
+ * plant, and any other request has none.
+ */
+async function principalOfPlant(headers: Headers): Promise<Principal | null> {
+  const plantId = headers.get(PLANT_HEADER);
+  if (!plantId) return null;
+  return {
+    userId: '019a0000-0000-7000-8000-0000000000e1',
+    plantId,
+    readScopes: [plantId],
+    writeScopes: [plantId],
+    scopes: new Map(),
+  };
+}
 
 /** The plant of the principal a resolver runs as, read after an await as a database call would. */
 async function plantOfPrincipal(): Promise<string | null> {
@@ -51,15 +66,18 @@ const schema = new GraphQLSchema({
 
 /** Sends one operation to the server, with the plant header when plantId is given. */
 function send(query: string, { plantId, sse = false }: { plantId?: string; sse?: boolean } = {}) {
-  return createGraphqlServer(schema).fetch(`http://127.0.0.1${GRAPHQL_PATH}`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(sse ? { accept: 'text/event-stream' } : {}),
-      ...(plantId ? { [PLANT_HEADER]: plantId } : {}),
+  return createGraphqlServer(schema, { resolvePrincipal: principalOfPlant }).fetch(
+    `http://127.0.0.1${GRAPHQL_PATH}`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(sse ? { accept: 'text/event-stream' } : {}),
+        ...(plantId ? { [PLANT_HEADER]: plantId } : {}),
+      },
+      body: JSON.stringify({ query }),
     },
-    body: JSON.stringify({ query }),
-  });
+  );
 }
 
 /** The data of every next event in an SSE answer. */
@@ -71,7 +89,7 @@ async function eventData(response: Response): Promise<unknown[]> {
 }
 
 describe('the GraphQL server', () => {
-  it('E02-S04 a query runs as the principal of the plant that x-northmes-plant names', async () => {
+  it('E02-S04 a query runs as the principal that the resolver resolves for its request', async () => {
     const plantId = given.plant();
 
     const response = await send('{ probePlant }', { plantId });
@@ -79,7 +97,7 @@ describe('the GraphQL server', () => {
     expect(await response.json()).toEqual({ data: { probePlant: plantId } });
   });
 
-  it('E02-S04 a request without x-northmes-plant runs as no principal', async () => {
+  it('E02-S04 a request the resolver resolves no principal for runs as no principal', async () => {
     const response = await send('{ probePlant }');
 
     expect(await response.json()).toEqual({ data: { probePlant: null } });

@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 import type { Type } from '@nestjs/common';
 import { CoreModule } from './modules/core/core.module.ts';
 import { corePermissions } from './modules/core/permissions.ts';
-import { PlanningModule } from './modules/planning/planning.module.ts';
 import { planningPermissions } from './modules/planning/permissions.ts';
+import { PlanningModule } from './modules/planning/planning.module.ts';
 
 /**
  * A module that ships in the backend: a plain Nest module in src/modules/<id>, with no manifest. It

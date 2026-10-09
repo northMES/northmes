@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { hostFactory } from '@northmes/backend/testing';
+import { hostFactory, signInAt } from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -43,10 +43,14 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     await testApp?.app.close();
   });
 
-  /** A GraphQL client for the test app that names `plant` in x-northmes-plant. */
+  /**
+   * A GraphQL client for the test app, signed in as a user who holds every permission at `plant`,
+   * that names `plant` in x-northmes-plant.
+   */
   async function clientAt(plant: string): Promise<GqlClient> {
     if (!testApp) throw new Error('the test app did not start');
-    return gqlClient(await testApp.app.getUrl(), { headers: { 'x-northmes-plant': plant } });
+    const headers = await signInAt(testApp.app, db.ownerUrl, plant);
+    return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
   /** The article with `id` as coreArticle reads it. */
@@ -151,7 +155,8 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
 
   it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN without an errorCode', async () => {
     if (!testApp) throw new Error('the test app did not start');
-    const client = gqlClient(await testApp.app.getUrl());
+    const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
+    const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
 
     const answer = await client.send(createMutation, {
       input: { id: randomUUIDv7(), code: 'PN-305', name: 'Side panel' },

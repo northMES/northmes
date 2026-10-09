@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory } from '@northmes/backend/testing';
+import { hostFactory, signInAt } from '@northmes/backend/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -36,10 +36,14 @@ describe('planningReleaseProductionOrder', () => {
     await testApp?.app.close();
   });
 
-  /** A GraphQL client for the test app that names `plant` in x-northmes-plant. */
+  /**
+   * A GraphQL client for the test app, signed in as a user who holds every permission at `plant`,
+   * that names `plant` in x-northmes-plant.
+   */
   async function clientAt(plant: string) {
     if (!testApp) throw new Error('the test app did not start');
-    return gqlClient(await testApp.app.getUrl(), { headers: { 'x-northmes-plant': plant } });
+    const headers = await signInAt(testApp.app, db.ownerUrl, plant);
+    return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
   /** Writes a planned production order for 40 of a new article at `plant` and returns its id. */

@@ -244,7 +244,7 @@ async function bootSteps<
   mode: MigrationCheckMode = 'serve',
 ): Promise<Booted<Env>> {
   const { secrets, config } = await loadConfig(env);
-  const { pluginRoots } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
+  const { pluginRoots, webOrigins } = readConfigFile(env.NORTHMES_CONFIG ?? defaultConfigFile, {
     imageVersion: imageVersion(),
   });
   installResolveHook(pluginRoots);
@@ -259,7 +259,7 @@ async function bootSteps<
     mode,
   });
   const servers = await importServers(catalog);
-  const root = AppModule.forRoot(config, servers, appOptions);
+  const root = AppModule.forRoot(config, servers, { webOrigins, ...appOptions });
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
   return { env, secrets, catalog, pending, app };

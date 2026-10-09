@@ -17,7 +17,7 @@ import { alpha } from '../fixtures/graphql/alpha.ts';
 import { beta } from '../fixtures/graphql/beta.ts';
 import { importPlugins, writeConfig, writePlugin } from '../fixtures/plugins/plugin-root.ts';
 import { articleGate, releaseCap } from '../fixtures/plugins/validator-plugins.ts';
-import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
+import { authSecret, serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 // Boot step 5 reads the migration records of the in-repo modules as nm_app, so the server needs a
 // migrated database.
@@ -93,6 +93,8 @@ describe('boot', () => {
     // The secrets namespace holds the value of each secret file the environment names.
     expect(app?.get(secretsConfig.KEY)).toEqual({
       NORTHMES_DB_APP_PASSWORD: decodeURIComponent(new URL(db.appUrl).password),
+      NORTHMES_DB_AUTH_PASSWORD: decodeURIComponent(new URL(db.authUrl).password),
+      NORTHMES_AUTH_SECRET: authSecret,
     });
   });
 

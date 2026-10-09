@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Controller, Get, Inject, NotFoundException, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Public } from '../principal.ts';
 import { ServedWeb } from './served-web.ts';
 
 /** The content security policy of the shell: every resource from the server's origin (ADR 0019). */
@@ -24,7 +25,11 @@ export const CSP = [
  */
 const SERVER_SEGMENTS = new Set(['api', 'assets', 'graphql', 'health', 'mcp', 'modules']);
 
-/** Answers the SPA paths with the shell's index.html (ADR 0064). */
+/**
+ * Answers the SPA paths with the shell's index.html (ADR 0064). It is public: the web app holds no
+ * data, and its sign-in page loads before any session exists.
+ */
+@Public()
 @Controller()
 export class ShellController {
   constructor(@Inject(ServedWeb) private readonly web: ServedWeb) {}

@@ -62,12 +62,7 @@ export interface AuthOptionsInput {
  * auth schema. The same options build the runtime instance and core's migration, and the drift
  * test compares the two.
  */
-export function authOptions({
-  dialect,
-  baseURL,
-  secret,
-  webOrigins,
-}: AuthOptionsInput): BetterAuthOptions {
+export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOptionsInput) {
   return {
     appName: 'NorthMES',
     baseURL,
@@ -97,5 +92,5 @@ export function authOptions({
         },
       }),
     ],
-  };
+  } satisfies BetterAuthOptions;
 }

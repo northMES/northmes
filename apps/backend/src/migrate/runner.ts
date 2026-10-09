@@ -242,9 +242,10 @@ async function syncPermissionCatalog(
        on conflict (key) do update set module_id = excluded.module_id, installed = true`,
       [keys.map(({ key }) => key), keys.map(({ module }) => module)],
     );
-    await client.query('update core.permission set installed = false where key <> all ($1::text[])', [
-      keys.map(({ key }) => key),
-    ]);
+    await client.query(
+      'update core.permission set installed = false where key <> all ($1::text[])',
+      [keys.map(({ key }) => key)],
+    );
     await client.query('commit');
   } catch (error) {
     await client.query('rollback').catch(() => {});
