@@ -4,8 +4,11 @@ import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
+import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
 import { type Article, CoreArticle } from './article.graphql.ts';
+import { readForbiddenState } from './no-access.tsx';
+import { usePlaces } from './use-places.ts';
 
 /** What the article and edit pages read of the article in the URL. */
 export interface ArticleOfPage {
@@ -13,7 +16,8 @@ export interface ArticleOfPage {
   readonly article: Article | undefined;
   /**
    * The page state: loading (ST6), not found for an article that does not exist or that the plant
-   * cannot see (ST7), or an error with Try again (ST8).
+   * cannot see (ST7), an error with Try again (ST8), or forbidden for a user who may not read
+   * articles (ST23).
    */
   readonly state: PageState;
   /** Reads the article from the API again and returns its saved values. */
@@ -27,8 +31,12 @@ export function useArticle(): ArticleOfPage {
   const { data, error, refetch } = useQuery(CoreArticle, { variables: { id: articleId ?? '' } });
   const article = data?.coreArticle ?? undefined;
   const reload = async () => (await refetch()).data?.coreArticle ?? undefined;
+  const forbidden = article === undefined && isForbidden(error);
+  const places = usePlaces({ skip: !forbidden });
   let state: PageState = { status: 'ready' };
-  if (data === undefined && error !== undefined) {
+  if (forbidden) {
+    state = readForbiddenState('articles', places.company?.name ?? 'the company');
+  } else if (data === undefined && error !== undefined) {
     state = {
       status: 'error',
       title: 'Could not load the article',

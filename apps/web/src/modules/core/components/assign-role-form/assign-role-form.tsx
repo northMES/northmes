@@ -17,10 +17,15 @@ import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { Label } from '../../../../ui/primitives/label.tsx';
 import { NativeSelect, NativeSelectOption } from '../../../../ui/primitives/native-select.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
-import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
-import { permissionPhrase } from '../../no-access.tsx';
-import { permissionLine } from '../../permission-names.ts';
+import {
+  listOf,
+  missingPermissionsOf,
+  permissionCount,
+  permissionList,
+} from '../../access-refusal.ts';
+import { permissionLine, permissionWithId } from '../../permission-names.ts';
 import { addHolder } from '../../role-cache.ts';
+import { roleKind } from '../../role-kind.ts';
 import type { CoreRolesQuery } from '../../roles.graphql.ts';
 import { useCompanyVariables } from '../../use-places.ts';
 import { CoreAssignRole, type CoreAssignRoleMutation } from './assign-role.graphql.ts';
@@ -72,56 +77,86 @@ interface LockContext {
   readonly holds: (permission: string, place: AssignPlace) => boolean;
 }
 
-/** Why a role cannot be added at the place, or undefined when it can or no place is chosen. */
-function lockedReason(role: PickRole, { person, place, held, holds }: LockContext) {
-  if (place === undefined) return undefined;
-  if (
-    person !== undefined &&
-    held.some(({ roleId, scopeId }) => roleId === role.id && scopeId === place.id)
-  ) {
-    return `${person.name} holds it at ${place.name} already.`;
+/** How a role of the picker reads at the place: its line, and whether it can be added there. */
+interface RoleOption {
+  /**
+   * The line under the role's name (AS3): "Custom role. 9 permissions.", or what keeps it from
+   * being added, such as "Custom role. Needs 3 permissions you do not hold at Plant A: ...".
+   */
+  readonly line: string;
+  /** The role cannot be added at the place: the person holds it there, or it needs permissions. */
+  readonly locked: boolean;
+  /** The role needs permissions the assigner does not hold at the place. */
+  readonly needsPermissions: boolean;
+}
+
+/**
+ * The role as the picker lists it at the place, for the person and the assigner. Before a place
+ * is chosen, no role is locked and the line names the role's kind and permission count.
+ */
+function optionOf(role: PickRole, { person, place, held, holds }: LockContext): RoleOption {
+  const kind = `${roleKind(role)}.`;
+  const count = `${permissionCount(role.permissions.length)}.`;
+  if (place === undefined) {
+    return { line: `${kind} ${count}`, locked: false, needsPermissions: false };
   }
+  const holdsIt =
+    person !== undefined &&
+    held.some(({ roleId, scopeId }) => roleId === role.id && scopeId === place.id);
   const missing = role.permissions.filter((key) => !holds(key, place));
-  if (missing.length === 0) return undefined;
-  const named = missing.slice(0, 3).map((key) => `${permissionLine(key)} (${key})`);
-  const more = missing.length > 3 ? `, and ${missing.length - 3} more` : '';
-  return `You do not hold ${permissionCount(missing.length)} of it at ${place.name}: ${named.join(', ')}${more}.`;
+  const parts = [kind];
+  if (holdsIt) parts.push(`${person.name} already holds it at ${place.name}.`);
+  if (missing.length > 0) {
+    const named = missing.slice(0, 3).map(permissionWithId);
+    const more = missing.length > 3 ? `, and ${missing.length - 3} more` : '';
+    parts.push(
+      `Needs ${permissionCount(missing.length)} you do not hold at ${place.name}: ${listOf(named)}${more}.`,
+    );
+  }
+  if (!holdsIt && missing.length === 0) parts.push(count);
+  return {
+    line: parts.join(' '),
+    locked: holdsIt || missing.length > 0,
+    needsPermissions: missing.length > 0,
+  };
 }
 
 interface RolePickerProps {
   readonly roles: readonly PickRole[];
   readonly value: string;
   readonly onChange: (roleId: string) => void;
-  readonly reasonOf: (role: PickRole) => string | undefined;
+  readonly optionOf: (role: PickRole) => RoleOption;
   readonly error?: string;
-  readonly placeName: string;
+  /** The chosen place, which names the two groups; undefined until Where is chosen. */
+  readonly placeName: string | undefined;
 }
 
 /**
- * Role (design core-304, AS3): one radio group, the custom roles and then the default roles, each
- * by name. A role that needs permissions the assigner does not hold at the place stays in the list,
- * disabled, with what it needs. One Tab stop; the arrow keys choose.
+ * Role (design core-304, AS3): one radio group in two groups, the roles the assigner can give at
+ * the place and the roles that need permissions the assigner does not hold there, each with the
+ * custom roles first and then the default roles, by name, and a line under each role. A role that
+ * cannot be added stays in the list, disabled, with what keeps it. Until a place is chosen, the
+ * groups are the custom roles and the default roles. One Tab stop; the arrow keys choose.
  */
-function RolePicker({ roles, value, onChange, reasonOf, error, placeName }: RolePickerProps) {
+function RolePicker({ roles, value, onChange, optionOf, error, placeName }: RolePickerProps) {
   const labelId = useId();
   const hintId = useId();
   const errorId = useId();
-  const group = (title: string, origin: PickRole['origin']) => {
-    const listed = roles.filter((role) => role.origin === origin);
+  const options = roles.map((role) => ({ role, option: optionOf(role) }));
+  const group = (title: string, listed: typeof options) => {
     if (listed.length === 0) return null;
     return (
       <fieldset className="flex flex-col gap-1">
         <legend className="mb-1 text-xs font-semibold text-muted-foreground">{title}</legend>
-        {listed.map((role) => {
-          const reason = reasonOf(role);
-          const reasonId = `${radioIdOf(role.id)}-reason`;
+        {listed.map(({ role, option }) => {
+          const lineId = `${radioIdOf(role.id)}-line`;
           return (
             <div key={role.id} className="flex min-h-9 items-start gap-3 py-1 text-sm">
               <RadioGroupItem
                 id={radioIdOf(role.id)}
                 value={role.id}
-                disabled={reason !== undefined}
-                aria-describedby={reason === undefined ? undefined : reasonId}
+                disabled={option.locked}
+                aria-describedby={lineId}
                 aria-invalid={error !== undefined || undefined}
                 className="mt-0.5"
               />
@@ -129,11 +164,9 @@ function RolePicker({ roles, value, onChange, reasonOf, error, placeName }: Role
                 <Label htmlFor={radioIdOf(role.id)} className="font-normal">
                   {role.name}
                 </Label>
-                {reason !== undefined && (
-                  <span id={reasonId} className="text-xs text-muted-foreground">
-                    {reason}
-                  </span>
-                )}
+                <span id={lineId} className="text-xs text-muted-foreground">
+                  {option.line}
+                </span>
               </span>
             </div>
           );
@@ -147,8 +180,8 @@ function RolePicker({ roles, value, onChange, reasonOf, error, placeName }: Role
         Role
       </p>
       <p id={hintId} className="text-xs text-muted-foreground">
-        Roles that need permissions you do not hold at {placeName} stay in the list, with what they
-        need.
+        Roles that need permissions you do not hold at {placeName ?? 'the place you choose'} stay in
+        the list, with what they need.
       </p>
       <RadioGroup
         aria-labelledby={labelId}
@@ -157,8 +190,29 @@ function RolePicker({ roles, value, onChange, reasonOf, error, placeName }: Role
         onValueChange={(next) => onChange(String(next))}
         className="flex flex-col gap-3"
       >
-        {group('Custom roles', 'CUSTOM')}
-        {group('Default roles', 'MODULE')}
+        {placeName === undefined ? (
+          <>
+            {group(
+              'Custom roles',
+              options.filter(({ role }) => role.origin === 'CUSTOM'),
+            )}
+            {group(
+              'Default roles',
+              options.filter(({ role }) => role.origin === 'MODULE'),
+            )}
+          </>
+        ) : (
+          <>
+            {group(
+              `You can assign these at ${placeName}`,
+              options.filter(({ option }) => !option.needsPermissions),
+            )}
+            {group(
+              `Needs permissions you do not hold at ${placeName}`,
+              options.filter(({ option }) => option.needsPermissions),
+            )}
+          </>
+        )}
       </RadioGroup>
       {error !== undefined && (
         <p id={errorId} className="text-xs text-destructive">
@@ -196,11 +250,45 @@ function ChosenRole({
   );
 }
 
-/** "Plant A only" or "Acme AB, all plants", and its hint. */
-function placeLabel({ kind, name }: AssignPlace, companyName: string) {
+/** "Plant A only" or "Acme AB, all plants", and its hint (AS3). */
+function placeLabel({ kind, name }: AssignPlace) {
   return kind === 'COMPANY'
-    ? { label: `${name}, all plants`, hint: `The role applies at every plant of ${name}.` }
-    : { label: `${name} only`, hint: `The role applies at ${name}, a plant of ${companyName}.` };
+    ? {
+        label: `${name}, all plants`,
+        hint: `Applies to every plant of ${name}, also plants created later.`,
+      }
+    : { label: `${name} only`, hint: `Applies at ${name}.` };
+}
+
+/** "Assign and remove roles (core.roleAssignment:manage)", the permission an assignment needs. */
+const assignPermission = permissionWithId('core.roleAssignment:manage');
+
+/**
+ * Why the API refused the assignment at the place (AS5), as the sentences between "You cannot
+ * assign Viewer at Acme AB." and who can act, or undefined for another failure. The grant rule
+ * names the role's permissions the assigner lacks there; a refused assignment permission names
+ * it, after the role's permissions the assigner lacks there by the client's own check.
+ */
+function refusalOf(
+  error: unknown,
+  role: PickRole | undefined,
+  at: AssignPlace,
+  holds: (key: string) => boolean,
+): string | undefined {
+  const lacking = (keys: readonly string[]) =>
+    `It includes ${permissionCount(keys.length)} you do not hold at ${at.name}: ${permissionList(keys)}.`;
+  const missing = missingPermissionsOf(error);
+  if (missing !== undefined) {
+    const also = holds('core.roleAssignment:manage')
+      ? ''
+      : ` Assigning at ${at.name} also needs ${assignPermission} there.`;
+    return `${lacking(missing)}${also}`;
+  }
+  if (!hasErrorCode(error, 'core.forbidden')) return undefined;
+  const unheld = role?.permissions.filter((key) => !holds(key)) ?? [];
+  return unheld.length === 0
+    ? `Assigning at ${at.name} needs ${assignPermission} there.`
+    : `${lacking(unheld)} Assigning at ${at.name} also needs ${assignPermission} there.`;
 }
 
 export interface AssignRoleFormProps {
@@ -257,7 +345,7 @@ export function AssignRoleForm({
     held: person === undefined ? [] : heldBy(person.id),
     holds,
   };
-  const reasonOf = (role: PickRole) => lockedReason(role, lock);
+  const optionAt = (role: PickRole) => optionOf(role, lock);
   const chosen = roles.find((role) => role.id === roleId);
   const { isDirty, isSubmitting } = form.formState;
   const [assign] = useMutation(CoreAssignRole, {
@@ -291,12 +379,10 @@ export function AssignRoleForm({
       );
       await onAssigned(to);
     } catch (error) {
-      const missing = missingPermissionsOf(error);
+      const refused = refusalOf(error, role, at, (key) => holds(key, at));
       let message = 'Could not add the role. Your choices are kept. Try again.';
-      if (missing !== undefined) {
-        message = `You cannot assign ${roleName} at ${at.name}. It includes ${permissionCount(missing.length)} you do not hold at ${at.name}: ${permissionList(missing)}. Ask a company admin of ${companyName} to assign it.`;
-      } else if (hasErrorCode(error, 'core.forbidden')) {
-        message = `You cannot assign ${roleName} at ${at.name}. Assigning there needs ${permissionPhrase('core.roleAssignment:manage')}. Ask a company admin of ${companyName} to assign it.`;
+      if (refused !== undefined) {
+        message = `You cannot assign ${roleName} at ${at.name}. ${refused} Ask a company admin of ${companyName} to assign it.`;
       } else if (hasErrorCode(error, 'core.role_already_assigned')) {
         message = `${to.name} holds ${roleName} at ${at.name} already. Choose another role or place.`;
       }
@@ -305,8 +391,7 @@ export function AssignRoleForm({
   };
 
   // A summary link to Role leads to the chosen role's radio, or the first one the user can choose.
-  const roleTarget =
-    chosen?.id ?? roles.find((role) => reasonOf(role) === undefined)?.id ?? roles[0]?.id;
+  const roleTarget = chosen?.id ?? roles.find((role) => !optionAt(role).locked)?.id ?? roles[0]?.id;
   const errors = summaryErrors(form.formState.errors).map((entry) => {
     if (entry.name === 'roleId' && roleTarget !== undefined) {
       return { ...entry, fieldId: radioIdOf(roleTarget) };
@@ -389,7 +474,7 @@ export function AssignRoleForm({
                   className="flex flex-col gap-2"
                 >
                   {places.map((each) => {
-                    const { label, hint } = placeLabel(each, companyName);
+                    const { label, hint } = placeLabel(each);
                     const radioId = `${fieldId('where')}-${each.id}`;
                     return (
                       <div key={each.id} className="flex items-start gap-3 text-sm">
@@ -429,9 +514,9 @@ export function AssignRoleForm({
               roles={roles}
               value={field.value}
               onChange={field.onChange}
-              reasonOf={reasonOf}
+              optionOf={optionAt}
               error={fieldState.error?.message}
-              placeName={place?.name ?? 'the place you choose'}
+              placeName={place?.name}
             />
           )}
         />

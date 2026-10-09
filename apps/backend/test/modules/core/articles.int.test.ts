@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { hostFactory, signInAt, statementsDuring } from '@northmes/backend/testing';
+import {
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+  signInAt,
+  statementsDuring,
+} from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -51,7 +58,7 @@ interface ListArgs {
   after?: string;
   last?: number;
   before?: string;
-  orderBy?: { field: 'CODE' | 'NAME'; direction?: 'ASC' | 'DESC' }[];
+  orderBy?: { field: 'CODE' | 'NAME' | 'UPDATED_AT'; direction?: 'ASC' | 'DESC' }[];
   search?: string;
 }
 
@@ -350,5 +357,105 @@ describe('coreArticles', () => {
     }
     // 100 characters are allowed, as are 100 rows.
     expect((await list(client, { first: 100, search: 'x'.repeat(100) })).errors).toBeUndefined();
+  });
+  /** Writes the articles at `plant` with the time of their last change, one statement each. */
+  async function writeChangedArticles(
+    plant: string,
+    articles: readonly { code: string; name: string; updatedAt: string }[],
+  ) {
+    await db.command(
+      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
+      async (tx) => {
+        for (const { code, name, updatedAt } of articles) {
+          await tx.query(
+            'insert into core.article (scope_id, code, name, updated_at) values ($1, $2, $3, $4)',
+            [plant, code, name, updatedAt],
+          );
+        }
+      },
+    );
+  }
+
+  it('E06-S06 orderBy UPDATED_AT DESC lists the most recently changed article first, with the code order breaking no tie but the id, and pages through the list', async () => {
+    const plant = given.plant();
+    await writeChangedArticles(plant, [
+      { code: 'AX-300', name: 'Shelf board', updatedAt: '2026-10-01T07:55:00Z' },
+      { code: 'BR-140', name: 'Wall bracket', updatedAt: '2026-10-05T14:07:00Z' },
+      { code: 'CW-220', name: 'Caster wheel', updatedAt: '2026-10-04T07:12:00Z' },
+      { code: 'HG-110', name: 'Cabinet hinge', updatedAt: '2026-10-04T07:12:00Z' },
+      { code: 'PN-305', name: 'Side panel', updatedAt: '2026-09-28T15:45:00.123456Z' },
+    ]);
+    const client = await clientAt(plant);
+    const newestFirst = ['BR-140', 'HG-110', 'CW-220', 'AX-300', 'PN-305'];
+
+    expect(
+      await walkForward(client, {
+        first: 2,
+        orderBy: [{ field: 'UPDATED_AT', direction: 'DESC' }],
+      }),
+    ).toEqual([newestFirst.slice(0, 2), newestFirst.slice(2, 4), newestFirst.slice(4)]);
+    expect(
+      await walkBackward(client, {
+        last: 2,
+        orderBy: [{ field: 'UPDATED_AT', direction: 'DESC' }],
+      }),
+    ).toEqual([newestFirst.slice(0, 1), newestFirst.slice(1, 3), newestFirst.slice(3)]);
+    expect(await walkForward(client, { first: 3, orderBy: [{ field: 'UPDATED_AT' }] })).toEqual([
+      ['PN-305', 'AX-300', 'CW-220'],
+      ['HG-110', 'BR-140'],
+    ]);
+  });
+
+  it('E06-S06 an article carries updatedAt, the time of its last change, which every update moves on', async () => {
+    const plant = given.plant();
+    await writeChangedArticles(plant, [
+      { code: 'AX-300', name: 'Shelf board', updatedAt: '2026-10-01T07:55:00Z' },
+    ]);
+    const client = await clientAt(plant);
+    const updatedAt = async () => {
+      const answer = await client.send<{
+        coreArticles: { edges: { node: { updatedAt: string } }[] };
+      }>('{ coreArticles { edges { node { updatedAt } } } }');
+      expect(answer.errors).toBeUndefined();
+      return answer.data?.coreArticles.edges[0]?.node.updatedAt;
+    };
+    expect(await updatedAt()).toBe('2026-10-01T07:55:00.000Z');
+
+    await db.command(
+      { principal: { type: 'system', id: 'fixture' }, scopes: [plant], reason: 'fixture' },
+      (tx) => tx.query("update core.article set name = 'Shelf board 600'"),
+    );
+
+    expect(Date.parse((await updatedAt()) ?? '')).toBeGreaterThan(
+      Date.parse('2026-10-01T07:55:00Z'),
+    );
+  });
+
+  it('E06-S06 a user without core.article:read at the plant gets FORBIDDEN with core.forbidden from coreArticles and coreArticle, and no article', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
+    const plant = plants[0] ?? '';
+    await writeArticles(plant, [{ code: 'AX-300', name: 'Shelf board' }]);
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['core.user:read'] },
+    ]);
+    const client = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': slugs[0] ?? '' },
+    });
+    const [row] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      'select id from core.article where scope_id = $1',
+      [plant],
+    );
+
+    const list = await client.send('{ coreArticles { edges { node { code } } } }');
+    const one = await client.send('query One($id: ID!) { coreArticle(id: $id) { code } }', {
+      id: row?.id,
+    });
+
+    expect(list.data).toBeNull();
+    expect(errorCodes(list)).toEqual([['FORBIDDEN', 'core.forbidden']]);
+    expect(one.data?.coreArticle ?? null).toBeNull();
+    expect(errorCodes(one)).toEqual([['FORBIDDEN', 'core.forbidden']]);
   });
 });

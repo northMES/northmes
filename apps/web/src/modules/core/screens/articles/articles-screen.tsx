@@ -9,6 +9,8 @@ import { DataTable, type DataTableColumn } from '../../../../ui/components/data-
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
+import { formatDateTime } from '../../../../ui/lib/date-time.ts';
+import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
@@ -25,6 +27,8 @@ import {
   sortedBy,
   sortOf,
 } from '../../article-list-search.ts';
+import { readForbiddenState } from '../../no-access.tsx';
+import { usePlaces } from '../../use-places.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
 
 /** One page of the list, as CoreArticles answers it. */
@@ -76,6 +80,16 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
         </span>
       ),
   },
+  {
+    id: 'changed',
+    header: 'Last changed',
+    sortable: true,
+    cell: (article) => (
+      <time dateTime={article.updatedAt} className="font-mono">
+        {formatDateTime(article.updatedAt)}
+      </time>
+    ),
+  },
 ];
 
 /** New article, the page's main action, as a link to the new article page. */
@@ -98,6 +112,10 @@ function isStaleCursor(error: ErrorLike | undefined): boolean {
 }
 
 interface StateOptions {
+  /** The API refused the list, because the user holds no role that reads articles there. */
+  readonly forbidden: boolean;
+  /** The company's name, where the forbidden state says the permission is missing. */
+  readonly companyName: string;
   readonly view: ArticleListSearch;
   readonly page: ArticlesPage | undefined;
   readonly error: ErrorLike | undefined;
@@ -107,10 +125,19 @@ interface StateOptions {
 
 /**
  * The state of the list's data region (design ui-222, row 2): loading while a page has no rows
- * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), a page whose cursor
- * no longer applies (ST21) or a failed load (ST4).
+ * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the forbidden state
+ * (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
  */
-function listState({ view, page, error, retry, show }: StateOptions): PageState {
+function listState({
+  forbidden,
+  companyName,
+  view,
+  page,
+  error,
+  retry,
+  show,
+}: StateOptions): PageState {
+  if (forbidden) return readForbiddenState('articles', companyName);
   if (page === undefined && isStaleCursor(error)) {
     return {
       status: 'empty',
@@ -159,8 +186,10 @@ function listState({ view, page, error, retry, show }: StateOptions): PageState 
 
 /**
  * The articles of the plant (design ui-222, LI1): Search articles, Show archived, and one page of
- * the DataTable with sortable Article number and Name headers, Previous, Next and the row range.
- * Archived articles show only with Show archived, each with the Archived badge (LI31). Search,
+ * the DataTable with sortable Article number, Name and Last changed headers, Previous, Next and
+ * the row range, newest change first by default (A5). Archived articles show only with Show
+ * archived, each with the Archived badge (LI31). A user who may not read articles gets the
+ * forbidden state with no toolbar and no page actions (ST19, A18). Search,
  * sort, Show archived and page live in the URL (plan 06, View state in the URL), so a reload, Back
  * or a copied link opens the same rows; each change replaces the history entry and leaves focus
  * where it is.
@@ -173,6 +202,8 @@ export function ArticlesScreen() {
     fetchPolicy: 'cache-and-network',
   });
   const page = data?.coreArticles;
+  const forbidden = page === undefined && isForbidden(error);
+  const places = usePlaces({ skip: !forbidden });
   // While a page loads, the pager keeps the buttons of the page before it, so the button just used
   // keeps focus.
   const shownPage = page ?? previousData?.coreArticles;
@@ -180,6 +211,8 @@ export function ArticlesScreen() {
     navigate({ to: '.', search: next, replace: true });
   };
   const state = listState({
+    forbidden,
+    companyName: places.company?.name ?? 'the company',
     view,
     page,
     error,
@@ -189,25 +222,27 @@ export function ArticlesScreen() {
   return (
     <PageFrame
       title="Articles"
-      actions={<NewArticleLink />}
+      actions={forbidden ? undefined : <NewArticleLink />}
       toolbar={
-        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-          <SearchField
-            id={searchFieldId}
-            label="Search articles"
-            value={view.q ?? ''}
-            onSearch={(text) => show(searchedFor(view, text))}
-            className="w-full max-w-sm"
-          />
-          <Field orientation="horizontal" className="w-auto">
-            <Checkbox
-              id={showArchivedId}
-              checked={view.archived !== undefined}
-              onCheckedChange={(shown) => show(showingArchived(view, shown))}
+        forbidden ? undefined : (
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+            <SearchField
+              id={searchFieldId}
+              label="Search articles"
+              value={view.q ?? ''}
+              onSearch={(text) => show(searchedFor(view, text))}
+              className="w-full max-w-sm"
             />
-            <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
-          </Field>
-        </div>
+            <Field orientation="horizontal" className="w-auto">
+              <Checkbox
+                id={showArchivedId}
+                checked={view.archived !== undefined}
+                onCheckedChange={(shown) => show(showingArchived(view, shown))}
+              />
+              <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+            </Field>
+          </div>
+        )
       }
       state={state}
     >

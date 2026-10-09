@@ -3,8 +3,9 @@ import { defineList } from '@northmes/sdk/lists';
 import { Article } from '../types/article.type.ts';
 
 /**
- * The list of a plant's articles: coreArticles, by code unless orderBy says otherwise, without the
- * archived ones unless includeArchived asks for them (ADR 0016).
+ * The list of a plant's articles: coreArticles, by code unless orderBy says otherwise, such as
+ * UPDATED_AT descending for the most recent change first, without the archived ones unless
+ * includeArchived asks for them (ADR 0016).
  */
 export const articleList = defineList({
   name: 'Article',
@@ -12,6 +13,7 @@ export const articleList = defineList({
   sortFields: {
     CODE: { column: 'code', type: 'text' },
     NAME: { column: 'name', type: 'text' },
+    UPDATED_AT: { column: 'updated_at', type: 'timestamptz' },
   },
   defaultOrderBy: [{ field: 'CODE' }],
   search: ['code', 'name'],

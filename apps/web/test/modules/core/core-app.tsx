@@ -73,7 +73,14 @@ export interface ArticleNode {
   readonly name: string;
   readonly version: number;
   readonly archivedAt: string | null;
+  readonly updatedAt: string;
 }
+
+/** When the fixtures' articles last changed: 2026-10-05 14:07 in the browser's time zone. */
+export const lastChanged = new Date(2026, 9, 5, 14, 7).toISOString();
+
+/** lastChanged as the Last changed column shows it. */
+export const lastChangedText = '2026-10-05 14:07';
 
 /** A fictional article with an id made from its code, active unless archivedAt says otherwise. */
 export function article(
@@ -81,10 +88,11 @@ export function article(
   name: string,
   version = 1,
   archivedAt: string | null = null,
+  updatedAt = lastChanged,
 ): ArticleNode {
   const digits = [...code].map((char) => char.charCodeAt(0).toString(16)).join('');
   const id = `019a0000-0000-7000-8000-${digits.padStart(12, '0').slice(-12)}`;
-  return { __typename: 'Article', id, code, name, version, archivedAt };
+  return { __typename: 'Article', id, code, name, version, archivedAt, updatedAt };
 }
 
 /** The polite live region's text. */
@@ -92,7 +100,7 @@ export function spoken(): string | null | undefined {
   return document.querySelector('[aria-live="polite"]')?.textContent;
 }
 
-/** count fictional articles, from AX-500 on, as one page of a list sorted by article number. */
+/** count fictional articles, from AX-500 on, as one page of the list. */
 export function articleRange(count: number, first = 500): ArticleNode[] {
   return Array.from({ length: count }, (_, index) =>
     article(`AX-${first + index}`, `Axle ${first + index} mm`),
@@ -133,8 +141,11 @@ export function articlesPage(
   };
 }
 
-/** The variables of the first page by article number, as a list without URL state sends them. */
-export const firstPage = { first: 25, orderBy: [{ field: 'CODE', direction: 'ASC' }] };
+/**
+ * The variables of the first page, newest change first, as a list without URL state sends them
+ * (design ui-222, A5).
+ */
+export const firstPage = { first: 25, orderBy: [{ field: 'UPDATED_AT', direction: 'DESC' }] };
 
 /** coreArticles with variables, answered with result. */
 export function articlesQuery(

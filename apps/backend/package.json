@@ -19,6 +19,7 @@
   "dependencies": {
     "@better-auth/api-key": "catalog:",
     "@better-auth/oauth-provider": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@modelcontextprotocol/client": "catalog:",
     "@northmes/testing": "workspace:*",
     "@types/express": "catalog:",
     "@types/node": "catalog:",

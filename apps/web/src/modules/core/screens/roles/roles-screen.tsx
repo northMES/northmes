@@ -8,6 +8,10 @@ import { DataTable, type DataTableColumn } from '../../../../ui/components/data-
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
+import {
+  CorePermissionCatalog,
+  type CorePermissionCatalogQuery,
+} from '../../components/permission-checklist/permission-catalog.graphql.ts';
 import { noAccessState, permissionPhrase } from '../../no-access.tsx';
 import { moduleName } from '../../permission-names.ts';
 import { CoreRoles, type CoreRolesQuery } from '../../roles.graphql.ts';
@@ -30,11 +34,66 @@ function RoleLink({ role }: { readonly role: RoleRow }) {
   );
 }
 
+/** The installed and the not installed permissions of the catalog, by key. */
+interface Installed {
+  readonly installed: ReadonlySet<string>;
+  readonly notInstalled: ReadonlySet<string>;
+}
+
+/** The keys of the catalog's permissions, split by whether their module is installed. */
+function installedOf(catalog: CorePermissionCatalogQuery['corePermissionCatalog']): Installed {
+  const permissions = catalog.flatMap(({ resources }) =>
+    resources.flatMap(({ permissions }) => permissions),
+  );
+  return {
+    installed: new Set(permissions.filter((each) => each.installed).map(({ key }) => key)),
+    notInstalled: new Set(permissions.filter((each) => !each.installed).map(({ key }) => key)),
+  };
+}
+
 /**
- * The columns of a group of roles: Defined by names the company or the role's module, and Holders
- * counts the people who hold the role at the company or at one of its plants.
+ * How many of the installed permissions the role holds, "5 of 36", with "1 not installed" under
+ * it for the permissions of modules that are not installed (RO1). Until the catalog loads, the
+ * count alone.
  */
-function columnsOf(companyName: string): readonly DataTableColumn<RoleRow>[] {
+function PermissionCount({
+  role,
+  installed,
+}: {
+  readonly role: RoleRow;
+  readonly installed: Installed | undefined;
+}) {
+  if (installed === undefined) return <span className="font-mono">{role.permissions.length}</span>;
+  const held = role.permissions.filter((key) => installed.installed.has(key)).length;
+  const missing = role.permissions.filter((key) => installed.notInstalled.has(key)).length;
+  return (
+    <span className="flex flex-col">
+      <span className="font-mono">
+        {held} of {installed.installed.size}
+      </span>
+      {missing > 0 && (
+        <span className="text-xs text-muted-foreground">{missing} not installed</span>
+      )}
+    </span>
+  );
+}
+
+/** "None", "1 person" or "3 people": the people who hold the role, each counted once. */
+function holdersCount(role: RoleRow): string {
+  const people = new Set(role.holders.map(({ user }) => user.id)).size;
+  if (people === 0) return 'None';
+  return `${people} ${people === 1 ? 'person' : 'people'}`;
+}
+
+/**
+ * The columns of a group of roles: Defined by names the company or the role's module, Permissions
+ * counts the installed permissions the role holds, and Holders counts the people who hold the role
+ * at the company or at one of its plants.
+ */
+function columnsOf(
+  companyName: string,
+  installed: Installed | undefined,
+): readonly DataTableColumn<RoleRow>[] {
   return [
     { id: 'name', header: 'Role', cell: (role) => <RoleLink role={role} /> },
     {
@@ -42,12 +101,12 @@ function columnsOf(companyName: string): readonly DataTableColumn<RoleRow>[] {
       header: 'Defined by',
       cell: (role) => (role.moduleId === null ? companyName : moduleName(role.moduleId)),
     },
-    { id: 'permissions', header: 'Permissions', cell: (role) => role.permissions.length },
     {
-      id: 'holders',
-      header: 'Holders',
-      cell: (role) => role.holders.length,
+      id: 'permissions',
+      header: 'Permissions',
+      cell: (role) => <PermissionCount role={role} installed={installed} />,
     },
+    { id: 'holders', header: 'Holders', cell: holdersCount },
   ];
 }
 
@@ -57,12 +116,15 @@ function RoleGroup({
   rows,
   columns,
   loading,
+  emptyTitle,
   empty,
 }: {
   readonly title: string;
   readonly rows: readonly RoleRow[];
   readonly columns: readonly DataTableColumn<RoleRow>[];
   readonly loading: boolean;
+  /** The heading of the empty group, when it has one. */
+  readonly emptyTitle?: string;
   readonly empty: string;
 }) {
   const headingId = useId();
@@ -72,7 +134,10 @@ function RoleGroup({
         {title}
       </h2>
       {!loading && rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{empty}</p>
+        <div className="flex flex-col gap-1 text-sm">
+          {emptyTitle !== undefined && <h3 className="font-semibold">{emptyTitle}</h3>}
+          <p className="text-muted-foreground">{empty}</p>
+        </div>
       ) : (
         <DataTable
           label={title}
@@ -87,10 +152,11 @@ function RoleGroup({
 }
 
 /**
- * The roles of the company in company settings (design core-304, RO1): its custom roles, then
- * the default roles of the modules, each by name, with who defines them, how many permissions they
- * hold and how many people hold them at the company and its plants. New role shows to a user who
- * may create and edit roles; another reader gets a line that says why it is missing (RO27). A
+ * The roles of the company in company settings (design core-304, RO1): the count beside the h1,
+ * then its custom roles and the default roles of the modules, each by name, with who defines them,
+ * how many of the installed permissions they hold ("5 of 36") and how many people hold them at the
+ * company and its plants ("1 person"). New role shows to a user who may create and edit roles;
+ * another reader gets a line that says why it is missing (RO27). No custom roles yet draws RO7. A
  * reader without core.role:read gets the page "No access to Roles" (NO1).
  */
 export function RolesScreen() {
@@ -99,6 +165,12 @@ export function RolesScreen() {
   const viewer = useViewer();
   const { data, error, refetch } = useQuery(CoreRoles, { variables: { companyId } });
   const roles = data?.coreRoles;
+  const catalog = useQuery(CorePermissionCatalog, { variables: { companyId } }).data
+    ?.corePermissionCatalog;
+  const installed = useMemo(
+    () => (catalog === undefined ? undefined : installedOf(catalog)),
+    [catalog],
+  );
   const companyName = places.company?.name ?? 'the company';
   const forbidden = roles === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
@@ -121,7 +193,7 @@ export function RolesScreen() {
   }
   // The API checks core.role:manage at the company (ADR 0010).
   const canManage = viewer.canAtCompany('core.role:manage');
-  const columns = useMemo(() => columnsOf(companyName), [companyName]);
+  const columns = useMemo(() => columnsOf(companyName, installed), [companyName, installed]);
   const loading = roles === undefined;
   return (
     <PageFrame
@@ -134,22 +206,20 @@ export function RolesScreen() {
           </Link>
         ) : undefined
       }
-      toolbar={
-        forbidden ? undefined : (
-          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-            {roles !== undefined && (
-              <p>
-                {roles.length} {roles.length === 1 ? 'role' : 'roles'} at {companyName}
-              </p>
-            )}
-            {viewer.loaded && !canManage && (
-              <p>
-                Creating and editing roles needs {permissionPhrase('core.role:manage')} at{' '}
-                {companyName}.
-              </p>
-            )}
-          </div>
+      meta={
+        roles === undefined ? undefined : (
+          <span>
+            {roles.length} {roles.length === 1 ? 'role' : 'roles'} at {companyName}
+          </span>
         )
+      }
+      toolbar={
+        !forbidden && viewer.loaded && !canManage ? (
+          <p className="text-sm text-muted-foreground">
+            Creating or changing a role needs {permissionPhrase('core.role:manage')} at{' '}
+            {companyName}. A company admin of {companyName} has it.
+          </p>
+        ) : undefined
       }
       state={state}
     >
@@ -159,7 +229,8 @@ export function RolesScreen() {
           rows={roles?.filter(({ origin }) => origin === 'CUSTOM') ?? []}
           columns={columns}
           loading={loading}
-          empty="No custom roles yet. A custom role holds the permissions you choose from the modules."
+          emptyTitle="No custom roles yet"
+          empty={`${companyName} uses the default roles of its modules. Create a role when a job needs another set of permissions, starting from a default role or from none.`}
         />
         <RoleGroup
           title="Default roles from modules"

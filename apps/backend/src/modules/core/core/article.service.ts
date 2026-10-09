@@ -4,6 +4,7 @@ import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import type { Connection } from '@northmes/sdk/lists';
 import { type ArticleListArgs, articleList } from '../api/article/queries/article.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
+import { requestScope } from './access/request-scope.ts';
 
 /** An article as core's service hands it out. */
 export interface ArticleRecord {
@@ -14,6 +15,8 @@ export interface ArticleRecord {
   readonly version: number;
   /** When the article was archived, or null while it is active. */
   readonly archivedAt: Date | null;
+  /** When the article last changed, its creation included. */
+  readonly updatedAt: Date;
 }
 
 /** The columns of core.article that make an ArticleRecord. */
@@ -23,6 +26,7 @@ export const recordColumns = [
   'name',
   'version',
   'archived_at as archivedAt',
+  'updated_at as updatedAt',
 ] as const;
 
 /**
@@ -33,8 +37,12 @@ export const recordColumns = [
 export class ArticleService {
   constructor(@Inject(DATABASE) private readonly db: ScopedDatabase<CoreDatabase>) {}
 
-  /** The article with this id, or null when none exists at the principal's read scopes. */
+  /**
+   * The article with this id, or null when none exists at the principal's read scopes. A
+   * principal without core.article:read at the request's plant gets core.forbidden.
+   */
   async byId(id: string): Promise<ArticleRecord | null> {
+    requestScope('core.article:read');
     const article = await this.db.transaction((tx) =>
       tx.selectFrom('core.article').select(recordColumns).where('id', '=', id).executeTakeFirst(),
     );
@@ -43,7 +51,9 @@ export class ArticleService {
 
   /**
    * The articles with these ids in one query, one entry per id in the order of the ids: the
-   * article, or null when none exists at the principal's read scopes.
+   * article, or null when none exists at the principal's read scopes. It checks no permission,
+   * because another module's field reads the articles of its own rows through it, such as the
+   * article of a production order.
    */
   async byIds(ids: readonly string[]): Promise<(ArticleRecord | null)[]> {
     if (ids.length === 0) return [];
@@ -56,9 +66,11 @@ export class ArticleService {
 
   /**
    * One page of the articles at the principal's read scopes, as coreArticles' arguments ask: the
-   * active ones, and the archived ones too when includeArchived is true.
+   * active ones, and the archived ones too when includeArchived is true. A principal without
+   * core.article:read at the request's plant gets core.forbidden.
    */
-  list(args: ArticleListArgs): Promise<Connection<ArticleRecord>> {
+  async list(args: ArticleListArgs): Promise<Connection<ArticleRecord>> {
+    requestScope('core.article:read');
     return articleList.page(
       this.db,
       (tx) => tx.selectFrom('core.article').select(recordColumns),
