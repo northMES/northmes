@@ -30,6 +30,7 @@ describe('schemaSdl', () => {
       'coreCreateUser',
       'coreDeleteRole',
       'coreRemoveRoleAssignment',
+      'coreResetPassword',
       'coreRestoreArticle',
       'coreUnblockUser',
       'coreUpdateArticle',
