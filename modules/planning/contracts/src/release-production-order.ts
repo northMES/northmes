@@ -11,6 +11,7 @@ export const releaseProductionOrder = defineCommandContract({
   name: 'planning.releaseProductionOrder',
   target: 'existing',
   fields: z.object({}),
+  permission: 'planning.productionOrder:release',
   validatable: true,
   payload: z.object({
     productionOrderId: z.uuid(),

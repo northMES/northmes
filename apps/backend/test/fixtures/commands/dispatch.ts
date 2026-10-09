@@ -13,6 +13,7 @@ export const releaseJob = defineCommandContract({
   name: 'dispatch.releaseJob',
   target: 'existing',
   fields: z.object({}),
+  permission: 'dispatch.job:release',
   validatable: true,
   payload: z.object({ jobId: z.uuid(), quantity: z.number() }),
 });
@@ -32,10 +33,23 @@ export class JobResolver {
   }
 }
 
+/** A job with `id` at version 1, at the plant the request names. */
+async function jobAtPlant(id: string, { plantId }: { readonly plantId: string | undefined }) {
+  return { id, version: 1, scope_id: plantId ?? '' };
+}
+
+/** Every job is at the plant the request names, where a job command runs. */
+const jobTarget = {
+  entity: 'Job',
+  scopeOf: async (_id: string, { plantId }: { readonly plantId: string | undefined }) => plantId,
+  load: jobAtPlant,
+};
+
 export const ReleaseJob = defineCommand(releaseJob, {
   returns: () => Job,
-  // The fixture reads no table: every job it is asked for exists at version 1.
-  target: { entity: 'Job', load: async (id) => ({ id, version: 1 }) },
+  // The fixture reads no table: every job it is asked for exists at version 1, at the request's
+  // plant.
+  target: jobTarget,
   async buildPayload({ id }) {
     return { jobId: id, quantity: 1500 };
   },
@@ -49,11 +63,12 @@ export const holdJob = defineCommandContract({
   name: 'dispatch.holdJob',
   target: 'existing',
   fields: z.object({}),
+  permission: 'dispatch.job:hold',
 });
 
 export const HoldJob = defineCommand(holdJob, {
   returns: () => Job,
-  target: { entity: 'Job', load: async (id) => ({ id, version: 1 }) },
+  target: jobTarget,
   async handle({ id }) {
     return { id, status: 'held' };
   },
@@ -65,4 +80,5 @@ export class DispatchModule {}
 export const dispatch: InRepoModule = {
   id: 'dispatch',
   module: DispatchModule,
+  permissions: { 'dispatch.job': ['release', 'hold'] },
 };

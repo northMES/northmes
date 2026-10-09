@@ -9,12 +9,16 @@ import type { CoreContext } from './context.ts';
 export type ArticleRow = Selectable<ArticleTable>;
 
 /**
- * The target of a core command on an existing article (ADR 0012). The bus reads the article and
- * locks its row until the command's transaction ends, and checks its version. An article outside
- * the principal's scopes is not found, like one that does not exist.
+ * The target of a core command on an existing article (ADR 0012). The bus reads the article's scope
+ * and checks the permission there, then locks the row until the command's transaction ends and
+ * checks its version. An article outside the principal's read scopes is not found, like one that
+ * does not exist.
  */
 export const articleTarget = {
   entity: 'Article',
+  scopeOf: async (id: string, { tx }: Pick<CoreContext, 'tx'>) =>
+    (await tx.selectFrom('core.article').select('scope_id').where('id', '=', id).executeTakeFirst())
+      ?.scope_id,
   load: (id: string, { tx }: Pick<CoreContext, 'tx'>) =>
     tx.selectFrom('core.article').selectAll().where('id', '=', id).forUpdate().executeTakeFirst(),
 };

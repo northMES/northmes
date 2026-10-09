@@ -14,27 +14,42 @@ export interface HandlerContext<Target = unknown> {
   readonly tx: Transaction<unknown>;
   /**
    * The scope id of the plant the principal works at, where a command that creates an entity
-   * writes its row (ADR 0012 step 3). undefined for a run without a principal.
+   * writes its row and where the bus checks the permission of a command without a target and
+   * without a scope hook (ADR 0012 step 3). undefined for a run without a principal.
    */
   readonly plantId: string | undefined;
   /** The row that target.load returned, or undefined for a command without a target. */
   readonly target: Target;
 }
 
-/** What the bus reads of a command's target: the version the command's change is checked on. */
-export interface Versioned {
+/**
+ * What the bus reads of a command's target: the scope it checks the command's permission at, and
+ * the version the command's change is checked on (ADR 0012 steps 3 and 5).
+ */
+export interface TargetRow {
+  /** The scope id of the row, where can() checks contract.permission (ADR 0010). */
+  readonly scope_id: string;
   readonly version: number;
 }
 
 /**
- * The entity a command on an existing entity changes (contract target existing). The bus loads it
- * before the validators and the handler run, and refuses the command with Nest's
- * NotFoundException when load finds no row, or with core.version_conflict when the row's version is not the input's
- * expectedVersion (ADR 0012 steps 3 and 5).
+ * The entity a command on an existing entity changes (contract target existing). Before the
+ * validators and the handler run, the bus reads the row's scope with scopeOf and checks the
+ * contract's permission there, then locks the row with load and checks the permission at the
+ * locked row's scope_id again. It refuses the command with Nest's NotFoundException when either
+ * finds no row, with core.forbidden when the principal does not hold the permission at the row's
+ * scope, or with core.version_conflict when the row's version is not the input's expectedVersion
+ * (ADR 0012 steps 3 and 5).
  */
 export interface CommandTarget<Target> {
   /** The entity's name in the messages of those errors, such as Article. */
   readonly entity: string;
+  /**
+   * Reads the scope_id of the row with this id without locking it, so the bus refuses a row that
+   * the principal reads but may not change with core.forbidden: row-level security limits a lock
+   * to the write scopes. undefined when no row with the id is at the principal's read scopes.
+   */
+  scopeOf(id: string, context: Pick<HandlerContext, 'tx' | 'plantId'>): Promise<string | undefined>;
   /**
    * Reads the row with this id and locks it until the command's transaction ends, so the version
    * check, the validators and the handler judge the same row. undefined when no row with the id
@@ -47,11 +62,22 @@ export interface CommandTarget<Target> {
 export interface Command<
   Input = unknown,
   Result = unknown,
-  Target extends Versioned | undefined = Versioned | undefined,
+  Target extends TargetRow | undefined = TargetRow | undefined,
 > {
   readonly contract: CommandContract;
   /** The entity the command changes, for a contract with target existing. */
   readonly target?: CommandTarget<Target>;
+  /**
+   * The scope id a command without a target writes at, where the bus checks contract.permission
+   * instead of at the request's plant (ADR 0012 step 3). A command that writes above the plant,
+   * such as one that creates a company role, derives it from server-side data, such as the company
+   * of the request's plant, and never from the client's input alone. undefined refuses the command
+   * with core.forbidden. A command with a target takes no scope hook: its row names the scope.
+   */
+  scope?(
+    input: Input,
+    context: Pick<HandlerContext, 'tx' | 'plantId'>,
+  ): Promise<string | undefined>;
   /**
    * Builds the payload that the command validators get. The bus calls it for a validatable
    * command and parses its result with each validator's copy of contract.payload (ADR 0037).
@@ -67,7 +93,7 @@ export interface Command<
  */
 export interface CommandBus {
   /** Runs `command` with an input that its contract parsed, and returns the handler's result. */
-  run<Input, Result, Target extends Versioned | undefined>(
+  run<Input, Result, Target extends TargetRow | undefined>(
     command: Command<Input, Result, Target>,
     input: Input,
   ): Promise<Result>;

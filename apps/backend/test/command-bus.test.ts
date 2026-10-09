@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { HttpStatus } from '@nestjs/common';
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { defineCommandContract } from '@northmes/contracts';
-import { type Command, CommandValidator } from '@northmes/sdk/commands';
+import { type Command, CommandValidator, type TargetRow } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError } from '@northmes/sdk/errors';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { CommandBusImpl } from '../src/commands/command-bus.ts';
+import { accessOf } from '../src/modules/core/core/access/access.ts';
+import { type Principal, runAs } from '../src/principal.ts';
 import { releaseJob } from './fixtures/commands/dispatch.ts';
 import {
   BROKEN_CHECK_ERROR,
@@ -19,6 +21,34 @@ import {
 
 const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
+// One company with plants A and B.
+const COMPANY = '019a0000-0000-7000-8000-000000000c01';
+const PLANT_A = '019a0000-0000-7000-8000-000000000a01';
+const PLANT_B = '019a0000-0000-7000-8000-000000000b01';
+
+/**
+ * A principal at plant A whose role assignments grant, at each scope of the company's tree, the
+ * permissions that `granted` names for it.
+ */
+function principalHolding(granted: Readonly<Record<string, readonly string[]>>): Principal {
+  const access = accessOf([
+    { id: COMPANY, parentId: null, permissions: granted[COMPANY] ?? [] },
+    { id: PLANT_A, parentId: COMPANY, permissions: granted[PLANT_A] ?? [] },
+    { id: PLANT_B, parentId: COMPANY, permissions: granted[PLANT_B] ?? [] },
+  ]);
+  return { userId: '019a0000-0000-7000-8000-0000000000e1', plantId: PLANT_A, ...access };
+}
+
+/** A planner who releases production orders and dispatch jobs at plant A. */
+const releaser = principalHolding({
+  [PLANT_A]: ['planning.productionOrder:release', 'dispatch.job:release'],
+});
+
+/** Runs fn as the releaser. */
+function asReleaser<Result>(fn: () => Promise<Result>): Promise<Result> {
+  return runAs(releaser, fn);
+}
 
 /** The fixture command dispatch.releaseJob, with `handle` as its handler. */
 function releaseJobWith(
@@ -70,6 +100,7 @@ const releaseProductionOrder = defineCommandContract({
   name: 'planning.releaseProductionOrder',
   target: 'existing',
   fields: z.object({}),
+  permission: 'planning.productionOrder:release',
   validatable: true,
   payload: z.object({ quantity: z.object({ value: z.number(), unit: z.string() }) }),
 });
@@ -85,6 +116,7 @@ describe('CommandBusImpl', () => {
       name: 'planning.releaseProductionOrder',
       target: 'existing',
       fields: z.object({}),
+      permission: 'planning.productionOrder:release',
       validatable: true,
       payload: z.object({ quantity: z.number() }),
     });
@@ -105,7 +137,7 @@ describe('CommandBusImpl', () => {
       ],
     });
 
-    const run = bus.run(command, { id: ORDER_ID });
+    const run = asReleaser(() => bus.run(command, { id: ORDER_ID }));
 
     await expect(run).rejects.toMatchObject({ code: 'core.validator_contract_mismatch' });
     expect(check).not.toHaveBeenCalled();
@@ -148,7 +180,7 @@ describe('CommandBusImpl', () => {
       ],
     });
 
-    const result = await bus.run(command, { id: ORDER_ID });
+    const result = await asReleaser(() => bus.run(command, { id: ORDER_ID }));
 
     expect(result).toEqual({ released: true });
     expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'committed' }]);
@@ -182,7 +214,7 @@ describe('CommandBusImpl', () => {
       validators: [{ module: 'release-limits', validator: quantityLimit.validator }],
     });
 
-    const run = bus.run(command, { id: ORDER_ID });
+    const run = asReleaser(() => bus.run(command, { id: ORDER_ID }));
 
     const error = await run.catch((thrown: unknown) => thrown);
     expect(error).toBeInstanceOf(DomainError);
@@ -204,7 +236,7 @@ describe('CommandBusImpl', () => {
       validators: [{ module: 'broken-rules', validator: BrokenCheck.validator }],
     });
 
-    const run = bus.run(releaseJobWith(handle), { id: JOB_ID });
+    const run = asReleaser(() => bus.run(releaseJobWith(handle), { id: JOB_ID }));
 
     // The validator's own error stays on the server, as the cause.
     await expect(run).rejects.toMatchObject({
@@ -225,7 +257,7 @@ describe('CommandBusImpl', () => {
     });
     let outcome: { result: unknown } | { error: unknown } | undefined;
 
-    void bus.run(releaseJobWith(handle), { id: JOB_ID }).then(
+    void asReleaser(() => bus.run(releaseJobWith(handle), { id: JOB_ID })).then(
       (result) => {
         outcome = { result };
       },
@@ -268,12 +300,281 @@ describe('CommandBusImpl', () => {
       validators: [{ module: 'release-limits', validator: lowerQuantity.validator }],
     });
 
-    const run = bus.run(command, { id: ORDER_ID });
+    const run = asReleaser(() => bus.run(command, { id: ORDER_ID }));
 
     await expect(run).rejects.toMatchObject({
       message: 'Unexpected error.',
       cause: expect.any(TypeError),
     });
+    expect(handle).not.toHaveBeenCalled();
+  });
+});
+
+/** The input of a release of the order ORDER_ID, made on version 1. */
+const releaseInput = { id: ORDER_ID, expectedVersion: 1 };
+
+/** The release command on an order at `scopeId` with `version`, whose spies record what ran. */
+function releaseOfOrderAt(scopeId: string, version = 1) {
+  const load = vi.fn(async (id: string) => ({ id, version, scope_id: scopeId }));
+  const buildPayload = vi.fn(async () => ({ quantity: { value: 1500, unit: 'pcs' } }));
+  const handle = vi.fn(async () => ({ released: true }));
+  const command: Command<typeof releaseInput, { released: boolean }, TargetRow> = {
+    contract: releaseProductionOrder,
+    target: { entity: 'Production order', scopeOf: async () => scopeId, load },
+    buildPayload,
+    handle,
+  };
+  return { command, load, buildPayload, handle };
+}
+
+/** A bus whose one validator of the release passes, and the spy of that validator's check. */
+function busWithPassingValidator(database: FakeScopedDatabase) {
+  const check = vi.fn(async () => ({ verdict: 'pass' }) as const);
+  const bus = new CommandBusImpl(database, {
+    modules: ['core', 'planning', 'release-limits'],
+    validators: [
+      {
+        module: 'release-limits',
+        validator: CommandValidator(releaseProductionOrder, { name: 'quantity-limit', check })
+          .validator,
+      },
+    ],
+  });
+  return { bus, check };
+}
+
+/** Creates an article under the client's id at the request's plant. */
+const createArticle = defineCommandContract({
+  name: 'core.createArticle',
+  target: 'new',
+  fields: z.object({ code: z.string() }),
+  permission: 'core.article:create',
+});
+
+/** Creates a custom role of the company, whatever plant the request names. */
+const createRole = defineCommandContract({
+  name: 'core.createRole',
+  target: 'new',
+  fields: z.object({ key: z.string() }),
+  permission: 'core.role:manage',
+});
+
+/** What the bus refuses a command with when the principal lacks its permission (ADR 0012). */
+const forbidden = { code: 'core.forbidden', status: HttpStatus.FORBIDDEN };
+
+/** The code and status of what `run` rejected with, which must be a DomainError. */
+async function refusalOf(run: Promise<unknown>) {
+  const error = await run.then(
+    () => undefined,
+    (thrown: unknown) => thrown,
+  );
+  expect(error).toBeInstanceOf(DomainError);
+  return { code: (error as DomainError).code, status: (error as DomainError).getStatus() };
+}
+
+describe('the permission step of CommandBusImpl', () => {
+  it("E05-S06 a principal who holds the command's permission at the company runs it on a row at a plant below", async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, handle } = releaseOfOrderAt(PLANT_A);
+    const companyPlanner = principalHolding({ [COMPANY]: ['planning.productionOrder:release'] });
+
+    const result = await runAs(companyPlanner, () => bus.run(command, releaseInput));
+
+    expect(result).toEqual({ released: true });
+    expect(check).toHaveBeenCalledOnce();
+    expect(handle).toHaveBeenCalledOnce();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'committed' }]);
+  });
+
+  it("E05-S06 a principal without the command's permission at the row's scope gets FORBIDDEN core.forbidden, and neither the validators nor the handler run", async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, buildPayload, handle } = releaseOfOrderAt(PLANT_A);
+    // A role with a write permission writes at plant A, but it does not grant the release.
+    const articleEditor = principalHolding({
+      [PLANT_A]: ['planning.productionOrder:read', 'core.article:update'],
+    });
+
+    const run = runAs(articleEditor, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(buildPayload).not.toHaveBeenCalled();
+    expect(check).not.toHaveBeenCalled();
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it("E05-S06 a principal who holds the command's permission at a sibling plant gets FORBIDDEN on a row at the other plant", async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, handle } = releaseOfOrderAt(PLANT_A);
+    const plantBPlanner = principalHolding({
+      [PLANT_A]: ['planning.productionOrder:read'],
+      [PLANT_B]: ['planning.productionOrder:release'],
+    });
+
+    const run = runAs(plantBPlanner, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(check).not.toHaveBeenCalled();
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it("E05-S06 a principal who holds the command's permission at a plant gets FORBIDDEN on a row at the company above it", async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, buildPayload, handle } = releaseOfOrderAt(COMPANY);
+    // The request names plant A, where the planner holds the release, so only the row's scope
+    // refuses it.
+    const plantAPlanner = principalHolding({ [PLANT_A]: ['planning.productionOrder:release'] });
+
+    const run = runAs(plantAPlanner, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(buildPayload).not.toHaveBeenCalled();
+    expect(check).not.toHaveBeenCalled();
+    expect(handle).not.toHaveBeenCalled();
+    expect(database.transactions).toEqual([{ tx: { transaction: 1 }, outcome: 'rolled back' }]);
+  });
+
+  it('E05-S06 the permission is checked on the scope the principal reads before the row is locked, so a refused command locks nothing', async () => {
+    const { bus } = busWithPassingValidator(new FakeScopedDatabase());
+    const { command, load } = releaseOfOrderAt(PLANT_A);
+    const viewer = principalHolding({ [PLANT_A]: ['planning.productionOrder:read'] });
+
+    const run = runAs(viewer, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 a row whose scope changed between the check and the lock is checked again at its new scope', async () => {
+    const database = new FakeScopedDatabase();
+    const { bus } = busWithPassingValidator(database);
+    const { command, handle } = releaseOfOrderAt(PLANT_B);
+    const plantAPlanner = principalHolding({ [PLANT_A]: ['planning.productionOrder:release'] });
+    // The order was at plant A when the bus read its scope, and at plant B once it was locked.
+    const movedCommand = {
+      ...command,
+      target: { ...command.target, scopeOf: async () => PLANT_A },
+    } as typeof command;
+
+    const run = runAs(plantAPlanner, () => bus.run(movedCommand, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 a row the principal does not read is not found, and the bus does not lock it', async () => {
+    const { bus } = busWithPassingValidator(new FakeScopedDatabase());
+    const { command, load } = releaseOfOrderAt(PLANT_A);
+    const unread = {
+      ...command,
+      target: { ...command.target, scopeOf: async () => undefined },
+    } as typeof command;
+
+    const run = asReleaser(() => bus.run(unread, releaseInput));
+
+    await expect(run).rejects.toBeInstanceOf(NotFoundException);
+    await expect(run).rejects.toThrow(`Production order ${ORDER_ID} was not found`);
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 the permission is checked before the version, so a stale expectedVersion without the permission gets FORBIDDEN', async () => {
+    const { bus } = busWithPassingValidator(new FakeScopedDatabase());
+    const { command } = releaseOfOrderAt(PLANT_A, 2);
+    const viewer = principalHolding({ [PLANT_A]: ['planning.productionOrder:read'] });
+
+    const run = runAs(viewer, () => bus.run(command, releaseInput));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+  });
+
+  it('E05-S06 a create is checked at the plant the request names', async () => {
+    const handle = vi.fn(async ({ id }: { id: string }) => ({ id }));
+    const command: Command<{ id: string; code: string }, { id: string }> = {
+      contract: createArticle,
+      handle,
+    };
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const input = { id: ORDER_ID, code: 'BR-140' };
+    // Both principals send their requests at plant A.
+    const plantACreator = principalHolding({ [PLANT_A]: ['core.article:create'] });
+    const plantBCreator = principalHolding({ [PLANT_B]: ['core.article:create'] });
+
+    const atPlantA = await runAs(plantACreator, () => bus.run(command, input));
+    const atPlantB = runAs(plantBCreator, () => bus.run(command, input));
+
+    expect(atPlantA).toEqual({ id: ORDER_ID });
+    expect(await refusalOf(atPlantB)).toEqual(forbidden);
+    expect(handle).toHaveBeenCalledOnce();
+  });
+
+  it('E05-S06 a create from a request that names no plant gets FORBIDDEN', async () => {
+    const handle = vi.fn(async ({ id }: { id: string; code: string }) => ({ id }));
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const creator = {
+      ...principalHolding({ [COMPANY]: ['core.article:create'] }),
+      plantId: undefined,
+    };
+
+    const run = runAs(creator, () =>
+      bus.run({ contract: createArticle, handle }, { id: ORDER_ID, code: 'BR-140' }),
+    );
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it("E05-S06 a command whose scope hook names the company is checked there, so a holder of the permission at the request's plant gets FORBIDDEN", async () => {
+    const handle = vi.fn(async ({ id }: { id: string; key: string }) => ({ id }));
+    const scope = vi.fn(async () => COMPANY);
+    const command: Command<{ id: string; key: string }, { id: string }> = {
+      contract: createRole,
+      scope,
+      handle,
+    };
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const input = { id: ORDER_ID, key: 'shift-lead' };
+    // Both principals send their requests at plant A.
+    const plantAAdmin = principalHolding({ [PLANT_A]: ['core.role:manage'] });
+    const companyAdmin = principalHolding({ [COMPANY]: ['core.role:manage'] });
+
+    const atPlantA = runAs(plantAAdmin, () => bus.run(command, input));
+    const atCompany = await runAs(companyAdmin, () => bus.run(command, input));
+
+    expect(await refusalOf(atPlantA)).toEqual(forbidden);
+    expect(atCompany).toEqual({ id: ORDER_ID });
+    expect(handle).toHaveBeenCalledOnce();
+    expect(scope).toHaveBeenCalledWith(input, { tx: { transaction: 1 }, plantId: PLANT_A });
+  });
+
+  it('E05-S06 a command whose scope hook finds no scope gets FORBIDDEN, and its handler does not run', async () => {
+    const handle = vi.fn(async ({ id }: { id: string; key: string }) => ({ id }));
+    const command: Command<{ id: string; key: string }, { id: string }> = {
+      contract: createRole,
+      scope: async () => undefined,
+      handle,
+    };
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const companyAdmin = principalHolding({ [COMPANY]: ['core.role:manage'] });
+
+    const run = runAs(companyAdmin, () => bus.run(command, { id: ORDER_ID, key: 'shift-lead' }));
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('E05-S06 a command run without a principal gets FORBIDDEN, and its handler does not run', async () => {
+    const database = new FakeScopedDatabase();
+    const { bus, check } = busWithPassingValidator(database);
+    const { command, handle } = releaseOfOrderAt(PLANT_A);
+
+    const run = bus.run(command, releaseInput);
+
+    expect(await refusalOf(run)).toEqual(forbidden);
+    expect(check).not.toHaveBeenCalled();
     expect(handle).not.toHaveBeenCalled();
   });
 });

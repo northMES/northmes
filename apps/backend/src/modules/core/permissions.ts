@@ -5,7 +5,7 @@
  * as `<resource>:<action>` into core.permission.
  */
 export const corePermissions = {
-  'core.article': ['read', 'create', 'update'],
+  'core.article': ['read', 'create', 'update', 'archive'],
   'core.role': ['manage'],
   'core.roleAssignment': ['manage'],
   'core.user': ['manage'],

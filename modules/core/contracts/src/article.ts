@@ -36,6 +36,7 @@ export const createArticle = defineCommandContract({
   name: 'core.createArticle',
   target: 'new',
   fields: articleFields,
+  permission: 'core.article:create',
 });
 
 /**
@@ -47,6 +48,7 @@ export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',
   target: 'existing',
   fields: articleFields,
+  permission: 'core.article:update',
 });
 
 /**
@@ -58,6 +60,7 @@ export const archiveArticle = defineCommandContract({
   name: 'core.archiveArticle',
   target: 'existing',
   fields: z.object({}),
+  permission: 'core.article:archive',
 });
 
 /**
@@ -68,4 +71,5 @@ export const restoreArticle = defineCommandContract({
   name: 'core.restoreArticle',
   target: 'existing',
   fields: z.object({}),
+  permission: 'core.article:archive',
 });

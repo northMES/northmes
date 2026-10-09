@@ -8,7 +8,7 @@ import {
   type Command,
   type CommandBus,
   defineCommand,
-  type Versioned,
+  type TargetRow,
 } from '@northmes/sdk/commands';
 import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
 import type { Transaction } from 'kysely';
@@ -26,7 +26,7 @@ const ORDER_ID = '01920000-0000-7000-8000-000000000001';
 class FakeCommandBus implements CommandBus {
   readonly calls: { readonly command: Command; readonly input: unknown }[] = [];
 
-  async run<Input, Result, Target extends Versioned | undefined>(
+  async run<Input, Result, Target extends TargetRow | undefined>(
     command: Command<Input, Result, Target>,
     input: Input,
   ): Promise<Result> {
@@ -161,6 +161,7 @@ describe('defineCommand', () => {
         name: 'planning.flagProductionOrders',
         target: 'none',
         fields,
+        permission: 'planning.productionOrder:flag',
       });
       expect(
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
@@ -176,12 +177,55 @@ describe('defineCommand', () => {
       name: 'planning.flagProductionOrder',
       target: 'existing',
       fields: z.object({}),
+      permission: 'planning.productionOrder:flag',
     });
 
     expect(() =>
       defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
     ).toThrow(
       'Command planning.flagProductionOrder changes an existing entity, so its definition needs target, which the command bus loads to check expectedVersion (ADR 0012)',
+    );
+  });
+
+  it('E05-S06 defineCommand hands the bus the scope hook of a command without a target', () => {
+    const contract = defineCommandContract({
+      name: 'planning.createCalendar',
+      target: 'new',
+      fields: z.object({}),
+      permission: 'planning.calendar:create',
+    });
+    const scope = async () => ORDER_ID;
+
+    const { command } = defineCommand(contract, {
+      returns: () => Boolean,
+      scope,
+      handle: async () => true,
+    });
+
+    expect(command.scope).toBe(scope);
+  });
+
+  it('E05-S06 defineCommand refuses a scope hook on a command on an existing entity, whose row names the scope', () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrder',
+      target: 'existing',
+      fields: z.object({}),
+      permission: 'planning.productionOrder:flag',
+    });
+
+    expect(() =>
+      defineCommand(contract, {
+        returns: () => Boolean,
+        target: {
+          entity: 'Production order',
+          scopeOf: async () => ORDER_ID,
+          load: async () => undefined,
+        },
+        scope: async () => ORDER_ID,
+        handle: async () => true,
+      }),
+    ).toThrow(
+      'Command planning.flagProductionOrder changes an existing entity, whose row names the scope the bus checks its permission at, so its definition takes no scope (ADR 0012)',
     );
   });
 });

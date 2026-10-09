@@ -12,6 +12,7 @@ export const releaseProductionOrder = defineCommandContract({
   name: 'planning.releaseProductionOrder',
   target: 'existing',
   fields: z.object({ note: z.string().trim(), quantity: z.number() }),
+  permission: 'planning.productionOrder:release',
 });
 
 @ObjectType('ProductionOrder')
@@ -32,7 +33,11 @@ export class ProductionOrderResolver {
 export const ReleaseProductionOrder = defineCommand(releaseProductionOrder, {
   returns: () => ProductionOrder,
   // The fixture reads no table: every order it is asked for exists at version 1.
-  target: { entity: 'Production order', load: async (id) => ({ id, version: 1 }) },
+  target: {
+    entity: 'Production order',
+    scopeOf: async (_id, { plantId }) => plantId,
+    load: async (id, { plantId }) => ({ id, version: 1, scope_id: plantId ?? '' }),
+  },
   async handle({ id }) {
     return { id, status: 'released' };
   },

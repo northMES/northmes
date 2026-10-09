@@ -26,8 +26,12 @@ export type CommandContractOptions = {
   readonly target: CommandTarget;
   /** The fields a person edits, with their refinements. Forms validate these (ADR 0017). */
   readonly fields: ObjectSchema;
-  /** Optional until the permission check of the pipeline arrives (E05-S01). */
-  readonly permission?: string;
+  /**
+   * The permission, `<module>.<entity>:<action>`, that the principal must hold at the scope of the
+   * row the command changes, or at the request's plant for a command without a target, such as a
+   * create (ADR 0010, ADR 0012 step 3). Boot refuses a command whose contract names none.
+   */
+  readonly permission: string;
   /** Optional until the shared reason input arrives (E05-S01). */
   readonly reason?: 'optional' | 'required';
   /** Optional until the signature stage is declared (E05-S01). */

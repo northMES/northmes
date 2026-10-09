@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { hostFactory, signInAt } from '@northmes/backend/testing';
+import { type Grant, givenCompany, hostFactory, signIn, signInAt } from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -153,7 +153,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN without an errorCode', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.forbidden', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
     const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
@@ -167,12 +167,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       data: null,
       errors: [
         {
-          message: 'The request names no plant, so it cannot create an article',
-          extensions: { code: 'FORBIDDEN' },
+          message: 'The request names no plant, so core.createArticle has no scope to run at',
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
         },
       ],
     });
-    expect(answer.errors?.[0]?.extensions).not.toHaveProperty('errorCode');
   });
 
   /** Creates an article through coreCreateArticle and returns it. */
@@ -273,5 +272,156 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       input: { id: article.id, expectedVersion: 1, code: 'cw-301', name: 'Caster wheel, braked' },
     });
     expect(recased.errors).toBeUndefined();
+  });
+
+  /**
+   * A GraphQL client for the test app, signed in as a user whose roles grant `grants`, that names
+   * the plant with slug `plantSlug` in x-northmes-plant.
+   */
+  async function clientWith(plantSlug: string, grants: readonly Grant[]): Promise<GqlClient> {
+    if (!testApp) throw new Error('the test app did not start');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, grants);
+    return gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': plantSlug },
+    });
+  }
+
+  /** The refusal of coreUpdateArticle on article `id` by a user without core.article:update there. */
+  const updateForbidden = (id: string) => ({
+    status: 200,
+    data: null,
+    errors: [
+      {
+        message: `You need core.article:update at the scope of Article ${id}`,
+        path: ['coreUpdateArticle'],
+        extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+      },
+    ],
+  });
+
+  it('E05-S06 a user who holds core.article:update at the company updates an article at a plant below it', async () => {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    const { id } = await create(await clientAt(plant), 'LG-100', 'Leveling foot');
+    const companyEditor = await clientWith(slug, [
+      { scopeId: company, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+
+    const answer = await companyEditor.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'LG-101', name: 'Leveling foot, M10' },
+    });
+
+    expect(answer).toEqual({
+      status: 200,
+      data: { coreUpdateArticle: { id, code: 'LG-101', name: 'Leveling foot, M10', version: 2 } },
+    });
+  });
+
+  it('E05-S06 a user whose role at the plant creates articles but does not update them gets FORBIDDEN core.forbidden, and the article stays as it was', async () => {
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    const planner = await clientAt(plant);
+    const { id } = await create(planner, 'DR-200', 'Drawer runner');
+    // core.article:create is a write permission, so row-level security lets this user write at
+    // the plant; only the permission step refuses the update.
+    const creator = await clientWith(slug, [
+      { scopeId: plant, permissions: ['core.article:read', 'core.article:create'] },
+    ]);
+
+    const answer = await creator.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'DR-201', name: 'Drawer runner, soft close' },
+    });
+
+    expect(answer).toMatchObject(updateForbidden(id));
+    expect(await readArticle(planner, id)).toEqual({
+      id,
+      code: 'DR-200',
+      name: 'Drawer runner',
+      version: 1,
+    });
+  });
+
+  it('E05-S06 a user who holds core.article:update at a sibling plant gets FORBIDDEN core.forbidden on an article at the other plant', async () => {
+    const { plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
+    const [plantA = '', plantB = ''] = plants;
+    const [slugA = ''] = slugs;
+    const planner = await clientAt(plantA);
+    const { id } = await create(planner, 'KN-300', 'Cabinet knob');
+    // The user reads articles at plant A and updates them at plant B only.
+    const plantBEditor = await clientWith(slugA, [
+      { scopeId: plantA, permissions: ['core.article:read'] },
+      { scopeId: plantB, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+
+    const answer = await plantBEditor.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'KN-301', name: 'Cabinet knob, brass' },
+    });
+
+    expect(answer).toMatchObject(updateForbidden(id));
+    expect(await readArticle(planner, id)).toMatchObject({ code: 'KN-300', version: 1 });
+  });
+
+  /** Writes an article at `scopeId`, such as the company, and returns its id. */
+  async function writeArticleAt(scopeId: string, code: string, name: string): Promise<string> {
+    const { rows } = await db.command(
+      { principal: { type: 'system', id: 'fixture' }, scopes: [scopeId], reason: 'fixture' },
+      (tx) =>
+        tx.query<{ id: string }>(
+          'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
+          [scopeId, code, name],
+        ),
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error('the fixture wrote no article');
+    return id;
+  }
+
+  it('E05-S06 a plant planner who updates articles at the plant gets FORBIDDEN core.forbidden on an article at the company, which the planner reads', async () => {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    const id = await writeArticleAt(company, 'FR-500', 'Frame rail');
+    const plantPlanner = await clientWith(slug, [
+      { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+    expect(await readArticle(plantPlanner, id)).toMatchObject({ code: 'FR-500', version: 1 });
+
+    const answer = await plantPlanner.send(updateMutation, {
+      input: { id, expectedVersion: 1, code: 'FR-501', name: 'Frame rail, long' },
+    });
+
+    expect(answer).toMatchObject(updateForbidden(id));
+    expect(await readArticle(plantPlanner, id)).toMatchObject({ code: 'FR-500', version: 1 });
+  });
+
+  it('E05-S06 a user without core.article:create at the plant gets FORBIDDEN core.forbidden from coreCreateArticle', async () => {
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    const editor = await clientWith(slug, [
+      { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
+    ]);
+
+    const answer = await editor.send(createMutation, {
+      input: { id: randomUUIDv7(), code: 'HK-400', name: 'Coat hook' },
+    });
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `You need core.article:create at plant ${plant}`,
+          path: ['coreCreateArticle'],
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+        },
+      ],
+    });
+    const listed = await editor.send<{ coreArticles: { totalCount: number } }>(
+      '{ coreArticles { totalCount } }',
+    );
+    expect(listed.data?.coreArticles.totalCount).toBe(0);
   });
 });
