@@ -12,13 +12,27 @@ describe('schemaSdl', () => {
       'coreArticle',
       'coreArticles',
       'coreCompanies',
+      'corePermissionCatalog',
+      'coreRole',
+      'coreRoles',
+      'coreUser',
+      'coreUsers',
+      'coreViewer',
       'planningProductionOrders',
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
       'coreArchiveArticle',
+      'coreAssignRole',
+      'coreBlockUser',
       'coreCreateArticle',
+      'coreCreateRole',
+      'coreCreateUser',
+      'coreDeleteRole',
+      'coreRemoveRoleAssignment',
       'coreRestoreArticle',
+      'coreUnblockUser',
       'coreUpdateArticle',
+      'coreUpdateRole',
       'planningReleaseProductionOrder',
     ]);
     expect(sdl.endsWith('}\n')).toBe(true);

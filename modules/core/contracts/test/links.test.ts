@@ -20,4 +20,29 @@ describe('coreLinks', () => {
       `/plant-a/core/articles/${ARTICLE_ID}/edit`,
     );
   });
+
+  it("E05-S06 coreLinks builds the hrefs of a plant's users, a user's access and Add role, and the roles and the role editor", () => {
+    const plant = 'plant-a';
+    const userId = '01920000-0000-7000-8000-0000000b0001';
+    const roleId = '01920000-0000-7000-8000-0000000c0001';
+
+    expect(coreLinks.users({ plant }).href).toBe('/plant-a/core/users');
+    expect(coreLinks.users.new({ plant }).href).toBe('/plant-a/core/users/new');
+    expect(coreLinks.users.user({ plant, userId }, { tab: 'access' }).href).toBe(
+      `/plant-a/core/users/${userId}?tab=access`,
+    );
+    expect(coreLinks.users.user.addRole({ plant, userId }).href).toBe(
+      `/plant-a/core/users/${userId}/roles/new`,
+    );
+    expect(coreLinks.roles({ plant }).href).toBe('/plant-a/core/roles');
+    expect(coreLinks.roles.new({ plant }, { from: roleId }).href).toBe(
+      `/plant-a/core/roles/new?from=${roleId}`,
+    );
+    expect(coreLinks.roles.role({ plant, roleId }, { tab: 'holders' }).href).toBe(
+      `/plant-a/core/roles/${roleId}?tab=holders`,
+    );
+    expect(coreLinks.roles.role.edit({ plant, roleId }).href).toBe(
+      `/plant-a/core/roles/${roleId}/edit`,
+    );
+  });
 });

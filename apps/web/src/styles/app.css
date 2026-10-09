@@ -46,3 +46,13 @@
     box-shadow: 0 0 0 2px var(--focus-ring);
   }
 }
+
+@layer base {
+  /*
+   * A form page's sticky Save bar (FormActions) covers the bottom of the page, so a field that
+   * takes focus scrolls clear of it (design ui-222, NA20; WCAG 2.4.11).
+   */
+  html:has([data-slot="form-actions"]) {
+    scroll-padding-bottom: 4.5rem;
+  }
+}

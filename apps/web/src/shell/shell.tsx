@@ -31,6 +31,7 @@ import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { ShellSidebar } from './shell-sidebar.tsx';
 import { ShellTopBar } from './shell-top-bar.tsx';
 import type { ShellUser } from './shell-user-menu.tsx';
+import { CoreViewer } from './viewer.graphql.ts';
 
 export interface ShellRouterOptions {
   /** The viewer's session: the plant routes need one, and every API request carries its JWT. */
@@ -174,6 +175,24 @@ function plantHome(modules: readonly ShellModule[], plant: string): string | und
   );
 }
 
+/**
+ * The plant's first page the user may open: the first entry of the sidebar that shows, the modules
+ * by their order, then Administration. An entry that needs a permission counts only once the
+ * permissions say the user holds it.
+ */
+function firstOpenPage(
+  modules: readonly ShellModule[],
+  plant: string,
+  permissions: ReadonlySet<string> | undefined,
+): { label: string; href: string } | undefined {
+  const ordered = [...modules].sort((a, b) => a.order - b.order);
+  const entry = [
+    ...ordered.flatMap(({ links = [] }) => links),
+    ...ordered.flatMap(({ adminLinks = [] }) => adminLinks),
+  ].find(({ permission }) => permission === undefined || (permissions?.has(permission) ?? false));
+  return entry === undefined ? undefined : { label: entry.label, href: entry.link({ plant }).href };
+}
+
 /** The company and the plant of the user's companies that a slug names. */
 function plantOf(companies: readonly ShellCompany[], slug: string) {
   for (const company of companies) {
@@ -236,6 +255,19 @@ function PlantLayout({
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
   const { data } = useQuery(CoreCompanies, { client: companiesClient });
+  // The permissions at the plant, read only when an entry of the sidebar needs one.
+  const gated = modules.some(({ links = [], adminLinks = [] }) =>
+    [...links, ...adminLinks].some(({ permission }) => permission !== undefined),
+  );
+  const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
+  const permissions = useMemo(
+    () => (viewer === undefined ? undefined : new Set(viewer.coreViewer.plantPermissions)),
+    [viewer],
+  );
+  const shell = useMemo(
+    () => ({ plant, home: firstOpenPage(modules, plant, permissions) }),
+    [modules, plant, permissions],
+  );
   const loaded = data?.coreCompanies;
   const companies = loaded ?? [];
   const found = plantOf(companies, plant);
@@ -256,7 +288,7 @@ function PlantLayout({
   }
   return (
     <ApolloProvider client={clientFor(plant)}>
-      <ShellProvider value={{ plant }}>
+      <ShellProvider value={shell}>
         <SkipLink targetId={mainId} />
         <SidebarProvider>
           <ShellSidebar
@@ -266,6 +298,7 @@ function PlantLayout({
             companies={companies}
             user={session.user() ?? nobody}
             onSignOut={onSignOut}
+            permissions={permissions}
           />
           <SidebarInset className="min-w-0">
             <ShellTopBar

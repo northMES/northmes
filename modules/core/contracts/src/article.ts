@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
-
-/** The message of a text over its limit: the field, the allowed range and the length typed. */
-function tooLong(label: string, max: number) {
-  return (issue: { readonly input?: unknown }) =>
-    `${label} can be 1 to ${max} characters. It has ${String(issue.input).length}.`;
-}
+import { tooLong } from './messages.ts';
 
 /**
  * The fields a person edits on an article: its code, the article number that is unique at its

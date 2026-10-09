@@ -49,10 +49,12 @@ apps/web/src/
       article-form/  index.ts, article-form.tsx, article-form-summary-button.tsx, article-save-errors.ts
   ui/
     primitives/  button.tsx, input.tsx, field.tsx, input-group.tsx, table.tsx, tooltip.tsx,
-                 checkbox.tsx, badge.tsx, alert-dialog.tsx, ... (shadcn)
-    components/  icon-button/, text-field/, search-field/, data-table/, page-frame/, error-summary/,
-                 confirm-dialog/
-    lib/         field-id.ts, announce.ts, use-zod-form.ts
+                 checkbox.tsx, badge.tsx, alert-dialog.tsx, dialog.tsx, tabs.tsx, radio-group.tsx,
+                 native-select.tsx, collapsible.tsx, ... (shadcn)
+    components/  icon-button/, text-field/, textarea-field/, search-field/, data-table/, page-frame/,
+                 error-summary/, conflict-summary/, confirm-dialog/, form-section/, form-actions/,
+                 unsaved-changes-guard/, status-badge/, detail-tabs/
+    lib/         field-id.ts, announce.ts, use-zod-form.ts, graphql-errors.ts
 ```
 
 Names and places:
@@ -71,6 +73,25 @@ Behaviour:
 - A `ui` piece owns no data: it takes values and callbacks, such as `DataTable`'s `onSortChange`.
 - Every component that shows data has a loading, an empty and a populated state. A screen hands `PageFrame` a `PageState`: loading shows the content's own skeleton, marked busy; empty names what is missing and the action that leads on; error offers Try again.
 - Errors take the shared paths. A failed save goes to the form: `setServerErrors` from `ui/lib/use-zod-form.ts` places the server's `extensions.fieldErrors` on their fields and the rest on the error summary, which `showSaveError` in the article form does. A failed load goes to `PageFrame`'s error state. The shell has no global error handler yet; it comes with the shell's shared toast, which echoes what the page shows inline (plan 06).
+
+## Form and detail page patterns
+
+A form or record page builds on these `ui/components`, as the article and role forms do:
+
+- `FormSection`: a field group, a Card that is a section named by its h2. `<FormSection title="Identity">...fields</FormSection>`.
+- `FormActions`: the sticky Save bar with the submit button, Cancel as a link and "Changes not saved". `<FormActions saveLabel="Save role" saving={isSubmitting} cancelHref={href} dirty={isDirty} />`.
+- `UnsavedChangesGuard`: asks before a form with changes is left for another path. `<UnsavedChangesGuard when={isDirty && !isSubmitting} />`; false while a save runs, so the save's own navigation goes through.
+- `ConflictSummary`: the error summary of a save refused with core.version_conflict, with Reload. `<ConflictSummary noun="role" errors={errors} onReload={onReload} />`. `ErrorSummaryAction` is the busy button for any other action under the summary, such as Restore article.
+- `StatusBadge`: an icon and the state in words on a tone. `<StatusBadge tone="destructive" icon={Ban}>Blocked</StatusBadge>`.
+- `DetailTabs`: a record's tabs with manual activation; the page keeps the open tab in the URL's `tab`. `<DetailTabs label={user.name} value={search.tab ?? 'general'} onValueChange={(tab) => navigate({ to: '.', search: ... })} tabs={[...]} />`.
+- `TextareaField`: TextField for several lines, such as the reason of a change.
+- `ConfirmDialog` takes a body as children, such as a reason field, `initialFocus` for the field that has focus on open, and `destructive` for an action that takes something away.
+
+`ui/lib/graphql-errors.ts` reads a failed command: `hasErrorCode(error, 'core.version_conflict')`, `detailsOf(error, code)`, `fieldErrorsOf(error)` and `isForbidden(error)`.
+
+## Access pages
+
+Core's users, roles and a user's access (design core-304) read the signed-in user's permissions with `useViewer()` (`coreViewer`: `can` at the plant, `canAtCompany` at its company) and the plant and its company with `usePlaces()`, both in the module root. A page shows an action only to a user who holds its permission where the API checks it: `canAtCompany` for a command checked at the company (creating users, blocking, editing roles), `can` for one checked at the plant. The API still checks every change. A page opened without its permission shows `noAccessState(page, permission, place, admin?)` under the h1 "No access to Roles", with the place where the API checks the permission and a link to `useShell().home`, the plant's first page the user may open; a region whose read answers FORBIDDEN keeps its h2 and shows `ForbiddenRegion`. A sidebar entry with a `permission` in `apps/web/src/modules.ts` shows only to a user who holds it at the plant; core's Users and Roles sit in `adminLinks`, which the sidebar draws as Administration, its last group.
 
 ## Queries and mutations
 

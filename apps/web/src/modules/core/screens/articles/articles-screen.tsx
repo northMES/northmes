@@ -8,7 +8,7 @@ import { Archive, Plus } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
-import { Badge } from '../../../../ui/primitives/badge.tsx';
+import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
@@ -70,10 +70,9 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
       ) : (
         <span className="flex flex-wrap items-center gap-2">
           {article.name}
-          <Badge variant="secondary" className="text-muted-foreground">
-            <Archive aria-hidden />
+          <StatusBadge tone="neutral" icon={Archive}>
             Archived
-          </Badge>
+          </StatusBadge>
         </span>
       ),
   },

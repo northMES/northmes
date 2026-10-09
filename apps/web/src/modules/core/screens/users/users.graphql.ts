@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { gql } from '@apollo/client';
+
+export {
+  CoreUsersDocument as CoreUsers,
+  type CoreUsersQuery,
+  type CoreUsersQueryVariables,
+} from './users.graphql.gen.ts';
+
+// One page of the company's users by name, each with their roles at the company and at the plant.
+// A role the reader may not read comes as null. pnpm gen writes its typed document to
+// users.graphql.gen.ts; this block never runs.
+if (false) {
+  gql`
+    query CoreUsers($first: Int, $after: String, $last: Int, $before: String, $search: String) {
+      coreUsers(first: $first, after: $after, last: $last, before: $before, search: $search) {
+        totalCount
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+        edges {
+          cursor
+          node {
+            id
+            name
+            username
+            blocked
+            roleAssignments {
+              id
+              scope {
+                id
+                kind
+                name
+              }
+              role {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+}

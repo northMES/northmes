@@ -149,10 +149,66 @@ describe('defineCommand', () => {
     ]);
   });
 
-  it('E05-S01 defineCommand refuses a contract field that is not a required ID, string, number or 32-bit integer, naming it', () => {
+  it('E05-S06 the generated input carries an optional string as a nullable String and a list of strings as [String!]!, and a null optional string reaches the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.tagProductionOrders',
+      target: 'none',
+      fields: z.object({ tags: z.array(z.string()), note: z.string().optional() }),
+      permission: 'planning.productionOrder:tag',
+    });
+    const handled: unknown[] = [];
+    const TagProductionOrders = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [TagProductionOrders] })
+    class TagModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      // Planning's fixture brings the Query root that a schema needs.
+      PlanningModule,
+      TagModule,
+    ]);
+    opened.push(moduleRef);
+    const tag = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningTagProductionOrdersInput!) {
+          planningTagProductionOrders(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const withNote = await tag({ tags: ['rush', 'export'], note: 'Call first' });
+    const withNullNote = await tag({ tags: [], note: null });
+    const withoutNote = await tag({ tags: ['rush'] });
+
+    expect(printSchema(schema)).toContain(
+      'input PlanningTagProductionOrdersInput {\n  note: String\n  tags: [String!]!\n}',
+    );
+    expect([withNote.errors, withNullNote.errors, withoutNote.errors]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(handled).toEqual([
+      { tags: ['rush', 'export'], note: 'Call first' },
+      { tags: [] },
+      { tags: ['rush'] },
+    ]);
+  });
+
+  it('E05-S01 defineCommand refuses a contract field of a kind the generated input cannot carry, naming it', () => {
     const fieldsWith = {
       urgent: z.object({ urgent: z.boolean() }),
-      note: z.object({ note: z.string().optional() }),
+      note: z.object({ note: z.number().optional() }),
       count: z.object({ count: z.int() }),
     };
 
@@ -167,7 +223,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number or 32-bit integer, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, 32-bit integer or list of strings, or an optional string, the kinds a generated mutation input supports so far`,
       );
     }
   });

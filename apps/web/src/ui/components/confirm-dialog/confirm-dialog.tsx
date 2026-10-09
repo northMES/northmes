@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleAlert } from 'lucide-react';
-import { type ReactElement, useEffect, useRef, useState } from 'react';
+import {
+  type ReactElement,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,12 +36,21 @@ export interface ConfirmDialogProps {
   readonly onConfirm: () => Promise<void>;
   /** Where focus goes after a confirmed action, such as the h1; the trigger when it is not set. */
   readonly focusAfterConfirm?: () => HTMLElement | null;
+  /** The confirm button warns: the action takes something away, such as Remove role. */
+  readonly destructive?: boolean;
+  /** The field that takes focus when the dialog opens, such as the reason; else the dialog's first. */
+  readonly initialFocus?: RefObject<HTMLElement | null>;
+  /** Runs when the dialog opens or closes, such as to clear the reason of an earlier opening. */
+  readonly onOpenChange?: (open: boolean) => void;
+  /** The body between the text and the buttons, such as what changes and a reason field. */
+  readonly children?: ReactNode;
 }
 
 /**
  * ConfirmDialog (design ui-222, DE23 and DE27; WCAG 3.3.4): shadcn's Alert Dialog that asks before
  * an action, named by its title and described by its text, with Cancel and the confirm button.
- * Tab stays in the dialog and Escape cancels.
+ * Tab stays in the dialog and Escape cancels. A body, such as a reason field, goes between the text
+ * and the buttons, and initialFocus puts focus in it on open.
  */
 export function ConfirmDialog({
   trigger,
@@ -43,6 +59,10 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   focusAfterConfirm,
+  destructive = false,
+  initialFocus,
+  onOpenChange,
+  children,
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
@@ -89,10 +109,12 @@ export function ConfirmDialog({
           setError(undefined);
         }
         setOpen(next);
+        onOpenChange?.(next);
       }}
     >
       <AlertDialogTrigger render={trigger} />
       <AlertDialogContent
+        initialFocus={initialFocus}
         finalFocus={() => {
           // The dialog closed, so the unmount has no focus left to move.
           const after = confirmed.current;
@@ -104,6 +126,7 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         {error !== undefined && (
           <p role="alert" className="flex items-start gap-2 text-sm text-destructive">
             <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
@@ -112,7 +135,11 @@ export function ConfirmDialog({
         )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={running}>Cancel</AlertDialogCancel>
-          <AlertDialogAction loading={running} onClick={confirm}>
+          <AlertDialogAction
+            variant={destructive ? 'destructive' : 'default'}
+            loading={running}
+            onClick={confirm}
+          >
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>

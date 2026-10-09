@@ -125,6 +125,18 @@ async function asCoreOwner<Result>(
   }
 }
 
+/**
+ * Runs one statement as core's owner role, which the row-level security policies do not bind, and
+ * returns its rows: for a test that reads core's tables across companies or without scopes.
+ */
+export function queryAsCore<Row extends Record<string, unknown> = Record<string, unknown>>(
+  ownerUrl: string,
+  sql: string,
+  params: readonly unknown[] = [],
+): Promise<Row[]> {
+  return asCoreOwner(ownerUrl, async (client) => (await client.query<Row>(sql, [...params])).rows);
+}
+
 /** A company and its plants, as givenCompany writes them. */
 export interface GivenCompany {
   /** The company's id: its node in core.scope and its core.company row. */
@@ -228,6 +240,27 @@ export function grantRoles(
         [userId, scopeId, roleId],
       );
     }
+  });
+}
+
+/**
+ * Gives a user a role at a scope node of the role's company, as core's owner role, and returns the
+ * assignment's id.
+ */
+export function givenAssignment(
+  ownerUrl: string,
+  { userId, roleId, scopeId }: { userId: string; roleId: string; scopeId: string },
+): Promise<string> {
+  return asCoreOwner(ownerUrl, async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
+       select $1, company_id, id, $3 from core.scope where id = $2
+       returning id`,
+      [userId, scopeId, roleId],
+    );
+    const id = rows[0]?.id;
+    if (!id) throw new Error(`givenAssignment: no scope ${scopeId} in core.scope`);
+    return id;
   });
 }
 

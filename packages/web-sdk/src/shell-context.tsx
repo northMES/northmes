@@ -5,6 +5,11 @@ import { createContext, type ReactNode, useContext } from 'react';
 export interface ShellState {
   /** The plant's slug, the $plant segment of the URL, which a module's links take as `plant`. */
   readonly plant: string;
+  /**
+   * The plant's first page the user may open, the first entry of the sidebar they see: the way
+   * out of a page they may not open. Undefined when no entry shows.
+   */
+  readonly home?: { readonly label: string; readonly href: string };
 }
 
 const ShellContext = createContext<ShellState | null>(null);

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useState } from 'react';
-import { Button } from '../../../../ui/primitives/button.tsx';
+import { Button } from '../../primitives/button.tsx';
 
-interface ArticleFormSummaryButtonProps {
+export interface ErrorSummaryActionProps {
   /** The button's text, such as Reload article or Restore article. */
   readonly label: string;
   readonly onAction: () => Promise<void>;
 }
 
-/** The action of the form's summary, busy while it runs. */
-export function ArticleFormSummaryButton({ label, onAction }: ArticleFormSummaryButtonProps) {
+/** An action under the error summary's text, busy while it runs. */
+export function ErrorSummaryAction({ label, onAction }: ErrorSummaryActionProps) {
   const [running, setRunning] = useState(false);
   return (
     <Button

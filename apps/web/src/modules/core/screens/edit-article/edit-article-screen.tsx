@@ -7,13 +7,13 @@ import { useRef, useState } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
+import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
   type ArticleValues,
   commandFailure,
-  hasErrorCode,
   showSaveError,
 } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';

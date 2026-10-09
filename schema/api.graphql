@@ -1,3 +1,9 @@
+type AccessScope {
+  id: ID!
+  kind: ScopeKind!
+  name: String!
+}
+
 type Article {
   archivedAt: DateTime
   code: String!
@@ -38,15 +44,55 @@ input CoreArchiveArticleInput {
   id: ID!
 }
 
+input CoreAssignRoleInput {
+  id: ID!
+  roleId: ID!
+  scopeId: ID!
+  userId: ID!
+}
+
+input CoreBlockUserInput {
+  id: ID!
+  reason: String
+}
+
 input CoreCreateArticleInput {
   code: String!
   id: ID!
   name: String!
 }
 
+input CoreCreateRoleInput {
+  id: ID!
+  name: String!
+  permissions: [String!]!
+}
+
+input CoreCreateUserInput {
+  email: String
+  id: ID!
+  name: String!
+  username: String!
+}
+
+input CoreDeleteRoleInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
+input CoreRemoveRoleAssignmentInput {
+  id: ID!
+  reason: String
+}
+
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
+}
+
+input CoreUnblockUserInput {
+  id: ID!
+  reason: String
 }
 
 input CoreUpdateArticleInput {
@@ -56,16 +102,42 @@ input CoreUpdateArticleInput {
   name: String!
 }
 
+input CoreUpdateRoleInput {
+  expectedVersion: Int!
+  id: ID!
+  name: String!
+  permissions: [String!]!
+  reason: String
+}
+
+type CreatedUser {
+  temporaryPassword: String!
+  user: User!
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
 
+type EffectivePermission {
+  grantedBy: [RoleAssignment!]!
+  permission: Permission!
+}
+
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
+  coreAssignRole(input: CoreAssignRoleInput!): RoleAssignment!
+  coreBlockUser(input: CoreBlockUserInput!): User!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreCreateRole(input: CoreCreateRoleInput!): Role!
+  coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
+  coreDeleteRole(input: CoreDeleteRoleInput!): Role!
+  coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
+  coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
+  coreUpdateRole(input: CoreUpdateRoleInput!): Role!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
 }
 
@@ -74,6 +146,24 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type Permission {
+  action: String!
+  installed: Boolean!
+  key: String!
+  moduleId: String!
+  resource: String!
+}
+
+type PermissionModule {
+  moduleId: String!
+  resources: [PermissionResource!]!
+}
+
+type PermissionResource {
+  permissions: [Permission!]!
+  resource: String!
 }
 
 input PlanningReleaseProductionOrderInput {
@@ -100,10 +190,80 @@ type Query {
   coreArticle(id: ID!): Article
   coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
   coreCompanies: [Company!]!
+  corePermissionCatalog: [PermissionModule!]!
+  coreRole(id: ID!): Role
+  coreRoles: [Role!]!
+  coreUser(id: ID!): User
+  coreUsers(after: String, before: String, first: Int = 25, last: Int, orderBy: [UserOrderBy!], search: String): UserConnection!
+  coreViewer: Viewer!
   planningProductionOrders: [ProductionOrder!]!
+}
+
+type Role {
+  holders: [RoleAssignment!]!
+  id: ID!
+  key: String!
+  moduleId: String
+  name: String!
+  origin: RoleOrigin!
+  permissions: [String!]!
+  version: Int!
+}
+
+type RoleAssignment {
+  id: ID!
+  role: Role
+  scope: AccessScope!
+  user: User!
+}
+
+enum RoleOrigin {
+  CUSTOM
+  MODULE
+}
+
+enum ScopeKind {
+  COMPANY
+  PLANT
 }
 
 enum SortDirection {
   ASC
   DESC
+}
+
+type User {
+  blocked: Boolean!
+  effectivePermissions: [EffectivePermission!]!
+  id: ID!
+  name: String!
+  roleAssignments: [RoleAssignment!]!
+  username: String!
+}
+
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type UserEdge {
+  cursor: String!
+  node: User!
+}
+
+input UserOrderBy {
+  direction: SortDirection = ASC
+  field: UserSortField!
+}
+
+enum UserSortField {
+  NAME
+  USERNAME
+}
+
+type Viewer {
+  companyPermissions: [String!]!
+  plantPermissions: [String!]!
+  userId: ID!
 }

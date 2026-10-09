@@ -27,7 +27,7 @@ export const seedPlants = [
 const [plantA, plantB] = seedPlants.map(({ id }) => id);
 
 /**
- * The dev admin, who holds every permission at the seed company. The password is for development
+ * The dev admin, the seed company's Company admin, who holds every permission there. The password is for development
  * only, it is no secret, and it never reaches production: the stack script seeds only the database
  * of pnpm dev, pnpm demo and the end-to-end tests.
  */
@@ -38,9 +38,6 @@ export const devAdmin = {
   name: 'Dev admin',
   email: 'admin@users.northmes.invalid',
 };
-
-/** The fixed id of the dev admin's role, which holds every installed permission. */
-const adminRoleId = '019a0000-0000-7000-8000-0000000d0002';
 
 const scryptAsync = promisify(scrypt);
 
@@ -151,8 +148,8 @@ const orders = [
  * Writes the company, its plants and the dev admin in one transaction as core's owner role, on a
  * connection that ownerUrl logs in as nm_owner: the company's Better Auth organization, its node in
  * core.scope and its core.company row, each plant's node and core.plant row, the admin in
- * auth.user with a password account, a role that holds every installed permission, and its
- * assignment at the company (ADR 0007, ADR 0010).
+ * auth.user with a password account, and the assignment of core's Company admin at the company,
+ * so the last-admin rule keeps the seed company's admin (ADR 0007, ADR 0010, ADR 0066).
  * @param {string} ownerUrl
  */
 async function seedAccess(ownerUrl) {
@@ -205,18 +202,15 @@ async function seedAccess(ownerUrl) {
         )`,
       [id, await hashPassword(password)],
     );
-    await client.query(
-      `insert into core.role (id, company_id, key, name, permissions, origin)
-       select $1, $2, 'admin', 'Admin', coalesce(array_agg(key order by key), '{}'), 'custom'
-         from core.permission where installed
-       on conflict (id) do update set permissions = excluded.permissions`,
-      [adminRoleId, seedCompany.id],
-    );
+    // The trigger on core.company gave the company core's Company admin, which northmes migrate
+    // keeps holding every installed permission.
     await client.query(
       `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
-       values ($1, $2, $2, $3)
+       select $1, r.company_id, r.company_id, r.id
+         from core.role r
+        where r.company_id = $2 and r.key = 'core-company-admin'
        on conflict (user_id, scope_id, role_id) do nothing`,
-      [id, seedCompany.id, adminRoleId],
+      [id, seedCompany.id],
     );
     await client.query('commit');
   } finally {
@@ -228,8 +222,9 @@ async function seedAccess(ownerUrl) {
  * Writes the seed: first the company, its plants and the dev admin as core's owner role
  * (seedAccess), then the articles and orders in one transaction as the role appUrl logs in as,
  * nm_app, with both plants as its read and write scopes, so the row-level security policies apply
- * as they do in the server (ADR 0008). A record that exists, also one a person changed since, is left as it is, so a
- * second run adds nothing; the admin's role takes up a permission installed since the last run.
+ * as they do in the server (ADR 0008). A record that exists, also one a person changed since, is
+ * left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
+ * installed since the last run.
  * @param {{ appUrl: string, ownerUrl: string }} urls
  */
 export async function seed({ appUrl, ownerUrl }) {

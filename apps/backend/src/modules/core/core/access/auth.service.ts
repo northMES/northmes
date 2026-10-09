@@ -12,10 +12,28 @@ export const PLACEHOLDER_EMAIL_DOMAIN = 'users.northmes.invalid';
 
 /** A user to create: the username they sign in with and their first password. */
 export interface NewUser {
+  /**
+   * The user's id, a uuid of version 1 to 5, which Better Auth keeps. Without it, Better Auth makes
+   * one.
+   */
+  readonly id?: string;
   readonly username: string;
   readonly password: string;
   /** The name others see. Without it, the username. */
   readonly name?: string;
+  /** The user's email. Without it, a placeholder under PLACEHOLDER_EMAIL_DOMAIN. */
+  readonly email?: string;
+}
+
+/** Better Auth's code for an email that another user has. */
+const EMAIL_TAKEN = 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL';
+
+/** Thrown by AuthService.createUser for an email that another user has. */
+export class EmailTaken extends Error {
+  constructor() {
+    super('Another user has this email address');
+    this.name = 'EmailTaken';
+  }
 }
 
 /** Better Auth's handler as a Node request handler. */
@@ -39,16 +57,87 @@ export class AuthService {
 
   /**
    * Creates a user with a password through Better Auth's server API, with sign-up disabled on HTTP
-   * (ADR 0011). The user's email is a placeholder under PLACEHOLDER_EMAIL_DOMAIN.
+   * (ADR 0011). Without an email, the user's email is a placeholder under PLACEHOLDER_EMAIL_DOMAIN.
+   * An email that another user has throws EmailTaken.
    */
-  async createUser({ username, password, name }: NewUser): Promise<{ user: { id: string } }> {
-    return this.betterAuth.auth.api.createUser({
-      body: {
-        email: `${username.toLowerCase()}@${PLACEHOLDER_EMAIL_DOMAIN}`,
-        password,
-        name: name ?? username,
-        data: { username, displayUsername: username },
-      },
+  async createUser({
+    id,
+    username,
+    password,
+    name,
+    email,
+  }: NewUser): Promise<{ user: { id: string } }> {
+    try {
+      return await this.betterAuth.auth.api.createUser({
+        body: {
+          email: email ?? `${username.toLowerCase()}@${PLACEHOLDER_EMAIL_DOMAIN}`,
+          password,
+          name: name ?? username,
+          // Better Auth writes the user with the id in its data.
+          data: { ...(id ? { id } : {}), username, displayUsername: username },
+        },
+      });
+    } catch (error) {
+      if ((error as { body?: { code?: string } }).body?.code === EMAIL_TAKEN)
+        throw new EmailTaken();
+      throw error;
+    }
+  }
+
+  /**
+   * Gives the user this password, on the credential account Better Auth signs them in with, which
+   * it creates when the user has none.
+   */
+  async setPassword(userId: string, password: string): Promise<void> {
+    const { internalAdapter, password: hasher } = await this.betterAuth.auth.$context;
+    const hash = await hasher.hash(password);
+    const accounts = await internalAdapter.findAccounts(userId);
+    if (accounts.some(({ providerId }) => providerId === 'credential')) {
+      await internalAdapter.updatePassword(userId, hash);
+      return;
+    }
+    await internalAdapter.linkAccount({
+      providerId: 'credential',
+      accountId: userId,
+      password: hash,
+      userId,
+    });
+  }
+
+  /**
+   * Makes the user a member of the Better Auth organization of a company (ADR 0010), which lists
+   * them among the company's users.
+   */
+  async addToOrganization(userId: string, organizationId: string): Promise<void> {
+    await this.betterAuth.auth.api.addMember({
+      body: { userId, organizationId, role: 'member' },
+    });
+  }
+
+  /**
+   * Blocks a user, as Better Auth's admin plugin bans one, on the server: the user cannot sign in,
+   * and their sessions end, so no new JWT is minted. A JWT they already hold stops working at their
+   * next request, because the principal of a blocked user is not resolved.
+   */
+  async block(userId: string, reason: string | undefined): Promise<void> {
+    const { internalAdapter } = await this.betterAuth.auth.$context;
+    await internalAdapter.updateUser(userId, {
+      banned: true,
+      banReason: reason ?? null,
+      banExpires: null,
+      updatedAt: new Date(),
+    });
+    await internalAdapter.deleteUserSessions(userId);
+  }
+
+  /** Unblocks a user, who can sign in again. */
+  async unblock(userId: string): Promise<void> {
+    const { internalAdapter } = await this.betterAuth.auth.$context;
+    await internalAdapter.updateUser(userId, {
+      banned: false,
+      banReason: null,
+      banExpires: null,
+      updatedAt: new Date(),
     });
   }
 
