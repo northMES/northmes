@@ -9,6 +9,11 @@ export interface Place {
   readonly name: string;
 }
 
+/** A plant of the company, with the slug its URLs name it by. */
+export interface PlantPlace extends Place {
+  readonly slug: string;
+}
+
 /** Where the access pages run, once the user's companies loaded. */
 export interface Places {
   /** The company: the one in company settings, or the company of the plant in the URL. */
@@ -16,7 +21,7 @@ export interface Places {
   /** The plant in the URL, in plant settings; undefined in company settings. */
   readonly plant: Place | undefined;
   /** The plants of the company that the user can open, as the companies list orders them. */
-  readonly plants: readonly Place[];
+  readonly plants: readonly PlantPlace[];
 }
 
 /**
@@ -34,7 +39,11 @@ export function usePlaces({ skip = false }: { readonly skip?: boolean } = {}): P
       return {
         company: { id: company.id, name: company.name },
         plant: plant === undefined ? undefined : { id: plant.id, name: plant.name },
-        plants: company.plants.map(({ id, name }) => ({ id, name })),
+        plants: company.plants.map(({ id, name, slug: plantSlug }) => ({
+          id,
+          name,
+          slug: plantSlug,
+        })),
       };
     }
   }

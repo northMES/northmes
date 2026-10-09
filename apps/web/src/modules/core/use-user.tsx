@@ -29,20 +29,22 @@ export interface UserOfPage {
 
 /**
  * Reads the user that the $userId segment of the URL names, in the company of company settings
- * (ADR 0066). A role the reader may not read comes as null beside a FORBIDDEN error, so the answer
+ * (ADR 0066), or at the plant of plant settings with their roles at the plant and its company. A role the reader may not read comes as null beside a FORBIDDEN error, so the answer
  * keeps its data (errorPolicy all).
  */
 export function useUser(): UserOfPage {
   const places = usePlaces();
-  const { userId, companyId = '' } = useParams({ strict: false });
+  const { userId, companyId, plant } = useParams({ strict: false });
   const { data, error, refetch } = useQuery(CoreUser, {
-    variables: { id: userId ?? '', companyId },
+    variables: { id: userId ?? '', ...(companyId !== undefined && { companyId }) },
     errorPolicy: 'all',
   });
   const user = data?.coreUser ?? undefined;
   const forbidden = user === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
-  if (forbidden) {
+  if (forbidden && plant !== undefined) {
+    state = noAccessState('People', 'core.user:read', places.plant?.name ?? plant);
+  } else if (forbidden) {
     const company = places.company?.name ?? 'the company';
     state = noAccessState('Users', 'core.user:read', company, `a company admin of ${company}`);
   } else if (data === undefined && error !== undefined) {
@@ -59,14 +61,22 @@ export function useUser(): UserOfPage {
       status: 'empty',
       title: 'This user does not exist or you cannot see it',
       description: 'The link may be out of date, or the user belongs to another company.',
-      action: (
-        <Link
-          to={coreLinks.settings.users({ companyId }).href}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Back to Users
-        </Link>
-      ),
+      action:
+        plant !== undefined ? (
+          <Link
+            to={coreLinks.people({ plant }).href}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Back to People
+          </Link>
+        ) : (
+          <Link
+            to={coreLinks.settings.users({ companyId: companyId ?? '' }).href}
+            className={buttonVariants({ variant: 'outline' })}
+          >
+            Back to Users
+          </Link>
+        ),
     };
   }
   return { user, state, forbidden, rolesForbidden: user !== undefined && isForbidden(error) };

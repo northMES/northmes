@@ -22,7 +22,7 @@ import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
 import { ForbiddenRegion } from '../../no-access.tsx';
 import { groupsOfKeys } from '../../permission-groups.ts';
 import { moduleOf, permissionLine } from '../../permission-names.ts';
-import { type Places, useCompanyId } from '../../use-places.ts';
+import { type Places, useCompanyVariables } from '../../use-places.ts';
 import type { User } from '../../use-user.tsx';
 import { CoreUserPermissions, type CoreUserPermissionsQuery } from './user-permissions.graphql.ts';
 
@@ -96,20 +96,24 @@ function CardState({
  * the region keeps its heading and names the permission it needs.
  */
 export function UserPermissions({ user, places }: UserPermissionsProps) {
-  const companyId = useCompanyId() ?? '';
   const headingId = useId();
   const everyId = useId();
   const [every, setEvery] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const { data, error, refetch } = useQuery(CoreUserPermissions, {
-    variables: { id: user.id, companyId },
+    variables: { id: user.id, ...useCompanyVariables() },
   });
   const companyName = places.company?.name ?? 'the company';
-  const title = `What ${user.name} can do at ${companyName}`;
+  // In plant settings the person's permissions at the plant, from roles there and at the company.
+  const placeName = places.plant?.name ?? companyName;
+  const title = `What ${user.name} can do at ${placeName}`;
   const effective = data?.coreUser?.effectivePermissions.filter(
     ({ permission }) => permission.installed,
   );
-  const noAccessReason = `No role of ${user.name} at ${companyName} includes it.`;
+  const noAccessReason =
+    places.plant === undefined
+      ? `No role of ${user.name} at ${companyName} includes it.`
+      : `No role of ${user.name} at ${places.plant.name} or at ${companyName} includes it.`;
   const columns = useMemo<readonly DataTableColumn<PermissionRow>[]>(
     () => [
       {
@@ -146,7 +150,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
       <ForbiddenRegion
         title={`You cannot see what ${user.name} can do here`}
         permission="core.role:read"
-        plant={companyName}
+        plant={placeName}
       />
     );
   } else if (effective === undefined && error !== undefined) {
@@ -177,7 +181,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
     body = (
       <CardState
         icon={ShieldCheck}
-        title={`${user.name} can do nothing at ${companyName} yet.`}
+        title={`${user.name} can do nothing at ${placeName} yet.`}
         description="Permissions come from roles. Add a role above."
       />
     );
@@ -200,7 +204,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
     body =
       shown.length === 0 ? (
         <p className="text-sm">
-          No role of {user.name} grants a permission at {companyName}.
+          No role of {user.name} grants a permission at {placeName}.
         </p>
       ) : (
         <DataTable

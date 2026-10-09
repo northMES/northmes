@@ -94,6 +94,11 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.people.addRole).path,
     component: lazyScreen('PeopleAddRoleScreen'),
   });
+  const personRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: linkEntry(coreLinks.people.person).path,
+    component: lazyScreen('PersonScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     articlesRoute.addChildren([
@@ -101,7 +106,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
       newArticleRoute,
       articleRoute.addChildren([articleDetailRoute, editArticleRoute]),
     ]),
-    peopleRoute.addChildren([peopleListRoute, peopleAddRoleRoute]),
+    peopleRoute.addChildren([peopleListRoute, peopleAddRoleRoute, personRoute]),
   ]);
 }
 

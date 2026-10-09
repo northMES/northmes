@@ -12,6 +12,7 @@ export { NewRoleScreen } from './screens/new-role/index.ts';
 export { NewUserScreen } from './screens/new-user/index.ts';
 export { PeopleScreen } from './screens/people/index.ts';
 export { PeopleAddRoleScreen } from './screens/people-add-role/index.ts';
+export { PersonScreen } from './screens/person/index.ts';
 export { RoleScreen } from './screens/role/index.ts';
 export { RolesScreen } from './screens/roles/index.ts';
 export { UserScreen } from './screens/user/index.ts';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { Link } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { Building2, Factory, Lock, Plus, Shield } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { useIsMobile } from '../../../../ui/lib/use-mobile.ts';
@@ -26,7 +26,7 @@ import { RemoveRole, roleLoss } from '../../components/remove-role/index.ts';
 import { permissionPhrase } from '../../no-access.tsx';
 import { roleKind } from '../../role-kind.ts';
 import { CoreRoles } from '../../roles.graphql.ts';
-import { type Places, useCompanyId } from '../../use-places.ts';
+import { type Places, useCompanyId, useCompanyVariables } from '../../use-places.ts';
 import type { User, UserAssignment } from '../../use-user.tsx';
 import type { Viewer } from '../../use-viewer.ts';
 
@@ -69,13 +69,15 @@ function RoleCell({
   assignment,
   companyName,
   kindOf,
+  companyId,
 }: {
   readonly assignment: UserAssignment;
   readonly companyName: string;
   /** The kind of a role by its id, once the company's roles loaded. */
   readonly kindOf: (roleId: string) => string | undefined;
+  /** The company whose settings hold the role's page. */
+  readonly companyId: string;
 }) {
-  const companyId = useCompanyId() ?? '';
   const { role } = assignment;
   if (role === null) {
     return (
@@ -106,15 +108,31 @@ function RoleCell({
 function WhereCell({
   assignment,
   places,
+  userId,
 }: {
   readonly assignment: UserAssignment;
   readonly places: Places;
+  readonly userId: string;
 }) {
   const Icon = assignment.scope.kind === 'COMPANY' ? Building2 : Factory;
+  // In company settings a plant links to the person's page in that plant's settings.
+  const plant =
+    places.plant === undefined && assignment.scope.kind === 'PLANT'
+      ? places.plants.find(({ id }) => id === assignment.scope.id)
+      : undefined;
   return (
     <span className="flex items-center gap-2">
       <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-      {whereOf(assignment, places)}
+      {plant === undefined ? (
+        whereOf(assignment, places)
+      ) : (
+        <Link
+          to={coreLinks.people.person({ plant: plant.slug, userId }).href}
+          className="text-link underline underline-offset-2 hover:no-underline"
+        >
+          {whereOf(assignment, places)}
+        </Link>
+      )}
     </span>
   );
 }
@@ -128,12 +146,13 @@ function WhereCell({
  * each Role cell, and Remove is named by the place only.
  */
 export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesProps) {
-  const companyId = useCompanyId() ?? '';
+  const companyId = useCompanyId() ?? places.company?.id ?? '';
+  const { plant: plantSlug } = useParams({ strict: false });
   const headingId = useId();
   const isMobile = useIsMobile();
   // A role's kind comes from the company's roles, which the roles pages read too.
   const companyRoles = useQuery(CoreRoles, {
-    variables: { companyId },
+    variables: useCompanyVariables(),
     skip: rolesForbidden,
   }).data?.coreRoles;
   const kindOf = (roleId: string) => {
@@ -141,6 +160,8 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
     return role === undefined ? undefined : roleKind(role);
   };
   const companyName = places.company?.name ?? 'the company';
+  // In plant settings the page reads the plant and its company (design core-304, AS1).
+  const plantName = places.plant?.name;
   const canAdd =
     viewer.can('core.roleAssignment:manage') && viewer.can('core.role:read') && !rolesForbidden;
   // The plant roles first, then those of the company (AS1).
@@ -179,11 +200,15 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
           </EmptyMedia>
           <EmptyTitle>
             <h3 className="text-sm font-semibold">
-              {user.name} holds no role at {companyName} or its plants.
+              {plantName === undefined
+                ? `${user.name} holds no role at ${companyName} or its plants.`
+                : `${user.name} holds no role at ${plantName} or at ${companyName}.`}
             </h3>
           </EmptyTitle>
           <EmptyDescription>
-            Add a role so that {user.name} can work at {companyName} and its plants.
+            {plantName === undefined
+              ? `Add a role so that ${user.name} can work at ${companyName} and its plants.`
+              : `Add a role so that ${user.name} can work at ${plantName}.`}
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -196,8 +221,13 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
             key={assignment.id}
             className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm"
           >
-            <RoleCell assignment={assignment} companyName={companyName} kindOf={kindOf} />
-            <WhereCell assignment={assignment} places={places} />
+            <RoleCell
+              assignment={assignment}
+              companyName={companyName}
+              kindOf={kindOf}
+              companyId={companyId}
+            />
+            <WhereCell assignment={assignment} places={places} userId={user.id} />
             <span className="self-start">{action(assignment, index)}</span>
           </li>
         ))}
@@ -220,10 +250,15 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
           {assignments.map((assignment, index) => (
             <TableRow key={assignment.id}>
               <TableCell>
-                <RoleCell assignment={assignment} companyName={companyName} kindOf={kindOf} />
+                <RoleCell
+                  assignment={assignment}
+                  companyName={companyName}
+                  kindOf={kindOf}
+                  companyId={companyId}
+                />
               </TableCell>
               <TableCell>
-                <WhereCell assignment={assignment} places={places} />
+                <WhereCell assignment={assignment} places={places} userId={user.id} />
               </TableCell>
               <TableCell className="text-right whitespace-normal">
                 {action(assignment, index)}
@@ -245,13 +280,19 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
             Roles
           </h2>
           <p className="text-sm text-muted-foreground">
-            {user.name}'s roles at {companyName} and its plants.
+            {plantName === undefined
+              ? `${user.name}'s roles at ${companyName} and its plants.`
+              : `${user.name}'s roles that apply at ${plantName}.`}
           </p>
         </div>
         {canAdd && (
           <Link
             id={addRoleId}
-            to={coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href}
+            to={
+              plantSlug === undefined
+                ? coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href
+                : coreLinks.people.addRole({ plant: plantSlug }).href
+            }
             className={buttonVariants({ variant: 'outline' })}
           >
             <Plus aria-hidden />

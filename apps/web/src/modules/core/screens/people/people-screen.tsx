@@ -122,7 +122,14 @@ export function PeopleScreen() {
             const { user, role } = assignment;
             return (
               <TableRow key={assignment.id}>
-                <TableCell>{user.name}</TableCell>
+                <TableCell>
+                  <Link
+                    to={coreLinks.people.person({ plant, userId: user.id }).href}
+                    className="text-link underline underline-offset-2 hover:no-underline"
+                  >
+                    {user.name}
+                  </Link>
+                </TableCell>
                 <TableCell className="font-mono">{user.username}</TableCell>
                 <TableCell>
                   {role === null ? (
