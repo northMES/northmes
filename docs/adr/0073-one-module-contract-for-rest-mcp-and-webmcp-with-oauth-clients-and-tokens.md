@@ -58,7 +58,7 @@ An operation is one capability of a module: a command or a query. A module decla
   * `tool`: the tool name, title, description, annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, and `consequentialHint` for WebMCP), effect (`read`, `proposal` or `command`), toolset, for a list `maxPageSize` (default 25, so that two outside text fields per row stay within ADR 0034's 50 values per call), and `serverFills`, the input fields the adapter fills when a call leaves them out (today only `id`, filled with a new uuidv7), or `false`;
   * `webmcp`: `true` to register the tool in the browser, default `false`.
 * The declaration is plain data in the MIT contracts package. It imports no MCP SDK, no Nest and no web code, so the backend, the web app and `northmes openapi print` read the same object.
-* The backend binds handlers with `bindOperations(declaration, handlers)` from a new MIT subpath, `@northmes/sdk/operations`. A query's handler is a service method; a command's handler is the command provider that `defineCommand` already registers, so the operation adds no second write path.
+* The backend binds handlers with `bindOperations(declaration, handlers)` from a new MIT subpath, `@northmes/sdk/operations`. Every handler is a method of the module's service in `core/`. A read method queries through the `ScopedDatabase`; a write method sends its command through the command bus, so the permission check, the version check, the validators and the audit run for every caller, and the command's handler stays the one write path. On 2026-10-09 Krister Johansson set the rule for every surface: "everything should just connect to service so no logic between the endpoints and the service", and "post create and gql create for article just call service.article.create". So the REST controller, the MCP and WebMCP tools and the GraphQL resolvers call the same service method and hold no logic of their own.
 
 ```ts
 // modules/core/contracts/src/operations/article.ts (sketch, names proposed)
@@ -103,8 +103,9 @@ export const articleOperations = defineOperations({
 export const articleOperationsProvider = bindOperations(articleOperations, {
   find: (input, ctx) => ctx.get(ArticleService).find(input),
   get: (input, ctx) => ctx.get(ArticleService).byIdOrThrow(input.id),
-  upsert: upsertArticleCommand,
-  // ...
+  create: (input, ctx) => ctx.get(ArticleService).create(input),
+  upsert: (input, ctx) => ctx.get(ArticleService).upsertByCode(input),
+  // update, archive and restore call the service in the same way
 });
 ```
 
@@ -127,7 +128,7 @@ The adapters sit on the runner and only translate:
 | `toWebMcpTool` | web, `apps/web/src/shell/webmcp/` | `document.modelContext.registerTool` entries whose `execute` posts to the first-party tool route |
 | `toAgentTool` | the `ai` module, later | AI SDK tools for the in-app assistant ([ADR 0035][adr-0035]) |
 
-GraphQL stays the web app's own API. Its mutations keep coming from `defineCommand`, and its list fields keep coming from the list kit; a query operation's handler and the GraphQL resolver call the same service method.
+GraphQL stays the web app's own API, and its resolvers are thin in the same way: `coreCreateArticle` calls `articleService.create`, as `POST /api/v1/core/plants/{plant}/articles` and the `core_create_article` tool do, and the list field calls `articleService.list`. `defineCommand` keeps registering the command's handler with the bus, and the GraphQL mutation that it generated moves to a resolver in the module's `api/` that calls the service ([Changes to ADR 0012](#changes-to-adr-0012)). The service's write method is where a module adds behaviour around a command, such as resolving an article number for the upsert, so no surface needs its own.
 
 What a new module adds, and nothing else:
 
@@ -287,6 +288,7 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 
 ### Changes to ADR 0012
 
+* "The SDK generates the mutation field, so a module writes no resolver for it" no longer holds. `defineCommand` registers the command's handler with the bus and keeps deriving the input type from the contract, and the module writes a thin mutation resolver in `api/` that calls its service, which sends the command. The maintainer's rule that every surface calls the service, quoted under section 1, is the reason.
 * The handler context gains `context.require(permission, scopeId)`, which a handler calls for a row it finds in step 8 when the contract's target could not name it, such as the upsert by article number. It runs step 3's `can()` check at that scope; a denial rolls the command back and writes the `permission.denied` event as step 3 does. Steps 3 to 5 stay in their order, and every successful command, a no-op upsert included, still writes exactly one `audit.command` row.
 
 ### Changes to ADR 0031
