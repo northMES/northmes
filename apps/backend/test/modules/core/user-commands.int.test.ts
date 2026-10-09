@@ -224,6 +224,44 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
     expect(await signInStatus(operator.username, operator.password)).toBe(200);
   });
 
+  it('E05-S08 an admin of one company cannot block or unblock a user who also belongs to another company, since a block holds everywhere', async () => {
+    const acme = await company();
+    const nordic = await company();
+    const planner = await signedIn(
+      [
+        { scopeId: acme.company, permissions: ['core.article:read'] },
+        { scopeId: nordic.company, permissions: ['core.article:read'] },
+      ],
+      acme.slugs[0] ?? '',
+    );
+    const bothAdmin = await signedIn(
+      [
+        { scopeId: acme.company, permissions: userAdmin },
+        { scopeId: nordic.company, permissions: userAdmin },
+      ],
+      acme.slugs[0] ?? '',
+    );
+
+    const blockedByAcme = await acme.admin.client.send(blockMutation, {
+      input: { id: planner.userId },
+    });
+    const statusAfterRefusal = await signInStatus(planner.username, planner.password);
+    const blockedByBoth = await bothAdmin.client.send(blockMutation, {
+      input: { id: planner.userId },
+    });
+    const unblockedByAcme = await acme.admin.client.send(unblockMutation, {
+      input: { id: planner.userId },
+    });
+
+    expect(refusals(blockedByAcme)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
+    expect(statusAfterRefusal).toBe(200);
+    expect(blockedByBoth.errors).toBeUndefined();
+    expect(refusals(unblockedByAcme)).toEqual([
+      { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+    ]);
+    expect(await signInStatus(planner.username, planner.password)).not.toBe(200);
+  });
+
   it('E05-S08 coreBlockUser refuses blocking yourself and a user of another company', async () => {
     const { admin } = await company();
     const other = await company();
