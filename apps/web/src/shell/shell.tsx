@@ -31,11 +31,16 @@ import {
 } from '../ui/components/page-frame/index.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
+import { useIsMobile } from '../ui/lib/use-mobile.ts';
 import { SidebarInset, SidebarProvider } from '../ui/primitives/sidebar.tsx';
 import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
+import { type PageGroup, PageGroupsProvider, ShellAllPages } from './shell-all-pages.tsx';
 import { CompanySettingsLanding, CompanySettingsLayout } from './shell-company-settings.tsx';
+import { ShellHelpMenu } from './shell-help-menu.tsx';
 import { ShellNotFound } from './shell-not-found.tsx';
 import {
+  allPagesHref,
+  allPagesPath,
   companySettingsEntries,
   currentOf,
   firstHref,
@@ -161,6 +166,13 @@ export function createShellRouter(
     ),
     settingsIndexComponent: CompanySettingsLanding,
     settingsBeforeLoad: signedIn,
+    plantShellRoutes: (plantRoute) => [
+      createRoute({
+        getParentRoute: () => plantRoute,
+        path: allPagesPath,
+        component: ShellAllPages,
+      }),
+    ],
     outsidePlantRoutes: (rootRoute) => [
       createRoute({
         getParentRoute: () => rootRoute,
@@ -349,6 +361,7 @@ function PlantLayout({
     }))
     .filter(({ entries }) => entries.length > 0);
   const settingsHome = settingsGroups[0]?.entries[0]?.href;
+  const isMobile = useIsMobile();
   const companyId = found?.company.id;
   const companySettings =
     companyId !== undefined &&
@@ -364,6 +377,20 @@ function PlantLayout({
   const [breadcrumb, setBreadcrumb] = useState<HTMLElement | null>(null);
   const [actions, setActions] = useState<HTMLElement | null>(null);
   const plantName = found?.plant.name ?? plant;
+  // Every page the user can open here, for the All pages index: the sidebar's, then settings.
+  const pageGroups: PageGroup[] = [
+    ...modules.map((module) => ({
+      label: module.label,
+      entries: sidebarLinks(module)
+        .filter(shown)
+        .map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    })),
+    {
+      label: `${plantName} settings`,
+      entries: settingsGroups.flatMap(({ entries }) => entries),
+    },
+  ].filter(({ entries }) => entries.length > 0);
+  const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
       trail: shellTrail(
@@ -387,6 +414,7 @@ function PlantLayout({
         user={session.user() ?? nobody}
         onSignOut={onSignOut}
         main={main}
+        help={<ShellHelpMenu modules={modules} />}
       />
     );
   }
@@ -424,6 +452,7 @@ function PlantLayout({
             user={session.user() ?? nobody}
             onSignOut={onSignOut}
             permissions={permissions}
+            help={isMobile ? help : undefined}
           />
           <SidebarInset className="min-w-0">
             <ShellTopBar
@@ -431,6 +460,7 @@ function PlantLayout({
               breadcrumbRef={setBreadcrumb}
               actionsRef={setActions}
               settings={settingsButton}
+              help={isMobile ? undefined : help}
             />
             <PageFrameTopBar value={topBar}>
               <main
@@ -439,7 +469,7 @@ function PlantLayout({
                 tabIndex={-1}
                 className="flex-1 px-4 py-6 md:px-7 focus-visible:outline-offset-[-4px]"
               >
-                {page}
+                <PageGroupsProvider value={pageGroups}>{page}</PageGroupsProvider>
               </main>
             </PageFrameTopBar>
           </SidebarInset>

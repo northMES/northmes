@@ -28,6 +28,8 @@ export interface ShellTopBarProps {
   readonly actionsRef: Ref<HTMLDivElement>;
   /** Where the Settings button leads; without one, the user has no settings and no button. */
   readonly settings?: SettingsButtonTarget;
+  /** The Help menu, after the Settings button; at 320 px the plant's sits in the sheet instead. */
+  readonly help?: ReactNode;
   /** The account button at the end, on a page without the sidebar and its user button. */
   readonly account?: ReactNode;
 }
@@ -91,8 +93,9 @@ function SettingsButton({ href, current }: SettingsButtonTarget) {
 
 /**
  * The top bar (D2), the banner landmark: the sidebar trigger at its start, then the breadcrumb and
- * the page actions, which the page frame of the route fills, then the Settings button, where Help
- * will follow it, and on a page without the sidebar the account button. It is sticky, so it keeps
+ * the page actions, which the page frame of the route fills, then the Settings button and Help, the
+ * last stop in release 1 (PL26), and on a page without the sidebar the account button. No AI
+ * provider can be configured yet, so there is no Assistant (ST31). It is sticky, so it keeps
  * the page's scroll-padding-top at its height plus 8 px (KE19, KE20).
  */
 export function ShellTopBar({
@@ -100,6 +103,7 @@ export function ShellTopBar({
   breadcrumbRef,
   actionsRef,
   settings,
+  help,
   account,
 }: ShellTopBarProps) {
   const stickyBlock = useScrollPaddingTop<HTMLElement>();
@@ -111,9 +115,10 @@ export function ShellTopBar({
       {sidebarId !== undefined && <SidebarToggle sidebarId={sidebarId} />}
       <div ref={breadcrumbRef} className="min-w-0 flex-1" />
       <div ref={actionsRef} className="flex shrink-0 items-center gap-2" />
-      {(settings !== undefined || account !== undefined) && (
+      {(settings !== undefined || help !== undefined || account !== undefined) && (
         <div className="flex shrink-0 items-center gap-1">
           {settings !== undefined && <SettingsButton {...settings} />}
+          {help}
           {account}
         </div>
       )}

@@ -166,3 +166,11 @@ export function wayOutOf(
   ].map(({ label, link }) => ({ label, href: link({ plant }).href }));
   return candidates.find(({ href }) => href !== pathname);
 }
+
+/** The path segment of the All pages index under a plant, the shell's own route. */
+export const allPagesPath = 'all-pages';
+
+/** The href of a plant's All pages index (ADR 0021, WCAG 2.4.5). */
+export function allPagesHref(plant: string): string {
+  return `/${plant}/${allPagesPath}`;
+}

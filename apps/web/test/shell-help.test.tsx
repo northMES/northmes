@@ -76,9 +76,9 @@ describe('the Help menu', () => {
     await screen.findByRole('heading', { level: 1, name: 'Tools' });
 
     const banner = screen.getByRole('banner');
-    const stops = within(banner)
-      .getAllByRole(/^(button|link)$/)
-      .map((stop) => stop.getAttribute('aria-label') ?? stop.textContent);
+    const stops = [...banner.querySelectorAll('a[href], button')].map(
+      (stop) => stop.getAttribute('aria-label') ?? stop.textContent,
+    );
     expect(stops.at(-1)).toBe('Help');
     const settings = within(banner).getByRole('link', { name: 'Settings' });
     expect(isBefore(settings, within(banner).getByRole('button', { name: 'Help' }))).toBe(true);

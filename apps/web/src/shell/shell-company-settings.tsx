@@ -18,6 +18,7 @@ import { isForbidden } from '../ui/lib/graphql-errors.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { buttonVariants } from '../ui/primitives/button.tsx';
 import { CoreCompanies } from './companies.graphql.ts';
+import { ShellHelpMenu } from './shell-help-menu.tsx';
 import {
   companySettingsEntries,
   mainId,
@@ -156,6 +157,7 @@ export function CompanySettingsLayout({
             breadcrumbRef={setBreadcrumb}
             actionsRef={setActions}
             settings={{ href: landing, current: true }}
+            help={<ShellHelpMenu modules={modules} />}
             account={<ShellAccountMenu user={user} onSignOut={onSignOut} />}
           />
           <PageFrameTopBar value={topBar}>

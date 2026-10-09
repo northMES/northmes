@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useRouterState } from '@tanstack/react-router';
 import { Factory, SearchX } from 'lucide-react';
-import { type RefObject, useEffect } from 'react';
+import { type ReactNode, type RefObject, useEffect } from 'react';
 import type { ShellModule } from '../modules.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { useScrollPaddingTop } from '../ui/lib/use-scroll-padding-top.ts';
@@ -16,6 +16,8 @@ export interface ShellUnknownPlantProps {
   readonly user: ShellUser;
   readonly onSignOut: () => void;
   readonly main: RefObject<HTMLElement | null>;
+  /** The Help menu, before the account menu. */
+  readonly help?: ReactNode;
 }
 
 /** The h1 and the title part of the page (D2 ST29, doc copy). */
@@ -23,8 +25,8 @@ const pageNotFound = 'Page not found';
 
 /**
  * The page of a plant slug that names none of the user's plants (D2 ST29, ST30): a page without a
- * plant, so no sidebar, no switcher and no crumbs. The top bar holds the NorthMES mark and the
- * account menu, so the user can sign out. Main holds the h1 Page not found, a card that says there
+ * plant, so no sidebar, no switcher and no crumbs. The top bar holds the NorthMES mark, Help and
+ * the account menu, so the user can sign out. Main holds the h1 Page not found, a card that says there
  * is no plant at the path the user can open, and under the h2 Your plants an h3 per company with a
  * list of its plants named by that h3: the switcher's Factory mark, the plant link, which opens the
  * plant's first page, and the plant's path. It never says whether the plant exists (ADR 0007).
@@ -35,6 +37,7 @@ export function ShellUnknownPlant({
   user,
   onSignOut,
   main,
+  help,
 }: ShellUnknownPlantProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const withPlants = companies.filter(({ plants }) => plants.length > 0);
@@ -56,6 +59,7 @@ export function ShellUnknownPlant({
           N
         </span>
         <span className="flex-1 font-semibold">NorthMES</span>
+        {help}
         <ShellAccountMenu user={user} onSignOut={onSignOut} />
       </header>
       <main

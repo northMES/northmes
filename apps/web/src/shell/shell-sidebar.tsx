@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useRouterState } from '@tanstack/react-router';
 import { X } from 'lucide-react';
-import { Fragment } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import type { MenuLink, ShellModule } from '../modules.ts';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import { Button } from '../ui/primitives/button.tsx';
@@ -41,6 +41,8 @@ export interface ShellSidebarProps {
    * such entries stay out.
    */
   readonly permissions?: ReadonlySet<string>;
+  /** The Help menu, which the footer row holds beside the user button where the sidebar is the sheet. */
+  readonly help?: ReactNode;
 }
 
 /**
@@ -60,6 +62,7 @@ export function ShellSidebar({
   user,
   onSignOut,
   permissions,
+  help,
 }: ShellSidebarProps) {
   const shown = shownTo(permissions);
   const { isMobile, setOpenMobile } = useSidebar();
@@ -125,8 +128,12 @@ export function ShellSidebar({
             );
           })}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <ShellUserMenu user={user} onSignOut={onSignOut} />
+        <SidebarFooter className="flex-row items-center border-t border-sidebar-border">
+          {/* One footer row (D2 Sheet): the user button, then Help in the 320 px sheet. */}
+          <div className="min-w-0 flex-1">
+            <ShellUserMenu user={user} onSignOut={onSignOut} />
+          </div>
+          {help}
         </SidebarFooter>
       </nav>
     </Sidebar>

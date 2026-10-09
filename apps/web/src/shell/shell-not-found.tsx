@@ -6,7 +6,7 @@ import type { ShellModule } from '../modules.ts';
 import { PageFrame, usePageFrameTopBar } from '../ui/components/page-frame/index.ts';
 import { StatePanel } from '../ui/components/state-panel/index.ts';
 import { buttonVariants } from '../ui/primitives/button.tsx';
-import { mainId, plantHome } from './shell-pages.ts';
+import { allPagesHref, mainId, plantHome } from './shell-pages.ts';
 
 /** The h1 and the title part of every not-found page (shell-306, doc copy). */
 const pageNotFound = 'Page not found';
@@ -21,7 +21,7 @@ interface WayOn {
  * The page of a path no route matches (design shell-306, NF1 to NF4), TanStack Router's default
  * not-found component, so it renders in the nearest layout. In a plant it renders inside the plant
  * layout with no current sidebar entry: "Plant A has no page at /plant-a/reports. The link may be
- * out of date." and Go to Plant A, the plant's first page. In company settings, which replaced the
+ * out of date.", Go to Plant A, the plant's first page, and See all pages. In company settings, which replaced the
  * admin frame of NF3 (ADR 0066), it renders in the settings layout with Go to Company settings,
  * the landing that lists every settings page. The path shows in Plex Mono. The shell moves focus to
  * the h1 as on any path change.
@@ -50,9 +50,16 @@ export function ShellNotFound({ modules }: { readonly modules: readonly ShellMod
         }
         actions={
           wayOn === undefined ? undefined : (
-            <Link to={wayOn.href} className={buttonVariants()}>
-              {wayOn.label}
-            </Link>
+            <>
+              <Link to={wayOn.href} className={buttonVariants()}>
+                {wayOn.label}
+              </Link>
+              {plant !== undefined && (
+                <Link to={allPagesHref(plant)} className={buttonVariants({ variant: 'outline' })}>
+                  See all pages
+                </Link>
+              )}
+            </>
           )
         }
       />
