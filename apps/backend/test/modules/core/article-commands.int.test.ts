@@ -153,7 +153,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.forbidden', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.plant_forbidden', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
     const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
@@ -162,16 +162,14 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       input: { id: randomUUIDv7(), code: 'PN-305', name: 'Side panel' },
     });
 
-    expect(answer).toMatchObject({
-      status: 200,
-      data: null,
-      errors: [
-        {
-          message: 'The request names no plant, so core.createArticle has no scope to run at',
-          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-        },
-      ],
-    });
+    // coreCreateArticle is not plant-free, so the operation runs no field (ADR 0066).
+    expect(answer.data).toBeUndefined();
+    expect(answer.errors).toMatchObject([
+      {
+        message: 'The request names no plant. Choose one of your plants.',
+        extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' },
+      },
+    ]);
   });
 
   /** Creates an article through coreCreateArticle and returns it. */

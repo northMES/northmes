@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Query, Resolver } from '@nestjs/graphql';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type ViewerRecord, viewerAtPlant } from '../../../core/access/viewer.ts';
 import { Viewer } from '../types/viewer.type.ts';
 
@@ -11,6 +12,7 @@ export class ViewerQueryResolver {
    * shows only the actions they can take. It needs a plant and no permission.
    */
   @Query(() => Viewer)
+  @PlantFree()
   coreViewer(): ViewerRecord {
     return viewerAtPlant();
   }
