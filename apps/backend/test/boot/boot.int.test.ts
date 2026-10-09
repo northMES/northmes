@@ -13,6 +13,7 @@ import { type BootOptions, boot } from '../../src/boot/boot.ts';
 import { imageVersion } from '../../src/version.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
+import { stock } from '../fixtures/commands/unguarded-commands.ts';
 import { alpha } from '../fixtures/graphql/alpha.ts';
 import { beta } from '../fixtures/graphql/beta.ts';
 import { importPlugins, writeConfig, writePlugin } from '../fixtures/plugins/plugin-root.ts';
@@ -196,6 +197,21 @@ describe('boot', () => {
     expect(log.error.mock.calls).toEqual([
       [
         'refused to start (1 problem)\n- Validator quantity-cap of module stray-rules is on dispatch.releaseJob of module dispatch, which is not in the dependsOn of stray-rules',
+      ],
+    ]);
+  });
+
+  it('E05-S06 a command whose contract names no permission exits 1 naming the command', async () => {
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+
+    app = await boot({ env, modules: [stock], exit, log });
+
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        'refused to start (2 problems)\n- Command stock.countBin of module stock names no permission. Its contract needs permission, such as stock.<entity>:<action>, which the command bus checks at the scope of the row the command changes (ADR 0012)\n- Command stock.moveBin of module stock checks permission stock.bin:move, which module stock does not declare',
       ],
     ]);
   });

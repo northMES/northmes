@@ -73,4 +73,5 @@ export class DispatchModule {}
 export const dispatch: InRepoModule = {
   id: 'dispatch',
   module: DispatchModule,
+  permissions: { 'dispatch.job': ['release', 'hold'] },
 };
