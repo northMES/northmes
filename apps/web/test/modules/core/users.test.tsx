@@ -81,11 +81,13 @@ describe('users', () => {
         ['Sara Nyberg', 's.nyberg', 'Viewer · Acme ABShift lead · Plant A', 'Active'],
       ]),
     );
-    expect(
-      within(table)
-        .getAllByRole('columnheader')
-        .map((header) => header.textContent),
-    ).toEqual(['Name', 'Username', 'Roles at Acme AB and Plant A', 'Status']);
+    await waitFor(() =>
+      expect(
+        within(table)
+          .getAllByRole('columnheader')
+          .map((header) => header.textContent),
+      ).toEqual(['Name', 'Username', 'Roles at Acme AB and Plant A', 'Status']),
+    );
     expect(screen.getByRole('link', { name: 'Sara Nyberg' }).getAttribute('href')).toBe(
       coreLinks.users.user({ plant, userId: sara.id }).href,
     );

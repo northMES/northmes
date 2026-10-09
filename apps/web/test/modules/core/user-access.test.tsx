@@ -198,7 +198,7 @@ describe("a user's access", () => {
     expect(
       await screen.findByText('Lena Ek holds no role at Plant A or at Acme AB.'),
     ).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Add role' })).toBeDefined();
+    expect(await screen.findByRole('link', { name: 'Add role' })).toBeDefined();
     expect(await screen.findByText('Permissions come from roles. Add a role above.')).toBeDefined();
   });
 
@@ -226,7 +226,8 @@ describe("a user's access", () => {
         'No access. Roles need the permission to read roles (core.role:read) at Plant A.',
       ]),
     );
-    expect(screen.getByRole('button', { name: 'Remove role at Plant A' })).toBeDefined();
+    // Remove shows once the reader's permissions arrived, so Add role would show by then too.
+    expect(await screen.findByRole('button', { name: 'Remove role at Plant A' })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Add role' })).toBeNull();
     const can = screen.getByRole('region', { name: 'What Sara Nyberg can do at Plant A' });
     expect(

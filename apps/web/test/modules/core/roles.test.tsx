@@ -31,17 +31,19 @@ describe('roles', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Roles' })).toBeDefined();
     const custom = await screen.findByRole('table', { name: 'Custom roles of Acme AB' });
     await waitFor(() => expect(bodyRows(custom)).toEqual([['Shift lead', 'Acme AB', '2', '2']]));
-    expect(
-      within(custom)
-        .getAllByRole('columnheader')
-        .map((header) => header.textContent),
-    ).toEqual(['Role', 'Defined by', 'Permissions', 'Held at Acme AB and Plant A']);
+    await waitFor(() =>
+      expect(
+        within(custom)
+          .getAllByRole('columnheader')
+          .map((header) => header.textContent),
+      ).toEqual(['Role', 'Defined by', 'Permissions', 'Held at Acme AB and Plant A']),
+    );
     expect(bodyRows(screen.getByRole('table', { name: 'Default roles from modules' }))).toEqual([
       ['Planner', 'Planning', '3', '0'],
       ['Viewer', 'Planning', '1', '1'],
     ]);
-    expect(screen.getByText('3 roles at Acme AB')).toBeDefined();
-    expect(screen.getByRole('link', { name: 'New role' }).getAttribute('href')).toBe(
+    expect(await screen.findByText('3 roles at Acme AB')).toBeDefined();
+    expect((await screen.findByRole('link', { name: 'New role' })).getAttribute('href')).toBe(
       coreLinks.roles.new({ plant }).href,
     );
     expect(screen.getByRole('link', { name: 'Shift lead' }).getAttribute('href')).toBe(
@@ -96,7 +98,7 @@ describe('roles', () => {
     ]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Shift lead' })).toBeDefined();
-    expect(screen.getByText('Custom role of Acme AB')).toBeDefined();
+    expect(await screen.findByText('Custom role of Acme AB')).toBeDefined();
     const permissions = screen.getByRole('tabpanel', { name: 'Permissions' });
     expect(within(permissions).getByRole('heading', { level: 3, name: 'Planning' })).toBeDefined();
     expect(within(permissions).getByText('Release production orders to the floor')).toBeDefined();
@@ -113,7 +115,7 @@ describe('roles', () => {
     const holders = await screen.findByRole('tabpanel', { name: 'Holders' });
     expect(router.state.location.search).toEqual({ tab: 'holders' });
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Holders' }));
-    expect(within(holders).getByText('Nobody holds Shift lead at Acme AB.')).toBeDefined();
+    expect(await within(holders).findByText('Nobody holds Shift lead at Acme AB.')).toBeDefined();
     expect(within(holders).getByText('2 people hold Shift lead at Plant A.')).toBeDefined();
     expect(within(holders).getByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
     expect(within(holders).queryByRole('button')).toBeNull();
@@ -131,10 +133,11 @@ describe('roles', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Planner' })).toBeDefined();
     expect(screen.getByText('Default role from Planning')).toBeDefined();
-    expect(screen.queryByRole('link', { name: 'Edit role' })).toBeNull();
     expect(
       (await screen.findByRole('link', { name: 'New role from Planner' })).getAttribute('href'),
     ).toBe(coreLinks.roles.new({ plant }, { from: planner.id }).href);
+    // New role from Planner shows once the reader's permissions arrived, so Edit role would too.
+    expect(screen.queryByRole('link', { name: 'Edit role' })).toBeNull();
     expect(
       screen.getByText(
         'Default roles come from their module and cannot be changed. To change one, make a new role from it.',
