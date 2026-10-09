@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type Grant, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
+import { randomUUIDv7 } from 'node:crypto';
+import {
+  type Grant,
+  givenAssignment,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -115,6 +123,100 @@ describe('the users of a company and their access', () => {
     expect(nodes.find(({ username }) => username === reader.username)?.roleAssignments).toEqual([
       { scope: { kind: 'COMPANY', name: 'Acme AB' }, role: expect.anything() },
     ]);
+  });
+
+  /**
+   * Acme AB with an admin who reads, creates and blocks users, and three users the admin created:
+   * Anna Berg (zeta.berg), who holds Plant admin at the plant, Bo Sjö (alpha.sjo), who is blocked,
+   * and Cia Ek (mid.ek), who holds no role. Each username ends in the same tag of this call, since a
+   * username is never given twice.
+   */
+  async function listedUsers() {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, { name: 'Acme AB' });
+    const admin = await signedIn(
+      [
+        {
+          scopeId: company,
+          permissions: ['core.user:read', 'core.user:create', 'core.user:block', 'core.role:read'],
+        },
+      ],
+      slugs[0] ?? '',
+    );
+    const tag = randomUUIDv7().slice(-6);
+    const create = async (name: string, handle: string) => {
+      const username = `${handle}_${tag}`;
+      const answer = await admin.client.send<{ coreCreateUser: { user: { id: string } } }>(
+        `mutation ($input: CoreCreateUserInput!) { coreCreateUser(input: $input) { user { id } } }`,
+        { input: { id: randomUUIDv7(), name, username, email: `${username}@example.test` } },
+      );
+      return answer.data?.coreCreateUser.user.id ?? '';
+    };
+    const anna = await create('Anna Berg', 'zeta.berg');
+    const bo = await create('Bo Sjö', 'alpha.sjo');
+    await create('Cia Ek', 'mid.ek');
+    const [{ id: plantAdmin } = { id: '' }] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-plant-admin'`,
+      [company],
+    );
+    await givenAssignment(db.ownerUrl, {
+      userId: anna,
+      roleId: plantAdmin,
+      scopeId: plants[0] ?? '',
+    });
+    await admin.client.send(
+      `mutation ($input: CoreBlockUserInput!) { coreBlockUser(input: $input) { id } }`,
+      { input: { id: bo } },
+    );
+    return { admin, plantAdmin, tag };
+  }
+
+  /**
+   * The usernames of coreUsers with these arguments, in the list's order, without the admin and
+   * without the tag.
+   */
+  async function usernames(client: GqlClient, args: string, admin: string) {
+    const answer = await client.send<{
+      coreUsers: { totalCount: number; edges: { node: { username: string } }[] };
+    }>(`{ coreUsers(${args}) { totalCount edges { node { username } } } }`);
+    if (!answer.data) throw new Error(JSON.stringify(answer.errors));
+    return answer.data.coreUsers.edges
+      .map(({ node }) => node.username)
+      .filter((username) => username !== admin)
+      .map((username) => username.replace(/_[0-9a-f]{6}$/, ''));
+  }
+
+  it('E05-S08 coreUsers filters by a role and by whether the user is blocked', async () => {
+    const { admin, plantAdmin } = await listedUsers();
+
+    expect(await usernames(admin.client, `roleId: "${plantAdmin}"`, admin.username)).toEqual([
+      'zeta.berg',
+    ]);
+    expect(await usernames(admin.client, 'blocked: true', admin.username)).toEqual(['alpha.sjo']);
+    expect(await usernames(admin.client, 'blocked: false', admin.username)).toEqual([
+      'zeta.berg',
+      'mid.ek',
+    ]);
+  });
+
+  it('E05-S08 coreUsers sorts by name, the default, and by username either way', async () => {
+    const { admin } = await listedUsers();
+
+    expect(await usernames(admin.client, 'first: 25', admin.username)).toEqual([
+      'zeta.berg',
+      'alpha.sjo',
+      'mid.ek',
+    ]);
+    expect(await usernames(admin.client, 'orderBy: [{ field: USERNAME }]', admin.username)).toEqual(
+      ['alpha.sjo', 'mid.ek', 'zeta.berg'],
+    );
+    expect(
+      await usernames(
+        admin.client,
+        'orderBy: [{ field: USERNAME, direction: DESC }]',
+        admin.username,
+      ),
+    ).toEqual(['zeta.berg', 'mid.ek', 'alpha.sjo']);
   });
 
   it('E05-S08 coreUsers needs core.user:read at the plant', async () => {
