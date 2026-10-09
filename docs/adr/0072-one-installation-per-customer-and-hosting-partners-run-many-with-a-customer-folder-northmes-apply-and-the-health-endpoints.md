@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT, hosting partners
 release: "1"
-needs-confirmation: "maintainer (the customer folder layout; the customer file format and the command name northmes apply; northmes apply and the partner hosting docs waiting for a hosting partner instead of entering release 1; metrics waiting for a trigger; whether several installations may share one host; the rollback class and contract migrations in the release notes)"
+needs-confirmation: "maintainer (the customer folder layout; the customer file format and the command name northmes apply; northmes apply, the partner hosting docs and the release notes step waiting for a hosting partner instead of entering release 1; metrics waiting for a trigger; one installation per host in release 1; no Postgres cluster shared between installations; the CLI's write commands as nm_app and nm_auth with their secrets in migrate; core.createPlant and core.updateCompany from the CLI outside can())"
 ---
 
 # One installation per customer, and hosting partners run many with a customer folder, northmes apply and the health endpoints
@@ -14,9 +14,9 @@ needs-confirmation: "maintainer (the customer folder layout; the customer file f
 
 [ADR 0007][adr-0007] says that one installation serves one customer, which may hold several companies, and rule 23 of [ADR 0051][adr-0051] records "One installation per customer" as decided. [ADR 0066][adr-0066] gives the hosting partner, a consultant or provider who installs and runs NorthMES for customers, scriptable CLI commands on the host to create a customer's companies and first company admins. It leaves for later "`northmes plant create` and a declarative onboarding file", with the trigger "a hosting partner sets up plants for several customers", and [ADR 0055][adr-0055] leaves "Helm values and partner hosting docs" for later, with the trigger "a partner".
 
-On 2026-10-09 Krister Johansson asked how the first user of a new customer gets to sign in, and how a consultant company can manage and maintain many installations for different customers. The planning session answered from ADR 0066 and proposed a folder per customer, a declarative file applied idempotently, standard endpoints that a partner's own tools watch, and a documented upgrade procedure, instead of a fleet console. Krister Johansson then decided that each customer gets its own installation, and that NorthMES supports neither multi-tenant hosting nor a database shared between customers. Earlier the same day he decided that the web signs in with email only, which [#415](https://github.com/northMES/northmes/pull/415) built: every new user has an email, and the placeholder address under `.invalid` is gone.
+On 2026-10-09 Krister Johansson asked how the first user of a new customer gets to sign in, and how a consultant company can manage and maintain many installations for different customers. The planning session answered from ADR 0066 and proposed a folder per customer, a declarative file applied idempotently, standard endpoints that a partner's own tools watch, and a documented upgrade procedure, instead of a fleet console. Krister Johansson then decided: "One instance per customer so we don't support tenant or shared database with different customer". This ADR reads that as: each customer gets its own installation, and NorthMES supports neither multi-tenant hosting nor a database shared between customers. Earlier the same day he decided that the web signs in with email only, which [#415](https://github.com/northMES/northmes/pull/415) built: every new user has an email, and the placeholder address under `.invalid` is gone.
 
-This ADR records that decision and decides how a hosting partner runs many installations with ordinary tools: what a customer folder holds, the customer file and the `northmes apply` command that applies it, the endpoints a partner's monitoring reads, the upgrade procedure per installation, which parts are release 1, and what stays out with the trigger that would bring it in. It covers the CLI in the one-off migrate container, core's contracts for the customer file, the health endpoints of [ADR 0043][adr-0043], the release bundle and scripts of [ADR 0044][adr-0044] and [ADR 0045][adr-0045], the release notes of [ADR 0038][adr-0038] and the partner hosting docs.
+This ADR records that decision and decides how a hosting partner runs many installations with ordinary tools: what a customer folder holds, the customer file and the `northmes apply` command that applies it, the endpoints a partner's monitoring reads, the upgrade procedure per installation, which parts are release 1, and what stays out with the trigger that would bring it in. It covers the CLI in the one-off migrate container and the database logins of its write commands, core's contracts for the customer file, the health endpoints of [ADR 0043][adr-0043], the release bundle and scripts of [ADR 0044][adr-0044] and [ADR 0045][adr-0045], the release notes of [ADR 0038][adr-0038] and the partner hosting docs.
 
 ## Decision drivers
 
@@ -45,14 +45,24 @@ How a hosting partner runs many installations:
 
 ## Decision outcome
 
-Chosen option: "One installation per customer", because Krister Johansson decided it, and because it is the only option in which a restore, an upgrade, an installation setting, a plugin and a compliance profile each touch one customer. For running many installations, chosen option: "Ordinary tools per installation", because it adds one command and a file format to what ADR 0043, ADR 0044, ADR 0045 and ADR 0066 already decide, and lets each partner keep its own tools.
+Chosen option: "One installation per customer", because Krister Johansson decided it, and because it is the only option in which a restore, an upgrade, an installation setting, a plugin and a compliance profile each touch one customer. For running many installations, chosen option: "Ordinary tools per installation", because it adds one command, a file format and a CLI path for two existing commands to what ADR 0043, ADR 0044, ADR 0045 and ADR 0066 already decide, and lets each partner keep its own tools.
 
 ### One installation per customer
 
 * An installation is one Compose project ([ADR 0044][adr-0044]) with its own `app`, `migrate` and `db` services, its own Postgres cluster, volumes, secrets, installation key, escrow and backups ([ADR 0047][adr-0047], [ADR 0045][adr-0045]). It serves exactly one customer.
 * An installation may hold several companies of that customer, as [ADR 0007][adr-0007] and [ADR 0066][adr-0066] decide: the company is the root of the scope tree, and no node, role, table, column or setting sits above it.
-* NorthMES does not support several customers in one installation, nor two installations on one Postgres cluster or database. The install guide and the partner hosting docs say so, and no table, column or code path holds a tenant id.
+* NorthMES does not support several customers in one installation, nor a database shared between customers, as Krister Johansson decided. The planning session reads the decision as also ruling out installations of several customers on one Postgres cluster with a database each, for the reasons under [One shared Postgres cluster with a schema or database per customer](#one-shared-postgres-cluster-with-a-schema-or-database-per-customer); that reading waits for his confirmation. The install guide and the partner hosting docs say so, and no table, column or code path holds a tenant id.
 * A consultant who works for several customers has one user per installation. No sign-in, user or role spans installations.
+
+### One installation per host
+
+Release 1 runs one installation per host, the pilot shape of [ADR 0044][adr-0044] and [12 operations and security](../plan/12-operations-and-security.md#the-pilot-shape). This is the working default until Krister Johansson decides whether several installations may share a host. A host that ran several would need, for each installation:
+
+* its own address or ports for Caddy, which publishes 443 and 80 on `NORTHMES_BIND_IP`;
+* its own host paths, because the bundle fixes `/srv/northmes/status/host.json`, `/opt/northmes/bin/hostcheck` and `/srv/northmes-backup` for pgBackRest repo1 ([12 operations and security](../plan/12-operations-and-security.md#disk-layout));
+* its own hostcheck timer, backup disk or directory, Compose project name and secrets directory.
+
+None of this exists, so a partner that wants several customers on one machine runs one virtual machine per installation.
 
 ### The customer folder
 
@@ -65,14 +75,14 @@ A hosting partner keeps one folder per installation, in its own private reposito
   northmes.env             infrastructure settings only (ADR 0044, ADR 0060)
   northmes.config.json     the plugins and webOrigins of the installation (ADR 0037, ADR 0070)
   site.caddy               the site Caddyfile snippet: the host name and the TLS choice (ADR 0044)
-  pgbackrest.conf          the backup repositories (ADR 0045)
   secrets.json             for each Compose secret, a reference to where the partner keeps it
   northmes.customer.json   the customer file (see below)
   Dockerfile               the site image FROM ghcr.io/northmes/northmes:<version>, when plugins run
 ```
 
 * `northmes.version` pins the release. The bundle's `compose.yaml` pins each image by digest ([ADR 0044][adr-0044]), so the version and the bundle checksum together name every image the installation runs.
-* `secrets.json` holds references, never values: for each secret that `install.sh` writes under the `_FILE` keys of [ADR 0060][adr-0060] (`db_app_password`, `db_auth_password`, `auth_secret`, `installation_key` and the others), it names the entry in the partner's secret store or in the escrow of [ADR 0047][adr-0047]. The folder never holds a secret value, a temporary password, a backup or the escrow itself.
+* `secrets.json` holds references, never values: for each secret that `install.sh` writes under the `_FILE` keys of [ADR 0060][adr-0060] (`db_app_password`, `db_auth_password`, `auth_secret`, `installation_key` and the others), and for the site's `pgbackrest.conf`, it names the entry in the partner's secret store or in the escrow of [ADR 0047][adr-0047]. The folder never holds a secret value, a temporary password, a backup or the escrow itself.
+* `pgbackrest.conf` stays out of the folder, because it holds the site's repositories and the repo2 credentials ([12 operations and security](../plan/12-operations-and-security.md#site-files)). The partner keeps it with the secrets.
 * A customer folder describes one installation. A partner that runs ten customers has ten folders, and its own scripts loop over them.
 * Once Helm values exist (see [Out of scope](#out-of-scope-with-the-trigger-that-revisits-each)), a values file takes the place of `compose.override.yaml`, and the rest of the folder stays.
 
@@ -123,9 +133,10 @@ What `apply` does:
 
 1. It validates the file and reads the installation: installation settings, companies, their company admins, plants and the loaded plugins.
 2. It plans every change, in this order: installation settings, companies, company admins, plants. A change it may not make is refused with exit 3 before any write, and the output names each refused entry. A plugin list that differs from the running image is such a refusal.
-3. It runs the existing commands for each planned change: `installation set` for a changed setting, `company create` for a new company id, `company add-admin` for an admin who lacks core's Company admin role at the company, `core.updateCompany` for a changed name, and `core.createPlant` for a new plant id. Each write is its own command with principal type `system`, the system principal `core.cli`, surface `cli`, the required `--reason` and the security event that the command writes ([ADR 0066][adr-0066]).
+3. It runs the existing commands for each planned change: `installation set` for a changed setting, `company create` for a new company id, `company add-admin` for an admin who lacks core's Company admin role at the company, `core.updateCompany` for a changed name, and `core.createPlant` for a new plant id. Each write is its own command with principal type `system`, the system principal `core.cli`, surface `cli` and the required `--reason`, and records one security event: the event that [ADR 0066][adr-0066] gives `installation set`, `company create` and `company add-admin`, and `cli.company_updated` or `cli.plant_created` (names proposed) for the other two.
 4. It prints the result: plain text, or with `--json` one object, for example `{ "dryRun": false, "changes": [{ "kind": "company", "id": "0199b8f2-4c1e-7a3b-9d2e-5f6a7b8c9d0e", "action": "create", "replayed": false }], "notInFile": [], "newUsers": [{ "username": "alex.lund", "temporaryPassword": "<printed once>" }] }` (shape proposed).
 
+* In the app, `core.createPlant` and `core.updateCompany` need `core.plant:create` and `core.company:update` at the company node through `can()` ([ADR 0066][adr-0066]). `core.cli` holds no role, so `apply` runs them on a CLI path outside `can()`, as `company create` assigns Company admin on the host. Only the CLI entry point in the migrate container reaches that path, and no GraphQL field does. This changes proposed ADR 0066, which gives these two commands only the `can()` check of the app.
 * `--dry-run` reads only, writes no command row and no security event, and prints the same plan with `create`, `update`, `unchanged` or `refused` per entry and the `notInFile` list. It exits 0 when `apply` would succeed and 3 when it would refuse.
 * A second run of the same file writes nothing and exits 0. A run that failed halfway, for example between Better Auth's write and core's command, completes when it runs again, through the replay rules of `company create` and `company add-admin` ([ADR 0066][adr-0066]).
 * A new user's temporary password appears once on standard output and nowhere else, as with `company create`, and must be changed at the first sign-in ([ADR 0051][adr-0051] rule 13). A script that runs `apply --json` treats the output as a secret.
@@ -140,6 +151,14 @@ What `apply` never does:
 * It opens no plant and records no onboarding step. Calendars, machines, planning rules, connector and AI settings are entered in the onboarding wizard or the module's own screens.
 * It installs, enables or removes no plugin, runs no migration and reads or writes no secret.
 
+### The logins of the CLI's write commands
+
+The write commands of [ADR 0066][adr-0066] and `apply` run in the one-off migrate container. Its configuration holds only `nm_owner`'s password today (`migrateEnvSchema` in `packages/sdk/src/config/entry-schemas.ts`), and `northmes migrate` connects as `nm_owner` (`apps/backend/src/boot/boot.ts`). Better Auth writes users and organizations through its own pool, which logs in as `nm_auth` with the `db_auth_password` secret (`apps/backend/src/modules/core/infrastructure/auth/better-auth.ts`), and the app's commands run as `nm_app` under row-level security ([ADR 0008][adr-0008]). Proposed:
+
+* The CLI's write commands run core's commands on a pool that logs in as `nm_app`, so row-level security and grants apply as they do in the app, and Better Auth's writes on its `nm_auth` pool. `northmes migrate` keeps `nm_owner`.
+* `nm_app` may only read `core.scope`, `core.company` and `core.plant` today, so the migration of each command grants `nm_app` the writes it needs, as `20261009120000_access_admin.sql` does for `core.role_assignment`.
+* The `migrate` service receives `db_app_password` and `db_auth_password` beside `db_owner_password`, and `auth_secret` under M-53. The CLI's write commands read `NORTHMES_DB_APP_PASSWORD_FILE`, `NORTHMES_DB_AUTH_PASSWORD_FILE` and `NORTHMES_AUTH_SECRET_FILE`. `app` still receives no `db_owner_password` ([ADR 0047][adr-0047]).
+
 ### The endpoints a partner's monitoring reads
 
 * Health and readiness: `/health/live`, `/health/ready` and `/health`, as [ADR 0043][adr-0043] decides and story E16-S01 ([#143](https://github.com/northMES/northmes/issues/143)) builds. `/health/ready` carries the degraded list (backup age, WAL archiving, certificate expiry and the other entries of ADR 0043), and its 503 during shutdown. Main does not serve them yet: `apps/backend` reserves the `health` path segment in its shell controller and has no health route.
@@ -151,7 +170,7 @@ What `apply` never does:
 
 A partner upgrades one installation at a time with the scripts of [ADR 0045][adr-0045]. NorthMES has no command that upgrades several installations.
 
-1. Read the release notes: the rollback class (`image` or `restore`) and the contract migrations of the release.
+1. Read the rollback class (`image` or `restore`) and the schema compatibility number of the release in the release manifest of [ADR 0045][adr-0045], or in the release notes once they carry both.
 2. Agree the window with the customer: between shifts, and never in the week of a daylight saving change ([ADR 0045][adr-0045], [ADR 0055][adr-0055]).
 3. Set the new version and bundle checksum in `northmes.version`, fetch the bundle and its images, online or by the offline image transfer ([12 operations and security](../plan/12-operations-and-security.md#offline-image-transfer)), and commit the folder.
 4. Run `upgrade.sh` on the host: pre-flight, `northmes migrate --check` from the new image, maintenance page, backup, `migrate` in the one-off container, `up`, wait for `/health/ready`, smoke check ([ADR 0045][adr-0045]).
@@ -159,19 +178,21 @@ A partner upgrades one installation at a time with the scripts of [ADR 0045][adr
 6. On a failure, run `rollback.sh`, which follows the rollback class ([ADR 0045][adr-0045]).
 
 * Under the working answer of [ADR 0038][adr-0038], only the latest minor gets fixes before 1.0, so a partner keeps each installation on the latest minor.
-* Release notes, proposed for release 1: the GitHub release text states the rollback class and names each contract migration, copied from the release manifest that [ADR 0045][adr-0045] already writes, so a partner can plan each customer's window before fetching the bundle.
+* Release notes, proposed for later with the partner hosting docs: the GitHub release text states the rollback class and the schema compatibility number, copied from the release manifest that [ADR 0045][adr-0045] decides, so a partner can plan each customer's window before fetching the bundle.
 
 ### What is release 1 and what waits
 
 | Part | Release | Reason |
 |---|---|---|
 | One installation per customer, no multi-tenant hosting, no database shared between customers | 1 | Krister Johansson's decision; it adds no work and removes the cases a shared installation would need |
-| `northmes company create`, `company add-admin`, `company list`, `installation show` and `installation set` | 1 | Already in the ledger through [ADR 0066][adr-0066] (E05-S14) |
+| One installation per host | 1 | The pilot shape ([ADR 0044][adr-0044]) |
+| `northmes company create`, `company add-admin`, `company list`, `installation show` and `installation set` | 1, once ADR 0066 is accepted | E05-S14 enters the ledger of [ADR 0055][adr-0055] through the change to ADR 0055 that [ADR 0066][adr-0066] proposes |
+| The CLI's write commands as `nm_app` and `nm_auth`, with their secrets in `migrate` | 1 | Part of `admin reset-password` and E05-S14, so no new ledger item |
 | `northmes admin reset-password` | 1 | [ADR 0011][adr-0011], [ADR 0066][adr-0066], E05-S05 |
 | The forced password change at the first sign-in | 1 | Rule 13 of [ADR 0051][adr-0051]; the new password step of design D2 (SI16 to SI18) |
 | `/health/live`, `/health/ready` and `/health` with the version | 1 | [ADR 0043][adr-0043], E16-S01 |
 | `upgrade.sh`, `rollback.sh` and the release manifest's rollback class | 1 | [ADR 0045][adr-0045] |
-| The rollback class and contract migrations in the release notes | 1, if the maintainer confirms | A step in the release workflow that copies the release manifest |
+| The rollback class and the schema compatibility number in the release notes | later | Trigger: a hosting partner, with the partner hosting docs; until then the release manifest in the bundle states both ([ADR 0045][adr-0045]) |
 | The partner hosting docs with the customer folder | later | Trigger of [ADR 0055][adr-0055]: a hosting partner |
 | The customer file and `northmes apply` | later | Trigger of [ADR 0066][adr-0066]: a hosting partner sets up companies and plants for several customers |
 | A metrics endpoint | later | Trigger: a hosting partner's or pilot IT's monitoring needs time series that the degraded list does not give |
@@ -184,12 +205,27 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 | Item | Trigger |
 |---|---|
 | Multi-tenant hosting: several customers in one installation | A decision that the project offers NorthMES as a hosted service. It needs a new ADR that supersedes this one and changes [ADR 0007][adr-0007] and rule 23 of [ADR 0051][adr-0051] |
-| Installations of several customers on one Postgres cluster, with a schema or database each | A hosting partner measures that one Postgres cluster per installation does not fit its hosts |
+| Installations of several customers on one Postgres cluster, with a schema or database each | Krister Johansson decides that his decision of 2026-10-09 allows it, and a hosting partner measures that one Postgres cluster per installation does not fit its hosts |
+| Several installations on one host | A hosting partner asks to run several customers on one host; it needs the per-installation addresses, paths and timers under [One installation per host](#one-installation-per-host) |
 | A central fleet console that registers, watches or upgrades installations | A hosting partner runs more installations than its own tools manage and asks for one |
 | Views across customers: reports, search or users that span installations | A partner asks for reporting across its customers; it would read each installation's reporting schema, which waits for a customer who asks for BI access ([01 product and scope](../plan/01-product-and-scope.md#out-of-release-1)) |
 | Creating companies in the UI, with installation roles | A partner must create companies without shell access to the host ([ADR 0066][adr-0066]) |
 | Onboarding data in the customer file: calendars, machines, planning rules | A partner sets up the same values for many plants |
 | `northmes upgrade` and the app repository | After 1.0 ([ADR 0055][adr-0055]) |
+
+### Parts of accepted ADRs this decision changes
+
+The parts below change when this ADR is accepted. The changed ADR stays accepted and its text unchanged; the rest of it stands.
+
+#### Changes to ADR 0060
+
+[ADR 0060][adr-0060], configuration:
+
+| Section | Before | After |
+|---|---|---|
+| The environment schema (`DATABASE_URL`) | "The login comes from the entry point: `nm_app` and `nm_auth` for the server, `nm_owner` for `migrate` and `admin`, the superuser for `db bootstrap`" | `nm_owner` for `northmes migrate`; `nm_app` and `nm_auth` for the CLI's write commands in the `migrate` container ([The logins of the CLI's write commands](#the-logins-of-the-clis-write-commands)) |
+| The environment schema (`NORTHMES_DB_APP_PASSWORD_FILE`, `NORTHMES_DB_AUTH_PASSWORD_FILE`) | read by "server" | read by the server and by the CLI's write commands in `migrate` |
+| Other entry points and tests | "If Better Auth needs its secret to create a user, the `migrate` service also receives `auth_secret`" | Unchanged for `auth_secret`; the `migrate` service also receives `db_app_password` and `db_auth_password` for the CLI's write commands |
 
 ### Consequences
 
@@ -199,6 +235,7 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 * Good, because a partner's customer folders, version control and monitoring work with any tool, and NorthMES ships one command and one file format for them.
 * Good, because the customer file never deletes, so a wrong or partial file cannot remove a company, a plant or an admin.
 * Good, because each customer is the controller of the data in its own installation, and a partner that hosts it is a processor for that installation alone ([12 operations and security](../plan/12-operations-and-security.md#gdpr-basics)).
+* Bad, because the `migrate` container holds the `nm_app` and `nm_auth` passwords beside the owner's, so whoever runs it on the host holds every database login of the installation.
 * Bad, because each installation runs its own Postgres cluster, backups, certificates and upgrades, so a partner pays per customer in hosts, memory and upgrade time.
 * Bad, because a partner builds its own loop over installations and its own dashboard from the health endpoints.
 * Bad, because a consultant who works for several customers has one account per installation.
@@ -206,11 +243,12 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 
 ### Confirmation
 
-* Plan review checklist item: a design that adds a scope node, table, column or setting above the company, or that lets two installations share a Postgres cluster or database, is refused with a link to this ADR.
+* Plan review checklist item: a design that adds a scope node, table, column or setting above the company, or that lets installations of two customers share a Postgres database, or a Postgres cluster while the planning session's reading stands, is refused with a link to this ADR.
+* `apps/backend/test/cli/reset-password.int.test.ts` (the first CLI write command) gains: "the CLI's command runs as nm_app under row-level security and Better Auth's write as nm_auth". The Compose contract test of [ADR 0047][adr-0047] also asserts that `migrate` has `db_app_password` and `db_auth_password`.
 * `apps/backend/test/health/ready.int.test.ts` (E16-S01) gains: "/health and /health/ready report the version that imageVersion() reads".
-* `apps/backend/test/cli/apply.int.test.ts`, with the task that builds `apply`: "apply creates the companies, admins and installation settings of the file, one command row with surface cli and principal core.cli each"; "a second apply of the same file writes nothing and exits 0"; "--dry-run writes no command row and lists create, update, unchanged and refused per entry"; "a company, plant or admin missing from the file is left as it is and listed in notInFile"; "a plant whose zone differs from the installation is refused with exit 3 before any write"; "a plugin list that differs from the running image exits 3 and changes nothing"; "a run that failed after Better Auth's write completes on the rerun and prints no password"; "the temporary password of a new admin appears once on standard output and in no command row, security event or log line".
+* `apps/backend/test/cli/apply.int.test.ts`, with the task that builds `apply`: "apply creates the companies, admins and installation settings of the file, one command row with surface cli and principal core.cli each"; "a second apply of the same file writes nothing and exits 0"; "--dry-run writes no command row and lists create, update, unchanged and refused per entry"; "a company, plant or admin missing from the file is left as it is and listed in notInFile"; "a plant whose zone differs from the installation is refused with exit 3 before any write"; "a plugin list that differs from the running image exits 3 and changes nothing"; "a run that failed after Better Auth's write completes on the rerun and prints no password"; "a new plant from apply writes one command row with principal core.cli and one security event cli.plant_created, although core.cli holds no role"; "the temporary password of a new admin appears once on standard output and in no command row, security event or log line".
 * `modules/core/contracts/test/customer-file.test.ts`, with the same task: "a customer file with a password key or any unknown key fails validation"; "an admin without an email fails validation".
-* Release workflow, if the maintainer confirms the release notes rule: the release job fails when the release text lacks the rollback class of the release manifest.
+* Release workflow, with the task that builds the release notes step: the release job fails when the release text lacks the rollback class or the schema compatibility number of the release manifest.
 
 ## Pros and cons of the options
 
@@ -237,7 +275,7 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 * Bad, because each module owns its Postgres schemas, such as `core`, `planning` and `auth` ([ADR 0002][adr-0002]), so a schema per customer would need every module schema once per customer and a migration runner that knows customers ([ADR 0006][adr-0006]).
 * Bad, because Postgres roles are cluster-wide, so the login roles `nm_owner`, `nm_app`, `nm_auth` and `nm_ext` ([12 operations and security](../plan/12-operations-and-security.md#install-and-bootstrap)) would need a set per customer, each with its own secret files.
 * Bad, because pgBackRest backs up and restores the whole cluster, so a restore for one customer rewinds the others ([ADR 0045][adr-0045]).
-* Bad, because Krister Johansson ruled out a database shared between customers.
+* Bad, because Krister Johansson ruled out a database shared between customers. The planning session reads that as covering a shared cluster with a database per customer too, which waits for his confirmation.
 
 ### Ordinary tools per installation
 
@@ -258,15 +296,17 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 
 ## More information
 
-* Related ADRs: [0002][adr-0002] module schemas, [0006][adr-0006] the migration runner, [0007][adr-0007] tenancy, [0011][adr-0011] principals and the CLI, [0013][adr-0013] audit, [0017][adr-0017] Zod contracts, [0037][adr-0037] plugins, [0038][adr-0038] releases, [0043][adr-0043] health, [0044][adr-0044] Compose and TLS, [0045][adr-0045] backups and upgrades, [0046][adr-0046] observability, [0047][adr-0047] secrets, [0051][adr-0051] rules 13, 14 and 23, [0055][adr-0055] scope, [0058][adr-0058] the developer stack, which is a developer's installation and not a partner tool, [0060][adr-0060] secret files, [0066][adr-0066] the company commands, [0070][adr-0070] one backend and Caddy serving the web.
-* This ADR changes no accepted ADR. It adds to the rule of [ADR 0007][adr-0007] and rule 23 of [ADR 0051][adr-0051] that no database is shared between customers.
-* Proposed ADRs to update before they are accepted: [0066][adr-0066] (`company create` takes a required `--admin-email` and `company add-admin` a required `--email` for a new user, and the `.invalid` placeholder goes, as #415 built for every user that `core.createUser` creates; its Hosting partners section links this ADR; the later item "`northmes plant create` and a declarative onboarding file" becomes the customer file and `northmes apply` here).
-* Plan documents to update once this ADR is accepted: [01 product and scope](../plan/01-product-and-scope.md#out-of-release-1) (the rows for partner hosting docs and the declarative onboarding file, and the new rows for metrics and the fleet console), [12 operations and security](../plan/12-operations-and-security.md#install-and-bootstrap) (the customer folder and the upgrade steps for partners) and the Hosting partner persona in the [plan README](../plan/README.md#personas).
+* Related ADRs: [0002][adr-0002] module schemas, [0006][adr-0006] the migration runner, [0007][adr-0007] tenancy, [0008][adr-0008] row-level security, [0011][adr-0011] principals and the CLI, [0013][adr-0013] audit, [0017][adr-0017] Zod contracts, [0037][adr-0037] plugins, [0038][adr-0038] releases, [0043][adr-0043] health, [0044][adr-0044] Compose and TLS, [0045][adr-0045] backups and upgrades, [0046][adr-0046] observability, [0047][adr-0047] secrets, [0051][adr-0051] rules 13, 14 and 23, [0055][adr-0055] scope, [0058][adr-0058] the developer stack, which is a developer's installation and not a partner tool, [0060][adr-0060] secret files, [0066][adr-0066] the company commands, [0070][adr-0070] one backend and Caddy serving the web.
+* This ADR changes one accepted ADR, [ADR 0060][adr-0060], under [Changes to ADR 0060](#changes-to-adr-0060). It adds to the rule of [ADR 0007][adr-0007] and rule 23 of [ADR 0051][adr-0051] that no database is shared between customers. It adds no row to the ledger of [ADR 0055][adr-0055]: the release notes step waits for a trigger, and E05-S14 enters the ledger through ADR 0066's change to ADR 0055 once ADR 0066 is accepted.
+* Open questions M-69 to M-76 in [16 open questions](../plan/16-open-questions.md#design-points-from-the-plan-documents) hold the parts under needs-confirmation and their working defaults.
+* Proposed ADRs to update before they are accepted: [0066][adr-0066] (`company create` takes a required `--admin-email` and `company add-admin` a required `--email` for a new user, and the `.invalid` placeholder goes, as #415 built for every user that `core.createUser` creates; its Hosting partners section links this ADR; the later item "`northmes plant create` and a declarative onboarding file" becomes the customer file and `northmes apply` here; the CLI's write commands run as `nm_app` and `nm_auth`, and the `migrate` service receives `db_app_password` and `db_auth_password`; `core.createPlant` and `core.updateCompany` from the CLI run as `core.cli` outside `can()`, with the security events `cli.plant_created` and `cli.company_updated`), [0047][adr-0047] (the `migrate` row of the secrets table gains `db_app_password` and `db_auth_password`).
+* Plan documents to update once this ADR is accepted: [01 product and scope](../plan/01-product-and-scope.md#out-of-release-1) (the rows for partner hosting docs and the declarative onboarding file, and the new rows for metrics and the fleet console), [12 operations and security](../plan/12-operations-and-security.md#install-and-bootstrap) (the customer folder, the upgrade steps for partners, and the `migrate` rows of the Compose and secrets tables) and the Hosting partner persona in the [plan README](../plan/README.md#personas).
 * Revisit when one of the triggers above fires, or when the project decides to offer a hosted service.
 
 [adr-0002]: 0002-modular-monolith-with-module-owned-schemas-and-process-roles.md
 [adr-0006]: 0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md
 [adr-0007]: 0007-tenancy-company-plants-and-the-scope-tree.md
+[adr-0008]: 0008-row-level-security-with-transaction-local-scopes.md
 [adr-0011]: 0011-principals-credentials-and-same-origin-rules.md
 [adr-0013]: 0013-audit-trail-written-in-the-command-transaction.md
 [adr-0017]: 0017-zod-contracts-as-the-single-source-for-inputs.md

@@ -223,6 +223,14 @@ The remaining administrator questions (installation, polling rate, response size
 | M-66 | May the notifications module declare plant-free fields, so that its bell works on company settings pages? | Decided when the notifications module is shaped; until then only core declares plant-free fields ([0066][adr-0066]) | [0068][adr-0068], [0066][adr-0066], [0067][adr-0067], 05, 06 |
 | M-67 | Do the `command.rejected` security event and the validator ids and versions on the audit row wait for the first regulated sale? | Yes; until then a veto leaves no row, because a rejected command rolls back ([0012][adr-0012]). The event would reuse the separate connection that `permission.denied` uses ([0013][adr-0013]) | [0068][adr-0068], [0051][adr-0051], [0013][adr-0013], 15 |
 | M-68 | Does ADR 0068 join the ADRs to accept before the walking skeleton's validator story (E02-S04) moves to Ready? | Yes; the alternative builds pieces 4 and 6 of ADR 0068 after the skeleton and keeps the veto shape of ADR 0037 until then | [0068][adr-0068], [0037][adr-0037], [0055][adr-0055], 03, 14 |
+| M-69 | Does the partner hosting docs' customer folder hold `northmes.version`, `compose.override.yaml`, `northmes.env`, `northmes.config.json`, `site.caddy`, `secrets.json`, `northmes.customer.json` and the site `Dockerfile`, with `pgbackrest.conf` kept with the secrets? | Yes, as ADR 0072 draws it; nothing is built until the partner hosting docs are | [0072][adr-0072], [0044][adr-0044], 12 |
+| M-70 | Is the customer file the JSON format of ADR 0072, validated by a Zod schema in core's contracts, and is its command named `northmes apply`? | Yes, as ADR 0072 draws it | [0072][adr-0072], [0066][adr-0066], [0017][adr-0017] |
+| M-71 | Do `northmes apply`, the partner hosting docs and the release notes step (the rollback class and schema compatibility number in the release text) wait for a hosting partner instead of entering release 1? | Yes; until then a partner scripts the ADR 0066 commands, and the release manifest in the bundle states the rollback class and the compatibility number | [0072][adr-0072], [0055][adr-0055], [0045][adr-0045], 01, 12 |
+| M-72 | Does a metrics endpoint wait until a hosting partner's or pilot IT's monitoring needs time series that the degraded list of `/health/ready` does not give? | Yes; release 1 serves no metrics endpoint | [0072][adr-0072], [0043][adr-0043], [0046][adr-0046], 12 |
+| M-73 | May several installations share one host? | No in release 1: one installation per host, because Caddy's address, the hostcheck paths and the backup directory are fixed per host; a partner runs one virtual machine per installation | [0072][adr-0072], [0044][adr-0044], 12 |
+| M-74 | Does the decision of 2026-10-09 (one installation per customer, no shared database) also rule out installations of several customers on one Postgres cluster with a database each? | Yes, the planning session's reading: pgBackRest restores a whole cluster, and the login roles are cluster-wide | [0072][adr-0072], [0045][adr-0045], 12 |
+| M-75 | Do the CLI's write commands run core's commands as `nm_app` and Better Auth's writes as `nm_auth`, with `db_app_password` and `db_auth_password` added to the `migrate` service? | Yes, so row-level security applies as in the app; `northmes migrate` keeps `nm_owner`, and `auth_secret` follows M-53 | [0072][adr-0072], [0060][adr-0060], [0047][adr-0047], [0066][adr-0066], 12 |
+| M-76 | Do `core.createPlant` and `core.updateCompany` from `northmes apply` run as `core.cli` on a CLI path outside `can()`, with the security events `cli.plant_created` and `cli.company_updated` (names proposed)? | Yes; only the CLI entry point in the migrate container reaches that path | [0072][adr-0072], [0066][adr-0066] |
 
 ### Later modules
 
@@ -242,6 +250,7 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0014]: ../adr/0014-outbox-event-log-and-pg-boss-jobs.md
 [adr-0015]: ../adr/0015-graphql-federation-inside-one-process-with-an-embedded-hive-gateway.md
 [adr-0016]: ../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md
+[adr-0017]: ../adr/0017-zod-contracts-as-the-single-source-for-inputs.md
 [adr-0018]: ../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md
 [adr-0019]: ../adr/0019-web-shell-with-react-module-federation-remotes.md
 [adr-0020]: ../adr/0020-frontend-libraries-tanstack-router-apollo-client-4-shadcn-ui-and-forms.md
@@ -280,3 +289,4 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md
 [adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md
 [adr-0068]: ../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md
+[adr-0072]: ../adr/0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md
