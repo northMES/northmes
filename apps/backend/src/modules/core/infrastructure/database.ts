@@ -46,6 +46,8 @@ export interface RoleTable {
 export interface RoleAssignmentTable {
   id: Generated<string>;
   user_id: string;
+  /** The company of both the scope node and the role. */
+  company_id: string;
   scope_id: string;
   role_id: string;
 }

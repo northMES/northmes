@@ -197,7 +197,8 @@ export function grantRoles(
       const roleId = rows[0]?.id;
       if (!roleId) throw new Error(`grantRoles: no scope ${scopeId} in core.scope`);
       await client.query(
-        'insert into core.role_assignment (user_id, scope_id, role_id) values ($1, $2, $3)',
+        `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
+         select $1, company_id, id, $3 from core.scope where id = $2`,
         [userId, scopeId, roleId],
       );
     }

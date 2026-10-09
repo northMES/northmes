@@ -173,7 +173,8 @@ async function seedAccess(ownerUrl) {
       [adminRoleId, seedScopes.company],
     );
     await client.query(
-      `insert into core.role_assignment (user_id, scope_id, role_id) values ($1, $2, $3)
+      `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
+       values ($1, $2, $2, $3)
        on conflict (user_id, scope_id, role_id) do nothing`,
       [id, seedScopes.company, adminRoleId],
     );
