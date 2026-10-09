@@ -19,9 +19,9 @@ export const plant = 'plant-a';
 
 /** The $plant route's component of the tests: the shell state of the plant in the URL. */
 function PlantStub() {
-  const { plant: plantId } = useParams({ strict: false });
+  const { plant } = useParams({ strict: false });
   return (
-    <ShellProvider value={{ plantId }}>
+    <ShellProvider value={{ plant }}>
       <main>
         <Outlet />
       </main>

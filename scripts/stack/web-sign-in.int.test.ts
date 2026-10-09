@@ -48,7 +48,7 @@ describe("the web's sign-in against the API", () => {
     const session = createAuthSession({ apiUrl: url, storage });
     const onUnauthenticated = vi.fn();
     const client = createNorthmesClient({
-      plantId: seedPlants[0]?.slug ?? '',
+      plant: seedPlants[0]?.slug ?? '',
       apiUrl: url,
       auth: { token: () => session.token(), onUnauthenticated },
     });

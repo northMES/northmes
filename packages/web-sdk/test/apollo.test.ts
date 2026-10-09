@@ -61,9 +61,18 @@ afterEach(() => {
 });
 
 describe('createNorthmesClient', () => {
-  it('E02-S05 createNorthmesClient sends the plant in x-northmes-plant over HTTP', async () => {
+  it('E04-S04 a client without a plant sends no x-northmes-plant, for the queries every plant shares', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
-    const client = createNorthmesClient({ plantId: 'plant-a', fetch });
+    const client = createNorthmesClient({ fetch });
+
+    await client.query({ query: gql`query Ping { ping }` });
+
+    expect(new Headers(fetch.mock.calls[0]?.[1]?.headers).has('x-northmes-plant')).toBe(false);
+  });
+
+  it('E02-S05 createNorthmesClient sends the plant slug in x-northmes-plant over HTTP', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
+    const client = createNorthmesClient({ plant: 'plant-a', fetch });
 
     await client.query({ query: gql`query Ping { ping }` });
 
@@ -75,7 +84,7 @@ describe('createNorthmesClient', () => {
   it('E02-S05 the graphql-ws client sends empty connectionParams', async () => {
     vi.stubGlobal('location', new URL('https://northmes.test/plant-a/planning/board'));
     const { WebSocket, sockets } = mockWebSocket();
-    const client = createNorthmesClient({ plantId: 'plant-a', webSocketImpl: WebSocket });
+    const client = createNorthmesClient({ plant: 'plant-a', webSocketImpl: WebSocket });
 
     const subscription = client.subscribe({ query: boardChanged }).subscribe(() => {});
     await vi.waitFor(() => expect(sockets).toHaveLength(1));
@@ -91,7 +100,7 @@ describe('createNorthmesClient', () => {
   it("E02-S05 the graphql-ws client connects to /graphql on the page's host, over wss on an https page", async () => {
     vi.stubGlobal('location', new URL('https://northmes.test:8443/plant-a/planning/board'));
     const { WebSocket, sockets } = mockWebSocket();
-    const client = createNorthmesClient({ plantId: 'plant-a', webSocketImpl: WebSocket });
+    const client = createNorthmesClient({ plant: 'plant-a', webSocketImpl: WebSocket });
 
     const subscription = client.subscribe({ query: boardChanged }).subscribe(() => {});
     await vi.waitFor(() => expect(sockets).toHaveLength(1));
@@ -106,7 +115,7 @@ describe('createNorthmesClient', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
     const { WebSocket, sockets } = mockWebSocket();
     const client = createNorthmesClient({
-      plantId: 'plant-a',
+      plant: 'plant-a',
       apiUrl: 'https://api.northmes.test/mes',
       fetch,
       webSocketImpl: WebSocket,
@@ -125,7 +134,7 @@ describe('createNorthmesClient', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
     const tokens = ['jwt-1', 'jwt-2'];
     const client = createNorthmesClient({
-      plantId: 'plant-a',
+      plant: 'plant-a',
       fetch,
       auth: { token: async () => tokens.shift(), onUnauthenticated: () => {} },
     });
@@ -142,7 +151,7 @@ describe('createNorthmesClient', () => {
   it('E05-S05 with auth and no token, the request goes without an authorization header', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => graphqlResponse({ ping: 'pong' }));
     const client = createNorthmesClient({
-      plantId: 'plant-a',
+      plant: 'plant-a',
       fetch,
       auth: { token: async () => undefined, onUnauthenticated: () => {} },
     });
@@ -164,7 +173,7 @@ describe('createNorthmesClient', () => {
     );
     const onUnauthenticated = vi.fn();
     const client = createNorthmesClient({
-      plantId: 'plant-a',
+      plant: 'plant-a',
       fetch,
       auth: { token: async () => 'jwt-1', onUnauthenticated },
     });
@@ -189,7 +198,7 @@ describe('createNorthmesClient', () => {
       .mockResolvedValueOnce(answerWith('UNAUTHENTICATED'));
     const onUnauthenticated = vi.fn();
     const client = createNorthmesClient({
-      plantId: 'plant-a',
+      plant: 'plant-a',
       fetch,
       auth: { token: async () => 'jwt-1', onUnauthenticated },
     });

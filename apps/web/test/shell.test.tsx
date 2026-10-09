@@ -36,8 +36,8 @@ afterEach(() => {
 
 /** A screen whose h1 cannot take focus, as the board stub's. */
 function BoardScreen() {
-  const { plantId } = useShell();
-  return <h1>Board of {plantId}</h1>;
+  const { plant } = useShell();
+  return <h1>Board of {plant}</h1>;
 }
 
 /** A list screen in a page frame, with a page action and a control in its content. */
@@ -51,11 +51,11 @@ function OrdersScreen() {
 
 /** A detail screen in a page frame, under its list's crumb. */
 function OrderScreen() {
-  const { plantId } = useShell();
+  const { plant } = useShell();
   return (
     <PageFrame
       title="Order 1001"
-      crumbs={[{ label: 'Production orders', href: `/${plantId}/planning/orders` }]}
+      crumbs={[{ label: 'Production orders', href: `/${plant}/planning/orders` }]}
     >
       <p>Order 1001</p>
     </PageFrame>
