@@ -90,9 +90,9 @@ describe('classifyError', () => {
   });
 
   it('E04-S07 an error that came from no request is a render error (D2 ST6)', () => {
-    expect(classifyError(new TypeError("Cannot read properties of undefined (reading 'id')"))).toEqual(
-      { page: 'render' },
-    );
+    expect(
+      classifyError(new TypeError("Cannot read properties of undefined (reading 'id')")),
+    ).toEqual({ page: 'render' });
     expect(classifyError('thrown text')).toEqual({ page: 'render' });
   });
 });

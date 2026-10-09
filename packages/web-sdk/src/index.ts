@@ -4,6 +4,7 @@ export {
   createNorthmesClient,
   type NorthmesClientAuth,
 } from './apollo.ts';
+export { type ClassifiedError, classifyError, type ErrorPage } from './classify-error.ts';
 export {
   companySettingsHref,
   createShellRoutes,
