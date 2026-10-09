@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { createAuthClient } from 'better-auth/client';
-import { jwtClient, usernameClient } from 'better-auth/client/plugins';
+import { jwtClient } from 'better-auth/client/plugins';
 
 /** Where Better Auth answers below the API's URL. */
 const authPath = 'api/auth';
@@ -31,8 +31,11 @@ export type SignInResult =
 export interface AuthSession {
   /** The signed-in user, or undefined when nobody is signed in in this tab. */
   user(): SignedInUser | undefined;
-  /** Signs in with a username, or with an email when the login holds an @. */
-  signIn(login: string, password: string): Promise<SignInResult>;
+  /**
+   * Signs in with an email and a password. The API's username sign-in is disabled: a user signs in
+   * on the web with their email only.
+   */
+  signIn(email: string, password: string): Promise<SignInResult>;
   /** Ends the session at the API and forgets it in this tab. */
   signOut(): Promise<void>;
   /** Forgets the session in this tab, as after a 401, without calling the API. */
@@ -79,7 +82,7 @@ interface Jwt {
 function authClientFor({ apiUrl, fetch }: AuthSessionOptions, sessionToken: () => string) {
   return createAuthClient({
     baseURL: new URL(authPath, apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`).href,
-    plugins: [usernameClient(), jwtClient()],
+    plugins: [jwtClient()],
     fetchOptions: {
       credentials: 'omit',
       auth: { type: 'Bearer', token: sessionToken },
@@ -164,7 +167,7 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
   return {
     user: () => stored?.user,
 
-    async signIn(login, password) {
+    async signIn(email, password) {
       forget();
       let token: string | null = null;
       let retryAfter: string | null = null;
@@ -177,10 +180,7 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
         },
       };
       // Better Fetch rejects when the request never reaches the API, as on a lost connection.
-      const answer = await (login.includes('@')
-        ? client.signIn.email({ email: login, password }, hooks)
-        : client.signIn.username({ username: login, password }, hooks)
-      ).catch(() => undefined);
+      const answer = await client.signIn.email({ email, password }, hooks).catch(() => undefined);
       if (answer === undefined) return { ok: false, reason: 'failed' };
       const { data, error } = answer;
       if (error !== null) return refusal(error.status, error.code, retryAfter);
@@ -193,7 +193,7 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
         token: sessionToken,
         user: {
           name: user.name,
-          username: typeof user.username === 'string' ? user.username : login,
+          username: typeof user.username === 'string' ? user.username : email,
         },
       };
       storage.setItem(storageKey, JSON.stringify(stored));

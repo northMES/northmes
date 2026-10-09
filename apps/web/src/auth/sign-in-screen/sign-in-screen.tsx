@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { CircleCheck } from 'lucide-react';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 import { ErrorSummary, type SummaryError } from '../../ui/components/error-summary/index.ts';
 import { SkipLink } from '../../ui/components/skip-link/index.ts';
 import { TextField } from '../../ui/components/text-field/index.ts';
@@ -27,17 +28,30 @@ type Refusal = Exclude<SignInResult, { ok: true }>;
 
 /** What the last submit came to: the fields' errors or the API's refusal. */
 type Problem =
-  | { readonly kind: 'fields'; readonly login?: string; readonly password?: string }
+  | { readonly kind: 'fields'; readonly email?: string; readonly password?: string }
   | { readonly kind: 'refused'; readonly refusal: Refusal };
+
+/** An email address as the API checks it at /sign-in/email. */
+const emailAddress = z.email();
+
+/** The error of Email: empty, or not an email address, such as a username. */
+function emailError(email: string): string | undefined {
+  if (email === '') return 'Enter your email.';
+  if (!emailAddress.safeParse(email).success) {
+    return 'Enter an email address, such as name@example.com.';
+  }
+  return undefined;
+}
 
 /** The summary's heading and entries for a problem (the D2 sign-in copy list). */
 function summaryOf(problem: Problem): { heading: string; errors: SummaryError[] } {
   switch (problem.kind) {
     case 'fields': {
       const errors: SummaryError[] = [
-        ...(problem.login === undefined
+        ...(problem.email === undefined
           ? []
-          : [{ name: 'username', message: 'Enter your username or email' }]),
+          : // The summary link is the field's error without its period.
+            [{ name: 'email', message: problem.email.replace(/\.$/, '') }]),
         ...(problem.password === undefined
           ? []
           : [{ name: 'password', message: 'Enter your password' }]),
@@ -55,7 +69,7 @@ function refusalSummary(refusal: Refusal): { heading: string; errors: SummaryErr
   switch (refusal.reason) {
     case 'wrong-credentials':
       return {
-        heading: 'The username or password is wrong',
+        heading: 'The email or password is wrong',
         errors: [
           { message: 'Passwords are case-sensitive.' },
           { name: 'password', message: 'Enter your password again' },
@@ -84,13 +98,15 @@ function refusalSummary(refusal: Refusal): { heading: string; errors: SummaryErr
 
 /**
  * The sign-in page (D2, SI1 to SI9 and SI19): outside the planner shell, a card with the h1, the
- * error summary, Username or email, Password and Sign in. Enter in a field submits. A submit with
- * empty fields or a refusal from the API moves focus to the summary; a wrong password keeps the
- * username and clears the password. After Sign out, focus goes to the h1 and the polite region
- * says "You are signed out." once.
+ * error summary, Email, Password and Sign in. A user signs in on the web with their email only, as
+ * the maintainer decided; a person without email signs in with a badge at the operator station.
+ * Enter in a field submits. A submit with an empty field, an Email that is no email address, or a
+ * refusal from the API moves focus to the summary; a wrong password keeps the email and clears the
+ * password. After Sign out, focus goes to the h1 and the polite region says "You are signed out."
+ * once.
  */
 export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInScreenProps) {
-  const [login, setLogin] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [problem, setProblem] = useState<Problem | undefined>(undefined);
   const [submits, setSubmits] = useState(0);
@@ -119,16 +135,17 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
       setProblem(next);
       setSubmits((count) => count + 1);
     };
-    const empty = {
-      ...(login.trim() === '' ? { login: 'Enter your username or email.' } : {}),
+    const emailProblem = emailError(email.trim());
+    const fields = {
+      ...(emailProblem === undefined ? {} : { email: emailProblem }),
       ...(password === '' ? { password: 'Enter your password.' } : {}),
     };
-    if (Object.keys(empty).length > 0) {
-      failWith({ kind: 'fields', ...empty });
+    if (Object.keys(fields).length > 0) {
+      failWith({ kind: 'fields', ...fields });
       return;
     }
     busy.current = true;
-    const result = await session.signIn(login.trim(), password).finally(() => {
+    const result = await session.signIn(email.trim(), password).finally(() => {
       busy.current = false;
     });
     if (result.ok) {
@@ -185,14 +202,15 @@ export function SignInScreen({ session, signedOut = false, onSignedIn }: SignInS
             )}
             <form noValidate onSubmit={submit} className="flex flex-col gap-5">
               <TextField
-                label="Username or email"
-                name="username"
+                label="Email"
+                name="email"
+                type="email"
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
-                value={login}
-                onChange={(event) => setLogin(event.target.value)}
-                error={fieldErrors?.login}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                error={fieldErrors?.email}
               />
               <TextField
                 label="Password"
