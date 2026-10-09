@@ -38,8 +38,6 @@ export const disabledPaths: readonly string[] = [
   '/api-key/update',
   '/api-key/delete',
   '/api-key/list',
-  '/api-key/verify',
-  '/api-key/delete-all-expired-api-keys',
   '/is-username-available',
   '/sign-up/email',
 ];

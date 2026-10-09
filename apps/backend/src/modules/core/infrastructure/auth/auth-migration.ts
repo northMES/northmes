@@ -15,7 +15,7 @@ import { AUTH_SCHEMA, authOptions } from './auth-options.ts';
  * A Postgres dialect that sends nothing: every statement returns no rows, so Better Auth's
  * introspection finds an empty database and plans every table.
  */
-const emptyPostgres: Dialect = {
+export const emptyPostgres: Dialect = {
   createAdapter: () => new PostgresAdapter(),
   createDriver: () => new DummyDriver(),
   createIntrospector: (db: Kysely<unknown>): DatabaseIntrospector => new PostgresIntrospector(db),
