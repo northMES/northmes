@@ -2,6 +2,7 @@
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
+import { readSecrets, secretsConfig } from '@northmes/sdk/config';
 import { printSchema } from 'graphql';
 import { AppModule } from '../app.module.ts';
 import { importServers, inRepoCatalog } from '../boot/boot.ts';
