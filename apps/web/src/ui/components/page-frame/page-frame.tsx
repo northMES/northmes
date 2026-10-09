@@ -247,13 +247,18 @@ export function PageFrame({
   }, [state.status]);
   // Try again (shell-306, SE7): the error state stays, busy, until the request settles and the
   // page has its next state. Then focus moves to the h1 when the page loaded, or stays on Try again
-  // when it failed again, and the polite region says so once.
+  // when it failed again, and the polite region says so once, and that the correlation id changed
+  // when the new one differs from the one shown before.
   const [retry, setRetry] = useState<Retry | undefined>(undefined);
   useEffect(() => {
     if (retry === undefined || !retry.settled || state.status === 'loading') return;
     setRetry(undefined);
     if (state.status === 'error') {
-      const changed = correlationIdOf(state) === undefined ? '' : ' The correlation id changed.';
+      const id = correlationIdOf(state);
+      const changed =
+        id === undefined || id === correlationIdOf(retry.from)
+          ? ''
+          : ' The correlation id changed.';
       announce(`Still ${inSentence(state.title)}.${changed}`);
     } else {
       requestAnimationFrame(() => heading.current?.focus());
