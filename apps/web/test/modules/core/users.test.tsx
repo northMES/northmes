@@ -554,7 +554,7 @@ describe('users', () => {
     const table = await screen.findByRole('table', { name: 'Users' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
 
-    await events.click(screen.getByRole('button', { name: 'Role' }));
+    await events.click(await screen.findByRole('button', { name: 'Role' }));
     await events.click(await screen.findByRole('menuitemradio', { name: 'Shift lead' }));
     await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
     expect(router.state.location.search).toEqual({ role: shiftLead.id });
