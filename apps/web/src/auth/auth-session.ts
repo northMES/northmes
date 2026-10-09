@@ -70,12 +70,18 @@ interface Jwt {
   readonly expiresAt: number;
 }
 
-/** Better Auth's endpoints for the session: sign-in, the JWT and sign-out. */
+/**
+ * Better Auth's endpoints for the session: sign-in, the JWT and sign-out. The requests omit
+ * credentials, which Better Auth's client would otherwise include: the browser then neither sends
+ * nor stores Better Auth's session cookie, which would outlive the tab, and the bearer header
+ * alone carries the session.
+ */
 function authClientFor({ apiUrl, fetch }: AuthSessionOptions, sessionToken: () => string) {
   return createAuthClient({
     baseURL: new URL(authPath, apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`).href,
     plugins: [usernameClient(), jwtClient()],
     fetchOptions: {
+      credentials: 'omit',
       auth: { type: 'Bearer', token: sessionToken },
       ...(fetch === undefined ? {} : { customFetchImpl: fetch }),
     },
@@ -96,13 +102,19 @@ function readStored(storage: Storage): StoredSession | undefined {
   }
 }
 
-/** When a JWT expires, from its exp claim, in milliseconds; 0 when it carries none. */
-function expiryOf(token: string): number {
+/**
+ * When a JWT expires by the browser's clock, in milliseconds: `requestedAt`, when the session asked for it, plus its lifetime, exp
+ * minus iat. The server's clock signs both claims, so a terminal whose clock runs behind or ahead
+ * of the server's still renews the JWT 30 seconds before the server counts it expired. 0 when the
+ * JWT carries no exp or iat, so the next token() mints again.
+ */
+function expiryOf(token: string, requestedAt: number): number {
   try {
     const payload = token.split('.')[1] ?? '';
     const base64 = payload.replaceAll('-', '+').replaceAll('_', '/');
-    const { exp } = JSON.parse(atob(base64)) as { exp?: unknown };
-    return typeof exp === 'number' ? exp * 1000 : 0;
+    const { exp, iat } = JSON.parse(atob(base64)) as { exp?: unknown; iat?: unknown };
+    if (typeof exp !== 'number' || typeof iat !== 'number') return 0;
+    return requestedAt + (exp - iat) * 1000;
   } catch {
     return 0;
   }
@@ -143,9 +155,10 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
   };
 
   const mint = async (): Promise<Jwt | undefined> => {
+    const requestedAt = now();
     const { data } = await client.token();
     if (data === null || typeof data.token !== 'string') return undefined;
-    return { token: data.token, expiresAt: expiryOf(data.token) };
+    return { token: data.token, expiresAt: expiryOf(data.token, requestedAt) };
   };
 
   return {
