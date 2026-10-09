@@ -3,6 +3,7 @@ import { HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/commo
 import {
   archiveArticle,
   createArticle,
+  type findArticles,
   restoreArticle,
   setArticlePlants,
   updateArticle,
@@ -11,12 +12,13 @@ import {
 import { COMMAND_BUS, type CommandBus, parseCommandInput } from '@northmes/sdk/commands';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError } from '@northmes/sdk/errors';
-import type { Connection } from '@northmes/sdk/lists';
+import type { Connection, ListPage } from '@northmes/sdk/lists';
 import { type SqlBool, sql, type Transaction } from 'kysely';
+import type { z } from 'zod';
 import { currentPrincipal } from '../../../principal.ts';
 import { type ArticleListArgs, articleList } from '../api/article/queries/article.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
-import { readIn, requestScope } from './access/request-scope.ts';
+import { type RequestScope, readIn, requestScope } from './access/request-scope.ts';
 import { type ArticleRecord, selectArticles } from './article-record.ts';
 import { ArchiveArticleCommand } from './commands/archive-article.handler.ts';
 import { CreateArticleCommand } from './commands/create-article.handler.ts';
@@ -38,6 +40,9 @@ export interface ArticleListScope {
 /** A query on core.article, as the list kit and the reference check take it. */
 type ArticleQuery = ReturnType<typeof selectArticles>;
 
+/** What core.findArticles asks of a page (ADR 0073). */
+export type FindArticlesInput = z.output<typeof findArticles.input>;
+
 /** The articles a plant may pick: those assigned to it or to All plants (ADR 0073). */
 function assignedTo(query: ArticleQuery, plantId: string): ArticleQuery {
   return query.where(
@@ -53,6 +58,25 @@ function unassigned(query: ArticleQuery): ArticleQuery {
     sql<SqlBool>`not core.article.all_plants and not exists (
       select 1 from core.article_plant ap where ap.article_id = core.article.id)`,
   );
+}
+
+/** The filter fields of the articles list (ADR 0073). */
+interface ArticleFilters {
+  readonly code?: string | undefined;
+  readonly unassigned?: boolean | undefined;
+}
+
+/**
+ * The articles a list reads where `scope` reads: those of its company, at a plant only those
+ * assigned to it or to All plants, narrowed by the filter fields.
+ */
+function listed(scope: RequestScope, filters: ArticleFilters) {
+  return (tx: Transaction<CoreDatabase>) => {
+    let rows = selectArticles(tx).where('company_id', '=', scope.companyId);
+    if (scope.plantId !== undefined) rows = assignedTo(rows, scope.plantId);
+    if (filters.code !== undefined) rows = rows.where('code', '=', filters.code);
+    return filters.unassigned === true ? unassigned(rows) : rows;
+  };
 }
 
 /**
@@ -146,14 +170,31 @@ export class ArticleService {
     { companyId, unassigned: onlyUnassigned }: ArticleListScope = {},
   ): Promise<Connection<ArticleRecord>> {
     const scope = requestScope('core.article:read', companyId);
-    const query = (tx: Transaction<CoreDatabase>) => {
-      let rows = selectArticles(tx).where('company_id', '=', scope.companyId);
-      if (scope.plantId !== undefined) rows = assignedTo(rows, scope.plantId);
-      return onlyUnassigned === true ? unassigned(rows) : rows;
-    };
+    const query = listed(scope, { unassigned: onlyUnassigned });
     const page = await readIn(scope, () => articleList.page(this.db, query, args));
     // totalCount counts later, in its own resolver, so it reads where the page did.
     return { ...page, count: () => readIn(scope, () => page.count()) };
+  }
+
+  /**
+   * One page of the articles as core.findArticles asks (ADR 0073): the articles list reads, with
+   * the filter fields code (exact match) and unassigned, answered as nodes and pageInfo. Without a
+   * plant it reads the company the request's principal acts at.
+   */
+  async find(input: FindArticlesInput): Promise<ListPage<ArticleRecord>> {
+    const scope = requestScope('core.article:read');
+    const query = listed(scope, input);
+    return readIn(scope, () => articleList.find(this.db, query, input));
+  }
+
+  /**
+   * The article with this id among the articles of the company, as byId reads it, or Nest's
+   * NotFoundException when there is none (ADR 0073).
+   */
+  async byIdOrThrow(id: string): Promise<ArticleRecord> {
+    const article = await this.byId(id);
+    if (!article) throw new NotFoundException(`Article ${id} was not found`);
+    return article;
   }
 
   /** Creates an article: core.createArticle with this input. */

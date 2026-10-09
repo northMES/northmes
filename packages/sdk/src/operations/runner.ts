@@ -97,7 +97,7 @@ function refusal(status: 400 | 404, code: string, message: string, fieldErrors?:
  * that status and keeps its message; anything else is core.internal with the correlation id, and
  * the runner reports it.
  */
-function toOperationError(
+export function operationError(
   error: unknown,
   correlationId: string,
   report: OperationPorts['report'],
@@ -206,6 +206,6 @@ export async function runOperation(
       : encoded;
     return { ok: true, status: statusOf(operation, created), value };
   } catch (error) {
-    return { ok: false, error: toOperationError(error, correlationId, ports.report) };
+    return { ok: false, error: operationError(error, correlationId, ports.report) };
   }
 }

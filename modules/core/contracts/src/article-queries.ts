@@ -13,10 +13,14 @@ import { z } from 'zod';
  * An article's plants as the operations answer them: the slugs of the plants it is assigned to,
  * from the plants a service hands out. Empty for an article assigned to All plants.
  */
-const plantSlugs = z.codec(z.array(z.string()), z.array(z.object({ slug: z.string() })), {
-  decode: (slugs) => slugs.map((slug) => ({ slug })),
-  encode: (plants) => plants.map(({ slug }) => slug),
-});
+const plantSlugs = z.codec(
+  z.array(z.string()),
+  z.array(z.object({ slug: z.string() })).readonly(),
+  {
+    decode: (slugs) => slugs.map((slug) => ({ slug })),
+    encode: (plants) => plants.map(({ slug }) => slug),
+  },
+);
 
 /**
  * An article as core's operations answer it, the component CoreArticle of the public API

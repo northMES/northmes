@@ -11,7 +11,7 @@ const outsideTexts = z.registry<{ readonly outsideText: true }>();
  * plain string on REST. The mark sits on the schema it returns, so refine the string before
  * marking it: outsideText(z.string().max(200)), not outsideText().max(200).
  */
-export function outsideText<Schema extends z.ZodString>(
+export function outsideText<Schema extends z.ZodString = z.ZodString>(
   schema: Schema = z.string() as Schema,
 ): Schema {
   outsideTexts.add(schema as z.ZodString, { outsideText: true });

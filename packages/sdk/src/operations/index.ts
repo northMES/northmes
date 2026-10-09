@@ -22,6 +22,7 @@ export {
   type OperationError,
   type OperationPorts,
   type OperationResult,
+  operationError,
   type RunnableOperation,
   runOperation,
   type Surface,

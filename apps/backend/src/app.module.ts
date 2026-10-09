@@ -8,6 +8,7 @@ import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
 import { GraphqlModule } from './graphql/graphql.module.ts';
 import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
 import { WebOriginsModule } from './http/web-origins.module.ts';
+import { OperationsModule } from './operations/operations.module.ts';
 import { WebModule } from './web/web.module.ts';
 
 /**
@@ -43,7 +44,8 @@ export class AppModule {
    * Imports config first: the ConfigModule that boot created before it imported any plugin
    * manifest (ADR 0060). Then the web origins and the origin rule that runs before every route,
    * the database that `options.database` names (the nm_app pool and the
-   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the Nest module of
+   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the operation
+   * runner with the operations every module binds, the Nest module of
    * every in-repo module and plugin in boot order, and the GraphQL module that builds one schema from their resolvers and serves it on
    * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
    * module's prefix throws one BootError before Nest builds anything. The SDK's exception filter is
@@ -67,6 +69,7 @@ export class AppModule {
         WebOriginsModule.forRoot(webOrigins),
         DatabaseModule.forRoot(database),
         CommandsModule.forRoot(servers),
+        OperationsModule.forRoot(servers),
         ...servers.map((server) => server.module),
         ...(declaresQuery ? [GraphqlModule] : []),
         WebModule,

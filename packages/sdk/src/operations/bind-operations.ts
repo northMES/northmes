@@ -13,9 +13,12 @@ export interface OperationContext {
 /** The parsed input of an operation. */
 type InputOf<Entry extends OperationEntry> = z.output<Entry['contract']['input']>;
 
-/** What a handler answers, before the runner encodes it with the operation's output schema. */
+/**
+ * What a handler answers: the output schema's decoded side, such as a Date where JSON carries a
+ * string, which the runner encodes with the schema.
+ */
 type AnswerOf<Entry> = Entry extends { readonly output: infer Output extends z.ZodType }
-  ? z.input<Output>
+  ? z.output<Output>
   : unknown;
 
 /**
