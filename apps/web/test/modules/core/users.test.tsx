@@ -16,6 +16,7 @@ import {
   companiesQuery,
   companyId,
   forbiddenError,
+  groupedRows,
   idOf,
   person,
   plantA,
@@ -823,6 +824,61 @@ describe('users', () => {
     expect(
       await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
     ).toBeDefined();
+  });
+
+  it('E05-S08 after New user gives a first role, the roles list read before it counts the new holder', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === plantA.id,
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: {
+                ...tove,
+                blocked: false,
+                roleAssignments: [
+                  { ...assignment(viewerRole, plantA), user: { __typename: 'User', id: tove.id } },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Plant A only' }));
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
+
+    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    const table = await screen.findByRole('table', { name: 'Roles' });
+    await waitFor(() =>
+      expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([
+        ['Viewer', 'Planning', '1 of 6', '2 people'],
+      ]),
+    );
   });
 
   it('E05-S08 a role the server refuses at the place lands on Role with every value kept', async () => {
