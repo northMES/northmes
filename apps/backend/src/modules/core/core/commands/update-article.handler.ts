@@ -9,8 +9,8 @@ import type { CoreContext } from './context.ts';
 /**
  * The handler of core.updateArticle (ADR 0012), which the bus checks at the article's edit scope
  * (ADR 0073). It changes the article's code and name, and its stock unit and note when the input
- * names them, and returns it with its new version. An
- * archived article is refused with core.archived.
+ * names them, and returns it with its new version. An archived article is refused with
+ * core.archived.
  */
 export const updateArticleHandler = {
   target: articleTarget,
