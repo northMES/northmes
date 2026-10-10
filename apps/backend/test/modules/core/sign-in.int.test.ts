@@ -324,6 +324,31 @@ describe('sign-in with Better Auth', () => {
     expect(await jwtOf(email, 'a new password of mine')).toMatch(/^Bearer \S+\.\S+\.\S+$/);
   });
 
+  it('E05-S08 setting a new password ends every other session of the user, so a session opened with the temporary password mints no JWT, and the caller keeps theirs', async () => {
+    const { email, temporaryPassword } = await temporaryUser();
+    const callerSession = await sessionTokenOf({ email, password: temporaryPassword });
+    const otherSession = await sessionTokenOf({ email, password: temporaryPassword });
+    const caller = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${callerSession}` },
+    });
+    const { token } = (await caller.json()) as { token: string };
+
+    const saved = await setNewPassword(
+      `Bearer ${token}`,
+      temporaryPassword,
+      'a new password of mine',
+    );
+    const [other, callerAgain] = await Promise.all(
+      [otherSession, callerSession].map((session) =>
+        fetch(`${url}/api/auth/token`, { headers: { authorization: `Bearer ${session}` } }),
+      ),
+    );
+
+    expect(saved.status).toBe(200);
+    expect(other?.status).toBe(401);
+    expect(callerAgain?.status).toBe(200);
+  });
+
   it('E05-S08 a new password equal to the temporary one, or shorter than 8 characters, is refused, and the request still needs a new password', async () => {
     const { email, temporaryPassword } = await temporaryUser();
     const authorization = await jwtOf(email, temporaryPassword);
