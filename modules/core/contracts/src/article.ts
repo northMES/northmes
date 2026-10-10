@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-import { defineCommandContract, version } from '@northmes/contracts';
+import { defineCommandContract, stockUnit, version } from '@northmes/contracts';
 import { z } from 'zod';
-import { tooLong } from './messages.ts';
+import { atMost, tooLong } from './messages.ts';
 import { plantSlug } from './plant.ts';
 import { settingsCompanyId } from './role.ts';
 
@@ -23,6 +23,27 @@ export const articleFields = z.object({
     .trim()
     .min(1, 'Enter a name.')
     .max(200, { error: tooLong('Name', 200) }),
+});
+
+/**
+ * An article's note, trimmed, at most 2000 characters. An empty note is none, so a form clears the
+ * note by sending it empty.
+ */
+export const articleNote = z
+  .string()
+  .trim()
+  .max(2000, { error: atMost('Note', 2000) })
+  .transform((note) => (note === '' ? null : note));
+
+/**
+ * The fields that classify an article, which create, update and upsert share (design ui-222,
+ * DE7): its stock unit, a code of the unit catalog in which its quantities are counted (ADR 0023),
+ * and its note. Each may be left out: a new article then counts in pieces and has no note, and an
+ * existing one keeps what it has.
+ */
+export const articleClassification = z.object({
+  stockUnit: stockUnit.optional(),
+  note: articleNote.optional(),
 });
 
 /** The refusal of All plants together with a list of plants. */
@@ -50,6 +71,7 @@ export const createArticle = defineCommandContract({
   name: 'core.createArticle',
   target: 'new',
   fields: articleFields
+    .extend(articleClassification.shape)
     .extend({
       allPlants: z.boolean().optional(),
       plants: z.array(plantSlug).optional(),
@@ -63,14 +85,14 @@ export const createArticle = defineCommandContract({
 });
 
 /**
- * Changes the code and name of an article, which the input names by id with the version the change
- * was made on. A stale version is refused with core.version_conflict, and a code that another
+ * Changes the code and name of an article, and its stock unit and note when the input names them,
+ * which the input names by id with the version the change was made on. A stale version is refused with core.version_conflict, and a code that another
  * article of the company uses with core.code_taken.
  */
 export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',
   target: 'existing',
-  fields: articleFields,
+  fields: articleFields.extend(articleClassification.shape),
   permission: 'core.article:update',
 });
 
@@ -111,12 +133,26 @@ export const setArticlePlants = defineCommandContract({
 });
 
 /**
+ * The integration that sends an article through core.upsertArticle, such as Pyramid, trimmed, 1
+ * to 64 characters. It names the integration until integration tokens, whose principal names it,
+ * arrive (ADR 0073).
+ */
+export const articleSource = z
+  .string()
+  .trim()
+  .min(1, 'Name the integration that sends the article.')
+  .max(64, { error: tooLong('Source', 64) });
+
+/**
  * Creates or changes the article with this article number in the company, for an ERP that pushes
  * its articles (ADR 0073). Without one, it creates the article under `id`, as core.createArticle
  * does, also for its plants. With an active one, it renames it when `name` differs, which needs
  * core.article:update at the article's edit scope, and replaces its plants when the input names
  * other ones, which needs core.article:assign at the company; an input without plants leaves them
- * as they are. A rename checks `expectedVersion`, or the version it found. An archived article is
+ * as they are; a stock unit or a note the input names replaces the article's, which also needs
+ * core.article:update. `source` names the integration that sends the article, which a new article
+ * keeps as where it came from; it never changes an existing article's source. A change checks
+ * `expectedVersion`, or the version it found. An archived article is
  * refused with core.archived. The bus checks core.article:create where a new article would be
  * edited, also when the article exists.
  */
@@ -124,8 +160,10 @@ export const upsertArticle = defineCommandContract({
   name: 'core.upsertArticle',
   target: 'none',
   fields: articleFields
+    .extend(articleClassification.shape)
     .extend({
       id: z.uuid(),
+      source: articleSource,
       allPlants: z.boolean().optional(),
       plants: z.array(plantSlug).optional(),
       expectedVersion: version.optional(),

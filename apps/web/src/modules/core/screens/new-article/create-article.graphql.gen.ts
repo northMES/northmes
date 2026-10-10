@@ -10,7 +10,9 @@ export type CoreCreateArticleInput = {
   readonly companyId?: string | null | undefined;
   readonly id: string | number;
   readonly name: string;
+  readonly note?: string | null | undefined;
   readonly plants?: ReadonlyArray<string> | null | undefined;
+  readonly stockUnit?: string | null | undefined;
 };
 
 export type CoreCreateArticleMutationVariables = Exact<{

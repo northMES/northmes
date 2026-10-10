@@ -120,7 +120,9 @@ describe("an article's stock unit, note, source and creation time", () => {
 
     expect(answer.errors?.[0]?.extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
-      fieldErrors: [{ path: ['note'], message: 'Note can be at most 2000 characters. It has 2001.' }],
+      fieldErrors: [
+        { path: ['note'], message: 'Note can be at most 2000 characters. It has 2001.' },
+      ],
     });
   });
 

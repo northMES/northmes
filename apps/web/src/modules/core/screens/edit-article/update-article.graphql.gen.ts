@@ -9,6 +9,8 @@ export type CoreUpdateArticleInput = {
   readonly expectedVersion: number;
   readonly id: string | number;
   readonly name: string;
+  readonly note?: string | null | undefined;
+  readonly stockUnit?: string | null | undefined;
 };
 
 export type CoreUpdateArticleMutationVariables = Exact<{

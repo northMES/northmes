@@ -4,6 +4,7 @@ import {
   defineListQueryContract,
   defineQueryContract,
   outsideText,
+  stockUnit,
   timestamp,
   version,
 } from '@northmes/contracts';
@@ -24,17 +25,22 @@ const plantSlugs = z.codec(
 
 /**
  * An article as core's operations answer it, the component CoreArticle of the public API
- * (ADR 0073). Its article number and name are outside text, since an ERP writes both through the
- * upsert, so the tool surfaces wrap them.
+ * (ADR 0073). Its article number, name, note and source are outside text, since an ERP writes them
+ * through the upsert, so the tool surfaces wrap them. source is null for an article created in
+ * NorthMES, else the integration that created it.
  */
 export const article = z.object({
   id: z.uuid(),
   code: outsideText(),
   name: outsideText(),
+  stockUnit,
+  note: outsideText().nullable(),
+  source: outsideText().nullable(),
   allPlants: z.boolean(),
   plants: plantSlugs,
   version,
   archivedAt: timestamp.nullable(),
+  createdAt: timestamp,
   updatedAt: timestamp,
 });
 

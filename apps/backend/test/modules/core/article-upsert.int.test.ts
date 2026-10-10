@@ -104,9 +104,10 @@ describe('upsert of an article by its article number', () => {
     return { helAdmin, companyAdmin, helSlug };
   }
 
+  /** Sends the upsert as the integration Pyramid. */
   function upsert(client: GqlClient, input: Record<string, unknown>) {
     return client.send<{ coreUpsertArticle: Article }>(upsertMutation, {
-      input,
+      input: { source: 'Pyramid', ...input },
     }) as Promise<UpsertAnswer>;
   }
 

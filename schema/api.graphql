@@ -8,9 +8,13 @@ type Article {
   allPlants: Boolean!
   archivedAt: DateTime
   code: String!
+  createdAt: DateTime!
   id: ID!
   name: String!
+  note: String
   plants: [Plant!]!
+  source: String
+  stockUnit: StockUnit!
   updatedAt: DateTime!
   version: Int!
 }
@@ -69,7 +73,9 @@ input CoreCreateArticleInput {
   companyId: String
   id: ID!
   name: String!
+  note: String
   plants: [String!]
+  stockUnit: String
 }
 
 input CoreCreateRoleInput {
@@ -130,6 +136,8 @@ input CoreUpdateArticleInput {
   expectedVersion: Int!
   id: ID!
   name: String!
+  note: String
+  stockUnit: String
 }
 
 input CoreUpdateRoleInput {
@@ -147,7 +155,10 @@ input CoreUpsertArticleInput {
   expectedVersion: Int
   id: ID!
   name: String!
+  note: String
   plants: [String!]
+  source: String!
+  stockUnit: String
 }
 
 type CreatedUser {
@@ -348,6 +359,23 @@ enum ScopeKind {
 enum SortDirection {
   ASC
   DESC
+}
+
+"""
+A unit of the unit catalog that an article counts its quantities in (ADR 0023).
+"""
+enum StockUnit {
+  """Kilograms (kg)"""
+  KILOGRAM
+
+  """Litres (l)"""
+  LITRE
+
+  """Metres (m)"""
+  METRE
+
+  """Pieces (pcs)"""
+  PIECE
 }
 
 type User {
