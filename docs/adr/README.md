@@ -10,16 +10,16 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 |---|---|
 | Release 1 scope | 0055 |
 | Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069 |
-| Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070 |
+| Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070, 0075 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
-| Web | 0019, 0020, 0021, 0053, 0061, 0062, 0067, 0070 |
+| Web | 0019, 0020, 0021, 0053, 0061, 0062, 0067, 0070, 0075 |
 | Production planning | 0025, 0026, 0027, 0028, 0029, 0030 |
 | ERP integration and the Pyramid connector | 0031, 0032 |
 | Operator station | 0033 |
 | AI | 0035, 0036 |
 | Testing | 0041, 0042 |
-| Operations | 0043, 0044, 0045, 0046, 0047, 0052, 0072 |
+| Operations | 0043, 0044, 0045, 0046, 0047, 0052, 0072, 0075 |
 | Licensing | 0039, 0040, 0056 |
 | Regulated readiness | 0051 |
 
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-09 the index holds 74 ADRs: 48 accepted and 26 proposed, 71 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
+On 2026-10-10 the index holds 75 ADRs: 48 accepted and 27 proposed, 72 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -171,5 +171,6 @@ On 2026-10-09 the index holds 74 ADRs: 48 accepted and 26 proposed, 71 for relea
 | 0072 | [One installation per customer, and hosting partners run many with a customer folder, northmes apply and the health endpoints](0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md) | proposed | 1 | maintainer (the customer folder layout; the customer file format and the command name northmes apply; northmes apply, the partner hosting docs and the release notes step waiting for a hosting partner instead of entering release 1; metrics waiting for a trigger; one installation per host in release 1; no Postgres cluster shared between installations; the CLI's write commands as nm_app and nm_auth with their secrets in migrate; core.createPlant and core.updateCompany from the CLI outside can()) |
 | 0073 | [One module contract for REST, WebMCP and later MCP, with OAuth clients and tokens](0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md) | proposed | 1 | maintainer (the optional plant parameter on article routes; core.article:assign as a company permission, also for removing a plant; edit_scope_id in core.article's write policies; plants on create and upsert as allPlants and plant slugs, defaulting to the request's plant or to none; an upsert that names no plants leaving an existing article's plants as they are; reads by id returning any article of the company; the company's article list at /settings/$companyId/articles with the unassigned filter; the error code core.article_not_assigned; personal access tokens bound to one company; the WebMCP toolset of the module whose route is open; planning's three read tools; the names webmcp.enabled and NORTHMES_WEBMCP; the audit surface webmcp and the principal type integration; token lifetimes and rate limit numbers; the ADR 0055 ledger row, its estimate and cut order item 3; the navigator.modelContext fallback) |
 | 0074 | [Core's pages at the plant root and the company settings root](0074-core-pages-at-the-plant-root-and-the-company-settings-root.md) | proposed | 1 | |
+| 0075 | [Plugin installs from signed archives into a plugin volume, with plugin screens loaded at run time](0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md) | proposed | 1 | maintainer (how a hosting partner controls plugin installs, left open; core.plugin:manage as a company-level permission that Company admin holds under M-61, for an install that reaches every company of the installation, with the requests in one installation-wide table; the plugin archive format, its signing scheme, trusted keys bound to plugin ids and the indexes as installation settings, with no project key in release 1; plugin screens as ES modules through one hashed import map, with the plugin list behind a session and a full page load after sign-in; the host step plugins.sh on a systemd timer with an apply window, a host lock and the one-off plugins service; the part of the UI kit that becomes MIT @northmes/ui; @northmes/plugin-build as an MIT package; the plugin drift of northmes apply with exit 4; the ADR 0055 ledger rows); lawyer (the ADR 0056 exception and bundling clause for plugin archives installed at run time and handed out through an index; the trademark policy for a NorthMES plugin index) |
 
-Next free number: 0075. Only Krister Johansson sets a status to accepted.
+Next free number: 0076. Only Krister Johansson sets a status to accepted.
