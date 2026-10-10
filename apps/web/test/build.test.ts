@@ -89,10 +89,11 @@ describe('the web build', () => {
       readFileSync(join(outDir, '.vite', 'manifest.json'), 'utf8'),
     ) as Record<string, ManifestChunk>;
     const html = readFileSync(join(outDir, 'index.html'), 'utf8');
-    const head = html.slice(0, html.indexOf('</head>'));
-    const tags = [...head.matchAll(/<(link|script)\b[^>]*>/g)].map(([tag]) => tag);
+    // Tag and attribute names are case-insensitive in HTML, so the patterns are too.
+    const head = html.slice(0, html.search(/<\/head\s*>/i));
+    const tags = [...head.matchAll(/<(link|script)\b[^>]*>/gi)].map(([tag]) => tag);
     const attribute = (tag: string, name: string) =>
-      new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+      new RegExp(`\\s${name}="([^"]*)"`, 'i').exec(tag)?.[1];
 
     // A stylesheet in the head with no media query holds the first paint until it has loaded.
     const [sheet] = manifest['index.html']?.css ?? [];
@@ -110,9 +111,9 @@ describe('the web build', () => {
     expect(themeAt).toBeGreaterThanOrEqual(0);
     const theme = tags[themeAt] as string;
     expect(attribute(theme, 'type')).toBeUndefined();
-    expect(theme).not.toMatch(/\s(async|defer)\b/);
+    expect(theme).not.toMatch(/\s(async|defer)\b/i);
     const modules = tags.flatMap((tag, at) =>
-      tag.startsWith('<script') && attribute(tag, 'type') === 'module' ? [at] : [],
+      /^<script/i.test(tag) && attribute(tag, 'type') === 'module' ? [at] : [],
     );
     expect(modules.length).toBeGreaterThan(0);
     expect(themeAt).toBeLessThan(Math.min(...modules));
