@@ -103,6 +103,7 @@ describe('the operation runner with core', () => {
         id,
         code: number,
         name: 'Bolt',
+        translations: [],
         stockUnit: 'PIECE',
         note: null,
         source: null,
