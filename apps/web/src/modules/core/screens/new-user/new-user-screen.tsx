@@ -118,12 +118,12 @@ function NewUserForm({
     },
   });
   const { isDirty, isSubmitting } = form.formState;
+  // With one place, Where shows no choice: the role applies there.
+  const [onlyPlace] = firstRole?.places.length === 1 ? firstRole.places : [];
 
   const save = async (values: UserValues) => {
     setCreatedBefore(undefined);
     const { reason, ...rest } = values;
-    // With one place, Where shows no choice: the role applies there.
-    const [onlyPlace] = firstRole?.places.length === 1 ? firstRole.places : [];
     const scopeId = rest.scopeId ?? (rest.roleId === undefined ? undefined : onlyPlace?.id);
     if (rest.roleId !== undefined && scopeId === undefined) {
       form.setError('scopeId', { type: 'validate', message: 'Choose where the role applies.' });
@@ -164,7 +164,7 @@ function NewUserForm({
       const refused = roleRefusal(
         error,
         firstRole?.roles.find(({ id }) => id === values.roleId),
-        firstRole?.places.find(({ id }) => id === values.scopeId),
+        firstRole?.places.find(({ id }) => id === scopeId),
         companyName,
       );
       if (refused !== undefined) {
@@ -234,7 +234,7 @@ function NewUserForm({
             places={firstRole.places}
             roles={firstRole.roles}
             holds={firstRole.holds}
-            where={form.watch('scopeId') ?? ''}
+            where={form.watch('scopeId') ?? onlyPlace?.id ?? ''}
             // The fields report no choice as '', which the form keeps as no value.
             onWhereChange={(scopeId) => {
               form.clearErrors('scopeId');
