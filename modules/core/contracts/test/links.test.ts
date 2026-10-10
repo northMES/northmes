@@ -54,6 +54,6 @@ describe('coreLinks', () => {
     expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
       '/plant-a/people/u1/roles/new',
     );
-    expect(Object.keys(coreLinks)).toEqual(['articles', 'people', 'settings']);
+    expect(Object.keys(coreLinks)).toEqual(['articles', 'articleGroups', 'people', 'settings']);
   });
 });
