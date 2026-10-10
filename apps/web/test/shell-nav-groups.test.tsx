@@ -212,6 +212,29 @@ describe('a nested group in a module sidebar group (D2 PL5)', () => {
     expect(registers.getAttribute('aria-expanded')).toBe('true');
   });
 
+  it('E04-S02 at 320 px a nested group the user closed in the Navigation sheet stays closed when the sheet opens again', async () => {
+    setViewport(320, 640);
+    const user = userEvent.setup();
+    renderAt('/plant-a/stock/warehouses');
+    await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
+    const open = await screen.findByRole('button', { name: 'Open navigation' });
+    await user.click(open);
+    const sheet = await screen.findByRole('dialog', { name: 'Navigation' });
+    const registers = await within(sheet).findByRole('button', { name: 'Registers' });
+    expect(registers.getAttribute('aria-expanded')).toBe('true');
+    await user.click(registers);
+    expect(registers.getAttribute('aria-expanded')).toBe('false');
+    await user.click(within(sheet).getByRole('button', { name: 'Close navigation' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Navigation' })).toBeNull());
+
+    await user.click(open);
+
+    const reopened = await screen.findByRole('dialog', { name: 'Navigation' });
+    expect(
+      within(reopened).getByRole('button', { name: 'Registers' }).getAttribute('aria-expanded'),
+    ).toBe('false');
+  });
+
   it('E04-S02 a nested group shows only the entries the user may open, and none at all when the user may open none of them', async () => {
     renderAt('/plant-a/stock/moves', []);
     await screen.findByRole('heading', { level: 1, name: 'Moves' });
