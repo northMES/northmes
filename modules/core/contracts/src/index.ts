@@ -5,6 +5,7 @@ export {
   archiveArticle,
   articleClassification,
   articleFields,
+  articleGroupId,
   articleNote,
   articleSource,
   articleTranslations,
@@ -14,9 +15,23 @@ export {
   updateArticle,
   upsertArticle,
 } from './article.ts';
+export {
+  archiveArticleGroup,
+  articleGroupFields,
+  createArticleGroup,
+  restoreArticleGroup,
+  updateArticleGroup,
+} from './article-group.ts';
+export {
+  articleGroup,
+  articleGroupList,
+  findArticleGroups,
+  getArticleGroup,
+} from './article-group-queries.ts';
 export { article, articleList, findArticles, getArticle } from './article-queries.ts';
 export { coreLinks } from './links.ts';
 export { articleOperations } from './operations/article.ts';
+export { articleGroupOperations } from './operations/article-group.ts';
 export { plantSlug, reservedPlantSlugs } from './plant.ts';
 export {
   accessReason,

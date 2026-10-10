@@ -9,6 +9,7 @@ import type { z } from 'zod';
 import type { ArticleTable } from '../../infrastructure/database.ts';
 import { forbidden } from '../access/request-scope.ts';
 import { type ArticleRecord, selectArticles } from '../article-record.ts';
+import { requireActiveGroup } from './article-group-target.ts';
 import { type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
 import { refuseArchived } from './article-target.ts';
 import { requestCompany } from './company-scope.ts';
@@ -80,11 +81,11 @@ async function lockAt(
  * the input's article number in the company, without regard to case, under a lock on that number so
  * concurrent upserts of a new number create it once. None: it creates one as core.createArticle
  * does, with the input's source. An archived one: core.archived. An active one: a different name,
- * or translations, a stock unit or a note the input names that differ, need core.article:update at
- * the article's edit scope, its source stays as it is, and other plants need core.article:assign at
- * the company, both checked with context.require; the change is one update at the input's
- * expectedVersion or the version found, and an input without plants keeps the article's plants. An
- * unchanged article writes nothing and keeps its version.
+ * or translations, an article group, a stock unit or a note the input names that differ, need
+ * core.article:update at the article's edit scope, its source stays as it is, and other plants need
+ * core.article:assign at the company, both checked with context.require; the change is one update
+ * at the input's expectedVersion or the version found, and an input without plants keeps the
+ * article's plants. An unchanged article writes nothing and keeps its version.
  */
 export const upsertArticleHandler = {
   scope: createArticleHandler.scope,
@@ -116,6 +117,12 @@ export const upsertArticleHandler = {
       changes.stock_unit = input.stockUnit;
     }
     if (input.note !== undefined && input.note !== found.note) changes.note = input.note;
+    if (input.articleGroupId !== undefined && input.articleGroupId !== found.article_group_id) {
+      if (input.articleGroupId !== null) {
+        await requireActiveGroup(context, input.articleGroupId, companyId);
+      }
+      changes.article_group_id = input.articleGroupId;
+    }
     if (
       input.translations !== undefined &&
       !sameTranslations(input.translations, found.translations)

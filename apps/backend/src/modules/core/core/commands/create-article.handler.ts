@@ -6,6 +6,7 @@ import { registerCommand } from '@northmes/sdk/commands';
 import { noteCreated } from '@northmes/sdk/operations';
 import type { z } from 'zod';
 import { type ArticleRecord, selectArticles } from '../article-record.ts';
+import { requireActiveGroup } from './article-group-target.ts';
 import { type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
@@ -68,6 +69,8 @@ export const createArticleHandler = {
     // The scope hook found no plan, so the bus refused the command before the handler runs.
     if (!plan) throw new NotFoundException(`Article ${input.id} was not found`);
     if (!isDefault(plan, plantId)) context.require('core.article:assign', plan.companyId);
+    if (input.articleGroupId)
+      await requireActiveGroup(context, input.articleGroupId, plan.companyId);
     const created = await tx
       .insertInto('core.article')
       .values({
@@ -80,6 +83,7 @@ export const createArticleHandler = {
         code: input.code,
         name: input.name,
         translations: JSON.stringify(input.translations ?? []),
+        article_group_id: input.articleGroupId ?? null,
         stock_unit: input.stockUnit ?? DEFAULT_STOCK_UNIT,
         note: input.note ?? null,
         source: input.source ?? null,
