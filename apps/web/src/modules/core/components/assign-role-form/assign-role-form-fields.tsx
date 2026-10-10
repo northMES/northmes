@@ -305,6 +305,7 @@ export function AssignRoleFormFields({
   onHighlight,
 }: AssignRoleFormFieldsProps) {
   const whereLabelId = useId();
+  const whereErrorId = useId();
   const [onlyPlace] = places.length === 1 ? places : [];
   const place = places.find((each) => each.id === where);
   // Until the catalog loads, every permission counts as installed, which locks more, not less.
@@ -352,7 +353,11 @@ export function AssignRoleFormFields({
                   <RadioGroupItem
                     id={radioId}
                     value={each.id}
-                    aria-describedby={`${radioId}-hint`}
+                    aria-describedby={
+                      whereError === undefined
+                        ? `${radioId}-hint`
+                        : `${radioId}-hint ${whereErrorId}`
+                    }
                     aria-invalid={whereError !== undefined || undefined}
                     className="mt-0.5"
                   />
@@ -368,7 +373,11 @@ export function AssignRoleFormFields({
               );
             })}
           </RadioGroup>
-          {whereError !== undefined && <p className="text-xs text-destructive">{whereError}</p>}
+          {whereError !== undefined && (
+            <p id={whereErrorId} className="text-xs text-destructive">
+              {whereError}
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-sm">The role applies at {onlyPlace.name}.</p>
