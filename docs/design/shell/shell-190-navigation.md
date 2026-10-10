@@ -25,6 +25,16 @@ After the approval, on 2026-10-06, the header frame got a text fix and a new sta
 
 Part 1 of the header PNG was captured again after the fix. Part 2 is unchanged.
 
+## Sidebar rules removed on 2026-10-10
+
+On 2026-10-10 Krister Johansson decided that the sidebar draws no rules, as shadcn's sidebar-07 block draws none: the groups' own padding spaces them. This overrides the page and its PNGs, which were not changed:
+
+- PL5 and NA3 draw a rule under the switcher head, a rule above the user footer and inset rules between the core, module and plugin sections. The built sidebar, rail and 320 px sheet draw none of them.
+- PL6 draws "a rule between module groups" in the rail. The built rail draws none.
+- The build notes say the top bar, the sidebar head and the rail head are 56 px "so their rules meet on one line". The heads stay 56 px, so the plant switcher stays level with the top bar, but only the top bar draws its rule, which now ends at the sidebar's edge.
+
+A later task that builds from these frames keeps the sidebar without rules.
+
 ## Approved files
 
 | File | Etag |
