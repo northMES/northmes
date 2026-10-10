@@ -851,6 +851,52 @@ describe('users', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('E05-S08 a Role typed into and cleared again counts as no role, and New user creates the user without one', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string | undefined> }) =>
+            input.username === 't.lindqvist' &&
+            input.roleId === undefined &&
+            input.scopeId === undefined,
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: { ...tove, blocked: false, roleAssignments: [] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    const role = within(section).getByRole('combobox', { name: 'Role' });
+    await events.type(role, 'V');
+    await events.clear(role);
+    await events.keyboard('{Escape}');
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
+  });
+
   it('E05-S08 New user shows no Role and place to a creator who may not assign roles', async () => {
     renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
