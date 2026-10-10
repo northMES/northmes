@@ -11,6 +11,7 @@ export type CoreUpdateArticleInput = {
   readonly name: string;
   readonly note?: string | null | undefined;
   readonly stockUnit?: string | null | undefined;
+  readonly translations?: ReadonlyArray<TranslationInput> | null | undefined;
 };
 
 /** A unit of the unit catalog that an article counts its quantities in (ADR 0023). */
@@ -23,6 +24,12 @@ export type StockUnit =
   | 'METRE'
   /** Pieces (pcs) */
   | 'PIECE';
+
+export type TranslationInput = {
+  readonly field: string;
+  readonly locale: string;
+  readonly text: string;
+};
 
 export type CoreUpdateArticleMutationVariables = Exact<{
   input: CoreUpdateArticleInput;

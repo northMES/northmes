@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Field, GraphQLISODateTime, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { type StockUnitCode, stockUnitCodes, unitOf } from '@northmes/contracts';
+import { Translation } from '@northmes/sdk/graphql';
 import { Plant } from '../../company/types/plant.type.ts';
 
 /** The stock units of the unit catalog, by their codes (ADR 0023). */
@@ -27,6 +28,8 @@ export class Article {
   /** The article number, unique within the company. */
   @Field(() => String) code!: string;
   @Field(() => String) name!: string;
+  /** The translations of the name, such as into English, in the order they were saved. */
+  @Field(() => [Translation]) translations!: Translation[];
   /** The unit the article's quantities are counted in, pieces unless someone chose another. */
   @Field(() => StockUnit) stockUnit!: string;
   /** A note on the article, or null. */

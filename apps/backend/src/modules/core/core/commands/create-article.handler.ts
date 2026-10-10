@@ -79,6 +79,7 @@ export const createArticleHandler = {
         all_plants: plan.allPlants,
         code: input.code,
         name: input.name,
+        translations: JSON.stringify(input.translations ?? []),
         stock_unit: input.stockUnit ?? DEFAULT_STOCK_UNIT,
         note: input.note ?? null,
         source: input.source ?? null,

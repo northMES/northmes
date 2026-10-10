@@ -33,6 +33,9 @@ export const article = z.object({
   id: z.uuid(),
   code: outsideText(),
   name: outsideText(),
+  translations: z
+    .array(z.object({ field: z.string(), locale: z.string(), text: outsideText() }))
+    .readonly(),
   stockUnit,
   note: outsideText().nullable(),
   source: outsideText().nullable(),

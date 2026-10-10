@@ -15,6 +15,7 @@ type Article {
   plants: [Plant!]!
   source: String
   stockUnit: StockUnit!
+  translations: [Translation!]!
   updatedAt: DateTime!
   version: Int!
 }
@@ -76,6 +77,7 @@ input CoreCreateArticleInput {
   note: String
   plants: [String!]
   stockUnit: String
+  translations: [TranslationInput!]
 }
 
 input CoreCreateRoleInput {
@@ -138,6 +140,7 @@ input CoreUpdateArticleInput {
   name: String!
   note: String
   stockUnit: String
+  translations: [TranslationInput!]
 }
 
 input CoreUpdateRoleInput {
@@ -159,6 +162,7 @@ input CoreUpsertArticleInput {
   plants: [String!]
   source: String!
   stockUnit: String
+  translations: [TranslationInput!]
 }
 
 type CreatedUser {
@@ -376,6 +380,18 @@ enum StockUnit {
 
   """Pieces (pcs)"""
   PIECE
+}
+
+type Translation {
+  field: String!
+  locale: String!
+  text: String!
+}
+
+input TranslationInput {
+  field: String!
+  locale: String!
+  text: String!
 }
 
 type User {
