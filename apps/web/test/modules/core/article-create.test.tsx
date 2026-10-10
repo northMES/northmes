@@ -27,6 +27,7 @@ interface CreateInput {
   readonly name: string;
   readonly stockUnit: string;
   readonly note?: string;
+  readonly translations?: readonly { field: string; locale: string; text: string }[];
 }
 
 /**
@@ -37,7 +38,15 @@ function createOf(
   code: string,
   name: string,
   result: (input: CreateInput) => MockLink.MockedResponse['result'],
-  { stockUnit = 'PIECE', note }: { stockUnit?: string; note?: string } = {},
+  {
+    stockUnit = 'PIECE',
+    note,
+    translations,
+  }: {
+    stockUnit?: string;
+    note?: string;
+    translations?: CreateInput['translations'];
+  } = {},
 ): MockLink.MockedResponse {
   return {
     request: {
@@ -48,6 +57,7 @@ function createOf(
         input.name === name &&
         input.stockUnit === stockUnit &&
         input.note === note &&
+        JSON.stringify(input.translations) === JSON.stringify(translations) &&
         // A user without core.article:assign at the company leaves the plants to the API.
         !('plants' in input) &&
         !('allPlants' in input),
@@ -65,6 +75,7 @@ function created(input: CreateInput) {
         version: 1,
         note: null,
         source: null,
+        translations: [],
         archivedAt: null,
         createdAt: lastChanged,
         updatedAt: lastChanged,
@@ -166,6 +177,33 @@ describe('new article', () => {
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Article AX-31007' }),
+    ).toBeDefined();
+  });
+
+  it('E06-S06 New article saves the translations of the name that Add translation adds', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.articles.new({ plant }).href, [
+      createOf(
+        'AX-20410',
+        'Fläns DN50 rostfri',
+        (input) => created({ ...input, translations: [] }),
+        { translations: [{ field: 'name', locale: 'en', text: 'Flange DN50 stainless' }] },
+      ),
+    ]);
+
+    await user.type(await screen.findByRole('textbox', { name: 'Article number' }), 'AX-20410');
+    await user.type(field('Name'), 'Fläns DN50 rostfri');
+    await user.click(screen.getByRole('button', { name: 'Add translation' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Language of translation 1' }),
+      'English',
+    );
+    await user.type(field('Translation 1'), ' Flange DN50 stainless ');
+    await chooseUnit(user);
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' }),
     ).toBeDefined();
   });
 

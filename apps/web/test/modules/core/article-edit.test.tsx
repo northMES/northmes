@@ -33,13 +33,22 @@ function spoken(): string | null | undefined {
  * otherwise, answered with result. The form always sends the note, empty to clear it.
  */
 function updateOf(
-  input: { expectedVersion: number; code: string; name: string; stockUnit?: string; note?: string },
+  input: {
+    expectedVersion: number;
+    code: string;
+    name: string;
+    stockUnit?: string;
+    note?: string;
+    translations?: readonly { field: string; locale: string; text: string }[];
+  },
   result: MockLink.MockedResponse['result'],
 ): MockLink.MockedResponse {
   return {
     request: {
       query: CoreUpdateArticle,
-      variables: { input: { id: axle.id, stockUnit: 'PIECE', note: '', ...input } },
+      variables: {
+        input: { id: axle.id, stockUnit: 'PIECE', note: '', translations: [], ...input },
+      },
     },
     result,
   };
@@ -111,6 +120,66 @@ describe('edit article', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
     const classification = screen.getByRole('region', { name: 'Classification' });
     expect(within(classification).getByText('Kilograms (kg)')).toBeDefined();
+  });
+
+  it("E06-S06 the edit form lists the name's translations, Add translation adds a row with focus on its language, and Remove takes one out", async () => {
+    const user = userEvent.setup();
+    const translated = {
+      ...axle,
+      translations: [
+        { __typename: 'Translation', field: 'name', locale: 'en', text: 'Axle 20 mm' },
+        { __typename: 'Translation', field: 'name', locale: 'de', text: 'Achse 20 mm' },
+      ],
+    } as const;
+    renderCoreAt(editHref(axle.id), [
+      articleQuery(translated),
+      updateOf(
+        {
+          expectedVersion: 1,
+          code: 'AX-500',
+          name: 'Axle 20 mm',
+          translations: [
+            { field: 'name', locale: 'de', text: 'Achse 20 mm' },
+            { field: 'name', locale: 'sv', text: 'Axel 20 mm' },
+          ],
+        },
+        { data: { coreUpdateArticle: { ...translated, version: 2 } } },
+      ),
+    ]);
+
+    const english = (await screen.findByRole('combobox', {
+      name: 'Language of translation 1',
+    })) as HTMLSelectElement;
+    expect(english.value).toBe('en');
+    expect(field('Translation 1').value).toBe('Axle 20 mm');
+    await user.click(screen.getByRole('button', { name: 'Remove the English translation' }));
+    // Focus moves to the next row's language, which is now the first.
+    expect(document.activeElement).toBe(
+      screen.getByRole('combobox', { name: 'Language of translation 1' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Add translation' }));
+    const added = screen.getByRole('combobox', { name: 'Language of translation 2' });
+    expect(document.activeElement).toBe(added);
+    await user.selectOptions(added, 'Swedish');
+    await user.type(field('Translation 2'), 'Axel 20 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+  });
+
+  it('E06-S06 a translation without a language or a text says so on its row', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(editHref(axle.id), [articleQuery(axle)]);
+
+    await user.click(await screen.findByRole('button', { name: 'Add translation' }));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 2 fields to save the article' });
+    expect(
+      within(summary)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Choose a language.', 'Enter the translation, or remove it.']);
   });
 
   it('E06-S06 a version conflict says the article changed with the typed values kept, and Reload article fills in the saved values and their version', async () => {

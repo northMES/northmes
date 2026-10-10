@@ -297,6 +297,7 @@ describe("an article's plants", () => {
               name: 'Axle 22 mm',
               stockUnit: 'PIECE',
               note: '',
+              translations: [],
             },
           },
         },
