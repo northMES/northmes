@@ -109,6 +109,10 @@ export function createShellRouter(
     await router.navigate({ to: signInPath, search, state: state as HistoryState });
     await clearCaches();
   };
+  // Whether a refusal for a password change is ending the session. The user stays signed in until
+  // the API has answered the sign-out, so a guard on the user alone would let the requests refused
+  // meanwhile end it again.
+  let endingSession = false;
   const auth = {
     token: () => session.token(),
     onUnauthenticated: () => {
@@ -122,9 +126,16 @@ export function createShellRouter(
       // The user signed in with a temporary password and must set a new one, as after an admin's
       // reset: only the temporary password lets them, so the session ends and they sign in with it
       // again, which leads to the new password step and then back to this page (issue #416).
-      if (session.user() === undefined) return;
+      // The first refused request ends the session; the requests refused with it follow it.
+      if (endingSession || session.user() === undefined) return;
+      endingSession = true;
       const redirect = router.state.location.href;
-      void session.signOut().then(() => toSignIn({ redirect }, { sessionEnded: true }));
+      void session
+        .signOut()
+        .then(() => toSignIn({ redirect }, { sessionEnded: true }))
+        .finally(() => {
+          endingSession = false;
+        });
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
