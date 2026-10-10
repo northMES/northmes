@@ -1,11 +1,11 @@
 ---
 status: "proposed"
-date: 2026-10-09
+date: 2026-10-10
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson; internal research note 02; the planning session's design study of main at 4cb2429
 informed: NorthMES contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the cost limit that replaces Hive demandControl; the carrier for plant permissions, presentation values and the station mount); pilot IT (browser versions); lawyer (the ADR 0056 bundling clause for plugin web code built into apps/web)"
+needs-confirmation: "maintainer (the cost limit that replaces Hive demandControl; the carrier for plant permissions, presentation values and the station mount); pilot IT (browser versions)"
 ---
 
 # One NestJS backend with one GraphQL schema and one static web app
@@ -28,7 +28,7 @@ needs-confirmation: "maintainer (the cost limit that replaces Hive demandControl
 
 ## Decision outcome
 
-Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, and one static web app", because it keeps the module seams with standard pieces, for about 2 to 3 working days of mostly deletion (estimate). Once accepted, it supersedes ADR 0015 and ADR 0019.
+Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, and one static web app", because it keeps the module seams with standard pieces, for about 2 to 3 working days of mostly deletion (estimate). Once accepted, it supersedes ADR 0015 and ADR 0019. Proposed ADR 0075 carries ADR 0019's shared singletons, load timeouts and placeholders over to plugin screens.
 
 ### Backend
 
@@ -48,19 +48,18 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 
 ### Web
 
-* `apps/web` is one Vite React app built to static files. `src/modules.ts` imports each module into one TanStack Router tree with lazy routes, one chunk per module. A runtime `config.json` holds the API URL. Any static host serves the build, and the backend serves no web files; in the pilot's Compose stack Caddy serves it and proxies `/graphql`, `/api` and `/health` to the backend.
-* Kept from ADR 0019: mount points `/$plant` and `/station/$stationId`, no SSR, one Tailwind sheet from `@source` lines, the browser floor and the strict CSP.
-* The module list and `/modules/<id>/<version>/` go. Plant permissions, presentation values and the station mount need another carrier.
+* `apps/web` is one Vite React app built to static files. `src/modules.ts` imports each module into one TanStack Router tree with lazy routes, one chunk per module. A runtime `config.json` holds the API URL. Any static host serves the build, and the backend serves none of its files; in the pilot's Compose stack Caddy serves it and proxies `/graphql`, `/api` and `/health` to the backend.
+* Kept from ADR 0019: mount points `/$plant` and `/station/$stationId`, no SSR, one Tailwind sheet from `@source` lines, the browser floor and the strict CSP, which proposed ADR 0075 widens by the hash of one import map and the API's plugin path.
+* The module list and `/modules/<id>/<version>/` go; for plugins, proposed ADR 0075 adds `GET /api/v1/web/plugins` and the files under it. Plant permissions, presentation values and the station mount need another carrier.
 
 ### Plugins
 
-* Server plugins stay drop-in ([ADR 0037][adr-0037]). In release 1 plugin web contributions are built into `apps/web` under [ADR 0068][adr-0068]'s slots, so `example-widget` becomes a build-time example.
+* Plugins stay drop-in ([ADR 0037][adr-0037]) and need no build to install (proposed ADR 0075). Krister Johansson decided on 2026-10-10 that plugin screens load at run time in release 1: the shell imports each plugin's web part as ES modules under [ADR 0068][adr-0068]'s slots, through the import map of proposed ADR 0075, so `example-widget` stays a runtime example. In-repo modules stay built into `apps/web`.
 * A plugin adds root fields and types prefixed with its GraphQL name. It may add a field to a core type when the name carries that prefix, the field is nullable and it is read-only (output types only); the boot check enforces this. How a drop-in plugin reaches core's type class is untested until the first such field.
 
 ### Paths to grow later
 
 * Federation for one module behind a gateway. Guard: the root-field prefix, one owner per type name, and fields across modules only through the owner's public api.
-* Module Federation for plugin screens. Guard: plugin web code reaches the shell only through ADR 0068's slots and imports only MIT packages.
 * Per-module request scaling. Guard: stateless `api` replicas plus the federation guards.
 * An `ingest` role for Data collection. Guard: boot starts modules and endpoints by role (ADR 0002), so a role is a row, not an app.
 * A database per module. Guard: no module reads another's tables, and foreign keys cross schemas only where the owner grants `references`.
@@ -75,7 +74,7 @@ Role `api` serves the one schema and no web files. Boot runs the root-field chec
 
 #### Changes to ADR 0003
 
-Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path, per-module `schema.graphql`, isolation check and remote build check go. The manifest's `commands` field goes as well: a command's contract says whether a plugin may validate it ([ADR 0017][adr-0017]), and the longest validator time limit that the `commands` entry carried belongs on the contract once validator time limits are built.
+Module code moves from packages to the folders above, and an in-repo module has no `northmes.module.ts`. The remote name, static path and remote build check go for in-repo modules, and proposed ADR 0075 replaces them for plugin web parts. The per-module `schema.graphql` and the isolation check go. The manifest's `commands` field goes as well: a command's contract says whether a plugin may validate it ([ADR 0017][adr-0017]), and the longest validator time limit that the `commands` entry carried belongs on the contract once validator time limits are built.
 
 #### Changes to ADR 0010
 
@@ -101,7 +100,7 @@ Module routes join the one router at build time. Code-based routes and the one A
 
 #### Changes to ADR 0037
 
-A plugin ships no `web/dist`, and `HOST_PROVIDED` drops `@apollo/subgraph`. The `@requires` field of `example-validator`, which has no story, and the composition in `plugin:check` go.
+`HOST_PROVIDED` drops `@apollo/subgraph`, and a plugin's `web/dist` becomes the ES module web part of proposed ADR 0075. The `@requires` field of `example-validator`, which has no story, and the composition in `plugin:check` go.
 
 #### Changes to ADR 0044
 
@@ -109,11 +108,11 @@ Caddy serves the web build with its `config.json` and the strict CSP, and proxie
 
 #### Changes to ADR 0056
 
-`@northmes/web-build` leaves the MIT list. The bundling clause names it, so its wording for plugin web code built into `apps/web` waits for the lawyer.
+`@northmes/web-build` leaves the MIT list. The bundling clause names the plugin build path of proposed ADR 0075 instead, and its wording waits for the lawyer there.
 
 #### Changes to ADR 0058
 
-`pnpm dev` runs the Nest watch and one Vite dev server. The per-remote servers and the Rsbuild exit go.
+`pnpm dev` runs the Nest watch and one Vite dev server. The per-remote servers and the Rsbuild exit go; `pnpm plugin:build <id> --watch` rebuilds a plugin's web part (proposed ADR 0075).
 
 #### Changes to ADR 0061
 
@@ -121,12 +120,12 @@ The plant's presentation values leave the module list; their carrier is open.
 
 #### Changes to ADR 0062
 
-`src/modules.ts` imports `defineWebModule` instead of loading it by URL. Link manifests and the path-literal lint stay; the bundle guards, the Zod copy per remote and the N-1 remote rule go.
+`src/modules.ts` imports `defineWebModule` instead of loading it by URL. Link manifests and the path-literal lint stay; the bundle guards, the Zod copy per remote and the N-1 remote rule go for in-repo modules. Proposed ADR 0075 sets the build checks for plugin web parts.
 
 ### Consequences
 
 * Good, because 2,395 lines leave and about 800 change (estimate), and a field across modules needs no `entityRef` stub.
-* Bad, because a plugin with web code needs a web build, which ADR 0037 rejected; ADR 0037 expects no third-party plugin on the pilot.
+* Bad, because plugin screens keep a runtime path of their own beside the build-time modules (proposed ADR 0075).
 * Bad, because every replica serves the whole schema, web parts no longer ship per module, and `demandControl` needs a replacement.
 
 ### Confirmation
@@ -142,7 +141,7 @@ The plant's presentation values leave the module list; their carrier is open.
 ### One NestJS backend with one code-first schema on GraphQL Yoga, and one static web app
 
 * Good, because Yoga serves SSE, the fallback of [ADR 0018][adr-0018], which the Apollo driver's docs do not show.
-* Bad, because plugin screens need a build.
+* Bad, because plugin screens need a runtime path of their own (proposed ADR 0075).
 
 ### HTTP subgraphs behind Hive Gateway, with Module Federation remotes
 
@@ -158,7 +157,7 @@ The plant's presentation values leave the module list; their carrier is open.
 
 * The index marks ADR 0015 and ADR 0019 superseded by ADR-0070 when this ADR is accepted. Proposed ADRs 0011, 0024, 0031, 0045, 0057, 0066, 0067 and 0068, the plan and the project skills follow.
 * Related ADRs: [0002][adr-0002], [0015][adr-0015], [0018][adr-0018], [0019][adr-0019], [0037][adr-0037], [0068][adr-0068], [0071][adr-0071] (jobs).
-* Revisit when one module's requests must scale alone, or a customer needs plugin screens without a rebuild.
+* Revisit when one module's requests must scale alone. The trigger "a customer needs plugin screens without a rebuild" fired on 2026-10-10, and proposed ADR 0075 answers it.
 
 [adr-0002]: 0002-modular-monolith-with-module-owned-schemas-and-process-roles.md
 [adr-0012]: 0012-commands-as-the-single-write-path.md
