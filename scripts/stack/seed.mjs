@@ -2,7 +2,8 @@
 // admin who signs in with a dev-only password, and fictional articles and production orders at
 // the plants, so the board has orders to list, the article list has pages and the plant switcher
 // has two plants. Every code, name, number and quantity here is made up.
-// The planner and the operator join the seed with their roles (E05-S05).
+// Beside the dev admin, a Plant admin, a planner, an operator and a viewer at plant A sign in with
+// dev-only passwords, so each role can be tried in the app (E05-S08).
 
 import { randomBytes, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -38,6 +39,59 @@ export const devAdmin = {
   password: 'northmes-dev-admin',
   name: 'Dev admin',
   email: 'admin@northmes.test',
+};
+
+/**
+ * The custom role Operator of the seed company: no module declares an operator default role yet,
+ * so the seed writes one that reads articles and production orders.
+ */
+const operatorRole = {
+  id: '019a0000-0000-7000-8000-0000000e0001',
+  key: 'custom-019a0000-0000-7000-8000-0000000e0001',
+  name: 'Operator',
+  permissions: ['core.article:read', 'planning.productionOrder:read'],
+};
+
+/**
+ * The dev users beside the dev admin, each holding one role at plant A, so the maintainer can sign
+ * in as each and see what the role allows: core's Plant admin, planning's Planner and Viewer, and
+ * the seed's custom Operator. Like the dev admin's, each email is under the reserved .test domain
+ * and each password is for development only, no secret, and never reaches production. Every name
+ * is fictional.
+ */
+export const devUsers = {
+  plantAdmin: {
+    id: '019a0000-0000-7000-8000-0000000d0002',
+    username: 'jonas.holm',
+    password: 'northmes-dev-plant-admin',
+    name: 'Jonas Holm',
+    email: 'jonas.holm@northmes.test',
+    roleKey: 'core-plant-admin',
+  },
+  planner: {
+    id: '019a0000-0000-7000-8000-0000000d0003',
+    username: 'alex.lund',
+    password: 'northmes-dev-planner',
+    name: 'Alex Lund',
+    email: 'alex.lund@northmes.test',
+    roleKey: 'planning-planner',
+  },
+  operator: {
+    id: '019a0000-0000-7000-8000-0000000d0004',
+    username: 'anna.berg',
+    password: 'northmes-dev-operator',
+    name: 'Anna Berg',
+    email: 'anna.berg@northmes.test',
+    roleKey: operatorRole.key,
+  },
+  viewer: {
+    id: '019a0000-0000-7000-8000-0000000d0005',
+    username: 'sara.nyberg',
+    password: 'northmes-dev-viewer',
+    name: 'Sara Nyberg',
+    email: 'sara.nyberg@northmes.test',
+    roleKey: 'planning-viewer',
+  },
 };
 
 /** The dev admin's address before it signed in with an email, which no mail reaches. */
@@ -149,11 +203,33 @@ const orders = [
 ];
 
 /**
+ * Gives a user the seed company's role with this key at a scope, once: a second run, or a role the
+ * company lacks, writes nothing.
+ * @param {pg.Client} client
+ * @param {string} userId
+ * @param {string} scopeId
+ * @param {string} roleKey
+ */
+async function assign(client, userId, scopeId, roleKey) {
+  await client.query(
+    `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
+     select $1, r.company_id, $2, r.id
+       from core.role r
+      where r.company_id = $3 and r.key = $4
+        and exists (select 1 from auth."user" where id = $1)
+     on conflict (user_id, scope_id, role_id) do nothing`,
+    [userId, scopeId, seedCompany.id, roleKey],
+  );
+}
+
+/**
  * Writes the company, its plants and the dev admin in one transaction as core's owner role, on a
  * connection that ownerUrl logs in as nm_owner: the company's Better Auth organization, its node in
  * core.scope and its core.company row, each plant's node and core.plant row, the admin in
  * auth.user with a password account, and the assignment of core's Company admin at the company,
- * so the last-admin rule keeps the seed company's admin (ADR 0007, ADR 0010, ADR 0066).
+ * so the last-admin rule keeps the seed company's admin (ADR 0007, ADR 0010, ADR 0066). Then the
+ * custom role Operator and the dev users, each with a password account and their role at plant A.
+ * None of them must set a new password, since the seed's passwords are not temporary.
  * @param {string} ownerUrl
  */
 async function seedAccess(ownerUrl) {
@@ -210,14 +286,38 @@ async function seedAccess(ownerUrl) {
     );
     // The trigger on core.company gave the company core's Company admin, which northmes migrate
     // keeps holding every installed permission.
+    await assign(client, id, seedCompany.id, 'core-company-admin');
+    // A custom role named Operator that a person made already stays as it is.
     await client.query(
-      `insert into core.role_assignment (user_id, company_id, scope_id, role_id)
-       select $1, r.company_id, r.company_id, r.id
-         from core.role r
-        where r.company_id = $2 and r.key = 'core-company-admin'
-       on conflict (user_id, scope_id, role_id) do nothing`,
-      [id, seedCompany.id],
+      `insert into core.role (id, company_id, key, name, permissions, origin)
+       values ($1, $2, $3, $4, $5, 'custom')
+       on conflict do nothing`,
+      [
+        operatorRole.id,
+        seedCompany.id,
+        operatorRole.key,
+        operatorRole.name,
+        operatorRole.permissions,
+      ],
     );
+    for (const user of Object.values(devUsers)) {
+      await client.query(
+        `insert into auth."user" (id, name, email, "emailVerified", username, "displayUsername")
+         values ($1, $2, $3, true, $4, $4)
+         on conflict do nothing`,
+        [user.id, user.name, user.email, user.username],
+      );
+      await client.query(
+        `insert into auth.account ("accountId", "providerId", "userId", password, "updatedAt")
+         select $1::text, 'credential', $1::uuid, $2, now()
+          where exists (select 1 from auth."user" where id = $1::uuid)
+            and not exists (
+              select 1 from auth.account where "userId" = $1::uuid and "providerId" = 'credential'
+            )`,
+        [user.id, await hashPassword(user.password)],
+      );
+      await assign(client, user.id, plantA, user.roleKey);
+    }
     await client.query('commit');
   } finally {
     await client.end();

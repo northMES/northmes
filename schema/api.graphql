@@ -51,6 +51,7 @@ input CoreArchiveArticleInput {
 input CoreAssignRoleInput {
   companyId: String
   id: ID!
+  reason: String
   roleId: ID!
   scopeId: ID!
   userId: ID!
@@ -76,6 +77,7 @@ input CoreCreateRoleInput {
   id: ID!
   name: String!
   permissions: [String!]!
+  reason: String
 }
 
 input CoreCreateUserInput {
@@ -83,6 +85,9 @@ input CoreCreateUserInput {
   email: String!
   id: ID!
   name: String!
+  reason: String
+  roleId: String
+  scopeId: String
   username: String!
 }
 
@@ -92,6 +97,12 @@ input CoreDeleteRoleInput {
 }
 
 input CoreRemoveRoleAssignmentInput {
+  id: ID!
+  reason: String
+}
+
+input CoreResetPasswordInput {
+  companyId: String
   id: ID!
   reason: String
 }
@@ -163,6 +174,7 @@ type Mutation {
   coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
   coreDeleteRole(input: CoreDeleteRoleInput!): Role!
   coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
+  coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
@@ -177,6 +189,11 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type PasswordReset {
+  temporaryPassword: String!
+  user: User!
 }
 
 type Permission {
@@ -274,6 +291,9 @@ type Query {
     after: String
     before: String
 
+    """Only the blocked users when true, only the active ones when false."""
+    blocked: Boolean
+
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
@@ -281,6 +301,11 @@ type Query {
     first: Int = 25
     last: Int
     orderBy: [UserOrderBy!]
+
+    """
+    Only the users who hold this role of the company, at any of its places.
+    """
+    roleId: ID
     search: String
   ): UserConnection!
   coreViewer(

@@ -44,13 +44,15 @@ const roleFields = z.object({
  * Creates a custom role of the company of the request's plant, or of companyId from company
  * settings, under the client-generated id, so a retry returns the first role (ADR 0012). It needs core.role:manage at the company (ADR 0010). A
  * name that a role of the company has is refused with core.role_name_taken, and a permission the
- * catalog does not hold with core.unknown_permission.
+ * catalog does not hold with core.unknown_permission. The reason is recorded once the audit trail
+ * arrives (#443).
  */
 export const createRole = defineCommandContract({
   name: 'core.createRole',
   target: 'new',
-  fields: roleFields.extend({ companyId: settingsCompanyId }),
+  fields: roleFields.extend({ companyId: settingsCompanyId, reason: accessReason }),
   permission: 'core.role:manage',
+  reason: 'optional',
 });
 
 /**
@@ -86,7 +88,7 @@ export const deleteRole = defineCommandContract({
  * client-generated id of the assignment, so a retry returns the first one (ADR 0012). It needs
  * core.roleAssignment:manage at that scope, and every permission of the role held by the assigner
  * there (ADR 0010), else core.role_not_held. A user who holds the role there already is refused
- * with core.role_already_assigned.
+ * with core.role_already_assigned. The reason is recorded once the audit trail arrives (#443).
  */
 export const assignRole = defineCommandContract({
   name: 'core.assignRole',
@@ -96,8 +98,10 @@ export const assignRole = defineCommandContract({
     roleId: z.uuid(),
     scopeId: z.uuid(),
     companyId: settingsCompanyId,
+    reason: accessReason,
   }),
   permission: 'core.roleAssignment:manage',
+  reason: 'optional',
 });
 
 /**

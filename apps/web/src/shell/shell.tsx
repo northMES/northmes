@@ -44,7 +44,11 @@ import {
   companySettingsEntries,
   currentOf,
   firstHref,
+  groupAt,
+  isCore,
   mainId,
+  menuLinks,
+  moduleOfPath,
   plantHome,
   plantOf,
   plantSettingsLinks,
@@ -88,7 +92,7 @@ const nobody: ShellUser = { name: 'Not signed in', username: '' };
  * plant in the URL around the screen; company settings render their own layout without a plant,
  * with the client that names no plant. A viewer without a session who opens a plant or settings
  * page goes to sign-in with the page as the return path, and so does one whose request the API
- * refuses with 401.
+ * refuses with 401, or with core.password_change_required, whose session ends first.
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
@@ -105,6 +109,10 @@ export function createShellRouter(
     await router.navigate({ to: signInPath, search, state: state as HistoryState });
     await clearCaches();
   };
+  // Whether a refusal for a password change is ending the session. The user stays signed in until
+  // the API has answered the sign-out, so a guard on the user alone would let the requests refused
+  // meanwhile end it again.
+  let endingSession = false;
   const auth = {
     token: () => session.token(),
     onUnauthenticated: () => {
@@ -113,6 +121,21 @@ export function createShellRouter(
       session.forget();
       // The URL keeps only the return path (SO1); the history entry says the session ended.
       void toSignIn({ redirect: router.state.location.href }, { sessionEnded: true });
+    },
+    onPasswordChangeRequired: () => {
+      // The user signed in with a temporary password and must set a new one, as after an admin's
+      // reset: only the temporary password lets them, so the session ends and they sign in with it
+      // again, which leads to the new password step and then back to this page (issue #416).
+      // The first refused request ends the session; the requests refused with it follow it.
+      if (endingSession || session.user() === undefined) return;
+      endingSession = true;
+      const redirect = router.state.location.href;
+      void session
+        .signOut()
+        .then(() => toSignIn({ redirect }, { sessionEnded: true }))
+        .finally(() => {
+          endingSession = false;
+        });
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
@@ -234,8 +257,10 @@ function firstOpenPage(
  * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
  * linked to the plant's first page; then the module of the page, linked to its first entry, or on
- * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066). A
- * crumb whose page is the one on screen is plain text.
+ * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
+ * Core's pages sit at the plant root and have no module crumb (ADR 0074). A page in a nested group,
+ * as Articles in Master data, adds the group's crumb, as text, since the group has no page. A crumb
+ * whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
@@ -253,11 +278,14 @@ function shellTrail(
     crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
   ];
   if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
-  const moduleId = pathname.split('/')[2];
-  const current = modules.find(({ module }) => module.id === moduleId);
+  const current = moduleOfPath(modules, pathname);
+  const group = groupAt(current, plant, pathname);
   return [
     ...head,
-    ...(current === undefined ? [] : [crumb(current.label, firstHref(current, plant))]),
+    ...(current === undefined || isCore(current)
+      ? []
+      : [crumb(current.label, firstHref(current, plant))]),
+    ...(group === undefined ? [] : [{ label: group.label }]),
   ];
 }
 
@@ -327,8 +355,9 @@ function PlantLayout({
   const { data } = useQuery(CoreCompanies, { client: companiesClient });
   // The permissions at the plant and its company, read only when an entry needs one.
   const gated = modules.some(
-    ({ links = [], settingsLinks = [] }) =>
-      links.some(({ permission }) => permission !== undefined) || settingsLinks.length > 0,
+    (module) =>
+      menuLinks(module).some(({ permission }) => permission !== undefined) ||
+      (module.settingsLinks ?? []).length > 0,
   );
   const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
   const permissions = useMemo(

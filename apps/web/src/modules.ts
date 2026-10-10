@@ -36,6 +36,23 @@ export interface SettingsLink {
   readonly permission?: string;
 }
 
+/**
+ * A nested group inside a module's sidebar group (D2 PL5), such as core's Master data: a button
+ * with its icon and a chevron that opens its entries one level down, and in the rail an icon that
+ * opens them in a flyout (KE28). It has no page of its own, and its entries are main sidebar
+ * entries only: an entry of the plant settings navigation stays out of it.
+ */
+export interface MenuGroup {
+  readonly label: string;
+  /** The group's icon in the sidebar and the rail, by its lucide name (ADR 0067). */
+  readonly icon: NavIconName;
+  /** The group's entries, in order. */
+  readonly links: readonly (MenuLink & { readonly area?: never })[];
+}
+
+/** An item of a module's links: an entry, or a nested group of entries. */
+export type MenuItem = MenuLink | MenuGroup;
+
 /** A module the web is built with, its group in the sidebar and its company settings entries. */
 export interface ShellModule {
   readonly module: WebModule;
@@ -43,8 +60,11 @@ export interface ShellModule {
   readonly label: string;
   /** The sidebar group's position among the modules' groups. */
   readonly order: number;
-  /** The entries of the module's sidebar group and of the plant settings navigation, in order. */
-  readonly links?: readonly MenuLink[];
+  /**
+   * The entries of the module's sidebar group and of the plant settings navigation, in order; an
+   * item can be a nested group of sidebar entries.
+   */
+  readonly links?: readonly MenuItem[];
   /** The module's entries in the company settings navigation, in their order. */
   readonly settingsLinks?: readonly SettingsLink[];
 }
@@ -59,7 +79,12 @@ export const shellModules: readonly ShellModule[] = [
     label: 'Core',
     order: 10,
     links: [
-      { label: 'Articles', icon: 'Package', link: coreLinks.articles },
+      // Master data holds the registers: Articles now, the others as they are built (D2 PL5).
+      {
+        label: 'Master data',
+        icon: 'Database',
+        links: [{ label: 'Articles', icon: 'Package', link: coreLinks.articles }],
+      },
       {
         label: 'People',
         icon: 'Users',

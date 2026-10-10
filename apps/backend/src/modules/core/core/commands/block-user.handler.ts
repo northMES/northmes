@@ -4,34 +4,12 @@ import type { blockUser, unblockUser } from '@northmes/core-contracts';
 import { DomainError } from '@northmes/sdk/errors';
 import type { z } from 'zod';
 import { currentPrincipal } from '../../../../principal.ts';
-import { can } from '../access/access.ts';
-import { forbidden } from '../access/request-scope.ts';
 import { userAccounts } from '../access/user-accounts.ts';
 import type { UserRecord } from '../user.service.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 import { refuseBlockingLastAdmin } from './last-admin.ts';
-import { userById, userOfCompany } from './user-rules.ts';
-
-/**
- * Refuses with core.forbidden unless the principal holds core.user:block at every company the user
- * belongs to (ADR 0011): a block holds in every company, so an admin of one company cannot lock
- * the user out of another, or lift a block that another company's admin set.
- */
-async function refuseOtherCompanies(context: CoreContext, id: string): Promise<void> {
-  const principal = currentPrincipal();
-  if (!principal) throw forbidden('Users are blocked only by a signed-in user');
-  const companies = await context.tx
-    .selectFrom('core.company_user')
-    .select('company_id')
-    .distinct()
-    .where('user_id', '=', id)
-    .execute();
-  if (companies.every(({ company_id }) => can(principal, 'core.user:block', company_id))) return;
-  throw forbidden(
-    'The user also belongs to a company where you cannot block users. Ask an admin of each of their companies.',
-  );
-}
+import { refuseOtherCompanies, userById, userOfCompany } from './user-rules.ts';
 
 /**
  * The handler of core.blockUser (ADR 0012), which the mutation coreBlockUser sends through the
@@ -58,7 +36,7 @@ export const blockUserHandler = {
         message: 'You cannot block yourself. Ask another admin of the company.',
       });
     }
-    await refuseOtherCompanies(context, id);
+    await refuseOtherCompanies(context, id, 'core.user:block');
     await refuseBlockingLastAdmin(context.tx, id);
     await userAccounts().block(id, reason);
     return userById(context.tx, id, user.companyId ?? '');
@@ -78,7 +56,7 @@ export const unblockUserHandler = {
   ): Promise<UserRecord> {
     const { id } = input;
     const user = await userOfCompany(context, input);
-    await refuseOtherCompanies(context, id);
+    await refuseOtherCompanies(context, id, 'core.user:block');
     await userAccounts().unblock(id);
     return userById(context.tx, id, user.companyId ?? '');
   },

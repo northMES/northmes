@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { apiPath } from '@northmes/contracts';
+import { apiPath, type LinkNode, linkEntry } from '@northmes/contracts';
+import { coreLinks } from '@northmes/core-contracts';
 import { type ModuleManifest, type ModuleNames, moduleNames } from '@northmes/sdk';
 import { satisfies } from 'semver';
 import type { CatalogEntry } from './check-catalog.ts';
@@ -15,14 +16,55 @@ const RESERVED_IDS: ReadonlyMap<string, 'first-party' | 'library'> = new Map([
   ['auth', 'library'],
 ]);
 
-/** A problem for every module or plugin whose id is a reserved path segment. */
+/** The first path segment of each entry of a link manifest, its settings section left out. */
+function topSegments(manifest: object): string[] {
+  return Object.entries(manifest)
+    .filter(([name]) => name !== 'settings')
+    .map(([, node]) => linkEntry(node as LinkNode<string>).path.split('/')[0] ?? '');
+}
+
+/**
+ * The web path segments that core's pages and the shell's own pages take (ADR 0074), with the path
+ * each stands at and its owner. Core's pages sit at the plant root and at the company settings
+ * root, so a module with one of these ids would sit where a page of core or of the shell is.
+ */
+interface ReservedWebSegment {
+  readonly path: string;
+  readonly owner: 'core' | 'shell';
+}
+
+const RESERVED_WEB_SEGMENTS: ReadonlyMap<string, ReservedWebSegment> = new Map<
+  string,
+  ReservedWebSegment
+>([
+  ['all-pages', { path: '/$plant/all-pages', owner: 'shell' }],
+  ['settings', { path: '/settings', owner: 'shell' }],
+  ...topSegments(coreLinks.settings).map((segment): [string, ReservedWebSegment] => [
+    segment,
+    { path: `/settings/$companyId/${segment}`, owner: 'core' },
+  ]),
+  ...topSegments(coreLinks).map((segment): [string, ReservedWebSegment] => [
+    segment,
+    { path: `/$plant/${segment}`, owner: 'core' },
+  ]),
+]);
+
+/**
+ * A problem for every module or plugin whose id is a reserved path segment: one under /api/v1 or
+ * one of the web's that core and the shell take (ADR 0074).
+ */
 export function reservedIdProblems(entries: readonly CatalogEntry[]): string[] {
   const problems: string[] = [];
   for (const { manifest } of entries) {
     const family = RESERVED_IDS.get(manifest.id);
+    const web = RESERVED_WEB_SEGMENTS.get(manifest.id);
     if (family) {
       problems.push(
         `Module id "${manifest.id}" is reserved: ${apiPath(manifest.id)} is a ${family} path segment`,
+      );
+    } else if (web) {
+      problems.push(
+        `Module id "${manifest.id}" is reserved: ${web.path} is a ${web.owner} web path segment`,
       );
     }
   }

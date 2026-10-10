@@ -6,7 +6,14 @@ import type { ShellModule } from '../modules.ts';
 import { PageFrame, usePageFrameTopBar } from '../ui/components/page-frame/index.ts';
 import { StatePanel } from '../ui/components/state-panel/index.ts';
 import { buttonVariants } from '../ui/primitives/button.tsx';
-import { allPagesHref, mainId, plantHome, sidebarLinks } from './shell-pages.ts';
+import {
+  allPagesHref,
+  isCore,
+  mainId,
+  moduleOfPath,
+  plantHome,
+  sidebarLinks,
+} from './shell-pages.ts';
 
 /** The h1 and the title part of every not-found page (shell-306, doc copy). */
 const pageNotFound = 'Page not found';
@@ -19,10 +26,12 @@ interface WayOn {
 
 /**
  * The module a path under a plant lies in, by its second segment, and the first entry of its
- * sidebar group, when the module is loaded and has one.
+ * sidebar group, when the module is loaded and has one. A path at the plant root is core's, which
+ * is the plant's own, so it has no module page not found (ADR 0074).
  */
 function moduleAt(modules: readonly ShellModule[], plant: string, pathname: string) {
-  const module = modules.find((each) => each.module.id === pathname.split('/')[2]);
+  const found = moduleOfPath(modules, pathname);
+  const module = isCore(found) ? undefined : found;
   const [first] = module === undefined ? [] : sidebarLinks(module);
   return module === undefined || first === undefined
     ? undefined

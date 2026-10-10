@@ -191,7 +191,7 @@ describe('the Settings button', () => {
 
   it('E04-S02 a user with only company settings goes to company settings, and a user with neither sees no Settings button', async () => {
     const companyOnly = api(['core.article:read'], ['core.role:read']);
-    renderShellAt('/plant-a/core/articles', shellModules, { fetch: companyOnly.fetch });
+    renderShellAt('/plant-a/articles', shellModules, { fetch: companyOnly.fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
@@ -200,7 +200,7 @@ describe('the Settings button', () => {
 
     cleanup();
     const neither = api(['core.article:read'], ['core.article:read']);
-    renderShellAt('/plant-a/core/articles', shellModules, { fetch: neither.fetch });
+    renderShellAt('/plant-a/articles', shellModules, { fetch: neither.fetch });
     await screen.findByRole('banner');
     await waitFor(() =>
       expect(neither.seen.map(({ operationName }) => operationName)).toContain('CoreViewer'),
@@ -211,12 +211,12 @@ describe('the Settings button', () => {
 
   it('E04-S02 a plant admin finds People in plant settings, and the main sidebar has no Administration group', async () => {
     const { fetch } = api(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']);
-    renderShellAt('/plant-a/core/articles', shellModules, { fetch });
+    renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe('/plant-a/core/people');
+    expect(button.getAttribute('href')).toBe('/plant-a/people');
     const sidebar = screen.getByRole('navigation', { name: 'Main' });
     expect(within(sidebar).queryByText('Administration')).toBeNull();
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('People');

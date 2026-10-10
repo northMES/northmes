@@ -2,7 +2,7 @@ import { randomUUIDv7 } from 'node:crypto';
 import { hostFactory, queryAsCore } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { devAdmin, seed, seedCompany, seedPlants } from './seed.mjs';
+import { devAdmin, devUsers, seed, seedCompany, seedPlants } from './seed.mjs';
 
 describe('the seed', () => {
   const db = useTestDatabase();
@@ -21,11 +21,16 @@ describe('the seed', () => {
   });
 
   /** The dev admin's JWT, signed in through Better Auth with the seed's password. */
-  async function adminToken(): Promise<string> {
+  function adminToken(): Promise<string> {
+    return tokenOf(devAdmin);
+  }
+
+  /** The JWT of a seed user, signed in through Better Auth with the seed's password. */
+  async function tokenOf({ email, password }: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: devAdmin.email, password: devAdmin.password }),
+      body: JSON.stringify({ email, password }),
     });
     expect(signedIn.status).toBe(200);
     const sessionToken = signedIn.headers.get('set-auth-token');
@@ -139,6 +144,122 @@ describe('the seed', () => {
     ]);
   });
 
+  /** The NorthMES codes of an answer's errors, or 'ok' for an answer without errors. */
+  function outcome(answer: { readonly errors?: readonly { extensions?: unknown }[] }) {
+    if (answer.errors === undefined) return 'ok';
+    return answer.errors
+      .map(({ extensions }) => (extensions as { errorCode?: string }).errorCode)
+      .join(', ');
+  }
+
+  it('E05-S08 the seed has a Plant admin, a planner, an operator and a viewer at plant-a, each with a dev-only password, an email under northmes.test and the role they are named for', async () => {
+    const roles = await queryAsCore<{ username: string; key: string; scope_id: string }>(
+      db.ownerUrl,
+      `select u.username, r.key, a.scope_id
+         from core.role_assignment a
+         join core.role r on r.id = a.role_id
+         join auth."user" u on u.id = a.user_id
+        where a.user_id <> $1
+        order by u.username`,
+      [devAdmin.id],
+    );
+    const operator = await queryAsCore<{ name: string; permissions: string[]; origin: string }>(
+      db.ownerUrl,
+      `select name, permissions, origin from core.role where key = $1`,
+      [devUsers.operator.roleKey],
+    );
+
+    expect(Object.values(devUsers).map(({ email }) => email.endsWith('@northmes.test'))).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(roles).toEqual(
+      [
+        { username: devUsers.plantAdmin.username, key: 'core-plant-admin' },
+        { username: devUsers.planner.username, key: 'planning-planner' },
+        { username: devUsers.operator.username, key: devUsers.operator.roleKey },
+        { username: devUsers.viewer.username, key: 'planning-viewer' },
+      ]
+        .map((row) => ({ ...row, scope_id: seedPlants[0]?.id }))
+        .sort((a, b) => a.username.localeCompare(b.username)),
+    );
+    expect(operator).toEqual([
+      {
+        name: 'Operator',
+        permissions: ['core.article:read', 'planning.productionOrder:read'],
+        origin: 'custom',
+      },
+    ]);
+  });
+
+  it('E05-S08 each seed user signs in and may do what their role allows at plant-a, and is refused what it does not', async () => {
+    const at = async (user: { email: string; password: string }) =>
+      gqlClient(url, {
+        headers: { authorization: `Bearer ${await tokenOf(user)}`, 'x-northmes-plant': 'plant-a' },
+      });
+    const plantAdmin = await at(devUsers.plantAdmin);
+    const planner = await at(devUsers.planner);
+    const operator = await at(devUsers.operator);
+    const viewer = await at(devUsers.viewer);
+    const ordersQuery = '{ planningProductionOrders { id version status } }';
+    const orders = await viewer.send<{
+      planningProductionOrders: { id: string; version: number; status: string }[];
+    }>(ordersQuery);
+    const order = orders.data?.planningProductionOrders.find(({ status }) => status === 'planned');
+    const newArticle = {
+      id: randomUUIDv7(),
+      code: `SEED-${randomUUIDv7().slice(-6)}`,
+      name: 'Seed role test article',
+    };
+    const createArticle = `mutation ($input: CoreCreateArticleInput!) {
+      coreCreateArticle(input: $input) { id }
+    }`;
+
+    const answers = {
+      plantAdmin: [
+        outcome(await plantAdmin.send(createArticle, { input: newArticle })),
+        outcome(
+          await plantAdmin.send(
+            `mutation ($input: CoreBlockUserInput!) { coreBlockUser(input: $input) { id } }`,
+            { input: { id: devUsers.viewer.id } },
+          ),
+        ),
+      ],
+      planner: [
+        outcome(await planner.send(ordersQuery)),
+        outcome(
+          await planner.send(createArticle, {
+            input: { ...newArticle, id: randomUUIDv7(), code: `${newArticle.code}-P` },
+          }),
+        ),
+      ],
+      operator: [
+        outcome(await operator.send('{ coreArticles { totalCount } }')),
+        outcome(await operator.send('{ coreUsers { totalCount } }')),
+      ],
+      viewer: [
+        outcome(orders),
+        outcome(
+          await viewer.send(
+            `mutation ($input: PlanningReleaseProductionOrderInput!) {
+              planningReleaseProductionOrder(input: $input) { status }
+            }`,
+            { input: { id: order?.id, expectedVersion: order?.version } },
+          ),
+        ),
+      ],
+    };
+
+    expect(answers).toEqual({
+      plantAdmin: ['ok', 'core.forbidden'],
+      planner: ['ok', 'core.forbidden'],
+      operator: ['ok', 'core.forbidden'],
+      viewer: ['ok', 'core.forbidden'],
+    });
+  });
+
   it('E05-S05 a seed run on a database seeded before the dev admin had an email to sign in with moves the admin to that email', async () => {
     await query(
       db.authUrl,
@@ -165,8 +286,9 @@ describe('the seed', () => {
 
     await seed({ appUrl: db.appUrl, ownerUrl: db.ownerUrl });
 
-    // The four default roles of core and planning that the company gets, one of them the admin's.
-    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 4, assignments: 1 }]);
+    // The four default roles of core and planning that the company gets and the custom Operator,
+    // and one role for each of the five dev users.
+    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 5, assignments: 5 }]);
     expect(await counts()).toEqual(before);
   });
 });

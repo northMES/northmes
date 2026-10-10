@@ -18,6 +18,7 @@ const releaseOnePlantFree = [
   'Mutation.coreCreateUser',
   'Mutation.coreDeleteRole',
   'Mutation.coreRemoveRoleAssignment',
+  'Mutation.coreResetPassword',
   'Mutation.coreRestoreArticle',
   'Mutation.coreSetArticlePlants',
   'Mutation.coreUnblockUser',

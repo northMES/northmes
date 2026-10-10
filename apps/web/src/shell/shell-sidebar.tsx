@@ -20,7 +20,8 @@ import {
   useSidebar,
 } from '../ui/primitives/sidebar.tsx';
 import type { ShellCompany } from './companies.graphql.ts';
-import { currentOf, shownTo, sidebarLinks } from './shell-pages.ts';
+import { ShellNavGroup, useNavGroupsOpen } from './shell-nav-group.tsx';
+import { currentOf, isMenuGroup, shownTo, sidebarItems } from './shell-pages.ts';
 import { ShellPlantSwitcher } from './shell-plant-switcher.tsx';
 import { type ShellUser, ShellUserMenu } from './shell-user-menu.tsx';
 
@@ -47,10 +48,11 @@ export interface ShellSidebarProps {
 
 /**
  * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the plant
- * switcher, one group per module in their order with its entries, and the user menu at the foot.
- * An entry that needs a permission shows only to a user who holds it at the plant, and an entry of
- * the plant settings navigation stays out (ADR 0066), as administration does: it lives in the
- * settings area behind the Settings button. collapsible="icon" makes it the 64 px rail, where each
+ * switcher, one group per module in their order with its entries and nested groups (PL5), and the
+ * user menu at the foot. An entry that needs a permission shows only to a user who holds it at the
+ * plant, a nested group only with an entry the user may open, and an entry of the plant settings
+ * navigation stays out (ADR 0066), as administration does: it lives in the settings area behind
+ * the Settings button. collapsible="icon" makes it the 64 px rail, where each
  * entry shows its icon and its label in a tooltip; where the shell is narrow it is the Navigation
  * sheet, whose head holds Close navigation and whose entries close it. Any path change closes the
  * sheet too, such as All pages chosen from Help in its footer, so focus can move to the new h1 (D2
@@ -71,6 +73,18 @@ export function ShellSidebar({
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Each new path closes the sheet, whatever link inside it led there.
   useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
+  // The keys, module id and label, of the nested groups with an entry shown that holds the page.
+  const holding = modules.flatMap((each) =>
+    sidebarItems(each)
+      .filter(isMenuGroup)
+      .filter(({ links }) =>
+        links
+          .filter(shown)
+          .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
+      )
+      .map(({ label }) => `${each.module.id}/${label}`),
+  );
+  const [groupsOpen, setGroupOpen] = useNavGroupsOpen(holding);
   const entry = ({ label, icon, link }: MenuLink) => {
     const href = link({ plant }).href;
     const current = currentOf(href, pathname);
@@ -125,7 +139,24 @@ export function ShellSidebar({
                     aria-labelledby={labelId}
                     className="group-data-[collapsible=icon]:items-center"
                   >
-                    {sidebarLinks(each).filter(shown).map(entry)}
+                    {sidebarItems(each).map((item) => {
+                      if (!isMenuGroup(item)) return shown(item) && entry(item);
+                      const entries = item.links.filter(shown);
+                      const groupKey = `${module.id}/${item.label}`;
+                      return (
+                        entries.length > 0 && (
+                          <ShellNavGroup
+                            key={item.label}
+                            group={item}
+                            entries={entries}
+                            moduleLabel={label}
+                            plant={plant}
+                            open={groupsOpen.has(groupKey)}
+                            onOpenChange={(open) => setGroupOpen(groupKey, open)}
+                          />
+                        )
+                      );
+                    })}
                   </SidebarMenu>
                 </SidebarGroup>
               </Fragment>

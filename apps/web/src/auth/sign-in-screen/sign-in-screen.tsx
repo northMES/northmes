@@ -10,10 +10,14 @@ import { Alert, AlertDescription, AlertTitle } from '../../ui/primitives/alert.t
 import { Button } from '../../ui/primitives/button.tsx';
 import { Card, CardContent, CardHeader } from '../../ui/primitives/card.tsx';
 import type { AuthSession, SignInResult } from '../auth-session.ts';
+import { NewPasswordStep } from './new-password-step.tsx';
 
 export interface SignInScreenProps {
-  /** The session the form signs in to. */
-  readonly session: Pick<AuthSession, 'signIn'>;
+  /**
+   * The session the form signs in to, which also saves the new password after a sign-in with a
+   * temporary one, and signs out from that step.
+   */
+  readonly session: Pick<AuthSession, 'signIn' | 'signOut' | 'user' | 'setNewPassword'>;
   /** Shows "You are signed out" and moves focus to the h1, after Sign out (SI19). */
   readonly signedOut?: boolean;
   /**
@@ -30,6 +34,13 @@ const mainId = 'main';
 
 /** The id of the h2 that names the session ended box. */
 const sessionEndedId = 'session-ended';
+
+/** The account of a sign-in with a temporary password, kept in memory until it is replaced. */
+interface Temporary {
+  readonly email: string;
+  readonly password: string;
+  readonly username: string;
+}
 
 /** A sign-in that the API refused. */
 type Refusal = Exclude<SignInResult, { ok: true }>;
@@ -111,7 +122,9 @@ function refusalSummary(refusal: Refusal): { heading: string; errors: SummaryErr
  * Enter in a field submits. A submit with an empty field, an Email that is no email address, or a
  * refusal from the API moves focus to the summary; a wrong password keeps the email and clears the
  * password. After Sign out, focus goes to the h1 and the polite region says "You are signed out."
- * once.
+ * once. A sign-in with a temporary password leads to the new password step (SI16 to SI18) on the
+ * same route, and onSignedIn follows once the new password is saved; its Sign out returns to the
+ * sign-in step without saving.
  */
 export function SignInScreen({
   session,
@@ -127,10 +140,12 @@ export function SignInScreen({
   const busy = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const announced = useRef(false);
+  const [temporary, setTemporary] = useState<Temporary | undefined>(undefined);
+  const [leftStep, setLeftStep] = useState(false);
 
   useEffect(() => {
-    document.title = 'Sign in · NorthMES';
-  }, []);
+    if (temporary === undefined) document.title = 'Sign in · NorthMES';
+  }, [temporary]);
 
   useEffect(() => {
     if ((!signedOut && !sessionEnded) || announced.current) return;
@@ -161,6 +176,15 @@ export function SignInScreen({
     const result = await session.signIn(email.trim(), password).finally(() => {
       busy.current = false;
     });
+    if (result.ok && result.newPasswordRequired === true) {
+      setTemporary({
+        email: email.trim(),
+        password,
+        username: session.user()?.username ?? email.trim(),
+      });
+      setPassword('');
+      return;
+    }
     if (result.ok) {
       onSignedIn();
       return;
@@ -198,11 +222,30 @@ export function SignInScreen({
               tabIndex={-1}
               className="text-2xl font-semibold tracking-tight sm:text-[1.75rem] sm:leading-[2.125rem]"
             >
-              Sign in to NorthMES
+              {temporary === undefined ? 'Sign in to NorthMES' : 'Set a new password'}
             </h1>
           </CardHeader>
           <CardContent className="flex flex-col gap-5 px-8 max-sm:px-0">
-            {signedOut && problem === undefined && (
+            {temporary !== undefined && (
+              <NewPasswordStep
+                session={session}
+                username={temporary.username}
+                email={temporary.email}
+                temporaryPassword={temporary.password}
+                onSaved={onSignedIn}
+                onSignOut={() => {
+                  setTemporary(undefined);
+                  setEmail('');
+                  setProblem(undefined);
+                  setLeftStep(true);
+                  void session.signOut().then(() => {
+                    heading.current?.focus();
+                    announce('You are signed out.');
+                  });
+                }}
+              />
+            )}
+            {temporary === undefined && (signedOut || leftStep) && problem === undefined && (
               // The polite region says it once, so the box has no live role: role none replaces the
               // role alert of shadcn's Alert.
               <Alert role="none" className="border-success bg-success-subtle text-foreground">
@@ -210,60 +253,68 @@ export function SignInScreen({
                 <AlertTitle>You are signed out</AlertTitle>
               </Alert>
             )}
-            {sessionEnded && !signedOut && problem === undefined && (
-              // A group named by its h2; the polite region says it once, so it has no live role.
-              <Alert
-                role="group"
-                aria-labelledby={sessionEndedId}
-                className="gap-1 border-info bg-info-subtle px-3.5 py-3 text-foreground"
-              >
-                <Info aria-hidden className="text-info" />
-                <h2 id={sessionEndedId} className="font-semibold text-info">
-                  Your session ended
-                </h2>
-                <AlertDescription className="text-foreground">
-                  Sign in again to go back to the page you were on.
-                </AlertDescription>
-              </Alert>
-            )}
-            {summary !== undefined && (
+            {temporary === undefined &&
+              sessionEnded &&
+              !signedOut &&
+              !leftStep &&
+              problem === undefined && (
+                // A group named by its h2; the polite region says it once, so it has no live role.
+                <Alert
+                  role="group"
+                  aria-labelledby={sessionEndedId}
+                  className="gap-1 border-info bg-info-subtle px-3.5 py-3 text-foreground"
+                >
+                  <Info aria-hidden className="text-info" />
+                  <h2 id={sessionEndedId} className="font-semibold text-info">
+                    Your session ended
+                  </h2>
+                  <AlertDescription className="text-foreground">
+                    Sign in again to go back to the page you were on.
+                  </AlertDescription>
+                </Alert>
+              )}
+            {temporary === undefined && summary !== undefined && (
               <ErrorSummary heading={summary.heading} errors={summary.errors} focusKey={submits} />
             )}
-            <form noValidate onSubmit={submit} className="flex flex-col gap-5">
-              <TextField
-                label="Email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                error={fieldErrors?.email}
-              />
-              <TextField
-                label="Password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
-                  setPasswordWrong(false);
-                }}
-                error={
-                  passwordWrong
-                    ? 'Enter your password again. Passwords are case-sensitive.'
-                    : fieldErrors?.password
-                }
-              />
-              <Button type="submit" className="w-full">
-                Sign in
-              </Button>
-            </form>
-            <p className="text-sm text-muted-foreground">
-              Forgot your password? Ask a plant admin to reset it.
-            </p>
+            {temporary === undefined && (
+              <form noValidate onSubmit={submit} className="flex flex-col gap-5">
+                <TextField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  error={fieldErrors?.email}
+                />
+                <TextField
+                  label="Password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setPasswordWrong(false);
+                  }}
+                  error={
+                    passwordWrong
+                      ? 'Enter your password again. Passwords are case-sensitive.'
+                      : fieldErrors?.password
+                  }
+                />
+                <Button type="submit" className="w-full">
+                  Sign in
+                </Button>
+              </form>
+            )}
+            {temporary === undefined && (
+              <p className="text-sm text-muted-foreground">
+                Forgot your password? Ask a plant admin to reset it.
+              </p>
+            )}
           </CardContent>
         </Card>
       </main>

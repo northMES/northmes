@@ -17,11 +17,38 @@ export interface SignedInUser {
   readonly username: string;
 }
 
-/** What a sign-in came to. A refusal names its reason, which the sign-in page words. */
+/**
+ * What a sign-in came to. A refusal names its reason, which the sign-in page words. A sign-in with
+ * a temporary password must set a new one before anything else (D2, SI16).
+ */
 export type SignInResult =
-  | { readonly ok: true }
+  | { readonly ok: true; readonly newPasswordRequired?: true }
   | { readonly ok: false; readonly reason: 'wrong-credentials' | 'blocked' | 'failed' }
   | { readonly ok: false; readonly reason: 'rate-limited'; readonly retryAfterSeconds: number };
+
+/**
+ * What setting a new password came to. A refusal names its reason, which the step words. A password
+ * that is no longer temporary counts as saved.
+ */
+export type NewPasswordResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly reason: 'too-short' | 'too-long' | 'unchanged' | 'wrong-current' | 'failed';
+    };
+
+/** The API's route of the new password step, below the API's URL. */
+const newPasswordPath = 'api/account/password';
+
+/** The reason of each refusal code of the new password route. */
+const newPasswordRefusals: Readonly<
+  Record<string, 'too-short' | 'too-long' | 'unchanged' | 'wrong-current'>
+> = {
+  'core.password_too_short': 'too-short',
+  'core.password_too_long': 'too-long',
+  'core.password_unchanged': 'unchanged',
+  'core.current_password_wrong': 'wrong-current',
+};
 
 /**
  * The web's session with the API (#391): Better Auth's session token, which the bearer plugin
@@ -45,6 +72,11 @@ export interface AuthSession {
    * mint one. It reuses the last JWT until 30 seconds before it expires.
    */
   token(): Promise<string | undefined>;
+  /**
+   * Replaces the temporary password the user signed in with by a new one, on the new password step
+   * (D2, SI16). Until it succeeds, the API refuses every other request of the user.
+   */
+  setNewPassword(currentPassword: string, newPassword: string): Promise<NewPasswordResult>;
 }
 
 export interface AuthSessionOptions {
@@ -164,7 +196,7 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
     return { token: data.token, expiresAt: expiryOf(data.token, requestedAt) };
   };
 
-  return {
+  const session: AuthSession = {
     user: () => stored?.user,
 
     async signIn(email, password) {
@@ -184,7 +216,9 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
       if (answer === undefined) return { ok: false, reason: 'failed' };
       const { data, error } = answer;
       if (error !== null) return refusal(error.status, error.code, retryAfter);
-      const user = data?.user as { name?: unknown; username?: unknown } | undefined;
+      const user = data?.user as
+        | { name?: unknown; username?: unknown; mustChangePassword?: unknown }
+        | undefined;
       const sessionToken = token ?? data?.token;
       if (typeof sessionToken !== 'string' || typeof user?.name !== 'string') {
         return { ok: false, reason: 'failed' };
@@ -197,7 +231,9 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
         },
       };
       storage.setItem(storageKey, JSON.stringify(stored));
-      return { ok: true };
+      return user.mustChangePassword === true
+        ? { ok: true, newPasswordRequired: true }
+        : { ok: true };
     },
 
     async signOut() {
@@ -213,15 +249,37 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
     async token() {
       if (stored === undefined) return undefined;
       if (jwt !== undefined && jwt.expiresAt - renewBeforeMs > now()) return jwt.token;
-      const session = stored;
+      const current = stored;
       minting ??= mint().finally(() => {
         minting = undefined;
       });
       const minted = await minting;
       // A sign-out or another sign-in while the JWT was minted keeps its own state.
-      if (stored !== session) return undefined;
+      if (stored !== current) return undefined;
       jwt = minted;
       return minted?.token;
     },
+
+    async setNewPassword(currentPassword, newPassword) {
+      const jwt = await session.token();
+      if (jwt === undefined) return { ok: false, reason: 'failed' };
+      const send = options.fetch ?? globalThis.fetch;
+      const base = options.apiUrl.endsWith('/') ? options.apiUrl : `${options.apiUrl}/`;
+      const answer = await send(new URL(newPasswordPath, base).href, {
+        method: 'POST',
+        credentials: 'omit',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }).catch(() => undefined);
+      if (answer === undefined) return { ok: false, reason: 'failed' };
+      if (answer.ok) return { ok: true };
+      const { errorCode } = (await answer.json().catch(() => ({}))) as { errorCode?: unknown };
+      // A password that is no longer temporary was saved already, as by a save whose answer was
+      // lost or by another tab, so the step is done.
+      if (errorCode === 'core.password_change_not_required') return { ok: true };
+      const reason = typeof errorCode === 'string' ? newPasswordRefusals[errorCode] : undefined;
+      return { ok: false, reason: reason ?? 'failed' };
+    },
   };
+  return session;
 }

@@ -5,3 +5,4 @@ export {
   RemoveRole,
   type RemoveRoleProps,
 } from './remove-role.tsx';
+export { type HeldAssignment, type RoleLoss, roleLoss } from './remove-role-loss.ts';

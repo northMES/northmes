@@ -218,3 +218,19 @@ export function bodyRows(table: HTMLElement): (string | null)[][] {
       .map((cell) => cell.textContent),
   );
 }
+
+/**
+ * Watches the document for skeleton rows from now on; the function it returns stops watching and
+ * says whether any showed, however briefly.
+ */
+export function watchForSkeletonRows(): () => boolean {
+  let seen = false;
+  const observer = new MutationObserver(() => {
+    if (document.querySelector('[data-slot="skeleton"]') !== null) seen = true;
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => {
+    observer.disconnect();
+    return seen;
+  };
+}

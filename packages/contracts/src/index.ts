@@ -21,6 +21,7 @@ export {
   type ListSortColumn,
 } from './define-list-query-contract.ts';
 export {
+  defineCoreLinks,
   defineModuleLinks,
   type LinkBuilder,
   type LinkEntry,

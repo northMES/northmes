@@ -17,7 +17,38 @@ export interface NewUser {
   readonly name?: string;
   /** The email the user signs in with, unique among users. */
   readonly email: string;
+  /**
+   * True for a password that an admin hands out: the user must set a new one at their next
+   * sign-in, and every other request is refused until they have (ADR 0051 rule 13).
+   */
+  readonly temporary?: boolean;
 }
+
+/** How a password is set: temporary for one an admin hands out. */
+export interface PasswordOptions {
+  /**
+   * The user must set a new password at the next sign-in, and every session they hold ends, so
+   * the old password and sessions stop working (ADR 0051 rule 13).
+   */
+  readonly temporary?: boolean;
+}
+
+/**
+ * The user of a JWT and the Better Auth session it was minted from. A JWT that the server signed
+ * itself names no session.
+ */
+export interface TokenSession {
+  readonly userId: string;
+  readonly sessionId: string | undefined;
+}
+
+/** Why the new password step refused a password, by NorthMES code. */
+export type NewPasswordRefusal =
+  | 'core.current_password_wrong'
+  | 'core.password_too_short'
+  | 'core.password_too_long'
+  | 'core.password_unchanged'
+  | 'core.password_change_not_required';
 
 /** Better Auth's code for an email that another user has. */
 const EMAIL_TAKEN = 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL';
@@ -59,6 +90,7 @@ export class AuthService {
     password,
     name,
     email,
+    temporary = false,
   }: NewUser): Promise<{ user: { id: string } }> {
     try {
       return await this.betterAuth.auth.api.createUser({
@@ -66,8 +98,13 @@ export class AuthService {
           email,
           password,
           name: name ?? username,
-          // Better Auth writes the user with the id in its data.
-          data: { ...(id ? { id } : {}), username, displayUsername: username },
+          // Better Auth writes the user with the id and the mark in its data.
+          data: {
+            ...(id ? { id } : {}),
+            username,
+            displayUsername: username,
+            mustChangePassword: temporary,
+          },
         },
       });
     } catch (error) {
@@ -79,22 +116,71 @@ export class AuthService {
 
   /**
    * Gives the user this password, on the credential account Better Auth signs them in with, which
-   * it creates when the user has none.
+   * it creates when the user has none. A temporary one marks the user as needing a new password
+   * and ends every session they hold.
    */
-  async setPassword(userId: string, password: string): Promise<void> {
+  async setPassword(
+    userId: string,
+    password: string,
+    { temporary = false }: PasswordOptions = {},
+  ): Promise<void> {
     const { internalAdapter, password: hasher } = await this.betterAuth.auth.$context;
     const hash = await hasher.hash(password);
     const accounts = await internalAdapter.findAccounts(userId);
     if (accounts.some(({ providerId }) => providerId === 'credential')) {
       await internalAdapter.updatePassword(userId, hash);
-      return;
+    } else {
+      await internalAdapter.linkAccount({
+        providerId: 'credential',
+        accountId: userId,
+        password: hash,
+        userId,
+      });
     }
-    await internalAdapter.linkAccount({
-      providerId: 'credential',
-      accountId: userId,
-      password: hash,
-      userId,
+    await internalAdapter.updateUser(userId, {
+      mustChangePassword: temporary,
+      updatedAt: new Date(),
     });
+    if (temporary) await internalAdapter.deleteUserSessions(userId);
+  }
+
+  /**
+   * The new password step (D2, SI16): a user marked as needing a new password replaces the
+   * temporary one, which they give as currentPassword, and the mark is cleared. Every other session
+   * of the user ends, so a session that someone else opened with the temporary password mints no
+   * more JWTs. The caller's session stays; when the caller's JWT names no session, every session
+   * ends. A JWT already minted from an ended session works until it expires (JWT_LIFETIME). It answers
+   * the refusal's code, or undefined once the password is set: a wrong current password, a new one
+   * shorter than Better Auth's minimum of 8 characters or longer than its maximum, one equal to the
+   * temporary password, or a user who is not marked.
+   */
+  async setNewPassword(
+    { userId, sessionId }: TokenSession,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<NewPasswordRefusal | undefined> {
+    const { internalAdapter, password: hasher } = await this.betterAuth.auth.$context;
+    const user = (await internalAdapter.findUserById(userId)) as {
+      mustChangePassword?: boolean;
+    } | null;
+    if (user?.mustChangePassword !== true) return 'core.password_change_not_required';
+    const account = (await internalAdapter.findAccounts(userId)).find(
+      ({ providerId }) => providerId === 'credential',
+    );
+    const hash = account?.password;
+    if (!hash || !(await hasher.verify({ hash, password: currentPassword }))) {
+      return 'core.current_password_wrong';
+    }
+    if (newPassword.length < hasher.config.minPasswordLength) return 'core.password_too_short';
+    if (newPassword.length > hasher.config.maxPasswordLength) return 'core.password_too_long';
+    if (newPassword === currentPassword) return 'core.password_unchanged';
+    await internalAdapter.updatePassword(userId, await hasher.hash(newPassword));
+    await internalAdapter.updateUser(userId, { mustChangePassword: false, updatedAt: new Date() });
+    const others = (await internalAdapter.listSessions(userId)).filter(
+      ({ id }) => id !== sessionId,
+    );
+    if (others.length > 0) await internalAdapter.deleteSessions(others.map(({ token }) => token));
+    return undefined;
   }
 
   /**
@@ -140,7 +226,19 @@ export class AuthService {
    * audience, or text that is no JWT.
    */
   async userOfToken(token: string): Promise<string | null> {
+    return (await this.sessionOfToken(token))?.userId ?? null;
+  }
+
+  /**
+   * The user of a JWT that userOfToken accepts and the session that minted it, which
+   * /api/auth/token names as sid, or null for a token that userOfToken refuses.
+   */
+  async sessionOfToken(token: string): Promise<TokenSession | null> {
     const { payload } = await this.betterAuth.auth.api.verifyJWT({ body: { token } });
-    return typeof payload?.sub === 'string' ? payload.sub : null;
+    if (typeof payload?.sub !== 'string') return null;
+    return {
+      userId: payload.sub,
+      sessionId: typeof payload.sid === 'string' ? payload.sid : undefined,
+    };
   }
 }

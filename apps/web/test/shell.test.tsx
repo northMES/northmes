@@ -126,16 +126,16 @@ const settings: ShellModule = {
     {
       label: 'Settings',
       icon: 'CalendarCog',
-      link: ({ plant }) => ({ href: `/${plant}/settings` }),
+      link: ({ plant }) => ({ href: `/${plant}/calendar` }),
     },
   ],
   module: defineWebModule({
-    id: 'settings',
+    id: 'calendar',
     version: '0.4.0',
     routes: (plantRoute) =>
       createRoute({
         getParentRoute: () => plantRoute,
-        path: 'settings',
+        path: 'calendar',
         component: SettingsScreen,
       }),
   }),
@@ -282,12 +282,12 @@ describe('the shell', () => {
   it("E04-S02 the web's sidebar has Articles in the Core group before Planning board in the Planning group", async () => {
     // The screen's query never gets an answer; the test reads the sidebar alone.
     const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
-    renderShellAt('/plant-a/core/articles', shellModules, { fetch });
+    renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const groups = await sidebarGroups();
     expect(groups.map(groupLabel)).toEqual(['Core', 'Planning']);
     expect(groups.map(linksIn)).toEqual([
-      [['Articles', '/plant-a/core/articles']],
+      [['Articles', '/plant-a/articles']],
       [['Planning board', '/plant-a/planning/board']],
     ]);
   });
@@ -597,7 +597,7 @@ describe('the shell', () => {
 
   it('E06-S06 a path change to a page whose h1 cannot take focus moves focus to main', async () => {
     const user = userEvent.setup();
-    renderShellAt('/plant-a/settings', [planning, settings]);
+    renderShellAt('/plant-a/calendar', [planning, settings]);
     await screen.findByRole('heading', { level: 1, name: 'Settings' });
 
     await user.click(screen.getByRole('link', { name: 'Planning board' }));

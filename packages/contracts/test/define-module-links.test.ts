@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { defineModuleLinks, linkEntry } from '@northmes/contracts';
+import { defineCoreLinks, defineModuleLinks, linkEntry } from '@northmes/contracts';
 import { describe, expect, it } from 'vitest';
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -107,31 +107,57 @@ describe('defineModuleLinks', () => {
     });
   });
 
-  it('E04-S02 a settings section builder builds /settings/<company id>/core/plants without a plant', () => {
+  it('E04-S02 a settings section builder builds /settings/<company id>/<module id>/plans without a plant', () => {
     const companyId = '01920000-0000-7000-8000-0000000ac3e0';
-    const core = defineModuleLinks(
-      'core',
-      { articles: { path: 'articles' } },
-      { settings: { plants: { path: 'plants', children: { plant: { path: '$plantId' } } } } },
+    const quality = defineModuleLinks(
+      'quality',
+      { inspections: { path: 'inspections' } },
+      { settings: { plans: { path: 'plans', children: { plan: { path: '$planId' } } } } },
     );
 
-    expect(core.settings.plants({ companyId }).href).toBe(`/settings/${companyId}/core/plants`);
-    expect(core.settings.plants.plant({ companyId, plantId: 'p/1' })).toEqual({
-      to: '/settings/$companyId/core/plants/$plantId',
-      params: { companyId, plantId: 'p/1' },
+    expect(quality.settings.plans({ companyId }).href).toBe(`/settings/${companyId}/quality/plans`);
+    expect(quality.settings.plans.plan({ companyId, planId: 'p/1' })).toEqual({
+      to: '/settings/$companyId/quality/plans/$planId',
+      params: { companyId, planId: 'p/1' },
       search: {},
-      href: `/settings/${companyId}/core/plants/p%2F1`,
+      href: `/settings/${companyId}/quality/plans/p%2F1`,
     });
-    expect(linkEntry(core.settings)).toEqual({
-      path: 'core',
-      pattern: '/settings/$companyId/core',
+    expect(linkEntry(quality.settings)).toEqual({
+      path: 'quality',
+      pattern: '/settings/$companyId/quality',
     });
-    expect(linkEntry(core.settings.plants)).toEqual({
-      path: 'plants',
-      pattern: '/settings/$companyId/core/plants',
+    expect(linkEntry(quality.settings.plans)).toEqual({
+      path: 'plans',
+      pattern: '/settings/$companyId/quality/plans',
     });
-    expect(Object.keys(core.settings)).toEqual(['plants']);
-    expect(core.articles({ plant: 'plant-a' }).href).toBe('/plant-a/core/articles');
+    expect(Object.keys(quality.settings)).toEqual(['plans']);
+    expect(quality.inspections({ plant: 'plant-a' }).href).toBe('/plant-a/quality/inspections');
+  });
+
+  it("E04-S02 defineCoreLinks builds core's pages at the plant root and its settings pages at the company settings root, without a module segment (ADR 0074)", () => {
+    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+    const core = defineCoreLinks(
+      { articles: { path: 'articles', children: { article: { path: '$articleId' } } } },
+      { settings: { users: { path: 'users' } } },
+    );
+
+    expect(core.articles({ plant: 'plant-a' }, { q: 'hinge' }).href).toBe(
+      '/plant-a/articles?q=hinge',
+    );
+    expect(core.articles.article({ plant: 'plant-a', articleId: 'a/b' })).toEqual({
+      to: '/$plant/articles/$articleId',
+      params: { plant: 'plant-a', articleId: 'a/b' },
+      search: {},
+      href: '/plant-a/articles/a%2Fb',
+    });
+    expect(core.settings.users({ companyId }).href).toBe(`/settings/${companyId}/users`);
+    expect(linkEntry(core)).toEqual({ path: '', pattern: '/$plant' });
+    expect(linkEntry(core.settings)).toEqual({ path: '', pattern: '/settings/$companyId' });
+    expect(linkEntry(core.settings.users)).toEqual({
+      path: 'users',
+      pattern: '/settings/$companyId/users',
+    });
+    expect(Object.keys(core)).toEqual(['articles', 'settings']);
   });
 
   it('E04-S02 a manifest without a settings section has no settings entry, and an entry named settings beside a settings section throws', () => {
