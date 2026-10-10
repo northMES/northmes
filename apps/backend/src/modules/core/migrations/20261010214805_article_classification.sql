@@ -15,9 +15,10 @@ alter table core.article
     constraint article_source_check check (source <> '' and char_length(source) <= 64),
   add column created_at timestamptz not null default now();
 
--- The id is a uuidv7, which holds the time it was made, so an existing article gets the time it
--- was created. Filling the column is no change to an article, so it keeps its version and its last
--- change.
+-- An id made by NorthMES is a uuidv7, which holds the time it was made, so such an article gets the
+-- time it was created. A client may send an id of another version, which holds no time; that
+-- article gets its last change, the nearest time known. Filling the column is no change to an
+-- article, so it keeps its version and its last change.
 alter table core.article disable trigger bump_version, disable trigger touch_updated_at;
-update core.article set created_at = uuid_extract_timestamp(id);
+update core.article set created_at = coalesce(uuid_extract_timestamp(id), updated_at);
 alter table core.article enable trigger bump_version, enable trigger touch_updated_at;
