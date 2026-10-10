@@ -52,6 +52,8 @@ function refusalProblem(result: Exclude<NewPasswordResult, { ok: true }>): Probl
   switch (result.reason) {
     case 'too-short':
       return { kind: 'field', message: 'Use at least 8 characters.' };
+    case 'too-long':
+      return { kind: 'field', message: 'Use at most 128 characters.' };
     case 'unchanged':
       return { kind: 'field', message: 'Choose a password other than the temporary one.' };
     case 'wrong-current':

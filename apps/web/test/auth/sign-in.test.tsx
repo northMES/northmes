@@ -57,6 +57,21 @@ const pong = () =>
     headers: { 'content-type': 'application/graphql-response+json' },
   });
 
+/** The API's refusal of a request from a user who must set a new password, as after a reset. */
+const passwordChangeRequired = () =>
+  new Response(
+    JSON.stringify({
+      data: null,
+      errors: [
+        {
+          message: 'Choose a new password to continue.',
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
+        },
+      ],
+    }),
+    { headers: { 'content-type': 'application/graphql-response+json' } },
+  );
+
 /** The calls of fetch that sent the operation named operation. */
 function callsOf(
   fetch: { mock: { calls: Parameters<typeof globalThis.fetch>[] } },
@@ -391,25 +406,32 @@ describe('sign-in', () => {
     );
   });
 
+  it('E05-S08 a new password the API refuses as longer than 128 characters stays on the step with "Use at most 128 characters." on New password', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    renderAt('/plant-a/quality', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, toveEmail, toveTemporaryPassword);
+    const field = await screen.findByLabelText('New password');
+
+    await user.click(field);
+    await user.paste('a long passphrase '.repeat(8));
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to continue' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(session.setNewPassword).toHaveBeenCalledOnce();
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Use at most 128 characters.')).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Set a new password' })).toBeDefined();
+  });
+
   it('E05-S08 a core.password_change_required answer mid-session, as after a reset, ends the session and sends the user to sign in again, then to the new password step and back to the page', async () => {
     const user = userEvent.setup();
     const session = fakeSession();
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            data: null,
-            errors: [
-              {
-                message: 'Choose a new password to continue.',
-                extensions: { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
-              },
-            ],
-          }),
-          { headers: { 'content-type': 'application/graphql-response+json' } },
-        ),
-      )
+      .mockResolvedValueOnce(passwordChangeRequired())
       .mockImplementation(async () => pong());
     const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
 
@@ -422,5 +444,19 @@ describe('sign-in', () => {
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
     expect(router.state.location.href).toBe('/plant-a/quality?tab=open');
+  });
+
+  it('E05-S08 requests refused with core.password_change_required at the same time end the session once', async () => {
+    const session = fakeSession();
+    // After a reset the API refuses every request of the session. The page's requests go out
+    // together, so their refusals arrive while the sign-out of the first one is under way.
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => passwordChangeRequired());
+    const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+
+    expect(fetch.mock.calls.length).toBeGreaterThan(1);
+    expect(session.signOut).toHaveBeenCalledOnce();
+    expect(router.state.location.search).toEqual({ redirect: '/plant-a/quality?tab=open' });
   });
 });

@@ -41,7 +41,9 @@ const json = (body: unknown, init: ResponseInit = {}) =>
 /**
  * Better Auth's answers as the API gives them: alex.lund signs in by email with the password
  * "correct horse", gets the session token "session-1", and /token mints JWTs that live five
- * minutes from `clock.now`. Its username sign-in is disabled, so that path is not found.
+ * minutes from `clock.now`. Its username sign-in is disabled, so that path is not found. Once a new
+ * password is saved, the password is no longer temporary, and the new password route refuses the
+ * next one as not required.
  */
 function betterAuth(clock: { now: number }) {
   const user = {
@@ -51,6 +53,7 @@ function betterAuth(clock: { now: number }) {
     email: 'alex.lund@example.test',
   };
   let minted = 0;
+  let newPasswordSaved = false;
   const fetch = vi.fn<typeof globalThis.fetch>(async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
@@ -92,12 +95,19 @@ function betterAuth(clock: { now: number }) {
         if (!/^Bearer \S+\.\S+\.signature$/.test(headers.get('authorization') ?? '')) {
           return json({ errorCode: 'core.unauthenticated' }, { status: 401 });
         }
+        if (newPasswordSaved) {
+          return json({ errorCode: 'core.password_change_not_required' }, { status: 409 });
+        }
         if (sent.newPassword.length < 8) {
           return json({ errorCode: 'core.password_too_short' }, { status: 400 });
+        }
+        if (sent.newPassword.length > 128) {
+          return json({ errorCode: 'core.password_too_long' }, { status: 400 });
         }
         if (sent.newPassword === sent.currentPassword) {
           return json({ errorCode: 'core.password_unchanged' }, { status: 400 });
         }
+        newPasswordSaved = true;
         return json({ ok: true });
       }
       default:
@@ -292,11 +302,13 @@ describe('the auth session', () => {
     await session.signIn('tove.lindqvist@example.test', 'Rk7qTm3vXp9w');
 
     const short = await session.setNewPassword('Rk7qTm3vXp9w', 'short');
+    const long = await session.setNewPassword('Rk7qTm3vXp9w', 'a long passphrase '.repeat(8));
     const unchanged = await session.setNewPassword('Rk7qTm3vXp9w', 'Rk7qTm3vXp9w');
     const saved = await session.setNewPassword('Rk7qTm3vXp9w', 'a password of mine');
 
-    expect([short, unchanged, saved]).toEqual([
+    expect([short, long, unchanged, saved]).toEqual([
       { ok: false, reason: 'too-short' },
+      { ok: false, reason: 'too-long' },
       { ok: false, reason: 'unchanged' },
       { ok: true },
     ]);
@@ -308,5 +320,17 @@ describe('the auth session', () => {
       currentPassword: 'Rk7qTm3vXp9w',
       newPassword: 'a password of mine',
     });
+  });
+
+  it('E05-S08 setNewPassword counts a password that is no longer temporary as saved, as after a save whose answer was lost or a save in another tab', async () => {
+    const { open, api } = setup();
+    const session = open();
+    await session.signIn('tove.lindqvist@example.test', 'Rk7qTm3vXp9w');
+    await session.setNewPassword('Rk7qTm3vXp9w', 'a password of mine');
+
+    const again = await session.setNewPassword('Rk7qTm3vXp9w', 'a password of mine');
+
+    expect(api.calls('/api/account/password')).toHaveLength(2);
+    expect(again).toEqual({ ok: true });
   });
 });
