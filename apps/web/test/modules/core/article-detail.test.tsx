@@ -81,7 +81,8 @@ describe('article page', () => {
     const hose = { ...article('AX-31007', 'Hydraulslang 12 mm'), source: 'Pyramid' };
     renderCoreAt(articleHref(hose.id), [articleQuery(hose)]);
 
-    const note = await screen.findByRole('region', { name: 'Note' });
+    await screen.findByRole('heading', { level: 1, name: 'Article AX-31007' });
+    const note = screen.getByRole('region', { name: 'Note' });
     expect(note.textContent).toBe('NoteNo note.');
     const origin = screen.getByRole('region', { name: 'Origin' });
     expect(definitions(origin)).toContainEqual(['Source', 'Pyramid']);
