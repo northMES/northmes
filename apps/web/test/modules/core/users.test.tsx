@@ -947,6 +947,40 @@ describe('users', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it("E05-S08 Where's message describes each choice of Where while it shows", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+    ]);
+    /** The texts that describe the radio, by its aria-describedby. */
+    const descriptionOf = (radio: HTMLElement) =>
+      (radio.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+    await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+
+    expect(within(section).getAllByRole('radio').map(descriptionOf)).toEqual([
+      ['Applies at Plant A.', 'Choose where the role applies.'],
+      [
+        'Applies to every plant of Acme AB, also plants created later.',
+        'Choose where the role applies.',
+      ],
+    ]);
+    await events.click(within(section).getByRole('radio', { name: 'Plant A only' }));
+    expect(within(section).getAllByRole('radio').map(descriptionOf)).toEqual([
+      ['Applies at Plant A.'],
+      ['Applies to every plant of Acme AB, also plants created later.'],
+    ]);
+  });
+
   it('E05-S08 with the company as the only place, Role locks the roles the creator cannot give there, and a refusal names the company', async () => {
     const events = userEvent.setup();
     renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
