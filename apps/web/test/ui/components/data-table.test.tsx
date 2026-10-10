@@ -249,4 +249,19 @@ describe('DataTable', () => {
     ]);
     expect(screen.getByText('3 groups, 3 articles')).toBeDefined();
   });
+
+  it("E05-S06 a grouped table's pager shows the row range of the rows in its groups, without the header rows", () => {
+    render(
+      table({
+        rows: [],
+        groups: [
+          { id: 'flanges', label: 'Flanges', count: '2 articles', rows: articles.slice(0, 2) },
+          { id: 'hoses', label: 'Hoses', count: '1 article', rows: articles.slice(2) },
+        ],
+        paging: paging(),
+      }),
+    );
+
+    expect(screen.getByText('Rows 1 to 3 of 8')).toBeDefined();
+  });
 });
