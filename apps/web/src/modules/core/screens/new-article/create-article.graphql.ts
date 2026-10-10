@@ -22,6 +22,11 @@ if (false) {
           locale
           text
         }
+        articleGroup {
+          id
+          code
+          name
+        }
         stockUnit
         note
         source

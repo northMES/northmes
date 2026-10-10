@@ -76,6 +76,7 @@ function created(input: CreateInput) {
         note: null,
         source: null,
         translations: [],
+        articleGroup: null,
         archivedAt: null,
         createdAt: lastChanged,
         updatedAt: lastChanged,

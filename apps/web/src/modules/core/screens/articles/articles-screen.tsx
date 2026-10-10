@@ -91,6 +91,11 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
     cell: (article) => plantsLabel(article),
   },
   {
+    id: 'articleGroup',
+    header: 'Article group',
+    cell: (article) => article.articleGroup?.name ?? '',
+  },
+  {
     id: 'stockUnit',
     header: 'Stock unit',
     cell: (article) => unitOf(article.stockUnit).symbol,

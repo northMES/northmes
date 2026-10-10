@@ -171,6 +171,7 @@ describe('article groups', () => {
         request: { query: CoreArticleGroup, variables: { id: flanges.id } },
         result: { data: { coreArticleGroup: flanges } },
       },
+      viewerQuery(['core.articleGroup:read'], ['core.articleGroup:update']),
       {
         request: {
           query: CoreUpdateArticleGroup,
@@ -185,8 +186,10 @@ describe('article groups', () => {
       groupsQuery([{ ...flanges, name: 'Flanges, steel', version: 2 }]),
     ]);
 
-    await user.type(await screen.findByRole('textbox', { name: 'Name' }), ', steel');
-    await user.click(screen.getByRole('button', { name: 'Save article group' }));
+    // The form is read-only until the viewer's permissions say the user may change the group.
+    const save = await screen.findByRole('button', { name: 'Save article group' });
+    await user.type(screen.getByRole('textbox', { name: 'Name' }), ', steel');
+    await user.click(save);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Article groups' })).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('Article group FL saved'));

@@ -62,6 +62,7 @@ describe('article page', () => {
     const h1 = await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' });
     expect(h1.parentElement?.textContent).toContain('Fläns DN50 rostfri');
     expect(definitions(screen.getByRole('region', { name: 'Classification' }))).toEqual([
+      ['Article group', 'No article group'],
       ['Stock unit', 'Metres (m)'],
     ]);
     expect(

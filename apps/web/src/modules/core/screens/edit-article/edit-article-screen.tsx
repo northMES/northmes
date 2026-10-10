@@ -28,6 +28,7 @@ function formValues(article: Article) {
     name: article.name,
     stockUnit: article.stockUnit,
     note: article.note ?? '',
+    articleGroupId: article.articleGroup?.id ?? '',
     translations: article.translations.map(({ field, locale, text }) => ({ field, locale, text })),
   };
 }
@@ -59,7 +60,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const save = async (values: ArticleValues) => {
     setConflict(false);
     setArchived(false);
-    const { code, name, stockUnit, note, translations } = values;
+    const { code, name, stockUnit, note, translations, articleGroupId } = values;
     try {
       const { data } = await update({
         variables: {
@@ -73,6 +74,8 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
             note: note ?? '',
             // The list replaces the saved one, so an emptied list removes them.
             translations,
+            // An empty group removes it.
+            articleGroupId: articleGroupId ?? '',
           },
         },
       });
@@ -156,6 +159,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
       cancelHref={coreLinks.articles.article({ plant, articleId: article.id }).href}
       conflict={conflict ? { onReload } : undefined}
       archived={archived ? { onRestore } : undefined}
+      currentGroup={article.articleGroup}
     />
   );
 }

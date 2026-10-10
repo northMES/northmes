@@ -47,6 +47,7 @@ export function NewArticleScreen() {
       stockUnit: '',
       note: '',
       translations: [],
+      articleGroupId: '',
       plants: { allPlants: false, plants: [plant] },
     },
   });
@@ -64,7 +65,7 @@ export function NewArticleScreen() {
   });
 
   const save = async (values: ArticleValues) => {
-    const { code, name, stockUnit, note, translations, plants } = values;
+    const { code, name, stockUnit, note, translations, articleGroupId, plants } = values;
     const plantsInput =
       assigns && plants !== undefined ? { allPlants: plants.allPlants, plants: plants.plants } : {};
     try {
@@ -77,6 +78,7 @@ export function NewArticleScreen() {
             stockUnit,
             ...(note === null ? {} : { note }),
             ...(translations.length === 0 ? {} : { translations }),
+            ...(articleGroupId === null ? {} : { articleGroupId }),
             ...plantsInput,
           },
         },

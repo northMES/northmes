@@ -43,6 +43,11 @@ if (false) {
             id
             code
             name
+            articleGroup {
+              id
+              code
+              name
+            }
             stockUnit
             source
             version
