@@ -28,6 +28,7 @@ function formValues(article: Article) {
     name: article.name,
     stockUnit: article.stockUnit,
     note: article.note ?? '',
+    translations: article.translations.map(({ field, locale, text }) => ({ field, locale, text })),
   };
 }
 
@@ -58,7 +59,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const save = async (values: ArticleValues) => {
     setConflict(false);
     setArchived(false);
-    const { code, name, stockUnit, note } = values;
+    const { code, name, stockUnit, note, translations } = values;
     try {
       const { data } = await update({
         variables: {
@@ -70,6 +71,8 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
             stockUnit,
             // An empty note clears it; a field the input leaves out keeps its value.
             note: note ?? '',
+            // The list replaces the saved one, so an emptied list removes them.
+            translations,
           },
         },
       });

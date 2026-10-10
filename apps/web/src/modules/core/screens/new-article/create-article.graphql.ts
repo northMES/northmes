@@ -17,6 +17,11 @@ if (false) {
         id
         code
         name
+        translations {
+          field
+          locale
+          text
+        }
         stockUnit
         note
         source

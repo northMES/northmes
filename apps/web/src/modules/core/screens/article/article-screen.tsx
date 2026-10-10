@@ -8,6 +8,7 @@ import { Fragment, type ReactNode } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { formatDateTime } from '../../../../ui/lib/date-time.ts';
+import { languageName } from '../../../../ui/lib/languages.ts';
 import type { Article } from '../../article.graphql.ts';
 import { plantsLabel } from '../../article-plants.ts';
 import { useArticle } from '../../use-article.tsx';
@@ -32,6 +33,24 @@ function Value({
     );
   }
   return <span className={className}>{text}</span>;
+}
+
+/**
+ * The article's name, and under it each translation of the name with its language, the
+ * translation carrying its own lang (design ui-222, DE1).
+ */
+function ArticleName({ article }: { readonly article: Article | undefined }) {
+  if (article === undefined) return <Value text={undefined} />;
+  return (
+    <>
+      <span className="block">{article.name}</span>
+      {article.translations.map(({ locale, text }) => (
+        <span key={locale} className="block text-xs text-muted-foreground">
+          {languageName(locale)}: <span lang={locale}>{text}</span>
+        </span>
+      ))}
+    </>
+  );
 }
 
 /** A section of the article's page: a card named by its h2 (design ui-222, DE1). */
@@ -92,7 +111,7 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
         <Definitions
           rows={[
             ['Article number', <Value key="code" text={article?.code} className="font-mono" />],
-            ['Name', <Value key="name" text={article?.name} />],
+            ['Name', <ArticleName key="name" article={article} />],
           ]}
         />
       </Section>
