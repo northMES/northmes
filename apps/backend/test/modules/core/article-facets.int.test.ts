@@ -41,13 +41,13 @@ const facetsQuery = `query (${filterArgs}) {
   }
 }`;
 
-interface Filters {
+type Filters = {
   search?: string;
   includeArchived?: boolean;
   articleGroupIds?: (string | null)[];
   stockUnits?: string[];
   sources?: (string | null)[];
-}
+};
 
 interface Facets {
   total: number;

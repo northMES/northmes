@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { type StockUnitCode, stockUnitCodes } from '@northmes/contracts';
 import {
   archiveArticle,
   createArticle,
@@ -19,7 +20,7 @@ import { currentPrincipal } from '../../../principal.ts';
 import { type ArticleListArgs, articleList } from '../api/article/queries/article.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
 import { type RequestScope, readIn, requestScope } from './access/request-scope.ts';
-import { type ArticleRecord, selectArticles } from './article-record.ts';
+import { type ArticleGroupRef, type ArticleRecord, selectArticles } from './article-record.ts';
 import { ArchiveArticleCommand } from './commands/archive-article.handler.ts';
 import { CreateArticleCommand } from './commands/create-article.handler.ts';
 import { RestoreArticleCommand } from './commands/restore-article.handler.ts';
@@ -29,12 +30,51 @@ import { UpsertArticleCommand } from './commands/upsert-article.handler.ts';
 
 export type { ArticleRecord };
 
+/**
+ * The filter fields of the articles list that keep any of several values (design ui-222, LI3): a
+ * null article group is no group, and a null source is NorthMES. A field left out keeps every
+ * article.
+ */
+export interface ArticleValueFilters {
+  readonly articleGroupIds?: readonly (string | null)[] | undefined;
+  readonly stockUnits?: readonly StockUnitCode[] | undefined;
+  readonly sources?: readonly (string | null)[] | undefined;
+}
+
 /** What coreArticles reads besides its list arguments (ADR 0073). */
-export interface ArticleListScope {
+export interface ArticleListScope extends ArticleValueFilters {
   /** The company of a request without a plant, from company settings or the public API. */
   readonly companyId?: string | undefined;
   /** Only the articles assigned to no plant and not to All plants. */
   readonly unassigned?: boolean | undefined;
+}
+
+/** What coreArticleFacets counts over: the list's search, Show archived and filter fields. */
+export interface ArticleFacetsArgs extends ArticleValueFilters {
+  readonly companyId?: string | undefined;
+  readonly search?: string | null | undefined;
+  readonly includeArchived?: boolean | null | undefined;
+}
+
+/** How many articles have one value of a filter field. */
+export interface FacetCount<Value> {
+  readonly value: Value;
+  readonly count: number;
+}
+
+/**
+ * The values of each filter field among the listed articles with how many have each, each field
+ * counted under the other fields' filters but not its own, so its menu offers every value (design
+ * ui-222, LI3); and how many articles the list holds.
+ */
+export interface ArticleFacets {
+  readonly total: number;
+  /** By the group's name, then no group. */
+  readonly articleGroups: readonly FacetCount<ArticleGroupRef | null>[];
+  /** In the catalog's order. */
+  readonly stockUnits: readonly FacetCount<StockUnitCode>[];
+  /** By name, then NorthMES. */
+  readonly sources: readonly FacetCount<string | null>[];
 }
 
 /** A query on core.article, as the list kit and the reference check take it. */
@@ -61,9 +101,25 @@ function unassigned(query: ArticleQuery): ArticleQuery {
 }
 
 /** The filter fields of the articles list (ADR 0073). */
-interface ArticleFilters {
+interface ArticleFilters extends ArticleValueFilters {
   readonly code?: string | undefined;
   readonly unassigned?: boolean | undefined;
+}
+
+/** The rows whose column holds one of `values`, a null value matching a null column. */
+function oneOf(
+  query: ArticleQuery,
+  column: 'article_group_id' | 'stock_unit' | 'source',
+  values: readonly (string | null)[] | undefined,
+): ArticleQuery {
+  if (values === undefined) return query;
+  const named = values.filter((value): value is string => value !== null);
+  const orNull = values.includes(null);
+  const ref = sql.ref(`core.article.${column}`);
+  if (named.length === 0)
+    return query.where(orNull ? sql<SqlBool>`${ref} is null` : sql<SqlBool>`false`);
+  const inList = sql<SqlBool>`${ref}::text = any(${named}::text[])`;
+  return query.where(orNull ? sql<SqlBool>`(${inList} or ${ref} is null)` : inList);
 }
 
 /**
@@ -75,6 +131,9 @@ function listed(scope: RequestScope, filters: ArticleFilters) {
     let rows = selectArticles(tx).where('company_id', '=', scope.companyId);
     if (scope.plantId !== undefined) rows = assignedTo(rows, scope.plantId);
     if (filters.code !== undefined) rows = rows.where('code', '=', filters.code);
+    rows = oneOf(rows, 'article_group_id', filters.articleGroupIds);
+    rows = oneOf(rows, 'stock_unit', filters.stockUnits);
+    rows = oneOf(rows, 'source', filters.sources);
     return filters.unassigned === true ? unassigned(rows) : rows;
   };
 }
@@ -167,13 +226,79 @@ export class ArticleService {
    */
   async list(
     args: ArticleListArgs,
-    { companyId, unassigned: onlyUnassigned }: ArticleListScope = {},
+    { companyId, ...filters }: ArticleListScope = {},
   ): Promise<Connection<ArticleRecord>> {
     const scope = requestScope('core.article:read', companyId);
-    const query = listed(scope, { unassigned: onlyUnassigned });
+    const query = listed(scope, filters);
     const page = await readIn(scope, () => articleList.page(this.db, query, args));
     // totalCount counts later, in its own resolver, so it reads where the page did.
     return { ...page, count: () => readIn(scope, () => page.count()) };
+  }
+
+  /**
+   * The values of each filter field among the articles the list shows for these arguments, with
+   * how many articles have each value, and how many it shows (design ui-222, LI3 and ST17): each
+   * field is counted under the search, Show archived and the other fields' filters, but not its
+   * own, so its menu still offers every value. A value no listed article has is left out. It needs
+   * core.article:read as the list does.
+   */
+  async facets({
+    companyId,
+    search,
+    includeArchived,
+    ...filters
+  }: ArticleFacetsArgs): Promise<ArticleFacets> {
+    const scope = requestScope('core.article:read', companyId);
+    const rowsWithout = (field: keyof ArticleValueFilters) =>
+      articleList.listed(listed(scope, { ...filters, [field]: undefined }), {
+        search,
+        includeArchived,
+      });
+    const all = articleList.listed(listed(scope, filters), { search, includeArchived });
+    return readIn(scope, () =>
+      this.db.transaction(async (tx) => {
+        const counted = (field: keyof ArticleValueFilters, column: string) =>
+          sql<{ value: string | null; count: string }>`
+            select _nm_value::text as value, count(*) as count
+              from (${rowsWithout(field)(tx).select(sql.ref(`core.article.${column}`).as('_nm_value'))}) as listed
+             group by _nm_value`.execute(tx);
+        const [groups, units, sources, total] = await Promise.all([
+          counted('articleGroupIds', 'article_group_id'),
+          counted('stockUnits', 'stock_unit'),
+          counted('sources', 'source'),
+          sql<{ count: string }>`select count(*) as count from (${all(tx)}) as listed`.execute(tx),
+        ]);
+        const groupIds = groups.rows.flatMap(({ value }) => (value === null ? [] : [value]));
+        const named =
+          groupIds.length === 0
+            ? []
+            : await tx
+                .selectFrom('core.article_group')
+                .select(['id', 'code', 'name'])
+                .where('id', 'in', groupIds)
+                .execute();
+        const byId = new Map(named.map((group) => [group.id, group]));
+        const lastNull = <T>(a: FacetCount<T | null>, b: FacetCount<T | null>, order: number) =>
+          a.value === null ? 1 : b.value === null ? -1 : order;
+        return {
+          total: Number(total.rows[0]?.count ?? 0),
+          articleGroups: groups.rows
+            .map(({ value, count }) => ({
+              value: value === null ? null : (byId.get(value) ?? null),
+              count: Number(count),
+            }))
+            .sort((a, b) =>
+              lastNull(a, b, (a.value?.name ?? '').localeCompare(b.value?.name ?? '')),
+            ),
+          stockUnits: units.rows
+            .map(({ value, count }) => ({ value: value as StockUnitCode, count: Number(count) }))
+            .sort((a, b) => stockUnitCodes.indexOf(a.value) - stockUnitCodes.indexOf(b.value)),
+          sources: sources.rows
+            .map(({ value, count }) => ({ value, count: Number(count) }))
+            .sort((a, b) => lastNull(a, b, (a.value ?? '').localeCompare(b.value ?? ''))),
+        };
+      }),
+    );
   }
 
   /**

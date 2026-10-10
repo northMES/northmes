@@ -5,7 +5,7 @@ import { Translation } from '@northmes/sdk/graphql';
 import { Plant } from '../../company/types/plant.type.ts';
 
 /** The stock units of the unit catalog, by their codes (ADR 0023). */
-const StockUnit = Object.fromEntries(stockUnitCodes.map((code) => [code, code])) as {
+export const StockUnit = Object.fromEntries(stockUnitCodes.map((code) => [code, code])) as {
   readonly [Code in StockUnitCode]: Code;
 };
 
