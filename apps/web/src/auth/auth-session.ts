@@ -26,7 +26,10 @@ export type SignInResult =
   | { readonly ok: false; readonly reason: 'wrong-credentials' | 'blocked' | 'failed' }
   | { readonly ok: false; readonly reason: 'rate-limited'; readonly retryAfterSeconds: number };
 
-/** What setting a new password came to. A refusal names its reason, which the step words. */
+/**
+ * What setting a new password came to. A refusal names its reason, which the step words. A password
+ * that is no longer temporary counts as saved.
+ */
 export type NewPasswordResult =
   | { readonly ok: true }
   | {
@@ -271,6 +274,9 @@ export function createAuthSession(options: AuthSessionOptions): AuthSession {
       if (answer === undefined) return { ok: false, reason: 'failed' };
       if (answer.ok) return { ok: true };
       const { errorCode } = (await answer.json().catch(() => ({}))) as { errorCode?: unknown };
+      // A password that is no longer temporary was saved already, as by a save whose answer was
+      // lost or by another tab, so the step is done.
+      if (errorCode === 'core.password_change_not_required') return { ok: true };
       const reason = typeof errorCode === 'string' ? newPasswordRefusals[errorCode] : undefined;
       return { ok: false, reason: reason ?? 'failed' };
     },
