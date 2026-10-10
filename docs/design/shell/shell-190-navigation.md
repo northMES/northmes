@@ -33,7 +33,7 @@ The sidebar, the rail and the 320 px sheet draw no rules, as shadcn's sidebar-07
 - PL6: the rule between module groups in the rail.
 - The build notes' 56 px heads: the top bar, the sidebar head and the rail head are 56 px, so the plant switcher is level with the top bar. Only the top bar draws a rule, which ends at the sidebar's edge.
 
-The line along a nested group's entries (SidebarMenuSub), which sidebar-07 also draws, is the group's indent guide and not a rule between sections, so it stays.
+A nested group's entries (SidebarMenuSub) draw no line along them either, which sidebar-07 does draw: their indent sets them off.
 
 ## Approved files
 
