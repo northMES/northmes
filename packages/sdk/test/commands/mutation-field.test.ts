@@ -425,7 +425,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean, 32-bit integer or list of strings, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
   });
