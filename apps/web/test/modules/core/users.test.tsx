@@ -541,6 +541,45 @@ describe('users', () => {
     );
   });
 
+  it("E05-S08 a dialog of a row's menu opens without the reason and the error of its last opening", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(userAdmin),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      usersQuery(listed),
+      { ...resetPasswordMutation(sara, 'Forgot it'), result: undefined, error: new Error('Down') },
+    ]);
+
+    const button = await screen.findByRole('button', { name: 'Actions for Sara Nyberg' });
+    await events.click(button);
+    await events.click(await screen.findByRole('menuitem', { name: 'Reset password' }));
+    let confirm = await screen.findByRole('alertdialog', {
+      name: 'Reset the password of Sara Nyberg?',
+    });
+    await events.type(
+      within(confirm).getByRole('textbox', { name: 'Reason (optional)' }),
+      'Forgot it',
+    );
+    await events.click(within(confirm).getByRole('button', { name: 'Reset password' }));
+    expect((await within(confirm).findByRole('alert')).textContent).toBe(
+      'Could not reset the password. Check the connection, then try again.',
+    );
+    await events.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+
+    await events.click(button);
+    await events.click(await screen.findByRole('menuitem', { name: 'Reset password' }));
+    confirm = await screen.findByRole('alertdialog', {
+      name: 'Reset the password of Sara Nyberg?',
+    });
+    expect(
+      (within(confirm).getByRole('textbox', { name: 'Reason (optional)' }) as HTMLTextAreaElement)
+        .value,
+    ).toBe('');
+    expect(within(confirm).queryByRole('alert')).toBeNull();
+  });
+
   it('E05-S08 the Role and Status filters narrow the list and live in the URL', async () => {
     const events = userEvent.setup();
     const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
