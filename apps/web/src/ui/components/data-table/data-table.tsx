@@ -326,7 +326,7 @@ export function DataTable<TRow extends RowData>({
         <p className="border-t border-border px-3 py-2.5 text-xs text-muted-foreground">{footer}</p>
       )}
       {paging !== undefined && (
-        <Pager paging={paging} rowCount={loading ? 0 : rows.length} stale={stale} />
+        <Pager paging={paging} rowCount={loading ? 0 : data.length} stale={stale} />
       )}
     </div>
   );
