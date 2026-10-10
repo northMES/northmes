@@ -248,6 +248,23 @@ async function sidebarGroups(): Promise<HTMLElement[]> {
     .filter((list) => list.hasAttribute('aria-labelledby'));
 }
 
+/**
+ * The rules drawn inside a sidebar's nav, Main: each separator, and the header or footer when it
+ * has a border. It reads the border classes, because happy-dom applies no Tailwind.
+ */
+function rulesIn(nav: HTMLElement): string[] {
+  const separators = [
+    ...nav.querySelectorAll('[role="separator"], [data-sidebar="separator"]'),
+  ].map(() => 'separator');
+  const bordered = ['header', 'footer'].filter((part) =>
+    nav
+      .querySelector(`[data-sidebar="${part}"]`)
+      ?.className.split(/\s+/)
+      .some((name) => /^border(-[tblrxy])?(-\d+)?$/.test(name)),
+  );
+  return [...separators, ...bordered];
+}
+
 /** The accessible name of the focused element: its aria-label, else its text. */
 function focusedName(): string {
   const element = document.activeElement;
@@ -502,6 +519,30 @@ describe('the shell', () => {
       expect(screen.queryByRole('tooltip', { name: 'Production orders' })).toBeNull(),
     );
     expect(document.activeElement).toBe(link);
+  });
+
+  it('E04-S02 the sidebar draws no rule between module groups, under the plant switcher or above the user button, labelled or as the rail', async () => {
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(rulesIn(nav)).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+
+    expect(rulesIn(screen.getByRole('navigation', { name: 'Main' }))).toEqual([]);
+  });
+
+  it('E04-S02 at 320 px the sheet draws no rule between module groups, under the plant switcher or above the user button', async () => {
+    setViewport(320, 640);
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+
+    await user.click(await screen.findByRole('button', { name: 'Open navigation' }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Navigation' });
+    expect(rulesIn(within(sheet).getByRole('navigation', { name: 'Main' }))).toEqual([]);
   });
 
   it('E04-S02 at 320 px Open navigation opens the sheet with focus on Close navigation, and Escape closes it with focus back on Open navigation', async () => {
