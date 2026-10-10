@@ -28,13 +28,19 @@ function spoken(): string | null | undefined {
   return document.querySelector('[aria-live="polite"]')?.textContent;
 }
 
-/** coreUpdateArticle of axle with these values, answered with result. */
+/**
+ * coreUpdateArticle of axle with these values, in pieces and without a note unless the input says
+ * otherwise, answered with result. The form always sends the note, empty to clear it.
+ */
 function updateOf(
-  input: { expectedVersion: number; code: string; name: string },
+  input: { expectedVersion: number; code: string; name: string; stockUnit?: string; note?: string },
   result: MockLink.MockedResponse['result'],
 ): MockLink.MockedResponse {
   return {
-    request: { query: CoreUpdateArticle, variables: { input: { id: axle.id, ...input } } },
+    request: {
+      query: CoreUpdateArticle,
+      variables: { input: { id: axle.id, stockUnit: 'PIECE', note: '', ...input } },
+    },
     result,
   };
 }
@@ -80,6 +86,31 @@ describe('edit article', () => {
     const identity = screen.getByRole('region', { name: 'Identity' });
     expect(within(identity).getByText('Axle 20 mm, steel')).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('Article AX-500 saved'));
+  });
+
+  it('E06-S06 the edit form shows the stock unit and the note, and Save sends the changed ones, an emptied note too', async () => {
+    const user = userEvent.setup();
+    const noted = { ...axle, stockUnit: 'METRE', note: 'Ritning rev C' } as const;
+    renderCoreAt(editHref(axle.id), [
+      articleQuery(noted),
+      updateOf(
+        { expectedVersion: 1, code: 'AX-500', name: 'Axle 20 mm', stockUnit: 'KILOGRAM', note: '' },
+        {
+          data: { coreUpdateArticle: { ...noted, stockUnit: 'KILOGRAM', note: null, version: 2 } },
+        },
+      ),
+    ]);
+
+    const unit = (await screen.findByRole('combobox', { name: 'Stock unit' })) as HTMLSelectElement;
+    expect(unit.value).toBe('METRE');
+    expect(field('Note (optional)').value).toBe('Ritning rev C');
+    await user.selectOptions(unit, 'Kilograms (kg)');
+    await user.clear(field('Note (optional)'));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+    const classification = screen.getByRole('region', { name: 'Classification' });
+    expect(within(classification).getByText('Kilograms (kg)')).toBeDefined();
   });
 
   it('E06-S06 a version conflict says the article changed with the typed values kept, and Reload article fills in the saved values and their version', async () => {

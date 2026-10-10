@@ -10,7 +10,9 @@ import {
   articleQuery,
   articlesPage,
   articlesQuery,
+  createdAtText,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
 } from './core-app.tsx';
@@ -43,11 +45,46 @@ describe('article page', () => {
     expect(definitions(identity)).toEqual([
       ['Article number', 'AX-500'],
       ['Name', 'Axle 20 mm'],
-      ['Plants', 'Plant A'],
     ]);
     expect((await screen.findByRole('link', { name: 'Edit' })).getAttribute('href')).toBe(
       coreLinks.articles.article.edit({ plant, articleId: axle.id }).href,
     );
+  });
+
+  it("E06-S06 an article's page shows its name beside the h1, then Classification, Note and Origin as DE1 draws them", async () => {
+    const flange = {
+      ...article('AX-20410', 'Fläns DN50 rostfri'),
+      stockUnit: 'METRE',
+      note: 'Ritning rev C gäller från vecka 2026-W41.',
+    } as const;
+    renderCoreAt(articleHref(flange.id), [articleQuery(flange)]);
+
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' });
+    expect(h1.parentElement?.textContent).toContain('Fläns DN50 rostfri');
+    expect(definitions(screen.getByRole('region', { name: 'Classification' }))).toEqual([
+      ['Stock unit', 'Metres (m)'],
+    ]);
+    expect(
+      within(screen.getByRole('region', { name: 'Note' })).getByText(
+        'Ritning rev C gäller från vecka 2026-W41.',
+      ),
+    ).toBeDefined();
+    expect(definitions(screen.getByRole('region', { name: 'Origin' }))).toEqual([
+      ['Plants', 'Plant A'],
+      ['Source', 'NorthMES'],
+      ['Created', createdAtText],
+      ['Last changed', lastChangedText],
+    ]);
+  });
+
+  it('E06-S06 an article without a note says so, and an imported one names its source', async () => {
+    const hose = { ...article('AX-31007', 'Hydraulslang 12 mm'), source: 'Pyramid' };
+    renderCoreAt(articleHref(hose.id), [articleQuery(hose)]);
+
+    const note = await screen.findByRole('region', { name: 'Note' });
+    expect(note.textContent).toBe('NoteNo note.');
+    const origin = screen.getByRole('region', { name: 'Origin' });
+    expect(definitions(origin)).toContainEqual(['Source', 'Pyramid']);
   });
 
   it("E06-S06 the article number in the list opens the article's page", async () => {
