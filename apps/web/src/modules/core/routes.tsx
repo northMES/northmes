@@ -10,7 +10,7 @@ import {
   redirect,
 } from '@tanstack/react-router';
 import { newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
-import { articleListSearch } from './article-list-search.ts';
+import { articleListSearch, urlSearchOf } from './article-list-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 
@@ -58,7 +58,9 @@ export function coreRoutes(plantRoute: PlantRoute) {
     getParentRoute: () => articlesRoute,
     path: '/',
     // Search, sort and page live in the URL; a key that does not apply falls back on its own.
-    validateSearch: articleListSearch,
+    // The route keeps the filters as the URL's comma lists, so the router writes them back as
+    // such; the screen reads the view from them.
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOf(articleListSearch(raw)),
     component: lazyScreen('ArticlesScreen'),
   });
   const newArticleRoute = createRoute({

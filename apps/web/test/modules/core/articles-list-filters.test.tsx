@@ -112,7 +112,8 @@ describe('the articles list filters', () => {
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Hoses 2' }));
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(router.state.location.search).toEqual({ articleGroup: hosesId }));
+    await waitFor(() => expect(router.state.location.searchStr).toBe(`?articleGroup=${hosesId}`));
+    expect(router.state.location.search).toEqual({ articleGroup: hosesId });
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
     expect(screen.getByRole('button', { name: 'Article group, 1 selected' })).toBeDefined();
