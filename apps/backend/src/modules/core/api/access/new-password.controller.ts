@@ -62,8 +62,8 @@ export class NewPasswordController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<{ ok: true } | { errorCode: string; message: string }> {
     const token = bearer.exec(authorization ?? '')?.[1];
-    const userId = token ? await this.auth.userOfToken(token) : null;
-    if (!userId) {
+    const caller = token ? await this.auth.sessionOfToken(token) : null;
+    if (!caller) {
       response.status(HttpStatus.UNAUTHORIZED);
       return { errorCode: 'core.unauthenticated', message: 'Sign in to use the API' };
     }
@@ -73,7 +73,7 @@ export class NewPasswordController {
       return { errorCode: 'core.invalid_input', message: 'Send currentPassword and newPassword.' };
     }
     const { currentPassword, newPassword } = parsed.data;
-    const refusal = await this.auth.setNewPassword(userId, currentPassword, newPassword);
+    const refusal = await this.auth.setNewPassword(caller, currentPassword, newPassword);
     if (refusal === undefined) return { ok: true };
     response.status(refusals[refusal].status);
     return { errorCode: refusal, message: refusals[refusal].message };
