@@ -27,7 +27,7 @@ describe('ColumnsMenu', () => {
         item.getAttribute('aria-disabled'),
       ]),
     ).toEqual([
-      ['Article numberAlways shown', 'true', 'true'],
+      ['Article number Always shown', 'true', 'true'],
       ['Name', 'true', null],
       ['Source', 'true', null],
     ]);

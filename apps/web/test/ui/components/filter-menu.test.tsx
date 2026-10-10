@@ -44,9 +44,9 @@ describe('FilterMenu', () => {
     await user.click(screen.getByRole('button', { name: 'Article group, 1 selected' }));
     const items = await screen.findAllByRole('menuitemcheckbox');
     expect(items.map((item) => [item.textContent, item.getAttribute('aria-checked')])).toEqual([
-      ['Consumables12', 'false'],
-      ['Hoses21', 'true'],
-      ['Shafts40', 'false'],
+      ['Consumables 12', 'false'],
+      ['Hoses 21', 'true'],
+      ['Shafts 40', 'false'],
     ]);
     expect(screen.getByText('Show articles in these groups')).toBeDefined();
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Shafts 40' }));

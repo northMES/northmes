@@ -69,6 +69,13 @@ export interface DataTableGroup<TRow> {
   readonly rows: readonly TRow[];
   /** The line a group without rows shows, such as "No custom roles yet". */
   readonly empty?: ReactNode;
+  /**
+   * Whether the group shows its rows, for a group that opens and closes (design ui-222, LI29);
+   * its header row then holds a button with aria-expanded. Left out, the group always shows them.
+   */
+  readonly expanded?: boolean;
+  /** Runs when the group's button asks to open or close it. */
+  readonly onExpandedChange?: (expanded: boolean) => void;
 }
 
 export interface DataTableProps<TRow> {
@@ -97,6 +104,8 @@ export interface DataTableProps<TRow> {
   readonly groups?: readonly DataTableGroup<TRow>[];
   /** A line under the table, such as "2 groups, 11 roles". */
   readonly footer?: ReactNode;
+  /** The ids of the columns the table leaves out, as the Columns menu hides them (LI13). */
+  readonly hiddenColumns?: readonly string[];
   /**
    * The name of the region the table scrolls sideways in, such as "Roles table, scrolls
    * sideways" at 320 px (design core-304, NO11): a Tab stop, so the keyboard scrolls it too.
@@ -136,7 +145,15 @@ export function DataTable<TRow extends RowData>({
   groups,
   footer,
   scrollLabel,
+  hiddenColumns,
 }: DataTableProps<TRow>) {
+  const shownColumns = useMemo(
+    () =>
+      hiddenColumns === undefined
+        ? columns
+        : columns.filter((column) => !hiddenColumns.includes(column.id)),
+    [columns, hiddenColumns],
+  );
   const data = useMemo(
     () => (groups === undefined ? rows : groups.flatMap((group) => group.rows)),
     [groups, rows],
@@ -147,7 +164,7 @@ export function DataTable<TRow extends RowData>({
   );
   const tableColumns = useMemo(
     () =>
-      columns.map(
+      shownColumns.map(
         (column): ColumnDef<typeof features, TRow> => ({
           id: column.id,
           header: column.header,
@@ -156,7 +173,7 @@ export function DataTable<TRow extends RowData>({
           enableSorting: column.sortable ?? false,
         }),
       ),
-    [columns],
+    [shownColumns],
   );
   const sorting = useMemo<SortingState>(
     () => (sort === undefined ? [] : [{ id: sort.id, desc: sort.desc }]),
@@ -261,7 +278,7 @@ export function DataTable<TRow extends RowData>({
         <TableBody>
           {skeletonRows.map((key) => (
             <TableRow key={key} className="border-border hover:bg-transparent">
-              {columns.map((column) => (
+              {shownColumns.map((column) => (
                 <TableCell key={column.id} className="px-3 py-3.5">
                   <Skeleton
                     aria-hidden
@@ -278,23 +295,58 @@ export function DataTable<TRow extends RowData>({
         groups.map((group) => {
           const ids = new Set(group.rows.map(getRowId));
           const groupRows = table.getRowModel().rows.filter((row) => ids.has(row.id));
+          const opens = group.expanded !== undefined;
+          const name = (
+            <>
+              {group.label}
+              {/* The button's name reads "Flanges 2 articles", with the space. */}
+              {opens && ' '}
+              <span
+                className={cn(
+                  'font-mono text-xs font-normal text-muted-foreground',
+                  opens ? 'ms-1' : 'ms-2',
+                )}
+              >
+                {group.count}
+              </span>
+            </>
+          );
           return (
             <TableBody key={group.id} className={bodyClass}>
               <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
                 <th
                   scope="rowgroup"
-                  colSpan={columns.length}
-                  className="px-3 py-2.5 text-start text-sm font-semibold"
+                  colSpan={shownColumns.length}
+                  className={cn('px-3 text-start text-sm font-semibold', opens ? 'py-1' : 'py-2.5')}
                 >
-                  {group.label}
-                  <span className="ms-2 font-mono text-xs font-normal text-muted-foreground">
-                    {group.count}
-                  </span>
+                  {opens ? (
+                    <Button
+                      variant="ghost"
+                      aria-expanded={group.expanded}
+                      onClick={() => group.onExpandedChange?.(!group.expanded)}
+                      className="h-auto min-h-(--nm-target-min) gap-1.5 px-1 text-sm font-semibold"
+                    >
+                      <ChevronRight
+                        aria-hidden
+                        className={cn(
+                          'size-4 transition-transform motion-reduce:transition-none',
+                          group.expanded && 'rotate-90',
+                        )}
+                      />
+                      {name}
+                    </Button>
+                  ) : (
+                    name
+                  )}
                 </th>
               </TableRow>
-              {groupRows.length === 0 && group.empty !== undefined ? (
+              {group.expanded === false ? null : groupRows.length === 0 &&
+                group.empty !== undefined ? (
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableCell colSpan={columns.length} className="px-3 py-2.5 whitespace-normal">
+                  <TableCell
+                    colSpan={shownColumns.length}
+                    className="px-3 py-2.5 whitespace-normal"
+                  >
                     {group.empty}
                   </TableCell>
                 </TableRow>
