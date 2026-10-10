@@ -37,20 +37,35 @@ export interface ShellNavGroupProps {
   readonly moduleLabel: string;
   /** The slug of the plant in the URL, whose links the entries are. */
   readonly plant: string;
+  /** Whether the group is open in the labelled sidebar and the sheet, from useNavGroupsOpen. */
+  readonly open: boolean;
+  /** Opens or closes the group in the labelled sidebar and the sheet, at the user's choice. */
+  readonly onOpenChange: (open: boolean) => void;
 }
 
 /**
- * Whether the group is open in the labelled sidebar: open by default when it holds the page on
- * screen, then the user's choice, until the user goes to a page of the group again, which opens it.
+ * Which nested groups are open in the labelled sidebar and the sheet, given the keys of the groups
+ * that hold the page on screen: a group is open by default when it holds that page, then the
+ * user's choice, until the user goes to a page of the group again, which opens it. The sidebar
+ * holds the choice rather than each group, so it lasts while the 320 px sheet is closed, which
+ * unmounts the groups in it.
  */
-function useGroupOpen(holdsCurrent: boolean) {
-  const [open, setOpen] = useState(holdsCurrent);
-  const [held, setHeld] = useState(holdsCurrent);
-  if (held !== holdsCurrent) {
-    setHeld(holdsCurrent);
-    if (holdsCurrent) setOpen(true);
+export function useNavGroupsOpen(holding: readonly string[]) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(holding));
+  const [held, setHeld] = useState(holding);
+  if (held.join('\n') !== holding.join('\n')) {
+    setHeld(holding);
+    const entered = holding.filter((key) => !held.includes(key));
+    if (entered.length > 0) setOpen(new Set([...open, ...entered]));
   }
-  return [open, setOpen] as const;
+  const setGroupOpen = (key: string, next: boolean) =>
+    setOpen((current) => {
+      const changed = new Set(current);
+      if (next) changed.add(key);
+      else changed.delete(key);
+      return changed;
+    });
+  return [open, setGroupOpen] as const;
 }
 
 /**
@@ -64,7 +79,14 @@ function useGroupOpen(holdsCurrent: boolean) {
  * icon carries aria-current="true" while the group holds the page on screen, and Escape returns
  * focus to it (KE29). The group has no page of its own.
  */
-export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGroupProps) {
+export function ShellNavGroup({
+  group,
+  entries,
+  moduleLabel,
+  plant,
+  open,
+  onOpenChange,
+}: ShellNavGroupProps) {
   const { isMobile, state, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (router) => router.location.pathname });
   const links = entries.map(({ label, icon, link }) => {
@@ -72,7 +94,6 @@ export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGr
     return { label, icon, href, current: currentOf(href, pathname) };
   });
   const holdsCurrent = links.some(({ current }) => current !== undefined);
-  const [open, setOpen] = useGroupOpen(holdsCurrent);
   if (state === 'collapsed' && !isMobile) {
     return (
       <SidebarMenuItem>
@@ -121,7 +142,7 @@ export function ShellNavGroup({ group, entries, moduleLabel, plant }: ShellNavGr
     );
   }
   return (
-    <Collapsible open={open} onOpenChange={setOpen} render={<SidebarMenuItem />}>
+    <Collapsible open={open} onOpenChange={onOpenChange} render={<SidebarMenuItem />}>
       <CollapsibleTrigger
         aria-current={holdsCurrent ? 'true' : undefined}
         render={<SidebarMenuButton />}

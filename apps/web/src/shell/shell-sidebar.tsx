@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from '../ui/primitives/sidebar.tsx';
 import type { ShellCompany } from './companies.graphql.ts';
-import { ShellNavGroup } from './shell-nav-group.tsx';
+import { ShellNavGroup, useNavGroupsOpen } from './shell-nav-group.tsx';
 import { currentOf, isMenuGroup, shownTo, sidebarItems } from './shell-pages.ts';
 import { ShellPlantSwitcher } from './shell-plant-switcher.tsx';
 import { type ShellUser, ShellUserMenu } from './shell-user-menu.tsx';
@@ -73,6 +73,18 @@ export function ShellSidebar({
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Each new path closes the sheet, whatever link inside it led there.
   useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
+  // The keys, module id and label, of the nested groups with an entry shown that holds the page.
+  const holding = modules.flatMap((each) =>
+    sidebarItems(each)
+      .filter(isMenuGroup)
+      .filter(({ links }) =>
+        links
+          .filter(shown)
+          .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
+      )
+      .map(({ label }) => `${each.module.id}/${label}`),
+  );
+  const [groupsOpen, setGroupOpen] = useNavGroupsOpen(holding);
   const entry = ({ label, icon, link }: MenuLink) => {
     const href = link({ plant }).href;
     const current = currentOf(href, pathname);
@@ -130,6 +142,7 @@ export function ShellSidebar({
                     {sidebarItems(each).map((item) => {
                       if (!isMenuGroup(item)) return shown(item) && entry(item);
                       const entries = item.links.filter(shown);
+                      const groupKey = `${module.id}/${item.label}`;
                       return (
                         entries.length > 0 && (
                           <ShellNavGroup
@@ -138,6 +151,8 @@ export function ShellSidebar({
                             entries={entries}
                             moduleLabel={label}
                             plant={plant}
+                            open={groupsOpen.has(groupKey)}
+                            onOpenChange={(open) => setGroupOpen(groupKey, open)}
                           />
                         )
                       );
