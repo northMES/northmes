@@ -19,7 +19,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Operator station | 0033 |
 | AI | 0035, 0036 |
 | Testing | 0041, 0042 |
-| Operations | 0043, 0044, 0045, 0046, 0047, 0052 |
+| Operations | 0043, 0044, 0045, 0046, 0047, 0052, 0072 |
 | Licensing | 0039, 0040, 0056 |
 | Regulated readiness | 0051 |
 
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-09 the index holds 71 ADRs: 48 accepted and 23 proposed, 68 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
+On 2026-10-09 the index holds 72 ADRs: 48 accepted and 24 proposed, 69 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -168,5 +168,6 @@ On 2026-10-09 the index holds 71 ADRs: 48 accepted and 23 proposed, 68 for relea
 | 0069 | [Require each CI job as a status check on main](0069-require-each-ci-job-as-a-status-check-on-main.md) | accepted | 1 | |
 | 0070 | [One NestJS backend with one GraphQL schema and one static web app](0070-one-nestjs-backend-with-one-graphql-schema-and-one-static-web-app.md) | proposed | 1 | maintainer (the cost limit that replaces Hive demandControl; the carrier for plant permissions, presentation values and the station mount); pilot IT (browser versions) |
 | 0071 | [Jobs on BullMQ with Valkey and the Postgres outbox as the record](0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md) | proposed | 1 | maintainer (the decision outcome) |
+| 0072 | [One installation per customer, and hosting partners run many with a customer folder, northmes apply and the health endpoints](0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md) | proposed | 1 | maintainer (the customer folder layout; the customer file format and the command name northmes apply; northmes apply, the partner hosting docs and the release notes step waiting for a hosting partner instead of entering release 1; metrics waiting for a trigger; one installation per host in release 1; no Postgres cluster shared between installations; the CLI's write commands as nm_app and nm_auth with their secrets in migrate; core.createPlant and core.updateCompany from the CLI outside can()) |
 
-Next free number: 0072. Only Krister Johansson sets a status to accepted.
+Next free number: 0073. Only Krister Johansson sets a status to accepted.
