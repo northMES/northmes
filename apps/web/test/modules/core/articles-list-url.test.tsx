@@ -81,6 +81,7 @@ describe('articles list URL state', () => {
       'AX-525',
       'Axle 525 mm',
       'Plant A',
+      '',
       'pcs',
       'NorthMES',
       lastChangedText,
