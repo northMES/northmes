@@ -19,9 +19,11 @@ const searchKeys = z.object({
     .pipe(z.string().trim().min(1).max(100))
     .optional()
     .catch(undefined),
+  // custom, or a module id by the SDK's rule (MODULE_ID in packages/sdk/src/module-names.ts, which
+  // the SDK does not export): kebab-case, such as quality-control.
   definedBy: z
     .string()
-    .regex(/^[a-z][A-Za-z0-9]*$/)
+    .regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/)
     .optional()
     .catch(undefined),
   sort: z.literal('-name').optional().catch(undefined),

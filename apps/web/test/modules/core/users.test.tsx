@@ -4,6 +4,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreCreateUser } from '../../../src/modules/core/screens/new-user/create-user.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/users/users.graphql.ts';
@@ -15,6 +16,7 @@ import {
   companiesQuery,
   companyId,
   forbiddenError,
+  groupedRows,
   idOf,
   person,
   plantA,
@@ -540,6 +542,45 @@ describe('users', () => {
     );
   });
 
+  it("E05-S08 a dialog of a row's menu opens without the reason and the error of its last opening", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+      settingsViewerQuery(userAdmin),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      usersQuery(listed),
+      { ...resetPasswordMutation(sara, 'Forgot it'), result: undefined, error: new Error('Down') },
+    ]);
+
+    const button = await screen.findByRole('button', { name: 'Actions for Sara Nyberg' });
+    await events.click(button);
+    await events.click(await screen.findByRole('menuitem', { name: 'Reset password' }));
+    let confirm = await screen.findByRole('alertdialog', {
+      name: 'Reset the password of Sara Nyberg?',
+    });
+    await events.type(
+      within(confirm).getByRole('textbox', { name: 'Reason (optional)' }),
+      'Forgot it',
+    );
+    await events.click(within(confirm).getByRole('button', { name: 'Reset password' }));
+    expect((await within(confirm).findByRole('alert')).textContent).toBe(
+      'Could not reset the password. Check the connection, then try again.',
+    );
+    await events.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+
+    await events.click(button);
+    await events.click(await screen.findByRole('menuitem', { name: 'Reset password' }));
+    confirm = await screen.findByRole('alertdialog', {
+      name: 'Reset the password of Sara Nyberg?',
+    });
+    expect(
+      (within(confirm).getByRole('textbox', { name: 'Reason (optional)' }) as HTMLTextAreaElement)
+        .value,
+    ).toBe('');
+    expect(within(confirm).queryByRole('alert')).toBeNull();
+  });
+
   it('E05-S08 the Role and Status filters narrow the list and live in the URL', async () => {
     const events = userEvent.setup();
     const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
@@ -785,6 +826,61 @@ describe('users', () => {
     ).toBeDefined();
   });
 
+  it('E05-S08 after New user gives a first role, the roles list read before it counts the new holder', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === plantA.id,
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: {
+                ...tove,
+                blocked: false,
+                roleAssignments: [
+                  { ...assignment(viewerRole, plantA), user: { __typename: 'User', id: tove.id } },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Plant A only' }));
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
+
+    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    const table = await screen.findByRole('table', { name: 'Roles' });
+    await waitFor(() =>
+      expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([
+        ['Viewer', 'Planning', '1 of 6', '2 people'],
+      ]),
+    );
+  });
+
   it('E05-S08 a role the server refuses at the place lands on Role with every value kept', async () => {
     const events = userEvent.setup();
     renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
@@ -849,6 +945,142 @@ describe('users', () => {
     expect(within(summary).getByRole('link').textContent).toBe('Choose where the role applies.');
     expect(chosenRole(section)).toBe('Viewer');
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it("E05-S08 Where's message describes each choice of Where while it shows", async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+    ]);
+    /** The texts that describe the radio, by its aria-describedby. */
+    const descriptionOf = (radio: HTMLElement) =>
+      (radio.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(roleOption(await openRoles(events, section), 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+    await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+
+    expect(within(section).getAllByRole('radio').map(descriptionOf)).toEqual([
+      ['Applies at Plant A.', 'Choose where the role applies.'],
+      [
+        'Applies to every plant of Acme AB, also plants created later.',
+        'Choose where the role applies.',
+      ],
+    ]);
+    await events.click(within(section).getByRole('radio', { name: 'Plant A only' }));
+    expect(within(section).getAllByRole('radio').map(descriptionOf)).toEqual([
+      ['Applies at Plant A.'],
+      ['Applies to every plant of Acme AB, also plants created later.'],
+    ]);
+  });
+
+  it('E05-S08 with the company as the only place, Role locks the roles the creator cannot give there, and a refusal names the company', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      {
+        request: { query: CoreCompanies },
+        result: {
+          data: {
+            coreCompanies: [{ __typename: 'Company', id: acme.id, name: 'Acme AB', plants: [] }],
+          },
+        },
+      },
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === acme.id,
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'You do not hold it.',
+              path: ['coreCreateUser'],
+              extensions: {
+                code: 'FORBIDDEN',
+                errorCode: 'core.role_not_held',
+                details: { missingPermissions: ['planning.productionOrder:read'] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    expect(within(section).getByText('The role applies at Acme AB.')).toBeDefined();
+    expect(
+      within(section).getByText(
+        'Checked when you add it: you need every permission of the role at Acme AB.',
+      ),
+    ).toBeDefined();
+    await typeTove(events);
+    const roles = await openRoles(events, section);
+    expect(roleOption(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
+    await events.click(roleOption(roles, 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+    expect(within(summary).getByRole('link').textContent).toMatch(
+      /^You cannot assign Viewer at Acme AB\. It includes 1 permission you do not hold at Acme AB/,
+    );
+  });
+
+  it('E05-S08 a Role typed into and cleared again counts as no role, and New user creates the user without one', async () => {
+    const events = userEvent.setup();
+    const tove = {
+      __typename: 'User',
+      id: idOf('tove'),
+      name: 'Tove Lindqvist',
+      username: 't.lindqvist',
+    } as const;
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string | undefined> }) =>
+            input.username === 't.lindqvist' &&
+            input.roleId === undefined &&
+            input.scopeId === undefined,
+        },
+        result: {
+          data: {
+            coreCreateUser: {
+              __typename: 'CreatedUser',
+              temporaryPassword: 'fictional-temp-4821',
+              user: { ...tove, blocked: false, roleAssignments: [] },
+            },
+          },
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    const role = within(section).getByRole('combobox', { name: 'Role' });
+    await events.type(role, 'V');
+    await events.clear(role);
+    await events.keyboard('{Escape}');
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
+    ).toBeDefined();
   });
 
   it('E05-S08 New user shows no Role and place to a creator who may not assign roles', async () => {

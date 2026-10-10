@@ -185,6 +185,30 @@ describe('roles', () => {
     ).toBe('lead');
   });
 
+  it('E05-S06 Defined by keeps a module whose id has a hyphen in the URL and shows only its roles', async () => {
+    const inspector = role('Inspector', ['planning.productionOrder:read'], {
+      origin: 'MODULE',
+      moduleId: 'quality-control',
+    });
+    const router = renderCoreAt(
+      `${coreLinks.settings.roles({ companyId }).href}?definedBy=quality-control`,
+      [
+        managerQuery(),
+        companiesQuery(),
+        rolesQuery([shiftLead, planner, inspector]),
+        catalogQuery(),
+      ],
+    );
+
+    const table = await screen.findByRole('table', { name: 'Roles' });
+    await waitFor(() =>
+      expect(
+        groupedRows(table).map(([group, rows]) => [group, rows.map(([name]) => name)]),
+      ).toEqual([['Default roles from modules', ['Inspector']]]),
+    );
+    expect(router.state.location.search).toEqual({ definedBy: 'quality-control' });
+  });
+
   it('E05-S06 the row menu of a custom role offers Edit role and New role from it: Enter opens it with focus on the first item, the arrows move, and Escape returns focus to its button (RO35)', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.settings.roles({ companyId }).href, [

@@ -26,6 +26,7 @@ import {
   type PickRole,
 } from '../../components/assign-role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
+import { addHolder } from '../../role-cache.ts';
 import { CoreRoles } from '../../roles.graphql.ts';
 import { handOverTemporaryPassword } from '../../temporary-password.ts';
 import { useCompanyId, usePlaces } from '../../use-places.ts';
@@ -106,7 +107,8 @@ function NewUserForm({
     defaultValues: { name: '', username: '', email: '', reason: '' },
   });
   const [create] = useMutation(CoreCreateUser, {
-    // The user's page reads the new user from the cache.
+    // The user's page reads the new user from the cache, and the roles list reads the first role's
+    // holders there.
     update(cache, { data }) {
       if (!data) return;
       const { user } = data.coreCreateUser;
@@ -115,15 +117,18 @@ function NewUserForm({
         variables: { id: user.id, companyId },
         data: { coreUser: user },
       });
+      for (const { id: assignmentId, role } of user.roleAssignments) {
+        if (role !== null) addHolder(cache, role.id, assignmentId);
+      }
     },
   });
   const { isDirty, isSubmitting } = form.formState;
+  // With one place, Where shows no choice: the role applies there.
+  const [onlyPlace] = firstRole?.places.length === 1 ? firstRole.places : [];
 
   const save = async (values: UserValues) => {
     setCreatedBefore(undefined);
     const { reason, ...rest } = values;
-    // With one place, Where shows no choice: the role applies there.
-    const [onlyPlace] = firstRole?.places.length === 1 ? firstRole.places : [];
     const scopeId = rest.scopeId ?? (rest.roleId === undefined ? undefined : onlyPlace?.id);
     if (rest.roleId !== undefined && scopeId === undefined) {
       form.setError('scopeId', { type: 'validate', message: 'Choose where the role applies.' });
@@ -164,7 +169,7 @@ function NewUserForm({
       const refused = roleRefusal(
         error,
         firstRole?.roles.find(({ id }) => id === values.roleId),
-        firstRole?.places.find(({ id }) => id === values.scopeId),
+        firstRole?.places.find(({ id }) => id === scopeId),
         companyName,
       );
       if (refused !== undefined) {
@@ -234,15 +239,16 @@ function NewUserForm({
             places={firstRole.places}
             roles={firstRole.roles}
             holds={firstRole.holds}
-            where={form.watch('scopeId') ?? ''}
+            where={form.watch('scopeId') ?? onlyPlace?.id ?? ''}
+            // The fields report no choice as '', which the form keeps as no value.
             onWhereChange={(scopeId) => {
               form.clearErrors('scopeId');
-              form.setValue('scopeId', scopeId, { shouldDirty: true });
+              form.setValue('scopeId', scopeId === '' ? undefined : scopeId, { shouldDirty: true });
             }}
             roleId={form.watch('roleId') ?? ''}
             onRoleChange={(roleId) => {
               form.clearErrors('roleId');
-              form.setValue('roleId', roleId, { shouldDirty: true });
+              form.setValue('roleId', roleId === '' ? undefined : roleId, { shouldDirty: true });
             }}
             whereError={form.getFieldState('scopeId', form.formState).error?.message}
             roleError={form.getFieldState('roleId', form.formState).error?.message}

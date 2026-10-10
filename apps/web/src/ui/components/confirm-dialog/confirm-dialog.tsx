@@ -95,6 +95,19 @@ export function ConfirmDialog({
   useEffect(() => {
     focusTarget.current = focusAfterConfirm;
   }, [focusAfterConfirm]);
+  const openChange = useRef(onOpenChange);
+  useEffect(() => {
+    openChange.current = onOpenChange;
+  }, [onOpenChange]);
+  // Base UI calls onOpenChange for a trigger or a dismiss only. A dialog that the open prop opens,
+  // as from a row menu's item, starts without the error of its last opening too, and onOpenChange
+  // hears the opening, so the body can clear its reason.
+  useEffect(() => {
+    if (!controlledOpen) return;
+    confirmed.current = false;
+    setError(undefined);
+    openChange.current?.(true);
+  }, [controlledOpen]);
   // The action may take the trigger away, as Archive gives way to Restore, and the dialog with it.
   // Focus then goes where the caller says once the page has settled.
   useEffect(
