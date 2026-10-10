@@ -25,15 +25,15 @@ After the approval, on 2026-10-06, the header frame got a text fix and a new sta
 
 Part 1 of the header PNG was captured again after the fix. Part 2 is unchanged.
 
-## Sidebar rules removed on 2026-10-10
+## The sidebar draws no rules
 
-On 2026-10-10 Krister Johansson decided that the sidebar draws no rules, as shadcn's sidebar-07 block draws none: the groups' own padding spaces them. This overrides the page and its PNGs, which were not changed:
+The sidebar, the rail and the 320 px sheet draw no rules, as shadcn's sidebar-07 block draws none: the groups' own padding spaces them (Krister Johansson, 2026-10-10). The page and its PNGs still draw them, so these frames do not apply to the built sidebar:
 
-- PL5 and NA3 draw a rule under the switcher head, a rule above the user footer and inset rules between the core, module and plugin sections. The built sidebar, rail and 320 px sheet draw none of them.
-- PL6 draws "a rule between module groups" in the rail. The built rail draws none.
-- The build notes say the top bar, the sidebar head and the rail head are 56 px "so their rules meet on one line". The heads stay 56 px, so the plant switcher stays level with the top bar, but only the top bar draws its rule, which now ends at the sidebar's edge.
+- PL5 and NA3: the rule under the switcher head, the rule above the user footer and the inset rules between the core, module and plugin sections.
+- PL6: the rule between module groups in the rail.
+- The build notes' 56 px heads: the top bar, the sidebar head and the rail head are 56 px, so the plant switcher is level with the top bar. Only the top bar draws a rule, which ends at the sidebar's edge.
 
-A later task that builds from these frames keeps the sidebar without rules.
+The line along a nested group's entries (SidebarMenuSub), which sidebar-07 also draws, is the group's indent guide and not a rule between sections, so it stays.
 
 ## Approved files
 
@@ -425,7 +425,7 @@ Every color is a D1 token.
 - Skip link and tooltips: `--primary` and `--primary-foreground`. Sidebar: `--sidebar`, `--sidebar-foreground`, `--sidebar-primary` with `--sidebar-primary-foreground` for the current entry and the company mark, `--sidebar-accent` for hover and for the switcher and user button while their menu is open, `--sidebar-border` and `--muted-foreground`. Row links: `--link`.
 - Avatar: `--secondary` with a 1 px inset `--border` ring, so it stays visible on `--sidebar-accent`. Unread badge: `--primary` and `--primary-foreground` with a 2 px ring in the surface color.
 - Status: `--warning` and `--warning-subtle` for the chip, the restarting strip and the Onboarding badge, `--destructive` and `--destructive-subtle` for the database strip, `--info` and `--info-subtle` for the restore strip and the plant in onboarding strip, `--success` and `--success-subtle` for the station chip. A failed top bar item draws `--muted-foreground` with a dashed border, as an unavailable module does in the rail.
-- Sizes: the top bar, the sidebar head and the rail head are 56 px, so their rules meet on one line. The switcher and the user button are 48 px (SidebarMenuButton size lg), rail icons 32 px, the rail mark and the avatar 40 px. `--nm-control-height` (36 px) for the trigger, Help, the bell and Assistant; `--nm-target-min` (24 px), which the crumb links, the ellipsis and the strip links meet; `--nm-target-min-station` (44 px). Station buttons draw 48 px, which no D1 token holds yet (question K10). The overlay, black at 50 percent, is still D1's open question.
+- Sizes: the top bar, the sidebar head and the rail head are 56 px, so the plant switcher is level with the top bar; only the top bar draws a rule (see [The sidebar draws no rules](#the-sidebar-draws-no-rules)). The switcher and the user button are 48 px (SidebarMenuButton size lg), rail icons 32 px, the rail mark and the avatar 40 px. `--nm-control-height` (36 px) for the trigger, Help, the bell and Assistant; `--nm-target-min` (24 px), which the crumb links, the ellipsis and the strip links meet; `--nm-target-min-station` (44 px). Station buttons draw 48 px, which no D1 token holds yet (question K10). The overlay, black at 50 percent, is still D1's open question.
 - Type: the h1 uses the D1 Page title role, 28 / 34, from 1280 up. At 320 it is 1.5rem / 1.875rem (24 / 30), proposed for D1 Q18.
 
 ### Icons
