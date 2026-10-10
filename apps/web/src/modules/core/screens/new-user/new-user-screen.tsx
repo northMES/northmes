@@ -26,6 +26,7 @@ import {
   type PickRole,
 } from '../../components/assign-role-form/index.ts';
 import { noAccessState } from '../../no-access.tsx';
+import { addHolder } from '../../role-cache.ts';
 import { CoreRoles } from '../../roles.graphql.ts';
 import { handOverTemporaryPassword } from '../../temporary-password.ts';
 import { useCompanyId, usePlaces } from '../../use-places.ts';
@@ -106,7 +107,8 @@ function NewUserForm({
     defaultValues: { name: '', username: '', email: '', reason: '' },
   });
   const [create] = useMutation(CoreCreateUser, {
-    // The user's page reads the new user from the cache.
+    // The user's page reads the new user from the cache, and the roles list reads the first role's
+    // holders there.
     update(cache, { data }) {
       if (!data) return;
       const { user } = data.coreCreateUser;
@@ -115,6 +117,9 @@ function NewUserForm({
         variables: { id: user.id, companyId },
         data: { coreUser: user },
       });
+      for (const { id: assignmentId, role } of user.roleAssignments) {
+        if (role !== null) addHolder(cache, role.id, assignmentId);
+      }
     },
   });
   const { isDirty, isSubmitting } = form.formState;
