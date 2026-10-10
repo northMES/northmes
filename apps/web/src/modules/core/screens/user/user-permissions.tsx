@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
-import { useShell } from '@northmes/web-sdk';
 import { Lock } from 'lucide-react';
 import { type ReactNode, useId, useState } from 'react';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
@@ -19,11 +18,11 @@ import {
 import { ForbiddenRegion } from '../../no-access.tsx';
 import { groupsOfKeys } from '../../permission-groups.ts';
 import { permissionLine } from '../../permission-names.ts';
-import type { Places } from '../../use-places.ts';
+import { type Places, useCompanyId } from '../../use-places.ts';
 import type { User } from '../../use-user.tsx';
 import { CoreUserPermissions, type CoreUserPermissionsQuery } from './user-permissions.graphql.ts';
 
-/** One permission with the assignments that grant it at the plant. */
+/** One permission with the assignments that grant it at the company. */
 type Effective = NonNullable<CoreUserPermissionsQuery['coreUser']>['effectivePermissions'][number];
 
 interface UserPermissionsProps {
@@ -39,20 +38,22 @@ function grantedBy({ grantedBy: grants }: Effective): string {
 }
 
 /**
- * What the user can do at the plant (design core-304, AS1, AS9, AS21 and AS25): by module, each
- * permission a role of theirs grants with the role and place behind it. Show every permission
- * adds the others, each with No access and a lock, which a screen reader hears with the reason.
+ * What the user can do at the company of company settings (design core-304, AS1, AS9, AS21 and
+ * AS25, ADR 0066): by module, each permission a role of theirs at the company grants, with the role
+ * behind it; a role at one plant grants nothing at the company. Show every permission adds the
+ * others, each with No access and a lock, which a screen reader hears with the reason.
  * Without core.role:read the region keeps its heading and names the permission it needs.
  */
 export function UserPermissions({ user, places }: UserPermissionsProps) {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const headingId = useId();
   const everyId = useId();
   const [every, setEvery] = useState(false);
-  const { data, error } = useQuery(CoreUserPermissions, { variables: { id: user.id } });
-  const plantName = places.plant?.name ?? plant;
+  const { data, error } = useQuery(CoreUserPermissions, {
+    variables: { id: user.id, companyId },
+  });
   const companyName = places.company?.name ?? 'the company';
-  const title = `What ${user.name} can do at ${plantName}`;
+  const title = `What ${user.name} can do at ${companyName}`;
   const effective = data?.coreUser?.effectivePermissions.filter(
     ({ permission }) => permission.installed,
   );
@@ -62,7 +63,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
       <ForbiddenRegion
         title={`You cannot see what ${user.name} can do here`}
         permission="core.role:read"
-        plant={plantName}
+        plant={companyName}
       />
     );
   } else if (effective === undefined && error !== undefined) {
@@ -86,7 +87,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
     const shown = effective
       .filter((entry) => every || entry.grantedBy.length > 0)
       .map(({ permission }) => permission.key);
-    const noAccessReason = `No role of ${user.name} at ${plantName} or at ${companyName} includes it.`;
+    const noAccessReason = `No role of ${user.name} at ${companyName} includes it.`;
     body = (
       <>
         <Field orientation="horizontal" className="w-auto">
@@ -145,7 +146,7 @@ export function UserPermissions({ user, places }: UserPermissionsProps) {
         })}
         {shown.length === 0 && (
           <p className="text-sm">
-            No role of {user.name} grants a permission at {plantName}.
+            No role of {user.name} grants a permission at {companyName}.
           </p>
         )}
       </>

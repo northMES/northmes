@@ -12,6 +12,8 @@ export interface ArticleTable {
   code_key: GeneratedAlways<string>;
   /** When the article was archived, or null while it is active (ADR 0006). */
   archived_at: Date | null;
+  /** When the article last changed, its creation included; an update trigger moves it on. */
+  updated_at: Generated<Date>;
 }
 
 /** core.scope: one node of a company's scope tree (ADR 0007). */

@@ -161,14 +161,12 @@ describe('companies, plants and the request plant', () => {
       slugs[0],
       articleCodes,
     );
-    const withoutPlant = await send<{ coreArticles: { edges: unknown[] } }>(
-      user.authorization,
-      undefined,
-      articleCodes,
-    );
+    const withoutPlant = await send(user.authorization, undefined, articleCodes);
 
     expect(atA.data?.coreArticles.edges.map(({ node }) => node.code)).toEqual(['CO-1', 'PA-1']);
-    expect(withoutPlant.data?.coreArticles.edges).toEqual([]);
+    // coreArticles is not plant-free, so without a plant the operation reads nothing (ADR 0066).
+    expect(withoutPlant.data).toBeUndefined();
+    expect(withoutPlant.errors?.[0]?.extensions?.errorCode).toBe('core.plant_forbidden');
   });
 
   it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is NOT_FOUND and keeps its version', async () => {

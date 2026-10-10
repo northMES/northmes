@@ -108,3 +108,32 @@ export function atPlant(access: Access, plantId: string | undefined): Access {
     writeScopes: access.writeScopes.filter(inPlant),
   };
 }
+
+/** The root of the tree above scopeId, its company, or undefined for a scope outside `scopes`. */
+function rootOf(scopes: ReadonlyMap<string, ScopeGrant>, scopeId: string): string | undefined {
+  let root: string | undefined;
+  for (const node of ancestorsOrSelf(scopes, scopeId)) root = node.id;
+  return root;
+}
+
+/**
+ * The access of a request without a plant in the companies where `held` answers true (ADR 0066):
+ * of every scope the principal reads and writes, those in such a company, its node and its plants.
+ * Company settings run plant-free fields with it, so they read the company where the check passed
+ * and every plant of it, and never another company. Both sets stay sorted.
+ */
+export function inCompanies(
+  principal: Pick<Access, 'scopes'>,
+  held: (companyId: string) => boolean,
+): Access {
+  const access = accessOf([...principal.scopes.values()]);
+  const inside = (scopeId: string) => {
+    const root = rootOf(access.scopes, scopeId);
+    return root !== undefined && held(root);
+  };
+  return {
+    ...access,
+    readScopes: access.readScopes.filter(inside),
+    writeScopes: access.writeScopes.filter(inside),
+  };
+}

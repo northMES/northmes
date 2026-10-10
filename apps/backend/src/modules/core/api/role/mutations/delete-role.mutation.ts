@@ -10,5 +10,6 @@ import { Role } from '../types/role.type.ts';
  */
 export const DeleteRole = defineCommand(deleteRole, {
   returns: () => Role,
+  plantFree: true,
   ...deleteRoleHandler,
 });

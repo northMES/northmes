@@ -37,6 +37,7 @@ describe('createTestApp', () => {
       'coreArticles',
       'coreCompanies',
       'corePermissionCatalog',
+      'corePlantRoleAssignments',
       'coreRole',
       'coreRoles',
       'coreUser',

@@ -7,14 +7,16 @@ export {
   type CoreRolesQueryVariables,
 } from './roles.graphql.gen.ts';
 
-// The roles of the company with their permissions and who holds them at the company and at the
-// plant: the roles list, Start from on New role and the role picker of Add role read it. pnpm gen
-// writes its typed document to roles.graphql.gen.ts; this block never runs.
+// The roles of the company with their permissions and who holds them: the roles list, Start from on
+// New role and the role picker of Add role read it in company settings with companyId, and Add role
+// of People at a plant without. pnpm gen writes its typed document to roles.graphql.gen.ts; this
+// block never runs.
 if (false) {
   gql`
-    query CoreRoles {
-      coreRoles {
+    query CoreRoles($companyId: ID) {
+      coreRoles(companyId: $companyId) {
         id
+        key
         name
         origin
         moduleId
@@ -25,6 +27,10 @@ if (false) {
           scope {
             id
             kind
+          }
+          # The roles list counts the people who hold the role, once each.
+          user {
+            id
           }
         }
       }

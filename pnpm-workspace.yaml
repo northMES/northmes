@@ -8,6 +8,7 @@ packages:
 pmOnFail: ignore
 
 allowBuilds:
+  '@scarf/scarf': false
   cpu-features: false
   protobufjs: false
   ssh2: false
@@ -22,6 +23,7 @@ catalog:
   '@apollo/client': 4.3.1
   '@base-ui/react': 1.8.0
   '@better-auth/api-key': 1.7.6
+  '@better-auth/oauth-provider': 1.7.6
   '@biomejs/biome': 2.5.14
   '@fontsource/ibm-plex-mono': 5.3.0
   '@fontsource/ibm-plex-sans': 5.3.0
@@ -29,11 +31,14 @@ catalog:
   '@graphql-codegen/typed-document-node': 7.1.0
   '@graphql-codegen/typescript-operations': 6.1.7
   '@hookform/resolvers': 5.9.1
+  '@modelcontextprotocol/client': 2.1.0
+  '@modelcontextprotocol/server': 2.1.0
   '@nestjs/common': 12.1.0
   '@nestjs/config': 12.0.1
   '@nestjs/core': 12.1.0
   '@nestjs/graphql': 14.0.2
   '@nestjs/platform-express': 12.1.0
+  '@nestjs/swagger': 12.0.2
   '@nestjs/terminus': 12.1.0
   '@nestjs/testing': 12.1.0
   '@playwright/test': 1.63.0
@@ -90,6 +95,7 @@ catalog:
   ws: 8.21.3
   yaml: 2.9.1
   zod: 4.6.5
+  zod-openapi: 6.0.2
 
 # React, the router, Apollo Client and graphql resolve to one copy each, also where a dependency's
 # own range would pick another version: two copies of one of them in the web bundle or the backend

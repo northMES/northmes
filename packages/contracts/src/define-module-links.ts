@@ -45,10 +45,13 @@ export type LinkBuilder<Pattern extends string> = (
 export interface LinkEntry<Pattern extends string = string> {
   /**
    * The entry's path below its parent entry, as the manifest declares it. A manifest's path is its
-   * module id, below /$plant.
+   * module id, below /$plant, and so is its settings section's, below /settings/$companyId.
    */
   readonly path: string;
-  /** The entry's route pattern, which starts with /$plant/<moduleId>. */
+  /**
+   * The entry's route pattern, which starts with /$plant/<moduleId>, or with
+   * /settings/$companyId/<moduleId> in the settings section.
+   */
   readonly pattern: Pattern;
 }
 
@@ -91,22 +94,58 @@ export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefiniti
   >;
 };
 
+/** The sections of a link manifest beside its plant pages. */
+export interface ModuleLinkSections<Settings extends LinkEntryDefinitions | undefined> {
+  /**
+   * The module's company settings pages, below /settings/$companyId/<moduleId>, whose builders take
+   * a company id and no plant (ADR 0066).
+   */
+  readonly settings: Settings;
+}
+
+/** The settings section of a manifest that declares one: a manifest of its own with that root. */
+type SettingsLinks<
+  ModuleId extends string,
+  Settings extends LinkEntryDefinitions | undefined,
+> = Settings extends LinkEntryDefinitions
+  ? {
+      readonly settings: ModuleLinks<`/settings/$companyId/${ModuleId}`, Settings> &
+        LinkNode<`/settings/$companyId/${ModuleId}`>;
+    }
+  : unknown;
+
+/** The builders of the entries of a manifest below `pattern`, with its entry. */
+function manifest(path: string, pattern: string, entries: LinkEntryDefinitions) {
+  return Object.assign(builders(pattern, entries), { [entryKey]: { path, pattern } });
+}
+
 /**
  * A module's link manifest (ADR 0062). Each entry becomes a builder that takes the params of its
  * route pattern, which starts with /$plant/<moduleId>, and returns the link. The param names come
  * from the patterns, so a missing or unknown param is a type error. The builders are plain
  * functions, so code without a router (server code, MCP tools, end-to-end specs) can call them.
+ * A settings section becomes the manifest's `settings`, whose builders start with
+ * /settings/$companyId/<moduleId> and take a company id instead of a plant (ADR 0066). An entry
+ * named settings beside a settings section throws.
  */
 export function defineModuleLinks<
   const ModuleId extends string,
   const Entries extends LinkEntryDefinitions,
+  const Settings extends LinkEntryDefinitions | undefined = undefined,
 >(
   moduleId: ModuleId,
   entries: Entries,
-): ModuleLinks<`/$plant/${ModuleId}`, Entries> & LinkNode<`/$plant/${ModuleId}`> {
-  const pattern = `/$plant/${moduleId}` as const;
-  const links = builders(pattern, entries) as ModuleLinks<typeof pattern, Entries>;
-  return Object.assign(links, { [entryKey]: { path: moduleId, pattern } });
+  sections?: ModuleLinkSections<Settings>,
+): ModuleLinks<`/$plant/${ModuleId}`, Entries> &
+  LinkNode<`/$plant/${ModuleId}`> &
+  SettingsLinks<ModuleId, Settings> {
+  const links = manifest(moduleId, `/$plant/${moduleId}`, entries);
+  if (sections?.settings === undefined) return links as never;
+  if ('settings' in entries) {
+    throw new Error(`Module ${moduleId} has an entry named settings and a settings section`);
+  }
+  const settings = manifest(moduleId, `/settings/$companyId/${moduleId}`, sections.settings);
+  return Object.assign(links, { settings }) as never;
 }
 
 type Params = Readonly<Record<string, string>>;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 import type { AnyRoute } from '@tanstack/react-router';
-import type { PlantRoute } from './routes.ts';
+import type { PlantRoute, SettingsRoute } from './routes.ts';
 
 /**
  * A module's web part, which apps/web/src/modules.ts imports and passes to createShellRoutes. It
@@ -13,6 +13,11 @@ export interface WebModule {
   readonly version: string;
   /** Returns the module's route subtree, whose top route has the module id as its path. */
   routes(plantRoute: PlantRoute): AnyRoute;
+  /**
+   * Returns the module's company settings subtree under /settings/$companyId, whose top route has
+   * the module id as its path (ADR 0066). Only core has one in release 1.
+   */
+  settingsRoutes?(settingsRoute: SettingsRoute): AnyRoute;
 }
 
 export function defineWebModule(module: WebModule): WebModule {

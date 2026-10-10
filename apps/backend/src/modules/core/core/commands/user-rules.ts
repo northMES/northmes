@@ -4,7 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import type { Transaction } from 'kysely';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
 import { companyUsers, type UserRecord } from '../user.service.ts';
-import { companyOfPlant } from './company-scope.ts';
+import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 
 /** The characters of a temporary password: letters and digits that are not mistaken for others. */
@@ -22,24 +22,26 @@ export function temporaryPassword(): string {
 }
 
 /**
- * The user with this id among the users of the company of the request's plant, or
- * NotFoundException: a user of another company reads as one that does not exist.
+ * The user with this id among the users of the request's company, the plant's or the one the
+ * input names in company settings, or NotFoundException: a user of another company reads as one
+ * that does not exist.
  */
 export async function userOfCompany(
   context: Pick<CoreContext, 'tx' | 'plantId'>,
-  id: string,
+  input: { readonly id: string; readonly companyId?: string },
 ): Promise<UserRecord> {
-  const companyId = (await companyOfPlant(undefined, context)) ?? '';
+  const { id } = input;
+  const companyId = (await requestCompany(input, context)) ?? '';
   const user = await companyUsers(context.tx, companyId).where('id', '=', id).executeTakeFirst();
   if (!user) throw new NotFoundException(`User ${id} was not found`);
   return user;
 }
 
-/** The user with this id as core.user_directory reads it now. */
-export function userById(tx: Transaction<CoreDatabase>, id: string): Promise<UserRecord> {
-  return tx
-    .selectFrom('core.user_directory')
-    .select(['id', 'name', 'username', 'banned as blocked'])
-    .where('id', '=', id)
-    .executeTakeFirstOrThrow();
+/** The user with this id of the company as core.user_directory reads it now. */
+export function userById(
+  tx: Transaction<CoreDatabase>,
+  id: string,
+  companyId: string,
+): Promise<UserRecord> {
+  return companyUsers(tx, companyId).where('id', '=', id).executeTakeFirstOrThrow();
 }

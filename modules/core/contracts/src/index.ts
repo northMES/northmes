@@ -11,6 +11,7 @@ export {
   deleteRole,
   permissionKey,
   removeRoleAssignment,
+  settingsCompanyId,
   updateRole,
 } from './role.ts';
 export { blockUser, createUser, unblockUser, username } from './user.ts';
