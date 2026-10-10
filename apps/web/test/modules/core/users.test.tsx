@@ -4,6 +4,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreCreateUser } from '../../../src/modules/core/screens/new-user/create-user.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/users/users.graphql.ts';
@@ -849,6 +850,62 @@ describe('users', () => {
     expect(within(summary).getByRole('link').textContent).toBe('Choose where the role applies.');
     expect(chosenRole(section)).toBe('Viewer');
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('E05-S08 with the company as the only place, Role locks the roles the creator cannot give there, and a refusal names the company', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+      settingsViewerQuery(creator),
+      {
+        request: { query: CoreCompanies },
+        result: {
+          data: {
+            coreCompanies: [{ __typename: 'Company', id: acme.id, name: 'Acme AB', plants: [] }],
+          },
+        },
+      },
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === acme.id,
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'You do not hold it.',
+              path: ['coreCreateUser'],
+              extensions: {
+                code: 'FORBIDDEN',
+                errorCode: 'core.role_not_held',
+                details: { missingPermissions: ['planning.productionOrder:read'] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    expect(within(section).getByText('The role applies at Acme AB.')).toBeDefined();
+    expect(
+      within(section).getByText(
+        'Checked when you add it: you need every permission of the role at Acme AB.',
+      ),
+    ).toBeDefined();
+    await typeTove(events);
+    const roles = await openRoles(events, section);
+    expect(roleOption(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
+    await events.click(roleOption(roles, 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+    expect(within(summary).getByRole('link').textContent).toMatch(
+      /^You cannot assign Viewer at Acme AB\. It includes 1 permission you do not hold at Acme AB/,
+    );
   });
 
   it('E05-S08 a Role typed into and cleared again counts as no role, and New user creates the user without one', async () => {
