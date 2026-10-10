@@ -77,11 +77,12 @@ describe('articles list', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((cell) => cell.textContent?.trim()),
-    ).toEqual(expect.arrayContaining(['Stock unit', 'Source']));
+    ).toEqual(expect.arrayContaining(['Article group', 'Stock unit', 'Source']));
     expect(bodyRows(table)[0]).toEqual([
       'AX-31007',
       'Hydraulslang 12 mm',
       'Plant A',
+      '',
       'm',
       'Pyramid',
       lastChangedText,

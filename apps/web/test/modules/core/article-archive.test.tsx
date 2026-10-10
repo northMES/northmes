@@ -254,7 +254,7 @@ describe('archive and restore an article', () => {
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-400', 'Axle 10 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-400', 'Axle 10 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
 
@@ -263,8 +263,8 @@ describe('archive and restore an article', () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-400', 'Axle 10 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
-        ['AX-500', 'Axle 20 mmArchived', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-400', 'Axle 10 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-500', 'Axle 20 mmArchived', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(router.state.location.search).toEqual({ archived: 1 });

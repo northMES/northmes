@@ -127,7 +127,7 @@ describe('articles list URL state', () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-900', 'Axle 900 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-900', 'Axle 900 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(router.state.location.href).toBe(listHref({ q: 'hinge' }));
@@ -159,7 +159,7 @@ describe('articles list URL state', () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-900', 'Axle 900 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-900', 'Axle 900 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(table.getAttribute('aria-busy')).toBeNull();
