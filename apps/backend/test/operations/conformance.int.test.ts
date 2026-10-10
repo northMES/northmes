@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomBytes, randomUUIDv7 } from 'node:crypto';
-import { givenArticle, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
-import { articleOperations } from '@northmes/core-contracts';
+import {
+  givenArticle,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '@northmes/backend/testing';
+import { articleGroupOperations, articleOperations } from '@northmes/core-contracts';
 import {
   type ConformanceCall,
   createTestApp,
@@ -84,6 +90,80 @@ describe('core article operations', () => {
         operation: operation.contract.name,
         input: await inputFor(key, at),
         headers: at.headers,
+      });
+    },
+  });
+});
+
+describe('core article group operations', () => {
+  const db = useTestDatabase();
+  let testApp: TestApp | undefined;
+
+  beforeAll(async () => {
+    testApp = await createTestApp({ modules: ['core'], hostFactory, database: db });
+    await testApp.app.listen(0, '127.0.0.1');
+  });
+
+  afterAll(async () => {
+    await testApp?.app.close();
+  });
+
+  /** A code no other test uses. */
+  const code = () => `GR-${randomBytes(3).toString('hex')}`;
+
+  /**
+   * A fresh company with one plant and the headers of a user at the plant: one who holds every
+   * article group permission at the company, or one who holds only core.user:read there.
+   */
+  async function place(permitted: boolean) {
+    if (!testApp) throw new Error('the test app did not start');
+    const { company, slugs } = await givenCompany(db.ownerUrl, {});
+    const permissions = permitted
+      ? ['read', 'create', 'update', 'archive'].map((action) => `core.articleGroup:${action}`)
+      : ['core.user:read'];
+    const user = await signIn(testApp.app, db.ownerUrl, [{ scopeId: company, permissions }]);
+    const headers = new Headers({
+      authorization: user.authorization,
+      'x-northmes-plant': slugs[0] ?? '',
+    });
+    return { company, headers };
+  }
+
+  /** An input that fits operation `key` at this company, with a group written as core's owner. */
+  async function inputFor(key: string, company: string) {
+    const id = randomUUIDv7();
+    await queryAsCore(
+      db.ownerUrl,
+      `insert into core.article_group (id, scope_id, company_id, code, name, archived_at)
+       values ($1, $2, $2, $3, 'Flanges', $4)`,
+      [id, company, code(), key === 'restore' ? new Date('2026-10-01T00:00:00Z') : null],
+    );
+    switch (key) {
+      case 'find':
+        return {};
+      case 'get':
+        return { id };
+      case 'create':
+        return { id: randomUUIDv7(), code: code(), name: 'Shafts' };
+      case 'update':
+        return { id, expectedVersion: 1, code: code(), name: 'Flanges, steel' };
+      default:
+        return { id, expectedVersion: 1 };
+    }
+  }
+
+  operationsConformance(articleGroupOperations, {
+    story: 'E06-S06',
+    async run({ key, surface, permitted }: ConformanceCall) {
+      if (!testApp) throw new Error('the test app did not start');
+      const { company, headers } = await place(permitted);
+      const operation =
+        articleGroupOperations.operations[key as keyof typeof articleGroupOperations.operations];
+      return testApp.app.get(OperationRunner).run({
+        surface,
+        operation: operation.contract.name,
+        input: await inputFor(key, company),
+        headers,
       });
     },
   });
