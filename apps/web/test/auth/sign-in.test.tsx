@@ -391,6 +391,26 @@ describe('sign-in', () => {
     );
   });
 
+  it('E05-S08 a new password the API refuses as longer than 128 characters stays on the step with "Use at most 128 characters." on New password', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession({ signedIn: false });
+    renderAt('/plant-a/quality', session);
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, toveEmail, toveTemporaryPassword);
+    const field = await screen.findByLabelText('New password');
+
+    await user.click(field);
+    await user.paste('a long passphrase '.repeat(8));
+    await user.click(screen.getByRole('button', { name: 'Save and continue' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to continue' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(session.setNewPassword).toHaveBeenCalledOnce();
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Use at most 128 characters.')).toBeDefined();
+    expect(screen.getByRole('heading', { level: 1, name: 'Set a new password' })).toBeDefined();
+  });
+
   it('E05-S08 a core.password_change_required answer mid-session, as after a reset, ends the session and sends the user to sign in again, then to the new password step and back to the page', async () => {
     const user = userEvent.setup();
     const session = fakeSession();

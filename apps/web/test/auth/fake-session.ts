@@ -27,9 +27,9 @@ export const rateLimitedEmail = 'rate.limited@example.test';
 
 /**
  * An AuthSession in memory. alexEmail signs in with "correct horse" and gets the JWT "jwt-1";
- * toveEmail signs in with her temporary password and must set a new one, which needs 8 characters
- * and differs from the temporary one; rateLimitedEmail is refused for 7 seconds; anyone else gets
- * wrong credentials.
+ * toveEmail signs in with her temporary password and must set a new one, which needs 8 to 128
+ * characters and differs from the temporary one; rateLimitedEmail is refused for 7 seconds; anyone
+ * else gets wrong credentials.
  */
 export function fakeSession({ signedIn = true }: { readonly signedIn?: boolean } = {}) {
   let user: SignedInUser | undefined = signedIn ? alex : undefined;
@@ -59,6 +59,7 @@ export function fakeSession({ signedIn = true }: { readonly signedIn?: boolean }
     setNewPassword: vi.fn(
       async (currentPassword: string, newPassword: string): Promise<NewPasswordResult> => {
         if (newPassword.length < 8) return { ok: false, reason: 'too-short' };
+        if (newPassword.length > 128) return { ok: false, reason: 'too-long' };
         if (newPassword === currentPassword) return { ok: false, reason: 'unchanged' };
         return { ok: true };
       },

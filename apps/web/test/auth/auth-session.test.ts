@@ -95,6 +95,9 @@ function betterAuth(clock: { now: number }) {
         if (sent.newPassword.length < 8) {
           return json({ errorCode: 'core.password_too_short' }, { status: 400 });
         }
+        if (sent.newPassword.length > 128) {
+          return json({ errorCode: 'core.password_too_long' }, { status: 400 });
+        }
         if (sent.newPassword === sent.currentPassword) {
           return json({ errorCode: 'core.password_unchanged' }, { status: 400 });
         }
@@ -292,11 +295,13 @@ describe('the auth session', () => {
     await session.signIn('tove.lindqvist@example.test', 'Rk7qTm3vXp9w');
 
     const short = await session.setNewPassword('Rk7qTm3vXp9w', 'short');
+    const long = await session.setNewPassword('Rk7qTm3vXp9w', 'a long passphrase '.repeat(8));
     const unchanged = await session.setNewPassword('Rk7qTm3vXp9w', 'Rk7qTm3vXp9w');
     const saved = await session.setNewPassword('Rk7qTm3vXp9w', 'a password of mine');
 
-    expect([short, unchanged, saved]).toEqual([
+    expect([short, long, unchanged, saved]).toEqual([
       { ok: false, reason: 'too-short' },
+      { ok: false, reason: 'too-long' },
       { ok: false, reason: 'unchanged' },
       { ok: true },
     ]);
