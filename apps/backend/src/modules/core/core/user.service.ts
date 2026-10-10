@@ -53,7 +53,9 @@ export class UserService {
 
   /**
    * One page of the users of the request's company, as coreUsers' arguments ask, narrowed by the
-   * filter: the holders of a role of the company at any of its places, and blocked or active users.
+   * filter: the holders of a role of the company where the request reads assignments (at a plant,
+   * the plant and the company; in company settings, the company and every plant of it), and blocked
+   * or active users.
    */
   async list(
     args: UserListArgs,
@@ -67,13 +69,18 @@ export class UserService {
         (tx) => {
           let users = companyUsers(tx, scope.companyId);
           if (roleId !== undefined) {
-            users = users.where('id', 'in', (holders) =>
-              holders
+            const { companyId, plantId } = scope;
+            users = users.where('id', 'in', (holders) => {
+              const inCompany = holders
                 .selectFrom('core.role_assignment')
                 .select('user_id')
-                .where('company_id', '=', scope.companyId)
-                .where('role_id', '=', roleId),
-            );
+                .where('company_id', '=', companyId)
+                .where('role_id', '=', roleId);
+              // At a plant, as roleAssignments reads them: never another plant's assignments.
+              return plantId === undefined
+                ? inCompany
+                : inCompany.where('scope_id', 'in', [plantId, companyId]);
+            });
           }
           if (blocked !== undefined) users = users.where('banned', '=', blocked);
           return users;
