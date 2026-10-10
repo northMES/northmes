@@ -50,6 +50,8 @@ export function fakeSession({ signedIn = true }: { readonly signedIn?: boolean }
       return { ok: true };
     }),
     signOut: vi.fn(async () => {
+      // As AuthSession, the tab forgets the user once the API has answered the sign-out.
+      await new Promise((resolve) => setTimeout(resolve));
       user = undefined;
     }),
     forget: vi.fn(() => {

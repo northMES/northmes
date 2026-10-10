@@ -57,6 +57,21 @@ const pong = () =>
     headers: { 'content-type': 'application/graphql-response+json' },
   });
 
+/** The API's refusal of a request from a user who must set a new password, as after a reset. */
+const passwordChangeRequired = () =>
+  new Response(
+    JSON.stringify({
+      data: null,
+      errors: [
+        {
+          message: 'Choose a new password to continue.',
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
+        },
+      ],
+    }),
+    { headers: { 'content-type': 'application/graphql-response+json' } },
+  );
+
 /** The calls of fetch that sent the operation named operation. */
 function callsOf(
   fetch: { mock: { calls: Parameters<typeof globalThis.fetch>[] } },
@@ -416,20 +431,7 @@ describe('sign-in', () => {
     const session = fakeSession();
     const fetch = vi
       .fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            data: null,
-            errors: [
-              {
-                message: 'Choose a new password to continue.',
-                extensions: { code: 'FORBIDDEN', errorCode: 'core.password_change_required' },
-              },
-            ],
-          }),
-          { headers: { 'content-type': 'application/graphql-response+json' } },
-        ),
-      )
+      .mockResolvedValueOnce(passwordChangeRequired())
       .mockImplementation(async () => pong());
     const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
 
@@ -442,5 +444,19 @@ describe('sign-in', () => {
 
     expect(await screen.findByRole('heading', { name: 'The API answered pong' })).toBeDefined();
     expect(router.state.location.href).toBe('/plant-a/quality?tab=open');
+  });
+
+  it('E05-S08 requests refused with core.password_change_required at the same time end the session once', async () => {
+    const session = fakeSession();
+    // After a reset the API refuses every request of the session. The page's requests go out
+    // together, so their refusals arrive while the sign-out of the first one is under way.
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => passwordChangeRequired());
+    const { router } = renderAt('/plant-a/quality?tab=open', session, fetch);
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+
+    expect(fetch.mock.calls.length).toBeGreaterThan(1);
+    expect(session.signOut).toHaveBeenCalledOnce();
+    expect(router.state.location.search).toEqual({ redirect: '/plant-a/quality?tab=open' });
   });
 });
