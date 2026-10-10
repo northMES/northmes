@@ -189,25 +189,38 @@ describe('BoardScreen', () => {
 
   it('E02-S05 a double click on Release sends one release, and the row shows Released with no failure', async () => {
     const user = userEvent.setup();
-    // One answer for one release: a second release would find no mock and fail.
+    // The mock answers two releases and counts them: a released order has no button, so the
+    // failure of a second, unanswered release would leave nothing on screen.
+    let releases = 0;
     renderBoard([
       boardQuery(order('7101', '40.000000', 'planned', bracket)),
-      releaseOf('order-7101', {
-        data: {
-          planningReleaseProductionOrder: {
-            __typename: 'ProductionOrder',
-            id: 'order-7101',
-            status: 'released',
-            version: 2,
+      {
+        request: {
+          query: PlanningReleaseProductionOrder,
+          variables: ({ input }) => {
+            releases += 1;
+            return input.id === 'order-7101' && input.expectedVersion === 1;
           },
         },
-      }),
+        maxUsageCount: 2,
+        result: {
+          data: {
+            planningReleaseProductionOrder: {
+              __typename: 'ProductionOrder',
+              id: 'order-7101',
+              status: 'released',
+              version: 2,
+            },
+          },
+        },
+      },
     ]);
 
     const row = await rowOf('7101');
     await user.dblClick(within(row).getByRole('button', { name: 'Release order 7101' }));
 
     await waitFor(() => expect(cellOf(row, 'Status').textContent).toBe('Released'));
+    expect(releases).toBe(1);
     expect(within(row).queryByRole('alert')).toBeNull();
   });
 
