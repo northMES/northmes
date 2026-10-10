@@ -29,14 +29,20 @@ export type SignInResult =
 /** What setting a new password came to. A refusal names its reason, which the step words. */
 export type NewPasswordResult =
   | { readonly ok: true }
-  | { readonly ok: false; readonly reason: 'too-short' | 'unchanged' | 'wrong-current' | 'failed' };
+  | {
+      readonly ok: false;
+      readonly reason: 'too-short' | 'too-long' | 'unchanged' | 'wrong-current' | 'failed';
+    };
 
 /** The API's route of the new password step, below the API's URL. */
 const newPasswordPath = 'api/account/password';
 
 /** The reason of each refusal code of the new password route. */
-const newPasswordRefusals: Readonly<Record<string, 'too-short' | 'unchanged' | 'wrong-current'>> = {
+const newPasswordRefusals: Readonly<
+  Record<string, 'too-short' | 'too-long' | 'unchanged' | 'wrong-current'>
+> = {
   'core.password_too_short': 'too-short',
+  'core.password_too_long': 'too-long',
   'core.password_unchanged': 'unchanged',
   'core.current_password_wrong': 'wrong-current',
 };
