@@ -158,10 +158,10 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
 }
 
 /**
- * The edit page of an article (design ui-222, DE7): the article form filled in, validated with
- * the identity fields of core.updateArticle. A saved change opens the article's page in place of the form
- * and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values and
- * offers Reload article (DE19), and an archived article keeps them and offers Restore article
+ * The edit page of an article (design ui-222, DE7): the article form filled in, validated with the
+ * identity fields of core.updateArticle. A saved change opens the article's page in place of the
+ * form and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values
+ * and offers Reload article (DE19), and an archived article keeps them and offers Restore article
  * (DE31).
  */
 export function EditArticleScreen() {

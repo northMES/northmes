@@ -70,14 +70,14 @@ async function lockAt(
 /**
  * The handler of core.upsertArticle (ADR 0073). Its scope hook is create's: the edit scope a new
  * article would have, where the bus checks core.article:create. The handler finds the article with
- * the input's article number in the company, without regard to case, under a lock on that number
- * so concurrent upserts of a new number create it once. None: it creates one as
- * core.createArticle does, with the input's source. An archived one: core.archived. An active
- * one: a different name, or a stock unit or note the input names that differs, needs
- * core.article:update at the article's edit scope, its source stays as it is, and other plants need core.article:assign at
- * the company, both checked with context.require; the change is one update at the input's
- * expectedVersion or the version found, and an input without plants keeps the article's plants.
- * An unchanged article writes nothing and keeps its version.
+ * the input's article number in the company, without regard to case, under a lock on that number so
+ * concurrent upserts of a new number create it once. None: it creates one as core.createArticle
+ * does, with the input's source. An archived one: core.archived. An active one: a different name,
+ * or a stock unit or note the input names that differs, needs core.article:update at the article's
+ * edit scope, its source stays as it is, and other plants need core.article:assign at the company,
+ * both checked with context.require; the change is one update at the input's expectedVersion or the
+ * version found, and an input without plants keeps the article's plants. An unchanged article
+ * writes nothing and keeps its version.
  */
 export const upsertArticleHandler = {
   scope: createArticleHandler.scope,

@@ -6,11 +6,11 @@ import { plantSlug } from './plant.ts';
 import { settingsCompanyId } from './role.ts';
 
 /**
- * The identity fields a person edits on an article, which core.createArticle and
- * core.updateArticle share and the web's article form validates: its code, the article number
- * that is unique within the company (ADR 0073), and its name. Both are trimmed and required. 32
- * characters is the code limit of every register (ADR 0009). Each message states the rule and the fix (design ui-222, Copy), and the
- * server and the web form give the same one (ADR 0017).
+ * The identity fields a person edits on an article, which core.createArticle and core.updateArticle
+ * share and the web's article form validates: its code, the article number that is unique within
+ * the company (ADR 0073), and its name. Both are trimmed and required. 32 characters is the code
+ * limit of every register (ADR 0009). Each message states the rule and the fix (design ui-222,
+ * Copy), and the server and the web form give the same one (ADR 0017).
  */
 export const articleFields = z.object({
   code: z
@@ -86,8 +86,9 @@ export const createArticle = defineCommandContract({
 
 /**
  * Changes the code and name of an article, and its stock unit and note when the input names them,
- * which the input names by id with the version the change was made on. A stale version is refused with core.version_conflict, and a code that another
- * article of the company uses with core.code_taken.
+ * which the input names by id with the version the change was made on. A stale version is refused
+ * with core.version_conflict, and a code that another article of the company uses with
+ * core.code_taken.
  */
 export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',

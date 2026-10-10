@@ -45,8 +45,9 @@ function SettingsStub() {
 }
 
 /**
- * Renders the core module's routes at href, at a plant or in company settings, with a MockedProvider that answers each of mocks once,
- * and returns the router, whose state.location shows the URL.
+ * Renders the core module's routes at href, at a plant or in company settings, with a
+ * MockedProvider that answers each of mocks once, and returns the router, whose state.location
+ * shows the URL.
  */
 export function renderCoreAt(href: string, mocks: readonly MockLink.MockedResponse[]) {
   const router = createRouter({

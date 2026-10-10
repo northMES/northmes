@@ -24,11 +24,12 @@ import { CoreCreateArticle } from './create-article.graphql.ts';
 
 /**
  * The new article page (design ui-222, DE5): the article form, validated with the fields of
- * core.createArticle and the Plants field; the stock unit starts on Choose a unit. Save sends the values under a uuidv7 the page made once, so a retry after
- * a lost answer finds the first article (ADR 0012). A saved article's page replaces the form in
- * the history, and the polite region says "Article BR-900 created". The article is assigned to
- * the plant in the URL; a user who holds core.article:assign at the company also gets the Plants
- * field, which starts at that plant and may choose other plants or All plants (ADR 0073).
+ * core.createArticle and the Plants field; the stock unit starts on Choose a unit. Save sends the
+ * values under a uuidv7 the page made once, so a retry after a lost answer finds the first article
+ * (ADR 0012). A saved article's page replaces the form in the history, and the polite region says
+ * "Article BR-900 created". The article is assigned to the plant in the URL; a user who holds
+ * core.article:assign at the company also gets the Plants field, which starts at that plant and may
+ * choose other plants or All plants (ADR 0073).
  */
 export function NewArticleScreen() {
   const { plant } = useShell();

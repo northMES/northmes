@@ -45,10 +45,10 @@ export const article = z.object({
 });
 
 /**
- * The list of articles (ADR 0016, ADR 0073): by code unless orderBy says otherwise, with search over
- * code and name, the filter fields code (exact match) and unassigned (only the articles of no plant
- * and not of All plants), and without archived articles unless includeArchived asks for them. The
- * backend's defineList reads it for coreArticles, and core.findArticles derives from it.
+ * The list of articles (ADR 0016, ADR 0073): by code unless orderBy says otherwise, with search
+ * over code and name, the filter fields code (exact match) and unassigned (only the articles of no
+ * plant and not of All plants), and without archived articles unless includeArchived asks for them.
+ * The backend's defineList reads it for coreArticles, and core.findArticles derives from it.
  */
 export const articleList = defineListDeclaration({
   name: 'Article',
