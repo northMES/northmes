@@ -264,4 +264,59 @@ describe('DataTable', () => {
 
     expect(screen.getByText('Rows 1 to 3 of 8')).toBeDefined();
   });
+
+  it('E06-S03 a hidden column leaves the header and every row, and the others keep their order', () => {
+    render(table({ rows: articles, hiddenColumns: ['group'] }));
+
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    expect(
+      within(grid)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Article number', 'Name']);
+    expect(within(grid).getAllByRole('row')[1]?.textContent).toBe('AX-20411Fläns DN80 rostfri');
+  });
+
+  it("E06-S03 a group that opens and closes has a button in its header row that tells whether it is open, and a closed group's rows leave", async () => {
+    const user = userEvent.setup();
+    const toggled: [string, boolean][] = [];
+    render(
+      table({
+        rows: [],
+        groups: [
+          {
+            id: 'flanges',
+            label: 'Flanges',
+            count: '2 articles',
+            rows: articles.slice(0, 2),
+            expanded: true,
+            onExpandedChange: (open) => toggled.push(['flanges', open]),
+          },
+          {
+            id: 'hoses',
+            label: 'Hoses',
+            count: '1 article',
+            rows: [],
+            expanded: false,
+            onExpandedChange: (open) => toggled.push(['hoses', open]),
+          },
+        ],
+      }),
+    );
+
+    const flanges = screen.getByRole('button', { name: 'Flanges 2 articles' });
+    const hoses = screen.getByRole('button', { name: 'Hoses 1 article' });
+    expect([flanges.getAttribute('aria-expanded'), hoses.getAttribute('aria-expanded')]).toEqual([
+      'true',
+      'false',
+    ]);
+    expect(screen.queryByText('Hydraulslang 12 mm')).toBeNull();
+    await user.click(hoses);
+    await user.click(flanges);
+
+    expect(toggled).toEqual([
+      ['hoses', true],
+      ['flanges', false],
+    ]);
+  });
 });
