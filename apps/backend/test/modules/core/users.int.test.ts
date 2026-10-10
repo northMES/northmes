@@ -4,6 +4,7 @@ import {
   type Grant,
   givenAssignment,
   givenCompany,
+  givenUser,
   hostFactory,
   queryAsCore,
   signIn,
@@ -197,6 +198,40 @@ describe('the users of a company and their access', () => {
       'zeta.berg',
       'mid.ek',
     ]);
+  });
+
+  it("E05-S08 coreUsers filtered by a role at a plant lists the role's holders at the plant and at its company, and no holder only at another plant", async () => {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, {
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = plants;
+    const reader = await signedIn(
+      [{ scopeId: plantA, permissions: ['core.user:read', 'core.role:read'] }],
+      slugs[0] ?? '',
+    );
+    const [{ id: plantAdmin } = { id: '' }] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-plant-admin'`,
+      [company],
+    );
+    const holderAt = async (scopeId: string) => {
+      const userId = await givenUser(db.ownerUrl, []);
+      await givenAssignment(db.ownerUrl, { userId, roleId: plantAdmin, scopeId });
+      return userId;
+    };
+    const atPlantA = await holderAt(plantA);
+    const atCompany = await holderAt(company);
+    await holderAt(plantB);
+
+    const answer = await reader.client.send<{
+      coreUsers: { totalCount: number; edges: { node: { id: string } }[] };
+    }>(`{ coreUsers(roleId: "${plantAdmin}") { totalCount edges { node { id } } } }`);
+
+    expect(answer.errors).toBeUndefined();
+    expect(answer.data?.coreUsers.edges.map(({ node }) => node.id).sort()).toEqual(
+      [atPlantA, atCompany].sort(),
+    );
+    expect(answer.data?.coreUsers.totalCount).toBe(2);
   });
 
   it('E05-S08 coreUsers sorts by name, the default, and by username either way', async () => {
