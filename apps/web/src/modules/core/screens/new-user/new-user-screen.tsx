@@ -235,14 +235,15 @@ function NewUserForm({
             roles={firstRole.roles}
             holds={firstRole.holds}
             where={form.watch('scopeId') ?? ''}
+            // The fields report no choice as '', which the form keeps as no value.
             onWhereChange={(scopeId) => {
               form.clearErrors('scopeId');
-              form.setValue('scopeId', scopeId, { shouldDirty: true });
+              form.setValue('scopeId', scopeId === '' ? undefined : scopeId, { shouldDirty: true });
             }}
             roleId={form.watch('roleId') ?? ''}
             onRoleChange={(roleId) => {
               form.clearErrors('roleId');
-              form.setValue('roleId', roleId, { shouldDirty: true });
+              form.setValue('roleId', roleId === '' ? undefined : roleId, { shouldDirty: true });
             }}
             whereError={form.getFieldState('scopeId', form.formState).error?.message}
             roleError={form.getFieldState('roleId', form.formState).error?.message}
