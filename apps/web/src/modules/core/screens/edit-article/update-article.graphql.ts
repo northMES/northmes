@@ -17,8 +17,11 @@ if (false) {
         id
         code
         name
+        stockUnit
+        note
         version
         archivedAt
+        updatedAt
       }
     }
   `;

@@ -1,23 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { articleFields } from '@northmes/core-contracts';
+import { stockUnit, stockUnitCodes, unitOf } from '@northmes/contracts';
+import { articleFields, articleNote } from '@northmes/core-contracts';
 import type { ReactNode } from 'react';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
 import { ErrorSummary, ErrorSummaryAction } from '../../../../ui/components/error-summary/index.ts';
 import { FormActions } from '../../../../ui/components/form-actions/index.ts';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
+import { SelectField } from '../../../../ui/components/select-field/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
+import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { plantsChoiceField } from '../article-plants-field/index.ts';
 
 /**
  * The fields of the article form: the identity fields that core.createArticle and
- * core.updateArticle share, the same for a new and an existing article (ADR 0017), and on a new
+ * core.updateArticle share, the same for a new and an existing article (ADR 0017); the stock
+ * unit, which the form requires although the commands default it, so nobody saves pieces without
+ * choosing them (design ui-222, Copy), and the note, which an empty field clears; and on a new
  * article the Plants field, whose choice must name a plant or All plants (ADR 0073). One parse
  * checks them all, so a failed save lists every field to fix.
  */
-export const articleFormFields = articleFields.extend({ plants: plantsChoiceField.optional() });
+export const articleFormFields = articleFields.extend({
+  // The select starts on Choose a unit, the empty value, which the catalog refuses.
+  stockUnit: z.string().pipe(stockUnit),
+  note: articleNote,
+  plants: plantsChoiceField.optional(),
+});
 
 /** The schema of the article form. */
 export type ArticleFields = typeof articleFormFields;
@@ -44,6 +54,9 @@ export interface ArticleFormProps {
   /** Further field groups after Identity, such as Plants on a new article (ADR 0073). */
   readonly children?: ReactNode;
 }
+
+/** The stock units as the Stock unit select offers them, in the catalog's order. */
+const stockUnitOptions = stockUnitCodes.map((code) => ({ value: code, label: unitOf(code).label }));
 
 /** The summary's heading: the number of fields to fix, or that the save failed. */
 function summaryHeading(fieldCount: number): string {
@@ -81,7 +94,8 @@ function Summary({
 
 /**
  * The article form (design ui-222, DE5 and DE7): the error summary, the Identity field group with
- * Article number and Name, any further field groups, then the sticky Save bar with Save article and Cancel. The summary takes
+ * Article number and Name, the Classification group with Stock unit and Note, any further field
+ * groups, then the sticky Save bar with Save article and Cancel. The summary takes
  * focus after each failed save, and the typed values stay (WCAG 3.3.7); after a version conflict it
  * says so and offers Reload article (DE19), and for an archived article it offers Restore article
  * (DE31). Leaving the form with changes asks first.
@@ -106,6 +120,17 @@ export function ArticleForm({
           {...fieldProps(form, 'code')}
         />
         <TextField label="Name" autoComplete="off" {...fieldProps(form, 'name')} />
+      </FormSection>
+      <FormSection title="Classification">
+        <SelectField
+          label="Stock unit"
+          placeholder="Choose a unit"
+          hint="Quantities of this article are counted in this unit."
+          options={stockUnitOptions}
+          className="max-w-xs"
+          {...fieldProps(form, 'stockUnit')}
+        />
+        <TextareaField label="Note" optional rows={3} {...fieldProps(form, 'note')} />
       </FormSection>
       {children}
       <FormActions

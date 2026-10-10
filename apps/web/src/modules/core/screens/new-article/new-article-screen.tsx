@@ -23,8 +23,8 @@ import { useViewer } from '../../use-viewer.ts';
 import { CoreCreateArticle } from './create-article.graphql.ts';
 
 /**
- * The new article page (design ui-222, DE5): the article form, validated with the identity fields
- * of core.createArticle and the Plants field. Save sends the values under a uuidv7 the page made once, so a retry after
+ * The new article page (design ui-222, DE5): the article form, validated with the fields of
+ * core.createArticle and the Plants field; the stock unit starts on Choose a unit. Save sends the values under a uuidv7 the page made once, so a retry after
  * a lost answer finds the first article (ADR 0012). A saved article's page replaces the form in
  * the history, and the polite region says "Article BR-900 created". The article is assigned to
  * the plant in the URL; a user who holds core.article:assign at the company also gets the Plants
@@ -40,7 +40,13 @@ export function NewArticleScreen() {
   // The plants start at the plant in the URL, which is also where a user without the Plants field
   // creates the article; only a user with the field sends them.
   const form = useZodForm(articleFormFields, {
-    defaultValues: { code: '', name: '', plants: { allPlants: false, plants: [plant] } },
+    defaultValues: {
+      code: '',
+      name: '',
+      stockUnit: '',
+      note: '',
+      plants: { allPlants: false, plants: [plant] },
+    },
   });
   const [create] = useMutation(CoreCreateArticle, {
     // The article's page reads the new article from the cache.
@@ -56,12 +62,21 @@ export function NewArticleScreen() {
   });
 
   const save = async (values: ArticleValues) => {
-    const { code, name, plants } = values;
+    const { code, name, stockUnit, note, plants } = values;
     const plantsInput =
       assigns && plants !== undefined ? { allPlants: plants.allPlants, plants: plants.plants } : {};
     try {
       const { data } = await create({
-        variables: { input: { id, code, name, ...plantsInput } },
+        variables: {
+          input: {
+            id,
+            code,
+            name,
+            stockUnit,
+            ...(note === null ? {} : { note }),
+            ...plantsInput,
+          },
+        },
       });
       if (!data) return;
       const article = data.coreCreateArticle;
