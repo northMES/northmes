@@ -21,10 +21,14 @@ minimumReleaseAge: 20160
 
 catalog:
   '@apollo/client': 4.3.1
+  '@axe-core/playwright': 4.13.0
   '@base-ui/react': 1.8.0
   '@better-auth/api-key': 1.7.6
   '@better-auth/oauth-provider': 1.7.6
   '@biomejs/biome': 2.5.14
+  '@escape.tech/graphql-armor-max-aliases': 2.6.2
+  '@escape.tech/graphql-armor-max-depth': 2.4.2
+  '@escape.tech/graphql-armor-max-tokens': 2.5.1
   '@fontsource/ibm-plex-mono': 5.3.0
   '@fontsource/ibm-plex-sans': 5.3.0
   '@graphql-codegen/cli': 7.4.3

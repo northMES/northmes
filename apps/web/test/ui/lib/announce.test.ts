@@ -4,11 +4,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import indexHtml from '../../../index.html?raw';
 import { announce } from '../../../src/ui/lib/announce.ts';
 
-/** The body of the web's index.html before the app renders, without the app's script. */
+/**
+ * The body of the web's index.html before the app renders, without the app's script. It goes
+ * through an inert template, since happy-dom would fetch the stylesheet a parsed document links.
+ */
 function indexBody(): string {
-  const page = new DOMParser().parseFromString(indexHtml, 'text/html');
-  for (const script of page.querySelectorAll('script')) script.remove();
-  return page.body.innerHTML;
+  const template = document.createElement('template');
+  template.innerHTML = /<body>([\s\S]*)<\/body>/.exec(indexHtml)?.[1] ?? '';
+  for (const script of template.content.querySelectorAll('script')) script.remove();
+  return template.innerHTML;
 }
 
 /** The text of the polite region after each timer, with repeats in a row folded into one. */
@@ -67,5 +71,19 @@ describe('announce', () => {
     await spoken();
 
     expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('Order 1001 released');
+  });
+
+  // A test's window can close while a message is still queued, as when a test file ends right
+  // after a save. The timers then find no document, and the queue stops instead of throwing; the
+  // next message on a page speaks as before.
+  it('E04-S07 a queued message whose page has gone stops quietly, and the next message speaks', async () => {
+    announce('Article AX-20410 created');
+    vi.stubGlobal('document', undefined);
+
+    await expect(vi.runAllTimersAsync()).resolves.not.toThrow();
+
+    vi.unstubAllGlobals();
+    announce('Article AX-20411 created');
+    expect((await spoken()).at(-1)).toBe('Article AX-20411 created');
   });
 });

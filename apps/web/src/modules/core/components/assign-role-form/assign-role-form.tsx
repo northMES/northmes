@@ -1,56 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
-import { useId, useState } from 'react';
-import { Controller } from 'react-hook-form';
+import { accessReason } from '@northmes/core-contracts';
+import { CircleCheck, CircleX, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Controller, useController } from 'react-hook-form';
 import { v7 as uuidv7 } from 'uuid';
 import { z } from 'zod';
 import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
 import { FormActions } from '../../../../ui/components/form-actions/index.ts';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
+import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
-import { summaryErrors, useZodForm } from '../../../../ui/lib/use-zod-form.ts';
+import { fieldProps, summaryErrors, useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { Label } from '../../../../ui/primitives/label.tsx';
 import { NativeSelect, NativeSelectOption } from '../../../../ui/primitives/native-select.tsx';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
-import {
-  listOf,
-  missingPermissionsOf,
-  permissionCount,
-  permissionList,
-} from '../../access-refusal.ts';
+import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
 import { permissionLine, permissionWithId } from '../../permission-names.ts';
 import { addHolder } from '../../role-cache.ts';
-import { roleKind } from '../../role-kind.ts';
-import type { CoreRolesQuery } from '../../roles.graphql.ts';
 import { useCompanyVariables } from '../../use-places.ts';
 import { CoreAssignRole, type CoreAssignRoleMutation } from './assign-role.graphql.ts';
-
-/** A role of the company, as the picker lists it. */
-export type PickRole = CoreRolesQuery['coreRoles'][number];
-
-/** A person a role is given to. */
-export interface AssignPerson {
-  readonly id: string;
-  readonly name: string;
-}
-
-/** A place where a role is given: the company, for all its plants, or one plant. */
-export interface AssignPlace {
-  readonly id: string;
-  readonly name: string;
-  readonly kind: 'COMPANY' | 'PLANT';
-}
-
-/** A role a person holds at a place already. */
-export interface HeldRole {
-  readonly roleId: string;
-  readonly scopeId: string;
-}
+import {
+  type AssignPerson,
+  type AssignPlace,
+  AssignRoleFormFields,
+  type HeldRole,
+  type PickRole,
+} from './assign-role-form-fields.tsx';
+import { AssignRoleFormPerson, type PersonSearch } from './assign-role-form-person.tsx';
 
 /** The assignment the API returned. */
 export type AssignedRole = CoreAssignRoleMutation['coreAssignRole'];
@@ -60,204 +40,89 @@ const addRoleFields = z.object({
   userId: z.string().min(1, 'Choose a person.'),
   where: z.string().min(1, 'Choose where the role applies.'),
   roleId: z.string().min(1, 'Choose a role.'),
+  reason: accessReason,
 });
 
 type AddRoleValues = z.output<typeof addRoleFields>;
 
-/** The id of a role's radio, which a summary link to Role may lead to. */
-function radioIdOf(roleId: string): string {
-  return `add-role-${roleId}`;
-}
-
-/** What the form reads to tell whether a role can be given at a place. */
-interface LockContext {
-  readonly person: AssignPerson | undefined;
-  readonly place: AssignPlace | undefined;
+/**
+ * The person card of Add role (AS3): the person's name, username and the roles they hold already,
+ * each with its place.
+ */
+function PersonCard({
+  person,
+  held,
+  roles,
+  places,
+}: {
+  readonly person: AssignPerson;
   readonly held: readonly HeldRole[];
-  readonly holds: (permission: string, place: AssignPlace) => boolean;
-}
-
-/** How a role of the picker reads at the place: its line, and whether it can be added there. */
-interface RoleOption {
-  /**
-   * The line under the role's name (AS3): "Custom role. 9 permissions.", or what keeps it from
-   * being added, such as "Custom role. Needs 3 permissions you do not hold at Plant A: ...".
-   */
-  readonly line: string;
-  /** The role cannot be added at the place: the person holds it there, or it needs permissions. */
-  readonly locked: boolean;
-  /** The role needs permissions the assigner does not hold at the place. */
-  readonly needsPermissions: boolean;
-}
-
-/**
- * The role as the picker lists it at the place, for the person and the assigner. Before a place
- * is chosen, no role is locked and the line names the role's kind and permission count.
- */
-function optionOf(role: PickRole, { person, place, held, holds }: LockContext): RoleOption {
-  const kind = `${roleKind(role)}.`;
-  const count = `${permissionCount(role.permissions.length)}.`;
-  if (place === undefined) {
-    return { line: `${kind} ${count}`, locked: false, needsPermissions: false };
-  }
-  const holdsIt =
-    person !== undefined &&
-    held.some(({ roleId, scopeId }) => roleId === role.id && scopeId === place.id);
-  const missing = role.permissions.filter((key) => !holds(key, place));
-  const parts = [kind];
-  if (holdsIt) parts.push(`${person.name} already holds it at ${place.name}.`);
-  if (missing.length > 0) {
-    const named = missing.slice(0, 3).map(permissionWithId);
-    const more = missing.length > 3 ? `, and ${missing.length - 3} more` : '';
-    parts.push(
-      `Needs ${permissionCount(missing.length)} you do not hold at ${place.name}: ${listOf(named)}${more}.`,
-    );
-  }
-  if (!holdsIt && missing.length === 0) parts.push(count);
-  return {
-    line: parts.join(' '),
-    locked: holdsIt || missing.length > 0,
-    needsPermissions: missing.length > 0,
-  };
-}
-
-interface RolePickerProps {
   readonly roles: readonly PickRole[];
-  readonly value: string;
-  readonly onChange: (roleId: string) => void;
-  readonly optionOf: (role: PickRole) => RoleOption;
-  readonly error?: string;
-  /** The chosen place, which names the two groups; undefined until Where is chosen. */
-  readonly placeName: string | undefined;
-}
-
-/**
- * Role (design core-304, AS3): one radio group in two groups, the roles the assigner can give at
- * the place and the roles that need permissions the assigner does not hold there, each with the
- * custom roles first and then the default roles, by name, and a line under each role. A role that
- * cannot be added stays in the list, disabled, with what keeps it. Until a place is chosen, the
- * groups are the custom roles and the default roles. One Tab stop; the arrow keys choose.
- */
-function RolePicker({ roles, value, onChange, optionOf, error, placeName }: RolePickerProps) {
-  const labelId = useId();
-  const hintId = useId();
-  const errorId = useId();
-  const options = roles.map((role) => ({ role, option: optionOf(role) }));
-  const group = (title: string, listed: typeof options) => {
-    if (listed.length === 0) return null;
-    return (
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-xs font-semibold text-muted-foreground">{title}</legend>
-        {listed.map(({ role, option }) => {
-          const lineId = `${radioIdOf(role.id)}-line`;
-          return (
-            <div key={role.id} className="flex min-h-9 items-start gap-3 py-1 text-sm">
-              <RadioGroupItem
-                id={radioIdOf(role.id)}
-                value={role.id}
-                disabled={option.locked}
-                aria-describedby={lineId}
-                aria-invalid={error !== undefined || undefined}
-                className="mt-0.5"
-              />
-              <span className="flex flex-col">
-                <Label htmlFor={radioIdOf(role.id)} className="font-normal">
-                  {role.name}
-                </Label>
-                <span id={lineId} className="text-xs text-muted-foreground">
-                  {option.line}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </fieldset>
-    );
-  };
+  readonly places: readonly AssignPlace[];
+}) {
+  const here = held.flatMap(({ roleId, scopeId }) => {
+    const role = roles.find(({ id }) => id === roleId);
+    const place = places.find(({ id }) => id === scopeId);
+    return role === undefined || place === undefined ? [] : [`${role.name} at ${place.name}`];
+  });
   return (
-    <div className="flex flex-col gap-2">
-      <p id={labelId} className="text-xs font-semibold">
-        Role
-      </p>
-      <p id={hintId} className="text-xs text-muted-foreground">
-        Roles that need permissions you do not hold at {placeName ?? 'the place you choose'} stay in
-        the list, with what they need.
-      </p>
-      <RadioGroup
-        aria-labelledby={labelId}
-        aria-describedby={[error === undefined ? '' : errorId, hintId].join(' ').trim()}
-        value={value}
-        onValueChange={(next) => onChange(String(next))}
-        className="flex flex-col gap-3"
-      >
-        {placeName === undefined ? (
+    <FormSection title={person.name}>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+        {person.username !== undefined && (
           <>
-            {group(
-              'Custom roles',
-              options.filter(({ role }) => role.origin === 'CUSTOM'),
-            )}
-            {group(
-              'Default roles',
-              options.filter(({ role }) => role.origin === 'MODULE'),
-            )}
-          </>
-        ) : (
-          <>
-            {group(
-              `You can assign these at ${placeName}`,
-              options.filter(({ option }) => !option.needsPermissions),
-            )}
-            {group(
-              `Needs permissions you do not hold at ${placeName}`,
-              options.filter(({ option }) => option.needsPermissions),
-            )}
+            <dt className="text-muted-foreground">Username</dt>
+            <dd className="font-mono">{person.username}</dd>
           </>
         )}
-      </RadioGroup>
-      {error !== undefined && (
-        <p id={errorId} className="text-xs text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
+        <dt className="text-muted-foreground">Roles here</dt>
+        <dd className="flex flex-col">
+          {here.length === 0 ? 'None' : here.map((line) => <span key={line}>{line}</span>)}
+        </dd>
+      </dl>
+    </FormSection>
   );
 }
 
-/** The permissions of the chosen role and whether the assigner holds each at the place (AS3). */
-function ChosenRole({
+/**
+ * The highlighted role at the place (AS3, AS5): each permission it includes, with its id, and
+ * whether the assigner holds it there. It follows the listbox highlight, else the chosen role.
+ */
+function HighlightedRole({
   role,
   holds,
-  placeName,
+  place,
 }: {
   readonly role: PickRole;
   readonly holds: (key: string) => boolean;
-  readonly placeName: string;
+  readonly place: AssignPlace;
 }) {
   return (
-    <FormSection title={`Permissions of ${role.name}`}>
-      <ul className="flex flex-col gap-1 text-sm">
+    <FormSection
+      title={`${role.name} at ${place.name}`}
+      description={`The highlighted role. Each permission it includes, and whether you hold it at ${place.name}.`}
+    >
+      <ul className="flex flex-col gap-2 text-sm">
         {role.permissions.map((key) => (
-          <li key={key} className="flex flex-wrap gap-x-3">
-            <span>{permissionLine(key)}</span>
-            <span className="font-mono text-xs text-muted-foreground">{key}</span>
-            <span className="text-xs text-muted-foreground">
-              {holds(key) ? `You hold it at ${placeName}.` : `You do not hold it at ${placeName}.`}
+          <li key={key} className="flex items-start gap-2">
+            {holds(key) ? (
+              <CircleCheck aria-hidden className="mt-0.5 size-4 shrink-0 text-success" />
+            ) : (
+              <CircleX aria-hidden className="mt-0.5 size-4 shrink-0 text-destructive" />
+            )}
+            <span className="flex min-w-0 flex-col">
+              <span>{permissionLine(key)}</span>
+              <span className="font-mono text-xs break-all text-muted-foreground">{key}</span>
+              <span className="text-xs text-muted-foreground">
+                {holds(key)
+                  ? `You hold it at ${place.name}`
+                  : `You do not hold it at ${place.name}`}
+              </span>
             </span>
           </li>
         ))}
       </ul>
     </FormSection>
   );
-}
-
-/** "Plant A only" or "Acme AB, all plants", and its hint (AS3). */
-function placeLabel({ kind, name }: AssignPlace) {
-  return kind === 'COMPANY'
-    ? {
-        label: `${name}, all plants`,
-        hint: `Applies to every plant of ${name}, also plants created later.`,
-      }
-    : { label: `${name} only`, hint: `Applies at ${name}.` };
 }
 
 /** "Assign and remove roles (core.roleAssignment:manage)", the permission an assignment needs. */
@@ -307,6 +172,8 @@ export interface AssignRoleFormProps {
   readonly onAssigned: (person: AssignPerson) => Promise<void>;
   /** Writes the new assignment where the page that follows reads it. */
   readonly writeAssignment?: (cache: ApolloCache, assignment: AssignedRole) => void;
+  /** Person searches the API with these, in place of choosing from `people` (People's Add role). */
+  readonly personSearch?: PersonSearch;
 }
 
 /**
@@ -326,27 +193,34 @@ export function AssignRoleForm({
   cancelHref,
   onAssigned,
   writeAssignment,
+  personSearch,
 }: AssignRoleFormProps) {
   const company = useCompanyVariables();
   const [id] = useState(() => uuidv7());
   const [onlyPerson] = people.length === 1 ? people : [];
   const [onlyPlace] = places.length === 1 ? places : [];
   const form = useZodForm(addRoleFields, {
-    defaultValues: { userId: onlyPerson?.id ?? '', where: onlyPlace?.id ?? '', roleId: '' },
+    defaultValues: {
+      userId: onlyPerson?.id ?? '',
+      where: onlyPlace?.id ?? '',
+      roleId: '',
+      reason: '',
+    },
   });
   const userId = form.watch('userId');
-  const where = form.watch('where');
-  const roleId = form.watch('roleId');
-  const person = people.find((each) => each.id === userId);
+  const whereField = useController({ control: form.control, name: 'where' });
+  const roleField = useController({ control: form.control, name: 'roleId' });
+  const where = whereField.field.value;
+  const roleId = roleField.field.value;
+  // The person picked by a search, which the next search's results may leave out.
+  const [picked, setPicked] = useState<AssignPerson | undefined>(undefined);
+  const personOf = (personId: string) =>
+    people.find((each) => each.id === personId) ?? (picked?.id === personId ? picked : undefined);
+  const person = personOf(userId);
   const place = places.find((each) => each.id === where);
-  const lock: LockContext = {
-    person,
-    place,
-    held: person === undefined ? [] : heldBy(person.id),
-    holds,
-  };
-  const optionAt = (role: PickRole) => optionOf(role, lock);
-  const chosen = roles.find((role) => role.id === roleId);
+  const [highlighted, setHighlighted] = useState<string | undefined>(undefined);
+  // The side card follows the listbox highlight, else the chosen role (AS3).
+  const shown = roles.find((role) => role.id === (highlighted ?? roleId));
   const { isDirty, isSubmitting } = form.formState;
   const [assign] = useMutation(CoreAssignRole, {
     update(cache, { data }) {
@@ -364,14 +238,21 @@ export function AssignRoleForm({
 
   const save = async (values: AddRoleValues) => {
     const at = places.find((each) => each.id === values.where);
-    const to = people.find((each) => each.id === values.userId);
+    const to = personOf(values.userId);
     if (at === undefined || to === undefined) return;
     const role = roles.find((each) => each.id === values.roleId);
     const roleName = role?.name ?? 'the role';
     try {
       await assign({
         variables: {
-          input: { id, userId: to.id, roleId: values.roleId, scopeId: at.id, ...company },
+          input: {
+            id,
+            userId: to.id,
+            roleId: values.roleId,
+            scopeId: at.id,
+            ...company,
+            ...(values.reason !== undefined && values.reason !== '' && { reason: values.reason }),
+          },
         },
       });
       announce(
@@ -390,146 +271,137 @@ export function AssignRoleForm({
     }
   };
 
-  // A summary link to Role leads to the chosen role's radio, or the first one the user can choose.
-  const roleTarget = chosen?.id ?? roles.find((role) => !optionAt(role).locked)?.id ?? roles[0]?.id;
-  const errors = summaryErrors(form.formState.errors).map((entry) => {
-    if (entry.name === 'roleId' && roleTarget !== undefined) {
-      return { ...entry, fieldId: radioIdOf(roleTarget) };
-    }
-    if (entry.name === 'where' && places[0] !== undefined) {
-      return { ...entry, fieldId: `${fieldId('where')}-${places[0].id}` };
-    }
-    return entry;
-  });
+  const errors = summaryErrors(form.formState.errors);
   const fieldCount = errors.filter(({ name }) => name !== undefined).length;
-  return (
-    <form noValidate onSubmit={form.handleSubmit(save)} className="flex max-w-190 flex-col gap-4">
-      <ErrorSummary
-        heading={
-          fieldCount === 0
-            ? 'Could not add the role'
-            : `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to add the role`
-        }
-        errors={errors}
-        focusKey={form.formState.submitCount}
+  const personField =
+    personSearch !== undefined ? (
+      <Controller
+        control={form.control}
+        name="userId"
+        render={({ field, fieldState }) => (
+          <AssignRoleFormPerson
+            {...personSearch}
+            value={person}
+            onChange={(next) => {
+              setPicked(next);
+              field.onChange(next?.id ?? '');
+              form.clearErrors('roleId');
+            }}
+            error={fieldState.error?.message}
+          />
+        )}
       />
-      <FormSection title={onlyPerson === undefined ? 'Person, role and place' : 'Role and place'}>
-        {onlyPerson === undefined && (
-          <Controller
-            control={form.control}
-            name="userId"
-            render={({ field, fieldState }) => (
-              <Field className="max-w-120">
-                <FieldLabel
-                  htmlFor={fieldId('userId')}
-                  className="block text-xs font-semibold text-foreground"
-                >
-                  Person
-                </FieldLabel>
-                <NativeSelect
-                  id={fieldId('userId')}
-                  className="w-full"
-                  value={field.value}
-                  onChange={(event) => {
-                    field.onChange(event.target.value);
-                    form.clearErrors('roleId');
-                  }}
-                  aria-invalid={fieldState.error !== undefined || undefined}
-                  aria-describedby={
-                    fieldState.error === undefined ? undefined : `${fieldId('userId')}-error`
-                  }
-                >
-                  <NativeSelectOption value="">Choose a person</NativeSelectOption>
-                  {people.map((each) => (
-                    <NativeSelectOption key={each.id} value={each.id}>
-                      {each.name}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-                {fieldState.error !== undefined && (
-                  <p id={`${fieldId('userId')}-error`} className="text-xs text-destructive">
-                    {fieldState.error.message}
-                  </p>
-                )}
-              </Field>
-            )}
-          />
-        )}
-        {onlyPlace === undefined ? (
-          <Controller
-            control={form.control}
-            name="where"
-            render={({ field, fieldState }) => (
-              <div className="flex flex-col gap-2">
-                <p id="add-role-where" className="text-xs font-semibold">
-                  Where
-                </p>
-                <RadioGroup
-                  aria-labelledby="add-role-where"
-                  value={field.value}
-                  onValueChange={(next) => {
-                    field.onChange(next);
-                    form.clearErrors('roleId');
-                  }}
-                  className="flex flex-col gap-2"
-                >
-                  {places.map((each) => {
-                    const { label, hint } = placeLabel(each);
-                    const radioId = `${fieldId('where')}-${each.id}`;
-                    return (
-                      <div key={each.id} className="flex items-start gap-3 text-sm">
-                        <RadioGroupItem
-                          id={radioId}
-                          value={each.id}
-                          aria-describedby={`${radioId}-hint`}
-                          aria-invalid={fieldState.error !== undefined || undefined}
-                          className="mt-0.5"
-                        />
-                        <span className="flex flex-col">
-                          <Label htmlFor={radioId} className="font-normal">
-                            {label}
-                          </Label>
-                          <span id={`${radioId}-hint`} className="text-xs text-muted-foreground">
-                            {hint}
-                          </span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                </RadioGroup>
-                {fieldState.error !== undefined && (
-                  <p className="text-xs text-destructive">{fieldState.error.message}</p>
-                )}
-              </div>
-            )}
-          />
-        ) : (
-          <p className="text-sm">The role applies at {onlyPlace.name}.</p>
-        )}
-        <Controller
-          control={form.control}
-          name="roleId"
-          render={({ field, fieldState }) => (
-            <RolePicker
-              roles={roles}
+    ) : onlyPerson === undefined ? (
+      <Controller
+        control={form.control}
+        name="userId"
+        render={({ field, fieldState }) => (
+          <Field className="max-w-120">
+            <FieldLabel
+              htmlFor={fieldId('userId')}
+              className="block text-xs font-semibold text-foreground"
+            >
+              Person
+            </FieldLabel>
+            <NativeSelect
+              id={fieldId('userId')}
+              className="w-full"
               value={field.value}
-              onChange={field.onChange}
-              optionOf={optionAt}
-              error={fieldState.error?.message}
-              placeName={place?.name}
-            />
-          )}
-        />
-      </FormSection>
-      {chosen !== undefined && place !== undefined && (
-        <ChosenRole role={chosen} holds={(key) => holds(key, place)} placeName={place.name} />
-      )}
-      <FormActions
-        saveLabel="Add role"
-        saving={isSubmitting}
-        cancelHref={cancelHref}
-        dirty={isDirty}
+              onChange={(event) => {
+                field.onChange(event.target.value);
+                form.clearErrors('roleId');
+              }}
+              aria-invalid={fieldState.error !== undefined || undefined}
+              aria-describedby={
+                fieldState.error === undefined ? undefined : `${fieldId('userId')}-error`
+              }
+            >
+              <NativeSelectOption value="">Choose a person</NativeSelectOption>
+              {people.map((each) => (
+                <NativeSelectOption key={each.id} value={each.id}>
+                  {each.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            {fieldState.error !== undefined && (
+              <p id={`${fieldId('userId')}-error`} className="text-xs text-destructive">
+                {fieldState.error.message}
+              </p>
+            )}
+          </Field>
+        )}
       />
+    ) : undefined;
+  // The note names the chosen place, or the first plant before one is chosen.
+  const notePlace = place ?? places.find(({ kind }) => kind === 'PLANT') ?? places[0];
+  return (
+    // Two columns from 1280 px (AS3): the form, then a 340 px side column with the person, the
+    // highlighted role and the note.
+    <form
+      noValidate
+      onSubmit={form.handleSubmit(save)}
+      className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start"
+    >
+      <div className="flex min-w-0 flex-col gap-4">
+        <ErrorSummary
+          heading={
+            fieldCount === 0
+              ? 'Could not add the role'
+              : `Fix ${fieldCount} ${fieldCount === 1 ? 'field' : 'fields'} to add the role`
+          }
+          errors={errors}
+          focusKey={form.formState.submitCount}
+        />
+        <FormSection title={onlyPerson === undefined ? 'Person, role and place' : 'Role and place'}>
+          {personField}
+          <AssignRoleFormFields
+            places={places}
+            roles={roles}
+            holds={holds}
+            person={person}
+            held={person === undefined ? [] : heldBy(person.id)}
+            where={where}
+            onWhereChange={(next) => {
+              whereField.field.onChange(next);
+              form.clearErrors('roleId');
+            }}
+            roleId={roleId}
+            onRoleChange={roleField.field.onChange}
+            whereError={whereField.fieldState.error?.message}
+            roleError={roleField.fieldState.error?.message}
+            onHighlight={setHighlighted}
+          />
+        </FormSection>
+        <TextareaField
+          label="Reason"
+          optional
+          placeholder={`Why ${person?.name ?? 'this person'} gets this role`}
+          hint="Shown in the user's history. Do not enter personal data. Up to 500 characters."
+          maxLength={500}
+          {...fieldProps(form, 'reason')}
+        />
+        <FormActions
+          saveLabel="Add role"
+          saving={isSubmitting}
+          cancelHref={cancelHref}
+          dirty={isDirty}
+        />
+      </div>
+      <div className="flex min-w-0 flex-col gap-4">
+        {person !== undefined && (
+          <PersonCard person={person} held={heldBy(person.id)} roles={roles} places={places} />
+        )}
+        {shown !== undefined && place !== undefined && (
+          <HighlightedRole role={shown} holds={(key) => holds(key, place)} place={place} />
+        )}
+        {notePlace !== undefined && (
+          <p className="flex items-start gap-2 rounded-lg bg-info-subtle px-4 py-3 text-sm">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-info" />
+            You can assign a role at {notePlace.name} when you hold every permission it includes
+            there. A company admin of {companyName} can assign the others.
+          </p>
+        )}
+      </div>
       <UnsavedChangesGuard when={isDirty && !isSubmitting} />
     </form>
   );

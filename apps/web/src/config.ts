@@ -11,15 +11,28 @@ export interface WebConfig {
   readonly apiUrl: string;
 }
 
+/** config.json got 502, 503 or 504: the server in front of NorthMES has no answer from it yet. */
+export class ServerUnavailable extends Error {
+  constructor(status: number) {
+    super(`config.json: the server answered ${status}`);
+    this.name = 'ServerUnavailable';
+  }
+}
+
 /**
  * Reads /config.json once at boot. Without the file, or without an apiUrl in it, the API is on the
- * page's origin. A host that answers a missing file with index.html counts as having no file.
+ * page's origin. A host that answers a missing file with 404 or with index.html counts as having
+ * no file. A 502, 503 or 504 throws ServerUnavailable, and any other server error throws.
  */
 export async function loadWebConfig(
   fetch: (url: string) => Promise<Response>,
   pageOrigin: string,
 ): Promise<WebConfig> {
   const response = await fetch('/config.json');
+  if ([502, 503, 504].includes(response.status)) throw new ServerUnavailable(response.status);
+  if (response.status >= 500) {
+    throw new Error(`config.json: the server answered ${response.status}`);
+  }
   const json = response.ok && response.headers.get('content-type')?.includes('json') === true;
   if (!json) return { apiUrl: pageOrigin };
   const config: unknown = await response.json();

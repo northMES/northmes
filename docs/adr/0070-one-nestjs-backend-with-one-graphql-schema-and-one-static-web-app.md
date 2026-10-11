@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson; internal research note 02; the planning session's design study of main at 4cb2429
 informed: NorthMES contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the cost limit that replaces Hive demandControl; the carrier for plant permissions, presentation values and the station mount); pilot IT (browser versions)"
+needs-confirmation: "maintainer (the carrier for plant permissions, presentation values and the station mount); pilot IT (browser versions)"
 ---
 
 # One NestJS backend with one GraphQL schema and one static web app
@@ -37,7 +37,7 @@ Chosen option: "One NestJS backend with one code-first schema on GraphQL Yoga, a
 * A field across modules is a `@ResolveField` calling the owner's public api through `loaderFor`. graphql-js refuses duplicate type names; shared types come only from `@northmes/sdk`.
 * Boot exits 1 naming the field when a root field does not start with its module's GraphQL name followed by an upper-case letter.
 * Errors use `@nestjs/common`. `DomainError` extends Nest's `HttpException` and carries an `HttpStatus` with its `code`, `fieldErrors` and `details`; code that needs no NorthMES code throws Nest's built-in exceptions such as `NotFoundException`. The one exception filter maps every `HttpException` by its status.
-* Kept from ADR 0015: masked errors, the graphql-armor limits, blocked suggestions, no introspection without a session, the permission guard with `@Public()`, the persisted-documents manifest, and GraphQL Inspector on `schema/api.graphql`, the one snapshot under `pnpm gen --check`. Hive `demandControl` goes.
+* Kept from ADR 0015: masked errors, the graphql-armor limits, blocked suggestions, no introspection without a session, the permission guard with `@Public()`, the persisted-documents manifest, and GraphQL Inspector on `schema/api.graphql`, the one snapshot under `pnpm gen --check`. Hive `demandControl` goes. A cost-limit plugin in the backend prices each operation by the same model before it runs, reading a list's `first` or `last` (#477, plan 05).
 
 ### Modules and boundaries
 
@@ -88,7 +88,7 @@ The web signs in with email and password only (#414); Better Auth's username sig
 
 #### Changes to ADR 0016
 
-A reference to another module's entity is a plain field, not a Federation reference. The drift test goes, and `@listSize` pricing waits for a cost limit.
+A reference to another module's entity is a plain field, not a Federation reference. The drift test goes, and `@listSize` is not needed: the cost limit reads a connection's `first` or `last` itself.
 
 #### Changes to ADR 0018
 
@@ -126,7 +126,7 @@ The plant's presentation values leave the module list; their carrier is open.
 
 * Good, because 2,395 lines leave and about 800 change (estimate), and a field across modules needs no `entityRef` stub.
 * Bad, because plugin screens keep a runtime path of their own beside the build-time modules (proposed ADR 0075).
-* Bad, because every replica serves the whole schema, web parts no longer ship per module, and `demandControl` needs a replacement.
+* Bad, because every replica serves the whole schema, and web parts no longer ship per module.
 
 ### Confirmation
 
@@ -134,7 +134,7 @@ The plant's presentation values leave the module list; their carrier is open.
 * Boundary fixtures: an import of another module's internal file fails `pnpm check` in both apps; the same import through the public api passes.
 * `pnpm gen --check` covers `schema/api.graphql`.
 * The four graphql-ws and SSE subscription tests pass on `/graphql`.
-* The guard test of plan 05 that refuses a document over `maxCost` stays and runs against the cost limit the maintainer picks; until then the depth and alias limits of graphql-armor are the only document limits.
+* `apps/backend/test/graphql/limits.test.ts` refuses a document over `maxCost` and over the depth, alias and token limits, a body over the cap or without a length, and a multipart request; `limits.int.test.ts` refuses a body over the cap through the HTTP server; `web-operations.test.ts` keeps every web operation within the limits.
 
 ## Pros and cons of the options
 

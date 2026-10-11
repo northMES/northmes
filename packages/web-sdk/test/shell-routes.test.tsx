@@ -23,6 +23,44 @@ const quality = defineWebModule({
     }),
 });
 
+/**
+ * A core module as ADR 0074 places it: its routes and its company settings routes are pathless
+ * routes, so its pages sit at /$plant/articles and /settings/$companyId/users.
+ */
+const core = defineWebModule({
+  id: 'core',
+  version: '0.4.0',
+  routes: (plantRoute) => {
+    const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: 'core' });
+    return coreRoute.addChildren([
+      createRoute({
+        getParentRoute: () => coreRoute,
+        path: 'articles',
+        component: () => <h1>Articles</h1>,
+      }),
+    ]);
+  },
+  settingsRoutes: (settingsRoute) => {
+    const coreRoute = createRoute({ getParentRoute: () => settingsRoute, id: 'core' });
+    return coreRoute.addChildren([
+      createRoute({
+        getParentRoute: () => coreRoute,
+        path: 'users',
+        component: () => <h1>Users</h1>,
+      }),
+    ]);
+  },
+});
+
+/** A module with the id and path id, and no screen. */
+function moduleWithId(id: string) {
+  return defineWebModule({
+    id,
+    version: '0.4.0',
+    routes: (plantRoute) => createRoute({ getParentRoute: () => plantRoute, path: id }),
+  });
+}
+
 function Shell() {
   return (
     <section aria-label="Shell">
@@ -155,4 +193,76 @@ describe('createShellRoutes', () => {
       'Module quality returned its settings routes at qa; they go at quality',
     );
   });
+
+  it("E04-S02 core's routes mount at the plant root and its settings routes at the company settings root, without its id (ADR 0074)", async () => {
+    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+    const routeTree = () =>
+      createShellRoutes({
+        modules: [core, quality],
+        plantComponent: Plant,
+        settingsComponent: CompanySettings,
+      });
+
+    const router = createRouter({
+      routeTree: routeTree(),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/articles'] }),
+    });
+    render(<RouterProvider router={router} />);
+
+    const plant = await screen.findByRole('region', { name: 'Plant plant-a' });
+    expect(within(plant).getByRole('heading', { name: 'Articles' })).toBeDefined();
+
+    cleanup();
+    const settings = createRouter({
+      routeTree: routeTree(),
+      history: createMemoryHistory({ initialEntries: [`/settings/${companyId}/users`] }),
+    });
+    render(<RouterProvider router={settings} />);
+
+    const company = await screen.findByRole('region', { name: `Settings of ${companyId}` });
+    expect(within(company).getByRole('heading', { name: 'Users' })).toBeDefined();
+  });
+
+  it('E04-S02 a module other than core whose routes sit at another path than its id is rejected, and so is core with a path', () => {
+    const misplaced = defineWebModule({
+      ...quality,
+      routes: (plantRoute) => createRoute({ getParentRoute: () => plantRoute, path: 'qa' }),
+    });
+    const coreWithPath = defineWebModule({
+      ...core,
+      routes: (plantRoute) => createRoute({ getParentRoute: () => plantRoute, path: 'core' }),
+    });
+
+    expect(() => createShellRoutes({ modules: [misplaced] })).toThrow(
+      'Module quality returned its routes at qa; they go at quality',
+    );
+    expect(() => createShellRoutes({ modules: [coreWithPath] })).toThrow(
+      "Module core returned its routes at core; core's routes have no path (ADR 0074)",
+    );
+  });
+
+  it.each([
+    ['articles', 'Module id "articles" is reserved: /$plant/articles is a core web path segment'],
+    [
+      'users',
+      'Module id "users" is reserved: /settings/$companyId/users is a core web path segment',
+    ],
+    [
+      'all-pages',
+      'Module id "all-pages" is reserved: /$plant/all-pages is a shell web path segment',
+    ],
+    ['settings', 'Module id "settings" is reserved: /settings is a shell web path segment'],
+  ])(
+    "E04-S02 a module whose id is a top-level path segment of core's or the shell's routes, such as %s, is rejected (ADR 0074)",
+    (id, message) => {
+      expect(() =>
+        createShellRoutes({
+          modules: [core, moduleWithId(id)],
+          plantShellRoutes: (plantRoute) => [
+            createRoute({ getParentRoute: () => plantRoute, path: 'all-pages' }),
+          ],
+        }),
+      ).toThrow(message);
+    },
+  );
 });

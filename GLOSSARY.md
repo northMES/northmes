@@ -141,6 +141,8 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 |---|---|---|
 | module | A part of NorthMES with its own data, server code and screens, such as core, planning or the Pyramid connector. | service, app |
 | plugin | A module that is installed into NorthMES without being part of the core repository's release. | extension, add-on |
+| channel | A way NorthMES sends a message to a person: email, SMS, chat such as Slack or Teams, and later push. Planned with the notifications (#445); NorthMES sends no message yet. | connector (an ERP link) |
+| channel plugin | A plugin that delivers one channel's messages through one service, such as an email plugin for Resend. Planned (#445): NorthMES is to ship the Resend email plugin, and an installation is to be able to replace it with another email plugin. | provider (that is an AI provider), connector |
 | command | A named write with a validated input; every change to data in NorthMES is one command. | mutation (that is its GraphQL form), action |
 | command validator | Plugin code that can veto a command before it runs. | interceptor, hook |
 | validator verdict | What a command validator returns: pass, or a veto with an error code, its details and a message. A throw, a timeout or a malformed verdict counts as a rejection. A later `ask` verdict asks the person to confirm with a reason. | result, decision |

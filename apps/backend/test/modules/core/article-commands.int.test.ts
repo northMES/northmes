@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
-import { type Grant, givenCompany, hostFactory, signIn, signInAt } from '@northmes/backend/testing';
+import {
+  type Grant,
+  givenArticle,
+  givenCompany,
+  hostFactory,
+  signIn,
+  signInAt,
+} from '@northmes/backend/testing';
 import {
   createTestApp,
   type GqlClient,
@@ -153,7 +160,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     });
   });
 
-  it('E06-S06 coreCreateArticle without x-northmes-plant returns FORBIDDEN with errorCode core.plant_forbidden', async () => {
+  it('E06-S06 coreCreateArticle without x-northmes-plant and without companyId returns FORBIDDEN with errorCode core.forbidden', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { authorization } = await signInAt(testApp.app, db.ownerUrl, given.plant());
     const client = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
@@ -162,13 +169,11 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       input: { id: randomUUIDv7(), code: 'PN-305', name: 'Side panel' },
     });
 
-    // coreCreateArticle is not plant-free, so the operation runs no field (ADR 0066).
-    expect(answer.data).toBeUndefined();
+    // coreCreateArticle is plant-free (ADR 0073), and without a plant it needs the company that
+    // companyId names, so it finds no scope to run at.
+    expect(answer.data).toBeNull();
     expect(answer.errors).toMatchObject([
-      {
-        message: 'The request names no plant. Choose one of your plants.',
-        extensions: { code: 'FORBIDDEN', errorCode: 'core.plant_forbidden' },
-      },
+      { extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } },
     ]);
   });
 
@@ -361,26 +366,16 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
     expect(await readArticle(planner, id)).toMatchObject({ code: 'KN-300', version: 1 });
   });
 
-  /** Writes an article at `scopeId`, such as the company, and returns its id. */
-  async function writeArticleAt(scopeId: string, code: string, name: string): Promise<string> {
-    const { rows } = await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [scopeId], reason: 'fixture' },
-      (tx) =>
-        tx.query<{ id: string }>(
-          'insert into core.article (scope_id, code, name) values ($1, $2, $3) returning id',
-          [scopeId, code, name],
-        ),
-    );
-    const id = rows[0]?.id;
-    if (!id) throw new Error('the fixture wrote no article');
-    return id;
+  /** Writes an article of `company` assigned to All plants, so its edit scope is the company. */
+  function writeCompanyArticle(company: string, code: string, name: string): Promise<string> {
+    return givenArticle(db.ownerUrl, { code, name, company, allPlants: true });
   }
 
-  it('E05-S06 a plant planner who updates articles at the plant gets FORBIDDEN core.forbidden on an article at the company, which the planner reads', async () => {
+  it('E05-S06 a plant planner who updates articles at the plant gets FORBIDDEN core.forbidden on an article of All plants, whose edit scope is the company, which the planner reads', async () => {
     const { company, plants, slugs } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
     const [slug = ''] = slugs;
-    const id = await writeArticleAt(company, 'FR-500', 'Frame rail');
+    const id = await writeCompanyArticle(company, 'FR-500', 'Frame rail');
     const plantPlanner = await clientWith(slug, [
       { scopeId: plant, permissions: ['core.article:read', 'core.article:update'] },
     ]);
@@ -411,7 +406,7 @@ describe('coreCreateArticle and coreUpdateArticle', () => {
       data: null,
       errors: [
         {
-          message: `You need core.article:create at plant ${plant}`,
+          message: `You need core.article:create at scope ${plant}`,
           path: ['coreCreateArticle'],
           extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
         },

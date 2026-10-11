@@ -53,14 +53,17 @@ export function usePlantSwitchTarget(): (plant: string) => PlantSwitchTarget | u
   };
 }
 
-/** The company mark: the plant icon on the sidebar's primary colour. */
-function CompanyMark() {
+/**
+ * The company mark (D2 PL26, assumption 13): a square with the company's initial on the sidebar's
+ * primary colour. Factory marks the plants in the menu.
+ */
+function CompanyMark({ company }: { readonly company: string }) {
   return (
     <span
       aria-hidden
-      className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+      className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground"
     >
-      <Factory className="size-4" />
+      {company.trim().charAt(0).toLocaleUpperCase()}
     </span>
   );
 }
@@ -103,13 +106,15 @@ export function ShellPlantSwitcher({ companies, plant }: ShellPlantSwitcherProps
   if (plants.length < 2) {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 px-2 text-sm group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-        <CompanyMark />
+        <CompanyMark company={company.name} />
         <CompanyAndPlant company={company.name} plant={current.name} />
       </div>
     );
   }
   const firstOtherSlug = plants.find(({ slug }) => slug !== plant)?.slug;
-  const grouped = companies.length > 1;
+  // Company labels only when the plants span two or more companies (D2, DropdownMenu).
+  const withPlants = companies.filter((each) => each.plants.length > 0);
+  const grouped = withPlants.length > 1;
   const link = (each: ShellPlant) => {
     const isCurrent = each.slug === plant;
     return (
@@ -146,7 +151,7 @@ export function ShellPlantSwitcher({ companies, plant }: ShellPlantSwitcherProps
               />
             }
           >
-            <CompanyMark />
+            <CompanyMark company={company.name} />
             <CompanyAndPlant company={company.name} plant={current.name} />
             <ChevronsUpDown aria-hidden className="ml-auto" />
           </DropdownMenuTrigger>
@@ -156,7 +161,7 @@ export function ShellPlantSwitcher({ companies, plant }: ShellPlantSwitcherProps
             className="min-w-56"
           >
             {grouped
-              ? companies.map((each) => (
+              ? withPlants.map((each) => (
                   <DropdownMenuGroup key={each.id}>
                     <DropdownMenuLabel>{each.name}</DropdownMenuLabel>
                     {each.plants.map(link)}
