@@ -5,10 +5,19 @@ type AccessScope {
 }
 
 type Article {
+  allPlants: Boolean!
   archivedAt: DateTime
+  articleGroup: ArticleGroup
   code: String!
+  createdAt: DateTime!
   id: ID!
   name: String!
+  note: String
+  plants: [Plant!]!
+  source: String
+  stockUnit: StockUnit!
+  translations: [Translation!]!
+  updatedAt: DateTime!
   version: Int!
 }
 
@@ -23,6 +32,52 @@ type ArticleEdge {
   node: Article!
 }
 
+type ArticleFacets {
+  articleGroups: [ArticleGroupCount!]!
+  sources: [SourceCount!]!
+  stockUnits: [StockUnitCount!]!
+  total: Int!
+}
+
+type ArticleGroup {
+  archivedAt: DateTime
+  code: String!
+  id: ID!
+  name: String!
+  translations: [Translation!]!
+  updatedAt: DateTime!
+  version: Int!
+}
+
+type ArticleGroupConnection {
+  edges: [ArticleGroupEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ArticleGroupCount {
+  code: String
+  count: Int!
+  id: ID
+  name: String
+}
+
+type ArticleGroupEdge {
+  cursor: String!
+  node: ArticleGroup!
+}
+
+input ArticleGroupOrderBy {
+  direction: SortDirection = ASC
+  field: ArticleGroupSortField!
+}
+
+enum ArticleGroupSortField {
+  CODE
+  NAME
+  UPDATED_AT
+}
+
 input ArticleOrderBy {
   direction: SortDirection = ASC
   field: ArticleSortField!
@@ -31,6 +86,7 @@ input ArticleOrderBy {
 enum ArticleSortField {
   CODE
   NAME
+  UPDATED_AT
 }
 
 type Company {
@@ -39,39 +95,68 @@ type Company {
   plants: [Plant!]!
 }
 
+input CoreArchiveArticleGroupInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
 input CoreArchiveArticleInput {
   expectedVersion: Int!
   id: ID!
 }
 
 input CoreAssignRoleInput {
+  companyId: String
   id: ID!
+  reason: String
   roleId: ID!
   scopeId: ID!
   userId: ID!
 }
 
 input CoreBlockUserInput {
+  companyId: String
   id: ID!
   reason: String
 }
 
-input CoreCreateArticleInput {
+input CoreCreateArticleGroupInput {
   code: String!
+  companyId: String
   id: ID!
   name: String!
+  translations: [TranslationInput!]
+}
+
+input CoreCreateArticleInput {
+  allPlants: Boolean
+  articleGroupId: String
+  code: String!
+  companyId: String
+  id: ID!
+  name: String!
+  note: String
+  plants: [String!]
+  stockUnit: String
+  translations: [TranslationInput!]
 }
 
 input CoreCreateRoleInput {
+  companyId: String
   id: ID!
   name: String!
   permissions: [String!]!
+  reason: String
 }
 
 input CoreCreateUserInput {
+  companyId: String
   email: String!
   id: ID!
   name: String!
+  reason: String
+  roleId: String
+  scopeId: String
   username: String!
 }
 
@@ -85,21 +170,52 @@ input CoreRemoveRoleAssignmentInput {
   reason: String
 }
 
+input CoreResetPasswordInput {
+  companyId: String
+  id: ID!
+  reason: String
+}
+
+input CoreRestoreArticleGroupInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
 }
 
+input CoreSetArticlePlantsInput {
+  allPlants: Boolean!
+  expectedVersion: Int!
+  id: ID!
+  plants: [String!]!
+}
+
 input CoreUnblockUserInput {
+  companyId: String
   id: ID!
   reason: String
 }
 
-input CoreUpdateArticleInput {
+input CoreUpdateArticleGroupInput {
   code: String!
   expectedVersion: Int!
   id: ID!
   name: String!
+  translations: [TranslationInput!]
+}
+
+input CoreUpdateArticleInput {
+  articleGroupId: String
+  code: String!
+  expectedVersion: Int!
+  id: ID!
+  name: String!
+  note: String
+  stockUnit: String
+  translations: [TranslationInput!]
 }
 
 input CoreUpdateRoleInput {
@@ -108,6 +224,21 @@ input CoreUpdateRoleInput {
   name: String!
   permissions: [String!]!
   reason: String
+}
+
+input CoreUpsertArticleInput {
+  allPlants: Boolean
+  articleGroupId: String
+  code: String!
+  companyId: String
+  expectedVersion: Int
+  id: ID!
+  name: String!
+  note: String
+  plants: [String!]
+  source: String!
+  stockUnit: String
+  translations: [TranslationInput!]
 }
 
 type CreatedUser {
@@ -127,17 +258,24 @@ type EffectivePermission {
 
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
+  coreArchiveArticleGroup(input: CoreArchiveArticleGroupInput!): ArticleGroup!
   coreAssignRole(input: CoreAssignRoleInput!): RoleAssignment!
   coreBlockUser(input: CoreBlockUserInput!): User!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreCreateArticleGroup(input: CoreCreateArticleGroupInput!): ArticleGroup!
   coreCreateRole(input: CoreCreateRoleInput!): Role!
   coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
   coreDeleteRole(input: CoreDeleteRoleInput!): Role!
   coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
+  coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
+  coreRestoreArticleGroup(input: CoreRestoreArticleGroupInput!): ArticleGroup!
+  coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
+  coreUpdateArticleGroup(input: CoreUpdateArticleGroupInput!): ArticleGroup!
   coreUpdateRole(input: CoreUpdateRoleInput!): Role!
+  coreUpsertArticle(input: CoreUpsertArticleInput!): Article!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
 }
 
@@ -146,6 +284,11 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+}
+
+type PasswordReset {
+  temporaryPassword: String!
+  user: User!
 }
 
 type Permission {
@@ -187,15 +330,140 @@ type ProductionOrder {
 }
 
 type Query {
-  coreArticle(id: ID!): Article
-  coreArticles(after: String, before: String, first: Int = 25, includeArchived: Boolean = false, last: Int, orderBy: [ArticleOrderBy!], search: String): ArticleConnection!
+  coreArticle(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): Article
+  coreArticleFacets(
+    """
+    Only the articles of these groups; a null element keeps those of no group.
+    """
+    articleGroupIds: [ID]
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    includeArchived: Boolean = false
+    search: String
+
+    """
+    Only the articles from these sources; a null element keeps those from NorthMES.
+    """
+    sources: [String]
+
+    """Only the articles that count in these stock units."""
+    stockUnits: [StockUnit!]
+  ): ArticleFacets!
+  coreArticleGroup(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): ArticleGroup
+  coreArticleGroups(
+    after: String
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    includeArchived: Boolean = false
+    last: Int
+    orderBy: [ArticleGroupOrderBy!]
+    search: String
+  ): ArticleGroupConnection!
+  coreArticles(
+    after: String
+
+    """
+    Only the articles of these groups; a null element keeps those of no group.
+    """
+    articleGroupIds: [ID]
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    includeArchived: Boolean = false
+    last: Int
+    orderBy: [ArticleOrderBy!]
+    search: String
+
+    """
+    Only the articles from these sources; a null element keeps those from NorthMES.
+    """
+    sources: [String]
+
+    """Only the articles that count in these stock units."""
+    stockUnits: [StockUnit!]
+
+    """Only the articles assigned to no plant and not to All plants."""
+    unassigned: Boolean
+  ): ArticleConnection!
   coreCompanies: [Company!]!
-  corePermissionCatalog: [PermissionModule!]!
-  coreRole(id: ID!): Role
-  coreRoles: [Role!]!
-  coreUser(id: ID!): User
-  coreUsers(after: String, before: String, first: Int = 25, last: Int, orderBy: [UserOrderBy!], search: String): UserConnection!
-  coreViewer: Viewer!
+  corePermissionCatalog(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): [PermissionModule!]!
+  corePlantRoleAssignments: [RoleAssignment!]!
+  coreRole(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): Role
+  coreRoles(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): [Role!]!
+  coreUser(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): User
+  coreUsers(
+    after: String
+    before: String
+
+    """Only the blocked users when true, only the active ones when false."""
+    blocked: Boolean
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    last: Int
+    orderBy: [UserOrderBy!]
+
+    """
+    Only the users who hold this role of the company, at any of its places.
+    """
+    roleId: ID
+    search: String
+  ): UserConnection!
+  coreViewer(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): Viewer!
   planningProductionOrders: [ProductionOrder!]!
 }
 
@@ -230,6 +498,45 @@ enum ScopeKind {
 enum SortDirection {
   ASC
   DESC
+}
+
+type SourceCount {
+  count: Int!
+  source: String
+}
+
+"""
+A unit of the unit catalog that an article counts its quantities in (ADR 0023).
+"""
+enum StockUnit {
+  """Kilograms (kg)"""
+  KILOGRAM
+
+  """Litres (l)"""
+  LITRE
+
+  """Metres (m)"""
+  METRE
+
+  """Pieces (pcs)"""
+  PIECE
+}
+
+type StockUnitCount {
+  count: Int!
+  stockUnit: StockUnit!
+}
+
+type Translation {
+  field: String!
+  locale: String!
+  text: String!
+}
+
+input TranslationInput {
+  field: String!
+  locale: String!
+  text: String!
 }
 
 type User {

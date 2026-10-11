@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { CircleAlert, Copy, RotateCw } from 'lucide-react';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { classifyError } from '@northmes/web-sdk';
+import { CircleAlert, Copy, type LucideIcon, RotateCw } from 'lucide-react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { announce } from '../../lib/announce.ts';
 import { Button } from '../../primitives/button.tsx';
@@ -27,17 +28,26 @@ export type PageState =
    */
   | {
       readonly status: 'empty';
+      /** An icon above the heading, such as Lock on a forbidden state (design ui-222, ST19). */
+      readonly icon?: LucideIcon;
       readonly title?: string;
       readonly description: string;
       readonly action?: ReactNode;
     }
-  /** The data could not be loaded: the error, the correlation id and Try again. */
+  /**
+   * The data could not be loaded: the error, the correlation id and Try again. The correlation id
+   * comes from the failed request, read by classifyError, unless the page names one.
+   */
   | {
       readonly status: 'error';
       readonly title: string;
-      readonly description: string;
+      /** Without one, ui-222's words: check the connection, try again, and the correlation id. */
+      readonly description?: string;
+      /** The failed request's error, whose correlation id the state shows. */
+      readonly error?: unknown;
       readonly correlationId?: string;
-      readonly onRetry: () => void;
+      /** Sends the request again; Try again stays busy until the promise settles. */
+      readonly onRetry: () => Promise<unknown>;
     };
 
 export interface PageFrameProps {
@@ -46,21 +56,43 @@ export interface PageFrameProps {
   /** The page actions, such as New article: in the shell's top bar, else beside the h1. */
   readonly actions?: ReactNode;
   /**
+   * The header slot beside the h1, such as "11 roles at Acme AB" on a list or the kind of a role
+   * on its page (design core-304, Shell, frame and slots).
+   */
+  readonly meta?: ReactNode;
+  /**
    * The crumbs between the module and this page, such as Articles above an article. The shell's
    * top bar shows them after the plant and the module crumbs, and the title as the last crumb.
    */
   readonly crumbs?: readonly Crumb[];
+  /**
+   * The last crumb, the current page, when the trail names it apart from its title: the company
+   * landing is "Company settings", and its trail ends with the company (design shell-313, C5).
+   */
+  readonly currentCrumb?: string;
+  /**
+   * The part of the document title between the title and the shell's, when the page names one,
+   * such as the module of a module page not found: "Page not found · Equipment · Plant A ·
+   * NorthMES" (D2 ST5).
+   */
+  readonly titleSection?: string;
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
   readonly state?: PageState;
+  /**
+   * The data region keeps what it shows, its rows or its empty state, while the next data loads,
+   * and is marked busy (design ui-222, LI7).
+   */
+  readonly busy?: boolean;
   /** The populated content, also rendered while loading. */
   readonly children: ReactNode;
 }
 
 const stateCard = 'gap-3 rounded-xl border border-solid bg-card px-6 py-16';
 
-/** An empty state: a heading, its text and the action that leads on. */
+/** An empty state: its icon, a heading, its text and the action that leads on. */
 export function EmptyState({
+  icon: Icon,
   title,
   description,
   action,
@@ -68,6 +100,11 @@ export function EmptyState({
   return (
     <Empty className={stateCard}>
       <EmptyHeader className="max-w-prose">
+        {Icon !== undefined && (
+          <EmptyMedia className="size-10 rounded-full bg-muted text-muted-foreground">
+            <Icon aria-hidden className="size-5" />
+          </EmptyMedia>
+        )}
         {title !== undefined && (
           <EmptyTitle>
             <h2 className="text-base font-semibold">{title}</h2>
@@ -80,23 +117,51 @@ export function EmptyState({
   );
 }
 
-/** An error state: an alert with the correlation id, Copy correlation id and Try again. */
+/** The props of an error state: the page's error and whether its Try again runs. */
+type ErrorStateProps = Omit<Extract<PageState, { status: 'error' }>, 'status'> & {
+  /** Try again runs: the button shows Trying again with aria-busy and aria-disabled (SE7). */
+  readonly retrying?: boolean;
+};
+
+/** The correlation id of an error state: the page's own, else the failed request's. */
+function correlationIdOf({
+  correlationId,
+  error,
+}: Pick<ErrorStateProps, 'correlationId' | 'error'>) {
+  return correlationId ?? (error === undefined ? undefined : classifyError(error).correlationId);
+}
+
+/**
+ * An error state (design ui-222, ST4 and ST8): an alert with the page's title and ui-222's text,
+ * then the correlation id with Copy correlation id, and Try again, which keeps focus in its loading
+ * state while the request runs (shell-306, SE7). The alert holds only the heading and the text, so
+ * Trying again and the new correlation id of a failed retry do not announce it again; the polite
+ * region reports the outcome once (shell-306, E22).
+ */
 export function ErrorState({
   title,
   description,
-  correlationId,
+  error,
+  correlationId: own,
   onRetry,
-}: Omit<Extract<PageState, { status: 'error' }>, 'status'>) {
+  retrying = false,
+}: ErrorStateProps) {
+  const correlationId = correlationIdOf({ correlationId: own, error });
+  const text =
+    description ??
+    (correlationId === undefined
+      ? 'Check the connection, then try again.'
+      : 'Check the connection, then try again. If it fails again, give your plant admin the correlation id.');
   return (
-    <Empty role="alert" className={stateCard}>
-      <EmptyHeader className="max-w-prose">
+    <Empty className={stateCard}>
+      <EmptyHeader role="alert" className="max-w-prose">
         <EmptyMedia className="size-10 rounded-full bg-destructive-subtle text-destructive">
           <CircleAlert aria-hidden className="size-5" />
         </EmptyMedia>
         <EmptyTitle>
           <h2 className="text-base font-semibold">{title}</h2>
         </EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
+        <EmptyDescription>{text}</EmptyDescription>
       </EmptyHeader>
       {correlationId !== undefined && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -120,29 +185,47 @@ export function ErrorState({
           </IconButton>
         </p>
       )}
-      <Button onClick={onRetry}>
-        <RotateCw aria-hidden />
-        Try again
+      {/* The D1 Button loading state: full opacity, the progress label, focus kept (D1 Q8). */}
+      <Button loading={retrying} onClick={() => onRetry()}>
+        {!retrying && <RotateCw aria-hidden />}
+        {retrying ? 'Trying again' : 'Try again'}
       </Button>
     </Empty>
   );
 }
 
+/** The first letter in lower case, so a title reads inside a sentence. */
+function inSentence(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/** A Try again in progress: the error state it started from, and whether its request settled. */
+interface Retry {
+  readonly from: Extract<PageState, { status: 'error' }>;
+  readonly settled: boolean;
+}
+
 /**
  * The frame of a screen (plan 06, UI patterns): the h1 from the route title, which the shell
  * focuses after a route change (tabindex -1) and which names the document ("Articles · Plant A ·
- * NorthMES" in the shell, "Articles · NorthMES" outside it), the page actions, the toolbar, and the
- * data region in its state. In the shell the breadcrumb and the page actions render in the top bar
- * (D2), before main in the Tab order. Loading marks the region busy around the content's skeleton; empty and error
- * replace the content. Try again moves focus to the h1, because the error state goes away, and so
- * does an empty state's action that takes the state away without moving focus itself.
+ * NorthMES" in the shell, "Articles · NorthMES" outside it), the header slot beside it, the page
+ * actions, the toolbar, and the data region in its state. In the shell the breadcrumb and the page
+ * actions render in the top bar (D2), before main in the Tab order. Loading marks the region busy
+ * around the content's skeleton; empty and error replace the content. Try again keeps the error
+ * state and its focus while the request runs, then moves focus to the h1 once the page loads; an
+ * empty state's action that takes the state away without moving focus itself moves focus to the
+ * h1 too.
  */
 export function PageFrame({
   title,
   actions,
+  meta,
   crumbs = [],
+  currentCrumb = title,
+  titleSection,
   toolbar,
   state = { status: 'ready' },
+  busy = false,
   children,
 }: PageFrameProps) {
   const heading = useRef<HTMLHeadingElement>(null);
@@ -150,13 +233,13 @@ export function PageFrame({
   const titleContext = topBar?.titleContext;
   // The page names the document while it shows; a page without a frame gets the plain name.
   useEffect(() => {
-    document.title = [title, titleContext, 'NorthMES']
+    document.title = [title, titleSection, titleContext, 'NorthMES']
       .filter((part) => part !== undefined)
       .join(' · ');
     return () => {
       document.title = 'NorthMES';
     };
-  }, [title, titleContext]);
+  }, [title, titleSection, titleContext]);
   // The action of an empty or error state, such as Go to the first page, removes the state and
   // the focused button with it. Unless the action moved focus itself, focus moves to the h1.
   const shownStatus = useRef(state.status);
@@ -168,36 +251,70 @@ export function PageFrame({
       heading.current?.focus();
     }
   }, [state.status]);
+  // Try again (shell-306, SE7): the error state stays, busy, until the request settles and the
+  // page has its next state. Then focus moves to the h1 when the page loaded, or stays on Try again
+  // when it failed again, and the polite region says so once, and that the correlation id changed
+  // when the new one differs from the one shown before.
+  const [retry, setRetry] = useState<Retry | undefined>(undefined);
+  useEffect(() => {
+    if (retry === undefined || !retry.settled || state.status === 'loading') return;
+    setRetry(undefined);
+    if (state.status === 'error') {
+      const id = correlationIdOf(state);
+      const changed =
+        id === undefined || id === correlationIdOf(retry.from)
+          ? ''
+          : ' The correlation id changed.';
+      announce(`Still ${inSentence(state.title)}.${changed}`);
+    } else {
+      requestAnimationFrame(() => heading.current?.focus());
+    }
+  }, [retry, state]);
+  const shown: PageState = retry === undefined ? state : retry.from;
   return (
     <div className="flex flex-col gap-4">
       {topBar?.breadcrumb &&
         createPortal(
-          <PageFrameBreadcrumb crumbs={[...topBar.trail, ...crumbs]} current={title} />,
+          <PageFrameBreadcrumb crumbs={[...topBar.trail, ...crumbs]} current={currentCrumb} />,
           topBar.breadcrumb,
         )}
       {actions !== undefined &&
         topBar?.actions &&
         createPortal(<div className="flex items-center gap-2">{actions}</div>, topBar.actions)}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
-          {title}
-        </h1>
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
+            {title}
+          </h1>
+          {meta !== undefined && (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {meta}
+            </div>
+          )}
+        </div>
         {actions !== undefined && topBar === null && (
           <div className="flex flex-wrap gap-2">{actions}</div>
         )}
       </div>
       {toolbar}
-      <div aria-busy={state.status === 'loading' || undefined}>
-        {state.status === 'empty' ? (
-          <EmptyState title={state.title} description={state.description} action={state.action} />
-        ) : state.status === 'error' ? (
+      <div aria-busy={shown.status === 'loading' || busy || undefined}>
+        {shown.status === 'empty' ? (
+          <EmptyState
+            icon={shown.icon}
+            title={shown.title}
+            description={shown.description}
+            action={shown.action}
+          />
+        ) : shown.status === 'error' ? (
           <ErrorState
-            title={state.title}
-            description={state.description}
-            correlationId={state.correlationId}
-            onRetry={() => {
-              state.onRetry();
-              heading.current?.focus();
+            {...shown}
+            retrying={retry !== undefined}
+            onRetry={async () => {
+              const from = shown;
+              setRetry({ from, settled: false });
+              // A refused retry settles too: the page's next state says how it went.
+              await from.onRetry().catch(() => {});
+              setRetry({ from, settled: true });
             }}
           />
         ) : (

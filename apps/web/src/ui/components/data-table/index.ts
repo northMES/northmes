@@ -2,6 +2,7 @@
 export {
   DataTable,
   type DataTableColumn,
+  type DataTableGroup,
   type DataTablePaging,
   type DataTableProps,
   type DataTableSort,

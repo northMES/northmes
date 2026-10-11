@@ -322,31 +322,122 @@ describe('tooling', () => {
     }
   });
 
-  it('E05-S05 better-auth and @better-auth/api-key are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
+  it('E05-S05 better-auth and its api-key and oauth-provider plugins are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
     // ADR 0010 pins Better Auth 1.7.x exactly. 1.7.6 was the newest 1.7 release outside Renovate's
-    // 14-day window on 2026-10-09. The api-key plugin ships in its own package since 1.5 and must
-    // match better-auth's version; username, organization, admin, jwt and bearer ship inside it.
-    const packages = ['better-auth', '@better-auth/api-key'];
+    // 14-day window on 2026-10-09. The api-key plugin ships in its own package since 1.5, and the
+    // OAuth 2.1 provider since 1.7.0 removed the in-core oidcProvider; each must match
+    // better-auth's version. Username, organization, admin, jwt and bearer ship inside it.
+    const packages = ['better-auth', '@better-auth/api-key', '@better-auth/oauth-provider'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
     expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
       'better-auth': '1.7.6',
       '@better-auth/api-key': '1.7.6',
+      '@better-auth/oauth-provider': '1.7.6',
     });
     for (const name of packages) {
       expect(backend.dependencies?.[name], `apps/backend dependencies ${name}`).toBe('catalog:');
     }
   });
 
-  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core, @better-auth/api-key and kysely, and no @better-auth/cli', () => {
-    // The api-key plugin and the Kysely adapter register against @better-auth/core, and Better
-    // Auth's Kysely adapter shares the kysely copy that the backend queries with. ADR 0040 lists
-    // @better-auth/cli as never installed.
-    for (const name of ['better-auth', '@better-auth/core', '@better-auth/api-key', 'kysely']) {
+  it('E05-S05 pnpm-lock.yaml holds one copy each of better-auth, @better-auth/core, its plugin packages, better-call and kysely, and no @better-auth/cli', () => {
+    // The api-key and oauth-provider plugins and the Kysely adapter register against
+    // @better-auth/core and better-call, and Better Auth's Kysely adapter shares the kysely copy
+    // that the backend queries with. ADR 0040 lists @better-auth/cli as never installed.
+    for (const name of [
+      'better-auth',
+      '@better-auth/core',
+      '@better-auth/api-key',
+      '@better-auth/oauth-provider',
+      'better-call',
+      'kysely',
+    ]) {
       expect(resolutions(name), name).toHaveLength(1);
     }
     expect(resolutions('@better-auth/cli')).toEqual([]);
+  });
+
+  it('@nestjs/swagger 12 is pinned exactly and apps/backend takes it from the catalog', () => {
+    // ADR 0064 builds the public API's OpenAPI 3.1 document with @nestjs/swagger 12 and its Standard
+    // Schema converter. 12.0.2 was the newest release outside Renovate's 14-day window on 2026-10-09.
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(catalog['@nestjs/swagger']).toBe('12.0.2');
+    expect(backend.dependencies?.['@nestjs/swagger']).toBe('catalog:');
+  });
+
+  it('pnpm-lock.yaml holds one @nestjs/swagger copy, and the install runs no @scarf/scarf script', () => {
+    // swagger-ui-dist, a dependency of @nestjs/swagger, pulls @scarf/scarf, whose postinstall script
+    // reports the install to a third party, so allowBuilds turns it off.
+    const workspace = parse(readText('pnpm-workspace.yaml')) as WorkspaceConfig & {
+      allowBuilds?: Record<string, boolean>;
+    };
+
+    expect(resolutions('@nestjs/swagger')).toHaveLength(1);
+    expect(workspace.allowBuilds?.['@scarf/scarf']).toBe(false);
+  });
+
+  it('zod-openapi 6 is pinned exactly and apps/backend takes it from the catalog', () => {
+    // ADR 0064 passes a converter built on zod-openapi to the Standard Schema hook of
+    // @nestjs/swagger 12, because Nest's own converter emits OpenAPI 3.0. 6.0.2 was the newest
+    // release outside Renovate's 14-day window on 2026-10-09; it takes zod ^4 as a peer.
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(catalog['zod-openapi']).toBe('6.0.2');
+    expect(backend.dependencies?.['zod-openapi']).toBe('catalog:');
+  });
+
+  it('pnpm-lock.yaml holds one zod-openapi copy, resolved against the catalog zod', () => {
+    // zod-openapi reads the schemas that the contracts build with the catalog zod.
+    const catalog = readWorkspace().catalog ?? {};
+
+    expect(resolutions('zod-openapi')).toEqual([
+      `zod-openapi@${catalog['zod-openapi']}(zod@${catalog.zod})`,
+    ]);
+  });
+
+  it('E12-S04 @modelcontextprotocol/server and @modelcontextprotocol/client are pinned exactly at one 2.x version, the server a dependency and the client a dev dependency of apps/backend', () => {
+    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. 2.1.0 was the
+    // newest 2.x release outside Renovate's 14-day window on 2026-10-09. Both packages pin the
+    // same @modelcontextprotocol/core, so they move together.
+    const packages = ['@modelcontextprotocol/server', '@modelcontextprotocol/client'];
+    const catalog = readWorkspace().catalog ?? {};
+    const backend = readJson<PackageJson>('apps/backend/package.json');
+
+    expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
+      '@modelcontextprotocol/server': '2.1.0',
+      '@modelcontextprotocol/client': '2.1.0',
+    });
+    expect(backend.dependencies?.['@modelcontextprotocol/server']).toBe('catalog:');
+    expect(backend.devDependencies?.['@modelcontextprotocol/client']).toBe('catalog:');
+    expect(backend.dependencies?.['@modelcontextprotocol/client']).toBeUndefined();
+  });
+
+  it('E12-S04 pnpm-lock.yaml holds one copy each of the MCP SDK v2 packages, on the catalog zod, and no workspace package takes the v1 @modelcontextprotocol/sdk', () => {
+    // The v2 packages validate tool schemas with zod 4, so they must share the copy that the
+    // contracts define schemas with. The v1 SDK arrives only through the shadcn CLI in apps/web.
+    const lockfile = parse(readText('pnpm-lock.yaml')) as {
+      importers?: Record<string, PackageJson>;
+      snapshots?: Record<string, { dependencies?: Record<string, string> } | undefined>;
+    };
+    const zod = readWorkspace().catalog?.zod;
+
+    for (const name of [
+      '@modelcontextprotocol/server',
+      '@modelcontextprotocol/client',
+      '@modelcontextprotocol/core',
+    ]) {
+      const keys = resolutions(name);
+      expect(keys, name).toHaveLength(1);
+      expect(lockfile.snapshots?.[keys[0] ?? '']?.dependencies?.zod, `${name} zod`).toBe(zod);
+    }
+    for (const [importer, manifest] of Object.entries(lockfile.importers ?? {})) {
+      expect(manifest.dependencies?.['@modelcontextprotocol/sdk'], importer).toBeUndefined();
+      expect(manifest.devDependencies?.['@modelcontextprotocol/sdk'], importer).toBeUndefined();
+    }
   });
 
   it('E04-S01 the IBM Plex font packages (OFL-1.1) are dependencies of apps/web only', () => {

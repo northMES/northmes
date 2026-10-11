@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { userPageSearch } from '../../access-search.ts';
 import { forgetTemporaryPassword, temporaryPasswordOf } from '../../temporary-password.ts';
-import { usePlaces } from '../../use-places.ts';
+import { useCompanyId, usePlaces } from '../../use-places.ts';
 import { type User, useUser } from '../../use-user.tsx';
 import { useViewer } from '../../use-viewer.ts';
 import { UserStatus } from '../../user-status.tsx';
 import { TemporaryPasswordDialog } from './temporary-password-dialog.tsx';
-import { UserBlockAction } from './user-actions.tsx';
+import { UserActions } from './user-actions.tsx';
 import { UserPermissions } from './user-permissions.tsx';
 import { UserRoles } from './user-roles.tsx';
 
@@ -60,14 +59,15 @@ function useTemporaryPassword(userId: string | undefined) {
 }
 
 /**
- * A user's page (design core-304, AS1, AS11 and US11 to US17): the name in the h1 with the
- * username and the StatusBadge, Block user or Unblock user in the page actions for a reader who may
- * block users, and the tabs General and Access, the open one in the URL's tab. The Access tab
- * holds the user's roles and what they can do at the plant. A user created a moment ago shows the
- * temporary password once. History comes with the audit trail.
+ * A user's page (design core-304, AS1, AS11 and US11 to US18): the name in the h1 with the
+ * username and the StatusBadge, Reset password and Block user or Unblock user in the page actions
+ * for a reader who may reset passwords or block users, never on your own page, and the tabs General and Access, the open one in the URL's tab. The Access tab
+ * holds the user's roles at the company and its plants, and what they can do at the company. A
+ * user created a moment ago shows the temporary password once. History comes with the audit
+ * trail.
  */
 export function UserScreen() {
-  const { plant } = useShell();
+  const companyId = useCompanyId() ?? '';
   const navigate = useNavigate();
   const { userId } = useParams({ strict: false });
   const search = userPageSearch(useSearch({ strict: false }));
@@ -75,22 +75,32 @@ export function UserScreen() {
   const places = usePlaces();
   const viewer = useViewer();
   const temporary = useTemporaryPassword(userId);
-  // The API checks core.user:block at the company, and at every other company the user belongs to.
-  const canBlock =
-    viewer.canAtCompany('core.user:block') && user !== undefined && user.id !== viewer.userId;
+  // The API checks core.user:block and core.user:resetPassword at the company, and at every other
+  // company the user belongs to. Neither applies to your own account.
+  const other = user !== undefined && viewer.userId !== undefined && user.id !== viewer.userId;
+  const canBlock = other && viewer.canAtCompany('core.user:block');
+  const canReset = other && viewer.canAtCompany('core.user:resetPassword');
   return (
     <PageFrame
       title={forbidden ? 'No access to Users' : (user?.name ?? 'User')}
-      crumbs={[{ label: 'Users', href: coreLinks.users({ plant }).href }]}
-      actions={canBlock ? <UserBlockAction user={user} /> : undefined}
+      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
+      actions={
+        user !== undefined && (canBlock || canReset) ? (
+          <UserActions user={user} canBlock={canBlock} canReset={canReset} />
+        ) : undefined
+      }
+      meta={
+        user === undefined ? undefined : (
+          <>
+            <UserStatus blocked={user.blocked} />
+            <span className="font-mono">{user.username}</span>
+          </>
+        )
+      }
       state={state}
     >
       {user !== undefined && (
         <>
-          <p className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-mono text-muted-foreground">{user.username}</span>
-            <UserStatus blocked={user.blocked} />
-          </p>
           <DetailTabs
             label={user.name}
             value={search.tab ?? 'general'}

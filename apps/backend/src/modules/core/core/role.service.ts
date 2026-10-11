@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { sql } from 'kysely';
 import type { CoreDatabase } from '../infrastructure/database.ts';
-import { requestScope } from './access/request-scope.ts';
+import { readIn, requestScope } from './access/request-scope.ts';
 
 /** A role of a company as core's service hands it out (ADR 0010). */
 export interface RoleRecord {
@@ -19,6 +19,8 @@ export interface RoleRecord {
   readonly permissions: readonly string[];
   /** Grows by one with every change to the role; a change sends it as expectedVersion. */
   readonly version: number;
+  /** The company the role belongs to, where the fields of Role read its holders. */
+  readonly companyId: string;
 }
 
 /** A permission of the catalog (ADR 0010). */
@@ -55,6 +57,7 @@ export const roleColumns = [
   'module_id as moduleId',
   'permissions',
   'version',
+  'company_id as companyId',
 ] as const;
 
 /** A permission record of a catalog row. */
@@ -93,25 +96,28 @@ function byModuleAndResource(permissions: readonly PermissionRecord[]): Permissi
 }
 
 /**
- * Reads the roles of the request's company and the permission catalog (ADR 0010). Each read needs
- * core.role:read at the request's plant.
+ * Reads the roles of a company and the permission catalog (ADR 0010): the company of the request's
+ * plant, or in company settings the company the request names (ADR 0066). Each read needs
+ * core.role:read there.
  */
 @Injectable()
 export class RoleService {
   constructor(@Inject(DATABASE) private readonly db: ScopedDatabase<CoreDatabase>) {}
 
   /** The roles of the request's company: custom roles first, then default roles, each by name. */
-  roles(): Promise<RoleRecord[]> {
-    const { companyId } = requestScope('core.role:read');
-    return this.db.transaction((tx) =>
-      tx
-        .selectFrom('core.role')
-        .select(roleColumns)
-        .where('company_id', '=', companyId)
-        .orderBy(sql`origin = 'custom'`, 'desc')
-        .orderBy(sql`lower(name)`)
-        .orderBy('id')
-        .execute(),
+  roles(companyId?: string): Promise<RoleRecord[]> {
+    const scope = requestScope('core.role:read', companyId);
+    return readIn(scope, () =>
+      this.db.transaction((tx) =>
+        tx
+          .selectFrom('core.role')
+          .select(roleColumns)
+          .where('company_id', '=', scope.companyId)
+          .orderBy(sql`origin = 'custom'`, 'desc')
+          .orderBy(sql`lower(name)`)
+          .orderBy('id')
+          .execute(),
+      ),
     );
   }
 
@@ -119,24 +125,26 @@ export class RoleService {
    * The roles with these ids, one entry per id: the role, or null when the request's company has
    * none with that id.
    */
-  async byIds(ids: readonly string[]): Promise<(RoleRecord | null)[]> {
-    const { companyId } = requestScope('core.role:read');
+  async byIds(ids: readonly string[], companyId?: string): Promise<(RoleRecord | null)[]> {
+    const scope = requestScope('core.role:read', companyId);
     if (ids.length === 0) return [];
-    const roles = await this.db.transaction((tx) =>
-      tx
-        .selectFrom('core.role')
-        .select(roleColumns)
-        .where('company_id', '=', companyId)
-        .where('id', 'in', ids)
-        .execute(),
+    const roles = await readIn(scope, () =>
+      this.db.transaction((tx) =>
+        tx
+          .selectFrom('core.role')
+          .select(roleColumns)
+          .where('company_id', '=', scope.companyId)
+          .where('id', 'in', ids)
+          .execute(),
+      ),
     );
     const byId = new Map(roles.map((role) => [role.id, role]));
     return ids.map((id) => byId.get(id) ?? null);
   }
 
   /** The role with this id of the request's company, or null. */
-  async byId(id: string): Promise<RoleRecord | null> {
-    const [role] = await this.byIds([id]);
+  async byId(id: string, companyId?: string): Promise<RoleRecord | null> {
+    const [role] = await this.byIds([id], companyId);
     return role ?? null;
   }
 
@@ -144,10 +152,12 @@ export class RoleService {
    * Every permission of the catalog, installed or not, grouped by module (core first, then by id)
    * and by resource, each sorted by key.
    */
-  async catalog(): Promise<PermissionModuleRecord[]> {
-    requestScope('core.role:read');
-    const rows = await this.db.transaction((tx) =>
-      tx.selectFrom('core.permission').select(['key', 'module_id', 'installed']).execute(),
+  async catalog(companyId?: string): Promise<PermissionModuleRecord[]> {
+    const scope = requestScope('core.role:read', companyId);
+    const rows = await readIn(scope, () =>
+      this.db.transaction((tx) =>
+        tx.selectFrom('core.permission').select(['key', 'module_id', 'installed']).execute(),
+      ),
     );
     return byModuleAndResource(sortedByKey(rows).map(permissionOf));
   }

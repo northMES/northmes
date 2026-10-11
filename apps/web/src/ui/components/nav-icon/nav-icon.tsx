@@ -16,6 +16,7 @@ import {
   Shapes,
   Shield,
   Table,
+  Tags,
   Users,
   Warehouse,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const icons: Readonly<Record<NavIconName, LucideIcon>> = {
   CalendarCog,
   Users,
   Shield,
+  Tags,
 };
 
 /**

@@ -8,6 +8,7 @@ import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { CoreRestoreArticle } from '../../../src/modules/core/restore-article.graphql.ts';
 import { CoreArchiveArticle } from '../../../src/modules/core/screens/article/archive-article.graphql.ts';
 import { CoreUpdateArticle } from '../../../src/modules/core/screens/edit-article/update-article.graphql.ts';
+import { viewerQuery } from './access-fixtures.ts';
 import {
   type ArticleNode,
   article,
@@ -16,12 +17,17 @@ import {
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
   spoken,
 } from './core-app.tsx';
 
 afterEach(cleanup);
+
+/** The viewer of a user who changes and archives articles at the plant. */
+const editor = () =>
+  viewerQuery(['core.article:read', 'core.article:update', 'core.article:archive']);
 
 const archivedAt = '2026-10-09T07:30:00.000Z';
 const axle = article('AX-500', 'Axle 20 mm');
@@ -85,7 +91,7 @@ function unansweredCommandOf(
 describe('archive and restore an article', () => {
   it("E06-S06 Archive on the article's page asks first, then archives it: the page shows Archived and Restore, offers no Edit, focuses the h1 and announces it", async () => {
     const user = userEvent.setup();
-    renderCoreAt(articleHref(axle.id), [articleQuery(axle), archiveOf(1, archivedAxle)]);
+    renderCoreAt(articleHref(axle.id), [articleQuery(axle), editor(), archiveOf(1, archivedAxle)]);
 
     await user.click(await screen.findByRole('button', { name: 'Archive' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'Archive article AX-500?' });
@@ -109,7 +115,11 @@ describe('archive and restore an article', () => {
   it("E06-S06 Restore on an archived article's page asks first, then restores it with Edit again and announces it", async () => {
     const user = userEvent.setup();
     const restored = article('AX-500', 'Axle 20 mm', 3);
-    renderCoreAt(articleHref(axle.id), [articleQuery(archivedAxle), restoreOf(2, restored)]);
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(archivedAxle),
+      editor(),
+      restoreOf(2, restored),
+    ]);
 
     await user.click(await screen.findByRole('button', { name: 'Restore' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'Restore article AX-500?' });
@@ -130,6 +140,7 @@ describe('archive and restore an article', () => {
     const changed = article('AX-500', 'Axle 20 mm, steel', 2);
     renderCoreAt(articleHref(axle.id), [
       articleQuery(axle),
+      editor(),
       commandOf(CoreArchiveArticle, 1, {
         data: null,
         errors: [
@@ -150,7 +161,13 @@ describe('archive and restore an article', () => {
     expect((await within(dialog).findByRole('alert')).textContent).toBe(
       'Someone changed this article after you opened it. The page now shows the saved article. Check it, then archive it again.',
     );
-    await waitFor(() => expect(screen.getByText('Axle 20 mm, steel')).toBeDefined());
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('region', { name: 'Identity', hidden: true })).getByText(
+          'Axle 20 mm, steel',
+        ),
+      ).toBeDefined(),
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
@@ -161,6 +178,7 @@ describe('archive and restore an article', () => {
     const user = userEvent.setup();
     renderCoreAt(articleHref(axle.id), [
       articleQuery(axle),
+      editor(),
       commandOf(CoreArchiveArticle, 1, {
         data: null,
         errors: [
@@ -183,13 +201,18 @@ describe('archive and restore an article', () => {
     expect((await within(dialog).findByRole('alert')).textContent).toBe(
       'Someone changed this article after you opened it, and the saved article could not be loaded. Check the connection, then try again.',
     );
-    expect(screen.getByText('Axle 20 mm')).toBeDefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Identity', hidden: true })).getByText(
+        'Axle 20 mm',
+      ),
+    ).toBeDefined();
   });
 
   it("E06-S06 an archive the server refuses shows the server's message in the dialog", async () => {
     const user = userEvent.setup();
     renderCoreAt(articleHref(axle.id), [
       articleQuery(axle),
+      editor(),
       refusedCommandOf(CoreArchiveArticle, 1),
     ]);
 
@@ -206,6 +229,7 @@ describe('archive and restore an article', () => {
     const user = userEvent.setup();
     renderCoreAt(articleHref(axle.id), [
       articleQuery(axle),
+      editor(),
       unansweredCommandOf(CoreArchiveArticle, 1),
     ]);
 
@@ -228,15 +252,19 @@ describe('archive and restore an article', () => {
       ),
     ]);
     const table = await screen.findByRole('table', { name: 'Articles' });
-    await waitFor(() => expect(bodyRows(table)).toEqual([['AX-400', 'Axle 10 mm']]));
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([
+        ['AX-400', 'Axle 10 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+      ]),
+    );
 
     const showArchived = screen.getByRole('checkbox', { name: 'Show archived' });
     await user.click(showArchived);
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-400', 'Axle 10 mm'],
-        ['AX-500', 'Axle 20 mmArchived'],
+        ['AX-400', 'Axle 10 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-500', 'Axle 20 mmArchived', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(router.state.location.search).toEqual({ archived: 1 });
@@ -273,7 +301,16 @@ describe('archive and restore an article', () => {
         request: {
           query: CoreUpdateArticle,
           variables: {
-            input: { id: axle.id, expectedVersion: 1, code: 'AX-500', name: 'Axle 20 mm, steel' },
+            input: {
+              id: axle.id,
+              expectedVersion: 1,
+              code: 'AX-500',
+              name: 'Axle 20 mm, steel',
+              stockUnit: 'PIECE',
+              note: '',
+              translations: [],
+              articleGroupId: '',
+            },
           },
         },
         result: {
@@ -293,7 +330,16 @@ describe('archive and restore an article', () => {
         request: {
           query: CoreUpdateArticle,
           variables: {
-            input: { id: axle.id, expectedVersion: 3, code: 'AX-500', name: 'Axle 20 mm, steel' },
+            input: {
+              id: axle.id,
+              expectedVersion: 3,
+              code: 'AX-500',
+              name: 'Axle 20 mm, steel',
+              stockUnit: 'PIECE',
+              note: '',
+              translations: [],
+              articleGroupId: '',
+            },
           },
         },
         result: {

@@ -10,5 +10,6 @@ import { CreatedUser } from '../types/created-user.type.ts';
  */
 export const CreateUser = defineCommand(createUser, {
   returns: () => CreatedUser,
+  plantFree: true,
   ...createUserHandler,
 });

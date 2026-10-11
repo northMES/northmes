@@ -18,27 +18,29 @@ export class UserFieldResolver {
   constructor(@Inject(RoleAssignmentService) private readonly assignments: RoleAssignmentService) {}
 
   /**
-   * The user's roles at the company of the request's plant and at the plant, those at the company
-   * first; never those at another plant. The roles of every user in an answer are read in one
-   * query. It needs core.user:read at the plant, and each assignment's role core.role:read.
+   * The user's roles where the request runs, those at the company first: at a plant, at its
+   * company and the plant, never at another plant; in company settings, at the company and every
+   * plant of it. The roles of every user in an answer are read in one query. It needs
+   * core.user:read there, and each assignment's role core.role:read.
    */
   @ResolveField(() => [RoleAssignment])
   roleAssignments(
     @Parent() user: UserRecord,
     @Context() context: RequestContext,
   ): Promise<RoleAssignmentRecord[]> {
-    return loaderFor(context, 'core.userRoleAssignments', (ids: readonly string[]) =>
-      this.assignments.ofUsers(ids),
+    const { companyId } = user;
+    return loaderFor(context, `core.userRoleAssignments:${companyId}`, (ids: readonly string[]) =>
+      this.assignments.ofUsers(ids, companyId),
     ).load(user.id);
   }
 
   /**
-   * What the user may do at the request's plant: every installed permission, by key, with the
-   * assignments at the plant or at its company that grant it. It names roles, so it needs
-   * core.role:read at the plant.
+   * What the user may do where the request runs: every installed permission, by key, with the
+   * assignments that grant it, at the plant or at its company, or in company settings at the
+   * company. It names roles, so it needs core.role:read there.
    */
   @ResolveField(() => [EffectivePermission])
   effectivePermissions(@Parent() user: UserRecord): Promise<EffectivePermissionRecord[]> {
-    return this.assignments.effectivePermissions(user.id);
+    return this.assignments.effectivePermissions(user.id, user.companyId);
   }
 }

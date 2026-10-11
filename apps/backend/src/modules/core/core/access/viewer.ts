@@ -11,20 +11,36 @@ export interface ViewerRecord {
 }
 
 /**
- * The running request's principal at its plant (ADR 0010): the permissions it holds at the plant,
- * from roles there and at the company, and those it holds at the company. The web hides or locks
- * what the user cannot do with them; the command bus still checks every change. A request without
- * a principal or without a plant gets core.forbidden.
+ * The running request's principal where it runs (ADR 0010). At a plant: the permissions it holds
+ * at the plant, from roles there and at the company, and those it holds at the company. In company
+ * settings, a request without a plant that names one of the user's companies (ADR 0066): those it
+ * holds at the company, and none at a plant. The web hides or locks what the user cannot do with
+ * them; the command bus still checks every change. A request without a principal, or without a
+ * plant and a company of the user, gets core.forbidden.
  */
-export function viewerAtPlant(): ViewerRecord {
+export function viewerAt(companyId?: string): ViewerRecord {
   const principal = currentPrincipal();
-  const plantId = principal?.plantId;
-  if (!principal || !plantId) {
-    throw forbidden('The request names no plant, so it has no access to read');
+  if (!principal) throw forbidden('Only a signed-in user has access to read');
+  const plantId = principal.plantId;
+  if (plantId) {
+    const company = companyOf(principal, plantId);
+    if (companyId !== undefined && companyId !== company) {
+      throw forbidden(`Company ${companyId} is not the company of the request's plant`);
+    }
+    return {
+      userId: principal.userId,
+      plantPermissions: heldAt(principal, plantId),
+      companyPermissions: heldAt(principal, company),
+    };
+  }
+  if (companyId === undefined || principal.scopes.get(companyId)?.parentId !== null) {
+    throw forbidden(
+      'The request names no plant and none of your companies, so it has no access to read',
+    );
   }
   return {
     userId: principal.userId,
-    plantPermissions: heldAt(principal, plantId),
-    companyPermissions: heldAt(principal, companyOf(principal, plantId)),
+    plantPermissions: [],
+    companyPermissions: heldAt(principal, companyId),
   };
 }

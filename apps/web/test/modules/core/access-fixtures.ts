@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MockLink } from '@apollo/client/testing';
+import { within } from '@testing-library/react';
 import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CorePermissionCatalog } from '../../../src/modules/core/components/permission-checklist/permission-catalog.graphql.ts';
 import { CoreRole } from '../../../src/modules/core/role.graphql.ts';
@@ -29,6 +30,12 @@ export const plantA = {
   name: 'Plant A',
 } as const;
 
+/** The company of company settings in the tests, as /settings/$companyId names it. */
+export const companyId = acme.id;
+
+/** The variables that name the company in a read of company settings. */
+export const inCompany = { companyId } as const;
+
 /** The signed-in user of every test. */
 export const viewerId = idOf('jonas');
 
@@ -40,7 +47,29 @@ export function forbiddenError(
   return { message, path, extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } };
 }
 
-/** coreViewer with these permissions at the plant and at the company. */
+/**
+ * coreViewer in company settings, with these permissions at the company: the access pages read
+ * them as the permissions at every plant of it too (ADR 0066).
+ */
+export function settingsViewerQuery(
+  companyPermissions: readonly string[],
+): MockLink.MockedResponse {
+  return {
+    request: { query: CoreViewer, variables: inCompany },
+    result: {
+      data: {
+        coreViewer: {
+          __typename: 'Viewer',
+          userId: viewerId,
+          plantPermissions: [],
+          companyPermissions,
+        },
+      },
+    },
+  };
+}
+
+/** coreViewer at the plant, People's, with these permissions at the plant and at the company. */
 export function viewerQuery(
   plantPermissions: readonly string[],
   companyPermissions: readonly string[] = [],
@@ -103,7 +132,7 @@ export function catalogQuery(): MockLink.MockedResponse {
     ],
   });
   return {
-    request: { query: CorePermissionCatalog },
+    request: { query: CorePermissionCatalog, variables: inCompany },
     result: {
       data: {
         corePermissionCatalog: [
@@ -125,6 +154,8 @@ export const sara = person('Sara Nyberg', 's.nyberg');
 export const anna = person('Anna Berg', 'a.berg');
 
 interface RoleOptions {
+  /** The role's key; a module role's key names it in every company, such as core-company-admin. */
+  readonly key?: string;
   readonly origin?: 'CUSTOM' | 'MODULE';
   readonly moduleId?: string | null;
   readonly version?: number;
@@ -137,9 +168,11 @@ interface RoleOptions {
 /** A role as CoreRole returns it. */
 export function role(name: string, permissions: readonly string[], options: RoleOptions = {}) {
   const { origin = 'CUSTOM', moduleId = null, version = 1, holders = [] } = options;
+  const key = options.key ?? `custom-${idOf(name).slice(-12)}`;
   return {
     __typename: 'Role',
     id: idOf(name),
+    key,
     name,
     origin,
     moduleId,
@@ -185,36 +218,43 @@ export const companyAdminRole = role(
     'core.user:block',
     ...catalogKeys.planning,
   ],
-  { origin: 'MODULE', moduleId: 'core' },
+  { origin: 'MODULE', moduleId: 'core', key: 'core-company-admin' },
 );
 /** core's Plant admin, which holds every installed permission but the company-level ones. */
 export const plantAdminRole = role(
   'Plant admin',
   ['core.role:read', 'core.user:read', 'core.roleAssignment:manage', ...catalogKeys.planning],
-  { origin: 'MODULE', moduleId: 'core' },
+  { origin: 'MODULE', moduleId: 'core', key: 'core-plant-admin' },
 );
 
-/** A role as CoreRoles lists it, without the holders' names. */
+/** A role as CoreRoles lists it, with only the id of each holder. */
 function listed(each: ReturnType<typeof role>) {
   return {
     ...each,
-    holders: each.holders.map(({ id, scope }) => ({
+    holders: each.holders.map(({ id, scope, user }) => ({
       __typename: 'RoleAssignment',
       id,
       scope: { __typename: 'AccessScope', id: scope.id, kind: scope.kind },
+      user: { __typename: 'User', id: user.id },
     })),
   };
 }
 
-/** coreRoles with these roles. */
-export function rolesQuery(roles: readonly ReturnType<typeof role>[]): MockLink.MockedResponse {
-  return { request: { query: CoreRoles }, result: { data: { coreRoles: roles.map(listed) } } };
+/** coreRoles with these roles, in company settings unless variables say otherwise. */
+export function rolesQuery(
+  roles: readonly ReturnType<typeof role>[],
+  variables: Record<string, string> = inCompany,
+): MockLink.MockedResponse {
+  return {
+    request: { query: CoreRoles, variables },
+    result: { data: { coreRoles: roles.map(listed) } },
+  };
 }
 
 /** coreRole for the role. */
 export function roleQuery(each: ReturnType<typeof role>): MockLink.MockedResponse {
   return {
-    request: { query: CoreRole, variables: { id: each.id } },
+    request: { query: CoreRole, variables: { id: each.id, companyId } },
     result: { data: { coreRole: each } },
   };
 }
@@ -251,7 +291,38 @@ export function userQuery(
   errors?: readonly ReturnType<typeof forbiddenError>[],
 ): MockLink.MockedResponse {
   return {
-    request: { query: CoreUser, variables: { id: of.id } },
+    request: { query: CoreUser, variables: { id: of.id, companyId } },
     result: { data: { coreUser: of }, ...(errors !== undefined && { errors }) },
   };
+}
+
+/**
+ * The rows of a grouped table by group (design core-304, RO1): each group's name, read from its
+ * header row without the count, and the text of each cell of each row under it.
+ */
+export function groupedRows(table: HTMLElement): [string, (string | null)[][]][] {
+  return within(table)
+    .getAllByRole('rowgroup')
+    .slice(1)
+    .map((body) => {
+      const header = within(body).getByRole('rowheader');
+      const rows = within(body)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) =>
+          within(row)
+            .queryAllByRole('cell')
+            .map((cell) => cell.textContent),
+        );
+      return [header.firstChild?.textContent ?? '', rows];
+    });
+}
+
+/** Resizes happy-dom's window, as the browser does at 320 px or on a desktop. */
+export function setViewport(width: number, height: number): void {
+  (
+    window as unknown as {
+      happyDOM: { setViewport(viewport: { width: number; height: number }): void };
+    }
+  ).happyDOM.setViewport({ width, height });
 }

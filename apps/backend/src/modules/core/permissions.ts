@@ -5,20 +5,28 @@
  * as `<resource>:<action>` into core.permission.
  */
 export const corePermissions = {
-  'core.article': ['read', 'create', 'update', 'archive'],
+  'core.article': ['read', 'create', 'update', 'archive', 'assign'],
+  'core.articleGroup': ['read', 'create', 'update', 'archive'],
   'core.role': ['read', 'manage'],
   'core.roleAssignment': ['manage'],
-  'core.user': ['read', 'create', 'block'],
+  'core.user': ['read', 'create', 'block', 'resetPassword'],
 } as const satisfies Readonly<Record<string, readonly string[]>>;
 
 /**
- * The permissions that the API checks only at the company: editing roles, creating users and
- * blocking them. Plant admin holds every installed permission but these.
+ * The permissions that the API checks only at the company: assigning articles to plants (ADR 0073),
+ * changing article groups, which are the company's register, editing roles, creating users,
+ * blocking them and resetting their passwords. Plant admin holds every installed permission but
+ * these.
  */
 export const companyPermissions: readonly string[] = [
+  'core.article:assign',
+  'core.articleGroup:archive',
+  'core.articleGroup:create',
+  'core.articleGroup:update',
   'core.role:manage',
   'core.user:block',
   'core.user:create',
+  'core.user:resetPassword',
 ];
 
 /** The key of core's Company admin role in core.role, `<module>-<role>`. */

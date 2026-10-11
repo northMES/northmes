@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { randomUUIDv7 } from 'node:crypto';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
@@ -245,6 +247,136 @@ describe('sign-in with Better Auth', () => {
     // The web sends no cookies, so the API does not let a web origin send them.
     expect(preflight.headers.get('access-control-allow-credentials')).toBeNull();
     expect(signedIn.headers.get('access-control-allow-credentials')).toBeNull();
+  });
+
+  /**
+   * A user that a company's user admin created with coreCreateUser, with the temporary password
+   * from its answer, and the slug of the company's plant.
+   */
+  async function temporaryUser() {
+    const { company, slugs } = await givenCompany(db.ownerUrl);
+    const plant = slugs[0] ?? '';
+    const admin = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: company, permissions: ['core.user:read', 'core.user:create'] },
+    ]);
+    const email = `temp_${randomUUIDv7().slice(-12)}@example.test`;
+    const created = await gqlClient(url, {
+      headers: { authorization: admin.authorization, 'x-northmes-plant': plant },
+    }).send<{ coreCreateUser: { temporaryPassword: string } }>(
+      `mutation ($input: CoreCreateUserInput!) { coreCreateUser(input: $input) { temporaryPassword } }`,
+      {
+        input: {
+          id: randomUUIDv7(),
+          username: `t_${randomUUIDv7().slice(-12)}`,
+          name: 'Tove Lindqvist',
+          email,
+        },
+      },
+    );
+    const temporaryPassword = created.data?.coreCreateUser.temporaryPassword ?? '';
+    if (temporaryPassword === '') throw new Error(JSON.stringify(created.errors));
+    return { email, temporaryPassword, plant };
+  }
+
+  /** Signs in with an email and a password as the web does, and returns the JWT's header. */
+  async function jwtOf(email: string, password: string) {
+    const sessionToken = await sessionTokenOf({ email, password });
+    const token = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const { token: jwt } = (await token.json()) as { token: string };
+    return `Bearer ${jwt}`;
+  }
+
+  /** Sets a new password on the route of the new password step. */
+  function setNewPassword(authorization: string, currentPassword: string, newPassword: string) {
+    return fetch(`${url}${NEW_PASSWORD_PATH}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  const companiesQuery = '{ coreCompanies { id } }';
+
+  it('E05-S08 a user created with a temporary password gets core.password_change_required on any GraphQL request', async () => {
+    const { email, temporaryPassword } = await temporaryUser();
+    const authorization = await jwtOf(email, temporaryPassword);
+
+    const answer = await gqlClient(url, { headers: { authorization } }).send(companiesQuery);
+
+    expect(answer.data ?? null).toBeNull();
+    expect(answer.errors?.[0]?.extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      errorCode: 'core.password_change_required',
+    });
+  });
+
+  it('E05-S08 after setting a new password the same request succeeds', async () => {
+    const { email, temporaryPassword } = await temporaryUser();
+    const authorization = await jwtOf(email, temporaryPassword);
+
+    const saved = await setNewPassword(authorization, temporaryPassword, 'a new password of mine');
+    const answer = await gqlClient(url, { headers: { authorization } }).send(companiesQuery);
+
+    expect(saved.status).toBe(200);
+    expect(answer).toEqual({ status: 200, data: { coreCompanies: expect.any(Array) } });
+    expect(await jwtOf(email, 'a new password of mine')).toMatch(/^Bearer \S+\.\S+\.\S+$/);
+  });
+
+  it('E05-S08 setting a new password ends every other session of the user, so a session opened with the temporary password mints no JWT, and the caller keeps theirs', async () => {
+    const { email, temporaryPassword } = await temporaryUser();
+    const callerSession = await sessionTokenOf({ email, password: temporaryPassword });
+    const otherSession = await sessionTokenOf({ email, password: temporaryPassword });
+    const caller = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${callerSession}` },
+    });
+    const { token } = (await caller.json()) as { token: string };
+
+    const saved = await setNewPassword(
+      `Bearer ${token}`,
+      temporaryPassword,
+      'a new password of mine',
+    );
+    const [other, callerAgain] = await Promise.all(
+      [otherSession, callerSession].map((session) =>
+        fetch(`${url}/api/auth/token`, { headers: { authorization: `Bearer ${session}` } }),
+      ),
+    );
+
+    expect(saved.status).toBe(200);
+    expect(other?.status).toBe(401);
+    expect(callerAgain?.status).toBe(200);
+  });
+
+  it('E05-S08 a new password equal to the temporary one, or shorter than 8 characters, is refused, and the request still needs a new password', async () => {
+    const { email, temporaryPassword } = await temporaryUser();
+    const authorization = await jwtOf(email, temporaryPassword);
+
+    const same = await setNewPassword(authorization, temporaryPassword, temporaryPassword);
+    const short = await setNewPassword(authorization, temporaryPassword, 'short');
+    const wrong = await setNewPassword(authorization, `${temporaryPassword}x`, 'a new password');
+    const answer = await gqlClient(url, { headers: { authorization } }).send(companiesQuery);
+
+    expect([same.status, short.status, wrong.status]).toEqual([400, 400, 400]);
+    expect([
+      ((await same.json()) as { errorCode: string }).errorCode,
+      ((await short.json()) as { errorCode: string }).errorCode,
+      ((await wrong.json()) as { errorCode: string }).errorCode,
+    ]).toEqual([
+      'core.password_unchanged',
+      'core.password_too_short',
+      'core.current_password_wrong',
+    ]);
+    expect(answer.errors?.[0]?.extensions).toMatchObject({
+      errorCode: 'core.password_change_required',
+    });
+  });
+
+  it('E05-S08 the new password route needs a signed-in user', async () => {
+    const answer = await setNewPassword('', 'anything', 'a new password');
+
+    expect(answer.status).toBe(401);
   });
 
   it('signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
