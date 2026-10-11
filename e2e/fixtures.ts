@@ -32,6 +32,8 @@ interface Fixtures {
   signIn: (href: string) => Promise<void>;
   /** Signs in, creates an article at plant A through New article, and stays on its page. */
   newArticle: () => Promise<{ code: string; href: string }>;
+  /** Fails when the page, in the named state, breaks a WCAG 2.2 A or AA rule that axe checks. */
+  checkA11y: (state: string) => Promise<void>;
 }
 
 /**
@@ -136,6 +138,11 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
       await page.getByLabel('Password', { exact: true }).fill(devAdmin.password);
       await page.getByRole('button', { name: 'Sign in' }).click();
       await page.waitForURL((url) => url.pathname === new URL(href, url).pathname);
+    });
+  },
+  checkA11y: async ({ page }, use) => {
+    await use(async () => {
+      await page.title();
     });
   },
   newArticle: async ({ page, signIn }, use) => {
