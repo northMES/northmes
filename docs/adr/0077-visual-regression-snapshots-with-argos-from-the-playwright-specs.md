@@ -45,7 +45,7 @@ Chosen option: "Argos with `@argos-ci/playwright`", because it compares each pul
 
 ### How changes are reviewed
 
-* The Argos GitHub app posts a check on each pull request. A visual change sets it to "changes detected" until someone approves the change in Argos.
+* The Argos GitHub app posts a check on each pull request whose `e2e` job uploads screenshots, so not on a fork's until a maintainer reruns it on a branch of the repository. A visual change sets it to "changes detected" until someone approves the change in Argos.
 * The check is not required at first. It becomes a required check of the `main` ruleset once it has been stable for two weeks (M-92).
 * `main` is the baseline: a merged pull request's screenshots become the reference for the next ones.
 
