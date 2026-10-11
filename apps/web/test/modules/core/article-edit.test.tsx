@@ -167,6 +167,24 @@ describe('edit article', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
   });
 
+  it('E06-S06 Remove announces the translation it took out, by its language or else by its number', async () => {
+    const user = userEvent.setup();
+    const translated = {
+      ...axle,
+      translations: [
+        { __typename: 'Translation', field: 'name', locale: 'en', text: 'Axle 20 mm' },
+      ],
+    } as const;
+    renderCoreAt(editHref(axle.id), [articleQuery(translated)]);
+
+    await user.click(await screen.findByRole('button', { name: 'Remove the English translation' }));
+    await waitFor(() => expect(spoken()).toBe('English translation removed'));
+
+    await user.click(screen.getByRole('button', { name: 'Add translation' }));
+    await user.click(screen.getByRole('button', { name: 'Remove translation 1' }));
+    await waitFor(() => expect(spoken()).toBe('Translation 1 removed'));
+  });
+
   it('E06-S06 a translation without a language or a text says so on its row', async () => {
     const user = userEvent.setup();
     renderCoreAt(editHref(axle.id), [articleQuery(axle)]);
