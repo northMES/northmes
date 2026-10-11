@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useQuery } from '@apollo/client/react';
+import { type StockUnitCode, stockUnitCodes, unitOf } from '@northmes/contracts';
 import { ChoiceMenu } from '../../../../ui/components/choice-menu/index.ts';
 import { FilterChip } from '../../../../ui/components/filter-chip/index.ts';
 import { FilterMenu } from '../../../../ui/components/filter-menu/index.ts';
@@ -12,6 +13,7 @@ import {
   groupedBy,
   isFiltered,
   noArticleGroup,
+  northmesSource,
   unfiltered,
 } from '../../article-list-search.ts';
 import type { ArticleFacets } from './article-facets.graphql.ts';
@@ -59,21 +61,33 @@ interface FiltersProps {
 }
 
 /**
- * A picked value that no listed article has, which the counts leave out: it shows with 0, named by
- * the group list for a group (ST17).
+ * A picked value that no listed article has, or that the counts have not answered yet: it shows
+ * with 0 (ST17), named as its field names it: a group by the group list, a stock unit by the unit
+ * catalog, a source by its name, and the empty source as NorthMES.
  */
 function withPicked(
+  field: ArticleGroupKey,
   values: readonly FieldValue[],
   picked: readonly string[],
-  nameOf: (value: string) => string,
+  groupName: (value: string) => string,
 ): FieldValue[] {
   const known = new Set(values.map(({ value }) => value));
+  const nameOf = (value: string): string => {
+    if (field === 'articleGroup') return groupName(value);
+    if (field === 'source') return value === northmesSource ? 'NorthMES' : value;
+    return isStockUnitCode(value) ? unitOf(value).label : value;
+  };
   return [
     ...values,
     ...picked
       .filter((value) => !known.has(value))
       .map((value) => ({ value, label: nameOf(value), count: 0 })),
   ];
+}
+
+/** Whether a picked stock unit is a code of the unit catalog's stock units. */
+function isStockUnitCode(value: string): value is StockUnitCode {
+  return (stockUnitCodes as readonly string[]).includes(value);
 }
 
 /** The names of the company's groups, read only while a picked group is missing from the counts. */
@@ -106,7 +120,7 @@ export function ArticlesFilterMenus({ view, facets, show }: FiltersProps) {
           key={key}
           label={label}
           heading={heading}
-          options={withPicked(valuesOf(key, facets), pickedOf(view, key), nameOf)}
+          options={withPicked(key, valuesOf(key, facets), pickedOf(view, key), nameOf)}
           selected={pickedOf(view, key)}
           onChange={(picked) => show(filteredBy(view, key, picked as never))}
         />
@@ -133,7 +147,7 @@ export function ArticlesFilterChips({ view, facets, show }: FiltersProps) {
       {fields.map(({ key, label, remove }) => {
         const picked = pickedOf(view, key);
         if (picked.length === 0) return null;
-        const values = withPicked(valuesOf(key, facets), picked, nameOf).filter(({ value }) =>
+        const values = withPicked(key, valuesOf(key, facets), picked, nameOf).filter(({ value }) =>
           picked.includes(value),
         );
         return (

@@ -117,8 +117,10 @@ describe('the articles list filters', () => {
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
     expect(screen.getByRole('button', { name: 'Article group, 1 selected' })).toBeDefined();
-    expect(screen.getByText('Article group:').parentElement?.textContent).toBe(
-      'Article group: Hoses 2',
+    await waitFor(() =>
+      expect(screen.getByText('Article group:').parentElement?.textContent).toBe(
+        'Article group: Hoses 2',
+      ),
     );
     expect(screen.getByRole('button', { name: 'Remove the article group filter' })).toBeDefined();
   });
@@ -148,7 +150,10 @@ describe('the articles list filters', () => {
     expect(await screen.findByRole('button', { name: 'Article group, 2 selected' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Stock unit, 1 selected' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Source, 1 selected' })).toBeDefined();
-    expect(screen.getByText('Source:').parentElement?.textContent).toBe('Source: NorthMES 3');
+    // The chip shows NorthMES with 0 until the counts answer, then their count.
+    await waitFor(() =>
+      expect(screen.getByText('Source:').parentElement?.textContent).toBe('Source: NorthMES 3'),
+    );
   });
 
   it('E06-S06 a picked stock unit or source that no listed article has shows on its chip by its own name with 0', async () => {
