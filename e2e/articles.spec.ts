@@ -202,4 +202,20 @@ test.describe('articles', () => {
       `Brackets ${groupCode}`,
     );
   });
+
+  test('ADR0077 each state that checkA11y checks also takes an Argos screenshot', async ({
+    page,
+    signIn,
+    checkA11y,
+  }, testInfo) => {
+    await signIn(coreLinks.articles({ plant }).href);
+    await page.getByLabel('Search articles').fill('BR-140');
+    await expect(page.getByRole('row', { name: /BR-140.*Wall bracket/ })).toBeVisible();
+
+    await checkA11y('the articles list searched for one article');
+
+    expect(testInfo.attachments.map(({ name }) => name)).toContain(
+      'argos/screenshot___e2e/the-articles-list-searched-for-one-article',
+    );
+  });
 });
