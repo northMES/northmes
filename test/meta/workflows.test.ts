@@ -421,6 +421,16 @@ describe('workflows', () => {
     expect(Object.keys(scorecard?.jobs ?? {})).toHaveLength(1);
     expect(job?.permissions).toEqual(scorecardPermissions);
     expect(analysis?.with?.publish_results).toBe(true);
+    // Scorecard publishes only from a job whose steps are all its approved actions.
+    expect(
+      (job?.steps ?? []).map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? `run: ${run}`),
+    ).toEqual([
+      'actions/checkout',
+      'ossf/scorecard-action',
+      'actions/upload-artifact',
+      'github/codeql-action/upload-sarif',
+    ]);
+    expect(job?.env, 'job env').toBeUndefined();
     // Scorecard publishes from the default branch only, so a manual run elsewhere skips the job.
     expect(job?.if).toBe(expression('github.ref_name == github.event.repository.default_branch'));
   });

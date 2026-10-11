@@ -1,8 +1,9 @@
 # OpenSSF Scorecard (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md):
 # scores the repository's supply-chain practices, uploads the findings to code scanning and
 # publishes the score behind the README badge. Scorecard refuses to publish from a workflow with
-# workflow-level write permissions, env or defaults, so this file has none, and its one job raises
-# only what publishing needs.
+# workflow-level write permissions, env or defaults, or from a job with env, defaults, containers,
+# services or a step outside its approved actions, so this file has none of them, and its one job
+# raises only what publishing needs.
 name: Scorecard
 
 on:
@@ -38,10 +39,8 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          # A fine-grained token with Administration: read lets Scorecard read the rulesets of
-          # ADR 0050, which the default token cannot; without it the score falls back to the
-          # default token and the Branch-Protection check reads less.
-          repo_token: ${{ secrets.SCORECARD_TOKEN || secrets.GITHUB_TOKEN }}
+          # The default token reads the repository rulesets that protect main (ADR 0050, ADR 0069),
+          # so the Branch-Protection check needs no personal access token.
           publish_results: true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
