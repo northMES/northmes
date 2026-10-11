@@ -49,7 +49,7 @@ describe('CI / pr security', () => {
   });
 
   it('ADR0076 a Security section that says none without a reason fails', () => {
-    for (const none of ['None', 'none.', 'N/A', '- None']) {
+    for (const none of ['None', 'none.', 'N/A', '- None', '- **None**', '_none_', 'None:']) {
       expect(checkPrSecurity(pullRequest(body(none))).ok, none).toBe(false);
     }
   });
@@ -64,6 +64,18 @@ describe('CI / pr security', () => {
     for (const note of notes) {
       expect(checkPrSecurity(pullRequest(body(note))).ok, note).toBe(true);
     }
+  });
+
+  // GitHub renders a fenced block as code, so a heading in it is no section.
+  it('ADR0076 a Security heading inside a fenced code block is no section', () => {
+    for (const fence of ['```', '~~~']) {
+      const fenced = `Closes #1\n\n${fence}md\n## Security\nNone: docs only.\n${fence}\n`;
+
+      expect(checkPrSecurity(pullRequest(fenced)).ok, fence).toBe(false);
+    }
+    expect(
+      checkPrSecurity(pullRequest(body('An example:\n```\n## Checks\n```\nNone: docs only.'))).ok,
+    ).toBe(true);
   });
 
   it('ADR0076 the section ends at the next heading of the same or a higher level', () => {
