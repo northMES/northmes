@@ -118,6 +118,7 @@ const ciJobs = [
   'test',
   'react doctor',
   'fresh worktree',
+  'e2e',
   'pr title',
   'linked issue',
   'gate',
@@ -479,7 +480,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, pr title, linked issue and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue and gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -741,5 +742,26 @@ describe('workflows', () => {
     expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
       [],
     );
+  });
+
+  // The end-to-end specs run against the built server in role all, with Postgres from
+  // Testcontainers (docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md).
+  // pnpm e2e builds, installs Chromium and runs Playwright; after a failed run the job keeps
+  // Playwright's report with the traces of the failed tests.
+  it('E02-S08 the e2e job installs and runs pnpm e2e, and keeps the report after a failure', () => {
+    const { id, job } = jobNamed('e2e');
+    const steps = job.steps ?? [];
+
+    expect(id).toBe('e2e');
+    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
+      'actions/checkout',
+      'pnpm/action-setup',
+      'actions/setup-node',
+      'pnpm install --frozen-lockfile',
+      'pnpm e2e',
+      'actions/upload-artifact',
+    ]);
+    expect(steps.at(-1)?.if).toBe('failure()');
+    expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
   });
 });

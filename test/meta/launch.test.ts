@@ -58,8 +58,6 @@ describe('.claude/launch.json', () => {
         NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4567',
       },
     });
-    expect(plan.boardUrl).toBe(
-      'http://127.0.0.1:4567/plant-a/planning/board',
-    );
+    expect(plan.boardUrl).toBe('http://127.0.0.1:4567/plant-a/planning/board');
   });
 });
