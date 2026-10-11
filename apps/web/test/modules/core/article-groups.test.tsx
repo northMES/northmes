@@ -41,18 +41,30 @@ function group(code: string, name: string, version = 1, archivedAt: string | nul
 const flanges = group('FL', 'Flanges');
 const consumables = group('CO', 'Consumables');
 
-/** coreArticleGroups, with or without the archived ones, answered with these groups. */
+/**
+ * coreArticleGroups, with or without the archived ones, answered with these groups: the first
+ * page, or with `after` and `next` the page after that cursor and the cursor of the page after it.
+ */
 function groupsQuery(
   groups: readonly ReturnType<typeof group>[],
   includeArchived = false,
+  { after, next, totalCount }: { after?: string; next?: string; totalCount?: number } = {},
 ): MockLink.MockedResponse {
   return {
-    request: { query: CoreArticleGroups, variables: { includeArchived } },
+    request: {
+      query: CoreArticleGroups,
+      variables: after === undefined ? { includeArchived } : { includeArchived, after },
+    },
     result: {
       data: {
         coreArticleGroups: {
           __typename: 'ArticleGroupConnection',
-          totalCount: groups.length,
+          totalCount: totalCount ?? groups.length,
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: next !== undefined,
+            endCursor: next ?? null,
+          },
           edges: groups.map((node) => ({ __typename: 'ArticleGroupEdge', node })),
         },
       },
@@ -83,6 +95,36 @@ describe('article groups', () => {
       coreLinks.articleGroups.articleGroup({ plant, articleGroupId: flanges.id }).href,
     );
     expect(await screen.findByRole('link', { name: 'New article group' })).toBeDefined();
+  });
+
+  it('E06-S06 Article groups and the article form read every page of the groups, past the first', async () => {
+    const hoses = group('HO', 'Hoses');
+    renderCoreAt(coreLinks.articleGroups({ plant }).href, [
+      groupsQuery([consumables, flanges], false, { next: 'page-2', totalCount: 3 }),
+      groupsQuery([hoses], false, { after: 'page-2', totalCount: 3 }),
+      viewerQuery(['core.articleGroup:read']),
+    ]);
+
+    const table = await screen.findByRole('table', { name: 'Article groups' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+    expect(bodyRows(table).map((row) => row[0])).toEqual(['CO', 'FL', 'HO']);
+    cleanup();
+
+    renderCoreAt(coreLinks.articles.new({ plant }).href, [
+      groupsQuery([consumables, flanges], false, { next: 'page-2', totalCount: 3 }),
+      groupsQuery([hoses], false, { after: 'page-2', totalCount: 3 }),
+    ]);
+    const select = (await screen.findByRole('combobox', {
+      name: 'Article group (optional)',
+    })) as HTMLSelectElement;
+    await waitFor(() =>
+      expect([...select.options].map((option) => option.textContent)).toEqual([
+        'Choose a group',
+        'Consumables',
+        'Flanges',
+        'Hoses',
+      ]),
+    );
   });
 
   it('E06-S06 a Plant admin reads the article groups without New article group', async () => {

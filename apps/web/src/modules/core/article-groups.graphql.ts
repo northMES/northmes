@@ -11,19 +11,24 @@ export {
 /** An article group as the list and the article form's select read it. */
 export type ArticleGroupRow = CoreArticleGroupsQuery['coreArticleGroups']['edges'][number]['node'];
 
-// The company's article groups by code, the active ones and with includeArchived the archived ones
-// too: a company keeps a short list of groups, so one page of 100 holds them all. The Article
-// groups list and the article form's Article group select read it. pnpm gen writes its typed
-// document to article-groups.graphql.gen.ts; this block never runs.
+// One page of the company's article groups by code, the active ones and with includeArchived the
+// archived ones too, after the cursor `after`. useArticleGroups reads every page, for the Article
+// groups list and the article form's Article group select. pnpm gen writes its typed document to
+// article-groups.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
-    query CoreArticleGroups($includeArchived: Boolean) {
+    query CoreArticleGroups($includeArchived: Boolean, $after: String) {
       coreArticleGroups(
         first: 100
+        after: $after
         includeArchived: $includeArchived
         orderBy: [{ field: CODE, direction: ASC }]
       ) {
         totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         edges {
           node {
             id

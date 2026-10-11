@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useQuery } from '@apollo/client/react';
 import { stockUnit, stockUnitCodes, unitOf } from '@northmes/contracts';
 import {
   articleFields,
@@ -19,7 +18,7 @@ import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
-import { CoreArticleGroups } from '../../article-groups.graphql.ts';
+import { useArticleGroups } from '../../use-article-groups.ts';
 import { plantsChoiceField } from '../article-plants-field/index.ts';
 import { ArticleFormTranslations } from './article-form-translations.tsx';
 
@@ -129,7 +128,7 @@ export function ArticleForm({
   const { isDirty, isSubmitting } = form.formState;
   // The company's active groups; while they load, or when they fail, the select offers the
   // article's own group alone, and the article saves as before.
-  const { data } = useQuery(CoreArticleGroups, { variables: { includeArchived: false } });
+  const { data } = useArticleGroups(false);
   const active = data?.coreArticleGroups.edges.map(({ node }) => node) ?? [];
   const groupOptions = [
     ...active.map(({ id, name }) => ({ value: id, label: name })),

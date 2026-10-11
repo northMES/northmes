@@ -18,7 +18,7 @@ import {
   articleGroupList,
 } from '../api/article-group/queries/article-group.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
-import { type RequestScope, readIn, requestScope } from './access/request-scope.ts';
+import { type RequestScope, readAsRequest, readIn, requestScope } from './access/request-scope.ts';
 import { type ArticleGroupRecord, selectArticleGroups } from './article-group-record.ts';
 import { ArchiveArticleGroupCommand } from './commands/archive-article-group.handler.ts';
 import { CreateArticleGroupCommand } from './commands/create-article-group.handler.ts';
@@ -60,13 +60,13 @@ export class ArticleGroupService {
 
   /**
    * The article groups with these ids in one query, one entry per id in the order of the ids: the
-   * group, or null when none exists at the principal's read scopes. It checks no permission,
-   * because an article's field reads its group through it.
+   * group, or null when none exists where the request reads, in company settings too. It checks no
+   * permission, because an article's field reads its group through it.
    */
   async byIds(ids: readonly string[]): Promise<(ArticleGroupRecord | null)[]> {
     if (ids.length === 0) return [];
-    const groups = await this.db.transaction((tx) =>
-      selectArticleGroups(tx).where('id', 'in', ids).execute(),
+    const groups = await readAsRequest(() =>
+      this.db.transaction((tx) => selectArticleGroups(tx).where('id', 'in', ids).execute()),
     );
     const byId = new Map(groups.map((group) => [group.id, group]));
     return ids.map((id) => byId.get(id) ?? null);
