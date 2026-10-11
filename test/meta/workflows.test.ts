@@ -53,7 +53,7 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-const pullRequestChecks = ['pr title', 'linked issue'];
+const pullRequestChecks = ['pr title', 'linked issue', 'pr security'];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
@@ -105,6 +105,15 @@ const pullRequestCheckSteps = {
       PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
     },
   },
+  'pr security': {
+    run: 'node scripts/ci/pr-security.mjs',
+    env: {
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
 };
 
 // The jobs of the CI workflow, which GitHub shows as CI / <job name>. The main ruleset requires
@@ -121,6 +130,7 @@ const ciJobs = [
   'e2e',
   'pr title',
   'linked issue',
+  'pr security',
   'gate',
 ];
 
@@ -491,7 +501,7 @@ describe('workflows', () => {
 
   // A push to main has no pull request to check. An event value interpolated into a run script
   // could inject shell code, so the scripts read the pull request from environment variables.
-  it('CI / pr title and CI / linked issue run on pull requests only and read the pull request from environment variables', () => {
+  it('CI / pr title, CI / linked issue and CI / pr security run on pull requests only and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { job } = jobNamed(name);
 
@@ -502,7 +512,7 @@ describe('workflows', () => {
 
   // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
   // fix to the title or body.
-  it('CI / gate needs CI / pr title and CI / linked issue, and an edited pull request re-runs them', () => {
+  it('ADR0076 CI / gate needs CI / pr title, CI / linked issue and CI / pr security, and an edited pull request re-runs them', () => {
     const { workflow, id } = jobNamed('gate');
     const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
     const on = workflow.on as { pull_request?: { types?: string[] } };
@@ -527,7 +537,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security and gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();

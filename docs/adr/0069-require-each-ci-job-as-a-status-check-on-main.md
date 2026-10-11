@@ -79,7 +79,7 @@ ADR 0039 is accepted, so its text stays as it was.
 
 ### Confirmation
 
-* `test/meta/workflows.test.ts`: "the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, pr title, linked issue and gate". It fails on a renamed, added or removed job, so the change that makes it pass names the ruleset edit.
+* `test/meta/workflows.test.ts`: "the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security and gate". It fails on a renamed, added or removed job, so the change that makes it pass names the ruleset edit.
 * `test/meta/workflows.test.ts`: "no two workflows share a job name" and "no job name starts with its workflow name and a slash".
 * `test/meta/workflows.test.ts`: "CI / test runs the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg", "CI / gate needs every other job in its workflow" and "CI / gate runs after a failed, cancelled or skipped job and then fails".
 * `test/meta/workflows.test.ts`: "the react doctor job runs with --no-telemetry", "the react doctor job scans apps/web, every modules/*/web and packages/web-sdk", "the react doctor job copies its findings into the job summary, also after a failed scan" and "neither pnpm check nor pnpm check:full runs react-doctor".

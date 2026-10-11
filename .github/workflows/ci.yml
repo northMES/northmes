@@ -253,6 +253,27 @@ jobs:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
+  # ADR 0076: every pull request body has a Security note, filled in.
+  pr-security:
+    name: pr security
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-security.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
   # so CI / gate always runs and fails itself instead. On a pull request every job it needs runs,
   # so a skipped one fails it too; a push to main skips only the pull request checks and
@@ -262,7 +283,7 @@ jobs:
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue]
+    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue, pr-security]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that CI / gate needs did not pass
