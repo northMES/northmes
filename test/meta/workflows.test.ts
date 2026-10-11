@@ -378,14 +378,49 @@ describe('workflows', () => {
     }
   });
 
-  it('every job sets its own permissions: contents: read, and none for CI / gate, which reads no files', () => {
+  // OpenSSF Scorecard uploads its findings to code scanning and publishes the score behind the
+  // README badge through OIDC, so its one job also writes security events and mints an id token.
+  const scorecardPermissions = {
+    contents: 'read',
+    'security-events': 'write',
+    'id-token': 'write',
+  };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, and what Scorecard publishes with for its analysis', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
-      const expected = job.name === 'gate' ? {} : { contents: 'read' };
+      const expected =
+        job.name === 'gate'
+          ? {}
+          : job.name === 'Scorecard analysis'
+            ? scorecardPermissions
+            : { contents: 'read' };
       expect(job.permissions, where).toEqual(expected);
     }
+  });
+
+  // The score behind the badge stays current: weekly, after every push to main and when the
+  // branch protection changes. Scorecard refuses to publish from a workflow with workflow-level
+  // write permissions, env or defaults, so the workflow holds none of them.
+  it('E00-S04 scorecard.yml runs weekly, on push to main and on branch protection changes, and publishes its results', () => {
+    const scorecard = workflows().find(({ path }) => path.endsWith('/scorecard.yml'));
+    const raw = scorecard === undefined ? {} : (scorecard as unknown as Record<string, unknown>);
+    const job = Object.values(scorecard?.jobs ?? {})[0];
+    const analysis = job?.steps?.find(({ uses }) => uses?.startsWith('ossf/scorecard-action@'));
+
+    expect(scorecard, '.github/workflows/scorecard.yml').toBeDefined();
+    expect(triggersOf(scorecard?.on)).toEqual(
+      expect.arrayContaining(['schedule', 'push', 'branch_protection_rule']),
+    );
+    expect((scorecard?.on as { push?: { branches?: string[] } }).push?.branches).toEqual(['main']);
+    expect(scorecard?.permissions).toEqual({ contents: 'read' });
+    expect(raw.env, 'workflow env').toBeUndefined();
+    expect(raw.defaults, 'workflow defaults').toBeUndefined();
+    expect(Object.keys(scorecard?.jobs ?? {})).toHaveLength(1);
+    expect(job?.permissions).toEqual(scorecardPermissions);
+    expect(analysis?.with?.publish_results).toBe(true);
   });
 
   it('test jobs take runs-on from a repository variable', () => {
