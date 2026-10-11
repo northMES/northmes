@@ -151,6 +151,26 @@ describe('the articles list filters', () => {
     expect(screen.getByText('Source:').parentElement?.textContent).toBe('Source: NorthMES 3');
   });
 
+  it('E06-S06 a picked stock unit or source that no listed article has shows on its chip by its own name with 0', async () => {
+    renderCoreAt(`${coreLinks.articles({ plant }).href}?stockUnit=LITRE&source=Pyramid`, [
+      articlesQuery(
+        { ...firstPage, stockUnits: ['LITRE'], sources: ['Pyramid'] },
+        articlesPage([], { totalCount: 0 }),
+      ),
+      facetsQuery(
+        { stockUnits: ['LITRE'], sources: ['Pyramid'] },
+        { total: 0, units: [['PIECE', 4]], sources: [[null, 3]] },
+      ),
+    ]);
+
+    await waitFor(() =>
+      expect(screen.getByText('Source:').parentElement?.textContent).toBe('Source: Pyramid 0'),
+    );
+    expect(screen.getByText('Stock unit:').parentElement?.textContent).toBe(
+      'Stock unit: Litres (l) 0',
+    );
+  });
+
   it('E06-S06 Clear filters removes every filter and keeps the search', async () => {
     const user = userEvent.setup();
     const router = renderCoreAt(`${coreLinks.articles({ plant }).href}?q=slang&stockUnit=METRE`, [
