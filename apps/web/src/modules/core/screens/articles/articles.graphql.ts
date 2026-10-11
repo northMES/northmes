@@ -43,6 +43,8 @@ if (false) {
             id
             code
             name
+            stockUnit
+            source
             version
             archivedAt
             allPlants

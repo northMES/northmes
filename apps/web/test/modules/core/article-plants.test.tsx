@@ -18,6 +18,7 @@ import {
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChanged,
   lastChangedText,
   plant,
   plants,
@@ -111,10 +112,10 @@ describe("an article's plants", () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-500', 'Axle 20 mm', 'All plants', lastChangedText],
-        ['AX-510', 'Axle 25 mm', 'Plant A', lastChangedText],
-        ['AX-520', 'Axle 30 mm', 'Plant A, Plant B', lastChangedText],
-        ['AX-530', 'Axle 35 mm', '3 plants', lastChangedText],
+        ['AX-500', 'Axle 20 mm', 'All plants', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-510', 'Axle 25 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-520', 'Axle 30 mm', 'Plant A, Plant B', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-530', 'Axle 35 mm', '3 plants', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(
@@ -144,8 +145,13 @@ describe("an article's plants", () => {
                 id: input.id,
                 code: input.code,
                 name: input.name,
+                stockUnit: 'PIECE',
+                note: null,
+                source: null,
                 version: 1,
                 archivedAt: null,
+                createdAt: lastChanged,
+                updatedAt: lastChanged,
                 allPlants: true,
                 plants: [],
               },
@@ -163,6 +169,7 @@ describe("an article's plants", () => {
     ).toBe('false');
     await user.type(screen.getByRole('textbox', { name: 'Article number' }), 'BR-900');
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Wall bracket 90 mm');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Stock unit' }), 'Pieces (pcs)');
     await user.click(within(plantsSection).getByRole('radio', { name: 'All plants' }));
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
@@ -223,8 +230,8 @@ describe("an article's plants", () => {
       } as MockLink.MockedResponse,
     ]);
 
-    const identity = await screen.findByRole('region', { name: 'Identity' });
-    await waitFor(() => expect(within(identity).getByText('Plant A')).toBeDefined());
+    const origin = await screen.findByRole('region', { name: 'Origin' });
+    await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
     const plantsSection = await screen.findByRole('region', { name: 'Plants' });
     await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
     await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
@@ -233,7 +240,7 @@ describe("an article's plants", () => {
     expect(sent).toEqual([
       { id: axle.id, expectedVersion: 3, allPlants: false, plants: ['plant-a', 'plant-b'] },
     ]);
-    await waitFor(() => expect(within(identity).getByText('Plant A, Plant B')).toBeDefined());
+    await waitFor(() => expect(within(origin).getByText('Plant A, Plant B')).toBeDefined());
   });
 
   it("ADR0073-W2 an article's page shows a Plant admin the plants but no Plants section", async () => {
@@ -243,8 +250,8 @@ describe("an article's plants", () => {
       plantAdmin(),
     ]);
 
-    const identity = await screen.findByRole('region', { name: 'Identity' });
-    await waitFor(() => expect(within(identity).getByText('Plant A')).toBeDefined());
+    const origin = await screen.findByRole('region', { name: 'Origin' });
+    await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
     expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
   });
   it('ADR0073-W2 a Plant admin gets Edit and Archive on an article of Plant A alone, and neither on one of Plant A and Plant B or of All plants', async () => {
@@ -283,7 +290,14 @@ describe("an article's plants", () => {
         request: {
           query: CoreUpdateArticle,
           variables: {
-            input: { id: shared.id, expectedVersion: 1, code: 'AX-500', name: 'Axle 22 mm' },
+            input: {
+              id: shared.id,
+              expectedVersion: 1,
+              code: 'AX-500',
+              name: 'Axle 22 mm',
+              stockUnit: 'PIECE',
+              note: '',
+            },
           },
         },
         result: forbiddenAnswer('coreUpdateArticle'),
@@ -336,6 +350,7 @@ describe("an article's plants", () => {
     await user.click(plantA);
     await user.type(screen.getByRole('textbox', { name: 'Article number' }), 'BR-902');
     await user.type(screen.getByRole('textbox', { name: 'Name' }), 'Wall bracket');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Stock unit' }), 'Pieces (pcs)');
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to save the article' });
@@ -346,7 +361,7 @@ describe("an article's plants", () => {
     expect(document.activeElement).toBe(plantA);
   });
 
-  it('ADR0073-W2 New article lists a missing number, a missing name and a missing plant in one save', async () => {
+  it('ADR0073-W2 New article lists a missing number, a missing name, a missing stock unit and a missing plant in one save', async () => {
     const user = userEvent.setup();
     renderCoreAt(coreLinks.articles.new({ plant }).href, [assigner(), companiesQuery()]);
 
@@ -354,7 +369,7 @@ describe("an article's plants", () => {
     await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant A' }));
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
-    const summary = await screen.findByRole('group', { name: 'Fix 3 fields to save the article' });
+    const summary = await screen.findByRole('group', { name: 'Fix 4 fields to save the article' });
     expect(
       within(summary).getByRole('link', { name: 'Choose at least one plant, or All plants.' }),
     ).toBeDefined();

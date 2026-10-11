@@ -60,8 +60,9 @@ describe('core article operations', () => {
       case 'get':
         return { id };
       case 'create':
-      case 'upsert':
         return { id: randomUUIDv7(), code: code(), name: 'Nut' };
+      case 'upsert':
+        return { id: randomUUIDv7(), code: code(), name: 'Nut', source: 'Pyramid' };
       case 'update':
         return { id, expectedVersion: 1, code: code(), name: 'Bolt M8' };
       case 'setPlants':

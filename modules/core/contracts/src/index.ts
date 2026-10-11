@@ -3,7 +3,10 @@
 // forms, validators and plugins read without Nest or React.
 export {
   archiveArticle,
+  articleClassification,
   articleFields,
+  articleNote,
+  articleSource,
   createArticle,
   restoreArticle,
   setArticlePlants,

@@ -103,10 +103,14 @@ describe('the operation runner with core', () => {
         id,
         code: number,
         name: 'Bolt',
+        stockUnit: 'PIECE',
+        note: null,
+        source: null,
         allPlants: false,
         plants: expect.arrayContaining([place.helSlug, place.stoSlug]),
         version: 1,
         archivedAt: null,
+        createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
         updatedAt: '2026-10-09T08:15:00.000Z',
       },
     });
@@ -229,12 +233,12 @@ describe('the operation runner with core', () => {
 
     const created = await run(
       'core.upsertArticle',
-      { id: randomUUIDv7(), code: number, name: 'Bolt' },
+      { id: randomUUIDv7(), code: number, name: 'Bolt', source: 'Pyramid' },
       { headers },
     );
     const again = await run(
       'core.upsertArticle',
-      { id: randomUUIDv7(), code: number, name: 'Bolt' },
+      { id: randomUUIDv7(), code: number, name: 'Bolt', source: 'Pyramid' },
       { headers },
     );
 
@@ -352,7 +356,7 @@ describe('the operation runner with core', () => {
     );
     const upserted = await run(
       'core.upsertArticle',
-      { id: randomUUIDv7(), code: code(), name: 'Bolt', companyId: b.company },
+      { id: randomUUIDv7(), code: code(), name: 'Bolt', source: 'Pyramid', companyId: b.company },
       at,
     );
     const inB = await run(

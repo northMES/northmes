@@ -21,6 +21,16 @@ import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
 import { useArticle } from '../../use-article.tsx';
 import { CoreUpdateArticle } from './update-article.graphql.ts';
 
+/** The form's values for a saved article. */
+function formValues(article: Article) {
+  return {
+    code: article.code,
+    name: article.name,
+    stockUnit: article.stockUnit,
+    note: article.note ?? '',
+  };
+}
+
 interface EditArticleFormProps {
   readonly article: Article;
   readonly reload: () => Promise<Article | undefined>;
@@ -40,7 +50,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   // An archived article refuses changes, so its form offers Restore article (DE31).
   const [archived, setArchived] = useState(article.archivedAt !== null);
   const form = useZodForm(articleFormFields, {
-    defaultValues: { code: article.code, name: article.name },
+    defaultValues: formValues(article),
   });
   const [update] = useMutation(CoreUpdateArticle);
   const [restore] = useMutation(CoreRestoreArticle);
@@ -48,11 +58,19 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const save = async (values: ArticleValues) => {
     setConflict(false);
     setArchived(false);
-    const { code, name } = values;
+    const { code, name, stockUnit, note } = values;
     try {
       const { data } = await update({
         variables: {
-          input: { id: article.id, expectedVersion: expectedVersion.current, code, name },
+          input: {
+            id: article.id,
+            expectedVersion: expectedVersion.current,
+            code,
+            name,
+            stockUnit,
+            // An empty note clears it; a field the input leaves out keeps its value.
+            note: note ?? '',
+          },
         },
       });
       if (!data) return;
@@ -88,7 +106,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
       return;
     }
     if (saved === undefined) return;
-    form.reset({ code: saved.code, name: saved.name });
+    form.reset(formValues(saved));
     expectedVersion.current = saved.version;
     setConflict(false);
     // reset drops the field refs that setFocus reads until the next render, so focus goes by id.
@@ -140,10 +158,10 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
 }
 
 /**
- * The edit page of an article (design ui-222, DE7): the article form filled in, validated with
- * the identity fields of core.updateArticle. A saved change opens the article's page in place of the form
- * and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values and
- * offers Reload article (DE19), and an archived article keeps them and offers Restore article
+ * The edit page of an article (design ui-222, DE7): the article form filled in, validated with the
+ * identity fields of core.updateArticle. A saved change opens the article's page in place of the
+ * form and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values
+ * and offers Reload article (DE19), and an archived article keeps them and offers Restore article
  * (DE31).
  */
 export function EditArticleScreen() {
