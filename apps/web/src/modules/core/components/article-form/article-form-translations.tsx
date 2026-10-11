@@ -3,6 +3,7 @@ import { CircleAlert, Plus, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { dataLanguages, languageName } from '../../../../ui/lib/languages.ts';
 import { fieldProps, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
@@ -25,7 +26,8 @@ function RowError({ id, message }: { readonly id: string; readonly message: stri
 /**
  * The translations of the article's name (design ui-222, DE7): one row per translation with its
  * language, its text and Remove, then Add translation. Add translation moves focus to the new
- * row's language; Remove moves it to the next row's language, else to Add translation (NA13).
+ * row's language; Remove moves it to the next row's language, else to Add translation (NA13), and
+ * announces the translation it took out.
  */
 export function ArticleFormTranslations({ form }: { readonly form: ZodForm<ArticleFields> }) {
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'translations' });
@@ -98,6 +100,11 @@ export function ArticleFormTranslations({ form }: { readonly form: ZodForm<Artic
                     onClick={() => {
                       focusAfterRemove.current = index;
                       remove(index);
+                      announce(
+                        tag === ''
+                          ? `Translation ${number} removed`
+                          : `${languageName(tag)} translation removed`,
+                      );
                     }}
                   >
                     <X aria-hidden />

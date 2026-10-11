@@ -35,6 +35,15 @@ describe('localizedText', () => {
     expect(parsed).toEqual([{ field: 'name', locale: 'en-GB', text: 'Flange' }]);
   });
 
+  it('E06-S04 a locale takes any BCP 47 tag of a language, with a variant or an extension too', () => {
+    const parsed = translations.parse([
+      { field: 'name', locale: 'sl-rozaj', text: 'Prirobnica' },
+      { field: 'name', locale: 'en-us-u-ca-gregory', text: 'Flange' },
+    ]);
+
+    expect(parsed.map((each) => each.locale)).toEqual(['sl-rozaj', 'en-US-u-ca-gregory']);
+  });
+
   it('E06-S04 a locale that is no BCP 47 tag is refused on its locale', () => {
     const parsed = translations.safeParse([{ field: 'name', locale: 'english', text: 'Flange' }]);
 
