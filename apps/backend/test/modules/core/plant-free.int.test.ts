@@ -30,6 +30,7 @@ const releaseOnePlantFree = [
   'Mutation.coreUpdateRole',
   'Mutation.coreUpsertArticle',
   'Query.coreArticle',
+  'Query.coreArticleFacets',
   'Query.coreArticleGroup',
   'Query.coreArticleGroups',
   'Query.coreArticles',

@@ -32,6 +32,13 @@ type ArticleEdge {
   node: Article!
 }
 
+type ArticleFacets {
+  articleGroups: [ArticleGroupCount!]!
+  sources: [SourceCount!]!
+  stockUnits: [StockUnitCount!]!
+  total: Int!
+}
+
 type ArticleGroup {
   archivedAt: DateTime
   code: String!
@@ -46,6 +53,13 @@ type ArticleGroupConnection {
   edges: [ArticleGroupEdge!]!
   pageInfo: PageInfo!
   totalCount: Int!
+}
+
+type ArticleGroupCount {
+  code: String
+  count: Int!
+  id: ID
+  name: String
 }
 
 type ArticleGroupEdge {
@@ -323,6 +337,27 @@ type Query {
     companyId: ID
     id: ID!
   ): Article
+  coreArticleFacets(
+    """
+    Only the articles of these groups; a null element keeps those of no group.
+    """
+    articleGroupIds: [ID]
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    includeArchived: Boolean = false
+    search: String
+
+    """
+    Only the articles from these sources; a null element keeps those from NorthMES.
+    """
+    sources: [String]
+
+    """Only the articles that count in these stock units."""
+    stockUnits: [StockUnit!]
+  ): ArticleFacets!
   coreArticleGroup(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
@@ -346,6 +381,11 @@ type Query {
   ): ArticleGroupConnection!
   coreArticles(
     after: String
+
+    """
+    Only the articles of these groups; a null element keeps those of no group.
+    """
+    articleGroupIds: [ID]
     before: String
 
     """
@@ -357,6 +397,14 @@ type Query {
     last: Int
     orderBy: [ArticleOrderBy!]
     search: String
+
+    """
+    Only the articles from these sources; a null element keeps those from NorthMES.
+    """
+    sources: [String]
+
+    """Only the articles that count in these stock units."""
+    stockUnits: [StockUnit!]
 
     """Only the articles assigned to no plant and not to All plants."""
     unassigned: Boolean
@@ -452,6 +500,11 @@ enum SortDirection {
   DESC
 }
 
+type SourceCount {
+  count: Int!
+  source: String
+}
+
 """
 A unit of the unit catalog that an article counts its quantities in (ADR 0023).
 """
@@ -467,6 +520,11 @@ enum StockUnit {
 
   """Pieces (pcs)"""
   PIECE
+}
+
+type StockUnitCount {
+  count: Int!
+  stockUnit: StockUnit!
 }
 
 type Translation {

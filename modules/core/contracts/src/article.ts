@@ -173,15 +173,21 @@ export const setArticlePlants = defineCommandContract({
 });
 
 /**
- * The integration that sends an article through core.upsertArticle, such as Pyramid, trimmed, 1
- * to 64 characters. It names the integration until integration tokens, whose principal names it,
- * arrive (ADR 0073).
+ * The integration that sends an article through core.upsertArticle, such as Pyramid, trimmed, 1 to
+ * 64 characters, without a comma and other than NorthMES. It names the integration until
+ * integration tokens, whose principal names it, arrive (ADR 0073).
  */
 export const articleSource = z
   .string()
   .trim()
   .min(1, 'Name the integration that sends the article.')
-  .max(64, { error: tooLong('Source', 64) });
+  .max(64, { error: tooLong('Source', 64) })
+  // The articles list's source filter keeps its picks as a comma list, with NorthMES for the
+  // articles created in NorthMES (design ui-222, URL keys).
+  .refine(
+    (name) => !name.includes(',') && name.toLowerCase() !== 'northmes',
+    'Name the integration without a comma, and not NorthMES.',
+  );
 
 /**
  * Creates or changes the article with this article number in the company, for an ERP that pushes

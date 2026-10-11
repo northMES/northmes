@@ -136,6 +136,18 @@ const MAX_PAGE_SIZE = 100;
 const MAX_ORDER_BY_ENTRIES = 3;
 const MAX_SEARCH_LENGTH = 100;
 
+/**
+ * The trimmed search, or undefined when the call searches for nothing. A page and listed take the
+ * same search, so both refuse one longer than MAX_SEARCH_LENGTH.
+ */
+function trimmedSearch(search: string | null | undefined): string | undefined {
+  const text = search?.trim() || undefined;
+  if (text && text.length > MAX_SEARCH_LENGTH) {
+    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
+  }
+  return text;
+}
+
 /** A sort key of a page's order: a column with its type and direction. */
 interface Key extends SortColumn {
   readonly direction: SortDirection;
@@ -240,11 +252,7 @@ function planOf<SortField extends string>(
   const signature = signatureOf(keys);
   const cursor = backward ? args.before : args.after;
   const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
-  const search = args.search?.trim() || undefined;
-  if (search && search.length > MAX_SEARCH_LENGTH) {
-    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
-  }
-  return { backward, size, keys, signature, from, search };
+  return { backward, size, keys, signature, from, search: trimmedSearch(args.search) };
 }
 
 /**
@@ -269,8 +277,8 @@ function afterValues(keys: readonly Key[], values: readonly string[]) {
 /**
  * Declares a list: its GraphQL types and the SQL of its pages, with keyset paging over opaque
  * cursors (ADR 0016). This is the smallest kit the first list needs: orderBy over declared sort
- * fields, paging forward and backward, search and a totalCount that runs only when selected. Filter,
- * group by and aggregates come with the full kit.
+ * fields, paging forward and backward, search and a totalCount that runs only when selected.
+ * Filter, group by and aggregates come with the full kit.
  */
 export function defineList<const SortField extends string>(
   declaration: ListDeclaration<SortField>,
@@ -364,6 +372,26 @@ function listKit<const SortField extends string>(declaration: ListDeclaration<So
      */
     ConnectionResolver: ConnectionResolver as Type,
     /**
+     * The rows of the list without paging, as a page reads them: those that `query` selects, the
+     * active ones unless the call includes archived rows, and those that search matches. A module
+     * counts the values of its filter fields over them, so its counts and its pages agree.
+     */
+    listed<DB, TB extends keyof DB, Row>(
+      query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
+      {
+        search,
+        includeArchived,
+      }: { readonly search?: string | null; readonly includeArchived?: boolean | null },
+    ): (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row> {
+      const hideArchived = declaration.archivable === true && includeArchived !== true;
+      const text = trimmedSearch(search);
+      return (tx) => {
+        let rows = query(tx);
+        if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);
+        return text ? rows.where(matching(declaration.search, text)) : rows;
+      };
+    },
+    /**
      * Reads one page of the rows that `query` selects, in one ScopedDatabase transaction, as the
      * root field's arguments ask. `query` selects the node's columns, id among them, from the
      * list's table. A refused argument is BAD_USER_INPUT with core.list.bad_argument, and a cursor
@@ -375,14 +403,7 @@ function listKit<const SortField extends string>(declaration: ListDeclaration<So
       args: ListArgs<SortField>,
     ): Promise<Connection<Row>> {
       const { backward, size, keys, signature, from, search } = planOf(declaration, args);
-      // The rows of the list without paging: the active ones unless the call includes archived
-      // rows, and those that search matches.
-      const hideArchived = declaration.archivable === true && args.includeArchived !== true;
-      const listed = (tx: Transaction<DB>) => {
-        let rows = query(tx);
-        if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);
-        return search ? rows.where(matching(declaration.search, search)) : rows;
-      };
+      const listed = this.listed(query, { search, includeArchived: args.includeArchived });
       // A backward page reads the rows before the cursor in the opposite order, and reverses them.
       const readKeys = backward ? reversed(keys) : keys;
       const aliases = keys.map((_key, index) => `_nm_key_${index}`);

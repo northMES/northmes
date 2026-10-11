@@ -10,6 +10,7 @@ describe('schemaSdl', () => {
 
     expect(Object.keys(schema.getQueryType()?.getFields() ?? {})).toEqual([
       'coreArticle',
+      'coreArticleFacets',
       'coreArticleGroup',
       'coreArticleGroups',
       'coreArticles',

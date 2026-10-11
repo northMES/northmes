@@ -7,6 +7,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Archive, Plus } from 'lucide-react';
+import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
@@ -19,21 +20,29 @@ import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import {
   type ArticleListSearch,
+  articleFilterVariables,
   articleListSearch,
   articleListVariables,
   articlePageSize,
   firstPageOf,
+  isFiltered,
   nextPage,
   previousPage,
   searchedFor,
   showingArchived,
   sortedBy,
   sortOf,
+  unfiltered,
+  urlSearchOf,
 } from '../../article-list-search.ts';
 import { plantsLabel } from '../../article-plants.ts';
 import { readForbiddenState } from '../../no-access.tsx';
 import { usePlaces } from '../../use-places.ts';
+import { CoreArticleFacets } from './article-facets.graphql.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
+import { useHiddenColumns } from './articles-columns.ts';
+import { ArticlesFilterChips, ArticlesFilterMenus } from './articles-filters.tsx';
+import { ArticlesGrouped } from './articles-grouped.tsx';
 
 /** One page of the list, as CoreArticles answers it. */
 type ArticlesPage = CoreArticlesQuery['coreArticles'];
@@ -184,7 +193,7 @@ function listState({
   }
   if (page === undefined) return { status: 'loading' };
   if (page.totalCount > 0) return { status: 'ready' };
-  if (view.q !== undefined) {
+  if (view.q !== undefined || isFiltered(view)) {
     return {
       status: 'empty',
       title: 'No articles match these filters',
@@ -193,7 +202,7 @@ function listState({
         <Button
           variant="link"
           onClick={() => {
-            show(searchedFor(view, ''));
+            show(unfiltered(searchedFor(view, '')));
             document.getElementById(searchFieldId)?.focus();
           }}
         >
@@ -241,8 +250,17 @@ export function ArticlesScreen() {
   });
   const stale = page === undefined && shownPage !== undefined;
   const show = (next: ArticleListSearch) => {
-    navigate({ to: '.', search: next, replace: true });
+    navigate({ to: '.', search: urlSearchOf(next), replace: true });
   };
+  // The counts of the filter menus, the chips and the groups, for the view's search and filters;
+  // while new counts load, the menus keep the ones before.
+  const facetsQuery = useQuery(CoreArticleFacets, {
+    variables: articleFilterVariables(view),
+    skip: forbidden,
+    fetchPolicy: 'cache-and-network',
+  });
+  const facets = facetsQuery.data?.coreArticleFacets ?? facetsQuery.previousData?.coreArticleFacets;
+  const [hiddenColumns, setHiddenColumns] = useHiddenColumns();
   const state = listState({
     forbidden,
     companyName: places.company?.name ?? 'the company',
@@ -258,53 +276,83 @@ export function ArticlesScreen() {
       actions={forbidden ? undefined : <NewArticleLink />}
       toolbar={
         forbidden ? undefined : (
-          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-            <SearchField
-              id={searchFieldId}
-              label="Search articles"
-              value={view.q ?? ''}
-              onSearch={(text) => show(searchedFor(view, text))}
-              className="w-full max-w-sm"
-            />
-            <Field orientation="horizontal" className="w-auto">
-              <Checkbox
-                id={showArchivedId}
-                checked={view.archived !== undefined}
-                onCheckedChange={(shown) => show(showingArchived(view, shown))}
-              />
-              <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
-            </Field>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <SearchField
+                  id={searchFieldId}
+                  label="Search articles"
+                  value={view.q ?? ''}
+                  onSearch={(text) => show(searchedFor(view, text))}
+                  className="w-full max-w-sm"
+                />
+                <ArticlesFilterMenus view={view} facets={facets} show={show} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Field orientation="horizontal" className="w-auto">
+                  <Checkbox
+                    id={showArchivedId}
+                    checked={view.archived !== undefined}
+                    onCheckedChange={(shown) => show(showingArchived(view, shown))}
+                  />
+                  <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+                </Field>
+                <ColumnsMenu
+                  columns={columns.map(({ id, header }) => ({
+                    id,
+                    label: header,
+                    alwaysShown: id === 'code',
+                  }))}
+                  hidden={hiddenColumns}
+                  onChange={setHiddenColumns}
+                />
+              </div>
+            </div>
+            <ArticlesFilterChips view={view} facets={facets} show={show} />
           </div>
         )
       }
       state={state}
       busy={stale}
     >
-      <DataTable
-        label="Articles"
-        columns={columns}
-        rows={shownPage?.edges.map(({ node }) => node) ?? []}
-        getRowId={(article) => article.id}
-        loading={shownPage === undefined}
-        stale={stale}
-        sort={sortOf(view)}
-        onSortChange={(sort) => show(sortedBy(view, sort))}
-        paging={{
-          page: view.page ?? 1,
-          pageSize: articlePageSize,
-          totalCount: shownPage?.totalCount,
-          hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
-          hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
-          onPrevious: () => {
-            const startCursor = page?.pageInfo.startCursor;
-            if (startCursor) show(previousPage(view, startCursor));
-          },
-          onNext: () => {
-            const endCursor = page?.pageInfo.endCursor;
-            if (endCursor) show(nextPage(view, endCursor));
-          },
-        }}
-      />
+      {view.group === undefined ? (
+        <DataTable
+          label="Articles"
+          columns={columns}
+          rows={shownPage?.edges.map(({ node }) => node) ?? []}
+          hiddenColumns={hiddenColumns}
+          getRowId={(article) => article.id}
+          loading={shownPage === undefined}
+          stale={stale}
+          sort={sortOf(view)}
+          onSortChange={(sort) => show(sortedBy(view, sort))}
+          paging={{
+            page: view.page ?? 1,
+            pageSize: articlePageSize,
+            totalCount: shownPage?.totalCount,
+            hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
+            hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
+            onPrevious: () => {
+              const startCursor = page?.pageInfo.startCursor;
+              if (startCursor) show(previousPage(view, startCursor));
+            },
+            onNext: () => {
+              const endCursor = page?.pageInfo.endCursor;
+              if (endCursor) show(nextPage(view, endCursor));
+            },
+          }}
+        />
+      ) : (
+        <ArticlesGrouped
+          key={JSON.stringify([view.group, articleFilterVariables(view), view.sort])}
+          view={view}
+          facets={facets}
+          columns={columns}
+          hiddenColumns={hiddenColumns}
+          sort={sortOf(view)}
+          onSortChange={(sort) => show(sortedBy(view, sort))}
+        />
+      )}
     </PageFrame>
   );
 }
