@@ -22,7 +22,7 @@ A's notes list its costs. Adding a widget takes three steps: Edit layout, Add wi
 
 ## What the two additions change
 
-### Position and Size in the settings Sheet
+### Position and size in the settings sheet
 
 A3 already draws the Size radio group in A's Sheet, and the draft build notes in frame G take it from option B. The new part is Position. Frame G's build notes leave it out of the Sheet: "No Position: the Sheet's overlay covers the grid, so moves stay with the move button and Widget actions." Frame R gives the reasons, and the spec page resolves them:
 
