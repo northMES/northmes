@@ -47,7 +47,14 @@ function updateOf(
     request: {
       query: CoreUpdateArticle,
       variables: {
-        input: { id: axle.id, stockUnit: 'PIECE', note: '', translations: [], ...input },
+        input: {
+          id: axle.id,
+          stockUnit: 'PIECE',
+          note: '',
+          translations: [],
+          articleGroupId: '',
+          ...input,
+        },
       },
     },
     result,

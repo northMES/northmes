@@ -41,12 +41,12 @@ function withoutCoreSegment(parent: AnyRoute, at: number) {
 }
 
 /**
- * The core module's routes under the shell's $plant route: the articles, and People in plant
- * settings (ADR 0066). The top route is pathless, so core's pages sit at the plant root, as
- * /plant-a/articles, and the old URLs with core in them lead there (ADR 0074). Each route takes its
- * path from its entry in coreLinks, so a path is written once, in the link manifest (ADR 0062); a
- * list and a record's page are the index routes of their entries. Each search definition sits on
- * its route, never in the lazy screens.ts, from which the screens load.
+ * The core module's routes under the shell's $plant route: the articles, the article groups, and
+ * People in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
+ * root, as /plant-a/articles, and the old URLs with core in them lead there (ADR 0074). Each route
+ * takes its path from its entry in coreLinks, so a path is written once, in the link manifest (ADR
+ * 0062); a list and a record's page are the index routes of their entries. Each search definition
+ * sits on its route, never in the lazy screens.ts, from which the screens load.
  */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: coreModuleId });
@@ -79,6 +79,25 @@ export function coreRoutes(plantRoute: PlantRoute) {
     getParentRoute: () => articleRoute,
     path: linkEntry(coreLinks.articles.article.edit).path,
     component: lazyScreen('EditArticleScreen'),
+  });
+  const articleGroupsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.articleGroups).path,
+  });
+  const articleGroupListRoute = createRoute({
+    getParentRoute: () => articleGroupsRoute,
+    path: '/',
+    component: lazyScreen('ArticleGroupsScreen'),
+  });
+  const newArticleGroupRoute = createRoute({
+    getParentRoute: () => articleGroupsRoute,
+    path: linkEntry(coreLinks.articleGroups.new).path,
+    component: lazyScreen('NewArticleGroupScreen'),
+  });
+  const articleGroupRoute = createRoute({
+    getParentRoute: () => articleGroupsRoute,
+    path: linkEntry(coreLinks.articleGroups.articleGroup).path,
+    component: lazyScreen('ArticleGroupScreen'),
   });
   const peopleRoute = createRoute({
     getParentRoute: () => coreRoute,
@@ -114,6 +133,11 @@ export function coreRoutes(plantRoute: PlantRoute) {
       articleListRoute,
       newArticleRoute,
       articleRoute.addChildren([articleDetailRoute, editArticleRoute]),
+    ]),
+    articleGroupsRoute.addChildren([
+      articleGroupListRoute,
+      newArticleGroupRoute,
+      articleGroupRoute,
     ]),
     peopleRoute.addChildren([
       peopleListRoute,

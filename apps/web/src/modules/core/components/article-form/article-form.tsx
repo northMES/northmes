@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { stockUnit, stockUnitCodes, unitOf } from '@northmes/contracts';
-import { articleFields, articleNote, articleTranslations } from '@northmes/core-contracts';
+import {
+  articleFields,
+  articleGroupId,
+  articleNote,
+  articleTranslations,
+} from '@northmes/core-contracts';
 import type { ReactNode } from 'react';
 import { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
@@ -12,6 +18,7 @@ import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
+import { useArticleGroups } from '../../use-article-groups.ts';
 import { plantsChoiceField } from '../article-plants-field/index.ts';
 import { ArticleFormTranslations } from './article-form-translations.tsx';
 
@@ -29,6 +36,7 @@ export const articleFormFields = articleFields.extend({
   stockUnit: z.string().pipe(stockUnit),
   note: articleNote,
   translations: articleTranslations,
+  articleGroupId,
   plants: plantsChoiceField.optional(),
 });
 
@@ -56,6 +64,11 @@ export interface ArticleFormProps {
   readonly archived?: { readonly onRestore: () => Promise<void> };
   /** Further field groups after Identity, such as Plants on a new article (ADR 0073). */
   readonly children?: ReactNode;
+  /**
+   * The group the article has, which the select offers also when it was archived since, so an
+   * edit keeps it.
+   */
+  readonly currentGroup?: { readonly id: string; readonly name: string } | null;
 }
 
 /** The stock units as the Stock unit select offers them, in the catalog's order. */
@@ -97,11 +110,11 @@ function Summary({
 
 /**
  * The article form (design ui-222, DE5 and DE7): the error summary, the Identity field group with
- * Article number, Name and the name's translations, the Classification group with Stock unit and
- * Note, any further field groups, then the sticky Save bar with Save article and Cancel. The
- * summary takes focus after each failed save, and the typed values stay (WCAG 3.3.7); after a
- * version conflict it says so and offers Reload article (DE19), and for an archived article it
- * offers Restore article (DE31). Leaving the form with changes asks first.
+ * Article number, Name and the name's translations, the Classification group with Article group,
+ * Stock unit and Note, any further field groups, then the sticky Save bar with Save article and
+ * Cancel. The summary takes focus after each failed save, and the typed values stay (WCAG 3.3.7);
+ * after a version conflict it says so and offers Reload article (DE19), and for an archived article
+ * it offers Restore article (DE31). Leaving the form with changes asks first.
  */
 export function ArticleForm({
   form,
@@ -110,8 +123,19 @@ export function ArticleForm({
   conflict,
   archived,
   children,
+  currentGroup,
 }: ArticleFormProps) {
   const { isDirty, isSubmitting } = form.formState;
+  // The company's active groups; while they load, or when they fail, the select offers the
+  // article's own group alone, and the article saves as before.
+  const { data } = useArticleGroups(false);
+  const active = data?.coreArticleGroups.edges.map(({ node }) => node) ?? [];
+  const groupOptions = [
+    ...active.map(({ id, name }) => ({ value: id, label: name })),
+    ...(currentGroup && !active.some(({ id }) => id === currentGroup.id)
+      ? [{ value: currentGroup.id, label: currentGroup.name }]
+      : []),
+  ];
   return (
     <form noValidate onSubmit={form.handleSubmit(onSave)} className="flex max-w-190 flex-col gap-4">
       <Summary form={form} conflict={conflict} archived={archived} />
@@ -126,6 +150,14 @@ export function ArticleForm({
         <ArticleFormTranslations form={form} />
       </FormSection>
       <FormSection title="Classification">
+        <SelectField
+          label="Article group"
+          optional
+          placeholder="Choose a group"
+          options={groupOptions}
+          className="max-w-xs"
+          {...fieldProps(form, 'articleGroupId')}
+        />
         <SelectField
           label="Stock unit"
           placeholder="Choose a unit"

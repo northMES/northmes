@@ -74,3 +74,15 @@ export function requestScope(permission: string, asked?: string): RequestScope {
 export function readIn<Result>(scope: RequestScope, fn: () => Result): Result {
   return runAs(scope.principal, fn);
 }
+
+/**
+ * Runs fn so that its transactions read where the request reads. At a plant, that is where the
+ * principal reads already. Without a plant, in company settings, the principal reads nothing until
+ * a read names its company, so fn reads at every company of the principal: for a field that reads
+ * a row by an id its parent, read in its company, holds, such as an article's group.
+ */
+export function readAsRequest<Result>(fn: () => Result): Result {
+  const principal = currentPrincipal();
+  if (!principal || principal.plantId) return fn();
+  return runAs({ ...principal, ...inCompanies(principal, () => true) }, fn);
+}

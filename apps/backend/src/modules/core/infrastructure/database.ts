@@ -37,6 +37,27 @@ export interface ArticleTable {
    * JSON string, since it would write a JavaScript array as a Postgres array.
    */
   translations: ColumnType<Translation[], string | undefined, string>;
+  /** The article group the article picked, of its company, or null. */
+  article_group_id: string | null;
+}
+
+/** core.article_group: an article group of a company, a register of the company. */
+export interface ArticleGroupTable {
+  id: Generated<string>;
+  /** The company's node, the same as company_id. */
+  scope_id: string;
+  company_id: string;
+  version: Generated<number>;
+  code: string;
+  /** lower(code), which the unique index of the code within the company holds. */
+  code_key: GeneratedAlways<string>;
+  name: string;
+  /** The translations of the name (ADR 0053), written as a JSON string. */
+  translations: ColumnType<Translation[], string | undefined, string>;
+  archived_at: Date | null;
+  created_at: Generated<Date>;
+  /** When the group last changed, its creation included; an update trigger moves it on. */
+  updated_at: Generated<Date>;
 }
 
 /** core.article_plant: a plant an article is assigned to (ADR 0073). */
@@ -141,6 +162,7 @@ export interface RoleAssignmentTable {
 export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.article_plant': ArticlePlantTable;
+  'core.article_group': ArticleGroupTable;
   'core.scope': ScopeTable;
   'core.company': CompanyTable;
   'core.plant': PlantTable;

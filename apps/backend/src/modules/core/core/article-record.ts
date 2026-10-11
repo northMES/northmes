@@ -4,11 +4,20 @@ import { type Kysely, sql, type Transaction } from 'kysely';
 import type { CoreDatabase } from '../infrastructure/database.ts';
 import type { PlantRecord } from './company.service.ts';
 
+/** An article's group as the article's record names it. */
+export interface ArticleGroupRef {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+}
+
 /** An article as core's service hands it out. */
 export interface ArticleRecord {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  /** The article group the article picked, or null. */
+  readonly articleGroup: ArticleGroupRef | null;
   /** The translations of the name, in the order they were saved (ADR 0053). */
   readonly translations: readonly Translation[];
   /** The stock unit's code in the unit catalog, in which the article's quantities are counted. */
@@ -55,10 +64,22 @@ const plantsColumn = sql<PlantRecord[]>`coalesce((
    where ap.article_id = ${sql.ref('core.article.id')}
 ), '[]'::jsonb)`.as('plants');
 
+/** The group of the article on the row being read, as a JSON object, or null. */
+const articleGroupColumn = sql<ArticleGroupRef | null>`(
+  select jsonb_build_object('id', g.id, 'code', g.code, 'name', g.name)
+    from core.article_group g
+   where g.id = ${sql.ref('core.article.article_group_id')}
+)`.as('articleGroup');
+
 /**
- * The articles that a query on core.article reads, as ArticleRecords: the article's columns and
- * its plants, in one statement. Row-level security limits it to the principal's read scopes.
+ * The articles that a query on core.article reads, as ArticleRecords: the article's columns, its
+ * plants and its group, in one statement. Row-level security limits it to the principal's read
+ * scopes.
  */
 export function selectArticles(db: Kysely<CoreDatabase> | Transaction<CoreDatabase>) {
-  return db.selectFrom('core.article').select(recordColumns).select(plantsColumn);
+  return db
+    .selectFrom('core.article')
+    .select(recordColumns)
+    .select(plantsColumn)
+    .select(articleGroupColumn);
 }

@@ -78,6 +78,12 @@ export interface ArticleNode {
     readonly locale: string;
     readonly text: string;
   }[];
+  readonly articleGroup: {
+    readonly __typename: 'ArticleGroup';
+    readonly id: string;
+    readonly code: string;
+    readonly name: string;
+  } | null;
   readonly stockUnit: 'PIECE' | 'METRE' | 'KILOGRAM' | 'LITRE';
   readonly note: string | null;
   readonly source: string | null;
@@ -150,6 +156,7 @@ export function article(
     code,
     name,
     translations: [],
+    articleGroup: null,
     stockUnit: 'PIECE',
     note: null,
     source: null,

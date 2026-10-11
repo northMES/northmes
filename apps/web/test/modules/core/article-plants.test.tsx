@@ -112,10 +112,10 @@ describe("an article's plants", () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-500', 'Axle 20 mm', 'All plants', 'pcs', 'NorthMES', lastChangedText],
-        ['AX-510', 'Axle 25 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
-        ['AX-520', 'Axle 30 mm', 'Plant A, Plant B', 'pcs', 'NorthMES', lastChangedText],
-        ['AX-530', 'Axle 35 mm', '3 plants', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-500', 'Axle 20 mm', 'All plants', '', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-510', 'Axle 25 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-520', 'Axle 30 mm', 'Plant A, Plant B', '', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-530', 'Axle 35 mm', '3 plants', '', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(
@@ -145,6 +145,8 @@ describe("an article's plants", () => {
                 id: input.id,
                 code: input.code,
                 name: input.name,
+                translations: [],
+                articleGroup: null,
                 stockUnit: 'PIECE',
                 note: null,
                 source: null,
@@ -298,6 +300,7 @@ describe("an article's plants", () => {
               stockUnit: 'PIECE',
               note: '',
               translations: [],
+              articleGroupId: '',
             },
           },
         },

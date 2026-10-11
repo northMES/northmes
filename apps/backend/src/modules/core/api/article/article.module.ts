@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Module } from '@nestjs/common';
+import { ArticleGroupServiceModule } from '../../core/article-group-service.module.ts';
 import { ArticleServiceModule } from '../../core/article-service.module.ts';
 import { ArticleOperations } from './article.operations.ts';
+import { ArticleFieldResolver } from './fields/article.field.resolver.ts';
 import { ArchiveArticleMutation } from './mutations/archive-article.mutation.ts';
 import { CreateArticleMutation } from './mutations/create-article.mutation.ts';
 import { RestoreArticleMutation } from './mutations/restore-article.mutation.ts';
@@ -16,9 +18,10 @@ import { ArticleQueryResolver } from './queries/article.query.resolver.ts';
  * operations, which the operation runner serves (ADR 0073).
  */
 @Module({
-  imports: [ArticleServiceModule],
+  imports: [ArticleServiceModule, ArticleGroupServiceModule],
   providers: [
     ArticleQueryResolver,
+    ArticleFieldResolver,
     articleList.ConnectionResolver,
     CreateArticleMutation,
     UpdateArticleMutation,

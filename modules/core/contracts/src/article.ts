@@ -51,6 +51,19 @@ export const articleTranslations = translations.superRefine((list, context) => {
   });
 });
 
+/** A uuid, as z.uuid() checks it. */
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The article group an article picks, an active group of its company, by id; an empty value picks
+ * none, so a form removes the group by sending it empty.
+ */
+export const articleGroupId = z
+  .string()
+  .trim()
+  .refine((id) => id === '' || uuid.test(id), 'Choose an active article group of the company.')
+  .transform((id) => (id === '' ? null : id.toLowerCase()));
+
 /**
  * The fields that classify an article, which create, update and upsert share (design ui-222,
  * DE7): its stock unit, a code of the unit catalog in which its quantities are counted (ADR 0023),
@@ -64,11 +77,12 @@ export const articleClassification = z.object({
 
 /**
  * The fields of an article that create, update and upsert take beside its identity: its name's
- * translations, its stock unit and its note. Each may be left out, which keeps an existing
- * article's value; an empty list of translations removes them.
+ * translations, its article group, its stock unit and its note. Each may be left out, which keeps
+ * an existing article's value; an empty list of translations removes them.
  */
 const articleDetails = articleClassification.extend({
   translations: articleTranslations.optional(),
+  articleGroupId: articleGroupId.optional(),
 });
 
 /** The refusal of All plants together with a list of plants. */

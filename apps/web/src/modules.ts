@@ -83,7 +83,10 @@ export const shellModules: readonly ShellModule[] = [
       {
         label: 'Master data',
         icon: 'Database',
-        links: [{ label: 'Articles', icon: 'Package', link: coreLinks.articles }],
+        links: [
+          { label: 'Articles', icon: 'Package', link: coreLinks.articles },
+          { label: 'Article groups', icon: 'Tags', link: coreLinks.articleGroups },
+        ],
       },
       {
         label: 'People',

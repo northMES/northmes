@@ -7,6 +7,7 @@ type AccessScope {
 type Article {
   allPlants: Boolean!
   archivedAt: DateTime
+  articleGroup: ArticleGroup
   code: String!
   createdAt: DateTime!
   id: ID!
@@ -31,6 +32,38 @@ type ArticleEdge {
   node: Article!
 }
 
+type ArticleGroup {
+  archivedAt: DateTime
+  code: String!
+  id: ID!
+  name: String!
+  translations: [Translation!]!
+  updatedAt: DateTime!
+  version: Int!
+}
+
+type ArticleGroupConnection {
+  edges: [ArticleGroupEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ArticleGroupEdge {
+  cursor: String!
+  node: ArticleGroup!
+}
+
+input ArticleGroupOrderBy {
+  direction: SortDirection = ASC
+  field: ArticleGroupSortField!
+}
+
+enum ArticleGroupSortField {
+  CODE
+  NAME
+  UPDATED_AT
+}
+
 input ArticleOrderBy {
   direction: SortDirection = ASC
   field: ArticleSortField!
@@ -46,6 +79,11 @@ type Company {
   id: ID!
   name: String!
   plants: [Plant!]!
+}
+
+input CoreArchiveArticleGroupInput {
+  expectedVersion: Int!
+  id: ID!
 }
 
 input CoreArchiveArticleInput {
@@ -68,8 +106,17 @@ input CoreBlockUserInput {
   reason: String
 }
 
+input CoreCreateArticleGroupInput {
+  code: String!
+  companyId: String
+  id: ID!
+  name: String!
+  translations: [TranslationInput!]
+}
+
 input CoreCreateArticleInput {
   allPlants: Boolean
+  articleGroupId: String
   code: String!
   companyId: String
   id: ID!
@@ -115,6 +162,11 @@ input CoreResetPasswordInput {
   reason: String
 }
 
+input CoreRestoreArticleGroupInput {
+  expectedVersion: Int!
+  id: ID!
+}
+
 input CoreRestoreArticleInput {
   expectedVersion: Int!
   id: ID!
@@ -133,7 +185,16 @@ input CoreUnblockUserInput {
   reason: String
 }
 
+input CoreUpdateArticleGroupInput {
+  code: String!
+  expectedVersion: Int!
+  id: ID!
+  name: String!
+  translations: [TranslationInput!]
+}
+
 input CoreUpdateArticleInput {
+  articleGroupId: String
   code: String!
   expectedVersion: Int!
   id: ID!
@@ -153,6 +214,7 @@ input CoreUpdateRoleInput {
 
 input CoreUpsertArticleInput {
   allPlants: Boolean
+  articleGroupId: String
   code: String!
   companyId: String
   expectedVersion: Int
@@ -182,18 +244,22 @@ type EffectivePermission {
 
 type Mutation {
   coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
+  coreArchiveArticleGroup(input: CoreArchiveArticleGroupInput!): ArticleGroup!
   coreAssignRole(input: CoreAssignRoleInput!): RoleAssignment!
   coreBlockUser(input: CoreBlockUserInput!): User!
   coreCreateArticle(input: CoreCreateArticleInput!): Article!
+  coreCreateArticleGroup(input: CoreCreateArticleGroupInput!): ArticleGroup!
   coreCreateRole(input: CoreCreateRoleInput!): Role!
   coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
   coreDeleteRole(input: CoreDeleteRoleInput!): Role!
   coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
   coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
+  coreRestoreArticleGroup(input: CoreRestoreArticleGroupInput!): ArticleGroup!
   coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
+  coreUpdateArticleGroup(input: CoreUpdateArticleGroupInput!): ArticleGroup!
   coreUpdateRole(input: CoreUpdateRoleInput!): Role!
   coreUpsertArticle(input: CoreUpsertArticleInput!): Article!
   planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
@@ -257,6 +323,27 @@ type Query {
     companyId: ID
     id: ID!
   ): Article
+  coreArticleGroup(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    id: ID!
+  ): ArticleGroup
+  coreArticleGroups(
+    after: String
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+    first: Int = 25
+    includeArchived: Boolean = false
+    last: Int
+    orderBy: [ArticleGroupOrderBy!]
+    search: String
+  ): ArticleGroupConnection!
   coreArticles(
     after: String
     before: String

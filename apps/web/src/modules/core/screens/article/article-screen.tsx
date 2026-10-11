@@ -98,9 +98,9 @@ function Definitions({
 
 /**
  * The article's sections (design ui-222, DE1): Identity with its number and name, Classification
- * with its stock unit, its Note, and Origin with its plants (ADR 0073), where it came from, and
- * when it was created and last changed. The "By" lines of Created and Last changed come with the
- * audit trail (#443).
+ * with its article group and stock unit, its Note, and Origin with its plants (ADR 0073), where it
+ * came from, and when it was created and last changed. The "By" lines of Created and Last changed
+ * come with the audit trail (#443).
  */
 function ArticleSections({ article }: { readonly article: Article | undefined }) {
   const loaded = <T,>(read: (loaded: Article) => T) =>
@@ -118,6 +118,13 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
       <Section id="article-classification" title="Classification">
         <Definitions
           rows={[
+            [
+              'Article group',
+              <Value
+                key="group"
+                text={loaded(({ articleGroup }) => articleGroup?.name ?? 'No article group')}
+              />,
+            ],
             [
               'Stock unit',
               <Value key="unit" text={loaded(({ stockUnit }) => unitOf(stockUnit).label)} />,
