@@ -31,6 +31,7 @@
     "e2e": "pnpm build && playwright install chromium && playwright test"
   },
   "devDependencies": {
+    "@argos-ci/playwright": "catalog:",
     "@axe-core/playwright": "catalog:",
     "@biomejs/biome": "catalog:",
     "@northmes/backend": "workspace:*",
