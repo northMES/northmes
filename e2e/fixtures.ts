@@ -8,6 +8,7 @@ import pg from 'pg';
 import { readSecret } from '../scripts/stack/config.mjs';
 import { freePort } from '../scripts/stack/ports.mjs';
 import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
+import { checkA11y } from './a11y.ts';
 import { stackEnv } from './stack-env.ts';
 
 export { expect };
@@ -140,10 +141,8 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
       await page.waitForURL((url) => url.pathname === new URL(href, url).pathname);
     });
   },
-  checkA11y: async ({ page }, use) => {
-    await use(async () => {
-      await page.title();
-    });
+  checkA11y: async ({ page }, use, testInfo) => {
+    await use((state) => checkA11y(page, testInfo, state));
   },
   newArticle: async ({ page, signIn }, use) => {
     await use(async () => {
