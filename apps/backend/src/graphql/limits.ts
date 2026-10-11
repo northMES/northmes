@@ -1,4 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { maxAliasesPlugin } from '@escape.tech/graphql-armor-max-aliases';
+import { maxDepthPlugin } from '@escape.tech/graphql-armor-max-depth';
+import { maxTokensPlugin } from '@escape.tech/graphql-armor-max-tokens';
+import { HttpStatus } from '@nestjs/common';
+import { DomainError, toGraphQLError } from '@northmes/sdk/errors';
+import type { ExecutionArgs } from 'graphql';
+import type { Plugin } from 'graphql-yoga';
+import { operationCost } from './cost.ts';
 
 /** The limits every GraphQL request must stay within (plan 05, audit finding B4). */
 export interface GraphqlLimits {
@@ -29,3 +37,85 @@ export const graphqlLimits: GraphqlLimits = {
   maxCost: 20_000,
   defaultListSize: 25,
 };
+
+/** The refusal of an operation that costs more than the limit. */
+export function tooCostly(cost: number, maxCost: number): DomainError {
+  return new DomainError({
+    code: 'core.operation_too_costly',
+    status: HttpStatus.BAD_REQUEST,
+    message: `The operation costs ${cost}, more than the limit of ${maxCost}. Ask for fewer rows with first, or fewer nested lists.`,
+    details: { cost, maxCost },
+  });
+}
+
+/** A JSON answer with one error and `status`, for a request refused before GraphQL reads it. */
+function refusal(fetchAPI: { Response: typeof Response }, status: number, message: string) {
+  return new fetchAPI.Response(JSON.stringify({ errors: [{ message }] }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+/**
+ * Refuses a POST whose body is over `maxBytes`, for every content type, before anything reads it:
+ * 413 when Content-Length says so, and 411 when the body has no length. Express's JSON parser caps
+ * only application/json, and Yoga reads the other types itself.
+ */
+export function bodyLimitPlugin(maxBytes: number): Plugin {
+  return {
+    onRequest({ request, endResponse, fetchAPI }) {
+      if (request.method !== 'POST') return;
+      const length = request.headers.get('content-length');
+      if (length === null) {
+        endResponse(refusal(fetchAPI, 411, 'The request body needs a Content-Length.'));
+      } else if (!/^\d+$/.test(length) || Number(length) > maxBytes) {
+        endResponse(
+          refusal(fetchAPI, 413, `The request body is over the limit of ${maxBytes} bytes.`),
+        );
+      }
+    },
+  };
+}
+
+/**
+ * Refuses an operation whose cost (operationCost) is over `maxCost` before any field runs. It runs
+ * at execution, after validation, because the cost of a list depends on the variables.
+ */
+export function costLimitPlugin({ maxCost, defaultListSize }: GraphqlLimits): Plugin {
+  const refusalOf = (args: ExecutionArgs) => {
+    const cost = operationCost(args.schema, args.document, {
+      operationName: args.operationName,
+      variables: args.variableValues,
+      defaultListSize,
+    });
+    if (cost <= maxCost) return undefined;
+    const error = tooCostly(cost, maxCost);
+    return { errors: [toGraphQLError(error) ?? error] };
+  };
+  return {
+    onExecute({ args, setResultAndStopExecution }) {
+      const result = refusalOf(args);
+      if (result) setResultAndStopExecution(result);
+    },
+    onSubscribe({ args, setResultAndStopExecution }) {
+      const result = refusalOf(args);
+      if (result) setResultAndStopExecution(result);
+    },
+  };
+}
+
+/**
+ * The plugins that hold every request within `limits`, in the order they act: the body cap before
+ * the body is read, the token limit while it parses, the depth and alias limits while it
+ * validates, and the cost limit before it runs. The limits are named in their errors, so a client
+ * developer knows what to change.
+ */
+export function limitPlugins(limits: GraphqlLimits = graphqlLimits): Plugin[] {
+  return [
+    bodyLimitPlugin(limits.maxBodyBytes),
+    maxTokensPlugin({ n: limits.maxTokens }),
+    maxDepthPlugin({ n: limits.maxDepth }),
+    maxAliasesPlugin({ n: limits.maxAliases }),
+    costLimitPlugin(limits),
+  ];
+}
