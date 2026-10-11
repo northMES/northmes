@@ -811,4 +811,30 @@ describe('workflows', () => {
     expect(steps.at(-1)?.if).toBe('failure()');
     expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
   });
+
+  // The Argos token reaches only the step that runs the e2e specs, as an environment variable, so
+  // no other job or step reads it and a fork's pull request, which gets no secrets, uploads nothing
+  // (docs/adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md).
+  it('ADR0077 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step', () => {
+    const token = 'secrets.ARGOS_TOKEN';
+    const reads = (value: unknown) => JSON.stringify(value ?? {}).includes(token);
+    const readers = workflows().flatMap((workflow) => [
+      ...(reads({ ...workflow, jobs: undefined }) ? [workflow.path] : []),
+      ...Object.entries(workflow.jobs ?? {}).flatMap(([id, job]) => [
+        ...(reads({ ...job, steps: undefined }) ? [`${workflow.path} ${id}`] : []),
+        ...(job.steps ?? []).flatMap((step) => {
+          if (!reads(step)) return [];
+          const where = `${workflow.path} ${id} ${step.run ?? step.uses}`;
+          if (reads({ ...step, env: undefined })) return [`${where} outside env`];
+          return Object.entries(step.env ?? {})
+            .filter(([, value]) => value.includes(token))
+            .map(([name, value]) => `${where} env ${name}=${value}`);
+        }),
+      ]),
+    ]);
+
+    expect(readers).toEqual([
+      `.github/workflows/ci.yml e2e pnpm e2e env ARGOS_TOKEN=\${{ ${token} }}`,
+    ]);
+  });
 });
