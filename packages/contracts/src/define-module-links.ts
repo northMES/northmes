@@ -45,12 +45,14 @@ export type LinkBuilder<Pattern extends string> = (
 export interface LinkEntry<Pattern extends string = string> {
   /**
    * The entry's path below its parent entry, as the manifest declares it. A manifest's path is its
-   * module id, below /$plant, and so is its settings section's, below /settings/$companyId.
+   * module id, below /$plant, and so is its settings section's, below /settings/$companyId. Core's
+   * manifest and its settings section have an empty path (ADR 0074).
    */
   readonly path: string;
   /**
    * The entry's route pattern, which starts with /$plant/<moduleId>, or with
-   * /settings/$companyId/<moduleId> in the settings section.
+   * /settings/$companyId/<moduleId> in the settings section. Core's start with /$plant and
+   * /settings/$companyId.
    */
   readonly pattern: Pattern;
 }
@@ -103,20 +105,44 @@ export interface ModuleLinkSections<Settings extends LinkEntryDefinitions | unde
   readonly settings: Settings;
 }
 
-/** The settings section of a manifest that declares one: a manifest of its own with that root. */
+/**
+ * The settings section of a manifest that declares one: a manifest of its own whose pages sit below
+ * the route pattern Root.
+ */
 type SettingsLinks<
-  ModuleId extends string,
+  Root extends string,
   Settings extends LinkEntryDefinitions | undefined,
 > = Settings extends LinkEntryDefinitions
-  ? {
-      readonly settings: ModuleLinks<`/settings/$companyId/${ModuleId}`, Settings> &
-        LinkNode<`/settings/$companyId/${ModuleId}`>;
-    }
+  ? { readonly settings: ModuleLinks<Root, Settings> & LinkNode<Root> }
   : unknown;
 
 /** The builders of the entries of a manifest below `pattern`, with its entry. */
 function manifest(path: string, pattern: string, entries: LinkEntryDefinitions) {
   return Object.assign(builders(pattern, entries), { [entryKey]: { path, pattern } });
+}
+
+/** Where a manifest's pages sit: its plant pages and its settings section. */
+interface ManifestRoots {
+  /** The manifest's path below /$plant, and below /settings/$companyId for its settings. */
+  readonly path: string;
+  readonly plant: string;
+  readonly settings: string;
+}
+
+/** The manifest of a module's entries and settings section, with its pages at roots. */
+function linksAt(
+  name: string,
+  roots: ManifestRoots,
+  entries: LinkEntryDefinitions,
+  sections: ModuleLinkSections<LinkEntryDefinitions | undefined> | undefined,
+) {
+  const links = manifest(roots.path, roots.plant, entries);
+  if (sections?.settings === undefined) return links;
+  if ('settings' in entries) {
+    throw new Error(`Module ${name} has an entry named settings and a settings section`);
+  }
+  const settings = manifest(roots.path, roots.settings, sections.settings);
+  return Object.assign(links, { settings });
 }
 
 /**
@@ -126,7 +152,7 @@ function manifest(path: string, pattern: string, entries: LinkEntryDefinitions) 
  * functions, so code without a router (server code, MCP tools, end-to-end specs) can call them.
  * A settings section becomes the manifest's `settings`, whose builders start with
  * /settings/$companyId/<moduleId> and take a company id instead of a plant (ADR 0066). An entry
- * named settings beside a settings section throws.
+ * named settings beside a settings section throws. Core's manifest comes from defineCoreLinks.
  */
 export function defineModuleLinks<
   const ModuleId extends string,
@@ -138,14 +164,32 @@ export function defineModuleLinks<
   sections?: ModuleLinkSections<Settings>,
 ): ModuleLinks<`/$plant/${ModuleId}`, Entries> &
   LinkNode<`/$plant/${ModuleId}`> &
-  SettingsLinks<ModuleId, Settings> {
-  const links = manifest(moduleId, `/$plant/${moduleId}`, entries);
-  if (sections?.settings === undefined) return links as never;
-  if ('settings' in entries) {
-    throw new Error(`Module ${moduleId} has an entry named settings and a settings section`);
-  }
-  const settings = manifest(moduleId, `/settings/$companyId/${moduleId}`, sections.settings);
-  return Object.assign(links, { settings }) as never;
+  SettingsLinks<`/settings/$companyId/${ModuleId}`, Settings> {
+  const roots = {
+    path: moduleId,
+    plant: `/$plant/${moduleId}`,
+    settings: `/settings/$companyId/${moduleId}`,
+  };
+  return linksAt(moduleId, roots, entries, sections) as never;
+}
+
+/**
+ * Core's link manifest (ADR 0074). Core is the platform's own module, so its pages sit at the plant
+ * root, /$plant/<entry>, and its settings section at the company settings root,
+ * /settings/$companyId/<entry>, without the module id. linkEntry reads an empty path for the
+ * manifest and for its settings section. Otherwise it builds as defineModuleLinks does.
+ */
+export function defineCoreLinks<
+  const Entries extends LinkEntryDefinitions,
+  const Settings extends LinkEntryDefinitions | undefined = undefined,
+>(
+  entries: Entries,
+  sections?: ModuleLinkSections<Settings>,
+): ModuleLinks<'/$plant', Entries> &
+  LinkNode<'/$plant'> &
+  SettingsLinks<'/settings/$companyId', Settings> {
+  const roots = { path: '', plant: '/$plant', settings: '/settings/$companyId' };
+  return linksAt('core', roots, entries, sections) as never;
 }
 
 type Params = Readonly<Record<string, string>>;

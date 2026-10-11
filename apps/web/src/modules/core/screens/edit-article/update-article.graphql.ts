@@ -17,8 +17,21 @@ if (false) {
         id
         code
         name
+        translations {
+          field
+          locale
+          text
+        }
+        articleGroup {
+          id
+          code
+          name
+        }
+        stockUnit
+        note
         version
         archivedAt
+        updatedAt
       }
     }
   `;

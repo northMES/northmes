@@ -37,14 +37,19 @@ export function companyOf(principal: Pick<Principal, 'scopes'>, scopeId: string)
 /**
  * The scope of the running request, when its principal holds `permission` there (ADR 0010). At a
  * plant, the principal must hold it at the plant, and a companyId, when one is given, must be the
- * plant's company. Without a plant, the request is in company settings (ADR 0066): it must name a
- * company, where the principal must hold the permission, and its reads run with the read scopes of
- * that company and its plants. Anything else is core.forbidden.
+ * plant's company. Without a plant, the request is in company settings (ADR 0066), or acts at the
+ * company its principal names (ADR 0073): it must name a company, where the principal must hold the
+ * permission, and its reads run with the read scopes of that company and its plants. A companyId
+ * other than the company the principal acts at, and anything else, is core.forbidden.
  */
-export function requestScope(permission: string, companyId?: string): RequestScope {
+export function requestScope(permission: string, asked?: string): RequestScope {
   const principal = currentPrincipal();
   if (!principal) throw forbidden(`Only a signed-in user can use ${permission}`);
   const { plantId } = principal;
+  if (asked !== undefined && principal.companyId !== undefined && asked !== principal.companyId) {
+    throw forbidden(`Company ${asked} is not the company the request acts at`);
+  }
+  const companyId = asked ?? principal.companyId;
   if (plantId) {
     if (!can(principal, permission, plantId)) {
       throw forbidden(`You need ${permission} at plant ${plantId}`);
@@ -68,4 +73,16 @@ export function requestScope(permission: string, companyId?: string): RequestSco
 /** Runs fn with the scope sets of `scope`, so its transactions read where the scope reads. */
 export function readIn<Result>(scope: RequestScope, fn: () => Result): Result {
   return runAs(scope.principal, fn);
+}
+
+/**
+ * Runs fn so that its transactions read where the request reads. At a plant, that is where the
+ * principal reads already. Without a plant, in company settings, the principal reads nothing until
+ * a read names its company, so fn reads at every company of the principal: for a field that reads
+ * a row by an id its parent, read in its company, holds, such as an article's group.
+ */
+export function readAsRequest<Result>(fn: () => Result): Result {
+  const principal = currentPrincipal();
+  if (!principal || principal.plantId) return fn();
+  return runAs({ ...principal, ...inCompanies(principal, () => true) }, fn);
 }

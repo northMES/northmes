@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Copy, Info, Pencil, Users } from 'lucide-react';
+import { Link, useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
+import { CircleCheck, Copy, Info, Pencil, Users } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
+import { Alert, AlertDescription } from '../../../../ui/primitives/alert.tsx';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { rolePageSearch } from '../../access-search.ts';
 import { permissionPhrase } from '../../no-access.tsx';
 import { groupsOfKeys } from '../../permission-groups.ts';
 import { permissionLine } from '../../permission-names.ts';
 import { isCompanyAdmin, roleKind } from '../../role-kind.ts';
+import { roleSavedOf } from '../../role-saved.ts';
 import { type Places, useCompanyId, usePlaces } from '../../use-places.ts';
 import { type Role, useRole } from '../../use-role.tsx';
 import { useViewer } from '../../use-viewer.ts';
@@ -162,8 +164,9 @@ function HoldersAt({
 
 /**
  * Who holds the role at the company and at each of its plants (design core-304, RO21 and RO25),
- * read only: a card per place, then a note that People in each plant's settings lists the plant's
- * holders and that roles are given and taken on a person's Access tab.
+ * read only: a card per place, then a note that roles are given and taken on a person's Access tab.
+ * Company settings show every plant of the company, so the design's line about the holders at the
+ * other plants does not apply here.
  */
 function HoldersTab({ role, places }: { readonly role: Role; readonly places: Places }) {
   const companyId = useCompanyId() ?? '';
@@ -190,8 +193,7 @@ function HoldersTab({ role, places }: { readonly role: Role; readonly places: Pl
       ))}
       <p className="flex items-start gap-2 rounded-lg bg-info-subtle px-4 py-3 text-sm">
         <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-info" />
-        People in each plant's settings lists who holds a role at that plant. To add or remove a
-        role, open the person and use the Access tab.
+        To add or remove a role, open the person and use the Access tab.
       </p>
     </div>
   );
@@ -208,6 +210,8 @@ export function RoleScreen() {
   const navigate = useNavigate();
   const search = rolePageSearch(useSearch({ strict: false }));
   const { role, state, forbidden } = useRole();
+  // The note that repeats the announcement of a save, which Edit role left in the history (RO41).
+  const saved = roleSavedOf(useRouterState({ select: ({ location }) => location.state }));
   const places = usePlaces();
   const viewer = useViewer();
   // The API checks core.role:manage at the company (ADR 0010).
@@ -260,6 +264,12 @@ export function RoleScreen() {
       }
       state={state}
     >
+      {role !== undefined && saved !== undefined && (
+        <Alert role="note" className="mb-4 border-success bg-success-subtle text-foreground">
+          <CircleCheck aria-hidden className="text-success" />
+          <AlertDescription className="text-foreground">{saved}</AlertDescription>
+        </Alert>
+      )}
       {role !== undefined && (
         <DetailTabs
           label={role.name}

@@ -5,9 +5,33 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
 export type CoreCreateArticleInput = {
+  readonly allPlants?: boolean | null | undefined;
+  readonly articleGroupId?: string | null | undefined;
   readonly code: string;
+  readonly companyId?: string | null | undefined;
   readonly id: string | number;
   readonly name: string;
+  readonly note?: string | null | undefined;
+  readonly plants?: ReadonlyArray<string> | null | undefined;
+  readonly stockUnit?: string | null | undefined;
+  readonly translations?: ReadonlyArray<TranslationInput> | null | undefined;
+};
+
+/** A unit of the unit catalog that an article counts its quantities in (ADR 0023). */
+export type StockUnit =
+  /** Kilograms (kg) */
+  | 'KILOGRAM'
+  /** Litres (l) */
+  | 'LITRE'
+  /** Metres (m) */
+  | 'METRE'
+  /** Pieces (pcs) */
+  | 'PIECE';
+
+export type TranslationInput = {
+  readonly field: string;
+  readonly locale: string;
+  readonly text: string;
 };
 
 export type CoreCreateArticleMutationVariables = Exact<{
@@ -15,7 +39,7 @@ export type CoreCreateArticleMutationVariables = Exact<{
 }>;
 
 
-export type CoreCreateArticleMutation = { readonly coreCreateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: string | null } };
+export type CoreCreateArticleMutation = { readonly coreCreateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly stockUnit: StockUnit, readonly note: string | null, readonly source: string | null, readonly version: number, readonly archivedAt: string | null, readonly createdAt: string, readonly updatedAt: string, readonly allPlants: boolean, readonly translations: ReadonlyArray<{ readonly __typename: 'Translation', readonly field: string, readonly locale: string, readonly text: string }>, readonly articleGroup: { readonly __typename: 'ArticleGroup', readonly id: string, readonly code: string, readonly name: string } | null, readonly plants: ReadonlyArray<{ readonly __typename: 'Plant', readonly id: string, readonly slug: string, readonly name: string }> } };
 
 
-export const CoreCreateArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CoreCreateArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoreCreateArticleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreCreateArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}}]}}]}}]} as unknown as DocumentNode<CoreCreateArticleMutation, CoreCreateArticleMutationVariables>;
+export const CoreCreateArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CoreCreateArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoreCreateArticleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreCreateArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"translations"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"field"}},{"kind":"Field","name":{"kind":"Name","value":"locale"}},{"kind":"Field","name":{"kind":"Name","value":"text"}}]}},{"kind":"Field","name":{"kind":"Name","value":"articleGroup"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"stockUnit"}},{"kind":"Field","name":{"kind":"Name","value":"note"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"allPlants"}},{"kind":"Field","name":{"kind":"Name","value":"plants"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"slug"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]} as unknown as DocumentNode<CoreCreateArticleMutation, CoreCreateArticleMutationVariables>;

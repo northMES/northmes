@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { Link } from '@tanstack/react-router';
-import { Lock, Plus } from 'lucide-react';
-import { useId } from 'react';
+import { Link, useParams } from '@tanstack/react-router';
+import { Building2, Factory, Lock, Plus, Shield } from 'lucide-react';
+import { type ReactNode, useId } from 'react';
+import { useIsMobile } from '../../../../ui/lib/use-mobile.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '../../../../ui/primitives/empty.tsx';
 import {
   Table,
   TableBody,
@@ -13,10 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import { RemoveRole } from '../../components/remove-role/index.ts';
+import { RemoveRole, roleLoss } from '../../components/remove-role/index.ts';
 import { permissionPhrase } from '../../no-access.tsx';
-import { permissionLine } from '../../permission-names.ts';
-import { type Places, useCompanyId } from '../../use-places.ts';
+import { roleKind } from '../../role-kind.ts';
+import { CoreRoles } from '../../roles.graphql.ts';
+import { type Places, useCompanyId, useCompanyVariables } from '../../use-places.ts';
 import type { User, UserAssignment } from '../../use-user.tsx';
 import type { Viewer } from '../../use-viewer.ts';
 
@@ -46,50 +56,6 @@ function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
   return assignment.role?.permissions.every(holds) ?? true;
 }
 
-/**
- * The user's other assignments that keep a permission where the assignment applies: a role at the
- * company grants at each of its plants, so only the user's other roles at the company keep its
- * permissions at every plant. A role at a plant is kept by the user's other roles at that plant or
- * at the company.
- */
-function keepersOf(assignment: UserAssignment, user: User): UserAssignment[] {
-  const atCompany = assignment.scope.kind === 'COMPANY';
-  return user.roleAssignments
-    .filter(({ id }) => id !== assignment.id)
-    .filter(
-      ({ scope }) => scope.kind === 'COMPANY' || (!atCompany && scope.id === assignment.scope.id),
-    );
-}
-
-/** The permissions the user loses with the assignment: those no keeper grants. */
-function lostWith(assignment: UserAssignment, user: User): string[] {
-  const kept = new Set(keepersOf(assignment, user).flatMap(({ role }) => role?.permissions ?? []));
-  return (assignment.role?.permissions ?? []).filter((key) => !kept.has(key));
-}
-
-/** "a", "a, and b" or "a, b, and c": permission lines in running text, which may hold an "and". */
-function linesOf(items: readonly string[]): string {
-  if (items.length <= 1) return items.join('');
-  return `${items.slice(0, -1).join(', ')}, and ${items.at(-1)}`;
-}
-
-/**
- * What each keeper still lets the user do of the removed role's permissions (AS7): "Viewer at Acme
- * AB still lets Sara Nyberg read production orders and the planning board, and read job orders."
- */
-function keptSentences(assignment: UserAssignment, user: User): string[] {
-  const removed = assignment.role?.permissions ?? [];
-  return keepersOf(assignment, user).flatMap(({ role, scope }) => {
-    const kept = removed.filter((key) => role?.permissions.includes(key));
-    if (role == null || kept.length === 0) return [];
-    const lines = kept.map((key) => {
-      const line = permissionLine(key);
-      return `${line.charAt(0).toLowerCase()}${line.slice(1)}`;
-    });
-    return [`${role.name} at ${scope.name} still lets ${user.name} ${linesOf(lines)}.`];
-  });
-}
-
 /** The id of a role link in the table, which takes focus after the row above it was removed. */
 function roleLinkId(assignment: UserAssignment): string {
   return `user-role-${assignment.id}`;
@@ -99,19 +65,227 @@ function roleLinkId(assignment: UserAssignment): string {
 const addRoleId = 'user-add-role';
 
 /**
- * The Roles card of the Access tab in company settings (design core-304, AS1, AS11, AS21 and NO5,
- * ADR 0066): the user's roles at the company and at each of its plants, the company's first, each
- * with Remove for a reader who may remove it, or the line that names who can. Add role leads to
- * the Add role page. A reader without core.role:read sees No access in each Role cell, and Remove
- * is named by the place only.
+ * The role of an assignment: its name with its kind under it, or No access (NO5). The name links to
+ * the role's page in company settings for a reader who holds core.role:read at the company, which
+ * that page needs; for anyone else, such as a Plant admin on a person's page, it is plain text.
+ */
+function RoleCell({
+  assignment,
+  companyName,
+  kindOf,
+  companyId,
+  linked,
+}: {
+  readonly assignment: UserAssignment;
+  readonly companyName: string;
+  /** The kind of a role by its id, once the company's roles loaded. */
+  readonly kindOf: (roleId: string) => string | undefined;
+  /** The company whose settings hold the role's page. */
+  readonly companyId: string;
+  /** The reader may open the role's page in company settings. */
+  readonly linked: boolean;
+}) {
+  const { role } = assignment;
+  if (role === null) {
+    return (
+      <span className="flex items-center gap-1 text-muted-foreground">
+        <Lock aria-hidden className="size-3.5" />
+        No access
+        <span className="sr-only">
+          . Roles need {permissionPhrase('core.role:read')} at {companyName}.
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-col">
+      {linked ? (
+        <Link
+          id={roleLinkId(assignment)}
+          to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
+          className="text-link underline underline-offset-2 hover:no-underline"
+        >
+          {role.name}
+        </Link>
+      ) : (
+        // Focus lands here after Remove of the row above, so the name takes focus by script.
+        <span id={roleLinkId(assignment)} tabIndex={-1} className="self-start">
+          {role.name}
+        </span>
+      )}
+      <span className="text-xs text-muted-foreground">{kindOf(role.id)}</span>
+    </span>
+  );
+}
+
+/** The place of an assignment with its icon: a factory for a plant, a building for the company. */
+function WhereCell({
+  assignment,
+  places,
+  userId,
+}: {
+  readonly assignment: UserAssignment;
+  readonly places: Places;
+  readonly userId: string;
+}) {
+  const Icon = assignment.scope.kind === 'COMPANY' ? Building2 : Factory;
+  // In company settings a plant links to the person's page in that plant's settings.
+  const plant =
+    places.plant === undefined && assignment.scope.kind === 'PLANT'
+      ? places.plants.find(({ id }) => id === assignment.scope.id)
+      : undefined;
+  return (
+    <span className="flex items-center gap-2">
+      <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      {plant === undefined ? (
+        whereOf(assignment, places)
+      ) : (
+        <Link
+          to={coreLinks.people.person({ plant: plant.slug, userId }).href}
+          className="text-link underline underline-offset-2 hover:no-underline"
+        >
+          {whereOf(assignment, places)}
+        </Link>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The Roles card of the Access tab in company settings (design core-304, AS1, AS11, AS21, NO5
+ * and NO13, ADR 0066): the user's roles at the plants and at the company, the plant roles first,
+ * each with its kind and its place, and Remove for a reader who may remove it, or the line that
+ * names who can. Add role leads to the Add role page. A user without a role gets the empty state
+ * that says so. At 320 px each role is a card. A reader without core.role:read sees No access in
+ * each Role cell, and Remove is named by the place only.
  */
 export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesProps) {
-  const companyId = useCompanyId() ?? '';
+  const companyId = useCompanyId() ?? places.company?.id ?? '';
+  const { plant: plantSlug } = useParams({ strict: false });
   const headingId = useId();
+  const isMobile = useIsMobile();
+  // A role's kind comes from the company's roles, which the roles pages read too.
+  const companyRoles = useQuery(CoreRoles, {
+    variables: useCompanyVariables(),
+    skip: rolesForbidden,
+  }).data?.coreRoles;
+  const kindOf = (roleId: string) => {
+    const role = companyRoles?.find(({ id }) => id === roleId);
+    return role === undefined ? undefined : roleKind(role);
+  };
   const companyName = places.company?.name ?? 'the company';
+  const linked = viewer.canAtCompany('core.role:read');
+  // In plant settings the page reads the plant and its company (design core-304, AS1).
+  const plantName = places.plant?.name;
   const canAdd =
     viewer.can('core.roleAssignment:manage') && viewer.can('core.role:read') && !rolesForbidden;
-  const assignments = user.roleAssignments;
+  // The plant roles first, then those of the company (AS1).
+  const assignments = [...user.roleAssignments].sort(
+    (a, b) => Number(a.scope.kind === 'COMPANY') - Number(b.scope.kind === 'COMPANY'),
+  );
+  const action = (assignment: UserAssignment, index: number) => {
+    const next = assignments[index + 1];
+    if (canRemove(assignment, viewer)) {
+      return (
+        <RemoveRole
+          person={user}
+          assignment={assignment}
+          {...roleLoss(assignment, user.roleAssignments, user.name)}
+          focusAfter={() =>
+            (next === undefined ? null : document.getElementById(roleLinkId(next))) ??
+            document.getElementById(addRoleId) ??
+            document.querySelector<HTMLElement>('h1')
+          }
+        />
+      );
+    }
+    return assignment.scope.kind === 'COMPANY' ? (
+      <span className="text-sm text-muted-foreground">
+        A company admin of {companyName} can remove it.
+      </span>
+    ) : null;
+  };
+  let body: ReactNode;
+  if (assignments.length === 0) {
+    body = (
+      <Empty className="gap-2 py-8">
+        <EmptyHeader>
+          <EmptyMedia className="size-10 rounded-full bg-muted text-muted-foreground">
+            <Shield aria-hidden className="size-5" />
+          </EmptyMedia>
+          <EmptyTitle>
+            <h3 className="text-sm font-semibold">
+              {plantName === undefined
+                ? `${user.name} holds no role at ${companyName} or its plants.`
+                : `${user.name} holds no role at ${plantName} or at ${companyName}.`}
+            </h3>
+          </EmptyTitle>
+          <EmptyDescription>
+            {plantName === undefined
+              ? `Add a role so that ${user.name} can work at ${companyName} and its plants.`
+              : `Add a role so that ${user.name} can work at ${plantName}.`}
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  } else if (isMobile) {
+    body = (
+      <ul aria-label={`Roles of ${user.name}`} className="flex flex-col gap-3">
+        {assignments.map((assignment, index) => (
+          <li
+            key={assignment.id}
+            className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm"
+          >
+            <RoleCell
+              assignment={assignment}
+              companyName={companyName}
+              kindOf={kindOf}
+              companyId={companyId}
+              linked={linked}
+            />
+            <WhereCell assignment={assignment} places={places} userId={user.id} />
+            <span className="self-start">{action(assignment, index)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  } else {
+    body = (
+      <Table>
+        <TableCaption className="sr-only">Roles of {user.name}</TableCaption>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead scope="col">Role</TableHead>
+            <TableHead scope="col">Where</TableHead>
+            <TableHead scope="col">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {assignments.map((assignment, index) => (
+            <TableRow key={assignment.id}>
+              <TableCell>
+                <RoleCell
+                  assignment={assignment}
+                  companyName={companyName}
+                  kindOf={kindOf}
+                  companyId={companyId}
+                  linked={linked}
+                />
+              </TableCell>
+              <TableCell>
+                <WhereCell assignment={assignment} places={places} userId={user.id} />
+              </TableCell>
+              <TableCell className="text-right whitespace-normal">
+                {action(assignment, index)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
   return (
     <section
       aria-labelledby={headingId}
@@ -123,13 +297,19 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
             Roles
           </h2>
           <p className="text-sm text-muted-foreground">
-            {user.name}'s roles at {companyName} and its plants.
+            {plantName === undefined
+              ? `${user.name}'s roles at ${companyName} and its plants.`
+              : `${user.name}'s roles that apply at ${plantName}.`}
           </p>
         </div>
         {canAdd && (
           <Link
             id={addRoleId}
-            to={coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href}
+            to={
+              plantSlug === undefined
+                ? coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href
+                : coreLinks.people.person.addRole({ plant: plantSlug, userId: user.id }).href
+            }
             className={buttonVariants({ variant: 'outline' })}
           >
             <Plus aria-hidden />
@@ -137,75 +317,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
           </Link>
         )}
       </div>
-      {assignments.length === 0 ? (
-        <p className="text-sm">
-          {user.name} holds no role at {companyName} or its plants.
-        </p>
-      ) : (
-        <Table>
-          <TableCaption className="sr-only">Roles of {user.name}</TableCaption>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead scope="col">Role</TableHead>
-              <TableHead scope="col">Where</TableHead>
-              <TableHead scope="col">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {assignments.map((assignment, index) => {
-              const next = assignments[index + 1];
-              return (
-                <TableRow key={assignment.id}>
-                  <TableCell>
-                    {assignment.role === null ? (
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Lock aria-hidden className="size-3.5" />
-                        No access
-                        <span className="sr-only">
-                          . Roles need {permissionPhrase('core.role:read')} at {companyName}.
-                        </span>
-                      </span>
-                    ) : (
-                      <Link
-                        id={roleLinkId(assignment)}
-                        to={
-                          coreLinks.settings.roles.role({ companyId, roleId: assignment.role.id })
-                            .href
-                        }
-                        className="text-link underline underline-offset-2 hover:no-underline"
-                      >
-                        {assignment.role.name}
-                      </Link>
-                    )}
-                  </TableCell>
-                  <TableCell>{whereOf(assignment, places)}</TableCell>
-                  <TableCell className="text-right">
-                    {canRemove(assignment, viewer) ? (
-                      <RemoveRole
-                        person={user}
-                        assignment={assignment}
-                        lost={lostWith(assignment, user)}
-                        kept={keptSentences(assignment, user)}
-                        focusAfter={() =>
-                          (next === undefined ? null : document.getElementById(roleLinkId(next))) ??
-                          document.getElementById(addRoleId) ??
-                          document.querySelector<HTMLElement>('h1')
-                        }
-                      />
-                    ) : assignment.scope.kind === 'COMPANY' ? (
-                      <span className="text-sm text-muted-foreground">
-                        A company admin of {companyName} can remove it.
-                      </span>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      )}
+      {body}
     </section>
   );
 }

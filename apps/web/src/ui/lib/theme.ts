@@ -4,7 +4,10 @@ import { useCallback, useState } from 'react';
 /** The D1 themes; the dark variant of theme.css reads data-theme on the html element. */
 export type Theme = 'light' | 'dark';
 
-/** The key of the viewer's choice in localStorage, kept per browser. */
+/**
+ * The key of the viewer's choice in localStorage, kept per browser. src/boot/theme-boot.js reads it
+ * before the first paint, and boot.test.tsx checks that the two agree.
+ */
 export const themeStorageKey = 'northmes-theme';
 
 /** The theme the viewer chose before, or undefined when there is none or storage is blocked. */
@@ -24,7 +27,10 @@ function systemTheme(): Theme {
     : 'light';
 }
 
-/** Sets the theme the viewer chose before on the html element, at boot and when the shell mounts. */
+/**
+ * Sets the theme the viewer chose before on the html element when the shell mounts, as
+ * src/boot/theme-boot.js does before the first paint.
+ */
 export function applyStoredTheme(): void {
   const theme = storedTheme();
   if (theme !== undefined) document.documentElement.dataset.theme = theme;

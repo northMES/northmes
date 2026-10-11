@@ -18,4 +18,13 @@ describe('StatusBadge', () => {
     expect(badge.getAttribute('data-tone')).toBe('destructive');
     expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('E02-S05 the info tone draws a state in progress, such as Planned, on the info colours', () => {
+    render(<StatusBadge tone="info">Planned</StatusBadge>);
+
+    const badge = screen.getByText('Planned');
+    expect(badge.getAttribute('data-tone')).toBe('info');
+    expect(badge.className).toContain('bg-info-subtle');
+    expect(badge.className).toContain('text-info');
+  });
 });

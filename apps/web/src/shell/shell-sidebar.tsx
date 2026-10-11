@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Link, useRouterState } from '@tanstack/react-router';
 import { X } from 'lucide-react';
-import { Fragment } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import type { MenuLink, ShellModule } from '../modules.ts';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import { Button } from '../ui/primitives/button.tsx';
@@ -16,11 +16,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
   useSidebar,
 } from '../ui/primitives/sidebar.tsx';
 import type { ShellCompany } from './companies.graphql.ts';
-import { currentOf, shownTo, sidebarLinks } from './shell-pages.ts';
+import { ShellNavGroup, useNavGroupsOpen } from './shell-nav-group.tsx';
+import { currentOf, isMenuGroup, shownTo, sidebarItems } from './shell-pages.ts';
 import { ShellPlantSwitcher } from './shell-plant-switcher.tsx';
 import { type ShellUser, ShellUserMenu } from './shell-user-menu.tsx';
 
@@ -41,16 +41,22 @@ export interface ShellSidebarProps {
    * such entries stay out.
    */
   readonly permissions?: ReadonlySet<string>;
+  /** The Help menu, which the footer row holds beside the user button where the sidebar is the sheet. */
+  readonly help?: ReactNode;
 }
 
 /**
  * The sidebar of the D2 planner shell, one nav landmark named Main (KE1): the head with the plant
- * switcher, one group per module in their order with its entries, and the user menu at the foot.
- * An entry that needs a permission shows only to a user who holds it at the plant, and an entry of
- * the plant settings navigation stays out (ADR 0066), as administration does: it lives in the
- * settings area behind the Settings button. collapsible="icon" makes it the 64 px rail, where each
- * entry shows its icon and its label in a tooltip; where the shell is narrow it is the Navigation
- * sheet, whose head holds Close navigation and whose entries close it.
+ * switcher, one group per module in their order with its entries and nested groups (PL5), and the
+ * user menu at the foot. The groups' own padding spaces them, as in shadcn's sidebar-07 block, so
+ * the sidebar draws no rules (the D2 record's note of 2026-10-10). An entry that needs a
+ * permission shows only to a user who holds it at the plant, a nested group only with an entry the
+ * user may open, and an entry of the plant settings navigation stays out (ADR 0066), as
+ * administration does: it lives in the settings area behind the Settings button.
+ * collapsible="icon" makes it the 64 px rail, where each entry shows its icon and its label in a
+ * tooltip; where the shell is narrow it is the Navigation sheet, whose head holds Close navigation
+ * and whose entries close it. Any path change closes the sheet too, such as All pages chosen from
+ * Help in its footer, so focus can move to the new h1 (D2 KE13).
  */
 export function ShellSidebar({
   id,
@@ -60,10 +66,25 @@ export function ShellSidebar({
   user,
   onSignOut,
   permissions,
+  help,
 }: ShellSidebarProps) {
   const shown = shownTo(permissions);
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // Each new path closes the sheet, whatever link inside it led there.
+  useEffect(() => setOpenMobile(false), [pathname, setOpenMobile]);
+  // The keys, module id and label, of the nested groups with an entry shown that holds the page.
+  const holding = modules.flatMap((each) =>
+    sidebarItems(each)
+      .filter(isMenuGroup)
+      .filter(({ links }) =>
+        links
+          .filter(shown)
+          .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
+      )
+      .map(({ label }) => `${each.module.id}/${label}`),
+  );
+  const [groupsOpen, setGroupOpen] = useNavGroupsOpen(holding);
   const entry = ({ label, icon, link }: MenuLink) => {
     const href = link({ plant }).href;
     const current = currentOf(href, pathname);
@@ -90,7 +111,7 @@ export function ShellSidebar({
   return (
     <Sidebar id={id} collapsible="icon">
       <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
-        <SidebarHeader className="h-14 flex-row items-center border-b border-sidebar-border">
+        <SidebarHeader className="h-14 flex-row items-center">
           {/* The plant switcher is the first item of the sidebar (ADR 0067). */}
           <div className="flex min-w-0 flex-1">
             <ShellPlantSwitcher companies={companies} plant={plant} />
@@ -106,27 +127,45 @@ export function ShellSidebar({
           )}
         </SidebarHeader>
         <SidebarContent>
-          {modules.map((each, index) => {
+          {modules.map((each) => {
             const { module, label } = each;
             const labelId = `sidebar-group-${module.id}`;
             return (
-              <Fragment key={module.id}>
-                {index > 0 && <SidebarSeparator />}
-                <SidebarGroup>
-                  <SidebarGroupLabel id={labelId}>{label}</SidebarGroupLabel>
-                  <SidebarMenu
-                    aria-labelledby={labelId}
-                    className="group-data-[collapsible=icon]:items-center"
-                  >
-                    {sidebarLinks(each).filter(shown).map(entry)}
-                  </SidebarMenu>
-                </SidebarGroup>
-              </Fragment>
+              <SidebarGroup key={module.id}>
+                <SidebarGroupLabel id={labelId}>{label}</SidebarGroupLabel>
+                <SidebarMenu
+                  aria-labelledby={labelId}
+                  className="group-data-[collapsible=icon]:items-center"
+                >
+                  {sidebarItems(each).map((item) => {
+                    if (!isMenuGroup(item)) return shown(item) && entry(item);
+                    const entries = item.links.filter(shown);
+                    const groupKey = `${module.id}/${item.label}`;
+                    return (
+                      entries.length > 0 && (
+                        <ShellNavGroup
+                          key={item.label}
+                          group={item}
+                          entries={entries}
+                          moduleLabel={label}
+                          plant={plant}
+                          open={groupsOpen.has(groupKey)}
+                          onOpenChange={(open) => setGroupOpen(groupKey, open)}
+                        />
+                      )
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
             );
           })}
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border">
-          <ShellUserMenu user={user} onSignOut={onSignOut} />
+        <SidebarFooter className="flex-row items-center">
+          {/* One footer row (D2 Sheet): the user button, then Help in the 320 px sheet. */}
+          <div className="min-w-0 flex-1">
+            <ShellUserMenu user={user} onSignOut={onSignOut} />
+          </div>
+          {help}
         </SidebarFooter>
       </nav>
     </Sidebar>

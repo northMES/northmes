@@ -1,35 +1,48 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { CombinedGraphQLErrors, type ErrorLike } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Archive, Plus } from 'lucide-react';
+import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { formatDateTime } from '../../../../ui/lib/date-time.ts';
 import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
+import { shownListPage } from '../../../../ui/lib/shown-list-page.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import {
   type ArticleListSearch,
+  articleFilterVariables,
   articleListSearch,
   articleListVariables,
   articlePageSize,
   firstPageOf,
+  isFiltered,
   nextPage,
   previousPage,
   searchedFor,
   showingArchived,
   sortedBy,
   sortOf,
+  unfiltered,
+  urlSearchOf,
 } from '../../article-list-search.ts';
+import { plantsLabel } from '../../article-plants.ts';
 import { readForbiddenState } from '../../no-access.tsx';
 import { usePlaces } from '../../use-places.ts';
+import { CoreArticleFacets } from './article-facets.graphql.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
+import { useHiddenColumns } from './articles-columns.ts';
+import { ArticlesFilterChips, ArticlesFilterMenus } from './articles-filters.tsx';
+import { ArticlesGrouped } from './articles-grouped.tsx';
 
 /** One page of the list, as CoreArticles answers it. */
 type ArticlesPage = CoreArticlesQuery['coreArticles'];
@@ -81,6 +94,28 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
       ),
   },
   {
+    // Where the article is used (ADR 0073); no design frame draws this column yet.
+    id: 'plants',
+    header: 'Plants',
+    cell: (article) => plantsLabel(article),
+  },
+  {
+    id: 'articleGroup',
+    header: 'Article group',
+    cell: (article) => article.articleGroup?.name ?? '',
+  },
+  {
+    id: 'stockUnit',
+    header: 'Stock unit',
+    cell: (article) => unitOf(article.stockUnit).symbol,
+  },
+  {
+    // An article created in NorthMES has no source (LI1).
+    id: 'source',
+    header: 'Source',
+    cell: (article) => article.source ?? 'NorthMES',
+  },
+  {
     id: 'changed',
     header: 'Last changed',
     sortable: true,
@@ -117,16 +152,17 @@ interface StateOptions {
   /** The company's name, where the forbidden state says the permission is missing. */
   readonly companyName: string;
   readonly view: ArticleListSearch;
+  /** The page the list shows: the one loaded, or the one before while the next loads. */
   readonly page: ArticlesPage | undefined;
   readonly error: ErrorLike | undefined;
-  readonly retry: () => void;
+  readonly retry: () => Promise<unknown>;
   readonly show: (view: ArticleListSearch) => void;
 }
 
 /**
- * The state of the list's data region (design ui-222, row 2): loading while a page has no rows
- * yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the forbidden state
- * (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
+ * The state of the list's data region (design ui-222, row 2): loading while the list has no rows
+ * to show yet (ST2), the first-run empty state (ST3), the filtered empty state (ST17), the
+ * forbidden state (ST19), a page whose cursor no longer applies (ST21) or a failed load (ST4).
  */
 function listState({
   forbidden,
@@ -151,13 +187,13 @@ function listState({
     return {
       status: 'error',
       title: 'Could not load articles',
-      description: 'Check the connection, then try again.',
+      error,
       onRetry: retry,
     };
   }
   if (page === undefined) return { status: 'loading' };
   if (page.totalCount > 0) return { status: 'ready' };
-  if (view.q !== undefined) {
+  if (view.q !== undefined || isFiltered(view)) {
     return {
       status: 'empty',
       title: 'No articles match these filters',
@@ -166,7 +202,7 @@ function listState({
         <Button
           variant="link"
           onClick={() => {
-            show(searchedFor(view, ''));
+            show(unfiltered(searchedFor(view, '')));
             document.getElementById(searchFieldId)?.focus();
           }}
         >
@@ -185,14 +221,14 @@ function listState({
 }
 
 /**
- * The articles of the plant (design ui-222, LI1): Search articles, Show archived, and one page of
- * the DataTable with sortable Article number, Name and Last changed headers, Previous, Next and
- * the row range, newest change first by default (A5). Archived articles show only with Show
- * archived, each with the Archived badge (LI31). A user who may not read articles gets the
- * forbidden state with no toolbar and no page actions (ST19, A18). Search,
- * sort, Show archived and page live in the URL (plan 06, View state in the URL), so a reload, Back
- * or a copied link opens the same rows; each change replaces the history entry and leaves focus
- * where it is.
+ * The articles assigned to the plant or to All plants (design ui-222, LI1, and ADR 0073): Search
+ * articles, Show archived, and one page of the DataTable with sortable Article number, Name and
+ * Last changed headers, the Plants column, Previous, Next and the row range, newest change first
+ * by default (A5). Archived articles show only with Show archived, each with the Archived badge
+ * (LI31). A user who may not read articles gets the forbidden state with no toolbar and no page
+ * actions (ST19, A18). Search, sort, Show archived and page live in the URL (plan 06, View state
+ * in the URL), so a reload, Back or a copied link opens the same rows; each change replaces the
+ * history entry and leaves focus where it is.
  */
 export function ArticlesScreen() {
   const view = articleListSearch(useSearch({ strict: false }));
@@ -204,21 +240,34 @@ export function ArticlesScreen() {
   const page = data?.coreArticles;
   const forbidden = page === undefined && isForbidden(error);
   const places = usePlaces({ skip: !forbidden });
-  // While a page loads, the pager keeps the buttons of the page before it, so the button just used
-  // keeps focus.
-  const shownPage = page ?? previousData?.coreArticles;
+  // While a new search, sort, filter or page loads, the list keeps the rows or the no-match state
+  // it shows, and their pager, so focus stays on the control used (design ui-222, LI7).
+  const shownPage = shownListPage({
+    page,
+    previous: previousData?.coreArticles,
+    failed: error !== undefined,
+    searching: view.q !== undefined,
+  });
+  const stale = page === undefined && shownPage !== undefined;
   const show = (next: ArticleListSearch) => {
-    navigate({ to: '.', search: next, replace: true });
+    navigate({ to: '.', search: urlSearchOf(next), replace: true });
   };
+  // The counts of the filter menus, the chips and the groups, for the view's search and filters;
+  // while new counts load, the menus keep the ones before.
+  const facetsQuery = useQuery(CoreArticleFacets, {
+    variables: articleFilterVariables(view),
+    skip: forbidden,
+    fetchPolicy: 'cache-and-network',
+  });
+  const facets = facetsQuery.data?.coreArticleFacets ?? facetsQuery.previousData?.coreArticleFacets;
+  const [hiddenColumns, setHiddenColumns] = useHiddenColumns();
   const state = listState({
     forbidden,
     companyName: places.company?.name ?? 'the company',
     view,
-    page,
+    page: shownPage,
     error,
-    retry: () => {
-      refetch().catch(() => {});
-    },
+    retry: () => refetch(),
     show,
   });
   return (
@@ -227,51 +276,83 @@ export function ArticlesScreen() {
       actions={forbidden ? undefined : <NewArticleLink />}
       toolbar={
         forbidden ? undefined : (
-          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-            <SearchField
-              id={searchFieldId}
-              label="Search articles"
-              value={view.q ?? ''}
-              onSearch={(text) => show(searchedFor(view, text))}
-              className="w-full max-w-sm"
-            />
-            <Field orientation="horizontal" className="w-auto">
-              <Checkbox
-                id={showArchivedId}
-                checked={view.archived !== undefined}
-                onCheckedChange={(shown) => show(showingArchived(view, shown))}
-              />
-              <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
-            </Field>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+              <div className="flex flex-wrap items-end gap-2">
+                <SearchField
+                  id={searchFieldId}
+                  label="Search articles"
+                  value={view.q ?? ''}
+                  onSearch={(text) => show(searchedFor(view, text))}
+                  className="w-full max-w-sm"
+                />
+                <ArticlesFilterMenus view={view} facets={facets} show={show} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Field orientation="horizontal" className="w-auto">
+                  <Checkbox
+                    id={showArchivedId}
+                    checked={view.archived !== undefined}
+                    onCheckedChange={(shown) => show(showingArchived(view, shown))}
+                  />
+                  <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+                </Field>
+                <ColumnsMenu
+                  columns={columns.map(({ id, header }) => ({
+                    id,
+                    label: header,
+                    alwaysShown: id === 'code',
+                  }))}
+                  hidden={hiddenColumns}
+                  onChange={setHiddenColumns}
+                />
+              </div>
+            </div>
+            <ArticlesFilterChips view={view} facets={facets} show={show} />
           </div>
         )
       }
       state={state}
+      busy={stale}
     >
-      <DataTable
-        label="Articles"
-        columns={columns}
-        rows={page?.edges.map(({ node }) => node) ?? []}
-        getRowId={(article) => article.id}
-        loading={page === undefined}
-        sort={sortOf(view)}
-        onSortChange={(sort) => show(sortedBy(view, sort))}
-        paging={{
-          page: view.page ?? 1,
-          pageSize: articlePageSize,
-          totalCount: page?.totalCount,
-          hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
-          hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
-          onPrevious: () => {
-            const startCursor = page?.pageInfo.startCursor;
-            if (startCursor) show(previousPage(view, startCursor));
-          },
-          onNext: () => {
-            const endCursor = page?.pageInfo.endCursor;
-            if (endCursor) show(nextPage(view, endCursor));
-          },
-        }}
-      />
+      {view.group === undefined ? (
+        <DataTable
+          label="Articles"
+          columns={columns}
+          rows={shownPage?.edges.map(({ node }) => node) ?? []}
+          hiddenColumns={hiddenColumns}
+          getRowId={(article) => article.id}
+          loading={shownPage === undefined}
+          stale={stale}
+          sort={sortOf(view)}
+          onSortChange={(sort) => show(sortedBy(view, sort))}
+          paging={{
+            page: view.page ?? 1,
+            pageSize: articlePageSize,
+            totalCount: shownPage?.totalCount,
+            hasPreviousPage: view.page !== undefined && (page?.pageInfo.hasPreviousPage ?? true),
+            hasNextPage: shownPage?.pageInfo.hasNextPage ?? false,
+            onPrevious: () => {
+              const startCursor = page?.pageInfo.startCursor;
+              if (startCursor) show(previousPage(view, startCursor));
+            },
+            onNext: () => {
+              const endCursor = page?.pageInfo.endCursor;
+              if (endCursor) show(nextPage(view, endCursor));
+            },
+          }}
+        />
+      ) : (
+        <ArticlesGrouped
+          key={JSON.stringify([view.group, articleFilterVariables(view), view.sort])}
+          view={view}
+          facets={facets}
+          columns={columns}
+          hiddenColumns={hiddenColumns}
+          sort={sortOf(view)}
+          onSortChange={(sort) => show(sortedBy(view, sort))}
+        />
+      )}
     </PageFrame>
   );
 }

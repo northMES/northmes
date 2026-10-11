@@ -207,17 +207,18 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 | Limit | Value | Where |
 |---|---|---|
 | Error masking | `maskedErrors: true`; unknown errors are masked again in each subgraph | runtime option and SDK exception filter |
-| Query depth | 12 | graphql-armor max-depth plugin in `plugins` (not a runtime option) |
-| Tokens per document | 2 000 | graphql-armor max-tokens plugin in `plugins` |
-| Cost | `demandControl` with `maxCost` starting at 20 000, then set from measured persisted documents | runtime option |
-| `@listSize` on root connections | `slicingArguments: ["first", "last"]`, `sizedFields: ["edges"]`, `requireOneSlicingArgument: false` | SDK list kit |
-| `@listSize` on nested connections | `slicingArguments: ["first"]`, `sizedFields: ["edges"]`, `requireOneSlicingArgument: false` | SDK list kit |
-| `@listSize` on `groupedAggregates` | `slicingArguments: ["first"]`, no `sizedFields` | SDK list kit |
+| Request body | 100 kB for every content type; a POST without `Content-Length` is refused with 411 | body-limit plugin in `apps/backend/src/graphql/limits.ts` |
+| Multipart requests | refused until uploads exist ([0054][adr-0054]) | Yoga option `multipart: false` |
+| Query depth | 12 | graphql-armor max-depth plugin |
+| Aliases per document | 15 | graphql-armor max-aliases plugin |
+| Tokens per document | 2 000 | graphql-armor max-tokens plugin |
+| Cost | `maxCost` 20 000, then set from measured persisted documents | cost-limit plugin with `operationCost` in `apps/backend/src/graphql/cost.ts` |
+| List size in the cost | a connection's `edges` take the connection's `first` or `last`; any other list its own `first` or `last`, or 25 | `operationCost` |
 | Field suggestions | blocked | gateway plugin |
 | Introspection | refused without a session | gateway |
 | Persisted documents | manifest generated now, enforced later | web build |
 
-A depth of 12 allows three nested connection levels plus a related object, because each connection costs three levels (field, `edges`, `node`). With the default type cost of 1, a table of 100 orders with customer, `totalCount` and `pageInfo` costs 303; 100 orders with 100 operations each costs 20 301 and is refused. `requireOneSlicingArgument` stays false: with `first: Int = 25` in the schema, the gateway otherwise rejects a call that sends only `last`.
+A depth of 12 allows three nested connection levels plus a related object, because each connection costs three levels (field, `edges`, `node`). The cost keeps the model of Hive's `demandControl`: an object costs 1, a scalar nothing, and a list the cost of one item times the number it may return. A table of 100 orders with customer, `totalCount` and `pageInfo` costs 302; 100 orders with 100 operations each costs 1 + 100 × (3 + 100 × 2) = 20 301 and is refused before any field runs. The cost reads the variables, so it runs after validation. `apps/backend/test/graphql/web-operations.test.ts` keeps every web operation within the depth, alias and cost limits with every page at 100.
 
 ## List conventions
 
@@ -430,6 +431,11 @@ Codes named by the decisions so far:
 | Code | Meaning |
 |---|---|
 | `core.forbidden` | permission denied at the target's scope (`FORBIDDEN`) |
+| `core.not_found` | the target does not exist or lies outside the caller's company (`NOT_FOUND`) |
+| `core.invalid_input` | an operation's input fails its contract, with `fieldErrors` (`BAD_USER_INPUT`) (ADR 0073) |
+| `core.unauthenticated` | an operation call without a valid credential (`UNAUTHENTICATED`) |
+| `core.plant_required` | a call without a plant to an operation whose scope is `plant` (`BAD_USER_INPUT`) |
+| `core.conflict`, `core.precondition`, `core.unavailable` | the operation runner's code for a Nest `HttpException` of status 409, 412 or 503 that is not a `DomainError` (`CONFLICT`, `PRECONDITION`, `UNAVAILABLE`) |
 | `core.plant_forbidden` | `x-northmes-plant` names a plant the principal may not use, or an operation without the header selects a field that is not plant-free (`FORBIDDEN`) |
 | `core.plant_not_ready` | the plant's onboarding is not complete and the principal does not hold `core.onboarding:manage` (`FORBIDDEN`, no security event) ([0066][adr-0066]) |
 | `core.plant_slug_taken` | another plant of the installation uses the slug; `fieldErrors` on `slug`, and the message names no company |
@@ -457,7 +463,7 @@ One filter catches every exception (`@Catch()` with no arguments). The SDK expor
 Exceptions that are not a `DomainError`:
 
 1. `PermissionGuard` and `PrincipalGuard` throw a `DomainError` (`core.forbidden` with `details.permission`, or kind `unauthenticated`) and never return false, because a guard that returns false makes Nest throw its own `ForbiddenException`.
-2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`.
+2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`. The operation runner of ADR 0073 gives such an exception the code of its status: 400 `core.invalid_input`, 401 `core.unauthenticated`, 403 `core.forbidden`, 404 `core.not_found`, 409 `core.conflict`, 412 `core.precondition` and 503 `core.unavailable`.
 3. Other 4xx statuses are transport errors. They keep their HTTP status and carry a core code: 413 `core.request.too_large`, 415 `core.request.unsupported_media_type` and 429 `core.request.rate_limited` with a `Retry-After` header. The code names answer M-51 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents).
 4. A 5xx status and anything else is masked.
 5. Core's user-management handlers translate a Better Auth `APIError` from `auth.api` into `core.user.*` codes ([0011][adr-0011]). An `APIError` that escapes them is masked.

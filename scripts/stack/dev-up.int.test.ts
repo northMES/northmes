@@ -6,7 +6,7 @@ import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';
 import { bootBuilt } from '@northmes/testing';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { seedPlants } from './seed.mjs';
+import { seedCompany, seedPlants } from './seed.mjs';
 import { prepareDatabase, startStack } from './stack.mjs';
 
 /** Runs a pnpm northmes command on the built server, which the test run builds once. */
@@ -56,8 +56,9 @@ async function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]>
   await client.connect();
   try {
     await client.query('begin');
+    // Articles sit at the company's node (ADR 0073), which a request at a plant reads too.
     await client.query("select set_config('northmes.read_scopes', $1::uuid[]::text, true)", [
-      seedPlants.map(({ id }) => id),
+      [seedCompany.id, ...seedPlants.map(({ id }) => id)],
     ]);
     const { rows } = await client.query(sql);
     await client.query('commit');

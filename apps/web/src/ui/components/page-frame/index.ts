@@ -10,4 +10,5 @@ export {
   type Crumb,
   PageFrameTopBar,
   type PageFrameTopBarValue,
+  usePageFrameTopBar,
 } from './page-frame-top-bar.tsx';

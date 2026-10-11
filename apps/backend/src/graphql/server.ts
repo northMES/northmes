@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { GraphQLSchema } from 'graphql';
 import { createYoga, type YogaServerInstance } from 'graphql-yoga';
+import { type GraphqlLimits, graphqlLimits, limitPlugins } from './limits.ts';
 import { plantFreePlugin } from './plant-free.ts';
 import {
   noPrincipal,
@@ -19,22 +20,31 @@ export type GraphqlServer = YogaServerInstance<Record<string, unknown>, ServerCo
 export interface GraphqlServerOptions {
   /** Resolves each request's principal. Without it, no request has one. */
   readonly resolvePrincipal?: ResolvePrincipal;
+  /** The limits every request must stay within. */
+  readonly limits?: GraphqlLimits;
 }
 
 /**
  * Serves `schema` with GraphQL Yoga at GRAPHQL_PATH over HTTP, and subscriptions over SSE. Errors
  * that a resolver did not throw as a GraphQLError reach the client masked, and every operation
  * runs as the principal that `resolvePrincipal` resolves for its request. An operation whose
- * request names no plant runs only plant-free root fields (ADR 0066).
+ * request names no plant runs only plant-free root fields (ADR 0066). Every request stays within
+ * `limits` (plan 05), and multipart requests are refused until uploads exist (ADR 0054).
  */
 export function createGraphqlServer(
   schema: GraphQLSchema,
-  { resolvePrincipal = noPrincipal }: GraphqlServerOptions = {},
+  { resolvePrincipal = noPrincipal, limits = graphqlLimits }: GraphqlServerOptions = {},
 ): GraphqlServer {
   return createYoga<Record<string, unknown>, ServerContext>({
     schema,
     graphqlEndpoint: GRAPHQL_PATH,
-    plugins: [principalPlugin(resolvePrincipal), plantFreePlugin, runAsPrincipalPlugin],
+    plugins: [
+      ...limitPlugins(limits),
+      principalPlugin(resolvePrincipal),
+      plantFreePlugin,
+      runAsPrincipalPlugin,
+    ],
+    multipart: false,
     maskedErrors: true,
     landingPage: false,
     graphiql: false,

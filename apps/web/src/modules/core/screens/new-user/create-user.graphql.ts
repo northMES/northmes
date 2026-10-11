@@ -32,6 +32,10 @@ if (false) {
               name
               permissions
             }
+            # The roles list counts the assignment among the role's holders by its user.
+            user {
+              id
+            }
           }
         }
       }

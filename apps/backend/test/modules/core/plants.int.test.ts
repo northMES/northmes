@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { randomUUIDv7 } from 'node:crypto';
-import { givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
+import { givenArticle, givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -47,19 +46,9 @@ describe('companies, plants and the request plant', () => {
     return gqlClient(await app().getUrl(), { headers }).send<Data>(document, variables);
   }
 
-  /** Writes one article at `scope` and returns its id. */
-  async function givenArticle(scope: string, code: string): Promise<string> {
-    const id = randomUUIDv7();
-    await db.command(
-      { principal: { type: 'system', id: 'fixture' }, scopes: [scope], reason: 'fixture' },
-      (tx) =>
-        tx.query('insert into core.article (id, scope_id, code, name) values ($1, $2, $3, $3)', [
-          id,
-          scope,
-          code,
-        ]),
-    );
-    return id;
+  /** Writes one article assigned to the plant `plant` and returns its id. */
+  function articleAt(plant: string, code: string): Promise<string> {
+    return givenArticle(db.ownerUrl, { code, name: code, plants: [plant] });
   }
 
   it('E05-S03 coreCompanies lists the plants a user can open from its role assignments, grouped by company and sorted by name', async () => {
@@ -145,12 +134,12 @@ describe('companies, plants and the request plant', () => {
     );
   });
 
-  it('E05-S04 a request reads the company and its own plant, never another plant where the user holds a role', async () => {
+  it('E05-S04 a request reads the articles of the company assigned to its own plant or to All plants, never those of another plant where the user holds a role', async () => {
     const { company, plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
     const [plantA = '', plantB = ''] = plants;
-    await givenArticle(company, 'CO-1');
-    await givenArticle(plantA, 'PA-1');
-    await givenArticle(plantB, 'PB-1');
+    await givenArticle(db.ownerUrl, { code: 'CO-1', name: 'CO-1', company, allPlants: true });
+    await articleAt(plantA, 'PA-1');
+    await articleAt(plantB, 'PB-1');
     const user = await signIn(app(), db.ownerUrl, [
       { scopeId: plantA, permissions: planner },
       { scopeId: plantB, permissions: planner },
@@ -164,15 +153,15 @@ describe('companies, plants and the request plant', () => {
     const withoutPlant = await send(user.authorization, undefined, articleCodes);
 
     expect(atA.data?.coreArticles.edges.map(({ node }) => node.code)).toEqual(['CO-1', 'PA-1']);
-    // coreArticles is not plant-free, so without a plant the operation reads nothing (ADR 0066).
-    expect(withoutPlant.data).toBeUndefined();
-    expect(withoutPlant.errors?.[0]?.extensions?.errorCode).toBe('core.plant_forbidden');
+    // Without a plant, coreArticles needs the company it reads, so it reads nothing (ADR 0066).
+    expect(withoutPlant.data).toBeNull();
+    expect(withoutPlant.errors?.[0]?.extensions?.errorCode).toBe('core.forbidden');
   });
 
-  it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is NOT_FOUND and keeps its version', async () => {
+  it('E05-S04 a request writes only its own plant: an article at another plant where the user may write is FORBIDDEN and keeps its version', async () => {
     const { plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
     const [plantA = '', plantB = ''] = plants;
-    const articleB = await givenArticle(plantB, 'PB-2');
+    const articleB = await articleAt(plantB, 'PB-2');
     const user = await signIn(app(), db.ownerUrl, [
       { scopeId: plantA, permissions: planner },
       { scopeId: plantB, permissions: planner },
@@ -183,7 +172,10 @@ describe('companies, plants and the request plant', () => {
     });
     const atB = await send(user.authorization, slugs[1], articleQuery, { id: articleB });
 
-    expect(atA).toMatchObject({ data: null, errors: [{ extensions: { code: 'NOT_FOUND' } }] });
+    expect(atA).toMatchObject({
+      data: null,
+      errors: [{ extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' } }],
+    });
     expect(atB.data).toEqual({ coreArticle: { code: 'PB-2', name: 'PB-2', version: 1 } });
   });
 });
