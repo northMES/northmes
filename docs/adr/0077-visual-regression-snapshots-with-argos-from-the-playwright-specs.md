@@ -53,6 +53,12 @@ Chosen option: "Argos with `@argos-ci/playwright`", because it compares each pul
 
 * `ARGOS_TOKEN` is a repository secret. Only the `e2e` job reads it, as an environment variable of its test step. Workflows never use `pull_request_target`, so a fork's pull request gets no token ([ADR 0050][adr-0050]).
 * Screenshots show only the fictional seed of `scripts/stack/seed.mjs` and the records a spec creates. No pilot export, customer name or recorded request appears in a spec.
+* The Argos upload is a new trust boundary, from the `e2e` job to a third-party service. ADR 0076 gives it a row in the threat model, `docs/security/threat-model.md`, which #485 writes; until that file exists, the row is recorded here and #485 carries it over:
+  * Assets: the screenshots, `ARGOS_TOKEN`, and the approved baselines in Argos.
+  * Spoofing and tampering: a leaked token could upload builds or change what a pull request is compared with. The token is Argos's project token, which uploads to this one project and grants nothing in GitHub. Only the `e2e` test step reads it, workflows never use `pull_request_target`, and a visual change counts only after a person approves it in Argos.
+  * Information disclosure: the screenshots leave the repository. They hold only the fictional seed and the records a spec creates (M-93).
+  * Repudiation: Argos records who approved each change.
+  * Denial of service: the Argos check is not required at first (M-92), so an Argos outage blocks no merge.
 
 ### Consequences
 
