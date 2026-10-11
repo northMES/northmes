@@ -122,8 +122,8 @@ The architecture and data flows stay in plan 02. The data models stay in plans 0
 
 ## More information
 
-* Related ADRs: 0008, 0010, 0011, 0013, 0017, 0026, 0037, 0038, 0040, 0041, 0044, 0046, 0047, 0050, 0051.
+* Related ADRs: [0008](0008-row-level-security-with-transaction-local-scopes.md), [0010](0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [0011](0011-principals-credentials-and-same-origin-rules.md), [0013](0013-audit-trail-written-in-the-command-transaction.md), [0017](0017-zod-contracts-as-the-single-source-for-inputs.md), [0026](0026-planning-domain-names-aligned-with-isa-95.md), [0037](0037-plugins-drop-in-packages-command-validators-and-ui-slots.md), [0038](0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0040](0040-dependency-license-policy-ci-gate-and-sbom.md), [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0044](0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0046](0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md), [0047](0047-secrets-and-the-installation-key.md), [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0051](0051-regulated-readiness-no-regret-rules.md).
 * Plan: [12-operations-and-security.md](../plan/12-operations-and-security.md), [17-risks.md](../plan/17-risks.md).
 * The first audit: [docs/security/audits/2026-10-11.md](../security/audits/2026-10-11.md), tracked in #473.
-* Krister Johansson answered M-86 to M-90 on 2026-10-11 with the working defaults of plan 16.
+* Krister Johansson answered M-86 to M-90 on 2026-10-11 with the working defaults of [plan 16](../plan/16-open-questions.md).
 * Revisit when a customer requires a certification, when the first audit company is booked, or when the regulated profile of ADR 0051 is switched on.
