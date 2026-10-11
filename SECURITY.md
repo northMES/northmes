@@ -1,7 +1,5 @@
 # Security policy
 
-Thank you for helping keep NorthMES and the plants that run it safe.
-
 ## Reporting a vulnerability
 
 Please report a vulnerability privately. Do not open a public issue, pull request or discussion for it.
@@ -22,7 +20,7 @@ Please give us a reasonable time to fix the issue before you disclose it, and do
 
 ## Supported versions
 
-NorthMES has no release yet. Until 1.0, only the latest minor release gets security fixes. Once 1.0 ships, this table names the supported versions.
+NorthMES has no 1.0 release yet. Until 1.0, only the latest 0.x minor release gets security fixes. Once 1.0 ships, this table names the supported versions.
 
 | Version | Supported |
 |---|---|
