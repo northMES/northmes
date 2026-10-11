@@ -21,11 +21,13 @@ import { startStack } from './stack.mjs';
  * What pnpm dev starts on ports: tsc -b --watch over the server's projects, the built server, which
  * pnpm dev starts after each completed build, and the web's Vite dev server, which forwards the API
  * paths to the server; northmes migrate, which it runs when a file in one of the migrations folders
- * changes; and the URL of the seed plant's board on the web's origin, which it prints.
+ * changes; the server's and the web's origins, and the URL of the seed plant's board on the web's
+ * origin, which it prints.
  * @param {DevPorts} ports
  */
 export async function devPlan({ server, web }) {
   const serverOrigin = loopbackOrigin(server);
+  const webOrigin = loopbackOrigin(web);
   return {
     /** @type {PlannedProcess} */
     watch: {
@@ -49,7 +51,7 @@ export async function devPlan({ server, web }) {
       env: {
         NORTHMES_ROLE: 'all',
         PORT: String(server),
-        NORTHMES_PUBLIC_ORIGIN: loopbackOrigin(web),
+        NORTHMES_PUBLIC_ORIGIN: webOrigin,
       },
     },
     /** @type {PlannedProcess} */
@@ -65,7 +67,11 @@ export async function devPlan({ server, web }) {
     },
     // Each in-repo module keeps its migrations in apps/backend/src/modules/<id>/migrations.
     migrations: globSync('apps/backend/src/modules/*/migrations', { cwd: repositoryRoot }).sort(),
-    boardUrl: await boardUrl(loopbackOrigin(web)),
+    /** The server's origin, which answers the API; a page opened there redirects to the web's. */
+    apiOrigin: serverOrigin,
+    /** The web's dev server, which serves the web app. */
+    webOrigin,
+    boardUrl: await boardUrl(webOrigin),
   };
 }
 
@@ -89,9 +95,11 @@ export function completedBuild(line) {
  */
 
 /**
- * Runs the processes of plan on a started stack: starts the web's dev server and tsc -b --watch, restarts the server after each completed build, runs northmes
- * migrate and then restarts the server when a migration file changes, and prints the board URL
- * and the dev admin's email once the server listens. A migrate that fails leaves the server running.
+ * Runs the processes of plan on a started stack: starts the web's dev server and tsc -b --watch,
+ * restarts the server after each completed build, runs northmes migrate and then restarts the
+ * server when a migration file changes, and prints the API's and the web's origins, the board URL
+ * and the dev admin's email once the server listens. A migrate that fails leaves the server
+ * running.
  * @param {{
  *   plan: DevPlan,
  *   stack: { env: Readonly<Record<string, string>>, stop: () => Promise<void> },
@@ -152,6 +160,7 @@ export function superviseDev({ plan, stack, start, run, watch, log }) {
         onLine: (line) => {
           if (listened || !line.includes('Listening on')) return;
           listened = true;
+          log(`The API listens on ${plan.apiOrigin}; open the web app at ${plan.webOrigin}`);
           log(`The board of the seeded plant: ${plan.boardUrl}`);
           // The password stays in the seed file, so the log never holds it.
           log(`Sign in as ${devAdmin.email}; the password is in scripts/stack/seed.mjs`);
