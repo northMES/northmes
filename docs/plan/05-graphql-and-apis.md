@@ -207,17 +207,18 @@ The SDK's `/graphql` subpath owns `defineSubgraph`, the driver, `graphqlKit`, `e
 | Limit | Value | Where |
 |---|---|---|
 | Error masking | `maskedErrors: true`; unknown errors are masked again in each subgraph | runtime option and SDK exception filter |
-| Query depth | 12 | graphql-armor max-depth plugin in `plugins` (not a runtime option) |
-| Tokens per document | 2 000 | graphql-armor max-tokens plugin in `plugins` |
-| Cost | `demandControl` with `maxCost` starting at 20 000, then set from measured persisted documents | runtime option |
-| `@listSize` on root connections | `slicingArguments: ["first", "last"]`, `sizedFields: ["edges"]`, `requireOneSlicingArgument: false` | SDK list kit |
-| `@listSize` on nested connections | `slicingArguments: ["first"]`, `sizedFields: ["edges"]`, `requireOneSlicingArgument: false` | SDK list kit |
-| `@listSize` on `groupedAggregates` | `slicingArguments: ["first"]`, no `sizedFields` | SDK list kit |
+| Request body | 100 kB for every content type; a POST without `Content-Length` is refused with 411 | body-limit plugin in `apps/backend/src/graphql/limits.ts` |
+| Multipart requests | refused until uploads exist ([0054][adr-0054]) | Yoga option `multipart: false` |
+| Query depth | 12 | graphql-armor max-depth plugin |
+| Aliases per document | 15 | graphql-armor max-aliases plugin |
+| Tokens per document | 2 000 | graphql-armor max-tokens plugin |
+| Cost | `maxCost` 20 000, then set from measured persisted documents | cost-limit plugin with `operationCost` in `apps/backend/src/graphql/cost.ts` |
+| List size in the cost | a connection's `edges` take the connection's `first` or `last`; any other list its own `first` or `last`, or 25 | `operationCost` |
 | Field suggestions | blocked | gateway plugin |
 | Introspection | refused without a session | gateway |
 | Persisted documents | manifest generated now, enforced later | web build |
 
-A depth of 12 allows three nested connection levels plus a related object, because each connection costs three levels (field, `edges`, `node`). With the default type cost of 1, a table of 100 orders with customer, `totalCount` and `pageInfo` costs 303; 100 orders with 100 operations each costs 20 301 and is refused. `requireOneSlicingArgument` stays false: with `first: Int = 25` in the schema, the gateway otherwise rejects a call that sends only `last`.
+A depth of 12 allows three nested connection levels plus a related object, because each connection costs three levels (field, `edges`, `node`). The cost keeps the model of Hive's `demandControl`: an object costs 1, a scalar nothing, and a list the cost of one item times the number it may return. A table of 100 orders with customer, `totalCount` and `pageInfo` costs 302; 100 orders with 100 operations each costs 1 + 100 × (3 + 100 × 2) = 20 301 and is refused before any field runs. The cost reads the variables, so it runs after validation. `apps/backend/test/graphql/web-operations.test.ts` keeps every web operation within the depth, alias and cost limits with every page at 100.
 
 ## List conventions
 
