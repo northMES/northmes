@@ -17,6 +17,18 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Do not run react-doctor, through `pnpm react-doctor` or any other command: it runs in CI only (`CI / react doctor`) until its vendor confirms that agents may run it (ADR 0040).
 - Packages published under MIT (`packages/sdk`, `packages/web-sdk`, `packages/ui`, `packages/contracts`, `packages/testing`, every `modules/*/contracts` package and the generator package) import only MIT or other permissive code, never the AGPL modules.
 
+## Security
+
+NorthMES keeps itself ready for a third-party audit (IEC 62443-4-1, the ISO 27001 and SOC 2 development controls, OpenSSF Best Practices). [ADR 0076](docs/adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) holds the rules, and `docs/security/README.md` is the controls index.
+
+- Least privilege everywhere: check the permission where the API acts, read through row-level security as `nm_app`, and never use `nm_owner` at run time.
+- Secrets come from secret files only. Never put a secret, token, password or personal data in code, a log line, an error or a test fixture that ships.
+- Every input passes a Zod contract. SQL goes through Kysely with bound values, and `sql.raw`, `sql.lit`, `sql.ref` and `sql.id` take literals only.
+- A client sees a masked error with a code and a correlation id, never a stack trace or an internal detail.
+- A change to a control starts with its security test: a refused permission, a hidden row, a refused input.
+- Every pull request description has a Security section. It names the controls the change touches and the threat each one meets, or says "none" with a reason.
+- A new surface, trust boundary or integration adds its row to the threat model. A change that adds a significant security or compliance risk says so and waits for the maintainer.
+
 ## Scope
 
 Deliver what the task or issue asks, at the scope it intends. Make routine judgment calls yourself, and ask only when different readings of the request would lead to materially different work. If the request looks mistaken or a better approach exists, say so in one sentence and continue as asked. Finish the whole task and stop there; note follow-up ideas in the pull request description.
