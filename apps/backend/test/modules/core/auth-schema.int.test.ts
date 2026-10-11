@@ -16,6 +16,10 @@ describe("Better Auth's tables", () => {
 
   it('E05-S05 the core migrations hold every table, column and index that Better Auth asks for, so its migration check finds nothing left to create', async () => {
     pool = new Pool({ connectionString: db.authUrl });
+    // Every pool has an error handler before use (ADR 0041). When useTestDatabase drops the
+    // database with (force), Postgres ends any connection still open with 57P01, and pg-pool emits
+    // that on the pool; without a listener it fails the run as an unhandled error.
+    pool.on('error', () => {});
     const options = authOptions({
       dialect: new PostgresDialect({ pool }),
       baseURL: 'http://127.0.0.1:4100',
