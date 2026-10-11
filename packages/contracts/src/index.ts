@@ -51,3 +51,13 @@ export {
   type QueryContractOptions,
 } from './define-query-contract.ts';
 export { isOutsideText, outsideText } from './outside-text.ts';
+export {
+  DEFAULT_STOCK_UNIT,
+  type Dimension,
+  type StockUnitCode,
+  stockUnit,
+  stockUnitCodes,
+  type Unit,
+  unitCatalog,
+  unitOf,
+} from './units.ts';

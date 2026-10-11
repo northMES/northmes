@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { StockUnitCode } from '@northmes/contracts';
 import { type Kysely, sql, type Transaction } from 'kysely';
 import type { CoreDatabase } from '../infrastructure/database.ts';
 import type { PlantRecord } from './company.service.ts';
@@ -8,6 +9,11 @@ export interface ArticleRecord {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  /** The stock unit's code in the unit catalog, in which the article's quantities are counted. */
+  readonly stockUnit: StockUnitCode;
+  readonly note: string | null;
+  /** The integration that created the article through core.upsertArticle, or null for NorthMES. */
+  readonly source: string | null;
   /** Grows by one with every change to the article. */
   readonly version: number;
   /** Assigned to every plant of the company, those created later included (ADR 0073). */
@@ -16,6 +22,8 @@ export interface ArticleRecord {
   readonly plants: readonly PlantRecord[];
   /** When the article was archived, or null while it is active. */
   readonly archivedAt: Date | null;
+  /** When the article was created. */
+  readonly createdAt: Date;
   /** When the article last changed, its creation included. */
   readonly updatedAt: Date;
 }
@@ -25,9 +33,13 @@ const recordColumns = [
   'id',
   'code',
   'name',
+  'stock_unit as stockUnit',
+  'note',
+  'source',
   'version',
   'all_plants as allPlants',
   'archived_at as archivedAt',
+  'created_at as createdAt',
   'updated_at as updatedAt',
 ] as const;
 

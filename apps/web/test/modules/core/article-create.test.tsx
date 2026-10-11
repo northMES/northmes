@@ -10,6 +10,7 @@ import {
   articlesPage,
   articlesQuery,
   firstPage,
+  lastChanged,
   plant,
   plants,
   renderCoreAt,
@@ -24,16 +25,19 @@ interface CreateInput {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  readonly stockUnit: string;
+  readonly note?: string;
 }
 
 /**
- * coreCreateArticle with a new uuidv7 and these code and name, answered by result for the input
- * the form sent.
+ * coreCreateArticle with a new uuidv7 and these code and name, in pieces and without a note unless
+ * classification says otherwise, answered by result for the input the form sent.
  */
 function createOf(
   code: string,
   name: string,
   result: (input: CreateInput) => MockLink.MockedResponse['result'],
+  { stockUnit = 'PIECE', note }: { stockUnit?: string; note?: string } = {},
 ): MockLink.MockedResponse {
   return {
     request: {
@@ -42,6 +46,8 @@ function createOf(
         uuidv7.test(input.id) &&
         input.code === code &&
         input.name === name &&
+        input.stockUnit === stockUnit &&
+        input.note === note &&
         // A user without core.article:assign at the company leaves the plants to the API.
         !('plants' in input) &&
         !('allPlants' in input),
@@ -57,7 +63,11 @@ function created(input: CreateInput) {
       coreCreateArticle: {
         __typename: 'Article',
         version: 1,
+        note: null,
+        source: null,
         archivedAt: null,
+        createdAt: lastChanged,
+        updatedAt: lastChanged,
         allPlants: false,
         plants: [plants.a],
         ...input,
@@ -76,6 +86,11 @@ function field(label: string): HTMLInputElement {
   return screen.getByRole('textbox', { name: label }) as HTMLInputElement;
 }
 
+/** Chooses the stock unit with this label. */
+async function chooseUnit(user: ReturnType<typeof userEvent.setup>, label = 'Pieces (pcs)') {
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Stock unit' }), label);
+}
+
 describe('new article', () => {
   it("E06-S06 New article saves the trimmed number and name under a new uuidv7, opens the article's page in place of the form and announces the article", async () => {
     const user = userEvent.setup();
@@ -90,6 +105,7 @@ describe('new article', () => {
     expect(document.title).toBe('New article · NorthMES');
     await user.type(field('Article number'), ' BR-900 ');
     await user.type(field('Name'), 'Wall bracket 90 mm ');
+    await chooseUnit(user);
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Article BR-900' })).toBeDefined();
@@ -113,15 +129,44 @@ describe('new article', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Save article' }));
 
-    const summary = await screen.findByRole('group', { name: 'Fix 2 fields to save the article' });
+    const summary = await screen.findByRole('group', { name: 'Fix 3 fields to save the article' });
     expect(document.activeElement).toBe(summary);
     expect(
       within(summary)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Enter an article number.', 'Enter a name.']);
+    ).toEqual(['Enter an article number.', 'Enter a name.', 'Choose a stock unit.']);
     expect(field('Article number').getAttribute('aria-invalid')).toBe('true');
     expect(field('Name').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('combobox', { name: 'Stock unit' }).getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+  });
+
+  it('E06-S06 New article starts on Choose a unit and an empty note, and saves the chosen stock unit and the trimmed note', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(coreLinks.articles.new({ plant }).href, [
+      createOf('AX-31007', 'Hydraulslang 12 mm', created, {
+        stockUnit: 'METRE',
+        note: 'Från vecka 41.',
+      }),
+    ]);
+
+    const unit = (await screen.findByRole('combobox', {
+      name: 'Stock unit',
+      description: 'Quantities of this article are counted in this unit.',
+    })) as HTMLSelectElement;
+    expect(unit.selectedOptions[0]?.textContent).toBe('Choose a unit');
+    expect(field('Note (optional)').value).toBe('');
+    await user.type(field('Article number'), 'AX-31007');
+    await user.type(field('Name'), 'Hydraulslang 12 mm');
+    await chooseUnit(user, 'Metres (m)');
+    await user.type(field('Note (optional)'), ' Från vecka 41. ');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Article AX-31007' }),
+    ).toBeDefined();
   });
 
   it('E06-S06 an article number over 32 characters states the range and the length typed', async () => {
@@ -130,6 +175,7 @@ describe('new article', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Article number' }), 'C'.repeat(34));
     await user.type(field('Name'), 'Clamp');
+    await chooseUnit(user);
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to save the article' });
@@ -161,6 +207,7 @@ describe('new article', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Article number' }), 'BR-140');
     await user.type(field('Name'), 'Wall bracket, wide');
+    await chooseUnit(user);
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to save the article' });
@@ -200,6 +247,7 @@ describe('new article', () => {
 
     await user.type(await screen.findByRole('textbox', { name: 'Article number' }), 'CL-300');
     await user.type(field('Name'), 'Clamp 300 mm');
+    await chooseUnit(user);
     await user.click(screen.getByRole('button', { name: 'Save article' }));
 
     const summary = await screen.findByRole('group', { name: 'Could not save the article' });

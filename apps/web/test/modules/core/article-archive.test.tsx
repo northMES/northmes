@@ -161,7 +161,13 @@ describe('archive and restore an article', () => {
     expect((await within(dialog).findByRole('alert')).textContent).toBe(
       'Someone changed this article after you opened it. The page now shows the saved article. Check it, then archive it again.',
     );
-    await waitFor(() => expect(screen.getByText('Axle 20 mm, steel')).toBeDefined());
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('region', { name: 'Identity', hidden: true })).getByText(
+          'Axle 20 mm, steel',
+        ),
+      ).toBeDefined(),
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Archive article' }));
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
@@ -195,7 +201,11 @@ describe('archive and restore an article', () => {
     expect((await within(dialog).findByRole('alert')).textContent).toBe(
       'Someone changed this article after you opened it, and the saved article could not be loaded. Check the connection, then try again.',
     );
-    expect(screen.getByText('Axle 20 mm')).toBeDefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Identity', hidden: true })).getByText(
+        'Axle 20 mm',
+      ),
+    ).toBeDefined();
   });
 
   it("E06-S06 an archive the server refuses shows the server's message in the dialog", async () => {
@@ -243,7 +253,9 @@ describe('archive and restore an article', () => {
     ]);
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() =>
-      expect(bodyRows(table)).toEqual([['AX-400', 'Axle 10 mm', 'Plant A', lastChangedText]]),
+      expect(bodyRows(table)).toEqual([
+        ['AX-400', 'Axle 10 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+      ]),
     );
 
     const showArchived = screen.getByRole('checkbox', { name: 'Show archived' });
@@ -251,8 +263,8 @@ describe('archive and restore an article', () => {
 
     await waitFor(() =>
       expect(bodyRows(table)).toEqual([
-        ['AX-400', 'Axle 10 mm', 'Plant A', lastChangedText],
-        ['AX-500', 'Axle 20 mmArchived', 'Plant A', lastChangedText],
+        ['AX-400', 'Axle 10 mm', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
+        ['AX-500', 'Axle 20 mmArchived', 'Plant A', 'pcs', 'NorthMES', lastChangedText],
       ]),
     );
     expect(router.state.location.search).toEqual({ archived: 1 });
@@ -289,7 +301,14 @@ describe('archive and restore an article', () => {
         request: {
           query: CoreUpdateArticle,
           variables: {
-            input: { id: axle.id, expectedVersion: 1, code: 'AX-500', name: 'Axle 20 mm, steel' },
+            input: {
+              id: axle.id,
+              expectedVersion: 1,
+              code: 'AX-500',
+              name: 'Axle 20 mm, steel',
+              stockUnit: 'PIECE',
+              note: '',
+            },
           },
         },
         result: {
@@ -309,7 +328,14 @@ describe('archive and restore an article', () => {
         request: {
           query: CoreUpdateArticle,
           variables: {
-            input: { id: axle.id, expectedVersion: 3, code: 'AX-500', name: 'Axle 20 mm, steel' },
+            input: {
+              id: axle.id,
+              expectedVersion: 3,
+              code: 'AX-500',
+              name: 'Axle 20 mm, steel',
+              stockUnit: 'PIECE',
+              note: '',
+            },
           },
         },
         result: {

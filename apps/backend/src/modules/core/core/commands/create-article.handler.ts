@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { NotFoundException } from '@nestjs/common';
+import { DEFAULT_STOCK_UNIT } from '@northmes/contracts';
 import { createArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import { noteCreated } from '@northmes/sdk/operations';
@@ -9,7 +10,11 @@ import { type PlantsPlan, planPlants, writePlants } from './article-plants.ts';
 import { requestCompany } from './company-scope.ts';
 import type { CoreContext } from './context.ts';
 
-type CreateArticleInput = z.output<typeof createArticle.input>;
+/**
+ * The input of core.createArticle, or of core.upsertArticle for a new article, which also names
+ * the integration it came from in source.
+ */
+type CreateArticleInput = z.output<typeof createArticle.input> & { readonly source?: string };
 
 /** True when the input names plants or All plants, rather than leaving them to the default. */
 function namesPlants({ allPlants, plants }: CreateArticleInput): boolean {
@@ -47,9 +52,10 @@ function isDefault(plan: PlantsPlan, plantId: string | undefined): boolean {
  * article will have, where the bus checks core.article:create: the request's plant by default, or
  * the company for an article of several plants, of All plants or, from company settings, of none
  * (ADR 0073). Plants other than that default also need core.article:assign at the company. It
- * writes the article at its company's node under the client's id with its plants, notes that it
- * created a row, and returns it with version 1, or returns the article a first run with that id
- * created.
+ * writes the article at its company's node under the client's id with its plants, in pieces
+ * unless the input names a stock unit and from NorthMES unless an upsert names its source, notes
+ * that it created a row, and returns it with version 1, or returns the article a first run with
+ * that id created.
  */
 export const createArticleHandler = {
   async scope(input: CreateArticleInput, context: Pick<CoreContext, 'tx' | 'plantId'>) {
@@ -73,6 +79,9 @@ export const createArticleHandler = {
         all_plants: plan.allPlants,
         code: input.code,
         name: input.name,
+        stock_unit: input.stockUnit ?? DEFAULT_STOCK_UNIT,
+        note: input.note ?? null,
+        source: input.source ?? null,
       })
       .onConflict((conflict) => conflict.column('id').doNothing())
       .returning('id')
