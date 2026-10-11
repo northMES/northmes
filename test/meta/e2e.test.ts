@@ -1,4 +1,6 @@
+import { getCSPScriptHash } from '@argos-ci/playwright';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { allowArgos } from '../../e2e/snapshot.ts';
 
 // The Playwright config of the e2e specs (docs/adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md):
 // the Argos reporter runs in every run, and uploads only in CI with ARGOS_TOKEN set, so a local run
@@ -53,5 +55,15 @@ describe('playwright.config.ts', () => {
         launchOptions: { args: ['--disable-lcd-text', '--font-render-hinting=none'] },
       }),
     ]);
+  });
+});
+
+describe('e2e/snapshot.ts', () => {
+  it("ADR0077 the specs' pages allow Argos's script by its hash and inline styles, and block any other inline script", () => {
+    const shell = "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'";
+
+    expect(allowArgos(shell)).toBe(
+      `default-src 'self'; script-src 'self' ${getCSPScriptHash()}; style-src 'self' 'unsafe-inline'; object-src 'none'`,
+    );
   });
 });
