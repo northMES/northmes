@@ -17,7 +17,8 @@ Please give us a reasonable time to fix the issue before you disclose it, and do
 - We triage it within 10 working days: we confirm whether it is a vulnerability, rate its severity and tell you what we plan.
 - We keep you informed while we fix it, and agree the disclosure date with you. We credit you in the advisory unless you prefer otherwise.
 - A fix reaches customers as a patch release: an image-only release with no migrations, with a target of 72 hours from the fix to the customer bundle (ADR 0038, ADR 0051).
-- We publish a GitHub security advisory for every confirmed vulnerability in a released version. The EU Cyber Resilience Act's vulnerability reporting obligations have applied since 11 September 2026, and we follow them as ADR 0051 records.
+- We publish a GitHub security advisory for every confirmed vulnerability in a released version.
+- The EU Cyber Resilience Act's vulnerability reporting obligations have applied since 11 September 2026. ADR 0051 records the readiness work. NorthMES's role under the Act, and with it the authority we report to, is still to be confirmed.
 
 ## Supported versions
 
