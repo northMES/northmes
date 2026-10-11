@@ -149,6 +149,30 @@ describe('article groups', () => {
     await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
   });
 
+  it('E06-S06 a page error of the active groups is gone once Show archived lists the groups anew', async () => {
+    const user = userEvent.setup();
+    const old = group('OL', 'Old', 2, lastChanged);
+    renderCoreAt(coreLinks.articleGroups({ plant }).href, [
+      groupsQuery([consumables, flanges], false, { next: 'page-2', totalCount: 3 }),
+      {
+        request: {
+          query: CoreArticleGroups,
+          variables: { includeArchived: false, after: 'page-2' },
+        },
+        error: new Error('Network down'),
+      },
+      groupsQuery([consumables, flanges, old], true),
+      viewerQuery(['core.articleGroup:read']),
+    ]);
+
+    expect(await screen.findByRole('button', { name: 'Try again' })).toBeDefined();
+    await user.click(screen.getByRole('checkbox', { name: 'Show archived' }));
+
+    const table = await screen.findByRole('table', { name: 'Article groups' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+
   it('E06-S06 a Plant admin reads the article groups without New article group', async () => {
     renderCoreAt(coreLinks.articleGroups({ plant }).href, [
       groupsQuery([flanges]),
