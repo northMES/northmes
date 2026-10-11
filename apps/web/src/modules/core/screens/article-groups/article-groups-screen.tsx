@@ -83,7 +83,7 @@ function NewArticleGroupLink() {
  */
 export function ArticleGroupsScreen() {
   const [showArchived, setShowArchived] = useState(false);
-  const { data, previousData, error, refetch } = useArticleGroups(
+  const { data, previousData, error, refetch, pageError, retryPage } = useArticleGroups(
     showArchived,
     'cache-and-network',
   );
@@ -99,6 +99,13 @@ export function ArticleGroupsScreen() {
       title: 'Could not load article groups',
       error,
       onRetry: () => refetch(),
+    };
+  } else if (pageError !== undefined) {
+    state = {
+      status: 'error',
+      title: 'Could not load article groups',
+      error: pageError,
+      onRetry: retryPage,
     };
   } else if (page !== undefined && page.totalCount === 0 && !showArchived) {
     state = {
