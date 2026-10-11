@@ -12,7 +12,16 @@ export default defineConfig({
   // Each worker runs its own server, so CI keeps to two of them.
   workers: process.env.CI ? 2 : undefined,
   timeout: 60_000,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // Argos takes the screenshots in every run and uploads them only from CI with ARGOS_TOKEN, which a
+  // fork's pull request does not get (ADR 0077).
+  reporter: [
+    ['list'],
+    ...(process.env.CI ? [['html', { open: 'never' }] as const] : []),
+    [
+      '@argos-ci/playwright/reporter',
+      { uploadToArgos: Boolean(process.env.CI && process.env.ARGOS_TOKEN) },
+    ],
+  ],
   use: { trace: 'retain-on-failure' },
   projects: [{ name: 'e2e', use: { ...devices['Desktop Chrome'] } }],
 });
