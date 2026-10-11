@@ -100,7 +100,7 @@ The architecture and data flows stay in plan 02. The data models stay in plans 0
   * "ADR0076 the controls index links every audit report, and each report links its tracking issue".
 * A `pr security` check in `scripts/ci/`, run like `linked-issue.mjs` on every pull request, fails a pull request whose Security section is missing or empty. A task adds it once M-87 is answered.
 * The release workflow of ADR 0038 fails when no report in `docs/security/audits/` is newer than the previous release tag. A task adds it with the first release (M-86).
-* `test/meta/security-docs.test.ts`: "SECURITY.md names a reporting channel, a response target and the plugin trust model", added by #481 (M-90).
+* `test/meta/security-policy.test.ts`: "ADR0076 SECURITY.md names a reporting channel, a response target and the plugin trust model", added by #481 (M-90).
 
 ## Pros and cons of the options
 
