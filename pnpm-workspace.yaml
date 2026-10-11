@@ -21,6 +21,7 @@ minimumReleaseAge: 20160
 
 catalog:
   '@apollo/client': 4.3.1
+  '@axe-core/playwright': 4.13.0
   '@base-ui/react': 1.8.0
   '@better-auth/api-key': 1.7.6
   '@better-auth/oauth-provider': 1.7.6
