@@ -162,7 +162,7 @@ test.describe('articles', () => {
     articles.hold();
     await page.goto(coreLinks.articles({ plant }).href);
     await expect(page.locator('main [aria-busy="true"]').first()).toBeVisible();
-    await checkA11y('the articles list while it loads');
+    await checkA11y('the articles list while it loads', { busy: true });
     articles.pass();
 
     articles.empty();

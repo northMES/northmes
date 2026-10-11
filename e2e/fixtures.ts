@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
@@ -9,6 +9,7 @@ import { readSecret } from '../scripts/stack/config.mjs';
 import { freePort } from '../scripts/stack/ports.mjs';
 import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
 import { checkA11y } from './a11y.ts';
+import { routeArgosCsp, snapshot } from './snapshot.ts';
 import { stackEnv } from './stack-env.ts';
 
 export { expect };
@@ -18,9 +19,22 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 /** The seed's plant A, where the specs work. */
 export const plant = seedPlants[0]?.slug ?? '';
 
-/** An article or group code that no other test uses, such as `NA-3F9A1C`. */
+/** How many codes each running test has taken so far. */
+const codesTaken = new WeakMap<object, number>();
+
+/**
+ * An article or group code that no other test uses, such as `NA-3F9A1C`. It comes from the test's
+ * title and how many codes the test took before, so it is the same in every run and the Argos
+ * screenshots that show it stay the same (ADR 0077).
+ */
 export function uniqueCode(prefix: string): string {
-  return `${prefix}-${randomBytes(3).toString('hex').toUpperCase()}`;
+  const info = base.info();
+  const taken = codesTaken.get(info) ?? 0;
+  codesTaken.set(info, taken + 1);
+  const hash = createHash('sha256')
+    .update(JSON.stringify([info.titlePath, info.repeatEachIndex, prefix, taken]))
+    .digest('hex');
+  return `${prefix}-${hash.slice(0, 6).toUpperCase()}`;
 }
 
 /** A worker's own server: its origin, on a database cloned from the stack's seeded one. */
@@ -33,8 +47,12 @@ interface Fixtures {
   signIn: (href: string) => Promise<void>;
   /** Signs in, creates an article at plant A through New article, and stays on its page. */
   newArticle: () => Promise<{ code: string; href: string }>;
-  /** Fails when the page, in the named state, breaks a WCAG 2.2 A or AA rule that axe checks. */
-  checkA11y: (state: string) => Promise<void>;
+  /**
+   * Fails when the page, in the named state, breaks a WCAG 2.2 A or AA rule that axe checks, and
+   * otherwise takes the state's Argos screenshot (ADR 0077). A state that is busy on purpose, such
+   * as a list while it loads, passes busy.
+   */
+  checkA11y: (state: string, options?: { readonly busy?: boolean }) => Promise<void>;
 }
 
 /**
@@ -132,6 +150,10 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
   baseURL: async ({ stack }, use) => {
     await use(stack.origin);
   },
+  page: async ({ page }, use) => {
+    await routeArgosCsp(page);
+    await use(page);
+  },
   signIn: async ({ page }, use) => {
     await use(async (href) => {
       await page.goto(href);
@@ -142,7 +164,10 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
     });
   },
   checkA11y: async ({ page }, use, testInfo) => {
-    await use((state) => checkA11y(page, testInfo, state));
+    await use(async (state, options) => {
+      await checkA11y(page, testInfo, state);
+      await snapshot(page, state, options);
+    });
   },
   newArticle: async ({ page, signIn }, use) => {
     await use(async () => {
