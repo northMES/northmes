@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { StockUnitCode } from '@northmes/contracts';
 import type { Generated, GeneratedAlways } from 'kysely';
 
 /** core.article, as its migrations shape it: an article of a company (ADR 0073). */
@@ -23,6 +24,14 @@ export interface ArticleTable {
   archived_at: Date | null;
   /** When the article last changed, its creation included; an update trigger moves it on. */
   updated_at: Generated<Date>;
+  /** A stock unit code of the unit catalog, PIECE unless one was chosen (ADR 0023). */
+  stock_unit: Generated<StockUnitCode>;
+  /** The article's note, or null. */
+  note: string | null;
+  /** The integration that created the article through core.upsertArticle, or null for NorthMES. */
+  source: string | null;
+  /** When the article was created. */
+  created_at: Generated<Date>;
 }
 
 /** core.article_plant: a plant an article is assigned to (ADR 0073). */

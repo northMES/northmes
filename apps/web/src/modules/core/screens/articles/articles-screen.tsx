@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { CombinedGraphQLErrors, type ErrorLike } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -87,6 +89,17 @@ const columns: readonly DataTableColumn<ArticleRow>[] = [
     id: 'plants',
     header: 'Plants',
     cell: (article) => plantsLabel(article),
+  },
+  {
+    id: 'stockUnit',
+    header: 'Stock unit',
+    cell: (article) => unitOf(article.stockUnit).symbol,
+  },
+  {
+    // An article created in NorthMES has no source (LI1).
+    id: 'source',
+    header: 'Source',
+    cell: (article) => article.source ?? 'NorthMES',
   },
   {
     id: 'changed',
