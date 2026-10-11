@@ -72,4 +72,18 @@ describe('announce', () => {
 
     expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe('Order 1001 released');
   });
+
+  // A test's window can close while a message is still queued, as when a test file ends right
+  // after a save. The timers then find no document, and the queue stops instead of throwing; the
+  // next message on a page speaks as before.
+  it('E04-S07 a queued message whose page has gone stops quietly, and the next message speaks', async () => {
+    announce('Article AX-20410 created');
+    vi.stubGlobal('document', undefined);
+
+    await expect(vi.runAllTimersAsync()).resolves.not.toThrow();
+
+    vi.unstubAllGlobals();
+    announce('Article AX-20411 created');
+    expect((await spoken()).at(-1)).toBe('Article AX-20411 created');
+  });
 });
