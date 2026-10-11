@@ -11,3 +11,9 @@ export function reasonTooLong(max: number) {
   return (issue: { readonly input?: unknown }) =>
     `A reason can be at most ${max} characters. It has ${String(issue.input).length}.`;
 }
+
+/** The message of an optional text over its limit: the field, the limit and the length typed. */
+export function atMost(label: string, max: number) {
+  return (issue: { readonly input?: unknown }) =>
+    `${label} can be at most ${max} characters. It has ${String(issue.input).length}.`;
+}

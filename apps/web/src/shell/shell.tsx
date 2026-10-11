@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider, useQuery } from '@apollo/client/react';
-import { createNorthmesClient, createShellRoutes, ShellProvider } from '@northmes/web-sdk';
+import {
+  companySettingsHref,
+  createNorthmesClient,
+  createShellRoutes,
+  ShellProvider,
+} from '@northmes/web-sdk';
 import {
   createRoute,
   createRouter,
-  Link,
+  type HistoryState,
   Outlet,
   type RouterHistory,
   redirect,
@@ -14,7 +19,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router';
-import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AuthSession } from '../auth/auth-session.ts';
 import { returnPathOf, signInPath, signInSearch } from '../auth/sign-in-link.ts';
 import { SignInScreen } from '../auth/sign-in-screen/index.ts';
@@ -26,10 +31,43 @@ import {
 } from '../ui/components/page-frame/index.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
+import { useIsMobile } from '../ui/lib/use-mobile.ts';
 import { SidebarInset, SidebarProvider } from '../ui/primitives/sidebar.tsx';
 import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
+import { type PageGroup, PageGroupsProvider, ShellAllPages } from './shell-all-pages.tsx';
+import { CompanySettingsLanding, CompanySettingsLayout } from './shell-company-settings.tsx';
+import { ShellHelpMenu } from './shell-help-menu.tsx';
+import { ShellNotFound } from './shell-not-found.tsx';
+import {
+  allPagesHref,
+  allPagesPath,
+  companySettingsEntries,
+  currentOf,
+  firstHref,
+  groupAt,
+  isCore,
+  mainId,
+  menuLinks,
+  moduleOfPath,
+  plantHome,
+  plantOf,
+  plantSettingsLinks,
+  settingsGroupsOf,
+  shownTo,
+  sidebarId,
+  sidebarLinks,
+  useFocusPageHeading,
+} from './shell-pages.ts';
+import { ShellRouteError } from './shell-route-error.tsx';
+import {
+  type SettingsGroup,
+  ShellSettingsLayout,
+  ShellSettingsNav,
+  settingsContentId,
+} from './shell-settings-nav.tsx';
 import { ShellSidebar } from './shell-sidebar.tsx';
-import { ShellTopBar } from './shell-top-bar.tsx';
+import { type SettingsButtonTarget, ShellTopBar } from './shell-top-bar.tsx';
+import { ShellUnknownPlant } from './shell-unknown-plant.tsx';
 import type { ShellUser } from './shell-user-menu.tsx';
 import { CoreViewer } from './viewer.graphql.ts';
 
@@ -44,12 +82,17 @@ export interface ShellRouterOptions {
   readonly fetch?: typeof globalThis.fetch;
 }
 
+/** The user menu's user while the session has none, which the plant routes' guard prevents. */
+const nobody: ShellUser = { name: 'Not signed in', username: '' };
+
 /**
- * Creates the web's router, once at boot: each module's routes under /$plant, and the sign-in
- * page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client
- * of the plant in the URL around the screen. A viewer without a session who opens a plant page
- * goes to sign-in with the page as the return path, and so does one whose request the API
- * refuses with 401.
+ * Creates the web's router, once at boot: each module's routes under /$plant, company settings at
+ * /settings/$companyId with each module's settingsRoutes (ADR 0066), and the sign-in page at
+ * /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client of the
+ * plant in the URL around the screen; company settings render their own layout without a plant,
+ * with the client that names no plant. A viewer without a session who opens a plant or settings
+ * page goes to sign-in with the page as the return path, and so does one whose request the API
+ * refuses with 401, or with core.password_change_required, whose session ends first.
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
@@ -59,21 +102,45 @@ export function createShellRouter(
   // client of the plant left behind come with the plant switcher.
   const clients = new Map<string, ApolloClient>();
   const clearCaches = () => Promise.all([...clients.values()].map((client) => client.clearStore()));
-  const toSignIn = async (search: { redirect?: string; signedOut?: true }) => {
-    await router.navigate({ to: signInPath, search });
+  const toSignIn = async (
+    search: { redirect?: string; signedOut?: true },
+    state: SignInState = {},
+  ) => {
+    await router.navigate({ to: signInPath, search, state: state as HistoryState });
     await clearCaches();
   };
+  // Whether a refusal for a password change is ending the session. The user stays signed in until
+  // the API has answered the sign-out, so a guard on the user alone would let the requests refused
+  // meanwhile end it again.
+  let endingSession = false;
   const auth = {
     token: () => session.token(),
     onUnauthenticated: () => {
       // The first refused request ends the session; the requests refused with it follow it.
       if (session.user() === undefined) return;
       session.forget();
-      void toSignIn({ redirect: router.state.location.href });
+      // The URL keeps only the return path (SO1); the history entry says the session ended.
+      void toSignIn({ redirect: router.state.location.href }, { sessionEnded: true });
+    },
+    onPasswordChangeRequired: () => {
+      // The user signed in with a temporary password and must set a new one, as after an admin's
+      // reset: only the temporary password lets them, so the session ends and they sign in with it
+      // again, which leads to the new password step and then back to this page (issue #416).
+      // The first refused request ends the session; the requests refused with it follow it.
+      if (endingSession || session.user() === undefined) return;
+      endingSession = true;
+      const redirect = router.state.location.href;
+      void session
+        .signOut()
+        .then(() => toSignIn({ redirect }, { sessionEnded: true }))
+        .finally(() => {
+          endingSession = false;
+        });
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
-  // reads them, and its cache serves every plant switch.
+  // reads them, and its cache serves every plant switch. Company settings, which have no plant,
+  // read and write through it too (ADR 0066).
   const companiesClient = createNorthmesClient({ apiUrl, fetch, auth });
   clients.set('', companiesClient);
   const clientFor = (plant: string): ApolloClient => {
@@ -85,7 +152,17 @@ export function createShellRouter(
     await session.signOut();
     await toSignIn({ signedOut: true });
   };
+  // The plant the user was at last, where company settings lead back to (ADR 0066).
+  let lastPlant: string | undefined;
+  // The user's own choice of the main sidebar, kept while company settings replace the plant's
+  // layout, so leaving them returns it (ADR 0066).
+  const sidebarChoice: SidebarChoice = { open: true };
   const ordered = [...modules].sort((a, b) => a.order - b.order);
+  const signedIn = ({ location }: { readonly location: { readonly href: string } }) => {
+    if (session.user() === undefined) {
+      throw redirect({ to: signInPath, search: { redirect: location.href } });
+    }
+  };
   const routeTree = createShellRoutes({
     modules: modules.map(({ module }) => module),
     plantComponent: () => (
@@ -95,13 +172,31 @@ export function createShellRouter(
         companiesClient={companiesClient}
         session={session}
         onSignOut={signOut}
+        onPlant={(plant) => {
+          lastPlant = plant;
+        }}
+        sidebarChoice={sidebarChoice}
       />
     ),
-    plantBeforeLoad: ({ location }) => {
-      if (session.user() === undefined) {
-        throw redirect({ to: signInPath, search: { redirect: location.href } });
-      }
-    },
+    plantBeforeLoad: signedIn,
+    settingsComponent: () => (
+      <CompanySettingsLayout
+        modules={ordered}
+        companiesClient={companiesClient}
+        user={session.user() ?? nobody}
+        onSignOut={signOut}
+        lastPlant={lastPlant}
+      />
+    ),
+    settingsIndexComponent: CompanySettingsLanding,
+    settingsBeforeLoad: signedIn,
+    plantShellRoutes: (plantRoute) => [
+      createRoute({
+        getParentRoute: () => plantRoute,
+        path: allPagesPath,
+        component: ShellAllPages,
+      }),
+    ],
     outsidePlantRoutes: (rootRoute) => [
       createRoute({
         getParentRoute: () => rootRoute,
@@ -111,120 +206,115 @@ export function createShellRouter(
       }),
     ],
   });
-  const router = createRouter({ routeTree, history });
+  const router = createRouter({
+    routeTree,
+    history,
+    // Both render in the nearest layout: the plant's or company settings' (shell-306, NF1, NF3).
+    defaultNotFoundComponent: () => <ShellNotFound modules={ordered} />,
+    defaultErrorComponent: (props) => <ShellRouteError {...props} modules={ordered} />,
+  });
   return router;
 }
 
-/** The sign-in route's component: the sign-in page, which leads to the return path once signed in. */
+/** What the history entry of the sign-in page carries: whether the API ended the tab's session. */
+interface SignInState {
+  readonly sessionEnded?: boolean;
+}
+
+/**
+ * The sign-in route's component: the sign-in page, which leads to the return path once signed in,
+ * and says the session ended when a refused request sent the tab there (shell-306, SO1).
+ */
 function SignInPage({ session }: { readonly session: AuthSession }) {
   const search = signInSearch(useSearch({ strict: false }));
+  const state = useRouterState({ select: ({ location }) => location.state as SignInState });
   const router = useRouter();
   return (
     <SignInScreen
       session={session}
       signedOut={search.signedOut === true}
+      sessionEnded={state.sessionEnded === true}
       onSignedIn={() => void router.navigate({ href: returnPathOf(search) })}
     />
   );
 }
 
-/** The id of main, which the skip link moves focus to. */
-const mainId = 'main';
-
-/** The id of the sidebar, which the sidebar trigger controls. */
-const sidebarId = 'shell-sidebar';
-
-/** The user menu's user while the session has none, which the plant routes' guard prevents. */
-const nobody: ShellUser = { name: 'Not signed in', username: '' };
-
 /**
- * Moves focus to the page's h1 after each path change, one frame after the new route rendered, and
- * to main when the page has no h1 that takes focus (ADR 0021). The first load moves no focus, so
- * the first Tab reaches the skip link (D2, Focus rules). A change of the search alone leaves focus
- * where it is, so sorting, searching and paging keep focus on their control.
- */
-function useFocusPageHeading() {
-  const main = useRef<HTMLElement>(null);
-  const shownPath = useRef<string | undefined>(undefined);
-  const pathname = useRouterState({ select: (state) => state.resolvedLocation?.pathname });
-  useEffect(() => {
-    if (pathname === undefined) return;
-    const left = shownPath.current;
-    shownPath.current = pathname;
-    if (left === undefined || left === pathname) return;
-    const frame = requestAnimationFrame(() => {
-      // An h1 without a tabindex, such as the board stub's, cannot take focus, so main does.
-      const heading = main.current?.querySelector<HTMLElement>('h1[tabindex]');
-      (heading ?? main.current)?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [pathname]);
-  return main;
-}
-
-/** The href of the first sidebar entry of a module, at a plant. */
-function firstHref(module: ShellModule | undefined, plant: string): string | undefined {
-  return module?.links?.[0]?.link({ plant }).href;
-}
-
-/** The href of a plant's first page, the first entry of the sidebar, until a plant has a home page. */
-function plantHome(modules: readonly ShellModule[], plant: string): string | undefined {
-  return firstHref(
-    modules.find(({ links = [] }) => links.length > 0),
-    plant,
-  );
-}
-
-/**
- * The plant's first page the user may open: the first entry of the sidebar that shows, the modules
- * by their order, then Administration. An entry that needs a permission counts only once the
- * permissions say the user holds it.
+ * The plant's first page the user may open: the first entry of the main sidebar that shows, the
+ * modules by their order. An entry that needs a permission counts only once the permissions say the
+ * user holds it.
  */
 function firstOpenPage(
   modules: readonly ShellModule[],
   plant: string,
   permissions: ReadonlySet<string> | undefined,
 ): { label: string; href: string } | undefined {
-  const ordered = [...modules].sort((a, b) => a.order - b.order);
-  const entry = [
-    ...ordered.flatMap(({ links = [] }) => links),
-    ...ordered.flatMap(({ adminLinks = [] }) => adminLinks),
-  ].find(({ permission }) => permission === undefined || (permissions?.has(permission) ?? false));
+  const entry = modules.flatMap(sidebarLinks).find(shownTo(permissions));
   return entry === undefined ? undefined : { label: entry.label, href: entry.link({ plant }).href };
-}
-
-/** The company and the plant of the user's companies that a slug names. */
-function plantOf(companies: readonly ShellCompany[], slug: string) {
-  for (const company of companies) {
-    const plant = company.plants.find((each) => each.slug === slug);
-    if (plant !== undefined) return { company, plant };
-  }
-  return undefined;
 }
 
 /**
  * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
- * linked to the plant's first page; then the module of the page, linked to its first entry. A
- * crumb whose page is the one on screen is plain text.
+ * linked to the plant's first page; then the module of the page, linked to its first entry, or on
+ * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
+ * Core's pages sit at the plant root and have no module crumb (ADR 0074). A page in a nested group,
+ * as Articles in Master data, adds the group's crumb, as text, since the group has no page. A crumb
+ * whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
   plant: string,
   companies: readonly ShellCompany[],
   pathname: string,
+  settingsHome: string | undefined,
 ): readonly Crumb[] {
   const crumb = (label: string, href: string | undefined): Crumb =>
     href === undefined || href === pathname ? { label } : { label, href };
-  const moduleId = pathname.split('/')[2];
-  const current = modules.find(({ module }) => module.id === moduleId);
   const found = plantOf(companies, plant);
   const spansCompanies = companies.filter(({ plants }) => plants.length > 0).length > 1;
-  return [
+  const head = [
     ...(found !== undefined && spansCompanies ? [{ label: found.company.name }] : []),
     crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
-    ...(current === undefined ? [] : [crumb(current.label, firstHref(current, plant))]),
   ];
+  if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
+  const current = moduleOfPath(modules, pathname);
+  const group = groupAt(current, plant, pathname);
+  return [
+    ...head,
+    ...(current === undefined || isCore(current)
+      ? []
+      : [crumb(current.label, firstHref(current, plant))]),
+    ...(group === undefined ? [] : [{ label: group.label }]),
+  ];
+}
+
+/** The user's own choice of the main sidebar, open or the rail, for the router's life. */
+interface SidebarChoice {
+  open: boolean;
+}
+
+/**
+ * The open state of the main sidebar (ADR 0066): the user's own choice, except on a settings page,
+ * where it collapses to the rail on its own. Leaving settings, plant or company, returns it to the
+ * user's choice, which the router keeps; an expand on a settings page lasts until the user leaves
+ * settings. The collapse moves no focus.
+ */
+function useSidebarOpen(inSettings: boolean, choice: SidebarChoice) {
+  const [own, setOwnState] = useState(choice.open);
+  const setOwn = (next: boolean) => {
+    choice.open = next;
+    setOwnState(next);
+  };
+  const [visit, setVisit] = useState({ inSettings, open: false });
+  // Entering or leaving settings starts a new visit, collapsed.
+  if (visit.inSettings !== inSettings) setVisit({ inSettings, open: false });
+  const open = inSettings ? visit.inSettings === inSettings && visit.open : own;
+  const onOpenChange = (next: boolean) => {
+    if (inSettings) setVisit({ inSettings, open: next });
+    else setOwn(next);
+  };
+  return { open, onOpenChange };
 }
 
 interface PlantLayoutProps {
@@ -234,15 +324,20 @@ interface PlantLayoutProps {
   readonly companiesClient: ApolloClient;
   readonly session: AuthSession;
   readonly onSignOut: () => void;
+  /** Hears the plant the user is at, which company settings lead back to. */
+  readonly onPlant: (plant: string) => void;
+  /** The user's own choice of the main sidebar, which outlives a visit to company settings. */
+  readonly sidebarChoice: SidebarChoice;
 }
 
 /**
  * The $plant route's component, the D2 planner shell: the skip link, the sidebar, the top bar with
- * the breadcrumb and the page actions, and main with the route, inside the shell state and Apollo
- * client of the plant. The DOM order is the focus order: skip link, sidebar, top bar, main. Once
- * the user's plants have loaded, a slug that names none of them gets the page of an unknown plant
- * (ADR 0007, D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows
- * the slug.
+ * the breadcrumb, the page actions and the Settings button, and main with the route, inside the
+ * shell state and Apollo client of the plant. The DOM order is the focus order: skip link, sidebar,
+ * top bar, main. A route whose entry is in the plant settings navigation gets the settings layout
+ * inside main, the sidebar collapsed to the rail and the Settings crumb (ADR 0066). Once the user's
+ * plants have loaded, a slug that names none of them gets the page of an unknown plant (ADR 0007,
+ * D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows the slug.
  */
 function PlantLayout({
   modules,
@@ -250,18 +345,27 @@ function PlantLayout({
   companiesClient,
   session,
   onSignOut,
+  onPlant,
+  sidebarChoice,
 }: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
+  useEffect(() => onPlant(plant), [onPlant, plant]);
   const { data } = useQuery(CoreCompanies, { client: companiesClient });
-  // The permissions at the plant, read only when an entry of the sidebar needs one.
-  const gated = modules.some(({ links = [], adminLinks = [] }) =>
-    [...links, ...adminLinks].some(({ permission }) => permission !== undefined),
+  // The permissions at the plant and its company, read only when an entry needs one.
+  const gated = modules.some(
+    (module) =>
+      menuLinks(module).some(({ permission }) => permission !== undefined) ||
+      (module.settingsLinks ?? []).length > 0,
   );
   const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
   const permissions = useMemo(
     () => (viewer === undefined ? undefined : new Set(viewer.coreViewer.plantPermissions)),
+    [viewer],
+  );
+  const companyPermissions = useMemo(
+    () => (viewer === undefined ? undefined : new Set(viewer.coreViewer.companyPermissions)),
     [viewer],
   );
   const shell = useMemo(
@@ -272,25 +376,104 @@ function PlantLayout({
   const companies = loaded ?? [];
   const found = plantOf(companies, plant);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // A page is a plant settings page when its entry is in the plant settings navigation, whether
+  // or not the permissions have loaded, so its layout does not change once they do.
+  const inSettings = modules
+    .flatMap(plantSettingsLinks)
+    .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined);
+  const shown = shownTo(permissions);
+  const settingsGroups: SettingsGroup[] = settingsGroupsOf(
+    modules.map((module) => ({
+      moduleId: module.module.id,
+      entries: plantSettingsLinks(module)
+        .filter(shown)
+        .map(({ label, icon, link }) => ({ label, icon, href: link({ plant }).href })),
+    })),
+  );
+  const settingsHome = settingsGroups[0]?.entries[0]?.href;
+  const isMobile = useIsMobile();
+  const companyId = found?.company.id;
+  const companySettings =
+    companyId !== undefined &&
+    companySettingsEntries(modules, companyPermissions, companyId).some(
+      ({ entries }) => entries.length > 0,
+    )
+      ? companySettingsHref(companyId)
+      : undefined;
+  const settingsTarget = settingsHome ?? companySettings;
+  const settingsButton: SettingsButtonTarget | undefined =
+    settingsTarget === undefined ? undefined : { href: settingsTarget, current: inSettings };
+  const sidebar = useSidebarOpen(inSettings, sidebarChoice);
   const [breadcrumb, setBreadcrumb] = useState<HTMLElement | null>(null);
   const [actions, setActions] = useState<HTMLElement | null>(null);
+  const plantName = found?.plant.name ?? plant;
+  // Every page the user can open here, for the All pages index: the sidebar's, then settings.
+  const pageGroups: PageGroup[] = [
+    ...modules.map((module) => ({
+      label: module.label,
+      entries: sidebarLinks(module)
+        .filter(shown)
+        .map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    })),
+    {
+      label: `${plantName} settings`,
+      entries: settingsGroups.flatMap(({ entries }) => entries),
+    },
+  ].filter(({ entries }) => entries.length > 0);
+  const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
-      trail: shellTrail(modules, plant, companies, pathname),
-      titleContext: found?.plant.name ?? plant,
+      trail: shellTrail(
+        modules,
+        plant,
+        companies,
+        pathname,
+        inSettings ? (settingsHome ?? pathname) : undefined,
+      ),
+      titleContext: plantName,
       breadcrumb,
       actions,
     }),
-    [modules, plant, companies, found, pathname, breadcrumb, actions],
+    [modules, plant, companies, pathname, inSettings, settingsHome, plantName, breadcrumb, actions],
   );
   if (loaded !== undefined && found === undefined) {
-    return <UnknownPlant modules={modules} plant={plant} companies={companies} main={main} />;
+    return (
+      <ShellUnknownPlant
+        modules={modules}
+        companies={companies}
+        user={session.user() ?? nobody}
+        onSignOut={onSignOut}
+        main={main}
+        help={<ShellHelpMenu modules={modules} />}
+      />
+    );
   }
+  const page = inSettings ? (
+    <ShellSettingsLayout
+      column={
+        <ShellSettingsNav
+          company={found?.company.name ?? ''}
+          title={`${plantName} settings`}
+          groups={settingsGroups}
+          foot={
+            companySettings === undefined || found === undefined
+              ? undefined
+              : { label: `${found.company.name} settings`, href: companySettings }
+          }
+          pathname={pathname}
+        />
+      }
+    >
+      <Outlet />
+    </ShellSettingsLayout>
+  ) : (
+    <Outlet />
+  );
   return (
     <ApolloProvider client={clientFor(plant)}>
       <ShellProvider value={shell}>
-        <SkipLink targetId={mainId} />
-        <SidebarProvider>
+        <SkipLink targetId={inSettings ? settingsContentId : mainId} />
+        <SidebarProvider open={sidebar.open} onOpenChange={sidebar.onOpenChange}>
           <ShellSidebar
             id={sidebarId}
             modules={modules}
@@ -299,12 +482,15 @@ function PlantLayout({
             user={session.user() ?? nobody}
             onSignOut={onSignOut}
             permissions={permissions}
+            help={isMobile ? help : undefined}
           />
           <SidebarInset className="min-w-0">
             <ShellTopBar
               sidebarId={sidebarId}
               breadcrumbRef={setBreadcrumb}
               actionsRef={setActions}
+              settings={settingsButton}
+              help={isMobile ? undefined : help}
             />
             <PageFrameTopBar value={topBar}>
               <main
@@ -313,74 +499,12 @@ function PlantLayout({
                 tabIndex={-1}
                 className="flex-1 px-4 py-6 md:px-7 focus-visible:outline-offset-[-4px]"
               >
-                <Outlet />
+                <PageGroupsProvider value={pageGroups}>{page}</PageGroupsProvider>
               </main>
             </PageFrameTopBar>
           </SidebarInset>
         </SidebarProvider>
       </ShellProvider>
     </ApolloProvider>
-  );
-}
-
-interface UnknownPlantProps {
-  readonly modules: readonly ShellModule[];
-  readonly plant: string;
-  readonly companies: readonly ShellCompany[];
-  readonly main: RefObject<HTMLElement | null>;
-}
-
-/**
- * The page of a plant slug that names none of the user's plants (D2 ST29): no sidebar and no
- * crumbs, the h1 Plant not found, and links to the first page of each of the user's plants, under
- * their company's name when they span two or more companies. It never says whether the plant
- * exists.
- */
-function UnknownPlant({ modules, plant, companies, main }: UnknownPlantProps) {
-  const withPlants = companies.filter(({ plants }) => plants.length > 0);
-  const title = 'Plant not found';
-  useEffect(() => {
-    document.title = `${title} · NorthMES`;
-  }, []);
-  const links = (company: ShellCompany) => (
-    <ul className="grid gap-1">
-      {company.plants.map((each) => (
-        <li key={each.slug}>
-          <Link to={plantHome(modules, each.slug) ?? '.'} className="text-link underline">
-            {each.name}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-  return (
-    <main
-      id={mainId}
-      ref={main}
-      tabIndex={-1}
-      className="mx-auto grid max-w-xl gap-4 px-4 py-10 focus-visible:outline-offset-[-4px]"
-    >
-      <h1 tabIndex={-1} className="text-2xl font-semibold">
-        {title}
-      </h1>
-      <p>
-        {plant} is not a plant you can open.{' '}
-        {withPlants.length > 0 ? 'Choose one of your plants.' : 'You have no plant to open yet.'}
-      </p>
-      {withPlants.length > 1
-        ? withPlants.map((company) => (
-            <section
-              key={company.id}
-              aria-labelledby={`company-${company.id}`}
-              className="grid gap-2"
-            >
-              <h2 id={`company-${company.id}`} className="text-lg font-medium">
-                {company.name}
-              </h2>
-              {links(company)}
-            </section>
-          ))
-        : withPlants.map((company) => <div key={company.id}>{links(company)}</div>)}
-    </main>
   );
 }

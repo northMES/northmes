@@ -10,9 +10,13 @@ describe('schemaSdl', () => {
 
     expect(Object.keys(schema.getQueryType()?.getFields() ?? {})).toEqual([
       'coreArticle',
+      'coreArticleFacets',
+      'coreArticleGroup',
+      'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
       'corePermissionCatalog',
+      'corePlantRoleAssignments',
       'coreRole',
       'coreRoles',
       'coreUser',
@@ -22,17 +26,24 @@ describe('schemaSdl', () => {
     ]);
     expect(Object.keys(schema.getMutationType()?.getFields() ?? {})).toEqual([
       'coreArchiveArticle',
+      'coreArchiveArticleGroup',
       'coreAssignRole',
       'coreBlockUser',
       'coreCreateArticle',
+      'coreCreateArticleGroup',
       'coreCreateRole',
       'coreCreateUser',
       'coreDeleteRole',
       'coreRemoveRoleAssignment',
+      'coreResetPassword',
       'coreRestoreArticle',
+      'coreRestoreArticleGroup',
+      'coreSetArticlePlants',
       'coreUnblockUser',
       'coreUpdateArticle',
+      'coreUpdateArticleGroup',
       'coreUpdateRole',
+      'coreUpsertArticle',
       'planningReleaseProductionOrder',
     ]);
     expect(sdl.endsWith('}\n')).toBe(true);

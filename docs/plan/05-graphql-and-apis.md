@@ -430,6 +430,11 @@ Codes named by the decisions so far:
 | Code | Meaning |
 |---|---|
 | `core.forbidden` | permission denied at the target's scope (`FORBIDDEN`) |
+| `core.not_found` | the target does not exist or lies outside the caller's company (`NOT_FOUND`) |
+| `core.invalid_input` | an operation's input fails its contract, with `fieldErrors` (`BAD_USER_INPUT`) (ADR 0073) |
+| `core.unauthenticated` | an operation call without a valid credential (`UNAUTHENTICATED`) |
+| `core.plant_required` | a call without a plant to an operation whose scope is `plant` (`BAD_USER_INPUT`) |
+| `core.conflict`, `core.precondition`, `core.unavailable` | the operation runner's code for a Nest `HttpException` of status 409, 412 or 503 that is not a `DomainError` (`CONFLICT`, `PRECONDITION`, `UNAVAILABLE`) |
 | `core.plant_forbidden` | `x-northmes-plant` names a plant the principal may not use, or an operation without the header selects a field that is not plant-free (`FORBIDDEN`) |
 | `core.plant_not_ready` | the plant's onboarding is not complete and the principal does not hold `core.onboarding:manage` (`FORBIDDEN`, no security event) ([0066][adr-0066]) |
 | `core.plant_slug_taken` | another plant of the installation uses the slug; `fieldErrors` on `slug`, and the message names no company |
@@ -457,7 +462,7 @@ One filter catches every exception (`@Catch()` with no arguments). The SDK expor
 Exceptions that are not a `DomainError`:
 
 1. `PermissionGuard` and `PrincipalGuard` throw a `DomainError` (`core.forbidden` with `details.permission`, or kind `unauthenticated`) and never return false, because a guard that returns false makes Nest throw its own `ForbiddenException`.
-2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`.
+2. A Nest `HttpException`, or an http-errors object such as body-parser's, maps by status: 400 to `validation`, 401 to `unauthenticated`, 403 to `forbidden`, 404 to `not_found` and 409 to `conflict`. The message becomes the kind's fixed text, because Nest's default texts are not written for users. Malformed JSON is a 400 with `core.request.malformed`. The operation runner of ADR 0073 gives such an exception the code of its status: 400 `core.invalid_input`, 401 `core.unauthenticated`, 403 `core.forbidden`, 404 `core.not_found`, 409 `core.conflict`, 412 `core.precondition` and 503 `core.unavailable`.
 3. Other 4xx statuses are transport errors. They keep their HTTP status and carry a core code: 413 `core.request.too_large`, 415 `core.request.unsupported_media_type` and 429 `core.request.rate_limited` with a `Retry-After` header. The code names answer M-51 in [16-open-questions.md](16-open-questions.md#design-points-from-the-plan-documents).
 4. A 5xx status and anything else is masked.
 5. Core's user-management handlers translate a Better Auth `APIError` from `auth.api` into `core.user.*` codes ([0011][adr-0011]). An `APIError` that escapes them is masked.

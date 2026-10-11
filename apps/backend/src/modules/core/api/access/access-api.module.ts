@@ -4,6 +4,7 @@ import { Inject, type MiddlewareConsumer, Module, type NestModule } from '@nestj
 import { APP_GUARD } from '@nestjs/core';
 import { AccessModule } from '../../core/access/access.module.ts';
 import { AuthService } from '../../core/access/auth.service.ts';
+import { NewPasswordController } from './new-password.controller.ts';
 import { PrincipalGuard } from './principal.guard.ts';
 
 /** The paths of Better Auth's handler, /api/auth and everything below it. */
@@ -11,10 +12,12 @@ const authRoutes = ['/api/auth', '/api/auth/{*path}'];
 
 /**
  * core's sign-in surface (ADR 0010): Better Auth's handler on /api/auth/*, which answers before any
- * route, and PrincipalGuard on every route and GraphQL field of the app.
+ * route, the new password step after a sign-in with a temporary password, and PrincipalGuard on
+ * every route and GraphQL field of the app.
  */
 @Module({
   imports: [AccessModule],
+  controllers: [NewPasswordController],
   providers: [{ provide: APP_GUARD, useClass: PrincipalGuard }],
 })
 export class AccessApiModule implements NestModule {

@@ -13,7 +13,7 @@ export class RoleAssignmentFieldResolver {
   constructor(@Inject(RoleService) private readonly roles: RoleService) {}
 
   /**
-   * The role held. It needs core.role:read at the request's plant: without it, the field is null
+   * The role held. It needs core.role:read where the request runs: without it, the field is null
    * with FORBIDDEN and core.forbidden, so a reader of users sees no access in its place. The roles
    * of every assignment in an answer are read in one query.
    */
@@ -22,8 +22,9 @@ export class RoleAssignmentFieldResolver {
     @Parent() assignment: RoleAssignmentRecord,
     @Context() context: RequestContext,
   ): Promise<RoleRecord | null> {
-    return loaderFor(context, 'core.role', (ids: readonly string[]) => this.roles.byIds(ids)).load(
-      assignment.roleId,
-    );
+    const { companyId } = assignment;
+    return loaderFor(context, `core.role:${companyId}`, (ids: readonly string[]) =>
+      this.roles.byIds(ids, companyId),
+    ).load(assignment.roleId);
   }
 }

@@ -13,7 +13,8 @@ type RemoveRoleAssignmentInput = z.output<typeof removeRoleAssignment.input>;
  * The handler of core.removeRoleAssignment (ADR 0012), which the mutation
  * coreRemoveRoleAssignment sends through the command bus. Its scope hook names the assignment's
  * scope, where the bus checks core.roleAssignment:manage; an assignment that does not exist, or is
- * at neither the request's plant nor its company, is not found. The handler applies the grant rule
+ * at neither the request's plant nor its company, is not found. In company settings, a request
+ * without a plant, the assignment's company is the request's (ADR 0066). The handler applies the grant rule
  * of ADR 0010 there, refuses with core.last_admin to remove the company's last active Company
  * admin, deletes the assignment and returns it as it was. The user loses its
  * permissions from their next request. The reason is not recorded until the audit trail arrives
@@ -26,10 +27,14 @@ export const removeRoleAssignmentHandler = {
   ): Promise<string> {
     const assignment = await context.tx
       .selectFrom('core.role_assignment')
-      .select('scope_id')
+      .select(['scope_id', 'company_id'])
       .where('id', '=', id)
       .executeTakeFirst();
-    const scopes = await assignableScopes(context);
+    // In company settings the assignment's own company is the request's (ADR 0066).
+    const scopes = await assignableScopes(
+      context,
+      context.plantId ? {} : { companyId: assignment?.company_id },
+    );
     if (!assignment || !scopes.includes(assignment.scope_id)) {
       throw new NotFoundException(`Role assignment ${id} was not found`);
     }

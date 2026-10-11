@@ -2,6 +2,7 @@
 import { Inject, type Type } from '@nestjs/common';
 import {
   Args,
+  Extensions,
   Field,
   Float,
   ID,
@@ -12,10 +13,11 @@ import {
   type ReturnTypeFunc,
 } from '@nestjs/graphql';
 import type { CommandContract } from '@northmes/contracts';
-import { GraphQLError } from 'graphql';
 import { z } from 'zod';
-import type { FieldError } from '../errors/domain-error.ts';
+import { PLANT_FREE } from '../graphql/plant-free.ts';
+import { TranslationInput } from '../graphql/translation.ts';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
+import { parseCommandInput } from './parse-input.ts';
 
 function capitalize(name: string): string {
   return `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
@@ -62,29 +64,56 @@ interface InputField {
   readonly optional: boolean;
 }
 
+/** True for the JSON Schema of a list of plain strings. */
+function isStringList(property: z.core.JSONSchema.JSONSchema): boolean {
+  const { items } = property;
+  return (
+    property.type === 'array' &&
+    typeof items === 'object' &&
+    !Array.isArray(items) &&
+    items.type === 'string' &&
+    items.format === undefined
+  );
+}
+
+/**
+ * True for the JSON Schema of a list of translations, objects of exactly a field, a locale and a
+ * text, as `translations` in @northmes/contracts gives it (ADR 0053).
+ */
+function isTranslationList(property: z.core.JSONSchema.JSONSchema): boolean {
+  const { items } = property;
+  if (property.type !== 'array' || typeof items !== 'object' || Array.isArray(items)) return false;
+  const keys = Object.keys(items.properties ?? {}).sort();
+  return items.type === 'object' && keys.join(' ') === 'field locale text';
+}
+
 /**
  * The GraphQL type of an input field, from its JSON Schema, or undefined for a kind the generated
- * input cannot carry: a required scalar, a required list of strings, or an optional string, which
- * is a nullable String.
+ * input cannot carry: a required scalar, boolean or list of strings, or an optional string,
+ * boolean, 32-bit integer or list of strings, which is nullable; and a list of translations, the
+ * shared TranslationInput.
  */
 function inputFieldType(
   property: z.core.JSONSchema._JSONSchema,
   required: boolean,
 ): ReturnTypeFunc | undefined {
   if (typeof property !== 'object') return undefined;
-  if (!required) return property.type === 'string' ? () => String : undefined;
-  const { items } = property;
-  if (property.type === 'array' && typeof items === 'object' && !Array.isArray(items)) {
-    return items.type === 'string' && items.format === undefined ? () => [String] : undefined;
+  if (property.type === 'boolean') return () => Boolean;
+  if (isStringList(property)) return () => [String];
+  if (isTranslationList(property)) return () => [TranslationInput];
+  if (!required) {
+    if (property.type === 'string') return () => String;
+    return property.type === 'integer' ? scalarOf(property) : undefined;
   }
   return scalarOf(property);
 }
 
 /**
  * The fields of a command's input type, built from contract.input. It covers the field kinds the
- * commands use so far: required ID, string, number, 32-bit integer and list of strings fields, and
- * optional strings. Any other field throws, naming it, before a type is registered; the full
- * converter is inputFromZod (ADR 0017, E05-S01).
+ * commands use so far: required ID, string, number, boolean, 32-bit integer and list of strings
+ * fields, optional strings, booleans, 32-bit integers and lists of strings, and lists of
+ * translations. Any other field throws, naming it,
+ * before a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
  */
 function inputFields(contract: CommandContract): InputField[] {
   const schema = z.toJSONSchema(contract.input, { io: 'input' });
@@ -93,7 +122,7 @@ function inputFields(contract: CommandContract): InputField[] {
     const type = inputFieldType(property, required.has(field));
     if (!type) {
       throw new Error(
-        `Command ${contract.name}: input field ${field} is not a required ID, string, number, 32-bit integer or list of strings, or an optional string, the kinds a generated mutation input supports so far`,
+        `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
     return { field, type, optional: !required.has(field) };
@@ -110,54 +139,47 @@ function inputType(fields: readonly InputField[], typeName: string): Type {
   return Input;
 }
 
-/**
- * The input as the contract reads it: an optional field the client sent as null is left out, since
- * GraphQL has null where the contract has an absent field.
- */
-function withoutNulls(fields: readonly InputField[], input: unknown): unknown {
-  if (typeof input !== 'object' || input === null) return input;
-  const optional = new Set(fields.filter((field) => field.optional).map(({ field }) => field));
-  return Object.fromEntries(
-    Object.entries(input).filter(([field, value]) => !(optional.has(field) && value === null)),
-  );
-}
+/** The input type of each contract, so a command's type is registered once. */
+const inputTypes = new WeakMap<CommandContract, Type>();
 
 /**
- * Parses a command's input with its contract. A failure is BAD_USER_INPUT with one fieldErrors
- * entry per Zod issue, whose path is relative to the input (ADR 0012, ADR 0017).
+ * The GraphQL input type of a command, built from its contract and named after its Mutation
+ * field, such as CoreCreateArticleInput for core.createArticle. A module's own mutation resolver
+ * takes it as the type of its input argument, and hands the input to the module's service, which
+ * parses it with parseCommandInput and sends it to the command bus (ADR 0073).
  */
-function parseInput(contract: CommandContract, input: unknown): unknown {
-  const parsed = contract.input.safeParse(input);
-  if (parsed.success) return parsed.data;
-  const { issues } = parsed.error;
-  const problems = issues.map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`);
-  const fieldErrors: FieldError[] = issues.map(({ path, message, code }) => ({
-    path: path.map((segment) => (typeof segment === 'symbol' ? String(segment) : segment)),
-    message,
-    code,
-  }));
-  throw new GraphQLError(`Invalid input for ${contract.name}: ${problems.join('; ')}`, {
-    extensions: { code: 'BAD_USER_INPUT', fieldErrors },
-  });
+export function commandInput(contract: CommandContract): Type {
+  const known = inputTypes.get(contract);
+  if (known) return known;
+  const Input = inputType(
+    inputFields(contract),
+    `${capitalize(mutationFieldName(contract.name))}Input`,
+  );
+  inputTypes.set(contract, Input);
+  return Input;
 }
 
 /**
  * A resolver class with the command's Mutation field. Its one argument, input, has the input type
  * built from the contract, and the field parses the input with the contract and sends the result
- * to the command bus.
+ * to the command bus. A plant-free command's field carries the plant-free mark (ADR 0066).
  */
-export function mutationResolver(command: Command, returns: ReturnTypeFunc): Type {
+export function mutationResolver(
+  command: Command,
+  returns: ReturnTypeFunc,
+  { plantFree }: { readonly plantFree?: true } = {},
+): Type {
   const fieldName = mutationFieldName(command.contract.name);
-  const fields = inputFields(command.contract);
-  const Input = inputType(fields, `${capitalize(fieldName)}Input`);
+  const Input = commandInput(command.contract);
 
   @Resolver()
   class CommandResolver {
     constructor(@Inject(COMMAND_BUS) private readonly bus: CommandBus) {}
 
     @Mutation(returns, { name: fieldName })
+    @Extensions({ [PLANT_FREE]: plantFree === true })
     run(@Args('input', { type: () => Input }) input: unknown): Promise<unknown> {
-      return this.bus.run(command, parseInput(command.contract, withoutNulls(fields, input)));
+      return this.bus.run(command, parseCommandInput(command.contract, input));
     }
   }
   // Nest's messages name the class, so it carries the field's name.

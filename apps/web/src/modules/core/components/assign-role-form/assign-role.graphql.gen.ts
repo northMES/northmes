@@ -5,7 +5,9 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
 export type CoreAssignRoleInput = {
+  readonly companyId?: string | null | undefined;
   readonly id: string | number;
+  readonly reason?: string | null | undefined;
   readonly roleId: string | number;
   readonly scopeId: string | number;
   readonly userId: string | number;

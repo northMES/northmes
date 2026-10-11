@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
+import { PlantFree } from '@northmes/sdk/graphql';
 import { type CompanyRecord, CompanyService } from '../../../core/company.service.ts';
 import { Company } from '../types/company.type.ts';
 
@@ -11,9 +12,11 @@ export class CompanyQueryResolver {
 
   /**
    * The companies where the signed-in user holds a role, sorted by name, each with the plants the
-   * user may open (ADR 0066). The answer is the same at every plant and without x-northmes-plant.
+   * user may open (ADR 0066). The answer is the same at every plant and without x-northmes-plant,
+   * so it is plant-free.
    */
   @Query(() => [Company])
+  @PlantFree()
   coreCompanies(): Promise<CompanyRecord[]> {
     return this.companies.companies();
   }

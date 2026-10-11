@@ -34,9 +34,13 @@ describe('createTestApp', () => {
     // Core's root fields, and none of planning, which the test did not boot.
     expect(Object.keys(query?.getFields() ?? {})).toEqual([
       'coreArticle',
+      'coreArticleFacets',
+      'coreArticleGroup',
+      'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
       'corePermissionCatalog',
+      'corePlantRoleAssignments',
       'coreRole',
       'coreRoles',
       'coreUser',

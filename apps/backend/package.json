@@ -18,11 +18,14 @@
   },
   "dependencies": {
     "@better-auth/api-key": "catalog:",
+    "@better-auth/oauth-provider": "catalog:",
+    "@modelcontextprotocol/server": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/graphql": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
     "@northmes/contracts": "workspace:*",
     "@northmes/core-contracts": "workspace:*",
@@ -40,10 +43,12 @@
     "semver": "catalog:",
     "temporal-polyfill": "catalog:",
     "ws": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zod-openapi": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@modelcontextprotocol/client": "catalog:",
     "@northmes/testing": "workspace:*",
     "@types/express": "catalog:",
     "@types/node": "catalog:",

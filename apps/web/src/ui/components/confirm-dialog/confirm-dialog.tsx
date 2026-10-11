@@ -5,6 +5,7 @@ import {
   type ReactNode,
   type RefObject,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react';
@@ -21,12 +22,23 @@ import {
 } from '../../primitives/alert-dialog.tsx';
 
 export interface ConfirmDialogProps {
-  /** The button that opens the dialog; Cancel and Escape return focus to it. */
-  readonly trigger: ReactElement;
+  /**
+   * The button that opens the dialog; Cancel and Escape return focus to it. Without one, open and
+   * onOpenChange control the dialog, as from a row menu's item.
+   */
+  readonly trigger?: ReactElement;
+  /** Opens the dialog without a trigger; onOpenChange hears every change. */
+  readonly open?: boolean;
   /** The question that names the dialog, such as "Archive article AX-500?". */
   readonly title: string;
   /** What the action does, which describes the dialog. */
   readonly description: string;
+  /**
+   * What the description goes on to name, under it, such as a list of what changes or what stays
+   * after the action; it describes the dialog too, so a screen reader hears it with the description.
+   * A string reads as one muted line.
+   */
+  readonly details?: ReactNode;
   /** The confirm button's text, such as "Archive article". */
   readonly confirmLabel: string;
   /**
@@ -48,14 +60,16 @@ export interface ConfirmDialogProps {
 
 /**
  * ConfirmDialog (design ui-222, DE23 and DE27; WCAG 3.3.4): shadcn's Alert Dialog that asks before
- * an action, named by its title and described by its text, with Cancel and the confirm button.
- * Tab stays in the dialog and Escape cancels. A body, such as a reason field, goes between the text
+ * an action, named by its title and described by its text and the details under it, with Cancel
+ * and the confirm button. Tab stays in the dialog and Escape cancels. A body, such as a reason field, goes between the text
  * and the buttons, and initialFocus puts focus in it on open.
  */
 export function ConfirmDialog({
   trigger,
+  open: controlledOpen,
   title,
   description,
+  details,
   confirmLabel,
   onConfirm,
   focusAfterConfirm,
@@ -64,7 +78,14 @@ export function ConfirmDialog({
   onOpenChange,
   children,
 }: ConfirmDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onOpenChange?.(next);
+  };
+  const descriptionId = useId();
+  const detailsId = useId();
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | undefined>();
   // Whether the action ran or is running; only the close and the unmount read it, so it is no
@@ -74,6 +95,19 @@ export function ConfirmDialog({
   useEffect(() => {
     focusTarget.current = focusAfterConfirm;
   }, [focusAfterConfirm]);
+  const openChange = useRef(onOpenChange);
+  useEffect(() => {
+    openChange.current = onOpenChange;
+  }, [onOpenChange]);
+  // Base UI calls onOpenChange for a trigger or a dismiss only. A dialog that the open prop opens,
+  // as from a row menu's item, starts without the error of its last opening too, and onOpenChange
+  // hears the opening, so the body can clear its reason.
+  useEffect(() => {
+    if (!controlledOpen) return;
+    confirmed.current = false;
+    setError(undefined);
+    openChange.current?.(true);
+  }, [controlledOpen]);
   // The action may take the trigger away, as Archive gives way to Restore, and the dialog with it.
   // Focus then goes where the caller says once the page has settled.
   useEffect(
@@ -109,12 +143,13 @@ export function ConfirmDialog({
           setError(undefined);
         }
         setOpen(next);
-        onOpenChange?.(next);
       }}
     >
-      <AlertDialogTrigger render={trigger} />
+      {trigger !== undefined && <AlertDialogTrigger render={trigger} />}
       <AlertDialogContent
         initialFocus={initialFocus}
+        // Base UI describes the dialog by its description; details join it when there are any.
+        {...(details !== undefined && { 'aria-describedby': `${descriptionId} ${detailsId}` })}
         finalFocus={() => {
           // The dialog closed, so the unmount has no focus left to move.
           const after = confirmed.current;
@@ -124,8 +159,23 @@ export function ConfirmDialog({
       >
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          {/* With details under it, the description is their lead sentence (design core-304, AS7). */}
+          <AlertDialogDescription
+            id={descriptionId}
+            className={details === undefined ? undefined : 'text-foreground'}
+          >
+            {description}
+          </AlertDialogDescription>
         </AlertDialogHeader>
+        {details !== undefined && (
+          <div id={detailsId} className="flex flex-col gap-2">
+            {typeof details === 'string' ? (
+              <p className="text-sm text-muted-foreground">{details}</p>
+            ) : (
+              details
+            )}
+          </div>
+        )}
         {children}
         {error !== undefined && (
           <p role="alert" className="flex items-start gap-2 text-sm text-destructive">

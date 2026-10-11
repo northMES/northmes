@@ -3,19 +3,24 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 import {
   articleRange,
   articlesPage,
   articlesQuery,
   bodyRows,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
+  watchForSkeletonRows,
 } from './core-app.tsx';
 
 afterEach(cleanup);
 
 const byName = (direction: 'ASC' | 'DESC') => [{ field: 'NAME', direction }];
+const byCode = (direction: 'ASC' | 'DESC') => [{ field: 'CODE', direction }];
+const byChange = (direction: 'ASC' | 'DESC') => [{ field: 'UPDATED_AT', direction }];
 
 /** The articles list's href with this search. */
 function listHref(search: Record<string, string> = {}): string {
@@ -72,7 +77,15 @@ describe('articles list URL state', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(25));
-    expect(bodyRows(table)[0]).toEqual(['AX-525', 'Axle 525 mm']);
+    expect(bodyRows(table)[0]).toEqual([
+      'AX-525',
+      'Axle 525 mm',
+      'Plant A',
+      '',
+      'pcs',
+      'NorthMES',
+      lastChangedText,
+    ]);
     expect(screen.getByText('Rows 26 to 50 of 60')).toBeDefined();
     expect(ariaSort(table, 'Name')).toBe('descending');
     expect(
@@ -91,7 +104,7 @@ describe('articles list URL state', () => {
 
     const table = await screen.findByRole('table', { name: 'Articles' });
     await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
-    expect(ariaSort(table, 'Article number')).toBe('ascending');
+    expect(ariaSort(table, 'Last changed')).toBe('descending');
     expect(screen.getByText('Rows 1 to 3 of 3')).toBeDefined();
   });
 
@@ -113,10 +126,67 @@ describe('articles list URL state', () => {
     const search = screen.getByRole('searchbox', { name: 'Search articles' });
     await user.type(search, ' hinge ');
 
-    await waitFor(() => expect(bodyRows(table)).toEqual([['AX-900', 'Axle 900 mm']]));
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([
+        ['AX-900', 'Axle 900 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+      ]),
+    );
     expect(router.state.location.href).toBe(listHref({ q: 'hinge' }));
     expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
     expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 while a search loads, the table keeps the rows it shows and is busy, with focus in the field, until the matching rows replace them (ui-222, LI7)', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(3), { totalCount: 3 })),
+      articlesQuery(
+        { ...firstPage, search: 'hinge' },
+        articlesPage(articleRange(1, 900), { totalCount: 1 }),
+        200,
+      ),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+
+    const search = screen.getByRole('searchbox', { name: 'Search articles' });
+    await user.type(search, 'hinge');
+
+    await waitFor(() => expect(table.getAttribute('aria-busy')).toBe('true'));
+    expect(screen.getByRole('table', { name: 'Articles' })).toBe(table);
+    expect(bodyRows(table).map(([code]) => code)).toEqual(['AX-500', 'AX-501', 'AX-502']);
+    expect(screen.getByText('Rows 1 to 3 of 3')).toBeDefined();
+    expect(document.activeElement).toBe(search);
+
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([
+        ['AX-900', 'Axle 900 mm', 'Plant A', '', 'pcs', 'NorthMES', lastChangedText],
+      ]),
+    );
+    expect(table.getAttribute('aria-busy')).toBeNull();
+    expect(screen.getByText('Rows 1 to 1 of 1')).toBeDefined();
+    expect(document.activeElement).toBe(search);
+  });
+
+  it('E06-S06 a search that fails shows Could not load articles in place of the rows it kept', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(3), { totalCount: 3 })),
+      {
+        request: { query: CoreArticles, variables: { ...firstPage, search: 'hinge' } },
+        error: new Error('Network down'),
+        delay: 50,
+      },
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search articles' }), 'hinge');
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Could not load articles' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('table')).toBeNull();
   });
 
   it('E06-S06 Next adds page and after to the URL and Previous returns to the first page, with focus on the button used', async () => {
@@ -202,6 +272,37 @@ describe('articles list URL state', () => {
     expect(document.activeElement).toBe(search);
   });
 
+  it('E06-S06 a new search from No articles match these filters keeps that state, busy, until its answer arrives, with no skeleton rows in between', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(listHref({ q: 'zz-404' }), [
+      articlesQuery({ ...firstPage, search: 'zz-404' }, articlesPage([], { totalCount: 0 })),
+      articlesQuery({ ...firstPage, search: 'zz-4045' }, articlesPage([], { totalCount: 0 }), 200),
+      articlesQuery(
+        { ...firstPage, search: 'zz-40' },
+        articlesPage(articleRange(2), { totalCount: 2 }),
+        200,
+      ),
+    ]);
+    const noMatch = () =>
+      screen.getByRole('heading', { level: 2, name: 'No articles match these filters' });
+    await screen.findByRole('heading', { level: 2, name: 'No articles match these filters' });
+    const skeletonRowsShown = watchForSkeletonRows();
+    const search = screen.getByRole('searchbox', { name: 'Search articles' });
+
+    await user.type(search, '5');
+
+    await waitFor(() => expect(noMatch().closest('[aria-busy="true"]')).not.toBeNull());
+    await waitFor(() => expect(noMatch().closest('[aria-busy]')).toBeNull());
+
+    await user.type(search, '{Backspace}{Backspace}');
+
+    await waitFor(() => expect(noMatch().closest('[aria-busy="true"]')).not.toBeNull());
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(skeletonRowsShown()).toBe(false);
+    expect(document.activeElement).toBe(search);
+  });
+
   it('E06-S06 a page whose cursor no longer applies offers Go to the first page, which keeps the sort and the search', async () => {
     const user = userEvent.setup();
     const router = renderCoreAt(listHref({ q: 'axle', sort: 'name', page: '3', after: 'stale' }), [
@@ -240,5 +341,41 @@ describe('articles list URL state', () => {
     expect(document.activeElement).toBe(
       screen.getByRole('heading', { level: 1, name: 'Articles' }),
     );
+  });
+
+  it('E06-S06 the default sort, Last changed newest first, stays out of the URL; Article number sorts as sort=code and Last changed ascending as sort=changed', async () => {
+    const user = userEvent.setup();
+    const router = renderCoreAt(listHref(), [
+      articlesQuery(firstPage, articlesPage(articleRange(2), { totalCount: 2 })),
+      articlesQuery(
+        { first: 25, orderBy: byCode('ASC') },
+        articlesPage(articleRange(2, 700), { totalCount: 2 }),
+      ),
+      articlesQuery(
+        { first: 25, orderBy: byChange('ASC') },
+        articlesPage(articleRange(2, 800), { totalCount: 2 }),
+      ),
+      articlesQuery(firstPage, articlesPage(articleRange(2, 900), { totalCount: 2 })),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(router.state.location.href).toBe(listHref());
+
+    await user.click(within(table).getByRole('button', { name: 'Article number' }));
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-700'));
+    expect(router.state.location.href).toBe(listHref({ sort: 'code' }));
+    expect(ariaSort(table, 'Article number')).toBe('ascending');
+    expect(ariaSort(table, 'Last changed')).toBe('none');
+
+    const changedHeader = within(table).getByRole('button', { name: 'Last changed' });
+    await user.click(changedHeader);
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-800'));
+    expect(router.state.location.href).toBe(listHref({ sort: 'changed' }));
+    expect(ariaSort(table, 'Last changed')).toBe('ascending');
+
+    await user.click(changedHeader);
+    await waitFor(() => expect(bodyRows(table)[0]?.[0]).toBe('AX-900'));
+    expect(router.state.location.href).toBe(listHref());
+    expect(ariaSort(table, 'Last changed')).toBe('descending');
   });
 });

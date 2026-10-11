@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { AccessApiModule } from './api/access/access-api.module.ts';
 import { ArticleModule } from './api/article/article.module.ts';
+import { ArticleGroupModule } from './api/article-group/article-group.module.ts';
 import { CompanyModule } from './api/company/company.module.ts';
 import { RoleModule } from './api/role/role.module.ts';
 import { RoleAssignmentModule } from './api/role-assignment/role-assignment.module.ts';
@@ -16,6 +17,7 @@ import { ViewerModule } from './api/viewer/viewer.module.ts';
   imports: [
     AccessApiModule,
     ArticleModule,
+    ArticleGroupModule,
     CompanyModule,
     RoleModule,
     RoleAssignmentModule,
