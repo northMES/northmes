@@ -255,7 +255,7 @@ WebMCP is release 1's agent surface (maintainer, 2026-10-09). The web app regist
 
 #### Integration tokens
 
-* A Company admin creates them under Settings, Integrations, at `/settings/$companyId/core/integrations`, with the commands `core.createIntegrationToken` and `core.revokeIntegrationToken`. Both need the new permission `core.integration:manage` at company scope, which joins `companyPermissions`, so Plant admin does not hold it.
+* A Company admin creates them under Settings, Integrations, at `/settings/$companyId/integrations`, with the commands `core.createIntegrationToken` and `core.revokeIntegrationToken`. Both need the new permission `core.integration:manage` at company scope, which joins `companyPermissions`, so Plant admin does not hold it.
 * Better Auth api-key, `configId` `integration`, prefix `nms_int_`, `references: "organization"` (the company is a Better Auth organization, [ADR 0007][adr-0007]). The core command calls `auth.api` on the server; the api-key HTTP paths stay disabled ([ADR 0011][adr-0011]).
 * A token is bound to the company node or one plant node and holds one or more roles at that node. It acts as its own principal, of the new principal type `integration`, never as the person who created it.
 * The secret is shown once, in the dialog that creates it, and stored hashed. Expiry is required, at most 365 days, default 90 days. `core.credential` records the name, the binding, the creator, the expiry and `last_used_at`, written at most once a minute per token. The Integrations page lists tokens with these fields and marks those that expire within 14 days.
