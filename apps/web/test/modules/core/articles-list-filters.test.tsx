@@ -254,7 +254,7 @@ describe('the articles list filters', () => {
         'Could not load the articles of Hoses. Close the group and open it again to try again.',
       ),
     ).toBeDefined();
-    expect(spoken()).toContain('Could not load the articles of Hoses');
+    await waitFor(() => expect(spoken()).toContain('Could not load the articles of Hoses'));
 
     await user.click(toggle);
     await user.click(toggle);

@@ -136,6 +136,18 @@ const MAX_PAGE_SIZE = 100;
 const MAX_ORDER_BY_ENTRIES = 3;
 const MAX_SEARCH_LENGTH = 100;
 
+/**
+ * The trimmed search, or undefined when the call searches for nothing. A page and listed take the
+ * same search, so both refuse one longer than MAX_SEARCH_LENGTH.
+ */
+function trimmedSearch(search: string | null | undefined): string | undefined {
+  const text = search?.trim() || undefined;
+  if (text && text.length > MAX_SEARCH_LENGTH) {
+    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
+  }
+  return text;
+}
+
 /** A sort key of a page's order: a column with its type and direction. */
 interface Key extends SortColumn {
   readonly direction: SortDirection;
@@ -240,11 +252,7 @@ function planOf<SortField extends string>(
   const signature = signatureOf(keys);
   const cursor = backward ? args.before : args.after;
   const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
-  const search = args.search?.trim() || undefined;
-  if (search && search.length > MAX_SEARCH_LENGTH) {
-    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
-  }
-  return { backward, size, keys, signature, from, search };
+  return { backward, size, keys, signature, from, search: trimmedSearch(args.search) };
 }
 
 /**
@@ -376,7 +384,7 @@ function listKit<const SortField extends string>(declaration: ListDeclaration<So
       }: { readonly search?: string | null; readonly includeArchived?: boolean | null },
     ): (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row> {
       const hideArchived = declaration.archivable === true && includeArchived !== true;
-      const text = search?.trim() || undefined;
+      const text = trimmedSearch(search);
       return (tx) => {
         let rows = query(tx);
         if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);

@@ -57,13 +57,16 @@ export interface ArticleListSearch {
  * not apply drops on its own,
  * the same value counts once, and a list with none left falls back to every value.
  */
-function commaList<Value extends string>(value: z.ZodType<Value>) {
+function commaList<Value extends string>(
+  value: z.ZodType<Value>,
+  canonical: (each: string) => string = (each) => each,
+) {
   return z
     .unknown()
     .transform((raw): Value[] | undefined => {
       // The URL holds a comma list; a view the route already validated holds the list itself.
       const values = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
-      const picked = [...new Set(values.map(String))].filter(
+      const picked = [...new Set(values.map((each) => canonical(String(each))))].filter(
         (each): each is Value => value.safeParse(each).success,
       );
       return picked.length === 0 ? undefined : picked;
@@ -88,9 +91,15 @@ const searchKeys = z.object({
     .transform(() => 1 as const)
     .optional()
     .catch(undefined),
-  articleGroup: commaList(z.union([z.uuid(), z.literal(noArticleGroup)])),
+  // The API compares group ids as text, which Postgres prints in lowercase, and NorthMES stands
+  // for no source in any case, so a hand-edited link filters as its canonical values do.
+  articleGroup: commaList(z.union([z.uuid(), z.literal(noArticleGroup)]), (each) =>
+    each.toLowerCase(),
+  ),
   stockUnit: commaList(z.enum(stockUnitCodes)),
-  source: commaList(z.string().min(1).max(64)),
+  source: commaList(z.string().min(1).max(64), (each) =>
+    each.toLowerCase() === northmesSource.toLowerCase() ? northmesSource : each,
+  ),
   group: z.enum(['articleGroup', 'stockUnit', 'source']).optional().catch(undefined),
   page: z.coerce.number().int().min(2).optional().catch(undefined),
   after: z.string().min(1).optional().catch(undefined),

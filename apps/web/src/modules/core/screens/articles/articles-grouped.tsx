@@ -6,6 +6,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '../../../../ui/components/data-table/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { type ArticleListSearch, groupRowsVariables } from '../../article-list-search.ts';
 import type { ArticleFacets } from './article-facets.graphql.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
@@ -32,7 +33,9 @@ interface ArticlesGroupedProps {
  * The articles grouped by a filter field (design ui-222, LI29): a header row per value with how
  * many articles have it, each a button that opens the group and loads its first 100 articles in
  * the list's order, and the number of groups and articles under the table. The view's search and
- * filters apply in every group. A new view starts with every group closed.
+ * filters apply in every group. A new view starts with every group closed. An opened group says
+ * it is loading until its rows arrive; when they do not, it says so in the group and the polite
+ * region, and closing and opening it tries again.
  */
 export function ArticlesGrouped({
   view,
@@ -45,9 +48,10 @@ export function ArticlesGrouped({
   const client = useApolloClient();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [rows, setRows] = useState<ReadonlyMap<string, readonly ArticleRow[]>>(new Map());
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   const values = valuesOf(view.group ?? 'articleGroup', facets);
 
-  const toggle = (value: string, expanded: boolean) => {
+  const toggle = (value: string, label: string, expanded: boolean) => {
     setOpen((before) => {
       const next = new Set(before);
       if (expanded) next.add(value);
@@ -55,6 +59,7 @@ export function ArticlesGrouped({
       return next;
     });
     if (!expanded || rows.has(value)) return;
+    setFailed((before) => without(before, value));
     client
       .query({ query: CoreArticles, variables: groupRowsVariables(view, value) })
       .then(({ data }) => {
@@ -62,14 +67,19 @@ export function ArticlesGrouped({
         setRows((before) => new Map(before).set(value, loaded));
       })
       .catch(() => {
-        // The group stays open without rows; closing and opening it tries again.
-        setRows((before) => {
-          const next = new Map(before);
-          next.delete(value);
-          return next;
-        });
+        // The group stays open without rows and says why; closing and opening it tries again.
+        setFailed((before) => new Set(before).add(value));
+        announce(`Could not load the articles of ${label}`);
       });
   };
+
+  /** What an opened group without rows shows: that they load, or that they did not. */
+  const emptyOf = (value: string, label: string) =>
+    failed.has(value)
+      ? `Could not load the articles of ${label}. Close the group and open it again to try again.`
+      : rows.has(value)
+        ? undefined
+        : `Loading the articles of ${label}`;
 
   return (
     <DataTable
@@ -86,8 +96,9 @@ export function ArticlesGrouped({
         label,
         count: articles(count),
         rows: rows.get(value) ?? [],
+        empty: emptyOf(value, label),
         expanded: open.has(value),
-        onExpandedChange: (expanded) => toggle(value, expanded),
+        onExpandedChange: (expanded) => toggle(value, label, expanded),
       }))}
       footer={
         facets === undefined
@@ -96,4 +107,11 @@ export function ArticlesGrouped({
       }
     />
   );
+}
+
+/** The set without value. */
+function without(set: ReadonlySet<string>, value: string): ReadonlySet<string> {
+  const next = new Set(set);
+  next.delete(value);
+  return next;
 }

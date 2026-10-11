@@ -106,16 +106,23 @@ interface ArticleFilters extends ArticleValueFilters {
   readonly unassigned?: boolean | undefined;
 }
 
+/** The columns of the filter fields, each named by a literal, so no reference is built from a value. */
+const filterColumns = {
+  article_group_id: sql.ref('core.article.article_group_id'),
+  stock_unit: sql.ref('core.article.stock_unit'),
+  source: sql.ref('core.article.source'),
+} as const;
+
 /** The rows whose column holds one of `values`, a null value matching a null column. */
 function oneOf(
   query: ArticleQuery,
-  column: 'article_group_id' | 'stock_unit' | 'source',
+  column: keyof typeof filterColumns,
   values: readonly (string | null)[] | undefined,
 ): ArticleQuery {
   if (values === undefined) return query;
   const named = values.filter((value): value is string => value !== null);
   const orNull = values.includes(null);
-  const ref = sql.ref(`core.article.${column}`);
+  const ref = filterColumns[column];
   if (named.length === 0)
     return query.where(orNull ? sql<SqlBool>`${ref} is null` : sql<SqlBool>`false`);
   const inList = sql<SqlBool>`${ref}::text = any(${named}::text[])`;
@@ -257,10 +264,10 @@ export class ArticleService {
     const all = articleList.listed(listed(scope, filters), { search, includeArchived });
     return readIn(scope, () =>
       this.db.transaction(async (tx) => {
-        const counted = (field: keyof ArticleValueFilters, column: string) =>
+        const counted = (field: keyof ArticleValueFilters, column: keyof typeof filterColumns) =>
           sql<{ value: string | null; count: string }>`
             select _nm_value::text as value, count(*) as count
-              from (${rowsWithout(field)(tx).select(sql.ref(`core.article.${column}`).as('_nm_value'))}) as listed
+              from (${rowsWithout(field)(tx).select(filterColumns[column].as('_nm_value'))}) as listed
              group by _nm_value`.execute(tx);
         const [groups, units, sources, total] = await Promise.all([
           counted('articleGroupIds', 'article_group_id'),
