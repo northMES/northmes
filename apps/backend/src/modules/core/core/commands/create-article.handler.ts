@@ -69,7 +69,14 @@ export const createArticleHandler = {
     // The scope hook found no plan, so the bus refused the command before the handler runs.
     if (!plan) throw new NotFoundException(`Article ${input.id} was not found`);
     if (!isDefault(plan, plantId)) context.require('core.article:assign', plan.companyId);
-    if (input.articleGroupId)
+    // A retry of a create that already ran keeps the group its first run checked, though it may
+    // have been archived since (ADR 0012).
+    const retried = await tx
+      .selectFrom('core.article')
+      .select('id')
+      .where('id', '=', input.id)
+      .executeTakeFirst();
+    if (input.articleGroupId && !retried)
       await requireActiveGroup(context, input.articleGroupId, plan.companyId);
     const created = await tx
       .insertInto('core.article')
