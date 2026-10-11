@@ -2,17 +2,25 @@
 import { z } from 'zod';
 
 /**
- * A language tag as translations take it: a language of two or three letters, then optionally a
- * script and a region, such as sv, en-GB or zh-Hant-TW. Private-use and extension subtags are not
- * taken.
+ * Whether a tag is a BCP 47 tag that starts with a language of two or three letters, such as sv,
+ * en-GB, zh-Hant-TW, sl-rozaj or en-US-u-ca-gregory (ADR 0053). Intl judges the rest of the tag;
+ * the language comes first so that a word such as "english", which Intl would take as a language
+ * subtag, is refused.
  */
-const languageTag = /^[a-z]{2,3}(-[a-z]{4})?(-([a-z]{2}|\d{3}))?$/i;
+function isLanguageTag(tag: string): boolean {
+  if (!/^[a-z]{2,3}(-|$)/i.test(tag)) return false;
+  try {
+    return Intl.getCanonicalLocales(tag).length === 1;
+  } catch {
+    return false;
+  }
+}
 
 /** A BCP 47 tag in its canonical form, such as en-GB for EN-gb. */
 const locale = z
   .string()
   .trim()
-  .refine((tag) => languageTag.test(tag), 'Choose a language.')
+  .refine(isLanguageTag, 'Choose a language.')
   .transform((tag) => Intl.getCanonicalLocales(tag)[0] ?? tag);
 
 /**

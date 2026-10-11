@@ -213,6 +213,39 @@ const audit: ShellModule = {
   }),
 };
 
+/** A module whose sidebar group holds a nested group, Registers, with Warehouses. */
+const stock: ShellModule = {
+  label: 'Stock',
+  order: 40,
+  links: [
+    {
+      label: 'Registers',
+      icon: 'Database',
+      links: [
+        {
+          label: 'Warehouses',
+          icon: 'Warehouse',
+          link: ({ plant }) => ({ href: `/${plant}/stock/warehouses` }),
+        },
+      ],
+    },
+  ],
+  module: defineWebModule({
+    id: 'stock',
+    version: '0.1.0',
+    routes: (plantRoute) => {
+      const stockRoute = createRoute({ getParentRoute: () => plantRoute, path: 'stock' });
+      return stockRoute.addChildren([
+        createRoute({
+          getParentRoute: () => stockRoute,
+          path: 'warehouses',
+          component: () => <PageFrame title="Warehouses">{null}</PageFrame>,
+        }),
+      ]);
+    },
+  }),
+};
+
 /** Renders the shell's router for the modules at path, for a signed-in viewer. */
 function renderShellAt(
   path: string,
@@ -246,6 +279,25 @@ async function sidebarGroups(): Promise<HTMLElement[]> {
   return within(sidebar)
     .getAllByRole('list')
     .filter((list) => list.hasAttribute('aria-labelledby'));
+}
+
+/**
+ * The rules drawn inside a sidebar's nav, Main: each separator, and the header, the footer or a
+ * nested group's entries when they have a border. It reads the border classes, because happy-dom
+ * applies no Tailwind.
+ */
+function rulesIn(nav: HTMLElement): string[] {
+  const separators = [
+    ...nav.querySelectorAll('[role="separator"], [data-sidebar="separator"]'),
+  ].map(() => 'separator');
+  const bordered = ['header', 'footer', 'menu-sub'].flatMap((part) =>
+    [...nav.querySelectorAll(`[data-sidebar="${part}"]`)]
+      .filter((element) =>
+        element.className.split(/\s+/).some((name) => /^border(-[tblrxy])?(-\d+)?$/.test(name)),
+      )
+      .map(() => part),
+  );
+  return [...separators, ...bordered];
 }
 
 /** The accessible name of the focused element: its aria-label, else its text. */
@@ -505,6 +557,39 @@ describe('the shell', () => {
       expect(screen.queryByRole('tooltip', { name: 'Production orders' })).toBeNull(),
     );
     expect(document.activeElement).toBe(link);
+  });
+
+  it('E04-S02 the sidebar draws no rule between module groups, under the plant switcher or above the user button, labelled or as the rail', async () => {
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(rulesIn(nav)).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+
+    expect(rulesIn(screen.getByRole('navigation', { name: 'Main' }))).toEqual([]);
+  });
+
+  it('E04-S02 a nested group draws no line along its entries', async () => {
+    renderShellAt('/plant-a/stock/warehouses', [planning, stock]);
+    await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
+
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(within(nav).getByRole('link', { name: 'Warehouses' })).toBeDefined();
+    expect(rulesIn(nav)).toEqual([]);
+  });
+
+  it('E04-S02 at 320 px the sheet draws no rule between module groups, under the plant switcher or above the user button', async () => {
+    setViewport(320, 640);
+    const user = userEvent.setup();
+    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
+    await screen.findByRole('heading', { name: 'Board of plant-a' });
+
+    await user.click(await screen.findByRole('button', { name: 'Open navigation' }));
+
+    const sheet = await screen.findByRole('dialog', { name: 'Navigation' });
+    expect(rulesIn(within(sheet).getByRole('navigation', { name: 'Main' }))).toEqual([]);
   });
 
   it('E04-S02 at 320 px Open navigation opens the sheet with focus on Close navigation, and Escape closes it with focus back on Open navigation', async () => {
