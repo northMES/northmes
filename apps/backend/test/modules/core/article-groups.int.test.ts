@@ -82,10 +82,13 @@ describe('article groups', () => {
     await testApp?.app.close();
   });
 
-  /** A client of a fresh user who holds the default role `key` at `scopeId`, at plant `slug`. */
+  /**
+   * A client of a fresh user who holds the default role `key` at `scopeId`, at plant `slug`, or in
+   * company settings without a slug.
+   */
   async function holderOf(
     key: 'core-company-admin' | 'core-plant-admin',
-    { company, scopeId, slug }: { company: string; scopeId: string; slug: string },
+    { company, scopeId, slug }: { company: string; scopeId: string; slug?: string },
   ): Promise<GqlClient> {
     if (!testApp) throw new Error('the test app did not start');
     const user = await signIn(testApp.app, db.ownerUrl, []);
@@ -96,9 +99,9 @@ describe('article groups', () => {
     );
     if (!role) throw new Error(`the company has no role ${key}`);
     await givenAssignment(db.ownerUrl, { userId: user.userId, roleId: role.id, scopeId });
-    return gqlClient(await testApp.app.getUrl(), {
-      headers: { authorization: user.authorization, 'x-northmes-plant': slug },
-    });
+    const headers: Record<string, string> = { authorization: user.authorization };
+    if (slug !== undefined) headers['x-northmes-plant'] = slug;
+    return gqlClient(await testApp.app.getUrl(), { headers });
   }
 
   /** A company with one plant and a Company admin and a Plant admin at that plant. */
@@ -203,6 +206,32 @@ describe('article groups', () => {
       articleGroup: { id: group?.id, code: 'FL', name: 'Flanges' },
     });
     expect(cleared.data?.coreUpdateArticle).toMatchObject({ version: 2, articleGroup: null });
+  });
+
+  it('E06-S06 in company settings an article answers its group, as it does at a plant', async () => {
+    const place = await givenPlace();
+    const { group } = await create(place.companyAdmin, 'FL', 'Flanges');
+    const id = randomUUIDv7();
+    await place.companyAdmin.send(createArticle, {
+      input: { id, code: 'AX-20412', name: 'Fläns', articleGroupId: group?.id },
+    });
+    const inSettings = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+    });
+
+    const answer: Answer = await inSettings.send(
+      `query ($id: ID!, $companyId: ID) {
+        coreArticle(id: $id, companyId: $companyId) { code articleGroup { code name } }
+      }`,
+      { id, companyId: place.company },
+    );
+
+    expect(answer.errors).toBeUndefined();
+    expect(answer.data?.coreArticle).toEqual({
+      code: 'AX-20412',
+      articleGroup: { code: 'FL', name: 'Flanges' },
+    });
   });
 
   it('E06-S06 a retried create answers the article its first run made, also when its group was archived since', async () => {
