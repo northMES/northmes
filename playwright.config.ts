@@ -19,7 +19,7 @@ export default defineConfig({
     ...(process.env.CI ? [['html', { open: 'never' }] as const] : []),
     [
       '@argos-ci/playwright/reporter',
-      { uploadToArgos: Boolean(process.env.CI && process.env.ARGOS_TOKEN) },
+      { uploadToArgos: process.env.CI === 'true' && Boolean(process.env.ARGOS_TOKEN) },
     ],
   ],
   use: { trace: 'retain-on-failure' },
