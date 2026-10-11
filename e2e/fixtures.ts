@@ -114,9 +114,13 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
         await listening(server);
         await use({ origin });
       } finally {
-        const exited = new Promise((resolve) => server.once('exit', resolve));
-        if (server.exitCode === null) server.kill('SIGTERM');
-        await exited;
+        // A server that already exited, before it listened or during the tests, emits no second
+        // exit, so the fixture waits only for one that still runs.
+        if (server.exitCode === null && server.signalCode === null) {
+          const exited = new Promise((resolve) => server.once('exit', resolve));
+          server.kill('SIGTERM');
+          await exited;
+        }
         await asSuperuser(env, `drop database if exists ${database} with (force)`);
       }
     },
