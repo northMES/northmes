@@ -9,7 +9,13 @@ interface MarkdownFile {
 }
 
 // The documents that must stay self-contained, because run agents read only tracked files.
-const documentGlobs = ['docs/plan/*.md', 'docs/adr/*.md', 'docs/agents/**/*.md', 'GLOSSARY.md'];
+const documentGlobs = [
+  'README.md',
+  'docs/plan/*.md',
+  'docs/adr/*.md',
+  'docs/agents/**/*.md',
+  'GLOSSARY.md',
+];
 
 // The files that tell an agent where things are. They may name a path that a later task creates.
 const agentFileGlobs = ['AGENTS.md', 'CLAUDE.md', 'docs/agents/**/*.md'];
@@ -173,7 +179,7 @@ describe('doc links', () => {
     'docs/agents/handoff/README.md',
   ]);
 
-  it('every relative link in docs/plan, docs/adr, docs/agents and GLOSSARY.md resolves', () => {
+  it('every relative link in README.md, docs/plan, docs/adr, docs/agents and GLOSSARY.md resolves', () => {
     const resolving = doc(
       'docs/plan/README.md',
       'Terms follow [the glossary](../../GLOSSARY.md) and [ADR 1][adr-1].',
@@ -219,7 +225,12 @@ describe('doc links', () => {
 
     const files = readMarkdown(trackedFiles());
     expect(files.map((file) => file.path)).toEqual(
-      expect.arrayContaining(['GLOSSARY.md', 'docs/plan/README.md', 'docs/agents/domain.md']),
+      expect.arrayContaining([
+        'README.md',
+        'GLOSSARY.md',
+        'docs/plan/README.md',
+        'docs/agents/domain.md',
+      ]),
     );
     expect(linkProblems(files, trackedFiles())).toEqual([]);
   });
