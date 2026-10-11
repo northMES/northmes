@@ -7,12 +7,13 @@ export {
   type CoreUserQueryVariables,
 } from './user.graphql.gen.ts';
 
-// A user of the company with their roles at the company and at its plants, in company settings: the
-// user page and Add role read it. A role the reader may not read comes as null. pnpm gen writes its
+// A user of the company with their roles at the company and at its plants, in company settings with
+// companyId, or at a plant, without it, with their roles at the plant and its company: the user page,
+// Add role and a person's page in plant settings read it. A role the reader may not read comes as null. pnpm gen writes its
 // typed document to user.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
-    query CoreUser($id: ID!, $companyId: ID!) {
+    query CoreUser($id: ID!, $companyId: ID) {
       coreUser(id: $id, companyId: $companyId) {
         id
         name

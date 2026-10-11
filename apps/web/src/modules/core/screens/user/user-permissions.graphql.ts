@@ -13,7 +13,7 @@ export {
 // this block never runs.
 if (false) {
   gql`
-    query CoreUserPermissions($id: ID!, $companyId: ID!) {
+    query CoreUserPermissions($id: ID!, $companyId: ID) {
       coreUser(id: $id, companyId: $companyId) {
         id
         effectivePermissions {

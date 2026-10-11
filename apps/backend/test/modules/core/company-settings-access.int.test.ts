@@ -19,6 +19,7 @@ const companyAdmin = [
   'core.user:block',
   'core.user:create',
   'core.user:read',
+  'core.user:resetPassword',
 ];
 
 const usersQuery = `query ($companyId: ID) {

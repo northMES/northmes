@@ -44,3 +44,14 @@ export function isForbidden(error: unknown): boolean {
     error.errors.some(({ extensions }) => extensions?.code === 'FORBIDDEN')
   );
 }
+
+/**
+ * The messages of the GraphQL errors of a refused command as running text, each a sentence, or
+ * undefined when no answer came back, as when the connection failed.
+ */
+export function refusalMessage(error: unknown): string | undefined {
+  if (!CombinedGraphQLErrors.is(error)) return undefined;
+  return error.errors
+    .map(({ message }) => (/[.!?]$/.test(message) ? message : `${message}.`))
+    .join(' ');
+}

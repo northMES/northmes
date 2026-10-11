@@ -16,10 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import { RemoveRole } from '../../components/remove-role/index.ts';
 import { noAccessState, permissionPhrase } from '../../no-access.tsx';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer, type Viewer } from '../../use-viewer.ts';
+import { PeopleRemove } from './people-remove.tsx';
 import {
   CorePlantRoleAssignments,
   type PlantAssignment,
@@ -76,10 +76,8 @@ export function PeopleScreen() {
     state = {
       status: 'error',
       title: 'Could not load people',
-      description: 'Check the connection, then try again.',
-      onRetry: () => {
-        refetch().catch(() => {});
-      },
+      error,
+      onRetry: () => refetch(),
     };
   } else if (assignments === undefined) {
     state = { status: 'loading' };
@@ -124,7 +122,14 @@ export function PeopleScreen() {
             const { user, role } = assignment;
             return (
               <TableRow key={assignment.id}>
-                <TableCell>{user.name}</TableCell>
+                <TableCell>
+                  <Link
+                    to={coreLinks.people.person({ plant, userId: user.id }).href}
+                    className="text-link underline underline-offset-2 hover:no-underline"
+                  >
+                    {user.name}
+                  </Link>
+                </TableCell>
                 <TableCell className="font-mono">{user.username}</TableCell>
                 <TableCell>
                   {role === null ? (
@@ -142,8 +147,7 @@ export function PeopleScreen() {
                 <TableCell className="text-right">
                   {canRemove(assignment, viewer) && (
                     <span id={removeId(assignment)} className="inline-flex">
-                      <RemoveRole
-                        person={user}
+                      <PeopleRemove
                         assignment={assignment}
                         label={`Remove ${role?.name ?? 'role'} at ${plantName} from ${user.name}`}
                         focusAfter={() =>

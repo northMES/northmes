@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import { defineModuleLinks } from '@northmes/contracts';
+import { defineCoreLinks, defineModuleLinks } from '@northmes/contracts';
 import { describe, expectTypeOf, it } from 'vitest';
 
 const links = defineModuleLinks('planning', {
@@ -27,18 +27,34 @@ describe('defineModuleLinks', () => {
   });
 
   it('E04-S02 a settings section builder takes a company id and no plant', () => {
-    const core = defineModuleLinks(
-      'core',
-      { articles: { path: 'articles' } },
-      { settings: { users: { path: 'users' } } },
+    const quality = defineModuleLinks(
+      'quality',
+      { inspections: { path: 'inspections' } },
+      { settings: { plans: { path: 'plans' } } },
     );
 
-    expectTypeOf(core.settings.users).parameter(0).toEqualTypeOf<{
+    expectTypeOf(quality.settings.plans).parameter(0).toEqualTypeOf<{
       readonly companyId: string;
     }>();
     // @ts-expect-error a settings page takes no plant
-    core.settings.users({ plant: 'plant-a' });
+    quality.settings.plans({ plant: 'plant-a' });
     // @ts-expect-error a manifest without a settings section has none
     links.settings;
+  });
+
+  it("E04-S02 defineCoreLinks' patterns have no module segment, and its settings builders take a company id", () => {
+    const core = defineCoreLinks(
+      { articles: { path: 'articles', children: { article: { path: '$articleId' } } } },
+      { settings: { users: { path: 'users' } } },
+    );
+
+    expectTypeOf(
+      core.articles.article({ plant: 'plant-a', articleId: '1' }).to,
+    ).toEqualTypeOf<'/$plant/articles/$articleId'>();
+    expectTypeOf(
+      core.settings.users({ companyId: 'c' }).to,
+    ).toEqualTypeOf<'/settings/$companyId/users'>();
+    // @ts-expect-error a settings page takes no plant
+    core.settings.users({ plant: 'plant-a' });
   });
 });

@@ -17,6 +17,9 @@ dist/
 coverage/
 # The JSON report of pnpm react-doctor, which CI / react doctor copies into its job summary.
 /react-doctor-report.json
+# Playwright's results and report of pnpm e2e.
+/test-results/
+/playwright-report/
 *.tsbuildinfo
 .env
 

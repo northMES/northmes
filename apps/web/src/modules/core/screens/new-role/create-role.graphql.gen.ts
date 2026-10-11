@@ -9,6 +9,7 @@ export type CoreCreateRoleInput = {
   readonly id: string | number;
   readonly name: string;
   readonly permissions: ReadonlyArray<string>;
+  readonly reason?: string | null | undefined;
 };
 
 export type RoleOrigin =

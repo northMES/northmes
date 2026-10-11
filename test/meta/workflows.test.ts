@@ -118,6 +118,7 @@ const ciJobs = [
   'test',
   'react doctor',
   'fresh worktree',
+  'e2e',
   'pr title',
   'linked issue',
   'gate',
@@ -377,14 +378,61 @@ describe('workflows', () => {
     }
   });
 
-  it('every job sets its own permissions: contents: read, and none for CI / gate, which reads no files', () => {
+  // OpenSSF Scorecard uploads its findings to code scanning and publishes the score behind the
+  // README badge through OIDC, so its one job also writes security events and mints an id token.
+  const scorecardPermissions = {
+    contents: 'read',
+    'security-events': 'write',
+    'id-token': 'write',
+  };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, and what Scorecard publishes with for its analysis', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
-      const expected = job.name === 'gate' ? {} : { contents: 'read' };
+      const expected =
+        job.name === 'gate'
+          ? {}
+          : job.name === 'Scorecard analysis'
+            ? scorecardPermissions
+            : { contents: 'read' };
       expect(job.permissions, where).toEqual(expected);
     }
+  });
+
+  // The score behind the badge stays current: weekly, after every push to main and when the
+  // branch protection changes. Scorecard refuses to publish from a workflow with workflow-level
+  // write permissions, env or defaults, so the workflow holds none of them.
+  it('E00-S04 scorecard.yml runs weekly, on push to main and on branch protection changes, and publishes its results', () => {
+    const scorecard = workflows().find(({ path }) => path.endsWith('/scorecard.yml'));
+    const raw = scorecard === undefined ? {} : (scorecard as unknown as Record<string, unknown>);
+    const job = Object.values(scorecard?.jobs ?? {})[0];
+    const analysis = job?.steps?.find(({ uses }) => uses?.startsWith('ossf/scorecard-action@'));
+
+    expect(scorecard, '.github/workflows/scorecard.yml').toBeDefined();
+    expect(triggersOf(scorecard?.on)).toEqual(
+      expect.arrayContaining(['schedule', 'push', 'branch_protection_rule']),
+    );
+    expect((scorecard?.on as { push?: { branches?: string[] } }).push?.branches).toEqual(['main']);
+    expect(scorecard?.permissions).toEqual({ contents: 'read' });
+    expect(raw.env, 'workflow env').toBeUndefined();
+    expect(raw.defaults, 'workflow defaults').toBeUndefined();
+    expect(Object.keys(scorecard?.jobs ?? {})).toHaveLength(1);
+    expect(job?.permissions).toEqual(scorecardPermissions);
+    expect(analysis?.with?.publish_results).toBe(true);
+    // Scorecard publishes only from a job whose steps are all its approved actions.
+    expect(
+      (job?.steps ?? []).map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? `run: ${run}`),
+    ).toEqual([
+      'actions/checkout',
+      'ossf/scorecard-action',
+      'actions/upload-artifact',
+      'github/codeql-action/upload-sarif',
+    ]);
+    expect(job?.env, 'job env').toBeUndefined();
+    // Scorecard publishes from the default branch only, so a manual run elsewhere skips the job.
+    expect(job?.if).toBe(expression('github.ref_name == github.event.repository.default_branch'));
   });
 
   it('test jobs take runs-on from a repository variable', () => {
@@ -479,7 +527,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, pr title, linked issue and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue and gate', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -741,5 +789,26 @@ describe('workflows', () => {
     expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
       [],
     );
+  });
+
+  // The end-to-end specs run against the built server in role all, with Postgres from
+  // Testcontainers (docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md).
+  // pnpm e2e builds, installs Chromium and runs Playwright; after a failed run the job keeps
+  // Playwright's report with the traces of the failed tests.
+  it('E02-S08 the e2e job installs and runs pnpm e2e, and keeps the report after a failure', () => {
+    const { id, job } = jobNamed('e2e');
+    const steps = job.steps ?? [];
+
+    expect(id).toBe('e2e');
+    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
+      'actions/checkout',
+      'pnpm/action-setup',
+      'actions/setup-node',
+      'pnpm install --frozen-lockfile',
+      'pnpm e2e',
+      'actions/upload-artifact',
+    ]);
+    expect(steps.at(-1)?.if).toBe('failure()');
+    expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
   });
 });

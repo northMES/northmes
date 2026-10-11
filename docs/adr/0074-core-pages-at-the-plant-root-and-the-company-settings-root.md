@@ -1,7 +1,7 @@
 ---
 status: "proposed"
 date: 2026-10-09
-decision-makers: proposed by the operating session, to be confirmed by Krister Johansson
+decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson
 informed: contributors, coding agents
 release: "1"

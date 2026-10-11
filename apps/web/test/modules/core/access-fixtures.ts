@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MockLink } from '@apollo/client/testing';
+import { within } from '@testing-library/react';
 import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CorePermissionCatalog } from '../../../src/modules/core/components/permission-checklist/permission-catalog.graphql.ts';
 import { CoreRole } from '../../../src/modules/core/role.graphql.ts';
@@ -293,4 +294,35 @@ export function userQuery(
     request: { query: CoreUser, variables: { id: of.id, companyId } },
     result: { data: { coreUser: of }, ...(errors !== undefined && { errors }) },
   };
+}
+
+/**
+ * The rows of a grouped table by group (design core-304, RO1): each group's name, read from its
+ * header row without the count, and the text of each cell of each row under it.
+ */
+export function groupedRows(table: HTMLElement): [string, (string | null)[][]][] {
+  return within(table)
+    .getAllByRole('rowgroup')
+    .slice(1)
+    .map((body) => {
+      const header = within(body).getByRole('rowheader');
+      const rows = within(body)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) =>
+          within(row)
+            .queryAllByRole('cell')
+            .map((cell) => cell.textContent),
+        );
+      return [header.firstChild?.textContent ?? '', rows];
+    });
+}
+
+/** Resizes happy-dom's window, as the browser does at 320 px or on a desktop. */
+export function setViewport(width: number, height: number): void {
+  (
+    window as unknown as {
+      happyDOM: { setViewport(viewport: { width: number; height: number }): void };
+    }
+  ).happyDOM.setViewport({ width, height });
 }

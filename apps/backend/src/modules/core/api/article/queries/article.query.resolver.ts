@@ -1,27 +1,119 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
+import type { StockUnitCode } from '@northmes/contracts';
+import { PlantFree } from '@northmes/sdk/graphql';
 import type { Connection } from '@northmes/sdk/lists';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
-import { Article } from '../types/article.type.ts';
+import { companyIdArg } from '../../company/inputs/company-id.arg.ts';
+import { Article, StockUnit } from '../types/article.type.ts';
+import { ArticleFacets } from '../types/article-facets.type.ts';
 import { type ArticleListArgs, articleList } from './article.list.ts';
 
-/** core's queries on Article. */
+/** The articles of any of these groups; a null element keeps the articles of no group. */
+const articleGroupIdsArg = {
+  type: () => [ID],
+  nullable: 'itemsAndList',
+  description: 'Only the articles of these groups; a null element keeps those of no group.',
+} as const;
+
+/** The articles that count in any of these stock units. */
+const stockUnitsArg = {
+  type: () => [StockUnit],
+  nullable: true,
+  description: 'Only the articles that count in these stock units.',
+} as const;
+
+/** The articles from any of these sources; a null element keeps those created in NorthMES. */
+const sourcesArg = {
+  type: () => [String],
+  nullable: 'itemsAndList',
+  description: 'Only the articles from these sources; a null element keeps those from NorthMES.',
+} as const;
+
+/**
+ * core's queries on Article. Each needs core.article:read at the request's plant, or in company
+ * settings at the company the request names (ADR 0066, ADR 0073).
+ */
 @Resolver(() => Article)
 export class ArticleQueryResolver {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
-  /** The article with this id at the request's plant, or null. */
+  /**
+   * The article with this id among the articles of the company, or null, also one that is not
+   * assigned to the request's plant.
+   */
   @Query(() => Article, { nullable: true })
-  coreArticle(@Args('id', { type: () => ID }) id: string): Promise<ArticleRecord | null> {
-    return this.articles.byId(id);
+  @PlantFree()
+  coreArticle(
+    @Args('id', { type: () => ID }) id: string,
+    @Args('companyId', companyIdArg) companyId?: string | null,
+  ): Promise<ArticleRecord | null> {
+    return this.articles.byId(id, companyId ?? undefined);
   }
 
-  /** One page of the articles at the request's plant, with search, orderBy and paging. */
+  /**
+   * One page of the articles, with search, orderBy and paging: at a plant, those assigned to it or
+   * to All plants; in company settings, every article of the company.
+   */
   @Query(() => articleList.Connection)
+  @PlantFree()
   coreArticles(
     @Args({ type: () => articleList.Args }) args: ArticleListArgs,
+    @Args('companyId', companyIdArg) companyId?: string | null,
+    @Args('unassigned', {
+      type: () => Boolean,
+      nullable: true,
+      description: 'Only the articles assigned to no plant and not to All plants.',
+    })
+    unassigned?: boolean | null,
+    @Args('articleGroupIds', articleGroupIdsArg) articleGroupIds?: (string | null)[] | null,
+    @Args('stockUnits', stockUnitsArg) stockUnits?: StockUnitCode[] | null,
+    @Args('sources', sourcesArg) sources?: (string | null)[] | null,
   ): Promise<Connection<ArticleRecord>> {
-    return this.articles.list(args);
+    return this.articles.list(args, {
+      companyId: companyId ?? undefined,
+      unassigned: unassigned ?? undefined,
+      articleGroupIds: articleGroupIds ?? undefined,
+      stockUnits: stockUnits ?? undefined,
+      sources: sources ?? undefined,
+    });
+  }
+
+  /**
+   * The values of the articles list's filter fields with how many articles have each, for the
+   * same search, Show archived and filters as coreArticles: each field counted under the others'
+   * filters but not its own (design ui-222, LI3).
+   */
+  @Query(() => ArticleFacets)
+  @PlantFree()
+  async coreArticleFacets(
+    @Args('companyId', companyIdArg) companyId?: string | null,
+    @Args('search', { type: () => String, nullable: true }) search?: string | null,
+    @Args('includeArchived', { type: () => Boolean, nullable: true, defaultValue: false })
+    includeArchived?: boolean | null,
+    @Args('articleGroupIds', articleGroupIdsArg) articleGroupIds?: (string | null)[] | null,
+    @Args('stockUnits', stockUnitsArg) stockUnits?: StockUnitCode[] | null,
+    @Args('sources', sourcesArg) sources?: (string | null)[] | null,
+  ): Promise<ArticleFacets> {
+    const facets = await this.articles.facets({
+      companyId: companyId ?? undefined,
+      search,
+      includeArchived,
+      articleGroupIds: articleGroupIds ?? undefined,
+      stockUnits: stockUnits ?? undefined,
+      sources: sources ?? undefined,
+    });
+    return {
+      total: facets.total,
+      articleGroups: facets.articleGroups.map(({ value, count }) => ({
+        id: value?.id ?? null,
+        code: value?.code ?? null,
+        name: value?.name ?? null,
+        count,
+      })),
+      stockUnits: facets.stockUnits.map(({ value, count }) => ({ stockUnit: value, count })),
+      sources: facets.sources.map(({ value, count }) => ({ source: value, count })),
+    };
   }
 }

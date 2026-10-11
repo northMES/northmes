@@ -98,7 +98,7 @@ The architecture and data flows stay in plan 02. The data models stay in plans 0
   * "ADR0076 the pull request template asks for a Security section and the validation impact";
   * "ADR0076 every control in the controls index has the status built, decided, gap or accepted";
   * "ADR0076 the controls index links every audit report, and each report links its tracking issue".
-* A `pr security` check in `scripts/ci/`, run like `linked-issue.mjs` on every pull request, fails a pull request whose Security section is missing or empty. A task adds it once M-87 is answered.
+* A `pr security` check in `scripts/ci/`, run like `linked-issue.mjs` on every pull request, fails a pull request whose Security section is missing or empty. #513 adds it (M-87).
 * The release workflow of ADR 0038 fails when no report in `docs/security/audits/` is newer than the previous release tag. A task adds it with the first release (M-86).
 * `test/meta/security-policy.test.ts`: "ADR0076 SECURITY.md names a reporting channel, a response target and the plugin trust model", added by #481 (M-90).
 

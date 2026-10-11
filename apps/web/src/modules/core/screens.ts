@@ -4,14 +4,19 @@
 // one chunk of their own, which the browser loads when it first opens a core route.
 export { AddRoleScreen } from './screens/add-role/index.ts';
 export { ArticleScreen } from './screens/article/index.ts';
+export { ArticleGroupScreen } from './screens/article-group/index.ts';
+export { ArticleGroupsScreen } from './screens/article-groups/index.ts';
 export { ArticlesScreen } from './screens/articles/index.ts';
 export { EditArticleScreen } from './screens/edit-article/index.ts';
 export { EditRoleScreen } from './screens/edit-role/index.ts';
 export { NewArticleScreen } from './screens/new-article/index.ts';
+export { NewArticleGroupScreen } from './screens/new-article-group/index.ts';
 export { NewRoleScreen } from './screens/new-role/index.ts';
 export { NewUserScreen } from './screens/new-user/index.ts';
 export { PeopleScreen } from './screens/people/index.ts';
 export { PeopleAddRoleScreen } from './screens/people-add-role/index.ts';
+export { PersonScreen } from './screens/person/index.ts';
+export { PersonAddRoleScreen } from './screens/person-add-role/index.ts';
 export { RoleScreen } from './screens/role/index.ts';
 export { RolesScreen } from './screens/roles/index.ts';
 export { UserScreen } from './screens/user/index.ts';

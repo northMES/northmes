@@ -9,7 +9,15 @@ export {
   type HandlerContext,
   type TargetRow,
 } from './command-bus.ts';
-export { type CommandDefinition, type CommandProvider, defineCommand } from './define-command.ts';
+export {
+  type CommandDefinition,
+  type CommandProvider,
+  defineCommand,
+  type RegisteredCommandDefinition,
+  registerCommand,
+} from './define-command.ts';
+export { commandInput } from './mutation-field.ts';
+export { parseCommandInput } from './parse-input.ts';
 export {
   CommandValidator,
   type CommandValidatorProvider,

@@ -6,7 +6,7 @@ This is the entry point for an auditor and for anyone who changes NorthMES. [ADR
 - Threat model: `threat-model.md`, written by [#485](https://github.com/northMES/northmes/issues/485).
 - Audit reports: [2026-10-11](audits/2026-10-11.md), tracked in [#473](https://github.com/northMES/northmes/issues/473).
 - Architecture and data flows: [plan 02](../plan/02-architecture.md). Deployment and operations: [plan 12](../plan/12-operations-and-security.md). Risks: [plan 17](../plan/17-risks.md).
-- Reporting a vulnerability: `SECURITY.md` at the repository root, written by [#481](https://github.com/northMES/northmes/issues/481).
+- Reporting a vulnerability: [`SECURITY.md`](../../SECURITY.md) at the repository root.
 
 ## Controls index
 
@@ -25,7 +25,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Every input parsed by a Zod contract | built | ADR 0017; `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts` |
 | Parameterized SQL only (Kysely with bound values; `sql.raw` on constants only) | built | `packages/sdk/src/lists/define-list.ts`; CodeRabbit path instructions in `.coderabbit.yaml` |
 | Errors masked: GraphQL `maskedErrors`, only HTTP exceptions pass the filter, static file errors hide paths | built | `apps/backend/src/graphql/server.ts`; `packages/sdk/src/errors/exception-filter.ts`; `apps/backend/src/web/static-mounts.ts` |
-| Request size, depth and cost limits on GraphQL | gap | [#477](https://github.com/northMES/northmes/issues/477) |
+| Request size, depth and cost limits on GraphQL | built | ADR 0070; `apps/backend/src/graphql/limits.ts`, `apps/backend/src/graphql/cost.ts`; `limits.test.ts`, `limits.int.test.ts`, `web-operations.test.ts`. A rate limit per principal is [#503](https://github.com/northMES/northmes/issues/503) |
 | Cryptography: AES-256-GCM with a keyring for stored secrets, TLS at the proxy | decided | ADR 0047, ADR 0044 |
 | Pinned dependencies: exact catalog versions, 14-day release age, install scripts denied | built | `pnpm-workspace.yaml` |
 
@@ -80,7 +80,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 
 | Control | Status | Evidence |
 |---|---|---|
-| `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | gap | [#481](https://github.com/northMES/northmes/issues/481) |
+| `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | built | `SECURITY.md`; `test/meta/security-policy.test.ts` |
 | Patch releases for security fixes | decided | ADR 0038, ADR 0051 |
 | Accepted risks recorded | built | the audit reports in `audits/`; [plan 17](../plan/17-risks.md) |
 
@@ -116,5 +116,5 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Decisions recorded as ADRs, checked by a meta test | built | `docs/adr`; `test/meta/adr.test.ts` |
 | Every pull request linked to an issue, with a Conventional Commit title | built | `scripts/ci/linked-issue.mjs`, `scripts/ci/pr-title.mjs` |
-| A security note in every pull request | decided | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; the `pr security` check comes with M-87 |
+| A security note in every pull request | decided | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; the `pr security` check is [#513](https://github.com/northMES/northmes/issues/513) |
 | An internal audit before each release and each quarter | decided | ADR 0076 |

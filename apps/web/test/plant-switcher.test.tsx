@@ -193,6 +193,29 @@ describe('the plant switcher', () => {
     ).toEqual(['Plant A', 'Plant B']);
   });
 
+  it('E04-S04 plants of one company render without group labels, also when another company of the user has no plant yet', async () => {
+    const user = userEvent.setup();
+    renderAt('/plant-b/planning/orders', [
+      company('Demo Works', [plantA, plantB]),
+      company('Nordic Tools', []),
+    ]);
+
+    const { menu } = await openSwitcher(user, 'Demo Works, Plant B, switch plant');
+
+    expect(within(menu).queryAllByRole('group')).toEqual([]);
+    expect(menu.textContent).not.toContain('Nordic Tools');
+  });
+
+  it("E04-S04 the company mark shows the company's initial letter, hidden from assistive technology (PL26)", async () => {
+    renderAt('/plant-a/planning/orders', twoCompanies);
+
+    const switcher = await within(await sidebar()).findByRole('button', { name: /switch plant$/ });
+
+    const mark = switcher.querySelector('[aria-hidden="true"]');
+    expect(mark?.textContent).toBe('D');
+    expect(mark?.querySelector('svg')).toBeNull();
+  });
+
   it('E04-S04 with one plant the switcher is not rendered, and the sidebar head names the company and the plant as text', async () => {
     renderAt('/plant-a/planning/orders', [company('Demo Works', [plantA])]);
     const nav = await sidebar();
@@ -286,19 +309,51 @@ describe('the plant crumb', () => {
 });
 
 describe('a plant the user cannot open', () => {
-  it("E04-S04 a plant slug that is none of the user's plants shows Plant not found with links to the user's plants, without the sidebar", async () => {
+  it("E04-S04 a plant slug that is none of the user's plants shows Page not found with the user's plants by company, without the sidebar (D2 ST29)", async () => {
     renderAt('/plant-x/planning/orders', twoCompanies);
 
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Plant not found' });
-
-    expect(heading).toBeDefined();
+    // The shell shows the slug while the plants load, then the page of an unknown plant.
+    await screen.findByRole('heading', { level: 1, name: 'Page not found' });
+    const main = screen.getByRole('main');
+    expect(document.title).toBe('Page not found · NorthMES');
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+    expect(main.textContent).toContain(
+      'There is no plant at /plant-x/planning/orders that you can open. The link may be out of date.',
+    );
+    expect(within(main).getByRole('heading', { level: 2, name: 'Your plants' })).toBeDefined();
+    const lists = within(main).getAllByRole('list');
+    expect(lists.map((list) => list.getAttribute('aria-labelledby'))).toHaveLength(2);
     expect(
-      screen.getAllByRole('link').map((link) => [link.textContent, link.getAttribute('href')]),
+      lists.map((list) => document.getElementById(list.getAttribute('aria-labelledby') ?? '')),
+    ).toEqual(within(main).getAllByRole('heading', { level: 3 }));
+    expect(
+      within(main)
+        .getAllByRole('heading', { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(['Demo Works', 'Nordic Tools']);
+    expect(
+      within(main)
+        .getAllByRole('link')
+        .map((link) => [link.textContent, link.getAttribute('href')]),
     ).toEqual([
       ['Plant A', '/plant-a/planning/orders'],
       ['Plant B', '/plant-b/planning/orders'],
       ['Plant C', '/plant-c/planning/orders'],
     ]);
+    expect(main.textContent).toContain('/plant-c');
+  });
+
+  it('E04-S04 the unknown plant page has a top bar with the NorthMES mark and the account menu, so the user can sign out (D2 ST29)', async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt('/plant-x/planning/orders', twoCompanies);
+    await screen.findByRole('heading', { level: 1, name: 'Page not found' });
+
+    const banner = screen.getByRole('banner');
+    expect(banner.textContent).toContain('NorthMES');
+    await user.click(within(banner).getByRole('button', { name: 'Alex Lund, alex.lund, account' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    expect(router.state.location.pathname).toBe('/sign-in');
   });
 });
