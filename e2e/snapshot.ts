@@ -58,13 +58,23 @@ export async function snapshot(
     times.evaluateAll((elements, value) => {
       for (const element of elements) (element as HTMLElement).style.visibility = value;
     }, visibility);
-  // fullPage given here, not left to Argos's default, also turns sticky and fixed elements such
-  // as the Save bar static, so the page's scroll position does not move them.
-  await argosScreenshot(page, snapshotName(state), {
-    fullPage: true,
-    mask: [times],
-    stabilize: { waitForAriaBusy: !busy },
-    beforeScreenshot: () => hideTimes('hidden'),
-    afterScreenshot: () => hideTimes(''),
-  });
+  // A full-page capture draws what is pinned to the window, such as the Save bar and the sidebar,
+  // where the window ends. The window takes the page's height for the screenshot, so the sidebar
+  // runs the full height and the Save bar sits below the form, and gets its size back after it.
+  const original = page.viewportSize();
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  if (original && height > original.height) await page.setViewportSize({ ...original, height });
+  try {
+    // fullPage given here, not left to Argos's default, also turns sticky and fixed elements
+    // static, so the page's scroll position does not move them.
+    await argosScreenshot(page, snapshotName(state), {
+      fullPage: true,
+      mask: [times],
+      stabilize: { waitForAriaBusy: !busy },
+      beforeScreenshot: () => hideTimes('hidden'),
+      afterScreenshot: () => hideTimes(''),
+    });
+  } finally {
+    if (original) await page.setViewportSize(original);
+  }
 }
