@@ -421,6 +421,8 @@ describe('workflows', () => {
     expect(Object.keys(scorecard?.jobs ?? {})).toHaveLength(1);
     expect(job?.permissions).toEqual(scorecardPermissions);
     expect(analysis?.with?.publish_results).toBe(true);
+    // Scorecard publishes from the default branch only, so a manual run elsewhere skips the job.
+    expect(job?.if).toBe(expression('github.ref_name == github.event.repository.default_branch'));
   });
 
   it('test jobs take runs-on from a repository variable', () => {
