@@ -1,18 +1,18 @@
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
-import { expect, test, uniqueCode } from './fixtures.ts';
+import { expect, plant, test, uniqueCode } from './fixtures.ts';
 
 // Core's articles pages in the browser, against the built server in role all with the stack's
 // seed: the dev admin, the seed's Company admin, signs in and works at plant A (E06-S06). Each
 // test makes its own records with codes no other test uses, since the tests of a worker share its
 // database.
-const plant = 'plant-a';
 
 test.describe('articles', () => {
   test("E06-S06 the articles list shows the plant's seeded articles", async ({ page, signIn }) => {
     await signIn(coreLinks.articles({ plant }).href);
 
     await expect(page.getByRole('heading', { level: 1, name: 'Articles' })).toBeVisible();
+    await page.getByLabel('Search articles').fill('BR-140');
     await expect(page.getByRole('row', { name: /BR-140.*Wall bracket/ })).toBeVisible();
   });
 
@@ -47,7 +47,9 @@ test.describe('articles', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: `Article ${article.code}` }),
     ).toBeVisible();
-    await expect(page.locator('#article-identity')).toContainText('Mounting plate, long');
+    await expect(page.getByRole('region', { name: 'Identity' })).toContainText(
+      'Mounting plate, long',
+    );
   });
 
   test('E06-S06 an archived article leaves the list and comes back after Restore', async ({
@@ -82,7 +84,7 @@ test.describe('articles', () => {
     await page.getByLabel('Name', { exact: true }).fill(`Brackets ${groupCode}`);
     await page.getByRole('button', { name: 'Save article group' }).click();
     await expect(
-      page.getByRole('heading', { level: 1, name: `Article group ${groupCode}` }),
+      page.getByRole('row', { name: new RegExp(`${groupCode}.*Brackets ${groupCode}`) }),
     ).toBeVisible();
 
     await page.goto(coreLinks.articles.new({ plant }).href);
@@ -93,6 +95,8 @@ test.describe('articles', () => {
     await page.getByRole('button', { name: 'Save article' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: `Article ${code}` })).toBeVisible();
-    await expect(page.locator('#article-classification')).toContainText(`Brackets ${groupCode}`);
+    await expect(page.getByRole('region', { name: 'Classification' })).toContainText(
+      `Brackets ${groupCode}`,
+    );
   });
 });
