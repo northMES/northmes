@@ -116,5 +116,5 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Decisions recorded as ADRs, checked by a meta test | built | `docs/adr`; `test/meta/adr.test.ts` |
 | Every pull request linked to an issue, with a Conventional Commit title | built | `scripts/ci/linked-issue.mjs`, `scripts/ci/pr-title.mjs` |
-| A security note in every pull request | built | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md` |
+| A security note in every pull request | decided | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; the `pr security` check comes with M-87 |
 | An internal audit before each release and each quarter | decided | ADR 0076 |

@@ -240,6 +240,11 @@ The remaining administrator questions (installation, polling rate, response size
 | M-83 | Do the five rows that ADR 0075 proposes enter the ledger of ADR 0055? | Yes. The row for plugin screens at run time records Krister's decision of 2026-10-10. The other four are read in release 1 by the `plugin-outside` job, the nightly Compose test, the Playwright step that installs `example-widget` through the Plugins page and the upgrade fixture test; no third-party plugin runs on the pilot ([0037][adr-0037]). Every row stays not estimated until its reader's stories exist | [0075][adr-0075], [0055][adr-0055], 14 |
 | M-84 | Does `@northmes/plugin-build` (name proposed) join the MIT packages of ADR 0056 in place of `@northmes/web-build`, with the plugin build, packing, signing and the `shared-exports.json` checks? | Yes, so a plugin author outside the repository builds, packs and signs a plugin with MIT code only, and `pnpm plugin:build` in the repository calls it | [0075][adr-0075], [0056][adr-0056], [0070][adr-0070], 03 |
 | M-85 | Does `northmes apply` report a difference between the customer file's `plugins` list and the installed plugins as `pluginDrift`, make the other changes and exit 4, instead of refusing the whole file with exit 3? | Yes, so a Company admin's plugin change never blocks a partner's `apply`, `company add-admin` included, and a partner's script alerts on exit 4 | [0075][adr-0075], [0072][adr-0072], [0066][adr-0066], 12 |
+| M-86 | How often does an internal security audit run? | Before each release and at least each quarter, each with a report in `docs/security/audits/` and its findings as issues under one tracking issue | [0076][adr-0076], 12 |
+| M-87 | Is the Security section required in every pull request description, and checked in CI? | Yes, asked for by the pull request template. A `pr security` check enforces it once this is answered | [0076][adr-0076], 13 |
+| M-88 | Is IEC 62443-4-1 maturity level 2 the target for the development process? | Yes, as the goal the controls index measures against; no assessment or certification before a customer requires one | [0076][adr-0076], 12, 15 |
+| M-89 | Does the project aim for the OpenSSF Best Practices passing badge? | Yes, once `SECURITY.md` (#481) and the supply-chain checks (#7, #197) are on `main` | [0076][adr-0076], 13 |
+| M-90 | Which address and response target does `SECURITY.md` give? | security@northmes.dev, as plan 12 names it, with acknowledgement within 5 working days and triage within 10 | [0076][adr-0076], [0051][adr-0051], 12 |
 
 ### Later modules
 
@@ -302,3 +307,4 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0070]: ../adr/0070-one-nestjs-backend-with-one-graphql-schema-and-one-static-web-app.md
 [adr-0072]: ../adr/0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md
 [adr-0075]: ../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md
+[adr-0076]: ../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md

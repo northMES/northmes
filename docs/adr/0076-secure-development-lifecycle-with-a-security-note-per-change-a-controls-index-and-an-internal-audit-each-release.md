@@ -1,11 +1,11 @@
 ---
 status: "proposed"
 date: 2026-10-11
-decision-makers: Krister Johansson
-consulted: the internal security audit of 2026-10-11 (docs/security/audits/2026-10-11.md)
+decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+consulted: Krister Johansson
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the audit cadence: before each release and at least each quarter; the Security section as a required part of every pull request description; IEC 62443-4-1 maturity level 2 and the OpenSSF Best Practices passing badge as the targets; the security contact address and the response target in SECURITY.md)"
+needs-confirmation: "maintainer (the audit cadence, M-86; the Security section as a required part of every pull request description, M-87; IEC 62443-4-1 maturity level 2 as the target, M-88; the OpenSSF Best Practices passing badge as the target, M-89; the security contact address and the response target in SECURITY.md, M-90)"
 ---
 
 # Secure development lifecycle with a security note per change, a controls index and an internal audit each release
@@ -94,10 +94,13 @@ The architecture and data flows stay in plan 02. The data models stay in plans 0
 
 ### Confirmation
 
-* `.github/PULL_REQUEST_TEMPLATE.md` has the Security section, and the AGENTS.md Security section names this ADR.
-* `docs/security/README.md` links every audit report, and each report links its tracking issue.
-* The audit before each release checks that the controls index matches the code. A control the index calls implemented without code, a test or a CI job is a finding.
-* Once #481 lands, a meta test checks that `SECURITY.md` names a reporting channel, a response target and the plugin trust model.
+* `test/meta/security-docs.test.ts`:
+  * "ADR0076 the pull request template asks for a Security section and the validation impact";
+  * "ADR0076 every control in the controls index has the status built, decided, gap or accepted";
+  * "ADR0076 the controls index links every audit report, and each report links its tracking issue".
+* A `pr security` check in `scripts/ci/`, run like `linked-issue.mjs` on every pull request, fails a pull request whose Security section is missing or empty. A task adds it once M-87 is answered.
+* The release workflow of ADR 0038 fails when no report in `docs/security/audits/` is newer than the previous release tag. A task adds it with the first release (M-86).
+* `test/meta/security-docs.test.ts`: "SECURITY.md names a reporting channel, a response target and the plugin trust model", added by #481 (M-90).
 
 ## Pros and cons of the options
 
