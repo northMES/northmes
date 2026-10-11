@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
@@ -13,8 +12,9 @@ import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { type ArticleGroupRow, CoreArticleGroups } from '../../article-groups.graphql.ts';
+import type { ArticleGroupRow } from '../../article-groups.graphql.ts';
 import { readForbiddenState } from '../../no-access.tsx';
+import { useArticleGroups } from '../../use-article-groups.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 
@@ -78,15 +78,15 @@ function NewArticleGroupLink() {
 /**
  * The company's article groups under Master data (maintainer, 2026-10-09): one table of Code,
  * Name and Last changed by code, with Show archived; each code opens the group's page. A company
- * keeps a short list, so one page holds it. New article group shows to a holder of
- * core.articleGroup:create at the company, since the groups are the company's.
+ * keeps a short list, so the table shows every group on one page. New article group shows to a
+ * holder of core.articleGroup:create at the company, since the groups are the company's.
  */
 export function ArticleGroupsScreen() {
   const [showArchived, setShowArchived] = useState(false);
-  const { data, previousData, error, refetch } = useQuery(CoreArticleGroups, {
-    variables: { includeArchived: showArchived },
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data, previousData, error, refetch } = useArticleGroups(
+    showArchived,
+    'cache-and-network',
+  );
   const page = data?.coreArticleGroups ?? previousData?.coreArticleGroups;
   const forbidden = data === undefined && isForbidden(error);
   const places = usePlaces({ skip: !forbidden });
