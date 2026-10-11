@@ -8,6 +8,7 @@ import pg from 'pg';
 import { readSecret } from '../scripts/stack/config.mjs';
 import { freePort } from '../scripts/stack/ports.mjs';
 import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
+import { checkA11y } from './a11y.ts';
 import { stackEnv } from './stack-env.ts';
 
 export { expect };
@@ -32,6 +33,8 @@ interface Fixtures {
   signIn: (href: string) => Promise<void>;
   /** Signs in, creates an article at plant A through New article, and stays on its page. */
   newArticle: () => Promise<{ code: string; href: string }>;
+  /** Fails when the page, in the named state, breaks a WCAG 2.2 A or AA rule that axe checks. */
+  checkA11y: (state: string) => Promise<void>;
 }
 
 /**
@@ -137,6 +140,9 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
       await page.getByRole('button', { name: 'Sign in' }).click();
       await page.waitForURL((url) => url.pathname === new URL(href, url).pathname);
     });
+  },
+  checkA11y: async ({ page }, use, testInfo) => {
+    await use((state) => checkA11y(page, testInfo, state));
   },
   newArticle: async ({ page, signIn }, use) => {
     await use(async () => {
