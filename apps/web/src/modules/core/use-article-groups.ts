@@ -8,7 +8,7 @@ import { CoreArticleGroups } from './article-groups.graphql.ts';
  * too, as CoreArticleGroups answers them. It reads the first page, then each next page until the
  * last, and adds its groups to the answer, so the Article groups list and the article form's
  * Article group select hold every group of the company. A next page that fails to load is
- * `pageError` until `retryPage` loads it; the groups already loaded stay.
+ * `pageError` until `retryPage` loads it, or the list changes; the groups already loaded stay.
  */
 export function useArticleGroups(
   includeArchived: boolean,
@@ -16,7 +16,9 @@ export function useArticleGroups(
 ) {
   const result = useQuery(CoreArticleGroups, { variables: { includeArchived }, fetchPolicy });
   const { data, fetchMore } = result;
-  const [pageError, setPageError] = useState<unknown>();
+  // A failed page, with the list it belongs to, so a new list does not show the old error.
+  const [failed, setFailed] = useState<{ includeArchived: boolean; error: unknown }>();
+  const pageError = failed?.includeArchived === includeArchived ? failed.error : undefined;
   const pageInfo = data?.coreArticleGroups.pageInfo;
   const next = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
   const loadPage = useCallback(
@@ -33,10 +35,11 @@ export function useArticleGroups(
           },
         }),
       }).then(
-        () => setPageError(undefined),
-        (error: unknown) => setPageError(error ?? new Error('The next page did not load')),
+        () => setFailed(undefined),
+        (error: unknown) =>
+          setFailed({ includeArchived, error: error ?? new Error('The next page did not load') }),
       ),
-    [fetchMore],
+    [fetchMore, includeArchived],
   );
   useEffect(() => {
     if (next) void loadPage(next);
