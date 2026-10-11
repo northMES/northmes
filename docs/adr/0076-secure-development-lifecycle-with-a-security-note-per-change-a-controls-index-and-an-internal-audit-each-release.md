@@ -5,7 +5,7 @@ decision-makers: proposed by the planning session, to be confirmed by Krister Jo
 consulted: Krister Johansson
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the audit cadence, M-86; the Security section as a required part of every pull request description, M-87; IEC 62443-4-1 maturity level 2 as the target, M-88; the OpenSSF Best Practices passing badge as the target, M-89; the security contact address and the response target in SECURITY.md, M-90)"
+needs-confirmation: ""
 ---
 
 # Secure development lifecycle with a security note per change, a controls index and an internal audit each release
@@ -125,4 +125,5 @@ The architecture and data flows stay in plan 02. The data models stay in plans 0
 * Related ADRs: 0008, 0010, 0011, 0013, 0017, 0026, 0037, 0038, 0040, 0041, 0044, 0046, 0047, 0050, 0051.
 * Plan: [12-operations-and-security.md](../plan/12-operations-and-security.md), [17-risks.md](../plan/17-risks.md).
 * The first audit: [docs/security/audits/2026-10-11.md](../security/audits/2026-10-11.md), tracked in #473.
+* Krister Johansson answered M-86 to M-90 on 2026-10-11 with the working defaults of plan 16.
 * Revisit when a customer requires a certification, when the first audit company is booked, or when the regulated profile of ADR 0051 is switched on.

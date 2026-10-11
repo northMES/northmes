@@ -44,9 +44,19 @@ describe('security docs', () => {
       expect(text, `${index} links ${report}`).toContain(
         `(${report.replace('docs/security/', '')})`,
       );
-      expect(read(report), `${report} links its tracking issue`).toMatch(
+      const reportText = read(report);
+      expect(reportText, `${report} links its tracking issue`).toMatch(
         /https:\/\/github\.com\/northMES\/northmes\/issues\/\d+/,
       );
+      // Each finding names its issue, or says why it has none: fixed, accepted, none, noted or
+      // checked again later.
+      const findings = reportText.split('\n').filter((line) => /^\| [A-Z]+\d+ \|/.test(line));
+      for (const finding of findings) {
+        const disposition = finding.split(' | ').at(-1)?.replace(/\|$/, '').trim() ?? '';
+        expect(disposition, `${report}: ${finding.slice(0, 40)}`).toMatch(
+          /#\d+|^fixed\b|^accepted\b|^none\b|^noted\b|^checked again\b/,
+        );
+      }
     }
   });
 });
