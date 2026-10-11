@@ -19,6 +19,9 @@
   "dependencies": {
     "@better-auth/api-key": "catalog:",
     "@better-auth/oauth-provider": "catalog:",
+    "@escape.tech/graphql-armor-max-aliases": "catalog:",
+    "@escape.tech/graphql-armor-max-depth": "catalog:",
+    "@escape.tech/graphql-armor-max-tokens": "catalog:",
     "@modelcontextprotocol/server": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
