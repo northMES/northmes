@@ -158,4 +158,26 @@ describe('defineList', () => {
     });
     expect(transaction).not.toHaveBeenCalled();
   });
+
+  // A module counts its filter values over listed, beside a page of the same search, so both take
+  // the same search contract.
+  it('E06-S06 listed refuses a search longer than 100 characters with core.list.bad_argument, as a page does', () => {
+    const query = vi.fn();
+
+    const error = (() => {
+      try {
+        toolList.listed(query as never, { search: ` ${'a'.repeat(101)} ` });
+        return undefined;
+      } catch (thrown: unknown) {
+        return thrown;
+      }
+    })();
+
+    expect(error).toBeInstanceOf(DomainError);
+    expect(error).toMatchObject({
+      code: 'core.list.bad_argument',
+      message: 'search takes at most 100 characters',
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
 });

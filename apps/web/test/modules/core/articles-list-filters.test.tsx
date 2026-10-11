@@ -5,6 +5,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CoreArticleFacets } from '../../../src/modules/core/screens/articles/article-facets.graphql.ts';
+import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 import {
   article,
   articlesPage,
@@ -13,6 +14,7 @@ import {
   firstPage,
   plant,
   renderCoreAt,
+  spoken,
 } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -224,6 +226,42 @@ describe('the articles list filters', () => {
     expect(
       within(table).getByRole('button', { name: 'Hoses 2 articles' }).getAttribute('aria-expanded'),
     ).toBe('true');
+  });
+
+  it('E06-S06 an opened group says it is loading, then that its articles did not load, also in the polite region, and opening it again loads them', async () => {
+    const user = userEvent.setup();
+    const hosesRows = { first: 100, orderBy: firstPage.orderBy, articleGroupIds: [hosesId] };
+    renderCoreAt(coreLinks.articles({ plant }).href, [
+      articlesQuery(firstPage, articlesPage([hose], { totalCount: 6 })),
+      facetsQuery({}, allCounts),
+      {
+        request: { query: CoreArticles, variables: hosesRows },
+        error: new Error('lost'),
+        delay: 50,
+      },
+      articlesQuery(hosesRows, articlesPage([hose, hose2], { totalCount: 2 })),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Group by' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Article group' }));
+    const table = await screen.findByRole('table', { name: 'Articles' });
+    const toggle = await within(table).findByRole('button', { name: 'Hoses 2 articles' });
+    await user.click(toggle);
+
+    expect(await within(table).findByText('Loading the articles of Hoses')).toBeDefined();
+    expect(
+      await within(table).findByText(
+        'Could not load the articles of Hoses. Close the group and open it again to try again.',
+      ),
+    ).toBeDefined();
+    expect(spoken()).toContain('Could not load the articles of Hoses');
+
+    await user.click(toggle);
+    await user.click(toggle);
+
+    await waitFor(() =>
+      expect(within(table).getAllByRole('cell')[0]?.textContent).toBe('AX-31007'),
+    );
   });
 
   it('E06-S06 Columns hides Source, which the table drops, and the choice stays for the next visit', async () => {
