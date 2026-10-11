@@ -28,6 +28,7 @@ Tests:
 - `apps/web/test/codegen.test.ts`: one `.graphql.gen.ts` per operation file, a field the schema drops fails `pnpm gen`, and a field whose type changes fails the typecheck of the screen that reads it.
 - `apps/web/test/shell.test.tsx`, `config.test.ts`, `vite-config.test.ts`, `build.test.ts`: the shell, config.json, the dev proxy, and a build whose manifest has `src/modules/<id>/screens.ts` as a dynamic entry.
 - `test/meta/module-boundaries.test.ts` runs `scripts/lint/module-boundaries.mjs`.
+- `e2e/*.spec.ts`: Playwright specs in Chromium against the built server in role all, with the stack's seed (`e2e/articles.spec.ts`). `pnpm e2e` builds, installs Chromium and runs them; `e2e/global-setup.ts` runs the stack script once, and the `stack` fixture in `e2e/fixtures.ts` gives each worker a clone of the seeded database and its own server. `signIn(href)` signs the dev admin in on the way to a page; specs build URLs with the link builders and make records with `uniqueCode`, because a worker's tests share its database.
 - `test/meta/path-literals.test.ts` runs `scripts/lint/path-literals.mjs`: an app path comes from a link builder's `to` or `href`, never a literal.
 
 ## Naming and folders
