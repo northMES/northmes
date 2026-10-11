@@ -4,9 +4,10 @@ import { maxDepthPlugin } from '@escape.tech/graphql-armor-max-depth';
 import { maxTokensPlugin } from '@escape.tech/graphql-armor-max-tokens';
 import { HttpStatus } from '@nestjs/common';
 import { DomainError, toGraphQLError } from '@northmes/sdk/errors';
-import type { ExecutionArgs } from 'graphql';
+import { type ExecutionArgs, GraphQLError } from 'graphql';
 import type { Plugin } from 'graphql-yoga';
 import { operationCost } from './cost.ts';
+import type { ServerContext } from './principal.ts';
 
 /** The limits every GraphQL request must stay within (plan 05, audit finding B4). */
 export interface GraphqlLimits {
@@ -22,12 +23,20 @@ export interface GraphqlLimits {
   readonly maxCost: number;
   /** The size a list costs when neither its first or last nor the schema gives one. */
   readonly defaultListSize: number;
+  /** The cost each principal, or each client address without one, may spend per window. */
+  readonly rateBudget: number;
+  /** The length of a rate window in milliseconds. */
+  readonly rateWindowMs: number;
+  /** What every operation spends on top of its cost, so cheap operations count too. */
+  readonly operationBaseCost: number;
 }
 
 /**
  * The numbers of plan 05: a depth of 12 allows three nested connection levels and a related object,
  * and a cost of 20 000 allows a table of 100 rows with a few related objects but not 100 rows with
  * 100 nested rows each. Express's JSON limit is 100 kB, so the cap for every other type is the same.
+ * A budget of 200 000 a minute with a base cost of 100 lets a session load a 100-row list every
+ * second, and holds a client to about 2000 cheap or 10 of the costliest operations a minute.
  */
 export const graphqlLimits: GraphqlLimits = {
   maxBodyBytes: 100_000,
@@ -36,6 +45,9 @@ export const graphqlLimits: GraphqlLimits = {
   maxTokens: 2000,
   maxCost: 20_000,
   defaultListSize: 25,
+  rateBudget: 200_000,
+  rateWindowMs: 60_000,
+  operationBaseCost: 100,
 };
 
 /** The refusal of an operation that costs more than the limit. */
@@ -91,6 +103,80 @@ export function costLimitPlugin({ maxCost, defaultListSize }: GraphqlLimits): Pl
     if (cost <= maxCost) return undefined;
     const error = tooCostly(cost, maxCost);
     return { errors: [toGraphQLError(error) ?? error] };
+  };
+  return {
+    onExecute({ args, setResultAndStopExecution }) {
+      const result = refusalOf(args);
+      if (result) setResultAndStopExecution(result);
+    },
+    onSubscribe({ args, setResultAndStopExecution }) {
+      const result = refusalOf(args);
+      if (result) setResultAndStopExecution(result);
+    },
+  };
+}
+
+/** The refusal of an operation over the rate limit, which Yoga answers with 429 and Retry-After. */
+function rateLimited(retryAfterSeconds: number): GraphQLError {
+  return new GraphQLError(`Too many requests. Try again in ${retryAfterSeconds} seconds.`, {
+    extensions: {
+      code: 'RATE_LIMITED',
+      errorCode: 'core.rate_limited',
+      details: { retryAfterSeconds },
+      http: { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
+    },
+  });
+}
+
+/**
+ * Who a request's spending counts against: its principal, or for a request without one, the client
+ * address that Express gives as req.ip, which follows Express's trust proxy setting (#476).
+ */
+function rateKeyOf(context: ServerContext & { req?: { ip?: string } }): string {
+  if (context.principal) return `user:${context.principal.userId}`;
+  return `address:${context.req?.ip ?? 'unknown'}`;
+}
+
+/**
+ * Refuses an operation once its principal, or its client address without one, has spent
+ * `rateBudget` in the current window of `rateWindowMs` (audit finding B4, #503). Each operation
+ * spends `operationBaseCost` plus its cost (operationCost), so a client that sends many cheap
+ * operations reaches the limit as one that sends a few costly ones does. The counters live in this
+ * server's memory, so each replica counts on its own until a shared store exists.
+ */
+export function rateLimitPlugin(
+  { rateBudget, rateWindowMs, operationBaseCost, defaultListSize }: GraphqlLimits,
+  now: () => number = Date.now,
+): Plugin<ServerContext> {
+  const windows = new Map<string, { readonly start: number; spent: number }>();
+  let swept = now();
+  const refusalOf = (args: ExecutionArgs) => {
+    const time = now();
+    if (time - swept >= rateWindowMs) {
+      for (const [key, window] of windows) {
+        if (time - window.start >= rateWindowMs) windows.delete(key);
+      }
+      swept = time;
+    }
+    const key = rateKeyOf(args.contextValue as ServerContext);
+    let window = windows.get(key);
+    if (!window || time - window.start >= rateWindowMs) {
+      window = { start: time, spent: 0 };
+      windows.set(key, window);
+    }
+    const charge =
+      operationBaseCost +
+      operationCost(args.schema, args.document, {
+        operationName: args.operationName,
+        variables: args.variableValues,
+        defaultListSize,
+      });
+    if (window.spent + charge > rateBudget) {
+      const retryAfter = Math.ceil((window.start + rateWindowMs - time) / 1000);
+      return { errors: [rateLimited(Math.max(1, retryAfter))] };
+    }
+    window.spent += charge;
+    return undefined;
   };
   return {
     onExecute({ args, setResultAndStopExecution }) {
