@@ -595,8 +595,10 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<'ul'>) {
     <ul
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
+      // NorthMES edit: no border-l along the entries, since the sidebar draws no rules
+      // (docs/design/shell/shell-190-navigation.md); the indent alone sets them off.
       className={cn(
-        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-sidebar-border px-2.5 py-0.5 group-data-[collapsible=icon]:hidden',
+        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 px-2.5 py-0.5 group-data-[collapsible=icon]:hidden',
         className,
       )}
       {...props}
