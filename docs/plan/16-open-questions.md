@@ -245,6 +245,9 @@ The remaining administrator questions (installation, polling rate, response size
 | M-88 | Is IEC 62443-4-1 maturity level 2 the target for the development process? | Answered 2026-10-11 by Krister: yes, as the goal the controls index measures against; no assessment or certification before a customer requires one | [0076][adr-0076], 12, 15 |
 | M-89 | Does the project aim for the OpenSSF Best Practices passing badge? | Answered 2026-10-11 by Krister: yes, once `SECURITY.md` (#481) and the supply-chain checks (#7, #197) are on `main` | [0076][adr-0076], 13 |
 | M-90 | Which address and response target does `SECURITY.md` give? | Answered 2026-10-11 by Krister: security@northmes.dev, as plan 12 names it, with acknowledgement within 5 working days and triage within 10 | [0076][adr-0076], [0051][adr-0051], 12 |
+| M-91 | Which Argos plan does NorthMES use, and who pays for it if the free quota runs out? | The free plan, with the reporter uploading from `main` and from pull requests of the repository; revisit when the quota runs out | [0077][adr-0077], 11 |
+| M-92 | When does the Argos check become a required check of the `main` ruleset? | After two weeks without a flaky snapshot on `main` | [0077][adr-0077], [0050][adr-0050] |
+| M-93 | Which screenshots may leave the repository for Argos? | The e2e specs' pages with the fictional seed and the records the specs create, never pilot exports or recorded customer requests | [0077][adr-0077], 17 |
 
 ### Later modules
 
@@ -308,3 +311,4 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0072]: ../adr/0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md
 [adr-0075]: ../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md
 [adr-0076]: ../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md
+[adr-0077]: ../adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md
