@@ -35,12 +35,14 @@ Chosen option: "Argos with `@argos-ci/playwright`", because it compares each pul
 
 ### How snapshots are taken
 
-* A spec calls `argosScreenshot(page, name)` from `@argos-ci/playwright` at each state where it calls `checkA11y`. The name is the page and the state, such as `articles-list-grouped`.
+* The `checkA11y` fixture of `e2e/fixtures.ts` calls `argosScreenshot(page, name)` from `@argos-ci/playwright` once axe passes, so each state a spec checks is also a screenshot. The name is the state in kebab case, such as `the-articles-list-grouped-by-stock-unit`.
 * Argos's reporter, added to `playwright.config.ts`, uploads the screenshots only when CI runs and `ARGOS_TOKEN` is set. A local run and a pull request from a fork take the screenshots and upload nothing.
 * Stability:
-  * the specs run in one Chromium with a fixed viewport, locale, time zone and color scheme;
-  * `argosScreenshot` waits for fonts, images and `aria-busy` to settle and hides the caret;
-  * values that change between runs, such as "Last changed" times and generated codes, are masked or come from a fixed seed.
+  * the specs run in one Chromium with a fixed viewport, locale, time zone and color scheme, and with the launch args `--disable-lcd-text` and `--font-render-hinting=none` that Argos asks for;
+  * `argosScreenshot` waits for fonts, images and `aria-busy` to settle and hides the caret; a state that is busy on purpose, such as a list while it loads, skips the `aria-busy` wait;
+  * the screenshot is full page with sticky elements made static, so the scroll position does not move the Save bar;
+  * "Created" and "Last changed" times are hidden and masked, and the codes a spec creates come from the test's title, so they are the same in every run.
+* The shell's content security policy blocks the script and the styles that `argosScreenshot` injects. The specs serve it with Argos's script allowed by the hash Argos publishes and with inline styles allowed, rather than Playwright's `bypassCSP`, so any other inline script stays blocked in the e2e run ([ADR 0019][adr-0019]).
 * A snapshot that differs on an unchanged commit is a flake: it is fixed in the spec, not accepted.
 
 ### How changes are reviewed
@@ -74,6 +76,7 @@ Chosen option: "Argos with `@argos-ci/playwright`", because it compares each pul
 * `test/meta/workflows.test.ts` gains "ADR0077 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step". The existing rule against `pull_request_target` stays.
 * `e2e/articles.spec.ts` gains "ADR0077 each state that checkA11y checks also takes an Argos screenshot", with the task that adds the reporter.
 * `test/meta/e2e.test.ts` (new): "ADR0077 playwright.config.ts uploads to Argos only in CI", read from the config's reporter options.
+* `test/meta/e2e.test.ts`: "ADR0077 the e2e project pins the viewport, locale, time zone, color scheme and font rendering" and "ADR0077 the specs' pages allow Argos's script by its hash and inline styles, and block any other inline script".
 
 ## Pros and cons of the options
 
@@ -96,11 +99,12 @@ Chosen option: "Argos with `@argos-ci/playwright`", because it compares each pul
 
 ## More information
 
-* Related ADRs: [0021][adr-0021] the accessibility target and the axe checks, [0041][adr-0041] the test strategy, [0050][adr-0050] the CI rules, [0076][adr-0076] the security note per change.
+* Related ADRs: [0019][adr-0019] the content security policy, [0021][adr-0021] the accessibility target and the axe checks, [0041][adr-0041] the test strategy, [0050][adr-0050] the CI rules, [0076][adr-0076] the security note per change.
 * Plan: [11 quality and testing](../plan/11-quality-and-testing.md), [16 open questions](../plan/16-open-questions.md) M-91 to M-93.
 * Issues: #506 (the axe checks that the snapshots follow).
 * Revisit when the free quota runs out, when a fork-heavy contribution flow starts, or if Argos changes its terms.
 
+[adr-0019]: 0019-web-shell-with-react-module-federation-remotes.md
 [adr-0021]: 0021-accessibility-target-wcag-2-2-aa.md
 [adr-0041]: 0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md
 [adr-0050]: 0050-github-organization-rulesets-ci-runners-and-supply-chain.md

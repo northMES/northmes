@@ -23,5 +23,20 @@ export default defineConfig({
     ],
   ],
   use: { trace: 'retain-on-failure' },
-  projects: [{ name: 'e2e', use: { ...devices['Desktop Chrome'] } }],
+  // One browser setup, so the same commit gives the same screenshots (ADR 0077). Argos asks for the
+  // two launch args to keep font rendering stable.
+  projects: [
+    {
+      name: 'e2e',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+        locale: 'en-US',
+        timezoneId: 'UTC',
+        colorScheme: 'light',
+        launchOptions: { args: ['--disable-lcd-text', '--font-render-hinting=none'] },
+      },
+    },
+  ],
 });

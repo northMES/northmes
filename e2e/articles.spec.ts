@@ -162,7 +162,7 @@ test.describe('articles', () => {
     articles.hold();
     await page.goto(coreLinks.articles({ plant }).href);
     await expect(page.locator('main [aria-busy="true"]').first()).toBeVisible();
-    await checkA11y('the articles list while it loads');
+    await checkA11y('the articles list while it loads', { busy: true });
     articles.pass();
 
     articles.empty();
@@ -200,6 +200,22 @@ test.describe('articles', () => {
     await expect(page.getByRole('heading', { level: 1, name: `Article ${code}` })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Classification' })).toContainText(
       `Brackets ${groupCode}`,
+    );
+  });
+
+  test('ADR0077 each state that checkA11y checks also takes an Argos screenshot', async ({
+    page,
+    signIn,
+    checkA11y,
+  }, testInfo) => {
+    await signIn(coreLinks.articles({ plant }).href);
+    await page.getByLabel('Search articles').fill('BR-140');
+    await expect(page.getByRole('row', { name: /BR-140.*Wall bracket/ })).toBeVisible();
+
+    await checkA11y('the articles list searched for one article');
+
+    expect(testInfo.attachments.map(({ name }) => name)).toContain(
+      'argos/screenshot___e2e/the-articles-list-searched-for-one-article',
     );
   });
 });
