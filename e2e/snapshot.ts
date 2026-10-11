@@ -61,9 +61,9 @@ export async function snapshot(
   // A full-page capture draws what is pinned to the window, such as the Save bar and the sidebar,
   // where the window ends. The window takes the page's height for the screenshot, so the sidebar
   // runs the full height and the Save bar sits below the form, and gets its size back after it.
-  const window = page.viewportSize();
+  const original = page.viewportSize();
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
-  if (window && height > window.height) await page.setViewportSize({ ...window, height });
+  if (original && height > original.height) await page.setViewportSize({ ...original, height });
   try {
     // fullPage given here, not left to Argos's default, also turns sticky and fixed elements
     // static, so the page's scroll position does not move them.
@@ -75,6 +75,6 @@ export async function snapshot(
       afterScreenshot: () => hideTimes(''),
     });
   } finally {
-    if (window) await page.setViewportSize(window);
+    if (original) await page.setViewportSize(original);
   }
 }
