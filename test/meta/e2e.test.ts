@@ -23,10 +23,12 @@ afterEach(() => {
 describe('playwright.config.ts', () => {
   it('ADR0077 playwright.config.ts uploads to Argos only in CI', async () => {
     const local = await argosOptions({ CI: undefined, ARGOS_TOKEN: undefined });
+    const localWithToken = await argosOptions({ CI: 'false', ARGOS_TOKEN: 'argos-test-token' });
     const forkPullRequest = await argosOptions({ CI: 'true', ARGOS_TOKEN: undefined });
     const ci = await argosOptions({ CI: 'true', ARGOS_TOKEN: 'argos-test-token' });
 
     expect(local).toEqual({ uploadToArgos: false });
+    expect(localWithToken).toEqual({ uploadToArgos: false });
     expect(forkPullRequest).toEqual({ uploadToArgos: false });
     expect(ci).toEqual({ uploadToArgos: true });
   });
