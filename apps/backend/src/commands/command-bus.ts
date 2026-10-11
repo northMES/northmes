@@ -140,10 +140,11 @@ function authorizeAtRow(
  *
  * For a command on an existing entity, the bus checks the scope that target.scopeOf reads before
  * target.load locks the row. Row-level security limits the lock to the write scopes, so a row that
- * the principal reads but may not change would otherwise answer NOT_FOUND. The bus checks the
- * locked row's scope again, which catches a row that moved in between. A row outside the
- * principal's read scopes is NotFoundException, like one that does not exist. A command without a
- * target gets undefined.
+ * the principal reads but may not change would otherwise answer NOT_FOUND. A row that scopeOf reads
+ * and the lock does not find is core.forbidden too: the principal holds the permission at its
+ * scope, but the request's plant does not write there. The bus checks the locked row's scope
+ * again, which catches a row that moved in between. A row outside the principal's read scopes is
+ * NotFoundException, like one that does not exist. A command without a target gets undefined.
  */
 async function authorizeAndLoad<Input, Result, Target extends TargetRow | undefined>(
   command: Command<Input, Result, Target>,
@@ -162,7 +163,13 @@ async function authorizeAndLoad<Input, Result, Target extends TargetRow | undefi
     if (scopeId === undefined) throw notFound(entity, id);
     authorizeAtRow(principal, permission, { entity, id, scopeId });
     const row = await load(id, context);
-    if (!row) throw notFound(entity, id);
+    // scopeOf read the row, so the lock found it outside the request's write scopes: a principal
+    // who holds the permission at another plant than the request's (ADR 0008).
+    if (!row) {
+      throw forbidden(
+        `${entity} ${id} is changed at scope ${scopeId}, which this request does not write; open that plant or company settings`,
+      );
+    }
     authorizeAtRow(principal, permission, { entity, id, scopeId: row.scope_id });
     return row;
   }
@@ -237,14 +244,19 @@ function validatorsByCommand({
 /**
  * The principal a command runs its transaction as. A command from company settings, a request
  * without a plant, reads and writes in the companies where the principal holds the command's
- * permission at the company node, their nodes and their plants (ADR 0066); a request at a plant
- * keeps its scope sets.
+ * permission at the company node, their nodes and their plants (ADR 0066), and only in the company
+ * the principal acts at when it names one (ADR 0073); a request at a plant keeps its scope sets.
  */
 function inSettings(principal: Principal | null, permission: string): Principal | null {
   if (!principal || principal.plantId !== undefined) return principal;
+  const { companyId } = principal;
   return {
     ...principal,
-    ...inCompanies(principal, (company) => can(principal, permission, company)),
+    ...inCompanies(
+      principal,
+      (company) =>
+        (companyId === undefined || company === companyId) && can(principal, permission, company),
+    ),
   };
 }
 
@@ -291,7 +303,17 @@ export class CommandBusImpl implements CommandBus {
       // A command without a target gets undefined, which its Target type then is.
       const target = (await authorizeAndLoad(command, input, principal, { tx, plantId })) as Target;
       checkVersion(command, input, target);
-      const context = { tx, plantId, target };
+      const context = {
+        tx,
+        plantId,
+        target,
+        require: (permission: string, scopeId: string) => {
+          // authorizeAndLoad refused a run without a principal before the handler can call it.
+          if (!principal || !can(principal, permission, scopeId)) {
+            throw forbidden(`You need ${permission} at scope ${scopeId}`);
+          }
+        },
+      };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);
         for (const registered of validators) {

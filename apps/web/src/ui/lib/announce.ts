@@ -22,7 +22,19 @@ function politeRegion(): HTMLElement {
   return region;
 }
 
+/**
+ * Whether the page is gone, as when a test's window closes while a message is still queued. The
+ * queue then empties and stops, so the next message on a page starts it again.
+ */
+function pageGone(): boolean {
+  if (typeof document !== 'undefined') return false;
+  queue.length = 0;
+  speaking = false;
+  return true;
+}
+
 function speakNext(): void {
+  if (pageGone()) return;
   const message = queue.shift();
   if (message === undefined) {
     speaking = false;
@@ -31,6 +43,7 @@ function speakNext(): void {
   speaking = true;
   politeRegion().textContent = '';
   setTimeout(() => {
+    if (pageGone()) return;
     politeRegion().textContent = message;
     setTimeout(speakNext, step);
   }, step);

@@ -11,6 +11,7 @@ import {
   Resolver,
   registerEnumType,
 } from '@nestjs/graphql';
+import type { ListDeclaration as ListContract } from '@northmes/contracts';
 import { type SelectQueryBuilder, type SqlBool, sql, type Transaction } from 'kysely';
 import type { ScopedDatabase } from '../data/database.ts';
 import { DomainError } from '../errors/domain-error.ts';
@@ -83,11 +84,69 @@ export interface Connection<Node> {
   count(): Promise<number>;
 }
 
+/**
+ * What a list's operation input asks of a page (ADR 0073): the fields that defineListQueryContract
+ * derives, with orderBy as camelCase sort fields, each optionally prefixed with - for descending.
+ */
+export interface ListInput {
+  readonly first?: number | undefined;
+  readonly after?: string | undefined;
+  readonly orderBy?: readonly string[] | undefined;
+  readonly search?: string | undefined;
+  readonly includeArchived?: boolean | undefined;
+}
+
+/** What a list's operation answers: the connection without edges (ADR 0073). */
+export interface ListPage<Node> {
+  readonly nodes: Node[];
+  readonly pageInfo: { readonly hasNextPage: boolean; readonly endCursor: string | null };
+}
+
+/** The GraphQL name of a camelCase sort field: updatedAt is UPDATED_AT. */
+function graphqlName(field: string): string {
+  return field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
+}
+
+/** The orderBy entry of a sort field as an operation names it, such as -updatedAt. */
+function orderOf(entry: string): OrderBy<string> {
+  const descending = entry.startsWith('-');
+  return {
+    field: graphqlName(descending ? entry.slice(1) : entry),
+    direction: descending ? SortDirection.DESC : SortDirection.ASC,
+  };
+}
+
+/** The kit's declaration of a list that a contracts package declares, with its GraphQL node. */
+function fromContract(list: ListContract, node: () => Type): ListDeclaration<string> {
+  return {
+    name: list.name,
+    node,
+    sortFields: Object.fromEntries(
+      Object.entries(list.sortFields).map(([field, column]) => [graphqlName(field), column]),
+    ),
+    defaultOrderBy: list.defaultOrderBy.map(orderOf),
+    search: list.search,
+    ...(list.archivable === undefined ? {} : { archivable: list.archivable }),
+  };
+}
+
 /** The page size of a call without first or last. */
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 const MAX_ORDER_BY_ENTRIES = 3;
 const MAX_SEARCH_LENGTH = 100;
+
+/**
+ * The trimmed search, or undefined when the call searches for nothing. A page and listed take the
+ * same search, so both refuse one longer than MAX_SEARCH_LENGTH.
+ */
+function trimmedSearch(search: string | null | undefined): string | undefined {
+  const text = search?.trim() || undefined;
+  if (text && text.length > MAX_SEARCH_LENGTH) {
+    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
+  }
+  return text;
+}
 
 /** A sort key of a page's order: a column with its type and direction. */
 interface Key extends SortColumn {
@@ -193,11 +252,7 @@ function planOf<SortField extends string>(
   const signature = signatureOf(keys);
   const cursor = backward ? args.before : args.after;
   const from = cursor != null ? decodeCursor(cursor, signature, keys.length) : undefined;
-  const search = args.search?.trim() || undefined;
-  if (search && search.length > MAX_SEARCH_LENGTH) {
-    throw badArgument(`search takes at most ${MAX_SEARCH_LENGTH} characters`);
-  }
-  return { backward, size, keys, signature, from, search };
+  return { backward, size, keys, signature, from, search: trimmedSearch(args.search) };
 }
 
 /**
@@ -222,12 +277,36 @@ function afterValues(keys: readonly Key[], values: readonly string[]) {
 /**
  * Declares a list: its GraphQL types and the SQL of its pages, with keyset paging over opaque
  * cursors (ADR 0016). This is the smallest kit the first list needs: orderBy over declared sort
- * fields, paging forward and backward, search and a totalCount that runs only when selected. Filter,
- * group by and aggregates come with the full kit.
+ * fields, paging forward and backward, search and a totalCount that runs only when selected.
+ * Filter, group by and aggregates come with the full kit.
  */
 export function defineList<const SortField extends string>(
   declaration: ListDeclaration<SortField>,
-) {
+): ListKit<SortField>;
+/**
+ * Declares the list that a contracts package declares (ADR 0073), with the GraphQL type of its
+ * node. Its sort fields are camelCase there and upper snake case in GraphQL: updatedAt is
+ * UPDATED_AT.
+ */
+export function defineList(
+  list: ListContract,
+  options: { readonly node: () => Type },
+): ListKit<string>;
+export function defineList(
+  declaration: ListDeclaration<string> | ListContract,
+  options?: { readonly node: () => Type },
+): ListKit<string> {
+  return listKit(
+    options
+      ? fromContract(declaration as ListContract, options.node)
+      : (declaration as ListDeclaration<string>),
+  );
+}
+
+/** What defineList returns. */
+export type ListKit<SortField extends string> = ReturnType<typeof listKit<SortField>>;
+
+function listKit<const SortField extends string>(declaration: ListDeclaration<SortField>) {
   const { name, node, sortFields } = declaration;
 
   const SortFieldEnum = Object.fromEntries(Object.keys(sortFields).map((field) => [field, field]));
@@ -293,6 +372,26 @@ export function defineList<const SortField extends string>(
      */
     ConnectionResolver: ConnectionResolver as Type,
     /**
+     * The rows of the list without paging, as a page reads them: those that `query` selects, the
+     * active ones unless the call includes archived rows, and those that search matches. A module
+     * counts the values of its filter fields over them, so its counts and its pages agree.
+     */
+    listed<DB, TB extends keyof DB, Row>(
+      query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
+      {
+        search,
+        includeArchived,
+      }: { readonly search?: string | null; readonly includeArchived?: boolean | null },
+    ): (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row> {
+      const hideArchived = declaration.archivable === true && includeArchived !== true;
+      const text = trimmedSearch(search);
+      return (tx) => {
+        let rows = query(tx);
+        if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);
+        return text ? rows.where(matching(declaration.search, text)) : rows;
+      };
+    },
+    /**
      * Reads one page of the rows that `query` selects, in one ScopedDatabase transaction, as the
      * root field's arguments ask. `query` selects the node's columns, id among them, from the
      * list's table. A refused argument is BAD_USER_INPUT with core.list.bad_argument, and a cursor
@@ -304,14 +403,7 @@ export function defineList<const SortField extends string>(
       args: ListArgs<SortField>,
     ): Promise<Connection<Row>> {
       const { backward, size, keys, signature, from, search } = planOf(declaration, args);
-      // The rows of the list without paging: the active ones unless the call includes archived
-      // rows, and those that search matches.
-      const hideArchived = declaration.archivable === true && args.includeArchived !== true;
-      const listed = (tx: Transaction<DB>) => {
-        let rows = query(tx);
-        if (hideArchived) rows = rows.where(sql<SqlBool>`${sql.ref('archived_at')} is null`);
-        return search ? rows.where(matching(declaration.search, search)) : rows;
-      };
+      const listed = this.listed(query, { search, includeArchived: args.includeArchived });
       // A backward page reads the rows before the cursor in the opposite order, and reverses them.
       const readKeys = backward ? reversed(keys) : keys;
       const aliases = keys.map((_key, index) => `_nm_key_${index}`);
@@ -356,6 +448,28 @@ export function defineList<const SortField extends string>(
             )}) as list`.execute(tx);
             return Number(rows[0]?.count);
           }),
+      };
+    },
+    /**
+     * Reads one page as a list's operation input asks (ADR 0073): page with first, after, orderBy
+     * of camelCase sort fields, search and includeArchived, answered as nodes and pageInfo. The
+     * module's service applies the list's filter fields in `query`.
+     */
+    async find<DB, TB extends keyof DB, Row extends { readonly id: string }>(
+      db: ScopedDatabase<DB>,
+      query: (tx: Transaction<DB>) => SelectQueryBuilder<DB, TB, Row>,
+      input: ListInput,
+    ): Promise<ListPage<Row>> {
+      const { edges, pageInfo } = await this.page(db, query, {
+        first: input.first ?? null,
+        after: input.after ?? null,
+        orderBy: (input.orderBy?.map(orderOf) as OrderBy<SortField>[] | undefined) ?? null,
+        search: input.search ?? null,
+        includeArchived: input.includeArchived ?? null,
+      });
+      return {
+        nodes: edges.map(({ node }) => node),
+        pageInfo: { hasNextPage: pageInfo.hasNextPage, endCursor: pageInfo.endCursor },
       };
     },
   };

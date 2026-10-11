@@ -20,6 +20,12 @@ export interface HandlerContext<Target = unknown> {
   readonly plantId: string | undefined;
   /** The row that target.load returned, or undefined for a command without a target. */
   readonly target: Target;
+  /**
+   * Checks that the principal holds `permission` at `scopeId`, a scope that neither the target nor
+   * the scope hook names, such as the company for a create that assigns plants (ADR 0073). It
+   * throws core.forbidden otherwise, which rolls the command back as the permission step does.
+   */
+  require(permission: string, scopeId: string): void;
 }
 
 /**
