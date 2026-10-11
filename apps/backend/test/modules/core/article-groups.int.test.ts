@@ -205,6 +205,28 @@ describe('article groups', () => {
     expect(cleared.data?.coreUpdateArticle).toMatchObject({ version: 2, articleGroup: null });
   });
 
+  it('E06-S06 a retried create answers the article its first run made, also when its group was archived since', async () => {
+    const { companyAdmin } = await givenPlace();
+    const { group } = await create(companyAdmin, 'FL', 'Flanges');
+    const input = {
+      id: randomUUIDv7(),
+      code: 'AX-20411',
+      name: 'Fläns',
+      articleGroupId: group?.id,
+    };
+    await companyAdmin.send(createArticle, { input });
+    await companyAdmin.send(archiveGroup, { input: { id: group?.id, expectedVersion: 1 } });
+
+    const retried: Answer = await companyAdmin.send(createArticle, { input });
+
+    expect(retried.errors).toBeUndefined();
+    expect(retried.data?.coreCreateArticle).toMatchObject({
+      id: input.id,
+      version: 1,
+      articleGroup: { id: group?.id },
+    });
+  });
+
   it('E06-S06 an article cannot pick an archived group or one of another company', async () => {
     const { companyAdmin } = await givenPlace();
     const other = await givenPlace();
