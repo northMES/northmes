@@ -41,6 +41,13 @@ describe('CI / pr security', () => {
     expect(checkPrSecurity(pullRequest('Closes #1\n\n## Security')).ok).toBe(false);
   });
 
+  // GitHub renders nothing after a comment that is never closed, so its text is no note.
+  it('ADR0076 a Security section that holds only an unclosed comment fails', () => {
+    expect(
+      checkPrSecurity(pullRequest(body('<!-- ADR 0076: the controls this change touches'))).ok,
+    ).toBe(false);
+  });
+
   it('ADR0076 a Security section that says none without a reason fails', () => {
     for (const none of ['None', 'none.', 'N/A', '- None']) {
       expect(checkPrSecurity(pullRequest(body(none))).ok, none).toBe(false);
