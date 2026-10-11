@@ -194,6 +194,7 @@ test.describe('articles', () => {
     await page.getByLabel('Name', { exact: true }).fill('Corner bracket');
     await page.getByLabel('Article group').selectOption({ label: `Brackets ${groupCode}` });
     await page.getByLabel('Stock unit').selectOption({ label: unitOf('PIECE').label });
+    await checkA11y('the new article form, filled in');
     await page.getByRole('button', { name: 'Save article' }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: `Article ${code}` })).toBeVisible();
