@@ -1,0 +1,18 @@
+import { defineConfig, devices } from '@playwright/test';
+
+// The end-to-end specs under e2e/ (ADR 0041). There is no webServer: Playwright starts it before
+// globalSetup, so it could not reach the database that globalSetup starts. globalSetup runs the
+// stack script into a seeded database, and each worker clones it and spawns the built server in
+// role all (e2e/fixtures.ts). pnpm e2e builds first.
+export default defineConfig({
+  testDir: 'e2e',
+  globalSetup: './e2e/global-setup.ts',
+  forbidOnly: true,
+  retries: 0,
+  // Each worker runs its own server, so CI keeps to two of them.
+  workers: process.env.CI ? 2 : undefined,
+  timeout: 60_000,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  use: { trace: 'retain-on-failure' },
+  projects: [{ name: 'e2e', use: { ...devices['Desktop Chrome'] } }],
+});
