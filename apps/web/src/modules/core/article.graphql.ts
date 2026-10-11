@@ -21,8 +21,13 @@ if (false) {
         id
         code
         name
+        stockUnit
+        note
+        source
         version
         archivedAt
+        createdAt
+        updatedAt
         allPlants
         plants {
           id

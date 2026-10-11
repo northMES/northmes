@@ -9,14 +9,27 @@ export type CoreUpdateArticleInput = {
   readonly expectedVersion: number;
   readonly id: string | number;
   readonly name: string;
+  readonly note?: string | null | undefined;
+  readonly stockUnit?: string | null | undefined;
 };
+
+/** A unit of the unit catalog that an article counts its quantities in (ADR 0023). */
+export type StockUnit =
+  /** Kilograms (kg) */
+  | 'KILOGRAM'
+  /** Litres (l) */
+  | 'LITRE'
+  /** Metres (m) */
+  | 'METRE'
+  /** Pieces (pcs) */
+  | 'PIECE';
 
 export type CoreUpdateArticleMutationVariables = Exact<{
   input: CoreUpdateArticleInput;
 }>;
 
 
-export type CoreUpdateArticleMutation = { readonly coreUpdateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly version: number, readonly archivedAt: string | null } };
+export type CoreUpdateArticleMutation = { readonly coreUpdateArticle: { readonly __typename: 'Article', readonly id: string, readonly code: string, readonly name: string, readonly stockUnit: StockUnit, readonly note: string | null, readonly version: number, readonly archivedAt: string | null, readonly updatedAt: string } };
 
 
-export const CoreUpdateArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CoreUpdateArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoreUpdateArticleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreUpdateArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}}]}}]}}]} as unknown as DocumentNode<CoreUpdateArticleMutation, CoreUpdateArticleMutationVariables>;
+export const CoreUpdateArticleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CoreUpdateArticle"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CoreUpdateArticleInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"coreUpdateArticle"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"code"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"stockUnit"}},{"kind":"Field","name":{"kind":"Name","value":"note"}},{"kind":"Field","name":{"kind":"Name","value":"version"}},{"kind":"Field","name":{"kind":"Name","value":"archivedAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<CoreUpdateArticleMutation, CoreUpdateArticleMutationVariables>;
