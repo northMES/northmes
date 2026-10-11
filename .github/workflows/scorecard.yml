@@ -21,6 +21,8 @@ permissions:
 jobs:
   analysis:
     name: Scorecard analysis
+    # Scorecard publishes from the default branch only, so a manual run elsewhere skips the job.
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
