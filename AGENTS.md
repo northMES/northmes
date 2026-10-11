@@ -8,6 +8,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 
 - Test-driven, one behaviour at a time: write its failing test, make it pass, then refactor.
 - Each integration and end-to-end test run starts its own Postgres with `@testcontainers/postgresql`.
+- An end-to-end spec runs `checkA11y` from `e2e/fixtures.ts` on each page state it reaches, so a WCAG 2.2 AA violation fails it (ADR 0021). An axe exclusion needs a linked issue and an expiry date.
 - Tests call the mocked AI provider. Tests against a real model live in `*.ai.test.ts` and run only through `pnpm test:ai` or `pnpm test:e2e:ai`.
 - Generated files (schema snapshots, link snapshots, `*.gen.*` files, the lockfile) are rebuilt with the command that owns them, also when resolving a merge conflict.
 - Run every command as `pnpm` or `git` from the repository root, through a root script, `pnpm --filter` or `pnpm -C`.

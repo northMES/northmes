@@ -73,6 +73,42 @@ test.describe('articles', () => {
     await expect(page.getByRole('row', { name: new RegExp(article.code) })).toBeVisible();
   });
 
+  test('ADR0021 each state of the articles pages passes the WCAG 2.2 AA rules', async ({
+    page,
+    newArticle,
+    checkA11y,
+  }) => {
+    const article = await newArticle();
+    await checkA11y('the article page');
+
+    await page.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.getByRole('button', { name: 'Save article' })).toBeVisible();
+    await checkA11y('the edit form');
+
+    await page.goto(coreLinks.articles.new({ plant }).href);
+    await page.getByRole('button', { name: 'Save article' }).click();
+    await expect(page.getByRole('group', { name: /to save the article/ })).toBeVisible();
+    await checkA11y('the new article form with its error summary');
+
+    await page.goto(coreLinks.articles({ plant }).href);
+    await expect(page.getByRole('heading', { level: 1, name: 'Articles' })).toBeVisible();
+    await expect(page.getByRole('row').nth(1)).toBeVisible();
+    await checkA11y('the articles list');
+
+    await page.getByLabel('Search articles').fill('NO-SUCH-ARTICLE');
+    await expect(page.getByText('No articles match')).toBeVisible();
+    await checkA11y('the articles list with no match');
+
+    await page.goto(`${coreLinks.articles({ plant }).href}?group=stockUnit`);
+    await expect(page.getByRole('button', { name: unitOf('PIECE').label })).toBeVisible();
+    await checkA11y('the articles list grouped by stock unit');
+
+    await page.goto(article.href);
+    await page.getByRole('button', { name: 'Archive' }).click();
+    await expect(page.getByRole('alertdialog')).toBeVisible();
+    await checkA11y('the archive dialog');
+  });
+
   test("E06-S06 an article group picked on the form names the article's group", async ({
     page,
     signIn,
