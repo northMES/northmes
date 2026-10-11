@@ -127,6 +127,28 @@ describe('article groups', () => {
     );
   });
 
+  it('E06-S06 a later page of groups that fails to load says so with Try again, which loads it', async () => {
+    const user = userEvent.setup();
+    const hoses = group('HO', 'Hoses');
+    renderCoreAt(coreLinks.articleGroups({ plant }).href, [
+      groupsQuery([consumables, flanges], false, { next: 'page-2', totalCount: 3 }),
+      {
+        request: {
+          query: CoreArticleGroups,
+          variables: { includeArchived: false, after: 'page-2' },
+        },
+        error: new Error('Network down'),
+      },
+      groupsQuery([hoses], false, { after: 'page-2', totalCount: 3 }),
+      viewerQuery(['core.articleGroup:read']),
+    ]);
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }));
+
+    const table = await screen.findByRole('table', { name: 'Article groups' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(3));
+  });
+
   it('E06-S06 a Plant admin reads the article groups without New article group', async () => {
     renderCoreAt(coreLinks.articleGroups({ plant }).href, [
       groupsQuery([flanges]),
