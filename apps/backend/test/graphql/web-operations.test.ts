@@ -2,7 +2,7 @@
 import { globSync, readFileSync } from 'node:fs';
 import { maxAliasesRule } from '@escape.tech/graphql-armor-max-aliases';
 import { maxDepthRule } from '@escape.tech/graphql-armor-max-depth';
-import { buildSchema, parse, specifiedRules, validate } from 'graphql';
+import { buildSchema, Kind, parse, specifiedRules, validate } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import { operationCost } from '../../src/graphql/cost.ts';
 import { graphqlLimits } from '../../src/graphql/limits.ts';
@@ -46,6 +46,11 @@ describe('the web operations under the request limits (B4)', () => {
     const overLimits = operations.flatMap(({ file, source }) => {
       const document = parse(source, { maxTokens: graphqlLimits.maxTokens });
       const errors = validate(schema, document, rules).map((error) => error.message);
+      // Without an operation name, operationCost prices a document of several operations at 0.
+      const definitions = document.definitions.filter(
+        (definition) => definition.kind === Kind.OPERATION_DEFINITION,
+      );
+      if (definitions.length !== 1) errors.push(`holds ${definitions.length} operations, not one`);
       const cost = operationCost(schema, document, {
         variables: largestPages,
         defaultListSize: graphqlLimits.defaultListSize,

@@ -134,7 +134,7 @@ The plant's presentation values leave the module list; their carrier is open.
 * Boundary fixtures: an import of another module's internal file fails `pnpm check` in both apps; the same import through the public api passes.
 * `pnpm gen --check` covers `schema/api.graphql`.
 * The four graphql-ws and SSE subscription tests pass on `/graphql`.
-* `apps/backend/test/graphql/limits.test.ts` refuses a document over `maxCost`, over the depth, alias and token limits and over the body cap; `web-operations.test.ts` keeps every web operation within them.
+* `apps/backend/test/graphql/limits.test.ts` refuses a document over `maxCost` and over the depth, alias and token limits, a body over the cap or without a length, and a multipart request; `limits.int.test.ts` refuses a body over the cap through the HTTP server; `web-operations.test.ts` keeps every web operation within the limits.
 
 ## Pros and cons of the options
 
