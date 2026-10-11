@@ -222,6 +222,22 @@ describe('superviseDev', () => {
     ]);
   });
 
+  it("E02-S08 pnpm dev names the server's address as the API's, apart from the web app's, before the board URL", async () => {
+    const dev = fakeDev();
+    const plan = await devPlan(ports);
+    superviseDev({ plan, ...dev.options });
+    await settle();
+    dev.print('tsc', completed);
+    await settle();
+    dev.print('server', 'Listening on http://127.0.0.1:41001');
+
+    // Vite serves the web app; the server's own address only answers the API.
+    expect(dev.logs.slice(-4, -2)).toEqual([
+      'The API listens on http://127.0.0.1:41001; open the web app at http://127.0.0.1:41002',
+      `The board of the seeded plant: ${plan.boardUrl}`,
+    ]);
+  });
+
   it("E05-S05 pnpm dev prints the dev admin's email on the reserved .test domain and where its password is, never the password", async () => {
     const dev = fakeDev();
     const plan = await devPlan(ports);
