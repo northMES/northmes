@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { stockUnit, stockUnitCodes, unitOf } from '@northmes/contracts';
-import { articleFields, articleNote } from '@northmes/core-contracts';
+import { articleFields, articleNote, articleTranslations } from '@northmes/core-contracts';
 import type { ReactNode } from 'react';
 import { z } from 'zod';
 import { ConflictSummary } from '../../../../ui/components/conflict-summary/index.ts';
@@ -13,12 +13,14 @@ import { TextareaField } from '../../../../ui/components/textarea-field/index.ts
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { plantsChoiceField } from '../article-plants-field/index.ts';
+import { ArticleFormTranslations } from './article-form-translations.tsx';
 
 /**
  * The fields of the article form: the identity fields that core.createArticle and
  * core.updateArticle share, the same for a new and an existing article (ADR 0017); the stock
  * unit, which the form requires although the commands default it, so nobody saves pieces without
- * choosing them (design ui-222, Copy), and the note, which an empty field clears; and on a new
+ * choosing them (design ui-222, Copy), the note, which an empty field clears, and the name's
+ * translations; and on a new
  * article the Plants field, whose choice must name a plant or All plants (ADR 0073). One parse
  * checks them all, so a failed save lists every field to fix.
  */
@@ -26,6 +28,7 @@ export const articleFormFields = articleFields.extend({
   // The select starts on Choose a unit, the empty value, which the catalog refuses.
   stockUnit: z.string().pipe(stockUnit),
   note: articleNote,
+  translations: articleTranslations,
   plants: plantsChoiceField.optional(),
 });
 
@@ -94,11 +97,11 @@ function Summary({
 
 /**
  * The article form (design ui-222, DE5 and DE7): the error summary, the Identity field group with
- * Article number and Name, the Classification group with Stock unit and Note, any further field
- * groups, then the sticky Save bar with Save article and Cancel. The summary takes
- * focus after each failed save, and the typed values stay (WCAG 3.3.7); after a version conflict it
- * says so and offers Reload article (DE19), and for an archived article it offers Restore article
- * (DE31). Leaving the form with changes asks first.
+ * Article number, Name and the name's translations, the Classification group with Stock unit and
+ * Note, any further field groups, then the sticky Save bar with Save article and Cancel. The
+ * summary takes focus after each failed save, and the typed values stay (WCAG 3.3.7); after a
+ * version conflict it says so and offers Reload article (DE19), and for an archived article it
+ * offers Restore article (DE31). Leaving the form with changes asks first.
  */
 export function ArticleForm({
   form,
@@ -120,6 +123,7 @@ export function ArticleForm({
           {...fieldProps(form, 'code')}
         />
         <TextField label="Name" autoComplete="off" {...fieldProps(form, 'name')} />
+        <ArticleFormTranslations form={form} />
       </FormSection>
       <FormSection title="Classification">
         <SelectField

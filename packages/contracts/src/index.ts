@@ -50,6 +50,13 @@ export {
   type QueryContract,
   type QueryContractOptions,
 } from './define-query-contract.ts';
+export {
+  type LocalizedText,
+  resolveLocalized,
+  type Translation,
+  translation,
+  translations,
+} from './localized-text.ts';
 export { isOutsideText, outsideText } from './outside-text.ts';
 export {
   DEFAULT_STOCK_UNIT,

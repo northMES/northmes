@@ -2,7 +2,7 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
-import { defineCommandContract } from '@northmes/contracts';
+import { defineCommandContract, translations } from '@northmes/contracts';
 import {
   COMMAND_BUS,
   type Command,
@@ -304,6 +304,61 @@ describe('defineCommand', () => {
     expect(handled).toEqual([{ expectedVersion: 3 }, {}]);
   });
 
+  it('E06-S04 the generated input carries translations as the shared TranslationInput list, and a null for an optional one reaches the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.nameProductionOrder',
+      target: 'none',
+      fields: z.object({ translations: translations.optional() }),
+      permission: 'planning.productionOrder:name',
+    });
+    const handled: unknown[] = [];
+    const NameProductionOrder = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [NameProductionOrder] })
+    class NameModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      NameModule,
+    ]);
+    opened.push(moduleRef);
+    const name = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningNameProductionOrderInput!) {
+          planningNameProductionOrder(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const given = await name({
+      translations: [{ field: 'name', locale: 'EN-gb', text: ' Flange ' }],
+    });
+    const nulls = await name({ translations: null });
+
+    const sdl = printSchema(schema);
+    expect(sdl).toContain(
+      'input PlanningNameProductionOrderInput {\n  translations: [TranslationInput!]\n}',
+    );
+    expect(sdl).toContain(
+      'input TranslationInput {\n  field: String!\n  locale: String!\n  text: String!\n}',
+    );
+    expect([given.errors, nulls.errors]).toEqual([undefined, undefined]);
+    expect(handled).toEqual([
+      { translations: [{ field: 'name', locale: 'en-GB', text: 'Flange' }] },
+      {},
+    ]);
+  });
+
   it('ADR0073-W2 registerCommand gives a provider whose command carries the handler and adds no Mutation field', async () => {
     const contract = defineCommandContract({
       name: 'planning.flagProductionOrders',
@@ -370,7 +425,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean, 32-bit integer or list of strings, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
   });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { HttpStatus, NotFoundException } from '@nestjs/common';
+import type { Translation } from '@northmes/contracts';
 import { upsertArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
@@ -19,6 +20,12 @@ type UpsertArticleInput = z.output<typeof upsertArticle.input>;
 /** True when the input names plants or All plants, rather than leaving them as they are. */
 function namesPlants({ allPlants, plants }: UpsertArticleInput): boolean {
   return allPlants !== undefined || plants !== undefined;
+}
+
+/** Whether two lists hold the same translations in the same order; jsonb reorders their keys. */
+function sameTranslations(a: readonly Translation[], b: readonly Translation[]): boolean {
+  const key = ({ field, locale, text }: Translation) => JSON.stringify([field, locale, text]);
+  return a.length === b.length && a.every((each, index) => b[index] && key(each) === key(b[index]));
 }
 
 /** Whether a plan assigns the article elsewhere than its row and its assignments say. */
@@ -73,11 +80,11 @@ async function lockAt(
  * the input's article number in the company, without regard to case, under a lock on that number so
  * concurrent upserts of a new number create it once. None: it creates one as core.createArticle
  * does, with the input's source. An archived one: core.archived. An active one: a different name,
- * or a stock unit or note the input names that differs, needs core.article:update at the article's
- * edit scope, its source stays as it is, and other plants need core.article:assign at the company,
- * both checked with context.require; the change is one update at the input's expectedVersion or the
- * version found, and an input without plants keeps the article's plants. An unchanged article
- * writes nothing and keeps its version.
+ * or translations, a stock unit or a note the input names that differ, need core.article:update at
+ * the article's edit scope, its source stays as it is, and other plants need core.article:assign at
+ * the company, both checked with context.require; the change is one update at the input's
+ * expectedVersion or the version found, and an input without plants keeps the article's plants. An
+ * unchanged article writes nothing and keeps its version.
  */
 export const upsertArticleHandler = {
   scope: createArticleHandler.scope,
@@ -109,6 +116,12 @@ export const upsertArticleHandler = {
       changes.stock_unit = input.stockUnit;
     }
     if (input.note !== undefined && input.note !== found.note) changes.note = input.note;
+    if (
+      input.translations !== undefined &&
+      !sameTranslations(input.translations, found.translations)
+    ) {
+      changes.translations = JSON.stringify(input.translations);
+    }
     if (Object.keys(changes).length > 0) {
       context.require('core.article:update', found.edit_scope_id);
     }

@@ -7,6 +7,7 @@ export {
   articleFields,
   articleNote,
   articleSource,
+  articleTranslations,
   createArticle,
   restoreArticle,
   setArticlePlants,

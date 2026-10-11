@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { StockUnitCode } from '@northmes/contracts';
-import type { Generated, GeneratedAlways } from 'kysely';
+import type { StockUnitCode, Translation } from '@northmes/contracts';
+import type { ColumnType, Generated, GeneratedAlways } from 'kysely';
 
 /** core.article, as its migrations shape it: an article of a company (ADR 0073). */
 export interface ArticleTable {
@@ -32,6 +32,11 @@ export interface ArticleTable {
   source: string | null;
   /** When the article was created. */
   created_at: Generated<Date>;
+  /**
+   * The translations of the article's name (ADR 0053). pg reads jsonb as the array and writes a
+   * JSON string, since it would write a JavaScript array as a Postgres array.
+   */
+  translations: ColumnType<Translation[], string | undefined, string>;
 }
 
 /** core.article_plant: a plant an article is assigned to (ADR 0073). */

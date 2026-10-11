@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { StockUnitCode } from '@northmes/contracts';
+import type { StockUnitCode, Translation } from '@northmes/contracts';
 import { type Kysely, sql, type Transaction } from 'kysely';
 import type { CoreDatabase } from '../infrastructure/database.ts';
 import type { PlantRecord } from './company.service.ts';
@@ -9,6 +9,8 @@ export interface ArticleRecord {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  /** The translations of the name, in the order they were saved (ADR 0053). */
+  readonly translations: readonly Translation[];
   /** The stock unit's code in the unit catalog, in which the article's quantities are counted. */
   readonly stockUnit: StockUnitCode;
   readonly note: string | null;
@@ -33,6 +35,7 @@ const recordColumns = [
   'id',
   'code',
   'name',
+  'translations',
   'stock_unit as stockUnit',
   'note',
   'source',

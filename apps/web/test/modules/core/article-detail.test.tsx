@@ -77,6 +77,26 @@ describe('article page', () => {
     ]);
   });
 
+  it("E06-S06 an article's page lists the name's translations under the name, each in its language", async () => {
+    const flange = {
+      ...article('AX-20410', 'Fläns DN50 rostfri'),
+      translations: [
+        { __typename: 'Translation', field: 'name', locale: 'en', text: 'Flange DN50 stainless' },
+        { __typename: 'Translation', field: 'name', locale: 'de', text: 'Flansch DN50 Edelstahl' },
+      ],
+    } as const;
+    renderCoreAt(articleHref(flange.id), [articleQuery(flange)]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' });
+    const identity = screen.getByRole('region', { name: 'Identity' });
+    expect(definitions(identity)).toEqual([
+      ['Article number', 'AX-20410'],
+      ['Name', 'Fläns DN50 rostfriEnglish: Flange DN50 stainlessGerman: Flansch DN50 Edelstahl'],
+    ]);
+    expect(within(identity).getByText('Flange DN50 stainless').getAttribute('lang')).toBe('en');
+    expect(within(identity).getByText('Flansch DN50 Edelstahl').getAttribute('lang')).toBe('de');
+  });
+
   it('E06-S06 an article without a note says so, and an imported one names its source', async () => {
     const hose = { ...article('AX-31007', 'Hydraulslang 12 mm'), source: 'Pyramid' };
     renderCoreAt(articleHref(hose.id), [articleQuery(hose)]);

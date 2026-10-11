@@ -15,6 +15,7 @@ import {
 import type { CommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 import { PLANT_FREE } from '../graphql/plant-free.ts';
+import { TranslationInput } from '../graphql/translation.ts';
 import { COMMAND_BUS, type Command, type CommandBus } from './command-bus.ts';
 import { parseCommandInput } from './parse-input.ts';
 
@@ -76,9 +77,21 @@ function isStringList(property: z.core.JSONSchema.JSONSchema): boolean {
 }
 
 /**
+ * True for the JSON Schema of a list of translations, objects of exactly a field, a locale and a
+ * text, as `translations` in @northmes/contracts gives it (ADR 0053).
+ */
+function isTranslationList(property: z.core.JSONSchema.JSONSchema): boolean {
+  const { items } = property;
+  if (property.type !== 'array' || typeof items !== 'object' || Array.isArray(items)) return false;
+  const keys = Object.keys(items.properties ?? {}).sort();
+  return items.type === 'object' && keys.join(' ') === 'field locale text';
+}
+
+/**
  * The GraphQL type of an input field, from its JSON Schema, or undefined for a kind the generated
  * input cannot carry: a required scalar, boolean or list of strings, or an optional string,
- * boolean, 32-bit integer or list of strings, which is nullable.
+ * boolean, 32-bit integer or list of strings, which is nullable; and a list of translations, the
+ * shared TranslationInput.
  */
 function inputFieldType(
   property: z.core.JSONSchema._JSONSchema,
@@ -87,6 +100,7 @@ function inputFieldType(
   if (typeof property !== 'object') return undefined;
   if (property.type === 'boolean') return () => Boolean;
   if (isStringList(property)) return () => [String];
+  if (isTranslationList(property)) return () => [TranslationInput];
   if (!required) {
     if (property.type === 'string') return () => String;
     return property.type === 'integer' ? scalarOf(property) : undefined;
@@ -97,7 +111,8 @@ function inputFieldType(
 /**
  * The fields of a command's input type, built from contract.input. It covers the field kinds the
  * commands use so far: required ID, string, number, boolean, 32-bit integer and list of strings
- * fields, and optional strings, booleans, 32-bit integers and lists of strings. Any other field throws, naming it,
+ * fields, optional strings, booleans, 32-bit integers and lists of strings, and lists of
+ * translations. Any other field throws, naming it,
  * before a type is registered; the full converter is inputFromZod (ADR 0017, E05-S01).
  */
 function inputFields(contract: CommandContract): InputField[] {
@@ -107,7 +122,7 @@ function inputFields(contract: CommandContract): InputField[] {
     const type = inputFieldType(property, required.has(field));
     if (!type) {
       throw new Error(
-        `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, or an optional string, boolean, 32-bit integer or list of strings, the kinds a generated mutation input supports so far`,
+        `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
     return { field, type, optional: !required.has(field) };
