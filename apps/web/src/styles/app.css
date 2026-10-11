@@ -21,6 +21,8 @@
 @import "@fontsource/ibm-plex-mono/700.css";
 
 @source "..";
+/* The static boot page lives in index.html, beside src (design shell-306, BO1). */
+@source "../../index.html";
 
 @layer base {
   /* The shadcn primitives draw a bare `border` in --border, as shadcn's own stylesheet sets it. */

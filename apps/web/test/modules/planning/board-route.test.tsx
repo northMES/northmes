@@ -30,7 +30,12 @@ describe('planning web module', () => {
               quantity: '40.000000',
               status: 'planned',
               version: 1,
-              article: { __typename: 'Article', id: 'article-7101', name: 'Bracket 40 mm' },
+              article: {
+                __typename: 'Article',
+                id: 'article-7101',
+                code: 'BR-40',
+                name: 'Bracket 40 mm',
+              },
             },
           ],
         },
@@ -43,6 +48,6 @@ describe('planning web module', () => {
       </MockedProvider>,
     );
 
-    expect((await screen.findByTestId('article-7101')).textContent).toBe('Bracket 40 mm');
+    expect(await screen.findByText('Bracket 40 mm')).toBeTruthy();
   });
 });

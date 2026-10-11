@@ -45,8 +45,9 @@ function SettingsStub() {
 }
 
 /**
- * Renders the core module's routes at href, at a plant or in company settings, with a MockedProvider that answers each of mocks once,
- * and returns the router, whose state.location shows the URL.
+ * Renders the core module's routes at href, at a plant or in company settings, with a
+ * MockedProvider that answers each of mocks once, and returns the router, whose state.location
+ * shows the URL.
  */
 export function renderCoreAt(href: string, mocks: readonly MockLink.MockedResponse[]) {
   const router = createRouter({
@@ -71,10 +72,58 @@ export interface ArticleNode {
   readonly id: string;
   readonly code: string;
   readonly name: string;
+  readonly translations: readonly {
+    readonly __typename: 'Translation';
+    readonly field: string;
+    readonly locale: string;
+    readonly text: string;
+  }[];
+  readonly articleGroup: {
+    readonly __typename: 'ArticleGroup';
+    readonly id: string;
+    readonly code: string;
+    readonly name: string;
+  } | null;
+  readonly stockUnit: 'PIECE' | 'METRE' | 'KILOGRAM' | 'LITRE';
+  readonly note: string | null;
+  readonly source: string | null;
   readonly version: number;
   readonly archivedAt: string | null;
+  readonly createdAt: string;
   readonly updatedAt: string;
+  readonly allPlants: boolean;
+  readonly plants: readonly PlantNode[];
 }
+
+/** A plant of an article, as the API returns it. */
+export interface PlantNode {
+  readonly __typename: 'Plant';
+  readonly id: string;
+  readonly slug: string;
+  readonly name: string;
+}
+
+/** The plants of the tests' company, Acme AB, by name: Plant A is the plant every test opens. */
+export const plants = {
+  a: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a001',
+    slug: 'plant-a',
+    name: 'Plant A',
+  },
+  b: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a002',
+    slug: 'plant-b',
+    name: 'Plant B',
+  },
+  c: {
+    __typename: 'Plant',
+    id: '019a0000-0000-7000-8000-00000000a003',
+    slug: 'plant-c',
+    name: 'Plant C',
+  },
+} as const satisfies Record<string, PlantNode>;
 
 /** When the fixtures' articles last changed: 2026-10-05 14:07 in the browser's time zone. */
 export const lastChanged = new Date(2026, 9, 5, 14, 7).toISOString();
@@ -82,7 +131,16 @@ export const lastChanged = new Date(2026, 9, 5, 14, 7).toISOString();
 /** lastChanged as the Last changed column shows it. */
 export const lastChangedText = '2026-10-05 14:07';
 
-/** A fictional article with an id made from its code, active unless archivedAt says otherwise. */
+/** When the fixtures' articles were created: 2026-09-12 07:15 in the browser's time zone. */
+export const createdAt = new Date(2026, 8, 12, 7, 15).toISOString();
+
+/** createdAt as the article's page shows it. */
+export const createdAtText = '2026-09-12 07:15';
+
+/**
+ * A fictional article with an id made from its code, active unless archivedAt says otherwise,
+ * assigned to Plant A.
+ */
 export function article(
   code: string,
   name: string,
@@ -92,7 +150,23 @@ export function article(
 ): ArticleNode {
   const digits = [...code].map((char) => char.charCodeAt(0).toString(16)).join('');
   const id = `019a0000-0000-7000-8000-${digits.padStart(12, '0').slice(-12)}`;
-  return { __typename: 'Article', id, code, name, version, archivedAt, updatedAt };
+  return {
+    __typename: 'Article',
+    id,
+    code,
+    name,
+    translations: [],
+    articleGroup: null,
+    stockUnit: 'PIECE',
+    note: null,
+    source: null,
+    version,
+    archivedAt,
+    createdAt,
+    updatedAt,
+    allPlants: false,
+    plants: [plants.a],
+  };
 }
 
 /** The polite live region's text. */
@@ -172,4 +246,20 @@ export function bodyRows(table: HTMLElement): (string | null)[][] {
       .getAllByRole('cell')
       .map((cell) => cell.textContent),
   );
+}
+
+/**
+ * Watches the document for skeleton rows from now on; the function it returns stops watching and
+ * says whether any showed, however briefly.
+ */
+export function watchForSkeletonRows(): () => boolean {
+  let seen = false;
+  const observer = new MutationObserver(() => {
+    if (document.querySelector('[data-slot="skeleton"]') !== null) seen = true;
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  return () => {
+    observer.disconnect();
+    return seen;
+  };
 }

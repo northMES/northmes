@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import type { StockUnitCode, Translation } from '@northmes/contracts';
+import { type Kysely, sql, type Transaction } from 'kysely';
+import type { CoreDatabase } from '../infrastructure/database.ts';
+import type { PlantRecord } from './company.service.ts';
+
+/** An article's group as the article's record names it. */
+export interface ArticleGroupRef {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+}
+
+/** An article as core's service hands it out. */
+export interface ArticleRecord {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  /** The article group the article picked, or null. */
+  readonly articleGroup: ArticleGroupRef | null;
+  /** The translations of the name, in the order they were saved (ADR 0053). */
+  readonly translations: readonly Translation[];
+  /** The stock unit's code in the unit catalog, in which the article's quantities are counted. */
+  readonly stockUnit: StockUnitCode;
+  readonly note: string | null;
+  /** The integration that created the article through core.upsertArticle, or null for NorthMES. */
+  readonly source: string | null;
+  /** Grows by one with every change to the article. */
+  readonly version: number;
+  /** Assigned to every plant of the company, those created later included (ADR 0073). */
+  readonly allPlants: boolean;
+  /** The plants the article is assigned to, sorted by name; empty with allPlants. */
+  readonly plants: readonly PlantRecord[];
+  /** When the article was archived, or null while it is active. */
+  readonly archivedAt: Date | null;
+  /** When the article was created. */
+  readonly createdAt: Date;
+  /** When the article last changed, its creation included. */
+  readonly updatedAt: Date;
+}
+
+/** The columns of core.article that make an ArticleRecord, but for its plants. */
+const recordColumns = [
+  'id',
+  'code',
+  'name',
+  'translations',
+  'stock_unit as stockUnit',
+  'note',
+  'source',
+  'version',
+  'all_plants as allPlants',
+  'archived_at as archivedAt',
+  'created_at as createdAt',
+  'updated_at as updatedAt',
+] as const;
+
+/** The plants of the article on the row being read, sorted by name, as a JSON array. */
+const plantsColumn = sql<PlantRecord[]>`coalesce((
+  select jsonb_agg(jsonb_build_object('id', p.id, 'slug', p.slug, 'name', p.name)
+                   order by p.name, p.slug)
+    from core.article_plant ap
+    join core.plant p on p.id = ap.plant_id
+   where ap.article_id = ${sql.ref('core.article.id')}
+), '[]'::jsonb)`.as('plants');
+
+/** The group of the article on the row being read, as a JSON object, or null. */
+const articleGroupColumn = sql<ArticleGroupRef | null>`(
+  select jsonb_build_object('id', g.id, 'code', g.code, 'name', g.name)
+    from core.article_group g
+   where g.id = ${sql.ref('core.article.article_group_id')}
+)`.as('articleGroup');
+
+/**
+ * The articles that a query on core.article reads, as ArticleRecords: the article's columns, its
+ * plants and its group, in one statement. Row-level security limits it to the principal's read
+ * scopes.
+ */
+export function selectArticles(db: Kysely<CoreDatabase> | Transaction<CoreDatabase>) {
+  return db
+    .selectFrom('core.article')
+    .select(recordColumns)
+    .select(plantsColumn)
+    .select(articleGroupColumn);
+}

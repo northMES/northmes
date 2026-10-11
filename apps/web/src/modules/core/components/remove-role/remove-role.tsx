@@ -4,10 +4,13 @@ import { useRef, useState } from 'react';
 import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import { missingPermissionsOf, permissionList } from '../../access-refusal.ts';
+import { missingPermissionsOf, permissionCount, permissionList } from '../../access-refusal.ts';
+import { permissionPhrase } from '../../no-access.tsx';
 import { permissionLine } from '../../permission-names.ts';
 import { removeHolder } from '../../role-cache.ts';
+import { usePlaces } from '../../use-places.ts';
 import { CoreRemoveRoleAssignment } from './remove-role-assignment.graphql.ts';
 
 /** The person who holds the role. */
@@ -41,6 +44,8 @@ export interface RemoveRoleProps {
   readonly label?: string;
   /** Where focus goes after the removal: the next row's link, else the page's add action (NO24). */
   readonly focusAfter: () => HTMLElement | null;
+  /** Called when the dialog opens, so the page can read what the person loses (People). */
+  readonly onOpen?: () => void;
 }
 
 /**
@@ -62,23 +67,45 @@ function removalDescription(
     : `From the next action, ${person.name} loses these permissions at ${place}:`;
 }
 
-/** The message of a refused removal: the grant rule's, or the API's own, or the connection. */
-function removalFailure(error: unknown, assignment: RemoveAssignment): Error {
+/**
+ * The message of a refused removal (design core-304, AS7; WCAG 3.3.1 and 3.3.3), by its code: the
+ * assignment permission or the grant rule at the place, or the last Company admin, each with who
+ * can act. The server's own text never shows.
+ */
+function removalFailure(
+  error: unknown,
+  person: RemovePerson,
+  assignment: RemoveAssignment,
+  companyName: string,
+): Error {
+  const role = assignment.role?.name ?? 'this role';
+  const place = assignment.scope.name;
+  const cannot = `You cannot remove ${role} at ${place}.`;
+  const askAdmin = `Ask a company admin of ${companyName} to remove it.`;
   const missing = missingPermissionsOf(error);
   if (missing !== undefined) {
     return new Error(
-      `You cannot remove ${assignment.role?.name ?? 'this role'} at ${assignment.scope.name}. It includes permissions you do not hold there: ${permissionList(missing)}.`,
+      `${cannot} It includes ${permissionCount(missing.length)} you do not hold at ${place}: ${permissionList(missing)}. ${askAdmin}`,
     );
   }
-  return new Error(
-    `Could not remove the role. ${error instanceof Error ? error.message : 'Check the connection, then try again.'}`,
-  );
+  if (hasErrorCode(error, 'core.last_admin')) {
+    return new Error(
+      `You cannot remove ${role} at ${place} from ${person.name}, the last ${role} of ${companyName}. Give ${role} at ${place} to another person first.`,
+    );
+  }
+  if (hasErrorCode(error, 'core.forbidden')) {
+    return new Error(
+      `${cannot} Removing a role at ${place} needs ${permissionPhrase('core.roleAssignment:manage')} there. ${askAdmin}`,
+    );
+  }
+  return new Error('Could not remove the role. Check the connection, then try again.');
 }
 
 /**
  * Remove on a role of a person (design core-304, AS7 and NO24), on a user's Access tab and on
- * People in plant settings: an alert dialog that names what the person loses and what the person's
- * other roles still let them do, with an optional reason that has focus. Escape or Cancel go back to Remove. The removed assignment leaves the
+ * People in plant settings: an alert dialog described by what the person loses and what the
+ * person's other roles still let them do, with an optional reason that has focus. Escape or Cancel
+ * go back to Remove. The removed assignment leaves the
  * person's roles, the role's holders and the people of the plant in the cache.
  */
 export function RemoveRole({
@@ -88,7 +115,9 @@ export function RemoveRole({
   kept = [],
   label,
   focusAfter,
+  onOpen,
 }: RemoveRoleProps) {
+  const places = usePlaces();
   const [reason, setReason] = useState('');
   const field = useRef<HTMLTextAreaElement>(null);
   const [remove] = useMutation(CoreRemoveRoleAssignment, {
@@ -131,11 +160,31 @@ export function RemoveRole({
           : `Remove ${role} at ${place} from ${person.name}?`
       }
       description={removalDescription(person, assignment, lost)}
+      details={
+        (lost !== undefined && lost.length > 0) || kept.length > 0 ? (
+          <>
+            {lost !== undefined && lost.length > 0 && (
+              <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
+                {lost.map((key) => (
+                  <li key={key}>{permissionLine(key)}</li>
+                ))}
+              </ul>
+            )}
+            {kept.map((sentence) => (
+              <p key={sentence} className="text-sm text-muted-foreground">
+                {sentence}
+              </p>
+            ))}
+          </>
+        ) : undefined
+      }
       confirmLabel="Remove role"
       destructive
       initialFocus={field}
       onOpenChange={(open) => {
-        if (open) setReason('');
+        if (!open) return;
+        setReason('');
+        onOpen?.();
       }}
       focusAfterConfirm={focusAfter}
       onConfirm={async () => {
@@ -149,25 +198,13 @@ export function RemoveRole({
             },
           });
         } catch (error) {
-          throw removalFailure(error, assignment);
+          throw removalFailure(error, person, assignment, places.company?.name ?? 'the company');
         }
         announce(
           `${role ?? 'The role'} at ${place} removed from ${person.name}. It applies from ${person.name}'s next action.`,
         );
       }}
     >
-      {lost !== undefined && lost.length > 0 && (
-        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-          {lost.map((key) => (
-            <li key={key}>{permissionLine(key)}</li>
-          ))}
-        </ul>
-      )}
-      {kept.map((sentence) => (
-        <p key={sentence} className="text-sm text-muted-foreground">
-          {sentence}
-        </p>
-      ))}
       <TextareaField
         ref={field}
         label="Reason"

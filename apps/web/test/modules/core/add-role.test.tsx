@@ -14,6 +14,7 @@ import {
   companiesQuery,
   companyAdminRole,
   companyId,
+  groupedRows,
   planner,
   plantA,
   plantAdminRole,
@@ -25,7 +26,7 @@ import {
   userQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, renderCoreAt, spoken } from './core-app.tsx';
+import { renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -52,6 +53,7 @@ function assignOf(
   of: ReturnType<typeof role>,
   scope: typeof acme | typeof plantA,
   result: MockLink.MockedResponse['result'],
+  reason?: string,
 ): MockLink.MockedResponse {
   return {
     request: {
@@ -61,18 +63,29 @@ function assignOf(
         input.userId === anna.id &&
         input.roleId === of.id &&
         input.scopeId === scope.id &&
-        input.companyId === companyId,
+        input.companyId === companyId &&
+        input.reason === reason,
     },
     result,
   } as MockLink.MockedResponse;
 }
 
-/** The names of the radios of a group, in their order, read from the label above each line. */
-function radioNames(group: HTMLElement): (string | null | undefined)[] {
+/** Opens the Role combobox and returns its listbox. */
+async function openRoles(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+  await user.click(screen.getByRole('combobox', { name: 'Role' }));
+  return screen.findByRole('listbox');
+}
+
+/** The names of the options of a group of the listbox, read from the first line of each. */
+function optionNames(group: HTMLElement): (string | null | undefined)[] {
   return within(group)
-    .getAllByRole('radio')
-    .map((radio) => document.getElementById(radio.getAttribute('aria-describedby') ?? ''))
-    .map((line) => line?.previousElementSibling?.textContent);
+    .getAllByRole('option')
+    .map((option) => option.querySelector('[data-role-name]')?.textContent);
+}
+
+/** An option of the listbox by the role's name. */
+function option(listbox: HTMLElement, name: string): HTMLElement {
+  return within(listbox).getByRole('option', { name: new RegExp(`^${name}`) });
 }
 
 describe('Add role', () => {
@@ -84,9 +97,12 @@ describe('Add role', () => {
       userQuery(annaOfPage),
       rolesQuery([operator, shiftLead, planner, viewerRole]),
       catalogQuery(),
-      assignOf(viewerRole, plantA, {
-        data: { coreAssignRole: { ...assignment(viewerRole, plantA), user: anna } },
-      }),
+      assignOf(
+        viewerRole,
+        plantA,
+        { data: { coreAssignRole: { ...assignment(viewerRole, plantA), user: anna } } },
+        'Covers the night shift',
+      ),
       {
         request: { query: CoreUserPermissions, variables: { id: anna.id, companyId } },
         result: {
@@ -109,17 +125,27 @@ describe('Add role', () => {
       within(where).getByText('Applies to every plant of Acme AB, also plants created later.'),
     ).toBeDefined();
     await user.click(within(where).getByRole('radio', { name: 'Plant A only' }));
-    const roles = screen.getByRole('radiogroup', { name: 'Role' });
+    // The side column: the person and what the person holds already.
+    const personCard = screen.getByRole('region', { name: 'Anna Berg' });
+    expect(within(personCard).getByText('a.berg')).toBeDefined();
+    expect(within(personCard).getByText('Operator at Plant A')).toBeDefined();
+    expect(
+      screen.getByText(
+        'You can assign a role at Plant A when you hold every permission it includes there. A company admin of Acme AB can assign the others.',
+      ),
+    ).toBeDefined();
+    const role = screen.getByRole('combobox', { name: 'Role' });
+    expect(role.getAttribute('placeholder')).toBe('Choose a role');
+    const roles = await openRoles(user);
     const assignable = within(roles).getByRole('group', {
       name: 'You can assign these at Plant A',
     });
     const locked = within(roles).getByRole('group', {
       name: 'Needs permissions you do not hold at Plant A',
     });
-    expect(radioNames(assignable)).toEqual(['Operator', 'Viewer']);
-    expect(radioNames(locked)).toEqual(['Shift lead', 'Planner']);
-    const shift = within(roles).getByRole('radio', { name: 'Shift lead' });
-    expect(shift.hasAttribute('data-disabled')).toBe(true);
+    expect(optionNames(assignable)).toEqual(['Operator', 'Viewer']);
+    expect(optionNames(locked)).toEqual(['Shift lead', 'Planner']);
+    expect(option(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
     expect(
       within(roles).getByText(
         'Custom role. Needs 1 permission you do not hold at Plant A: Release production orders to the floor (planning.productionOrder:release).',
@@ -130,16 +156,37 @@ describe('Add role', () => {
         'Planning, default role. Needs 2 permissions you do not hold at Plant A: Release production orders to the floor (planning.productionOrder:release) and Run autoplan (planning.autoplan:run).',
       ),
     ).toBeDefined();
-    expect(
-      within(roles).getByRole('radio', { name: 'Operator' }).hasAttribute('data-disabled'),
-    ).toBe(true);
+    expect(option(roles, 'Operator').getAttribute('aria-disabled')).toBe('true');
     expect(
       within(roles).getByText('Custom role. Anna Berg already holds it at Plant A.'),
     ).toBeDefined();
     expect(within(roles).getByText('Planning, default role. 1 permission.')).toBeDefined();
 
-    await user.click(within(roles).getByRole('radio', { name: 'Viewer' }));
-    expect(screen.getByRole('region', { name: 'Permissions of Viewer' })).toBeDefined();
+    // The keyboard highlight is the active descendant, and the side card follows it.
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(role.getAttribute('aria-activedescendant')).toBeTruthy());
+    const highlighted = document.getElementById(role.getAttribute('aria-activedescendant') ?? '');
+    const name = highlighted?.querySelector('[data-role-name]')?.textContent ?? '';
+    // The listbox hides the page from the accessibility tree while it is open.
+    expect(await screen.findByText(`${name} at Plant A`, { selector: 'h2' })).toBeDefined();
+
+    await user.click(option(roles, 'Viewer'));
+    const card = await screen.findByRole('region', { name: 'Viewer at Plant A' });
+    expect(
+      within(card).getByText(
+        'The highlighted role. Each permission it includes, and whether you hold it at Plant A.',
+      ),
+    ).toBeDefined();
+    expect(within(card).getByText('You hold it at Plant A')).toBeDefined();
+    const reason = screen.getByRole('textbox', { name: 'Reason (optional)' });
+    expect(reason.getAttribute('placeholder')).toBe('Why Anna Berg gets this role');
+    expect(reason.getAttribute('maxlength')).toBe('500');
+    expect(
+      screen.getByText(
+        "Shown in the user's history. Do not enter personal data. Up to 500 characters.",
+      ),
+    ).toBeDefined();
+    await user.type(reason, 'Covers the night shift');
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Anna Berg' })).toBeDefined();
@@ -153,9 +200,9 @@ describe('Add role', () => {
 
     // The roles list read before the assignment counts the new holder.
     await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
-    const defaults = await screen.findByRole('table', { name: 'Default roles from modules' });
+    const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
-      expect(bodyRows(defaults)).toEqual([
+      expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([
         ['Planner', 'Planning', '3 of 6', 'None'],
         ['Viewer', 'Planning', '1 of 6', '2 people'],
       ]),
@@ -172,14 +219,35 @@ describe('Add role', () => {
     ]);
 
     await user.click(await screen.findByRole('radio', { name: 'Plant A only' }));
-    const roles = await screen.findByRole('radiogroup', { name: 'Role' });
-    const plantAdmin = within(roles).getByRole('radio', { name: 'Plant admin' });
-    const companyAdmin = within(roles).getByRole('radio', { name: 'Company admin' });
+    const roles = await openRoles(user);
 
-    expect(plantAdmin.hasAttribute('data-disabled')).toBe(false);
-    expect(companyAdmin.hasAttribute('data-disabled')).toBe(true);
-    expect(within(roles).getByRole('radio', { name: 'Planner' })).toBeDefined();
-    expect(within(roles).getByRole('radio', { name: 'Viewer' })).toBeDefined();
+    expect(option(roles, 'Plant admin').getAttribute('aria-disabled')).toBeNull();
+    expect(option(roles, 'Company admin').getAttribute('aria-disabled')).toBe('true');
+    expect(option(roles, 'Planner')).toBeDefined();
+    expect(option(roles, 'Viewer')).toBeDefined();
+  });
+
+  it('E05-S06 a permission of a module that is not installed locks no role, since the API grants and checks only installed permissions', async () => {
+    const user = userEvent.setup();
+    const kanbanReader = role('Kanban reader', ['kanban.board:read']);
+    renderCoreAt(addRoleHref, [
+      settingsViewerQuery([...companyAdminRole.permissions]),
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([kanbanReader, operator, viewerRole]),
+      catalogQuery(),
+    ]);
+
+    await user.click(await screen.findByRole('radio', { name: 'Plant A only' }));
+    expect(
+      await screen.findByText(
+        'You can assign a role at Plant A when you hold every permission it includes there. A company admin of Acme AB can assign the others.',
+      ),
+    ).toBeDefined();
+    const roles = await openRoles(user);
+    await waitFor(() =>
+      expect(option(roles, 'Kanban reader').getAttribute('aria-disabled')).toBeNull(),
+    );
   });
 
   it('E05-S06 a refusal of the API at the company lands on Role: the summary takes focus with the message, the choices stay, and its link leads to Role', async () => {
@@ -209,7 +277,12 @@ describe('Add role', () => {
     ]);
 
     await user.click(await screen.findByRole('radio', { name: 'Acme AB, all plants' }));
-    await user.click(screen.getByRole('radio', { name: 'Viewer' }));
+    expect(
+      screen.getByText(
+        'Checked when you add it: you need every permission of the role at Acme AB.',
+      ),
+    ).toBeDefined();
+    await user.click(option(await openRoles(user), 'Viewer'));
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to add the role' });
@@ -221,12 +294,13 @@ describe('Add role', () => {
     expect(
       screen.getByRole('radio', { name: 'Acme AB, all plants' }).getAttribute('aria-checked'),
     ).toBe('true');
-    const viewer = screen.getByRole('radio', { name: 'Viewer' });
-    expect(viewer.getAttribute('aria-checked')).toBe('true');
+    const role = screen.getByRole('combobox', { name: 'Role' }) as HTMLInputElement;
+    expect(role.value).toBe('Viewer');
+    expect(role.getAttribute('aria-invalid')).toBe('true');
 
     link.focus();
     await user.keyboard('{Enter}');
-    expect(document.activeElement).toBe(viewer);
+    expect(document.activeElement).toBe(role);
   });
 
   it('E05-S06 a refusal because the assigner may not assign at the company names the assignment permission there and who can act', async () => {
@@ -250,7 +324,7 @@ describe('Add role', () => {
     ]);
 
     await user.click(await screen.findByRole('radio', { name: 'Acme AB, all plants' }));
-    await user.click(screen.getByRole('radio', { name: 'Viewer' }));
+    await user.click(option(await openRoles(user), 'Viewer'));
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     const summary = await screen.findByRole('group', { name: 'Fix 1 field to add the role' });

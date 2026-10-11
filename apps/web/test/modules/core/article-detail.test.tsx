@@ -4,13 +4,15 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
-import { companiesQuery, forbiddenError } from './access-fixtures.ts';
+import { companiesQuery, forbiddenError, viewerQuery } from './access-fixtures.ts';
 import {
   article,
   articleQuery,
   articlesPage,
   articlesQuery,
+  createdAtText,
   firstPage,
+  lastChangedText,
   plant,
   renderCoreAt,
 } from './core-app.tsx';
@@ -32,7 +34,10 @@ function definitions(list: HTMLElement): (string | null)[][] {
 
 describe('article page', () => {
   it("E06-S06 an article's page shows its number and name, with Edit", async () => {
-    renderCoreAt(articleHref(axle.id), [articleQuery(axle)]);
+    renderCoreAt(articleHref(axle.id), [
+      articleQuery(axle),
+      viewerQuery(['core.article:read', 'core.article:update']),
+    ]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
     expect(document.title).toBe('Article AX-500 · NorthMES');
@@ -41,9 +46,67 @@ describe('article page', () => {
       ['Article number', 'AX-500'],
       ['Name', 'Axle 20 mm'],
     ]);
-    expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
+    expect((await screen.findByRole('link', { name: 'Edit' })).getAttribute('href')).toBe(
       coreLinks.articles.article.edit({ plant, articleId: axle.id }).href,
     );
+  });
+
+  it("E06-S06 an article's page shows its name beside the h1, then Classification, Note and Origin as DE1 draws them", async () => {
+    const flange = {
+      ...article('AX-20410', 'Fläns DN50 rostfri'),
+      stockUnit: 'METRE',
+      note: 'Ritning rev C gäller från vecka 2026-W41.',
+    } as const;
+    renderCoreAt(articleHref(flange.id), [articleQuery(flange)]);
+
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' });
+    expect(h1.parentElement?.textContent).toContain('Fläns DN50 rostfri');
+    expect(definitions(screen.getByRole('region', { name: 'Classification' }))).toEqual([
+      ['Article group', 'No article group'],
+      ['Stock unit', 'Metres (m)'],
+    ]);
+    expect(
+      within(screen.getByRole('region', { name: 'Note' })).getByText(
+        'Ritning rev C gäller från vecka 2026-W41.',
+      ),
+    ).toBeDefined();
+    expect(definitions(screen.getByRole('region', { name: 'Origin' }))).toEqual([
+      ['Plants', 'Plant A'],
+      ['Source', 'NorthMES'],
+      ['Created', createdAtText],
+      ['Last changed', lastChangedText],
+    ]);
+  });
+
+  it("E06-S06 an article's page lists the name's translations under the name, each in its language", async () => {
+    const flange = {
+      ...article('AX-20410', 'Fläns DN50 rostfri'),
+      translations: [
+        { __typename: 'Translation', field: 'name', locale: 'en', text: 'Flange DN50 stainless' },
+        { __typename: 'Translation', field: 'name', locale: 'de', text: 'Flansch DN50 Edelstahl' },
+      ],
+    } as const;
+    renderCoreAt(articleHref(flange.id), [articleQuery(flange)]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Article AX-20410' });
+    const identity = screen.getByRole('region', { name: 'Identity' });
+    expect(definitions(identity)).toEqual([
+      ['Article number', 'AX-20410'],
+      ['Name', 'Fläns DN50 rostfriEnglish: Flange DN50 stainlessGerman: Flansch DN50 Edelstahl'],
+    ]);
+    expect(within(identity).getByText('Flange DN50 stainless').getAttribute('lang')).toBe('en');
+    expect(within(identity).getByText('Flansch DN50 Edelstahl').getAttribute('lang')).toBe('de');
+  });
+
+  it('E06-S06 an article without a note says so, and an imported one names its source', async () => {
+    const hose = { ...article('AX-31007', 'Hydraulslang 12 mm'), source: 'Pyramid' };
+    renderCoreAt(articleHref(hose.id), [articleQuery(hose)]);
+
+    await screen.findByRole('heading', { level: 1, name: 'Article AX-31007' });
+    const note = screen.getByRole('region', { name: 'Note' });
+    expect(note.textContent).toBe('NoteNo note.');
+    const origin = screen.getByRole('region', { name: 'Origin' });
+    expect(definitions(origin)).toContainEqual(['Source', 'Pyramid']);
   });
 
   it("E06-S06 the article number in the list opens the article's page", async () => {
@@ -107,7 +170,7 @@ describe('article page', () => {
     expect(
       within(alert).getByRole('heading', { name: 'Could not load the article' }),
     ).toBeDefined();
-    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined(),

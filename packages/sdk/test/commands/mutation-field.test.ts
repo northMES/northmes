@@ -2,12 +2,15 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
-import { defineCommandContract } from '@northmes/contracts';
+import { defineCommandContract, translations } from '@northmes/contracts';
 import {
   COMMAND_BUS,
   type Command,
   type CommandBus,
+  commandInput,
   defineCommand,
+  parseCommandInput,
+  registerCommand,
   type TargetRow,
 } from '@northmes/sdk/commands';
 import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
@@ -32,7 +35,7 @@ class FakeCommandBus implements CommandBus {
   ): Promise<Result> {
     this.calls.push({ command, input });
     const tx = {} as Transaction<unknown>;
-    const context = { tx, plantId: undefined };
+    const context = { tx, plantId: undefined, require: () => undefined };
     const target = (await command.target?.load((input as { id: string }).id, context)) as Target;
     return command.handle(input, { ...context, target });
   }
@@ -205,9 +208,208 @@ describe('defineCommand', () => {
     ]);
   });
 
+  it('ADR0073-W2 the generated input carries a boolean as Boolean!, an optional boolean as Boolean and an optional list of strings as [String!], and nulls for them reach the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrders',
+      target: 'none',
+      fields: z.object({
+        urgent: z.boolean(),
+        late: z.boolean().optional(),
+        tags: z.array(z.string()).optional(),
+      }),
+      permission: 'planning.productionOrder:flag',
+    });
+    const handled: unknown[] = [];
+    const FlagProductionOrders = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [FlagProductionOrders] })
+    class FlagModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      FlagModule,
+    ]);
+    opened.push(moduleRef);
+    const flag = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningFlagProductionOrdersInput!) {
+          planningFlagProductionOrders(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const full = await flag({ urgent: true, late: false, tags: ['rush'] });
+    const nulls = await flag({ urgent: false, late: null, tags: null });
+
+    expect(printSchema(schema)).toContain(
+      'input PlanningFlagProductionOrdersInput {\n  late: Boolean\n  tags: [String!]\n  urgent: Boolean!\n}',
+    );
+    expect([full.errors, nulls.errors]).toEqual([undefined, undefined]);
+    expect(handled).toEqual([{ urgent: true, late: false, tags: ['rush'] }, { urgent: false }]);
+  });
+
+  it('ADR0073-W3 the generated input carries an optional 32-bit integer as Int, and a null for it reaches the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrders',
+      target: 'none',
+      fields: z.object({ expectedVersion: z.int32().min(1).optional() }),
+      permission: 'planning.productionOrder:flag',
+    });
+    const handled: unknown[] = [];
+    const FlagProductionOrders = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [FlagProductionOrders] })
+    class FlagModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      FlagModule,
+    ]);
+    opened.push(moduleRef);
+    const flag = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningFlagProductionOrdersInput!) {
+          planningFlagProductionOrders(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const given = await flag({ expectedVersion: 3 });
+    const nulls = await flag({ expectedVersion: null });
+
+    expect(printSchema(schema)).toContain(
+      'input PlanningFlagProductionOrdersInput {\n  expectedVersion: Int\n}',
+    );
+    expect([given.errors, nulls.errors]).toEqual([undefined, undefined]);
+    expect(handled).toEqual([{ expectedVersion: 3 }, {}]);
+  });
+
+  it('E06-S04 the generated input carries translations as the shared TranslationInput list, and a null for an optional one reaches the bus as absent', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.nameProductionOrder',
+      target: 'none',
+      fields: z.object({ translations: translations.optional() }),
+      permission: 'planning.productionOrder:name',
+    });
+    const handled: unknown[] = [];
+    const NameProductionOrder = defineCommand(contract, {
+      returns: () => Boolean,
+      handle: async (input) => {
+        handled.push(input);
+        return true;
+      },
+    });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [NameProductionOrder] })
+    class NameModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      NameModule,
+    ]);
+    opened.push(moduleRef);
+    const name = (input: Record<string, unknown>) =>
+      execute({
+        schema,
+        document: parse(`mutation ($input: PlanningNameProductionOrderInput!) {
+          planningNameProductionOrder(input: $input)
+        }`),
+        variableValues: { input },
+        contextValue: { loaders: new Map() },
+      });
+
+    const given = await name({
+      translations: [{ field: 'name', locale: 'EN-gb', text: ' Flange ' }],
+    });
+    const nulls = await name({ translations: null });
+
+    const sdl = printSchema(schema);
+    expect(sdl).toContain(
+      'input PlanningNameProductionOrderInput {\n  translations: [TranslationInput!]\n}',
+    );
+    expect(sdl).toContain(
+      'input TranslationInput {\n  field: String!\n  locale: String!\n  text: String!\n}',
+    );
+    expect([given.errors, nulls.errors]).toEqual([undefined, undefined]);
+    expect(handled).toEqual([
+      { translations: [{ field: 'name', locale: 'en-GB', text: 'Flange' }] },
+      {},
+    ]);
+  });
+
+  it('ADR0073-W2 registerCommand gives a provider whose command carries the handler and adds no Mutation field', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.flagProductionOrders',
+      target: 'none',
+      fields: z.object({ urgent: z.boolean() }),
+      permission: 'planning.productionOrder:flag',
+    });
+    const handle = async () => true;
+    const FlagProductionOrders = registerCommand(contract, { handle });
+    const bus = new FakeCommandBus();
+    @Module({ providers: [{ provide: COMMAND_BUS, useValue: bus }], exports: [COMMAND_BUS] })
+    class FakeCommandsModule {}
+    @Module({ providers: [FlagProductionOrders] })
+    class FlagModule {}
+    const { sdl, moduleRef } = await (async () => {
+      const built = await buildSchema([
+        { module: FakeCommandsModule, global: true },
+        PlanningModule,
+        FlagModule,
+      ]);
+      return { sdl: printSchema(built.schema), moduleRef: built.moduleRef };
+    })();
+    opened.push(moduleRef);
+
+    expect(FlagProductionOrders.command).toMatchObject({ contract, handle });
+    expect(sdl).not.toContain('planningFlagProductionOrders');
+  });
+
+  it('ADR0073-W2 commandInput names the input type of a command once, and parseCommandInput drops null optional fields and refuses an input that fails the contract with BAD_USER_INPUT', () => {
+    const contract = defineCommandContract({
+      name: 'planning.noteProductionOrder',
+      target: 'none',
+      fields: z.object({ note: z.string().min(1), late: z.boolean().optional() }),
+      permission: 'planning.productionOrder:note',
+    });
+
+    expect(commandInput(contract)).toBe(commandInput(contract));
+    expect(commandInput(contract).name).toBe('PlanningNoteProductionOrderInput');
+    expect(parseCommandInput(contract, { note: 'Call first', late: null })).toEqual({
+      note: 'Call first',
+    });
+    expect(() => parseCommandInput(contract, { note: '' })).toThrow(
+      expect.objectContaining({
+        message: expect.stringMatching(/^Invalid input for planning.noteProductionOrder: note:/),
+        extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
+      }),
+    );
+  });
+
   it('E05-S01 defineCommand refuses a contract field of a kind the generated input cannot carry, naming it', () => {
     const fieldsWith = {
-      urgent: z.object({ urgent: z.boolean() }),
       note: z.object({ note: z.number().optional() }),
       count: z.object({ count: z.int() }),
     };
@@ -223,7 +425,7 @@ describe('defineCommand', () => {
         () => defineCommand(contract, { returns: () => Boolean, handle: async () => true }),
         field,
       ).toThrow(
-        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, 32-bit integer or list of strings, or an optional string, the kinds a generated mutation input supports so far`,
+        `Command planning.flagProductionOrders: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
   });

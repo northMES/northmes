@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { givenCompany, hostFactory, signIn, signInAt } from '@northmes/backend/testing';
+import {
+  givenArticle,
+  givenCompany,
+  hostFactory,
+  signIn,
+  signInAt,
+} from '@northmes/backend/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -48,16 +54,17 @@ describe('planningReleaseProductionOrder', () => {
 
   /** Writes a planned production order for 40 of a new article at `plant` and returns its id. */
   async function writeOrder(plant: string, number: string): Promise<string> {
+    const article = await givenArticle(db.ownerUrl, {
+      code: `SH-${number}`,
+      name: 'Shelf board',
+      plants: [plant],
+    });
     const { rows } = await db.command(fixtureAt(plant), (tx) =>
       tx.query<{ id: string }>(
-        `with article as (
-           insert into core.article (scope_id, code, name) values ($1, 'SH-210', 'Shelf board')
-           returning id
-         )
-         insert into planning.production_order (scope_id, number, article_id, quantity)
-         select $1, $2, id, 40 from article
+        `insert into planning.production_order (scope_id, number, article_id, quantity)
+         values ($1, $2, $3, 40)
          returning id`,
-        [plant, number],
+        [plant, number, article],
       ),
     );
     const id = rows[0]?.id;

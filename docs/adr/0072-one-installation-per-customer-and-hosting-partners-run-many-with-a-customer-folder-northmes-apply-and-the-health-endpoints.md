@@ -218,6 +218,22 @@ Until `apply` exists, a partner scripts the ADR 0066 commands with fixed `--id` 
 
 The parts below change when this ADR is accepted. The changed ADR stays accepted and its text unchanged; the rest of it stands.
 
+#### Changes to ADR 0007
+
+[ADR 0007][adr-0007], tenancy:
+
+| Section | Before | After |
+|---|---|---|
+| Decision outcome | "One installation serves one customer, which may hold several companies." | One installation serves one customer, which may hold several companies. Installations of two customers share no Postgres database, and while M-74 stands no Postgres cluster ([One installation per customer](#one-installation-per-customer)). |
+
+#### Changes to ADR 0051
+
+[ADR 0051][adr-0051], regulated readiness:
+
+| Section | Before | After |
+|---|---|---|
+| Rule 23 | "One installation per customer" | One installation per customer, with no Postgres database shared between customers ([One installation per customer](#one-installation-per-customer)) |
+
 #### Changes to ADR 0060
 
 [ADR 0060][adr-0060], configuration:
@@ -244,7 +260,8 @@ The parts below change when this ADR is accepted. The changed ADR stays accepted
 
 ### Confirmation
 
-* Plan review checklist item: a design that adds a scope node, table, column or setting above the company, or that lets installations of two customers share a Postgres database, or a Postgres cluster while the planning session's reading stands, is refused with a link to this ADR. The installation-wide records that [ADR 0066][adr-0066] and proposed ADR 0075 decide are the named exceptions: `core.installation_setting`, `core.plugin_request` and the plugin set.
+* `apps/backend/test/db/scope-tree.int.test.ts`, with the first task that touches the scope tree: "core.scope accepts only company and plant nodes, and a company node has no parent"; "every table in a module schema has a scope_id, except core.installation_setting, core.plugin_request and the plugin set". Those three are the installation-wide records that [ADR 0066][adr-0066] and proposed ADR 0075 decide.
+* The Compose contract test of [ADR 0047][adr-0047] gains: "the installation's Compose file runs its own db service, and the DATABASE_URL of app and migrate names that service". That holds no database, and while M-74 stands no cluster, shared between customers.
 * `apps/backend/test/cli/reset-password.int.test.ts` (the first CLI write command) gains: "the CLI's command runs as nm_app under row-level security and Better Auth's write as nm_auth". The Compose contract test of [ADR 0047][adr-0047] also asserts that `migrate` has `db_app_password` and `db_auth_password`.
 * `apps/backend/test/health/ready.int.test.ts` (E16-S01) gains: "/health and /health/ready report the version that imageVersion() reads".
 * `apps/backend/test/cli/apply.int.test.ts`, with the task that builds `apply`: "apply creates the companies, admins and installation settings of the file, one command row with surface cli and principal core.cli each"; "a second apply of the same file writes nothing and exits 0"; "--dry-run writes no command row and lists create, update, unchanged and refused per entry"; "a company, plant or admin missing from the file is left as it is and listed in notInFile"; "a plant whose zone differs from the installation is refused with exit 3 before any write"; "a plugin in the file that is not installed appears in pluginDrift, the other changes apply and apply exits 4"; "an installed plugin that the file does not list appears in pluginDrift and apply exits 4"; "a new admin in the file is added with company add-admin while pluginDrift is not empty"; "a run that failed after Better Auth's write completes on the rerun and prints no password"; "a new plant from apply writes one command row with principal core.cli and one security event cli.plant_created, although core.cli holds no role"; "the temporary password of a new admin appears once on standard output and in no command row, security event or log line".
@@ -298,7 +315,7 @@ The parts below change when this ADR is accepted. The changed ADR stays accepted
 ## More information
 
 * Related ADRs: [0002][adr-0002] module schemas, [0006][adr-0006] the migration runner, [0007][adr-0007] tenancy, [0008][adr-0008] row-level security, [0011][adr-0011] principals and the CLI, [0013][adr-0013] audit, [0017][adr-0017] Zod contracts, [0037][adr-0037] plugins, [0038][adr-0038] releases, [0043][adr-0043] health, [0044][adr-0044] Compose and TLS, [0045][adr-0045] backups and upgrades, [0046][adr-0046] observability, [0047][adr-0047] secrets, [0051][adr-0051] rules 13, 14 and 23, [0055][adr-0055] scope, [0058][adr-0058] the developer stack, which is a developer's installation and not a partner tool, [0060][adr-0060] secret files, [0066][adr-0066] the company commands, [0070][adr-0070] one backend and Caddy serving the web, and proposed ADR 0075, plugin installs.
-* This ADR changes one accepted ADR, [ADR 0060][adr-0060], under [Changes to ADR 0060](#changes-to-adr-0060). It adds to the rule of [ADR 0007][adr-0007] and rule 23 of [ADR 0051][adr-0051] that no database is shared between customers. It adds no row to the ledger of [ADR 0055][adr-0055]: the release notes step waits for a trigger, and E05-S14 enters the ledger through ADR 0066's change to ADR 0055 once ADR 0066 is accepted.
+* This ADR changes three accepted ADRs under [Parts of accepted ADRs this decision changes](#parts-of-accepted-adrs-this-decision-changes): [ADR 0007][adr-0007] and rule 23 of [ADR 0051][adr-0051], which gain the rule that no database is shared between customers, and [ADR 0060][adr-0060]. It adds no row to the ledger of [ADR 0055][adr-0055]: the release notes step waits for a trigger, and E05-S14 enters the ledger through ADR 0066's change to ADR 0055 once ADR 0066 is accepted.
 * Open questions M-69 to M-76 in [16 open questions](../plan/16-open-questions.md#design-points-from-the-plan-documents) hold the parts under needs-confirmation and their working defaults.
 * Proposed ADRs to update before they are accepted: [0066][adr-0066] (`company create` takes a required `--admin-email` and `company add-admin` a required `--email` for a new user, and the `.invalid` placeholder goes, as #415 built for every user that `core.createUser` creates; its Hosting partners section links this ADR; the later item "`northmes plant create` and a declarative onboarding file" becomes the customer file and `northmes apply` here; the CLI's write commands run as `nm_app` and `nm_auth`, and the `migrate` service receives `db_app_password` and `db_auth_password`; `core.createPlant` and `core.updateCompany` from the CLI run as `core.cli` outside `can()`, with the security events `cli.plant_created` and `cli.company_updated`), [0047][adr-0047] (the `migrate` row of the secrets table gains `db_app_password` and `db_auth_password`).
 * Plan documents to update once this ADR is accepted: [01 product and scope](../plan/01-product-and-scope.md#out-of-release-1) (the rows for partner hosting docs and the declarative onboarding file, and the new rows for metrics and the fleet console), [12 operations and security](../plan/12-operations-and-security.md#install-and-bootstrap) (the customer folder, the upgrade steps for partners, and the `migrate` rows of the Compose and secrets tables) and the Hosting partner persona in the [plan README](../plan/README.md#personas).

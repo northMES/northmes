@@ -97,7 +97,7 @@ describe('gates', () => {
     );
     expect(rootScripts.dev).toBe('node scripts/stack/dev.mjs');
     expect(rootScripts.demo).toBe('node scripts/stack/demo.mjs');
-    expect(rootScripts.e2e).toBe('pnpm build && playwright test');
+    expect(rootScripts.e2e).toBe('pnpm build && playwright install chromium && playwright test');
   });
 
   it('the Tester command in every graph under docs/agents/handoff/graphs is pnpm check, and its coder instruction names pnpm check', () => {

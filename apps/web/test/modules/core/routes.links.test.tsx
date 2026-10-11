@@ -3,8 +3,12 @@ import { type LinkNode, linkEntry } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { createShellRoutes } from '@northmes/web-sdk';
 import { createRouter } from '@tanstack/react-router';
-import { describe, expect, it } from 'vitest';
+import { cleanup, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { coreModule } from '../../../src/modules/core/index.ts';
+import { renderCoreAt } from './core-app.tsx';
+
+afterEach(cleanup);
 
 /**
  * The route pattern of a link manifest or entry and of every entry below it. The string keys of a
@@ -29,10 +33,49 @@ function routeFullPaths(): string[] {
 
 describe('core routes', () => {
   it('E06-S06 every coreLinks entry, its settings section included, matches a route fullPath', () => {
-    // The shell's root route, its $plant route and its company settings route, then one route per
-    // link entry, of the plant pages and of the settings section, and no other.
-    expect(routeFullPaths().sort()).toEqual(
-      ['/', '/$plant', '/settings/$companyId', ...linkPatterns(coreLinks)].sort(),
-    );
+    // The shell's root route, its $plant route and its company settings route, which are also the
+    // patterns of core's manifest and of its settings section, one route per link entry, and the
+    // routes that lead the old URLs with core in them to the new ones (ADR 0074).
+    const expected = new Set([
+      '/',
+      ...linkPatterns(coreLinks),
+      '/$plant/core/$',
+      '/settings/$companyId/core/$',
+    ]);
+    expect(routeFullPaths().sort()).toEqual([...expected].sort());
+  });
+
+  it("E04-S02 a person's page in plant settings sits under People", () => {
+    expect(
+      coreLinks.people.person({ plant: 'plant-a', userId: '01920000-0000-7000-8000-00000000a001' })
+        .href,
+    ).toBe('/plant-a/people/01920000-0000-7000-8000-00000000a001');
+  });
+
+  it.each([
+    ['/plant-a/core/articles?q=hinge', '/plant-a/articles?q=hinge'],
+    [
+      '/plant-a/core/articles/01920000-0000-7000-8000-0000000a0001',
+      '/plant-a/articles/01920000-0000-7000-8000-0000000a0001',
+    ],
+    [
+      '/settings/01920000-0000-7000-8000-0000000ac3e0/core/users',
+      '/settings/01920000-0000-7000-8000-0000000ac3e0/users',
+    ],
+  ])(
+    'E04-S02 the old URL %s leads to %s, so bookmarks keep working (ADR 0074)',
+    async (old, now) => {
+      const router = renderCoreAt(old, []);
+
+      await waitFor(() => expect(router.state.location.href).toBe(now));
+    },
+  );
+
+  it('E04-S02 an old URL keeps its search values and its hash on the way to the new one (ADR 0074)', async () => {
+    const router = renderCoreAt('/plant-a/core/articles?q=fl%C3%A4ns%20dn50#rows', []);
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/articles'));
+    expect(router.state.location.search).toMatchObject({ q: 'fläns dn50' });
+    expect(router.state.location.hash).toBe('rows');
   });
 });

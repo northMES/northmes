@@ -91,6 +91,18 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
     disabledPaths: [...disabledPaths],
     emailAndPassword: { enabled: true, disableSignUp: true },
     session: { expiresIn: SESSION_LIFETIME_SECONDS, updateAge: SESSION_RENEWAL_SECONDS },
+    user: {
+      additionalFields: {
+        // Set with a temporary password that an admin hands out, cleared when the user sets their
+        // own on the new password step (ADR 0051 rule 13). No client may set it.
+        mustChangePassword: {
+          type: 'boolean',
+          required: false,
+          defaultValue: false,
+          input: false,
+        },
+      },
+    },
     rateLimit: { storage: 'database' },
     telemetry: { enabled: false },
     advanced: {

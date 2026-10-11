@@ -4,5 +4,6 @@ export {
   ArticleForm,
   type ArticleFormProps,
   type ArticleValues,
+  articleFormFields,
 } from './article-form.tsx';
 export { commandFailure, showSaveError } from './article-save-errors.ts';

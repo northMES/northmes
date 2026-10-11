@@ -12,8 +12,8 @@ export {
 export type BoardOrder = PlanningBoardQuery['planningProductionOrders'][number];
 
 // The production orders of the plant that the Apollo client's x-northmes-plant header names. An
-// order's article is null when core holds no article for the order's article id. pnpm gen writes
-// its typed document to board.graphql.gen.ts; this block never runs.
+// order's article is null when core has none at the request's scopes, so the reader cannot see it.
+// pnpm gen writes its typed document to board.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
     query PlanningBoard {
@@ -25,6 +25,7 @@ if (false) {
         version
         article {
           id
+          code
           name
         }
       }
