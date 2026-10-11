@@ -30,6 +30,7 @@ pnpm e2e      # the end-to-end specs in Chromium against the built server
 - [docs/adr](docs/adr/README.md): the architecture decisions.
 - [GLOSSARY.md](GLOSSARY.md): the project's terms.
 - [AGENTS.md](AGENTS.md): how work is done here, for people and coding agents.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability, and what happens next.
 
 ## License
 
