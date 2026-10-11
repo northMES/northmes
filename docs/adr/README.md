@@ -18,7 +18,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | ERP integration and the Pyramid connector | 0031, 0032 |
 | Operator station | 0033 |
 | AI | 0035, 0036 |
-| Testing | 0041, 0042 |
+| Testing | 0041, 0042, 0077 |
 | Operations | 0043, 0044, 0045, 0046, 0047, 0052, 0072, 0075 |
 | Licensing | 0039, 0040, 0056 |
 | Regulated readiness and security | 0051, 0076 |
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-11 the index holds 76 ADRs: 48 accepted and 28 proposed, 73 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
+On 2026-10-11 the index holds 77 ADRs: 48 accepted and 29 proposed, 74 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -173,5 +173,6 @@ On 2026-10-11 the index holds 76 ADRs: 48 accepted and 28 proposed, 73 for relea
 | 0074 | [Core's pages at the plant root and the company settings root](0074-core-pages-at-the-plant-root-and-the-company-settings-root.md) | proposed | 1 | |
 | 0075 | [Plugin installs from signed archives into a plugin volume, with plugin screens loaded at run time](0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md) | proposed | 1 | maintainer (how a hosting partner controls plugin installs, left open; core.plugin:manage as a company-level permission that Company admin holds under M-61, for an install that reaches every company of the installation, with the requests in one installation-wide table; the plugin archive format, its signing scheme, trusted keys bound to plugin ids and the indexes as installation settings, with no project key in release 1; plugin screens as ES modules through one hashed import map, with the plugin list behind a session and a full page load after sign-in; the host step plugins.sh on a systemd timer with an apply window, a host lock and the one-off plugins service; the part of the UI kit that becomes MIT @northmes/ui; @northmes/plugin-build as an MIT package; the plugin drift of northmes apply with exit 4; the ADR 0055 ledger rows); lawyer (the ADR 0056 exception and bundling clause for plugin archives installed at run time and handed out through an index; the trademark policy for a NorthMES plugin index) |
 | 0076 | [Secure development lifecycle with a security note per change, a controls index and an internal audit each release](0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) | proposed | 1 | |
+| 0077 | [Visual regression snapshots with Argos from the Playwright specs](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) | proposed | 1 | maintainer (the Argos plan and its cost; when the Argos check becomes required; which screenshots leave the repository for Argos) |
 
-Next free number: 0077. Only Krister Johansson sets a status to accepted.
+Next free number: 0078. Only Krister Johansson sets a status to accepted.
