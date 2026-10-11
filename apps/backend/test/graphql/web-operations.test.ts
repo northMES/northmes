@@ -18,8 +18,11 @@ const webSource = new URL('../../../web/src/', import.meta.url);
 function webOperations(): { file: string; source: string }[] {
   return globSync('**/*.graphql.ts', { cwd: webSource }).map((file) => {
     const text = readFileSync(new URL(file, webSource), 'utf8');
-    const source = /gql`([\s\S]*?)`/.exec(text)?.[1];
-    if (!source) throw new Error(`${file} holds no gql operation`);
+    const blocks = [...text.matchAll(/gql`([\s\S]*?)`/g)].map((match) => match[1] ?? '');
+    const [source] = blocks;
+    if (blocks.length !== 1 || source === undefined) {
+      throw new Error(`${file} holds ${blocks.length} gql blocks, and an operation file holds one`);
+    }
     return { file, source };
   });
 }

@@ -126,7 +126,7 @@ The plant's presentation values leave the module list; their carrier is open.
 
 * Good, because 2,395 lines leave and about 800 change (estimate), and a field across modules needs no `entityRef` stub.
 * Bad, because plugin screens keep a runtime path of their own beside the build-time modules (proposed ADR 0075).
-* Bad, because every replica serves the whole schema, web parts no longer ship per module, and `demandControl` needs a replacement.
+* Bad, because every replica serves the whole schema, and web parts no longer ship per module.
 
 ### Confirmation
 
