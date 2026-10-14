@@ -46,7 +46,7 @@ Chosen option: "Compose secrets per service, AES-256-GCM with a versioned keyrin
 | `installation_key` | `app` | Root of the purpose keys |
 | `customer_ca` | `app` | The customer's CA bundle for outbound TLS ([ADR 0044](0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md)) |
 | `db_owner_password` | `migrate` | `nm_owner`, the only login that may `SET ROLE` to module owner roles ([ADR 0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md)) |
-| `auth_secret` | `migrate`, only if Better Auth needs it to create a user | `northmes admin create` and `northmes admin reset-password` ([ADR 0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), M-53) |
+| `db_app_password`, `db_auth_password` and `auth_secret` | `migrate` | `northmes company create`, `company add-admin`, `company list` and `admin reset-password`, which run core's writes as `nm_app` and Better Auth's as `nm_auth` ([ADR 0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md), [ADR 0072](0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md), M-53, M-75) |
 | Superuser password | `db` | First init, bootstrap and extension updates ([ADR 0005](0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md)) |
 
 `install.sh` generates every secret and writes each file with `install -m 0440`, owned by root and the group of the uid the `db` and `app` processes run as, in a root-owned directory with mode 0700.

@@ -28,9 +28,7 @@ describe('northmes admin reset-password', () => {
     const username = `user_${randomBytes(5).toString('hex')}`;
     const email = `${username}@example.test`;
     const password = 'the password the user chose';
-    const { user } = await testApp.app
-      .get(AuthService)
-      .createUser({ username, email, password });
+    const { user } = await testApp.app.get(AuthService).createUser({ username, email, password });
     return { id: user.id, username, email, password };
   }
 

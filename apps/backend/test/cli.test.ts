@@ -77,23 +77,66 @@ describe('cli', () => {
 
   it.each([
     ['admin reset-password without --reason', ['admin', 'reset-password', '--username', 'ada']],
-    ['admin reset-password with an empty --reason', ['admin', 'reset-password', '--username', 'ada', '--reason', ' ']],
-    ['admin reset-password with a --password flag', ['admin', 'reset-password', '--username', 'ada', '--reason', 'x', '--password', 'secret']],
-    ['company create without --reason', ['company', 'create', '--name', 'Acme', '--admin-username', 'ada', '--admin-email', 'ada@example.test']],
-    ['company create without --admin-email', ['company', 'create', '--name', 'Acme', '--admin-username', 'ada', '--reason', 'x']],
-    ['company create with an --id that is not a uuidv7', ['company', 'create', '--id', 'acme', '--name', 'Acme', '--admin-username', 'ada', '--admin-email', 'ada@example.test', '--reason', 'x']],
-    ['company add-admin without --company', ['company', 'add-admin', '--username', 'ada', '--reason', 'x']],
+    [
+      'admin reset-password with an empty --reason',
+      ['admin', 'reset-password', '--username', 'ada', '--reason', ' '],
+    ],
+    [
+      'admin reset-password with a --password flag',
+      ['admin', 'reset-password', '--username', 'ada', '--reason', 'x', '--password', 'secret'],
+    ],
+    [
+      'company create without --reason',
+      [
+        'company',
+        'create',
+        '--name',
+        'Acme',
+        '--admin-username',
+        'ada',
+        '--admin-email',
+        'ada@example.test',
+      ],
+    ],
+    [
+      'company create without --admin-email',
+      ['company', 'create', '--name', 'Acme', '--admin-username', 'ada', '--reason', 'x'],
+    ],
+    [
+      'company create with an --id that is not a uuidv7',
+      [
+        'company',
+        'create',
+        '--id',
+        'acme',
+        '--name',
+        'Acme',
+        '--admin-username',
+        'ada',
+        '--admin-email',
+        'ada@example.test',
+        '--reason',
+        'x',
+      ],
+    ],
+    [
+      'company add-admin without --company',
+      ['company', 'add-admin', '--username', 'ada', '--reason', 'x'],
+    ],
     ['company list with a stray argument', ['company', 'list', 'extra']],
-  ])('E05-S14 %s exits 2 with its usage, before it reads any configuration or prompts', async (_name, args) => {
-    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
-    const exit = vi.fn<(code: number) => void>();
-    const print = vi.fn<(text: string) => void>();
+  ])(
+    'E05-S14 %s exits 2 with its usage, before it reads any configuration or prompts',
+    async (_name, args) => {
+      const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+      const exit = vi.fn<(code: number) => void>();
+      const print = vi.fn<(text: string) => void>();
 
-    await cli(args, { env: {}, exit, log, print });
+      await cli(args, { env: {}, exit, log, print });
 
-    expect(exit.mock.calls).toEqual([[2]]);
-    expect(log.error.mock.calls.join('\n')).toContain('Usage: northmes ');
-    expect(log.error.mock.calls.join('\n')).not.toContain('secret');
-    expect(print).not.toHaveBeenCalled();
-  });
+      expect(exit.mock.calls).toEqual([[2]]);
+      expect(log.error.mock.calls.join('\n')).toContain('Usage: northmes ');
+      expect(log.error.mock.calls.join('\n')).not.toContain('secret');
+      expect(print).not.toHaveBeenCalled();
+    },
+  );
 });

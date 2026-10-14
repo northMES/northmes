@@ -5,6 +5,8 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ModuleManifest } from '@northmes/sdk';
 import {
+  type AdminEnv,
+  adminEnvSchema,
   ConfigError,
   loadEnv,
   type MigrateEnv,
@@ -119,6 +121,16 @@ export async function bootForMigrate(options: BootOptions): Promise<Booted<Migra
     { database: 'none' },
     'migrate',
   );
+}
+
+/**
+ * The boot of the CLI's write commands, northmes company and northmes admin (ADR 0066, ADR 0072):
+ * the boot steps with adminEnvSchema and the server's nm_app pool, without listening. Like the
+ * server, it refuses to start while a migration file is pending. It throws a ConfigError or a
+ * BootError, and the caller initialises and closes the app.
+ */
+export async function bootForAdmin(options: BootOptions): Promise<Booted<AdminEnv>> {
+  return bootSteps(loadEnv(adminEnvSchema)(options.env), options);
 }
 
 /**
