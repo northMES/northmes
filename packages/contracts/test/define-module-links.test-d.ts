@@ -57,4 +57,10 @@ describe('defineModuleLinks', () => {
     // @ts-expect-error a settings page takes no plant
     core.settings.users({ plant: 'plant-a' });
   });
+
+  it("ADR0078 an entry with an empty path builds its parent's own pattern", () => {
+    const core = defineCoreLinks({ dashboard: { path: '' } });
+
+    expectTypeOf(core.dashboard({ plant: 'plant-a' }).to).toEqualTypeOf<'/$plant'>();
+  });
 });

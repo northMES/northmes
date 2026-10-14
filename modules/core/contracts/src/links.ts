@@ -2,8 +2,9 @@
 import { defineCoreLinks } from '@northmes/contracts';
 
 /**
- * The core module's link manifest (ADR 0062): at a plant, the articles list, its new article page,
- * and each article's page with its edit page; the article groups, the new group page and each
+ * The core module's link manifest (ADR 0062): at a plant, the dashboard at the plant root, the
+ * plant's landing page with its open tab in `tab` (ADR 0078); the articles list, its new article
+ * page, and each article's page with its edit page; the article groups, the new group page and each
  * group's page, which is its form; and in plant settings the people of the plant with Add role and
  * each person's page with Add role for that person. Its settings section holds core's company
  * settings pages (ADR 0066): the users, the new user page, each user's page (its tab in `tab`) with
@@ -15,6 +16,7 @@ import { defineCoreLinks } from '@northmes/contracts';
  */
 export const coreLinks = defineCoreLinks(
   {
+    dashboard: { path: '' },
     articles: {
       path: 'articles',
       children: {
