@@ -15,6 +15,7 @@ describe('schemaSdl', () => {
       'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
+      'coreDashboardTabs',
       'corePermissionCatalog',
       'corePlantRoleAssignments',
       'coreRole',

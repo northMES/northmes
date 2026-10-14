@@ -27,12 +27,14 @@ interface Session {
   pid: number;
   readScopes: string | null;
   writeScopes: string | null;
+  userId: string | null;
 }
 
 /** Selects a Session row. missing_ok is true, so a setting that was never set reads as null. */
 const sessionQuery = `select current_user as "user", pg_backend_pid() as pid,
   current_setting('northmes.read_scopes', true) as "readScopes",
-  current_setting('northmes.write_scopes', true) as "writeScopes"`;
+  current_setting('northmes.write_scopes', true) as "writeScopes",
+  current_setting('northmes.user_id', true) as "userId"`;
 
 /** The Kysely table types of the fixture module, written by hand. */
 interface FixtureDatabase {
@@ -140,9 +142,27 @@ describe('ScopedDatabase', () => {
       pid: expect.any(Number),
       readScopes: `{${plantA}}`,
       writeScopes: `{${plantA}}`,
+      userId: principalAt(plantA).userId,
     });
     // A transaction-local setting reads as an empty string once its transaction ends (ADR 0008).
-    expect(after).toEqual({ user: 'nm_app', pid: inside?.pid, readScopes: '', writeScopes: '' });
+    expect(after).toEqual({
+      user: 'nm_app',
+      pid: inside?.pid,
+      readScopes: '',
+      writeScopes: '',
+      userId: '',
+    });
+  });
+
+  it('ADR0078 a transaction without a principal sets no user', async () => {
+    const inside = await runAs(null, () =>
+      scopedDatabase().transaction(async (tx) => {
+        const { rows } = await tx.executeQuery<Session>(CompiledQuery.raw(sessionQuery));
+        return rows[0];
+      }),
+    );
+
+    expect(inside).toMatchObject({ readScopes: '{}', writeScopes: '{}', userId: '' });
   });
 
   it('E02-S04 after Postgres ends an idle connection of the pool, the server logs it without its connection settings and the next transaction runs', async () => {

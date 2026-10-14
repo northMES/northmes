@@ -159,6 +159,25 @@ export interface RoleAssignmentTable {
  * The Kysely table types of the core module, by schema-qualified name. They are written by hand
  * until generated types arrive (ADR 0006), so they change with every core migration.
  */
+/**
+ * core.dashboard_tab: a tab of the dashboard (ADR 0078). A shared tab has no owner and sits at the
+ * company or a plant; an own tab has its owner and sits at the owner's company.
+ */
+export interface DashboardTabTable {
+  id: Generated<string>;
+  scope_id: string;
+  company_id: string;
+  version: Generated<number>;
+  owner_id: string | null;
+  name: string;
+  /** The tab's place among the tabs of its kind. */
+  position: number;
+  /** The layout's widgets. pg reads jsonb as the array and writes it as a JSON string. */
+  widgets: ColumnType<unknown[], string | undefined, string>;
+  created_at: Generated<Date>;
+  updated_at: Generated<Date>;
+}
+
 export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.article_plant': ArticlePlantTable;
@@ -172,4 +191,5 @@ export interface CoreDatabase {
   'core.default_role': DefaultRoleTable;
   'core.user_directory': UserDirectoryView;
   'core.company_user': CompanyUserView;
+  'core.dashboard_tab': DashboardTabTable;
 }

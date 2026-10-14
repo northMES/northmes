@@ -19,6 +19,8 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
 @import "@fontsource/ibm-plex-mono/700.css";
+/* react-grid-layout positions the dashboard's widgets; its own sheet places them (design shell-454). */
+@import "react-grid-layout/css/styles.css";
 
 @source "..";
 /* The static boot page lives in index.html, beside src (design shell-306, BO1). */
@@ -56,5 +58,16 @@
    */
   html:has([data-slot="form-actions"]) {
     scroll-padding-bottom: 4.5rem;
+  }
+}
+
+/*
+ * The dashboard's widgets keep still when the user asks for reduced motion (design shell-454). The
+ * rule stays outside a layer, as react-grid-layout's own sheet does, so it wins over that sheet.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .react-grid-layout,
+  .react-grid-item {
+    transition: none;
   }
 }
