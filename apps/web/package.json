@@ -34,6 +34,7 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-grid-layout": "catalog:",
     "react-hook-form": "catalog:",
     "rxjs": "catalog:",
     "tailwindcss": "catalog:",
