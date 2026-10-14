@@ -384,11 +384,10 @@ const dashboardTabs = [
 
 /**
  * Writes the seed: first the company, its plants and the dev admin as core's owner role
- * (seedAccess), then the articles and orders in one transaction as the role appUrl logs in as,
- * nm_app, with the company and both plants as its read and write scopes and the dev admin as its
- * user, so the row-level security
- * policies apply as they do in the server (ADR 0008). A record that exists, also one a person changed since, is
- * left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
+ * (seedAccess), then the articles, orders and dashboard tabs in one transaction as the role appUrl
+ * logs in as, nm_app, with the company and both plants as its read and write scopes and the dev
+ * admin as its user, so the row-level security policies apply as they do in the server (ADR 0008,
+ * ADR 0078). A record that exists, also one a person changed since, is left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
  * installed since the last run.
  * @param {{ appUrl: string, ownerUrl: string }} urls
  */
