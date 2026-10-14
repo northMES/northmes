@@ -34,11 +34,15 @@ export {
   type DashboardWidgetSize,
   type DashboardWidgetType,
   dashboardColumns,
+  dashboardLayout,
+  dashboardMaxWidgets,
   dashboardSizesOf,
   dashboardSizeUnits,
   dashboardWidget,
   dashboardWidgetSizes,
+  dashboardWidgetsOverlap,
   dashboardWidgetTypes,
+  saveDashboardTab,
 } from './dashboard.ts';
 export { coreLinks } from './links.ts';
 export { articleOperations } from './operations/article.ts';

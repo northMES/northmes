@@ -680,7 +680,10 @@ describe('own rows in the permission step of CommandBusImpl (ADR 0078)', () => {
 
     const run = runAs(viewer, () => bus.run(command, { ...input, expectedVersion: 2 }));
 
-    expect(await refusalOf(run)).toEqual({ code: 'core.version_conflict', status: HttpStatus.CONFLICT });
+    expect(await refusalOf(run)).toEqual({
+      code: 'core.version_conflict',
+      status: HttpStatus.CONFLICT,
+    });
     expect(handle).not.toHaveBeenCalled();
   });
 });
