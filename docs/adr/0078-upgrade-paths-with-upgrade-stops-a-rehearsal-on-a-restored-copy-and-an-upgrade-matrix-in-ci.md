@@ -2,7 +2,7 @@
 status: "proposed"
 date: 2026-10-14
 decision-makers: proposed by a planning session, to be confirmed by Krister Johansson
-consulted: ADR 0006, 0018, 0038, 0045, 0072 and 0075; the upgrade documentation of GitLab, Sentry self-hosted, Nextcloud and Mastodon
+consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
 needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
@@ -43,7 +43,7 @@ Chosen option: "Any supported version upgrades straight to the latest, with decl
 * `northmes migrate` writes one row to `northmes_meta.release(version, image_digest, applied_at)` at the end of each successful run. The latest row is the installed release. System health and `/health` read it beside the image version.
 * The release manifest of [ADR 0045][adr-0045] gains `minimumUpgradeFrom`. In 0.x it is the oldest of the last 3 minors, so an installation on 0.4.x upgrades to 0.7.0 in one step, and one on 0.3.x does not.
 * A release becomes an upgrade stop when it squashes migration files into a baseline, when a data migration needs code of a certain version, or when it has to drop something an older release still expects. The next release then sets `minimumUpgradeFrom` to that stop. The first planned stop is 1.0, where 0.x migrations are squashed.
-* `northmes migrate --check` compares the installed release with `minimumUpgradeFrom` before boot step 1 and exits 1 with both values and the path: "this installation runs 0.3.2; 0.7.0 upgrades from 0.4.0 or later; install the latest 0.4.x first". An installation with no `northmes_meta.release` row (installed before this ADR) is read from its newest applied migration file.
+* `northmes migrate --check` compares the installed release with `minimumUpgradeFrom` before boot step 1 and exits 1 with both values and the path: "this installation runs 0.3.2; 0.7.0 upgrades from 0.4.0 or later; install the latest 0.4.x first". The row is written from the first release on, because the story that adds it lands before 0.1.0, so every installation made from a release has one. A database that holds applied migrations but no `northmes_meta.release` row was never installed from a release (a development or test database): `migrate --check` refuses it with exit 1 and names its newest applied file, and no release is guessed from the files. `pnpm upgrade:test --from main` is the way to test such a database.
 * The upgrade guide in `apps/docs` lists the stops, and the release notes state `minimumUpgradeFrom` next to the rollback class.
 * Downgrades stay a restore, as [ADR 0045][adr-0045] decides. No release ships down migrations.
 
@@ -102,7 +102,7 @@ A minor release breaks plugins in 0.x ([ADR 0038][adr-0038]), so plugin provider
 
 ### Confirmation
 
-* `migrate-release.int.test.ts`: a successful `migrate` writes one `northmes_meta.release` row with the image version; a failed run writes none; a database without the table reports the release of its newest applied file.
+* `migrate-release.int.test.ts`: a successful `migrate` writes one `northmes_meta.release` row with the image version; a failed run writes none; a database with `northmes_meta.migration` rows and no `northmes_meta.release` row makes `migrate --check` exit 1 naming its newest applied file, and changes nothing.
 * `migrate-check-path.int.test.ts`: with `minimumUpgradeFrom` 0.4.0, a database at 0.3.2 exits 1 naming 0.3.2, 0.4.0 and the path, and `northmes_meta` is unchanged; at 0.4.1 it passes.
 * `infra/test/rehearse.int.test.ts` (nightly): a rehearsal with a fixture migration that adds a unique index over duplicate codes reports the failing file and leaves the production database and its archive unchanged; a passing rehearsal writes `rehearsal-state.json`; `upgrade.sh` refuses a `restore`-class release without one.
 * `infra/test/upgrade-matrix.int.test.ts` (release pull request and nightly): every snapshot from `minimumUpgradeFrom` upgrades, boots and passes the smoke check; the sorted schema dump equals a fresh install's.

@@ -388,9 +388,9 @@ An upgrade test restores a snapshot into a Testcontainers Postgres, runs the can
 |---|---|---|
 | Every pull request | Migration lint and markers; the computed rollback class; `migrate.test.ts` on a fresh database; the `migrate --check` path tests with fixture manifests | merge |
 | Pull requests that change a `migrations/` folder, the runner or a seed fixture | The upgrade test from the latest release's snapshot to the pull request, checks 1 to 7 | merge |
-| The release-please pull request and every candidate | The full matrix: the latest snapshot of every minor from `minimumUpgradeFrom`, and the last candidate, to the release; the large snapshot within its time budget; `upgrade.sh` from N-1 to N through the real Compose file | the release |
+| The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; `upgrade.sh` from N-1 to N through the real Compose file | the release |
 | Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, rehearsal, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
-| Before the pilot install, and before each customer's first upgrade of a minor | The rehearsal of ADR 0078 on the pilot-like VM or the customer's host, on a copy of their data | that upgrade |
+| Before the pilot install, and before every upgrade to a release of the `restore` class | The rehearsal of ADR 0078 on the pilot-like VM or the customer's host, on a copy of their data; optional, and recommended, for the `image` class | that upgrade |
 
 The matrix runs one job per "from" version in parallel, each with its own container, so its time is that of the slowest path, not the sum.
 

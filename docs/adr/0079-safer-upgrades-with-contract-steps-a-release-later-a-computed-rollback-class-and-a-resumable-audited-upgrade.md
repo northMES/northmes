@@ -2,7 +2,7 @@
 status: "proposed"
 date: 2026-10-14
 decision-makers: proposed by a planning session, to be confirmed by Krister Johansson
-consulted: ADR 0005, 0006, 0018, 0038, 0043, 0045, 0051, 0071, 0075 and 0078; GitLab's post-deployment and batched background migrations
+consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
 needs-confirmation: "maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; the restore-class rollback deadline; backfills as background jobs after start; the migration time budget; the resumable upgrade unit; the read-only smoke check and the watch period; the 503 with Retry-After during the stop; a late window of at least 24 hours; the gateway requirements in the install guide; polling adapters outside app)"
@@ -44,7 +44,8 @@ Chosen option: "Keep the stop, and add contract steps a release later, a compute
 
 ### Contract steps one release later
 
-* A contract step never ships in the release whose code stops using the old shape. Release N stops reading and writing a column; release N+1 or later drops it. The previous image then still runs on the schema of every release that only expands, so almost every release is of the `image` class, and its rollback starts the previous image with no restore and no lost write ([ADR 0045][adr-0045]).
+* A contract step never ships in the release whose code stops using the old shape. Release N stops reading and writing a column; release N+1 or later drops it. The previous image then still runs on the schema of every release that only expands, and its rollback starts the previous image with no restore and no lost write ([ADR 0045][adr-0045]).
+* A delayed contract step keeps the rule of [ADR 0045][adr-0045]: it bumps the schema compatibility number, and its release is of the `restore` class. To keep such releases rare, contract steps are batched: they wait for a release that is of the `restore` class anyway, or for an upgrade stop of proposed [ADR 0078][adr-0078], so most releases carry none and are of the `image` class.
 * A pull request that adds a `contract` file names the release whose code stopped using what it removes, and review checks it against the schema snapshot.
 * A release is of the `restore` class only when nothing else works: a Postgres major or extension update ([ADR 0005][adr-0005]), a third-party schema change without a compatible path (Better Auth's tables, BullMQ's data in Valkey under [ADR 0071][adr-0071]), or a fix that must rewrite data the previous code would misread. Its release notes say why.
 * Postgres major upgrades have their own procedure and window, and never share one with a NorthMES upgrade.
@@ -57,7 +58,7 @@ CI computes each release's rollback class and schema compatibility number from t
 
 * A backfill over more than a fixed row count is not a migration file. A migration file registers it as a batched, idempotent background job that runs after `app` starts, in batches with a pause between them, and `northmes_meta.background_migration` records its progress. A later release whose code needs it finished declares that, and `migrate --check` refuses until it has finished, naming it. Such a release is an upgrade stop under proposed [ADR 0078][adr-0078].
 * Each release manifest carries a migration time budget measured on the large nightly snapshot. The rehearsal of proposed [ADR 0078][adr-0078] prints its own time beside the budget, and the operator plans the window from it.
-* The runner sets a `statement_timeout` from that budget on each file, so a migration that runs far longer than measured fails, and `rollback.sh` takes over, instead of holding the plant for an unknown time.
+* The runner sets one deadline for the whole run, the start time plus the release's budget times a safety factor, and before each file and each statement sets `statement_timeout` to the time left until that deadline. A run that passes the deadline fails, however its time is spread over statements and files, and `rollback.sh` takes over, instead of holding the plant for an unknown time.
 * Before stopping `app`, `upgrade.sh` lets running jobs finish inside the 45 s grace period of [ADR 0043][adr-0043]. Jobs still queued in Valkey carry `schema_version` ([ADR 0045][adr-0045]), and the new version accepts the previous version's payloads.
 
 ### Before the stop
@@ -93,7 +94,7 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 
 ### Consequences
 
-* Good, because almost every release rolls back by starting the previous image, without losing a write.
+* Good, because most releases carry no contract step and roll back by starting the previous image, without losing a write.
 * Good, because a mislabelled release, a tampered or older bundle, or a dropped connection no longer turns into a broken installation.
 * Good, because the window holds the schema change only, and the operator knows its length before the stop.
 * Good, because every upgrade and rollback is in the audit trail.
@@ -104,12 +105,12 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 ### Confirmation
 
 * `rollback-class.test.ts`: a release with one `contract` file computes `restore`, and a manifest that says `image` fails the release workflow.
-* `migrate-timeout.int.test.ts`: a file that runs longer than its `statement_timeout` fails, and `northmes_meta.migration` does not record it.
+* `migrate-timeout.int.test.ts`: a file that runs past the run's deadline fails, and `northmes_meta.migration` does not record it; three files that each stay under the per-file share but together pass the deadline make the run fail at the third.
 * `background-migration.int.test.ts`: a registered backfill runs in batches after start and survives a restart halfway; a release that needs it finished is refused by `migrate --check` until it is.
 * `infra/test/upgrade-crash.int.test.ts` (nightly): the upgrade is killed after the backup, during migrate and after the start; each time `upgrade.sh --resume` or `rollback.sh` ends with a working installation and no lost rows.
 * `infra/test/maintenance.int.test.ts`: with `app` stopped, a POST to the ingestion endpoint and to `/graphql` gets `503` with `Retry-After`, and a browser request for `/` gets the maintenance page.
 * `infra/test/upgrade.int.test.ts`: an older bundle and a bundle with a wrong digest are refused before the stop; an upgrade and a rollback each write their security event.
-* A large snapshot at five times pilot scale upgrades nightly inside the time budget of its release manifest.
+* `infra/test/upgrade-matrix.int.test.ts`, nightly in `nightly.yml`: "the large snapshot upgrades within the release's time budget", with a snapshot at five times pilot scale.
 
 ## Pros and cons of the options
 

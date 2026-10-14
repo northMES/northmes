@@ -4943,12 +4943,12 @@ Acceptance criteria:
 - `northmes migrate` writes one `northmes_meta.release(version, image_digest, applied_at)` row at the end of a successful run; System health and `/health` show the installed release.
 - The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
 - `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing.
-- A database without `northmes_meta.release` reports the release of its newest applied migration file.
+- The story lands before the first release, so every released installation has a `northmes_meta.release` row; `migrate --check` refuses a database with applied migrations and no such row, naming its newest applied file.
 - The upgrade guide in `apps/docs` lists the upgrade stops.
 
 Tests first:
 
-- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release".
+- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release"; "migrate --check refuses a database with migrations and no release row".
 - `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
 
 #### E18-S08 ops: Rehearse an upgrade on a restored copy before the window
@@ -5049,7 +5049,7 @@ Acceptance criteria:
 
 - CI computes the rollback class and the schema compatibility number from the migration markers since the previous release, the example plugins' migrations and the recorded third-party schema changes, writes them into the release manifest, and fails the release when a hand-written value disagrees.
 - The pull request template asks a pull request with a `contract` file for the release whose code stopped using what it removes.
-- The runner sets a `statement_timeout` from the release manifest's migration time budget on each file.
+- The runner sets one deadline for the whole run from the release manifest's migration time budget, and sets `statement_timeout` before each file and statement to the time left.
 
 Tests first:
 
