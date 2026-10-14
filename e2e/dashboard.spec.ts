@@ -1,5 +1,5 @@
 import { coreLinks } from '@northmes/core-contracts';
-import type { Page, Request } from '@playwright/test';
+import type { Locator, Page, Request } from '@playwright/test';
 import { expect, plant, test } from './fixtures.ts';
 
 /** The GraphQL operation a request runs, such as `CoreDashboardTabs`. */
@@ -55,6 +55,16 @@ async function routeTabs(page: Page) {
       release();
     },
   };
+}
+
+/**
+ * Waits until a Sheet has finished sliding and fading in, so the accessibility check measures its
+ * colours at full opacity, not mid-transition.
+ */
+async function settled(sheet: Locator) {
+  await expect
+    .poll(() => sheet.evaluate((element) => element.getAnimations({ subtree: true }).length))
+    .toBe(0);
 }
 
 test.describe('the dashboard', () => {
@@ -130,6 +140,7 @@ test.describe('the dashboard', () => {
     await page.getByRole('button', { name: 'Add widget' }).click();
     const catalog = page.getByRole('dialog', { name: 'Add widget' });
     await expect(catalog.getByRole('heading', { name: 'Chart' })).toBeVisible();
+    await settled(catalog);
     await checkA11y('the widget catalog');
     await catalog.getByRole('button', { name: 'Add List' }).click();
     await expect(page.getByRole('region', { name: 'List' })).toBeVisible();
@@ -138,10 +149,15 @@ test.describe('the dashboard', () => {
     await page.getByRole('menuitem', { name: 'Settings' }).click();
     const settings = page.getByRole('dialog', { name: 'Widget settings' });
     await expect(settings.getByRole('radio', { name: 'Medium 4 by 4' })).toBeChecked();
+    await settled(settings);
     await checkA11y('the widget settings');
     await settings.getByRole('textbox', { name: 'Title' }).fill('Orders to start');
     await settings.getByRole('button', { name: 'Apply' }).click();
     await expect(page.getByRole('region', { name: 'Orders to start' })).toBeVisible();
+    // The closed Sheet hands focus back to the widget's Widget actions.
+    await expect(
+      page.getByRole('button', { name: 'Widget actions, Orders to start' }),
+    ).toBeFocused();
 
     await page.getByRole('button', { name: 'Move Late orders' }).focus();
     await page.keyboard.press('Enter');
