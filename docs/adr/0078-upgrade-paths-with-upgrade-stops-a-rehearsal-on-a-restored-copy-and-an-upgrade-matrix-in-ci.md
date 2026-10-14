@@ -5,7 +5,7 @@ decision-makers: proposed by a planning session, to be confirmed by Krister Joha
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
-needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
+needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
 ---
 
 # Upgrade paths with upgrade stops, a rehearsal on a restored copy and an upgrade matrix in CI
@@ -68,6 +68,7 @@ Chosen option: "Any supported version upgrades straight to the latest, with decl
 
 * The host runs an upgrade, through `upgrade.sh`, in release 1. The web cannot: replacing its own image, stopping itself, backing up and migrating as `nm_owner` would need the Docker socket and the owner password in `app`, and there is no role above a company ([ADR 0066][adr-0066]). [ADR 0011][adr-0011] rejected a web setup route for the same reason.
 * System health shows the installed release, a newer release when the installation knows of one (from a bundle on the host or an optional update check), its rollback class, `minimumUpgradeFrom` and the last rehearsal result. It is read-only.
+* One settings page, Updates (name proposed), holds both: a NorthMES tab with the installed release, a newer release, the path to it, its rollback class, the last rehearsal and which plugins have a version for it, and a Plugins tab that is the Plugins page of proposed [ADR 0075][adr-0075]. Plugin compatibility belongs with the release it blocks, and `upgrade.sh --with-plugin-updates` already applies the core upgrade and the plugin updates as one set. System health keeps a one-line summary that links to it. Its route, permission and layout come from a design task (E18-S16); in release 1 the NorthMES tab is read-only.
 * Later, an admin may request an upgrade in the web the way proposed [ADR 0075][adr-0075] requests a plugin install: an audited request row that a host timer applies in the upgrade window, rehearsal first, with the result written back. An installation setting that only `northmes installation set` changes turns web requests off, so a hosting partner keeps upgrades to itself. Trigger: a customer without host access asks for it.
 
 ### Plugins and open tabs

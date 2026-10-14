@@ -5000,14 +5000,14 @@ Issue: not created yet.
 
 As a plant admin, I want the upgrade check to name each plugin that does not support the new release, and System health to warn before the window, so that I can get new plugin versions in time.
 
-Module: ops, core. Blocked by: E18-S07 and the plugin compatibility check of proposed ADR 0075. Design: System health and Plugins page warning (part of D2).
+Module: ops, core. Blocked by: E18-S07 and the plugin compatibility check of proposed ADR 0075. Design: the Updates page (E18-S16).
 
 ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
 
 Acceptance criteria:
 
 - `upgrade.sh` stops before the maintenance page when an installed plugin has no version for the new release, and names each plugin's id, version and NorthMES range, and a newer compatible version when its index has one.
-- System health and the Plugins page show "N plugins have no version for <release>" once the installation knows of a newer release.
+- System health and the Updates page show "N plugins have no version for <release>" once the installation knows of a newer release.
 
 Tests first:
 
@@ -5116,6 +5116,26 @@ Acceptance criteria:
 Tests first:
 
 - `infra/test/upgrade-matrix.int.test.ts`: "the large snapshot upgrades within the release's time budget".
+
+#### E18-S16 core: Show releases and plugins on one Updates page
+
+Issue: not created yet.
+
+As a plant admin, I want one page that shows the installed release, the next release, whether I can reach it and which plugins are ready for it, beside the plugins themselves, so that I plan an upgrade and its plugin updates in one place.
+
+Module: core, web. Blocked by: E18-S07, E18-S10, E16-S03 and the Plugins page of proposed ADR 0075. Design: Updates page (a design task under this story, not started; it lays out the NorthMES and Plugins tabs, their empty, loading and stopped states, and where the later upgrade request goes).
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
+
+Acceptance criteria:
+
+- The NorthMES tab shows the installed release, a newer release when the installation knows of one, the path to it with any upgrade stop, its rollback class, the last rehearsal's result and each installed plugin's readiness for it. It starts nothing.
+- The Plugins tab is the Plugins page of proposed ADR 0075, with the same actions and permission checks.
+- System health shows a one-line summary that links to the page.
+
+Tests first:
+
+- `modules/core/test/updates-page.int.test.ts`: "an admin without the permission is refused the release query"; "a plugin with no version for the next release is listed as not ready".
 
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
