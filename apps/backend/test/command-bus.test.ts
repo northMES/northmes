@@ -674,6 +674,15 @@ describe('own rows in the permission step of CommandBusImpl (ADR 0078)', () => {
     expect(others.handle).not.toHaveBeenCalled();
   });
 
+  it('ADR0078 an empty owner never matches, not even a principal with an empty user id', async () => {
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const { command, handle } = saveOfTabOwnedBy('');
+    const nobody = { ...viewer, userId: '' };
+
+    expect(await refusalOf(runAs(nobody, () => bus.run(command, input)))).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
   it("ADR0078 the version step still runs on the user's own row", async () => {
     const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
     const { command, handle } = saveOfTabOwnedBy(viewer.userId);
