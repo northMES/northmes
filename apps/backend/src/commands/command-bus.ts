@@ -132,8 +132,8 @@ function authorizeAtRow(
 /**
  * The locked row of a command whose target names an owner, when the owner is the principal's own
  * user: the bus runs the command on it without the contract's permission (ADR 0078). undefined for
- * a target without ownerOf, a row it does not find, and a row of no one or of another user, which
- * the permission step then judges.
+ * a target without ownerOf, a principal without a user id, a row it does not find, and a row of no
+ * one or of another user, which the permission step then judges.
  */
 async function ownRow<Input, Result, Target extends TargetRow | undefined>(
   command: Command<Input, Result, Target>,
@@ -143,6 +143,8 @@ async function ownRow<Input, Result, Target extends TargetRow | undefined>(
 ): Promise<Target | undefined> {
   const ownerOf = command.target?.ownerOf;
   if (!command.target || !ownerOf) return undefined;
+  // Fails closed: an empty user id, or a row without an owner, is never the principal's own.
+  if (principal.userId === '') return undefined;
   const row = await command.target.load(id, context);
   return row !== undefined && ownerOf(row) === principal.userId ? row : undefined;
 }
