@@ -5,7 +5,7 @@ decision-makers: proposed by the dashboard build session, to be confirmed by Kri
 consulted: Krister Johansson (option A of the dashboard round, and building on these defaults, 2026-10-14)
 informed: contributors, coding agents
 release: "1"
-needs-confirmation: "maintainer (northmes.user_id as a third transaction setting; a user's own tabs at the company node, so they follow the user across the plants of one company; reading the dashboard with no permission beyond opening the plant; core.dashboardTab:manage for shared tabs outside companyPermissions; the layout as one jsonb column per tab)"
+needs-confirmation: "maintainer (northmes.user_id as a third transaction setting; a user's own tabs at the company node, so they follow the user across the plants of one company; reading the dashboard with no permission beyond opening the plant; core.dashboardTab:manage for shared tabs outside companyPermissions; the layout as one jsonb column per tab; the command bus skipping the permission for a row its target names as the principal's own; the layout sent as a JSON string until inputFromZod)"
 ---
 
 # Dashboard tabs in core, with a user's own tabs guarded by the user id in row-level security
@@ -42,8 +42,10 @@ Chosen option: "A third transaction setting, `northmes.user_id`, and policies on
 * The policies of `core.dashboard_tab`:
   * select: the row's scope is in the read scopes, and the row has no owner or its owner is `northmes.user_id`;
   * insert, update and delete: a row without an owner whose scope is in the write scopes, or a row whose owner is `northmes.user_id` and whose scope is in the read scopes.
-* Reading the dashboard needs no permission beyond opening the plant, as `coreViewer` needs none. Changing a shared tab will need `core.dashboardTab:manage` at the tab's scope; it stays out of `companyPermissions`, so Company admin and Plant admin both hold it. Changing an own tab will need no permission beyond being its owner. The commands come with edit mode.
-* A widget's layout is validated by a Zod schema in core when it is read and written. The widget types are List, Table, Value and Chart, the sizes are Small, Medium, Large, Tall and Wide, and each type allows the sizes of the record.
+* Reading the dashboard needs no permission beyond opening the plant, as `coreViewer` needs none. Changing a shared tab needs `core.dashboardTab:manage` at the tab's scope; it stays out of `companyPermissions`, so Company admin and Plant admin both hold it. Changing an own tab needs no permission beyond being its owner. Each tab the API answers says whether the user may change it (`canEdit`), so the web shows Edit layout only there.
+* One edit session, from Edit layout to Done, is one command, `core.saveDashboardTab`, with the tab's id, the version the session started from and the whole layout. The command bus checks `core.dashboardTab:manage` as for any command, except on a row that is the principal's own: a command target may name the owner of a row (`ownerOf` in the SDK's `CommandTarget`), and when that owner is the principal's user id the bus loads the row and skips the permission check. The waiver rests on the policies above, since a row that is another user's own never loads, and the version check still runs on the own row.
+* A widget's layout is validated by a Zod schema in core when it is read and written. The widget types are List, Table, Value and Chart, the sizes are Small, Medium, Large, Tall and Wide, and each type allows the sizes of the record. A saved layout holds at most 40 widgets, each id once and no two widgets over one cell.
+* A generated mutation input carries no list of objects yet, so the command's `layout` field is the layout as a JSON string of at most 32,000 characters, which the contract parses and then validates with the layout schema. It becomes a list of objects when inputFromZod arrives (ADR 0017, E05-S01).
 
 ### Consequences
 
@@ -58,6 +60,8 @@ Chosen option: "A third transaction setting, `northmes.user_id`, and policies on
 
 * `apps/backend/test/modules/core/dashboard-tab-policies.int.test.ts`: as `nm_app`, a transaction reads its user's own tabs and the shared tabs of its scopes, and reads no other user's own tab and no own tab without a user; it may not write an own tab of another user or a shared tab outside its write scopes.
 * `apps/backend/test/modules/core/dashboard.int.test.ts`: `coreDashboardTabs` answers the company's tabs, the plant's tabs and the user's own tabs in that order, and no tab of a sibling plant or of another user.
+* `apps/backend/test/modules/core/dashboard-save.int.test.ts`: `coreSaveDashboardTab` saves a user's own tab without a permission, refuses a shared tab without `core.dashboardTab:manage` at its scope, refuses a stale version and an overlapping layout, and finds no other user's own tab.
+* `apps/backend/test/command-bus.test.ts`: the bus skips the permission only for a row the target names as the principal's own, and still checks the version there.
 
 ## Pros and cons of the options
 
