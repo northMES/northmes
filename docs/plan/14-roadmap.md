@@ -4944,7 +4944,7 @@ Acceptance criteria:
 - The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
 - `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing; when the release check passes it runs boot steps 1 to 10, lists pending files at step 5 and stops before the first file.
 - `migrate --check` compares the installation's catalog with the sorted schema dump of the installed release, which the release bundle carries, and exits 1 naming each object that differs.
-- The story lands before the first release, so every released installation has a `northmes_meta.release` row; `migrate --check` refuses a database with applied migrations and no such row, naming its newest applied file.
+- The story lands before the first release, so every released installation has a `northmes_meta.release` row; the first `migrate` writes a `northmes_meta.install` row before any file, so `install.sh` resumes a first install that failed partway from the same image; `migrate --check` refuses a database with applied migrations and neither row, naming its newest applied file.
 - The upgrade guide in `apps/docs` lists the upgrade stops.
 
 Tests first:
