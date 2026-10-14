@@ -95,9 +95,9 @@ describe('the row-level security policies of dashboard tabs', () => {
     expect(
       await asApp(context, `update core.dashboard_tab set name = 'Mine' where id = $1`, [jonasTab]),
     ).toEqual({ rows: 0 });
-    expect(await asApp(context, 'delete from core.dashboard_tab where id = $1', [jonasTab])).toEqual(
-      { rows: 0 },
-    );
+    expect(
+      await asApp(context, 'delete from core.dashboard_tab where id = $1', [jonasTab]),
+    ).toEqual({ rows: 0 });
   });
 
   it('may not write an own tab for another user', async () => {
