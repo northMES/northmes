@@ -5,7 +5,7 @@ decision-makers: proposed by a planning session, to be confirmed by Krister Joha
 consulted: ADR 0005, 0006, 0018, 0038, 0043, 0045, 0051, 0071, 0075 and 0078; GitLab's post-deployment and batched background migrations
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
-needs-confirmation: "maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; the restore-class rollback deadline; backfills as background jobs after start; the migration time budget; the resumable upgrade unit; the read-only smoke check and the watch period)"
+needs-confirmation: "maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; the restore-class rollback deadline; backfills as background jobs after start; the migration time budget; the resumable upgrade unit; the read-only smoke check and the watch period; the 503 with Retry-After during the stop; a late window of at least 24 hours; the gateway requirements in the install guide; polling adapters outside app)"
 ---
 
 # Safer upgrades with contract steps a release later, a computed rollback class and a resumable, audited upgrade
@@ -79,6 +79,18 @@ CI computes each release's rollback class and schema compatibility number from t
 * For the `image` class, `rollback.sh` starts the previous image at any time until the next upgrade. For the `restore` class, the operator sets a deadline at upgrade time, by default the start of the next shift; until then `rollback.sh` restores the backup, and after it `rollback.sh` refuses and names the forward fix, within the 72-hour patch target of [ADR 0038][adr-0038], so a restore never silently drops a day of production.
 * The rehearsal copy of proposed [ADR 0078][adr-0078] holds production data: it stays on a host the customer controls, on an encrypted disk, and is removed on exit and again at the start of the next rehearsal.
 
+### Machine data, stations and displays during the stop
+
+Krister Johansson named machine data as what matters most during an upgrade, and expects the gateway at the machine to keep its own store so that it works offline for a while. That is the model [ADR 0059][adr-0059] already assumes ("gateways buffer during outages and resend late, repeated and out-of-order data"). For the stop to lose nothing:
+
+* While `app` is down, Caddy answers `/api` and `/graphql` with `503` and a `Retry-After` header, never with the maintenance page's HTML and a `200`, so a gateway or a script never takes the page for an accepted batch. The maintenance page is served only to browsers that ask for HTML.
+* The ingestion endpoint is idempotent per sample (series, timestamp and the gateway's sequence number), so a resent batch is stored once.
+* Data collection's late window ([ADR 0059][adr-0059]) is at least 24 hours, longer than any upgrade window, so data buffered through the stop is accepted, not refused as `beyond_late_window`.
+* The install guide states the requirement on a gateway: a local store for at least 24 hours of its signals, resend with backoff on `503` and on network errors, and in-order resend per series. An MQTT broker that NorthMES reads from runs outside the NorthMES stack, with persistent sessions and QoS 1, so it holds messages while the adapter is down.
+* An adapter that polls a machine, such as OPC UA, runs as its own process role or on an edge host with a local buffer, not inside `app`, so it keeps reading while `app` is stopped. The Data collection ADR decides where, before the adapter is built.
+* Operator stations are online only in release 1 ([ADR 0033][adr-0033]). During the stop an unsent entry stays on the screen and in local storage until the operator sends it, and paper reporting covers the window. The station outage queue that ADR 0033 moves to a later release makes the stop invisible to operators, and becomes more valuable because of this ADR.
+* Displays and boards only read. They show the maintenance page, then reconnect and refetch every query ([ADR 0018][adr-0018]), so they lose nothing.
+
 ### Consequences
 
 * Good, because almost every release rolls back by starting the previous image, without losing a write.
@@ -95,6 +107,7 @@ CI computes each release's rollback class and schema compatibility number from t
 * `migrate-timeout.int.test.ts`: a file that runs longer than its `statement_timeout` fails, and `northmes_meta.migration` does not record it.
 * `background-migration.int.test.ts`: a registered backfill runs in batches after start and survives a restart halfway; a release that needs it finished is refused by `migrate --check` until it is.
 * `infra/test/upgrade-crash.int.test.ts` (nightly): the upgrade is killed after the backup, during migrate and after the start; each time `upgrade.sh --resume` or `rollback.sh` ends with a working installation and no lost rows.
+* `infra/test/maintenance.int.test.ts`: with `app` stopped, a POST to the ingestion endpoint and to `/graphql` gets `503` with `Retry-After`, and a browser request for `/` gets the maintenance page.
 * `infra/test/upgrade.int.test.ts`: an older bundle and a bundle with a wrong digest are refused before the stop; an upgrade and a rollback each write their security event.
 * A large snapshot at five times pilot scale upgrades nightly inside the time budget of its release manifest.
 
@@ -117,7 +130,7 @@ CI computes each release's rollback class and schema compatibility number from t
 
 ## More information
 
-* Related ADRs: [0005][adr-0005], [0006][adr-0006], [0038][adr-0038], [0043][adr-0043], [0045][adr-0045], [0051][adr-0051], [0071][adr-0071], [0075][adr-0075], [0078][adr-0078].
+* Related ADRs: [0005][adr-0005], [0018][adr-0018], [0033][adr-0033], [0059][adr-0059], [0006][adr-0006], [0038][adr-0038], [0043][adr-0043], [0045][adr-0045], [0051][adr-0051], [0071][adr-0071], [0075][adr-0075], [0078][adr-0078].
 * GitLab migration ordering and post-deployment migrations: https://docs.gitlab.com/development/database/migration_ordering/.
 * Revisit if the length of upgrade windows becomes a problem for a plant; the blue/green switch is then the next step, because contract steps a release later already make it possible.
 
@@ -130,3 +143,6 @@ CI computes each release's rollback class and schema compatibility number from t
 [adr-0071]: 0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md
 [adr-0075]: 0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md
 [adr-0078]: 0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md
+[adr-0033]: 0033-online-operator-station-in-the-production-start-module.md
+[adr-0059]: 0059-time-series-storage-port-with-an-open-default-backend.md
+[adr-0018]: 0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md
