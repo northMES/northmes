@@ -9,6 +9,7 @@ import {
   Hammer,
   Handshake,
   Layers,
+  LayoutDashboard,
   ListChecks,
   type LucideIcon,
   Package,
@@ -23,6 +24,7 @@ import {
 import type { NavIconName } from '../../lib/nav-icon-names.ts';
 
 const icons: Readonly<Record<NavIconName, LucideIcon>> = {
+  LayoutDashboard,
   Database,
   Layers,
   Drill,

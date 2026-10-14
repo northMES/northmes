@@ -105,7 +105,7 @@ export function firstHref(module: ShellModule | undefined, plant: string): strin
   return first?.link({ plant }).href;
 }
 
-/** The href of a plant's first page, the first entry of the sidebar, until a plant has a home page. */
+/** The href of a plant's first page, the first entry of the sidebar: core's Dashboard (ADR 0078). */
 export function plantHome(modules: readonly ShellModule[], plant: string): string | undefined {
   return firstHref(
     modules.find((module) => sidebarLinks(module).length > 0),

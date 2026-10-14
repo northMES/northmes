@@ -79,6 +79,8 @@ export const shellModules: readonly ShellModule[] = [
     label: 'Core',
     order: 10,
     links: [
+      // The dashboard, the plant's landing page (ADR 0078, design shell-454).
+      { label: 'Dashboard', icon: 'LayoutDashboard', link: coreLinks.dashboard },
       // Master data holds the registers: Articles now, the others as they are built (D2 PL5).
       {
         label: 'Master data',

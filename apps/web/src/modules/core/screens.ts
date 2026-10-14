@@ -7,6 +7,7 @@ export { ArticleScreen } from './screens/article/index.ts';
 export { ArticleGroupScreen } from './screens/article-group/index.ts';
 export { ArticleGroupsScreen } from './screens/article-groups/index.ts';
 export { ArticlesScreen } from './screens/articles/index.ts';
+export { DashboardScreen } from './screens/dashboard/index.ts';
 export { EditArticleScreen } from './screens/edit-article/index.ts';
 export { EditRoleScreen } from './screens/edit-role/index.ts';
 export { NewArticleScreen } from './screens/new-article/index.ts';

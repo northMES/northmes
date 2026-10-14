@@ -84,7 +84,7 @@ describe("core's pages at the plant root (ADR 0074)", () => {
       ),
     );
     expect(within(main).getByRole('link', { name: 'Go to Plant A' }).getAttribute('href')).toBe(
-      '/plant-a/articles',
+      '/plant-a',
     );
     expect(crumbs()).toEqual(['Plant A', 'Page not found']);
     expect(document.title).toBe('Page not found · Plant A · NorthMES');
@@ -92,10 +92,10 @@ describe("core's pages at the plant root (ADR 0074)", () => {
 
   it("E04-S02 the way out of a core page that failed is core's first entry, or See all pages on that entry itself", () => {
     expect(wayOutOf(shellModules, { plant: 'plant-a' }, `/plant-a/articles/${articleId}`)).toEqual({
-      label: 'Go to Articles',
-      href: '/plant-a/articles',
+      label: 'Go to Dashboard',
+      href: '/plant-a',
     });
-    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/articles')).toEqual({
+    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a')).toEqual({
       label: 'See all pages',
       href: '/plant-a/all-pages',
     });

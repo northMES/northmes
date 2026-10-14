@@ -88,10 +88,18 @@ type EntryLinks<Pattern extends string, Entry extends LinkEntryDefinition> = Lin
   LinkNode<Pattern> &
   ModuleLinks<Pattern, ChildEntries<Entry>>;
 
-/** The builders of the entries below the route pattern Parent. */
+/** The route pattern of an entry at `path` below Parent: Parent itself for an empty path. */
+type EntryPattern<Parent extends string, Path extends string> = Path extends ''
+  ? Parent
+  : `${Parent}/${Path}`;
+
+/**
+ * The builders of the entries below the route pattern Parent. An entry with an empty path is its
+ * parent's own page, such as core's dashboard at the plant root (ADR 0078).
+ */
 export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefinitions> = {
   readonly [Name in keyof Entries & string]: EntryLinks<
-    `${Parent}/${Entries[Name]['path']}`,
+    EntryPattern<Parent, Entries[Name]['path']>,
     Entries[Name]
   >;
 };
@@ -202,7 +210,7 @@ function builders(parent: string, entries: LinkEntryDefinitions): Record<string,
       if (name in Function.prototype) {
         throw new Error(`Link entry ${name} under ${parent} has the name of a function property`);
       }
-      const pattern = `${parent}/${entry.path}`;
+      const pattern = entry.path === '' ? parent : `${parent}/${entry.path}`;
       const build = (params: Params, search: LinkSearch = {}) => ({
         to: pattern,
         params,

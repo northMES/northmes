@@ -9,7 +9,7 @@ import {
   type ParsedLocation,
   redirect,
 } from '@tanstack/react-router';
-import { newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
+import { dashboardSearch, newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch, urlSearchOf } from './article-list-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
@@ -41,8 +41,8 @@ function withoutCoreSegment(parent: AnyRoute, at: number) {
 }
 
 /**
- * The core module's routes under the shell's $plant route: the articles, the article groups, and
- * People in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
+ * The core module's routes under the shell's $plant route: the dashboard, the plant's landing page
+ * (ADR 0078), the articles, the article groups, and People in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
  * root, as /plant-a/articles, and the old URLs with core in them lead there (ADR 0074). Each route
  * takes its path from its entry in coreLinks, so a path is written once, in the link manifest (ADR
  * 0062); a list and a record's page are the index routes of their entries. Each search definition
@@ -50,6 +50,14 @@ function withoutCoreSegment(parent: AnyRoute, at: number) {
  */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: coreModuleId });
+  // The dashboard is the plant's landing page, at the plant root, with its open tab in the URL
+  // (ADR 0078, design shell-454).
+  const dashboardRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: '/',
+    validateSearch: dashboardSearch,
+    component: lazyScreen('DashboardScreen'),
+  });
   const articlesRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.articles).path,
@@ -131,6 +139,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
   });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
+    dashboardRoute,
     articlesRoute.addChildren([
       articleListRoute,
       newArticleRoute,
