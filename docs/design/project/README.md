@@ -21,9 +21,11 @@ The files moved from the project root into these folders on 2026-10-05. The root
 
 Standalone Claude Design closes on 2026-12-14, so this folder holds the project as it was exported on 2026-10-14, with the root copies and the project thumbnail left out. The etags in the table are the Claude Design etags of each file at approval; the repository copies are byte for byte the exported files. The pages load React, Babel, lucide and the fonts from unpkg and Google Fonts and their part files over `fetch`, so open them through a local web server, not from disk.
 
+New pages are Design artifacts built on the NorthMES design system (https://claude.ai/artifact/65vYss7WbTHUytBjyWEJHy). When Krister approves one, the design session exports the approved version's page source to its area folder as `<area>-<issue>-<slug>.html` and adds its row below with the artifact URL and the version id in place of an etag (ADR 0079 in `docs/adr/`).
+
 ## Pages
 
-| Folder | Page | Issue | Status | Approved etag |
+| Folder | Page | Issue | Status | Approved etag or artifact version |
 |---|---|---|---|---|
 | ui/ | ui-189-tokens.dc.html | #189 | approved by Krister Johansson, 2026-10-05; moved to ui/ on 2026-10-05, content unchanged | 1791221434821682 |
 | ui/ | ui-189-tokens-header.dc.html | #189 | approved as part of ui/ui-189-tokens.dc.html; moved to ui/ on 2026-10-05, content unchanged | 1791221434937191 |
