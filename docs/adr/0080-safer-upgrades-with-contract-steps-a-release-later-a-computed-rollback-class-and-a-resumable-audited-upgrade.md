@@ -71,7 +71,7 @@ CI computes each release's rollback class and schema compatibility number from t
 
 * `upgrade.sh` starts itself as a transient systemd unit (`systemd-run --unit northmes-upgrade`), so it survives the operator's connection dropping. It logs to the backup disk and records each finished step in `upgrade-state.json`. `upgrade.sh --status` shows the step, and `upgrade.sh --resume` continues from the last finished step. Every step is safe to run twice, and a step is recorded as finished only after its side effect: the migrate step through `northmes_meta.migration` and the advisory lock ([ADR 0006][adr-0006]); the backup by its label, which `--resume` looks up in the repository before it takes another; the security event by an idempotency key of the upgrade id and the step, so a replay writes no second event; the start of `app` and the smoke check by checking the running image digest and re-running the read-only smoke check; and `rollback.sh` by the same checks against the old image.
 * It takes the host lock of proposed [ADR 0075][adr-0075].
-* `upgrade.sh` and `rollback.sh` each write a security event through a `cli` audit context with the from and to versions, the bundle digest, the rollback class, the rehearsal result, the outcome and the operator's reason ([ADR 0051][adr-0051]).
+* `northmes migrate` writes a security event with the from and to versions and the image digest, so an upgrade on a platform without `upgrade.sh` is audited too. `upgrade.sh` and `rollback.sh` each write a security event through a `cli` audit context with the from and to versions, the bundle digest, the rollback class, the rehearsal result, the outcome and the operator's reason ([ADR 0051][adr-0051]).
 
 ### After the start
 
@@ -133,7 +133,7 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 
 * Related ADRs: [0005][adr-0005], [0018][adr-0018], [0033][adr-0033], [0059][adr-0059], [0006][adr-0006], [0038][adr-0038], [0043][adr-0043], [0045][adr-0045], [0051][adr-0051], [0071][adr-0071], [0075][adr-0075], [0079][adr-0079].
 * GitLab migration ordering and post-deployment migrations: https://docs.gitlab.com/development/database/migration_ordering/.
-* Revisit if the length of upgrade windows becomes a problem for a plant; the blue/green switch is then the next step, because contract steps a release later already make it possible.
+* Revisit if the length of upgrade windows becomes a problem for a plant; the blue/green switch is then the next step, because contract steps a release later already make it possible. A rolling upgrade of an `image`-class release over several replicas needs four more things first: a build check that accepts the previous build for one window, workers upgraded before API replicas, plugins in the image or on shared storage, and a nightly test that runs two versions at once against one database.
 
 [adr-0005]: 0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md
 [adr-0006]: 0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md
