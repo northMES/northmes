@@ -5,6 +5,7 @@ import {
   dashboardSizeUnits,
 } from '@northmes/core-contracts';
 import { type LayoutItem, moveElement, verticalCompactor } from 'react-grid-layout/core';
+import { readingOrder } from './dashboard-layout.ts';
 
 /** A widget of a tab in edit mode: what the API answers, without its type name. */
 export interface EditedWidget {
@@ -167,10 +168,10 @@ export function sizeText(size: EditedWidget['size']): string {
   return `${sizeName(size)} ${w} by ${h}`;
 }
 
-/** The layout as the JSON of core.saveDashboardTab's layout field (ADR 0078). */
+/** The layout as the JSON of core.saveDashboardTab's layout field, in reading order (ADR 0078). */
 export function layoutInput(widgets: readonly EditedWidget[]): string {
   return JSON.stringify(
-    widgets.map(({ id, type, size, x, y, title }) => ({
+    readingOrder(widgets).map(({ id, type, size, x, y, title }) => ({
       id,
       type: type.toLowerCase(),
       size: size.toLowerCase(),

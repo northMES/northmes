@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { cn } from 'cn';
-import { useId } from 'react';
+import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { demoChartBars, demoListItems, demoTableRows, demoValue } from './dashboard-demo-data.ts';
 import type { DashboardWidget as Widget } from './dashboard-tabs.graphql.ts';
 
+/** What a widget's content reads: its id, which seeds the demo data, and its title. */
+type Shown = Pick<Widget, 'id' | 'title'>;
+
 /** A Value widget: one number, large. */
-function ValueContent({ widget }: { readonly widget: Widget }) {
+function ValueContent({ widget }: { readonly widget: Shown }) {
   return (
     <p data-testid="widget-value" className="font-mono text-3xl font-semibold tabular-nums">
       {demoValue(widget.id)}
@@ -15,7 +18,7 @@ function ValueContent({ widget }: { readonly widget: Widget }) {
 }
 
 /** A List widget: fictional production orders, each with its article. */
-function ListContent({ widget }: { readonly widget: Widget }) {
+function ListContent({ widget }: { readonly widget: Shown }) {
   return (
     <ul className="flex flex-col divide-y divide-border">
       {demoListItems(widget.id).map(({ order, article }) => (
@@ -29,7 +32,7 @@ function ListContent({ widget }: { readonly widget: Widget }) {
 }
 
 /** A Table widget: fictional rows under named columns. */
-function TableContent({ widget }: { readonly widget: Widget }) {
+function TableContent({ widget }: { readonly widget: Shown }) {
   return (
     <table aria-label={widget.title} className="w-full text-left">
       <thead className="text-muted-foreground">
@@ -63,7 +66,7 @@ function TableContent({ widget }: { readonly widget: Widget }) {
  * reader hears the data the bars draw (WCAG 1.1.1). Chart colours and a chart library are open
  * (design shell-454, question 7), so the bars take the primary colour.
  */
-function ChartContent({ widget }: { readonly widget: Widget }) {
+function ChartContent({ widget }: { readonly widget: Shown }) {
   const bars = demoChartBars(widget.id);
   const top = Math.max(...bars.map(({ value }) => value));
   const label = `${widget.title}, demo data: ${bars.map(({ label, value }) => `${label} ${value}`).join(', ')}`;
@@ -86,18 +89,22 @@ const contents = {
   CHART: ChartContent,
 } as const;
 
+export interface DashboardWidgetProps {
+  readonly widget: Pick<Widget, 'id' | 'type' | 'title'>;
+  readonly className?: string;
+  /** Before the title in edit mode: the move button (design shell-454, A7). */
+  readonly leading?: ReactNode;
+  /** After the Demo badge in edit mode: the Widget actions menu. */
+  readonly trailing?: ReactNode;
+}
+
 /**
  * One widget of a tab: a region named by its title, with a Demo badge, since release 1's four
  * types show fictional data (design shell-454, question 15). In the grid it fills its cell and
- * scrolls inside; in the one-column list its height grows with its content (WCAG 1.4.10).
+ * scrolls inside; in the one-column list its height grows with its content (WCAG 1.4.10). In edit
+ * mode its border is dashed, with the move button before the title and Widget actions after it.
  */
-export function DashboardWidget({
-  widget,
-  className,
-}: {
-  readonly widget: Widget;
-  readonly className?: string;
-}) {
+export function DashboardWidget({ widget, className, leading, trailing }: DashboardWidgetProps) {
   const titleId = useId();
   const Content = contents[widget.type];
   return (
@@ -108,11 +115,15 @@ export function DashboardWidget({
         className,
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h2 id={titleId} className="text-sm leading-snug font-semibold">
+      <div className="flex items-start gap-2">
+        {leading}
+        <h2 id={titleId} className="mr-auto self-center text-sm leading-snug font-semibold">
           {widget.title}
         </h2>
-        <Badge variant="outline">Demo</Badge>
+        <Badge variant="outline" className="self-center">
+          Demo
+        </Badge>
+        {trailing}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <Content widget={widget} />

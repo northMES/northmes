@@ -328,7 +328,7 @@ describe('edit mode of a dashboard tab (design shell-454, option A)', () => {
     await user.click(screen.getByRole('tab', { name: 'My shift' }));
 
     const ask = await screen.findByRole('alertdialog', { name: 'Discard your changes?' });
-    await user.click(within(ask).getByRole('button', { name: 'Keep editing' }));
+    await user.click(within(ask).getByRole('button', { name: 'Cancel' }));
     expect(router.state.location.search).toEqual({ tab: shiftOverview.id });
 
     await user.click(screen.getByRole('tab', { name: 'My shift' }));
