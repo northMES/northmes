@@ -267,6 +267,45 @@ describe('northmes company', () => {
     expect(await companyRolesOf(answer.adminUserId, id)).toEqual(['core-company-admin']);
   });
 
+  it('E05-S14 with the organization written and no core rows, a rerun naming another admin exits 3 and gives nobody the role', {
+    timeout: 60_000,
+  }, async () => {
+    const id = randomUUIDv7();
+    await createCompany(['--id', id]);
+    await queryAsCore(db.ownerUrl, 'delete from core.role_assignment where company_id = $1', [id]);
+    await queryAsCore(db.ownerUrl, 'delete from core.role where company_id = $1', [id]);
+    await queryAsCore(db.ownerUrl, 'delete from core.company where id = $1', [id]);
+    await queryAsCore(db.ownerUrl, 'delete from core.scope where id = $1', [id]);
+    const other = freshUsername();
+
+    const rerun = await runCli(
+      [
+        'company',
+        'create',
+        '--id',
+        id,
+        '--name',
+        'Acme AB',
+        '--admin-username',
+        other,
+        '--admin-email',
+        `${other}@example.test`,
+        '--reason',
+        'New customer',
+      ],
+      env,
+    );
+
+    expect(rerun.code).toBe(3);
+    expect(rerun.log.join('\n')).toContain(`An earlier run under ${id} named another admin`);
+    expect(
+      await queryAsCore(db.ownerUrl, 'select id from core.company where id = $1', [id]),
+    ).toEqual([]);
+    expect(
+      await queryAsCore(db.ownerUrl, 'select id from auth."user" where username = $1', [other]),
+    ).toEqual([]);
+  });
+
   it('E05-S14 an existing username gets the Company admin role and no new password', {
     timeout: 60_000,
   }, async () => {

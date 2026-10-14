@@ -214,13 +214,22 @@ export class AuthService {
     return { id: user.id, email: user.email, name: user.name, banned: user.banned === true };
   }
 
+  /** The id of the Better Auth organization with this slug, or undefined when there is none. */
+  async organizationBySlug(slug: string): Promise<string | undefined> {
+    const { adapter } = await this.betterAuth.auth.$context;
+    const found = await adapter.findOne<{ id: string }>({
+      model: 'organization',
+      where: [{ field: 'slug', value: slug }],
+    });
+    return found?.id;
+  }
+
   /**
-   * The id of the Better Auth organization with this slug, which this call creates with the user
-   * as its owner member when there is none (ADR 0066). The CLI calls it on the server, where the
-   * organization plugin's rule that users create no organization does not apply. A rerun after a
-   * failure finds the organization of the first run by its slug, the company's id.
+   * Creates a Better Auth organization with the user as its owner member and returns its id (ADR
+   * 0066). The CLI calls it on the server, where the organization plugin's rule that users create
+   * no organization does not apply.
    */
-  async ensureOrganization({
+  async createOrganization({
     name,
     slug,
     ownerId,
@@ -229,12 +238,6 @@ export class AuthService {
     readonly slug: string;
     readonly ownerId: string;
   }): Promise<string> {
-    const { adapter } = await this.betterAuth.auth.$context;
-    const found = await adapter.findOne<{ id: string }>({
-      model: 'organization',
-      where: [{ field: 'slug', value: slug }],
-    });
-    if (found) return found.id;
     const created = await this.betterAuth.auth.api.createOrganization({
       body: { name, slug, userId: ownerId },
     });

@@ -154,16 +154,26 @@ export class AdministrationService {
       }
       return { companyId, name, adminUserId: found.id, adminUsername, replayed: true };
     }
+    // A first run that stopped after Better Auth's writes left the organization, owned by its
+    // admin. A rerun under the id finishes it only for that admin, so Better Auth and core never
+    // disagree about who administers the company.
+    const firstRunOrganization = await this.auth.organizationBySlug(companyId);
+    if (
+      firstRunOrganization &&
+      (!found || !(await this.auth.isMember(found.id, firstRunOrganization)))
+    ) {
+      throw new AdministrationRefused(
+        `An earlier run under ${companyId} named another admin. Give that admin, or another --id.`,
+      );
+    }
     const { admin, password } = await this.#adminAccount(found, {
       username: adminUsername,
       email: input.adminEmail,
       ...(input.adminName ? { name: input.adminName } : {}),
     });
-    const organizationId = await this.auth.ensureOrganization({
-      name,
-      slug: companyId,
-      ownerId: admin.id,
-    });
+    const organizationId =
+      firstRunOrganization ??
+      (await this.auth.createOrganization({ name, slug: companyId, ownerId: admin.id }));
     await this.#inCompanies([companyId], async (tx) => {
       // Two runs with one id wait for each other, so only one of them writes the company.
       await sql`select pg_advisory_xact_lock(hashtextextended(${`core.create-company:${companyId}`}, 0))`.execute(
