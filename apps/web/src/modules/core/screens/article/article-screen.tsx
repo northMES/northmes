@@ -12,9 +12,7 @@ import { languageName } from '../../../../ui/lib/languages.ts';
 import type { Article } from '../../article.graphql.ts';
 import { plantsLabel } from '../../article-plants.ts';
 import { useArticle } from '../../use-article.tsx';
-import { useViewer } from '../../use-viewer.ts';
 import { ArticleActions } from './article-actions.tsx';
-import { ArticlePlants } from './article-plants.tsx';
 
 /** A value of a definition list, or its skeleton while the article loads. */
 function Value({
@@ -174,15 +172,14 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
 /**
  * An article's page (design ui-222, DE1): its number in the h1 with its name beside it, and its
  * sections, with Archive and Edit in the page actions; an archived article carries the Archived
- * badge and offers Restore. A user who holds core.article:assign at the company also gets the
- * Plants section of an active article (ADR 0073). While it loads the h1 reads Article (A12); an
+ * badge and offers Restore. Its plants show in Origin, and Edit changes them (ADR 0073). While
+ * it loads the h1 reads Article (A12); an
  * article that does not exist, or that the plant cannot see, shows the not-found state (ST7), and
  * a failed load an error with Try again (ST8).
  */
 export function ArticleScreen() {
   const { plant } = useShell();
   const { article, state, reload } = useArticle();
-  const assigns = useViewer().canAtCompany('core.article:assign');
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
@@ -205,9 +202,6 @@ export function ArticleScreen() {
         </p>
       )}
       <ArticleSections article={article} />
-      {assigns && article !== undefined && article.archivedAt === null && (
-        <ArticlePlants key={article.id} article={article} reload={reload} />
-      )}
     </PageFrame>
   );
 }

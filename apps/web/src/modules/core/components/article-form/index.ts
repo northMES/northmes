@@ -6,4 +6,5 @@ export {
   type ArticleValues,
   articleFormFields,
 } from './article-form.tsx';
-export { commandFailure, showSaveError } from './article-save-errors.ts';
+export { ArticleFormPlants } from './article-form-plants.tsx';
+export { commandFailure, showPlantsSaveError, showSaveError } from './article-save-errors.ts';

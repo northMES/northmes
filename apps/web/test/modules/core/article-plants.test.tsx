@@ -6,7 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreArchiveArticle } from '../../../src/modules/core/screens/article/archive-article.graphql.ts';
-import { CoreSetArticlePlants } from '../../../src/modules/core/screens/article/set-article-plants.graphql.ts';
+import { CoreSetArticlePlants } from '../../../src/modules/core/screens/edit-article/set-article-plants.graphql.ts';
 import { CoreUpdateArticle } from '../../../src/modules/core/screens/edit-article/update-article.graphql.ts';
 import { CoreCreateArticle } from '../../../src/modules/core/screens/new-article/create-article.graphql.ts';
 import { viewerQuery } from './access-fixtures.ts';

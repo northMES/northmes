@@ -12,18 +12,37 @@ import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import type { Article } from '../../article.graphql.ts';
 import {
   ArticleForm,
+  ArticleFormPlants,
   type ArticleValues,
   articleFormFields,
   commandFailure,
+  showPlantsSaveError,
   showSaveError,
 } from '../../components/article-form/index.ts';
+import type { PlantsChoice } from '../../components/article-plants-field/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
 import { useArticle } from '../../use-article.tsx';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer } from '../../use-viewer.ts';
+import { CoreSetArticlePlants } from './set-article-plants.graphql.ts';
 import { CoreUpdateArticle } from './update-article.graphql.ts';
+
+/** The choice that an article's saved plants make. */
+function choiceOf(article: Pick<Article, 'allPlants' | 'plants'>): PlantsChoice {
+  return { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) };
+}
+
+/** Whether two choices of plants name the same plants, in any order. */
+function sameChoice(a: PlantsChoice, b: PlantsChoice): boolean {
+  if (a.allPlants !== b.allPlants || a.plants.length !== b.plants.length) return false;
+  const named = new Set(a.plants);
+  return b.plants.every((slug) => named.has(slug));
+}
 
 /** The form's values for a saved article. */
 function formValues(article: Article) {
   return {
+    plants: { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) },
     code: article.code,
     name: article.name,
     stockUnit: article.stockUnit,
@@ -48,19 +67,25 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   const navigate = useNavigate();
   // The version the form was filled from; only a save reads it, so it is no render state.
   const expectedVersion = useRef(article.version);
+  // The plants the saved article has; a save sends core.setArticlePlants only when they differ.
+  const savedPlants = useRef(choiceOf(article));
   const [conflict, setConflict] = useState(false);
   // An archived article refuses changes, so its form offers Restore article (DE31).
   const [archived, setArchived] = useState(article.archivedAt !== null);
   const form = useZodForm(articleFormFields, {
     defaultValues: formValues(article),
   });
+  const assigns = useViewer().canAtCompany('core.article:assign');
+  const places = usePlaces({ skip: !assigns });
   const [update] = useMutation(CoreUpdateArticle);
+  const [setPlants] = useMutation(CoreSetArticlePlants);
   const [restore] = useMutation(CoreRestoreArticle);
 
   const save = async (values: ArticleValues) => {
     setConflict(false);
     setArchived(false);
-    const { code, name, stockUnit, note, translations, articleGroupId } = values;
+    const { code, name, stockUnit, note, translations, articleGroupId, plants } = values;
+    let saved: { readonly code: string; readonly version: number };
     try {
       const { data } = await update({
         variables: {
@@ -80,11 +105,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
         },
       });
       if (!data) return;
-      announce(`Article ${data.coreUpdateArticle.code} saved`);
-      await navigate({
-        to: coreLinks.articles.article({ plant, articleId: article.id }).href,
-        replace: true,
-      });
+      saved = data.coreUpdateArticle;
     } catch (error) {
       if (hasErrorCode(error, 'core.version_conflict')) {
         setConflict(true);
@@ -95,7 +116,42 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
         return;
       }
       showSaveError(form, error, values);
+      return;
     }
+    // The rest of the article is saved, so a refused plants change goes on from its version.
+    expectedVersion.current = saved.version;
+    if (assigns && plants !== undefined && !sameChoice(plants, savedPlants.current)) {
+      try {
+        const { data } = await setPlants({
+          variables: {
+            input: {
+              id: article.id,
+              expectedVersion: saved.version,
+              allPlants: plants.allPlants,
+              plants: plants.allPlants ? [] : [...plants.plants],
+            },
+          },
+        });
+        if (!data) return;
+        savedPlants.current = choiceOf(data.coreSetArticlePlants);
+      } catch (error) {
+        if (hasErrorCode(error, 'core.version_conflict')) {
+          setConflict(true);
+          return;
+        }
+        if (hasErrorCode(error, 'core.archived')) {
+          setArchived(true);
+          return;
+        }
+        showPlantsSaveError(form, error, values, places.company?.name ?? 'the company');
+        return;
+      }
+    }
+    announce(`Article ${saved.code} saved`);
+    await navigate({
+      to: coreLinks.articles.article({ plant, articleId: article.id }).href,
+      replace: true,
+    });
   };
 
   // Reload article: the saved values and their version replace the typed ones, and focus moves to
@@ -114,6 +170,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
     if (saved === undefined) return;
     form.reset(formValues(saved));
     expectedVersion.current = saved.version;
+    savedPlants.current = choiceOf(saved);
     setConflict(false);
     // reset drops the field refs that setFocus reads until the next render, so focus goes by id.
     document.getElementById(fieldId('code'))?.focus();
@@ -160,13 +217,17 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
       conflict={conflict ? { onReload } : undefined}
       archived={archived ? { onRestore } : undefined}
       currentGroup={article.articleGroup}
-    />
+    >
+      {assigns && <ArticleFormPlants form={form} options={places.plants} />}
+    </ArticleForm>
   );
 }
 
 /**
  * The edit page of an article (design ui-222, DE7): the article form filled in, validated with the
- * identity fields of core.updateArticle. A saved change opens the article's page in place of the
+ * identity fields of core.updateArticle, and for a user who holds core.article:assign at the
+ * company the Plants field, whose changed choice goes through core.setArticlePlants on the version
+ * the update answered (ADR 0073). A saved change opens the article's page in place of the
  * form and the polite region says "Article AX-500 saved"; a version conflict keeps the typed values
  * and offers Reload article (DE19), and an archived article keeps them and offers Restore article
  * (DE31).
