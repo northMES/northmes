@@ -4988,6 +4988,7 @@ Acceptance criteria:
 - The upgrade matrix restores the snapshot of every release from the candidate's `minimumUpgradeFrom`, runs the candidate's `migrate`, boots it, runs the smoke check and data assertions and loads the example plugins; it runs on the release-please pull request and nightly.
 - The sorted `pg_dump --schema-only` of a fresh install equals that of every upgraded snapshot, and a difference is printed.
 - A snapshot older than `minimumUpgradeFrom` is refused by `migrate --check`.
+- `pnpm upgrade:seed`, `pnpm upgrade:test`, `pnpm upgrade:path` and `pnpm upgrade:stack` run the same tests locally, as [11 quality and testing](11-quality-and-testing.md#upgrade-tests) describes; pull requests that change a `migrations/` folder, the runner or a seed fixture run the upgrade test from the latest release.
 
 Tests first:
 

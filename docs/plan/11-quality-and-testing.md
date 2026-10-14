@@ -340,6 +340,85 @@ The nightly workflow tests what an on-prem install depends on. What each test pr
 | hostcheck | Fixture inputs (disk at 91 percent, a backup 27 hours old, a certificate expiring in 20 days) give one state change and one mail each, captured by Mailpit; a `host.json` 16 minutes old adds a stale entry to readiness |
 | Offline bundle (release job) | The amd64 bundle loads in a fresh VM or Docker-in-Docker with `--network none`, the preflight passes, `up --pull never` starts the stack and `/health/ready` returns 200 through Caddy |
 
+## Upgrade tests
+
+This section is the test plan for upgrades: which versions an installation may upgrade from, what CI runs on each pull request, release and night, and how a contributor runs the same tests on a laptop. The rules come from proposed [ADR 0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md) and [ADR 0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md); the ops tests above stay as they are.
+
+### Which versions a release upgrades from
+
+- Each release manifest carries `minimumUpgradeFrom`. In 0.x it is the `.0` of the oldest of the 3 minors before the release. A release accepts every patch and every candidate of a minor from there up to the release itself.
+- Patch releases add no migrations ([ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)), so every patch of a minor has the same schema, and a patch upgrades from every version its minor's `.0` upgrades from.
+- An upgrade stop raises `minimumUpgradeFrom` to the stop. The first planned stop is 1.0, which squashes the 0.x migrations, so 1.1 upgrades only from 1.0.x.
+- `northmes migrate --check` refuses a version below `minimumUpgradeFrom` before downtime and prints the path, for example "0.3.2, then the latest 0.4.x, then 0.7.0". `pnpm upgrade:path <from> <to>` prints the same path from the release manifests, for the upgrade guide and for support.
+
+| Installed | Target | Allowed | Path |
+|---|---|---|---|
+| 0.6.3 | 0.7.0 | yes | one step |
+| 0.4.1 | 0.7.0 | yes | one step, the oldest minor in the window |
+| 0.3.2 | 0.7.0 | no | latest 0.4.x, then 0.7.0 |
+| 0.7.0-rc.2 | 0.7.0 | yes | one step; the matrix covers the last candidate to the final |
+| 0.7.0 | 0.6.3 | no | a downgrade is `rollback.sh` only |
+| 0.8.1 | 1.0.0 | yes, if 0.8 is in 1.0's window | one step |
+| 0.9.2 | 1.1.0 | no | latest 1.0.x, then 1.1.0 (the 1.0 stop) |
+
+### Seeded snapshots
+
+A snapshot is a database as a real installation of a release left it, so an upgrade test starts from what plants have, not from what today's code would create.
+
+- `pnpm upgrade:seed` builds one at a git tag: it starts that tag's image against a fresh Postgres, runs `northmes migrate`, creates two companies with plants through the CLI, and writes the fixture data through that release's own commands, so audit rows, versions and outbox events are what the release wrote. The fixture covers every module's tables, archived rows, the example plugins' tables, a finished and an unfinished background migration once those exist, and data in the edge cases the migrations touch (nulls, long codes, several plant time zones).
+- It writes `northmes-<version>-seed.dump` (`pg_dump -Fc`) and `northmes-<version>-seed.json`: the version, the image digest, row counts per table and the answers to the golden queries below.
+- The release workflow builds the snapshot of each release and candidate and attaches it, attested like the other assets. Before the first release, the matrix has no history, and `pnpm upgrade:seed --ref main` builds one from `main` for local use.
+- A large snapshot, five times pilot scale (orders, job orders, audit rows, time series once Data collection exists), is built by the same script with `--scale 5` and kept as a nightly cache artifact, not a release asset.
+
+### What an upgrade test checks
+
+An upgrade test restores a snapshot into a Testcontainers Postgres, runs the candidate's `northmes migrate --check` and `northmes migrate`, boots the candidate and then checks:
+
+1. Every migration applied, and a second `migrate` applies nothing.
+2. Fresh equals upgraded: the normalized `pg_dump --schema-only` of the upgraded database equals that of a fresh install of the candidate, including grants, policies, triggers and function bodies. The normalization sorts objects and drops `northmes_meta` rows; any difference fails and is printed as a diff.
+3. Data survives: row counts per table equal the snapshot's, except where the release's manifest declares a change.
+4. Golden queries: a fixed set of read-only GraphQL and REST queries in `test/upgrade/golden/`, run as fixture users of both companies, return the answers stored in the snapshot's JSON after normalizing ids that may change. A difference fails unless the release declares it.
+5. Isolation holds: a user of company A still reads nothing of company B through the API and through `nm_app` in SQL.
+6. The read-only smoke check of ADR 0079 passes, the example plugins load, and `northmes_meta.release` holds the candidate's version.
+7. The previous image still boots on the upgraded schema for a release of the `image` class, which proves the computed rollback class.
+
+### What runs when
+
+| When | What runs | Blocks |
+|---|---|---|
+| Every pull request | Migration lint and markers; the computed rollback class; `migrate.test.ts` on a fresh database; the `migrate --check` path tests with fixture manifests | merge |
+| Pull requests that change a `migrations/` folder, the runner or a seed fixture | The upgrade test from the latest release's snapshot to the pull request, checks 1 to 7 | merge |
+| The release-please pull request and every candidate | The full matrix: the latest snapshot of every minor from `minimumUpgradeFrom`, and the last candidate, to the release; the large snapshot within its time budget; `upgrade.sh` from N-1 to N through the real Compose file | the release |
+| Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, rehearsal, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
+| Before the pilot install, and before each customer's first upgrade of a minor | The rehearsal of ADR 0078 on the pilot-like VM or the customer's host, on a copy of their data | that upgrade |
+
+The matrix runs one job per "from" version in parallel, each with its own container, so its time is that of the slowest path, not the sum.
+
+### Failures the tests inject
+
+- A migration that fails halfway: the database stays at the backup label after `rollback.sh` (existing ops test).
+- The upgrade killed after the backup, during migrate and after the start: `upgrade.sh --resume` or `rollback.sh` ends with a working installation and no lost rows.
+- A migration over its time budget: it fails on `statement_timeout`, and `northmes_meta.migration` does not record it.
+- A bundle with a wrong digest, and an older bundle: refused before the stop.
+- An installed plugin whose range excludes the release: the upgrade stops before the maintenance page and names it.
+- A snapshot below `minimumUpgradeFrom`: `migrate --check` exits 1 with the path, and nothing changes.
+- A gateway posting during the stop: it gets `503` with `Retry-After`, and its resent batch is stored once afterwards.
+
+### Running the tests locally
+
+Every command runs from the repository root through pnpm ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)) and needs only Docker. Snapshots download from the GitHub release once and are cached in `.cache/upgrade-snapshots/`.
+
+| Command | What it does |
+|---|---|
+| `pnpm upgrade:test` | Upgrades the latest release's snapshot to the working tree and runs checks 1 to 7. A contributor who adds a migration runs it before opening the pull request. |
+| `pnpm upgrade:test --from 0.5.2` | The same from one version; `--from all` runs the whole window, `--from main` uses a snapshot built from `main`. |
+| `pnpm upgrade:test --large` | Uses the large snapshot and prints each migration's time against the budget. |
+| `pnpm upgrade:seed --ref v0.6.0` | Builds a snapshot from a tag, a branch or the working tree. |
+| `pnpm upgrade:path 0.3.2 0.7.0` | Prints the supported path. |
+| `pnpm upgrade:stack --from 0.6.1` | Starts the real Compose stack with the 0.6.1 images and its snapshot, builds the working tree's image, and runs `upgrade.sh` and then `rollback.sh` against it, as the nightly ops test does. |
+
+A failing local run leaves the containers up with `--keep`, and prints the connection string and the schema diff, so the contributor can inspect the database.
+
 ## Requirement ids and test evidence
 
 Tests carry requirement ids from the first test, because adding them later costs more than adding them now ([ADR 0051](../adr/0051-regulated-readiness-no-regret-rules.md), rule 19 in [15-regulated-readiness.md](15-regulated-readiness.md)). The id format is not decided yet, and because the rule applies from the first test, it is needed before the first test task (see [Open questions](#open-questions)). Until the maintainer fixes the format, a test name starts with the plan case id when one exists (TC1, CAL8) and otherwise with the story's plan id (E07-S05). With ids in place, a traceability matrix from requirement to test can be generated for a regulated customer's validation package.
