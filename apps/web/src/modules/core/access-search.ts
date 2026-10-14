@@ -31,3 +31,15 @@ export function newRoleSearch(raw: Record<string, unknown>): NewRoleSearch {
   const from = z.uuid().safeParse(raw.from);
   return from.success ? { from: from.data } : {};
 }
+
+/** The dashboard in the URL: its open tab by id, the first tab without one (design shell-454). */
+export interface DashboardSearch {
+  readonly tab?: string;
+}
+
+/** The URL search of the dashboard, for its route's validateSearch; a value that is no id falls back. */
+export function dashboardSearch(raw: Record<string, unknown>): DashboardSearch {
+  return typeof raw.tab === 'string' && raw.tab.length > 0 && raw.tab.length <= 64
+    ? { tab: raw.tab }
+    : {};
+}
