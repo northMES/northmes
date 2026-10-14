@@ -271,7 +271,34 @@ describe('the seed', () => {
     expect(await adminToken()).toEqual(expect.any(String));
   });
 
-  it('E05-S05 a second run of the seed adds no scope, company, plant, role or assignment', async () => {
+  it("ADR0078 the dev admin's dashboard at plant-a has the company's tab, plant A's tab and an own tab, each with widgets", async () => {
+    const token = await adminToken();
+
+    const tabsAt = async (plant: string) => {
+      const answer = await gqlClient(url, {
+        headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
+      }).send<{ coreDashboardTabs: { name: string; scope: string; widgets: unknown[] }[] }>(
+        '{ coreDashboardTabs { name scope widgets { id } } }',
+      );
+      return answer.data?.coreDashboardTabs.map(({ name, scope, widgets }) => [
+        name,
+        scope,
+        widgets.length > 0,
+      ]);
+    };
+
+    expect(await tabsAt('plant-a')).toEqual([
+      ['Company overview', 'COMPANY', true],
+      ['Shift overview', 'PLANT', true],
+      ['My shift', 'OWN', true],
+    ]);
+    expect(await tabsAt('plant-b')).toEqual([
+      ['Company overview', 'COMPANY', true],
+      ['My shift', 'OWN', true],
+    ]);
+  });
+
+  it('E05-S05 a second run of the seed adds no scope, company, plant, role, assignment or dashboard tab', async () => {
     // Core's owner role reads every role; nm_app reads only those of its read scopes.
     const counts = () =>
       queryAsCore(
@@ -280,7 +307,8 @@ describe('the seed', () => {
                 (select count(*)::int from core.company) as companies,
                 (select count(*)::int from core.plant) as plants,
                 (select count(*)::int from core.role) as roles,
-                (select count(*)::int from core.role_assignment) as assignments`,
+                (select count(*)::int from core.role_assignment) as assignments,
+                (select count(*)::int from core.dashboard_tab) as tabs`,
       );
     const before = await counts();
 
@@ -288,7 +316,10 @@ describe('the seed', () => {
 
     // The four default roles of core and planning that the company gets and the custom Operator,
     // and one role for each of the five dev users.
-    expect(before).toEqual([{ scopes: 3, companies: 1, plants: 2, roles: 5, assignments: 5 }]);
+    // The dashboard's company tab, plant A's tab and the dev admin's own tab.
+    expect(before).toEqual([
+      { scopes: 3, companies: 1, plants: 2, roles: 5, assignments: 5, tabs: 3 },
+    ]);
     expect(await counts()).toEqual(before);
   });
 });
