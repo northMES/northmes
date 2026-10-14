@@ -497,6 +497,29 @@ describe("an article's plants", () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
   });
 
+  it('ADR0073-W2 Edit article saves another change to an article without plants for a holder of core.article:assign, and leaves its plants as they are', async () => {
+    const user = userEvent.setup();
+    const unassigned = withPlants(article('AX-500', 'Axle 20 mm'), false, []);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href, [
+      articleQuery(unassigned),
+      assigner(),
+      companiesQuery(),
+      updateOf(
+        { ...unassigned, name: 'Axle 22 mm' },
+        { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
+      ),
+    ]);
+
+    const plantsSection = await screen.findByRole('region', { name: 'Plants' });
+    await within(plantsSection).findByRole('checkbox', { name: 'Plant A' });
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Axle 22 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+  });
+
   it('ADR0073-W2 Edit article lists a save without a plant in the error summary and sends nothing', async () => {
     const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm');
