@@ -22,7 +22,7 @@ On 2026-10-14 Krister Johansson asked for a thorough review of the upgrade plan,
 * Nobody records who upgraded what, the smoke check is undefined, and nothing watches the installation after it starts.
 * No test kills an upgrade halfway, and no test measures migration time on a large database.
 
-The upgrade path, the rehearsal and release candidates stay in proposed [ADR 0078][adr-0078]. This ADR covers the migration runner and lint of [ADR 0006][adr-0006], `upgrade.sh` and `rollback.sh` of [ADR 0045][adr-0045], the release manifest and the nightly tests.
+The upgrade path, the rehearsal and release candidates stay in proposed [ADR 0079][adr-0079]. This ADR covers the migration runner and lint of [ADR 0006][adr-0006], `upgrade.sh` and `rollback.sh` of [ADR 0045][adr-0045], the release manifest and the nightly tests.
 
 ## Decision drivers
 
@@ -45,7 +45,7 @@ Chosen option: "Keep the stop, and add contract steps a release later, a compute
 ### Contract steps one release later
 
 * A contract step never ships in the release whose code stops using the old shape. Release N stops reading and writing a column; release N+1 or later drops it. The previous image then still runs on the schema of every release that only expands, and its rollback starts the previous image with no restore and no lost write ([ADR 0045][adr-0045]).
-* A delayed contract step keeps the rule of [ADR 0045][adr-0045]: it bumps the schema compatibility number, and its release is of the `restore` class. To keep such releases rare, contract steps are batched: they wait for a release that is of the `restore` class anyway, or for an upgrade stop of proposed [ADR 0078][adr-0078], so most releases carry none and are of the `image` class.
+* A delayed contract step keeps the rule of [ADR 0045][adr-0045]: it bumps the schema compatibility number, and its release is of the `restore` class. To keep such releases rare, contract steps are batched: they wait for a release that is of the `restore` class anyway, or for an upgrade stop of proposed [ADR 0079][adr-0079], so most releases carry none and are of the `image` class.
 * A pull request that adds a `contract` file names the release whose code stopped using what it removes, and review checks it against the schema snapshot.
 * A release is of the `restore` class only when nothing else works: a Postgres major or extension update ([ADR 0005][adr-0005]), a third-party schema change without a compatible path (Better Auth's tables, BullMQ's data in Valkey under [ADR 0071][adr-0071]), or a fix that must rewrite data the previous code would misread. Its release notes say why.
 * Postgres major upgrades have their own procedure and window, and never share one with a NorthMES upgrade.
@@ -56,8 +56,8 @@ CI computes each release's rollback class and schema compatibility number from t
 
 ### A short window
 
-* A backfill over more than a fixed row count is not a migration file. A migration file registers it as a batched, idempotent background job that runs after `app` starts, in batches with a pause between them, and `northmes_meta.background_migration` records its progress. A later release whose code needs it finished declares that, and `migrate --check` refuses until it has finished, naming it. Such a release is an upgrade stop under proposed [ADR 0078][adr-0078].
-* Each release manifest carries a migration time budget measured on the large nightly snapshot. The rehearsal of proposed [ADR 0078][adr-0078] prints its own time beside the budget, and the operator plans the window from it.
+* A backfill over more than a fixed row count is not a migration file. A migration file registers it as a batched, idempotent background job that runs after `app` starts, in batches with a pause between them, and `northmes_meta.background_migration` records its progress. A later release whose code needs it finished declares that, and `migrate --check` refuses until it has finished, naming it. Such a release is an upgrade stop under proposed [ADR 0079][adr-0079].
+* Each release manifest carries a migration time budget measured on the large nightly snapshot. The rehearsal of proposed [ADR 0079][adr-0079] prints its own time beside the budget, and the operator plans the window from it.
 * The runner sets one deadline for the whole run, the start time plus the release's budget times a safety factor, and before each file and each statement sets `statement_timeout` to the time left until that deadline. A run that passes the deadline fails, however its time is spread over statements and files, and `rollback.sh` takes over, instead of holding the plant for an unknown time.
 * Before stopping `app`, `upgrade.sh` lets running jobs finish inside the 45 s grace period of [ADR 0043][adr-0043]. Jobs still queued in Valkey carry `schema_version` ([ADR 0045][adr-0045]), and the new version accepts the previous version's payloads.
 
@@ -78,7 +78,7 @@ CI computes each release's rollback class and schema compatibility number from t
 * The smoke check reads only: `/health/ready`, sign-in with a dedicated health account that holds no role, one read per module through the API, the web's module list and a realtime connection. It writes no command row.
 * `upgrade.sh` watches for 30 minutes after the smoke check: readiness, the error rate in the logs and the browser error reports of [ADR 0043][adr-0043]. It prints what it saw and recommends `rollback.sh` on a failure, without running it.
 * For the `image` class, `rollback.sh` starts the previous image at any time until the next upgrade. For the `restore` class, the operator sets a deadline at upgrade time, by default the start of the next shift; until then `rollback.sh` restores the backup, and after it `rollback.sh` refuses and names the forward fix, within the 72-hour patch target of [ADR 0038][adr-0038], so a restore never silently drops a day of production.
-* The rehearsal copy of proposed [ADR 0078][adr-0078] holds production data: it stays on a host the customer controls, on an encrypted disk, and is removed on exit and again at the start of the next rehearsal.
+* The rehearsal copy of proposed [ADR 0079][adr-0079] holds production data: it stays on a host the customer controls, on an encrypted disk, and is removed on exit and again at the start of the next rehearsal.
 
 ### Machine data, stations and displays during the stop
 
@@ -131,7 +131,7 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 
 ## More information
 
-* Related ADRs: [0005][adr-0005], [0018][adr-0018], [0033][adr-0033], [0059][adr-0059], [0006][adr-0006], [0038][adr-0038], [0043][adr-0043], [0045][adr-0045], [0051][adr-0051], [0071][adr-0071], [0075][adr-0075], [0078][adr-0078].
+* Related ADRs: [0005][adr-0005], [0018][adr-0018], [0033][adr-0033], [0059][adr-0059], [0006][adr-0006], [0038][adr-0038], [0043][adr-0043], [0045][adr-0045], [0051][adr-0051], [0071][adr-0071], [0075][adr-0075], [0079][adr-0079].
 * GitLab migration ordering and post-deployment migrations: https://docs.gitlab.com/development/database/migration_ordering/.
 * Revisit if the length of upgrade windows becomes a problem for a plant; the blue/green switch is then the next step, because contract steps a release later already make it possible.
 
@@ -143,7 +143,7 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 [adr-0051]: 0051-regulated-readiness-no-regret-rules.md
 [adr-0071]: 0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md
 [adr-0075]: 0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md
-[adr-0078]: 0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md
+[adr-0079]: 0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md
 [adr-0033]: 0033-online-operator-station-in-the-production-start-module.md
 [adr-0059]: 0059-time-series-storage-port-with-an-open-default-backend.md
 [adr-0018]: 0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md

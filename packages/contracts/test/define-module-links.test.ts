@@ -160,6 +160,18 @@ describe('defineModuleLinks', () => {
     expect(Object.keys(core)).toEqual(['articles', 'settings']);
   });
 
+  it("ADR0078 an entry with an empty path is its parent's own page, such as core's dashboard at the plant root", () => {
+    const core = defineCoreLinks({ dashboard: { path: '' } });
+
+    expect(core.dashboard({ plant: 'plant-a' }, { tab: 't1' })).toEqual({
+      to: '/$plant',
+      params: { plant: 'plant-a' },
+      search: { tab: 't1' },
+      href: '/plant-a?tab=t1',
+    });
+    expect(linkEntry(core.dashboard)).toEqual({ path: '', pattern: '/$plant' });
+  });
+
   it('E04-S02 a manifest without a settings section has no settings entry, and an entry named settings beside a settings section throws', () => {
     expect('settings' in links).toBe(false);
     expect(() =>

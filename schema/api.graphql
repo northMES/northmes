@@ -246,6 +246,44 @@ type CreatedUser {
   user: User!
 }
 
+type DashboardTab {
+  id: ID!
+  name: String!
+  scope: DashboardTabScope!
+  version: Int!
+  widgets: [DashboardWidget!]!
+}
+
+enum DashboardTabScope {
+  COMPANY
+  OWN
+  PLANT
+}
+
+type DashboardWidget {
+  id: ID!
+  size: DashboardWidgetSize!
+  title: String!
+  type: DashboardWidgetType!
+  x: Int!
+  y: Int!
+}
+
+enum DashboardWidgetSize {
+  LARGE
+  MEDIUM
+  SMALL
+  TALL
+  WIDE
+}
+
+enum DashboardWidgetType {
+  CHART
+  LIST
+  TABLE
+  VALUE
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -410,6 +448,7 @@ type Query {
     unassigned: Boolean
   ): ArticleConnection!
   coreCompanies: [Company!]!
+  coreDashboardTabs: [DashboardTab!]!
   corePermissionCatalog(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.

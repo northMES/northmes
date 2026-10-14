@@ -342,7 +342,7 @@ The nightly workflow tests what an on-prem install depends on. What each test pr
 
 ## Upgrade tests
 
-This section is the test plan for upgrades: which versions an installation may upgrade from, what CI runs on each pull request, release and night, and how a contributor runs the same tests on a laptop. The rules come from proposed [ADR 0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md) and [ADR 0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md); the ops tests above stay as they are.
+This section is the test plan for upgrades: which versions an installation may upgrade from, what CI runs on each pull request, release and night, and how a contributor runs the same tests on a laptop. The rules come from proposed [ADR 0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md) and [ADR 0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md); the ops tests above stay as they are.
 
 ### Which versions a release upgrades from
 
@@ -379,7 +379,7 @@ An upgrade test restores a snapshot into a Testcontainers Postgres, runs the can
 3. Data survives: row counts per table equal the snapshot's, except where the release's manifest declares a change.
 4. Golden queries: a fixed set of read-only GraphQL and REST queries in `test/upgrade/golden/`, run as fixture users of both companies, return the answers stored in the snapshot's JSON after normalizing ids that may change. A difference fails unless the release declares it.
 5. Isolation holds: a user of company A still reads nothing of company B through the API and through `nm_app` in SQL.
-6. The read-only smoke check of ADR 0079 passes, the example plugins load, and `northmes_meta.release` holds the candidate's version.
+6. The read-only smoke check of ADR 0080 passes, the example plugins load, and `northmes_meta.release` holds the candidate's version.
 7. The previous image still boots on the upgraded schema for a release of the `image` class, which proves the computed rollback class.
 
 ### What runs when
@@ -390,7 +390,7 @@ An upgrade test restores a snapshot into a Testcontainers Postgres, runs the can
 | Pull requests that change a `migrations/` folder, the runner or a seed fixture | The upgrade test from the latest release's snapshot to the pull request, checks 1 to 7 | merge |
 | The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; `upgrade.sh` from N-1 to N through the real Compose file | the release |
 | Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, rehearsal, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
-| Before the pilot install, and before every upgrade to a release of the `restore` class | The rehearsal of ADR 0078 on the pilot-like VM or the customer's host, on a copy of their data; optional, and recommended, for the `image` class | that upgrade |
+| Before the pilot install, and before every upgrade to a release of the `restore` class | The rehearsal of ADR 0079 on the pilot-like VM or the customer's host, on a copy of their data; optional, and recommended, for the `image` class | that upgrade |
 
 The matrix runs one job per "from" version in parallel, each with its own container, so its time is that of the slowest path, not the sum.
 

@@ -48,12 +48,23 @@ describe('coreLinks', () => {
     );
   });
 
+  it("ADR0078 coreLinks builds the href of a plant's dashboard at the plant root, with its open tab", () => {
+    expect(coreLinks.dashboard({ plant: 'plant-a' }).href).toBe('/plant-a');
+    expect(coreLinks.dashboard({ plant: 'plant-a' }, { tab: 't1' }).href).toBe('/plant-a?tab=t1');
+  });
+
   it('E04-S02 coreLinks builds the hrefs of the people of a plant and their Add role, and has no plant users or roles', () => {
     expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/people');
     expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe('/plant-a/people/roles/new');
     expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
       '/plant-a/people/u1/roles/new',
     );
-    expect(Object.keys(coreLinks)).toEqual(['articles', 'articleGroups', 'people', 'settings']);
+    expect(Object.keys(coreLinks)).toEqual([
+      'dashboard',
+      'articles',
+      'articleGroups',
+      'people',
+      'settings',
+    ]);
   });
 });

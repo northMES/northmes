@@ -2,6 +2,15 @@
 // What other modules may import from core. The module boundary check refuses any other file.
 export { Article } from './api/article/types/article.type.ts';
 export {
+  type AddedCompanyAdmin,
+  AdministrationNotFound,
+  AdministrationRefused,
+  AdministrationService,
+  type CompanySummary,
+  type CreatedCompany,
+  type PasswordReset,
+} from './core/administration.service.ts';
+export {
   type ArticleRecord,
   ArticleService,
   requireArticleAssigned,

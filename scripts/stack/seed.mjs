@@ -318,18 +318,76 @@ async function seedAccess(ownerUrl) {
       );
       await assign(client, user.id, plantA, user.roleKey);
     }
+    // The dev admin is the transaction's user, so the policies let it write the admin's own tab.
+    for (const [position, { id, scopeId, ownerId, name, widgets }] of dashboardTabs.entries()) {
+      await client.query(
+        `insert into core.dashboard_tab (id, scope_id, company_id, owner_id, name, position, widgets)
+         values ($1, $2, $3, $4, $5, $6, $7)
+         on conflict (id) do nothing`,
+        [id, scopeId, seedCompany.id, ownerId, name, position, JSON.stringify(widgets)],
+      );
+    }
     await client.query('commit');
   } finally {
     await client.end();
   }
 }
 
+/** A widget of a seed tab's layout (design shell-454): type, size, place and title. */
+function widget(id, type, size, x, y, title) {
+  return { id, type, size, x, y, settings: { title } };
+}
+
+/**
+ * The dashboard tabs of the seed (ADR 0078): a company tab every plant shows, plant A's own shared
+ * tab and the dev admin's own tab, each with demo widgets of the four types of release 1.
+ */
+const dashboardTabs = [
+  {
+    id: '019a0000-0000-7000-8000-0000000f0001',
+    scopeId: seedCompany.id,
+    ownerId: null,
+    name: 'Company overview',
+    widgets: [
+      widget('company-output', 'chart', 'large', 0, 0, 'Output per week'),
+      widget('company-late', 'value', 'small', 6, 0, 'Late orders'),
+      widget('company-open', 'value', 'small', 9, 0, 'Open orders'),
+    ],
+  },
+  {
+    id: '019a0000-0000-7000-8000-0000000f0002',
+    scopeId: plantA,
+    ownerId: null,
+    name: 'Shift overview',
+    widgets: [
+      widget('shift-late', 'value', 'small', 0, 0, 'Late orders'),
+      widget('shift-released', 'value', 'small', 3, 0, 'Released today'),
+      widget('shift-scrap', 'value', 'small', 6, 0, 'Scrap rate'),
+      widget('shift-oee', 'value', 'small', 9, 0, 'OEE'),
+      widget('shift-milling', 'list', 'medium', 0, 2, 'Production orders, Milling'),
+      widget('shift-pressing', 'list', 'medium', 4, 2, 'Production orders, Pressing'),
+      widget('shift-stops', 'table', 'large', 6, 6, 'Stops this shift'),
+      widget('shift-output', 'chart', 'large', 0, 6, 'Output per hour'),
+    ],
+  },
+  {
+    id: '019a0000-0000-7000-8000-0000000f0003',
+    scopeId: seedCompany.id,
+    ownerId: devAdmin.id,
+    name: 'My shift',
+    widgets: [
+      widget('mine-orders', 'table', 'wide', 0, 0, 'My production orders'),
+      widget('mine-late', 'value', 'small', 0, 4, 'Late orders'),
+    ],
+  },
+];
+
 /**
  * Writes the seed: first the company, its plants and the dev admin as core's owner role
- * (seedAccess), then the articles and orders in one transaction as the role appUrl logs in as,
- * nm_app, with the company and both plants as its read and write scopes, so the row-level security
- * policies apply as they do in the server (ADR 0008). A record that exists, also one a person changed since, is
- * left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
+ * (seedAccess), then the articles, orders and dashboard tabs in one transaction as the role appUrl
+ * logs in as, nm_app, with the company and both plants as its read and write scopes and the dev
+ * admin as its user, so the row-level security policies apply as they do in the server (ADR 0008,
+ * ADR 0078). A record that exists, also one a person changed since, is left as it is, so a second run adds nothing; northmes migrate gives Company admin a permission
  * installed since the last run.
  * @param {{ appUrl: string, ownerUrl: string }} urls
  */
@@ -341,8 +399,9 @@ export async function seed({ appUrl, ownerUrl }) {
     await client.query('begin');
     await client.query(
       `select set_config('northmes.read_scopes', $1::uuid[]::text, true),
-              set_config('northmes.write_scopes', $1::uuid[]::text, true)`,
-      [[seedCompany.id, plantA, plantB]],
+              set_config('northmes.write_scopes', $1::uuid[]::text, true),
+              set_config('northmes.user_id', $2, true)`,
+      [[seedCompany.id, plantA, plantB], devAdmin.id],
     );
     // Each article belongs to the company and is assigned to its one plant, which is its edit
     // scope (ADR 0073).
@@ -366,6 +425,15 @@ export async function seed({ appUrl, ownerUrl }) {
          values ($1, $2, $3, $4, $5)
          on conflict (id) do nothing`,
         [id, plant, number, articleId, quantity],
+      );
+    }
+    // The dev admin is the transaction's user, so the policies let it write the admin's own tab.
+    for (const [position, { id, scopeId, ownerId, name, widgets }] of dashboardTabs.entries()) {
+      await client.query(
+        `insert into core.dashboard_tab (id, scope_id, company_id, owner_id, name, position, widgets)
+         values ($1, $2, $3, $4, $5, $6, $7)
+         on conflict (id) do nothing`,
+        [id, scopeId, seedCompany.id, ownerId, name, position, JSON.stringify(widgets)],
       );
     }
     await client.query('commit');

@@ -84,6 +84,7 @@ catalog:
   react-doctor: 0.9.14
   react-dom: 19.3.0
   react-hook-form: 7.88.0
+  react-grid-layout: 2.2.4
   reflect-metadata: 0.2.2
   rolldown: 1.2.10
   rxjs: 7.8.2

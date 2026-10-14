@@ -331,7 +331,7 @@ describe('the shell', () => {
     ]);
   });
 
-  it("E04-S02 the web's sidebar has Articles and Article groups in the Core group before Planning board in the Planning group", async () => {
+  it("E04-S02 the web's sidebar has Dashboard, Articles and Article groups in the Core group before Planning board in the Planning group", async () => {
     // The screen's query never gets an answer; the test reads the sidebar alone.
     const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
     renderShellAt('/plant-a/articles', shellModules, { fetch });
@@ -340,6 +340,7 @@ describe('the shell', () => {
     expect(groups.map(groupLabel)).toEqual(['Core', 'Planning']);
     expect(groups.map(linksIn)).toEqual([
       [
+        ['Dashboard', '/plant-a'],
         ['Articles', '/plant-a/articles'],
         ['Article groups', '/plant-a/article-groups'],
       ],

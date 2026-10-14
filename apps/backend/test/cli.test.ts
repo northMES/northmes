@@ -10,7 +10,9 @@ describe('cli', () => {
     await cli(['seed'], { env: {}, exit, log });
 
     expect(log.error.mock.calls).toEqual([
-      ['Unknown command "seed". Commands: serve, db bootstrap, migrate'],
+      [
+        'Unknown command "seed". Commands: serve, db bootstrap, migrate, company create, company add-admin, company list, admin reset-password',
+      ],
     ]);
     expect(exit.mock.calls).toEqual([[1]]);
     expect(log.info).not.toHaveBeenCalled();
@@ -62,4 +64,79 @@ describe('cli', () => {
     expect(log.error.mock.calls.join('\n')).not.toContain('hunter2');
     expect(log.info).not.toHaveBeenCalled();
   });
+
+  it('E05-S05 admin create is not a command: companies and their first admins come from company create', async () => {
+    const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+    const exit = vi.fn<(code: number) => void>();
+
+    await cli(['admin', 'create', '--username', 'ada'], { env: {}, exit, log });
+
+    expect(log.error.mock.calls[0]?.[0]).toMatch(/^Unknown command "admin create --username ada"/);
+    expect(exit.mock.calls).toEqual([[1]]);
+  });
+
+  it.each([
+    ['admin reset-password without --reason', ['admin', 'reset-password', '--username', 'ada']],
+    [
+      'admin reset-password with an empty --reason',
+      ['admin', 'reset-password', '--username', 'ada', '--reason', ' '],
+    ],
+    [
+      'admin reset-password with a --password flag',
+      ['admin', 'reset-password', '--username', 'ada', '--reason', 'x', '--password', 'secret'],
+    ],
+    [
+      'company create without --reason',
+      [
+        'company',
+        'create',
+        '--name',
+        'Acme',
+        '--admin-username',
+        'ada',
+        '--admin-email',
+        'ada@example.test',
+      ],
+    ],
+    [
+      'company create without --admin-email',
+      ['company', 'create', '--name', 'Acme', '--admin-username', 'ada', '--reason', 'x'],
+    ],
+    [
+      'company create with an --id that is not a uuidv7',
+      [
+        'company',
+        'create',
+        '--id',
+        'acme',
+        '--name',
+        'Acme',
+        '--admin-username',
+        'ada',
+        '--admin-email',
+        'ada@example.test',
+        '--reason',
+        'x',
+      ],
+    ],
+    [
+      'company add-admin without --company',
+      ['company', 'add-admin', '--username', 'ada', '--reason', 'x'],
+    ],
+    ['company list with a stray argument', ['company', 'list', 'extra']],
+  ])(
+    'E05-S14 %s exits 2 with its usage, before it reads any configuration or prompts',
+    async (_name, args) => {
+      const log = { info: vi.fn<(line: string) => void>(), error: vi.fn<(line: string) => void>() };
+      const exit = vi.fn<(code: number) => void>();
+      const print = vi.fn<(text: string) => void>();
+
+      await cli(args, { env: {}, exit, log, print });
+
+      expect(exit.mock.calls).toEqual([[2]]);
+      expect(log.error.mock.calls.join('\n')).toContain('Usage: northmes ');
+      expect(log.error.mock.calls.join('\n')).not.toContain('secret');
+      expect(print).not.toHaveBeenCalled();
+    },
+  );
 });

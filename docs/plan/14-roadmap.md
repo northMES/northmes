@@ -4794,9 +4794,9 @@ Goal: every release produces signed, attested images, SBOMs and an offline amd64
 
 Who it is for: Plant admin. Also: Maintainer.
 
-ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md).
+ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md).
 
-Out of scope: upgrade requests from the web (trigger in ADR 0078); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
+Out of scope: upgrade requests from the web (trigger in ADR 0079); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
 
 Estimate: not estimated. Depends on: E17, E01-S03. Milestone: the pilot install.
 
@@ -4936,7 +4936,7 @@ As a plant admin, I want the upgrade check to tell me which version to install f
 
 Module: platform, ops. Blocked by: E18-S03. Design: none.
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 
 Acceptance criteria:
 
@@ -4959,7 +4959,7 @@ As a plant admin, I want to run the upgrade on a copy of my own data while the p
 
 Module: ops. Blocked by: E18-S03, E18-S04. Design: none.
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
 
 Acceptance criteria:
 
@@ -4980,7 +4980,7 @@ As a maintainer, I want CI to upgrade a seeded database of every supported relea
 
 Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
 
 Acceptance criteria:
 
@@ -5002,7 +5002,7 @@ As a plant admin, I want the upgrade check to name each plugin that does not sup
 
 Module: ops, core. Blocked by: E18-S07 and the plugin compatibility check of proposed ADR 0075. Design: the Updates page (E18-S16).
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
 
 Acceptance criteria:
 
@@ -5021,7 +5021,7 @@ As a plugin provider, I want a release candidate of the next minor with its SDK 
 
 Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
 
 Acceptance criteria:
 
@@ -5043,7 +5043,7 @@ As a plant admin, I want almost every release to roll back by starting the previ
 
 Module: platform, ci. Blocked by: E18-S03. Design: none.
 
-ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 
 Acceptance criteria:
 
@@ -5064,7 +5064,7 @@ As a plant admin, I want large data changes to run after NorthMES is back up, so
 
 Module: platform. Blocked by: E18-S07. Design: none.
 
-ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0071](../adr/0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md).
+ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0071](../adr/0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md).
 
 Acceptance criteria:
 
@@ -5083,7 +5083,7 @@ As a plant admin, I want an upgrade that survives my connection dropping, refuse
 
 Module: ops. Blocked by: E18-S03, E18-S04. Design: none.
 
-ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
 
 Acceptance criteria:
 
@@ -5106,7 +5106,7 @@ As a maintainer, I want each release's migrations timed on a database five times
 
 Module: ops, ci. Blocked by: E18-S09. Design: none.
 
-ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
+ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
 
 Acceptance criteria:
 
@@ -5125,7 +5125,7 @@ As a plant admin, I want one page that shows the installed release, the next rel
 
 Module: core, web. Blocked by: E18-S07, E18-S10, E16-S03 and the Plugins page of proposed ADR 0075. Design: Updates page (a design task under this story, not started; it lays out the NorthMES and Plugins tabs, their empty, loading and stopped states, and where the later upgrade request goes).
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
 
 Acceptance criteria:
 
@@ -5146,7 +5146,7 @@ As a plant admin, I want to tell users about a planned maintenance window or oth
 
 Module: core, web, ops. Blocked by: E04 (the shell's banner strip), E18-S16. Design: the notice form and list on the Updates page and in company settings (part of the Updates page design task).
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
 
 Acceptance criteria:
 

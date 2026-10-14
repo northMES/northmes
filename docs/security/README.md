@@ -18,6 +18,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Least privilege in the database: `nm_owner`, `nm_app`, `nm_auth` and `nm_ext`, none with SUPERUSER, CREATEDB, REPLICATION or BYPASSRLS | built | ADR 0006, ADR 0008; `apps/backend/src/db/bootstrap.ts`; `bootstrap.int.test.ts` |
 | Row-level security on module tables, with scopes set per transaction from bound values | built | ADR 0008; `apps/backend/src/db/scoped-database.ts`; `access-policies.int.test.ts`, `scoped-database.int.test.ts` |
+| Row-level security on a user's own rows (own dashboard tabs), by the signed-in user's id set per transaction from a bound value | built | ADR 0078 (proposed); `apps/backend/src/db/scoped-database.ts`; `dashboard-tab-policies.int.test.ts`, `scoped-database.int.test.ts` |
 | Row-level security on the identity and company tables | gap | [#483](https://github.com/northMES/northmes/issues/483) |
 | Least privilege in containers (non-root, read-only, no capabilities) | decided | ADR 0044; no container files yet |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
@@ -38,6 +39,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Role-based access control with permissions per scope, checked by the command bus at the row's scope | built | ADR 0010, ADR 0012; `permissions.ts`; `command-bus.ts`; `role-assignment-commands.int.test.ts` |
 | A permission check on every read | gap | [#474](https://github.com/northMES/northmes/issues/474) (production orders) |
 | No one grants a permission they lack; the last Company admin is protected | built | `role-rules.ts`, `user-rules.ts`; `last-admin` tests |
+| No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
 | Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
 | Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |

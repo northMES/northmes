@@ -18,9 +18,9 @@ export function readOnly<Result>(fn: () => Promise<Result>): Promise<Result> {
 
 /**
  * The ScopedDatabase on a Kysely instance whose pool logs in as nm_app. Each transaction first sets
- * both scope sets of the principal that runAs names, with set_config(..., true), so they hold
- * until the transaction ends (ADR 0008). Without a principal both sets are empty, so the policies
- * let the transaction read and write nothing. Inside readOnly, the transaction is read only.
+ * both scope sets and the user id of the principal that runAs names, with set_config(..., true),
+ * so they hold until the transaction ends (ADR 0008, ADR 0078). Without a principal both sets and
+ * the user id are empty, so the policies let the transaction read and write nothing. Inside readOnly, the transaction is read only.
  */
 export function scopedDatabase<DB>(db: Kysely<DB>): ScopedDatabase<DB> {
   return {
@@ -28,6 +28,7 @@ export function scopedDatabase<DB>(db: Kysely<DB>): ScopedDatabase<DB> {
       const principal = currentPrincipal();
       const readScopes = principal?.readScopes ?? [];
       const writeScopes = principal?.writeScopes ?? [];
+      const userId = principal?.userId ?? '';
       const readOnlyRun = readOnlyRuns.getStore() === true;
       return await db.transaction().execute(async (tx) => {
         // SET TRANSACTION must come before the transaction's first query.
@@ -35,9 +36,8 @@ export function scopedDatabase<DB>(db: Kysely<DB>): ScopedDatabase<DB> {
         // set_config takes bind parameters, which SET LOCAL does not. The cast refuses a scope id
         // that is not a uuid.
         await sql`select set_config('northmes.read_scopes', ${readScopes}::uuid[]::text, true),
-                         set_config('northmes.write_scopes', ${writeScopes}::uuid[]::text, true)`.execute(
-          tx,
-        );
+                         set_config('northmes.write_scopes', ${writeScopes}::uuid[]::text, true),
+                         set_config('northmes.user_id', ${userId}, true)`.execute(tx);
         return fn(tx);
       });
     },
