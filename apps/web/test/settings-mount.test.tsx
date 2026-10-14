@@ -152,7 +152,7 @@ describe('company settings', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Company settings' });
     const back = await screen.findByRole('link', { name: 'Back to Plant B' });
-    expect(back.getAttribute('href')).toBe('/plant-b/articles');
+    expect(back.getAttribute('href')).toBe('/plant-b');
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
   });
 
@@ -189,7 +189,7 @@ describe('company settings', () => {
     await screen.findByRole('heading', { level: 1, name: 'Company settings' });
     await user.click(await screen.findByRole('link', { name: 'Back to Plant B' }));
 
-    await screen.findByRole('heading', { level: 1, name: 'Articles' });
+    await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
     expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeDefined();
   });
 
@@ -214,10 +214,7 @@ describe('company settings', () => {
     ).toBeDefined();
     expect(main.querySelector('[aria-busy="true"]')).toBeNull();
     const back = within(main).getAllByRole('link', { name: 'Back to Plant A' });
-    expect(back.map((link) => link.getAttribute('href'))).toEqual([
-      '/plant-a/articles',
-      '/plant-a/articles',
-    ]);
+    expect(back.map((link) => link.getAttribute('href'))).toEqual(['/plant-a', '/plant-a']);
   });
 
   it('E04-S02 a company landing whose permissions could not be read shows the error with Try again, which reads them again', async () => {

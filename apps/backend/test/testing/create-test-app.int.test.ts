@@ -39,6 +39,7 @@ describe('createTestApp', () => {
       'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
+      'coreDashboardTabs',
       'corePermissionCatalog',
       'corePlantRoleAssignments',
       'coreRole',
