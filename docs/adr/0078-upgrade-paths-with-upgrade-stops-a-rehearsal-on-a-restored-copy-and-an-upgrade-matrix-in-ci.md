@@ -5,7 +5,7 @@ decision-makers: proposed by a planning session, to be confirmed by Krister Joha
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
-needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
+needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; notices to users from the host and from company admins; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
 ---
 
 # Upgrade paths with upgrade stops, a rehearsal on a restored copy and an upgrade matrix in CI
@@ -70,6 +70,12 @@ Chosen option: "Any supported version upgrades straight to the latest, with decl
 * System health shows the installed release, a newer release when the installation knows of one (from a bundle on the host or an optional update check), its rollback class, `minimumUpgradeFrom` and the last rehearsal result. It is read-only.
 * One settings page, Updates (name proposed), holds both: a NorthMES tab with the installed release, a newer release, the path to it, its rollback class, the last rehearsal and which plugins have a version for it, and a Plugins tab that is the Plugins page of proposed [ADR 0075][adr-0075]. Plugin compatibility belongs with the release it blocks, and `upgrade.sh --with-plugin-updates` already applies the core upgrade and the plugin updates as one set. System health keeps a one-line summary that links to it. Its route, permission and layout come from a design task (E18-S16); in release 1 the NorthMES tab is read-only.
 * Later, an admin may request an upgrade in the web the way proposed [ADR 0075][adr-0075] requests a plugin install: an audited request row that a host timer applies in the upgrade window, rehearsal first, with the result written back. An installation setting that only `northmes installation set` changes turns web requests off, so a hosting partner keeps upgrades to itself. Trigger: a customer without host access asks for it.
+
+### Notices to users
+
+* A notice is a short plain-text message with a severity (info or warning), a time to show from and a time to end, such as "Planned maintenance 2026-11-10 12:40 to 13:50". The shell draws it in the banner strip under the top bar, from the same `BannerSpec` data as its own banners, for every signed-in user it reaches, and removes it at its end time. It holds no link and no markup.
+* No role sits above a company ([ADR 0066][adr-0066]), so an installation-wide notice belongs to the host like the other installation-wide values: `northmes notice add|list|remove` (names proposed) writes it as an audited command, and `upgrade.sh --schedule <time>` (later) adds the maintenance notice for its window by itself. A company admin with `core.notice:manage` (name proposed) posts a notice to their own company's users from company settings, also audited. Both kinds show on the Updates page.
+* During the stop itself the maintenance page of [ADR 0045][adr-0045] answers, so a notice is how users learn of the window before it starts.
 
 ### Plugins and open tabs
 

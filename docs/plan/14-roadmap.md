@@ -5137,6 +5137,27 @@ Tests first:
 
 - `modules/core/test/updates-page.int.test.ts`: "an admin without the permission is refused the release query"; "a plugin with no version for the next release is listed as not ready".
 
+
+#### E18-S17 core: Show maintenance and other notices to users
+
+Issue: not created yet.
+
+As a plant admin, I want to tell users about a planned maintenance window or other news in a banner at the top of every page, so that nobody is surprised when NorthMES stops for an upgrade.
+
+Module: core, web, ops. Blocked by: E04 (the shell's banner strip), E18-S16. Design: the notice form and list on the Updates page and in company settings (part of the Updates page design task).
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-one-scope-tree-and-the-company-admin-role.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+
+Acceptance criteria:
+
+- `northmes notice add|list|remove` on the host manages installation-wide notices with severity, start and end time, as audited commands.
+- A company admin with `core.notice:manage` adds and removes notices for their own company in company settings; each change is audited.
+- The shell shows each active notice in the banner strip as plain text, to every user it reaches, and drops it at its end time without a reload.
+
+Tests first:
+
+- `modules/core/test/notice.int.test.ts`: "an admin without core.notice:manage is refused"; "a company notice is not visible to another company's users"; "a notice past its end time is not returned".
+
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
 Issue: northMES/northmes#163.
