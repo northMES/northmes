@@ -27,9 +27,9 @@ import { ArticleFormTranslations } from './article-form-translations.tsx';
  * core.updateArticle share, the same for a new and an existing article (ADR 0017); the stock
  * unit, which the form requires although the commands default it, so nobody saves pieces without
  * choosing them (design ui-222, Copy), the note, which an empty field clears, and the name's
- * translations; and on a new
- * article the Plants field, whose choice must name a plant or All plants (ADR 0073). One parse
- * checks them all, so a failed save lists every field to fix.
+ * translations; and for a user who holds core.article:assign at the company the Plants field,
+ * whose choice must name a plant or All plants (ADR 0073). One parse checks them all, so a failed
+ * save lists every field to fix.
  */
 export const articleFormFields = articleFields.extend({
   // The select starts on Choose a unit, the empty value, which the catalog refuses.
@@ -62,7 +62,7 @@ export interface ArticleFormProps {
    * restores it, and the typed values stay for the next save (DE31).
    */
   readonly archived?: { readonly onRestore: () => Promise<void> };
-  /** Further field groups after Identity, such as Plants on a new article (ADR 0073). */
+  /** Further field groups after Identity, such as Plants (ADR 0073). */
   readonly children?: ReactNode;
   /**
    * The group the article has, which the select offers also when it was archived since, so an

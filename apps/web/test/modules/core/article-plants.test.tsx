@@ -6,7 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreArchiveArticle } from '../../../src/modules/core/screens/article/archive-article.graphql.ts';
-import { CoreSetArticlePlants } from '../../../src/modules/core/screens/article/set-article-plants.graphql.ts';
+import { CoreSetArticlePlants } from '../../../src/modules/core/screens/edit-article/set-article-plants.graphql.ts';
 import { CoreUpdateArticle } from '../../../src/modules/core/screens/edit-article/update-article.graphql.ts';
 import { CoreCreateArticle } from '../../../src/modules/core/screens/new-article/create-article.graphql.ts';
 import { viewerQuery } from './access-fixtures.ts';
@@ -86,6 +86,48 @@ function forbiddenAnswer(field: string) {
 /** An article with these plants. */
 function withPlants(node: ArticleNode, allPlants: boolean, assigned: ArticleNode['plants']) {
   return { ...node, allPlants, plants: assigned };
+}
+
+/** coreUpdateArticle of an article with its saved values, answered with result. */
+function updateOf(
+  node: ArticleNode,
+  result: MockLink.MockedResponse['result'],
+): MockLink.MockedResponse {
+  return {
+    request: {
+      query: CoreUpdateArticle,
+      variables: {
+        input: {
+          id: node.id,
+          expectedVersion: node.version,
+          code: node.code,
+          name: node.name,
+          stockUnit: 'PIECE',
+          note: '',
+          translations: [],
+          articleGroupId: '',
+        },
+      },
+    },
+    result,
+  };
+}
+
+/** coreSetArticlePlants of Plant A and Plant B on this version, answered with result. */
+function plantsAnswer(
+  id: string,
+  expectedVersion: number,
+  result: MockLink.MockedResponse['result'],
+): MockLink.MockedResponse {
+  return {
+    request: {
+      query: CoreSetArticlePlants,
+      variables: {
+        input: { id, expectedVersion, allPlants: false, plants: ['plant-a', 'plant-b'] },
+      },
+    },
+    result,
+  };
 }
 
 interface CreateInput {
@@ -202,14 +244,31 @@ describe("an article's plants", () => {
     expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
   });
 
-  it("ADR0073-W2 an article's page names its plants, and a holder of core.article:assign at the company adds a plant with Save plants", async () => {
-    const user = userEvent.setup();
-    const axle = article('AX-500', 'Axle 20 mm', 3);
-    const sent: unknown[] = [];
+  it("ADR0073-W2 an article's page names its plants and offers a holder of core.article:assign at the company no Plants section, which Edit holds", async () => {
+    const axle = article('AX-500', 'Axle 20 mm');
     renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
       articleQuery(axle),
       assigner(),
       companiesQuery(),
+    ]);
+
+    const origin = await screen.findByRole('region', { name: 'Origin' });
+    await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
+    // The viewer's answer arrives after the article; give it the time to show any section.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save plants' })).toBeNull();
+  });
+
+  it('ADR0073-W2 Edit article offers a holder of core.article:assign at the company the Plants field filled with the plants, and Save article sends a changed choice with the version the update answered', async () => {
+    const user = userEvent.setup();
+    const axle = article('AX-500', 'Axle 20 mm', 3);
+    const sent: unknown[] = [];
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(axle),
+      assigner(),
+      companiesQuery(),
+      updateOf(axle, { data: { coreUpdateArticle: { ...axle, version: 4 } } }),
       {
         request: {
           query: CoreSetArticlePlants,
@@ -223,7 +282,7 @@ describe("an article's plants", () => {
             coreSetArticlePlants: {
               __typename: 'Article',
               id: axle.id,
-              version: 4,
+              version: 5,
               allPlants: false,
               plants: [plants.a, plants.b],
             },
@@ -232,19 +291,55 @@ describe("an article's plants", () => {
       } as MockLink.MockedResponse,
     ]);
 
-    const origin = await screen.findByRole('region', { name: 'Origin' });
-    await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
     const plantsSection = await screen.findByRole('region', { name: 'Plants' });
-    await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
-    await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
+    const plantA = await within(plantsSection).findByRole('checkbox', { name: 'Plant A' });
+    expect(plantA.getAttribute('aria-checked')).toBe('true');
+    await user.click(within(plantsSection).getByRole('checkbox', { name: 'Plant B' }));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
 
-    await waitFor(() => expect(spoken()).toBe('Plants of article AX-500 saved'));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
     expect(sent).toEqual([
-      { id: axle.id, expectedVersion: 3, allPlants: false, plants: ['plant-a', 'plant-b'] },
+      { id: axle.id, expectedVersion: 4, allPlants: false, plants: ['plant-a', 'plant-b'] },
     ]);
+    const origin = await screen.findByRole('region', { name: 'Origin' });
     await waitFor(() => expect(within(origin).getByText('Plant A, Plant B')).toBeDefined());
   });
 
+  it('ADR0073-W2 Edit article saves unchanged plants without core.setArticlePlants', async () => {
+    const user = userEvent.setup();
+    const axle = article('AX-500', 'Axle 20 mm', 3);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(axle),
+      assigner(),
+      companiesQuery(),
+      updateOf(
+        { ...axle, name: 'Axle 22 mm' },
+        { data: { coreUpdateArticle: { ...axle, name: 'Axle 22 mm', version: 4 } } },
+      ),
+    ]);
+
+    const plantsSection = await screen.findByRole('region', { name: 'Plants' });
+    await within(plantsSection).findByRole('checkbox', { name: 'Plant A' });
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Axle 22 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+    await waitFor(() => expect(spoken()).toBe('Article AX-500 saved'));
+  });
+
+  it('ADR0073-W2 Edit article shows a Plant admin no Plants field', async () => {
+    const axle = article('AX-500', 'Axle 20 mm');
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(axle),
+      plantEditor(),
+    ]);
+
+    expect(await screen.findByRole('textbox', { name: 'Name' })).toBeDefined();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
+  });
   it("ADR0073-W2 an article's page shows a Plant admin the plants but no Plants section", async () => {
     const axle = article('AX-500', 'Axle 20 mm');
     renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
@@ -379,10 +474,56 @@ describe("an article's plants", () => {
     ).toBeDefined();
   });
 
-  it('ADR0073-W2 Save plants without a plant moves focus to the first plant, which the message describes', async () => {
+  it('ADR0073-W2 Edit article saves an article without plants for a user without core.article:assign, whom no hidden Plants field holds back', async () => {
+    const user = userEvent.setup();
+    const unassigned = withPlants(article('AX-500', 'Axle 20 mm'), false, []);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href, [
+      articleQuery(unassigned),
+      companyEditor(),
+      updateOf(
+        { ...unassigned, name: 'Axle 22 mm' },
+        { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
+      ),
+    ]);
+
+    await screen.findByRole('textbox', { name: 'Name' });
+    // The viewer's answer arrives after the article; give it the time to settle the form.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Axle 22 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+  });
+
+  it('ADR0073-W2 Edit article saves another change to an article without plants for a holder of core.article:assign, and leaves its plants as they are', async () => {
+    const user = userEvent.setup();
+    const unassigned = withPlants(article('AX-500', 'Axle 20 mm'), false, []);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href, [
+      articleQuery(unassigned),
+      assigner(),
+      companiesQuery(),
+      updateOf(
+        { ...unassigned, name: 'Axle 22 mm' },
+        { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
+      ),
+    ]);
+
+    const plantsSection = await screen.findByRole('region', { name: 'Plants' });
+    await within(plantsSection).findByRole('checkbox', { name: 'Plant A' });
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Axle 22 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+  });
+
+  it('ADR0073-W2 Edit article lists a save without a plant in the error summary and sends nothing', async () => {
     const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm');
-    renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
       articleQuery(axle),
       assigner(),
       companiesQuery(),
@@ -391,133 +532,74 @@ describe("an article's plants", () => {
     const plantsSection = await screen.findByRole('region', { name: 'Plants' });
     const plantA = await within(plantsSection).findByRole('checkbox', { name: 'Plant A' });
     await user.click(plantA);
-    await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
 
-    await waitFor(() => expect(document.activeElement).toBe(plantA));
-    const message = within(plantsSection).getByText('Choose at least one plant, or All plants.');
-    expect(plantA.getAttribute('aria-describedby')?.split(' ')).toContain(message.id);
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to save the article' });
+    await user.click(
+      within(summary).getByRole('link', { name: 'Choose at least one plant, or All plants.' }),
+    );
+    expect(document.activeElement).toBe(plantA);
   });
 
-  it('ADR0073-W2 Save plants refused for a stale version says so in the section and through the polite region, and shows the saved plants', async () => {
+  it('ADR0073-W2 Edit article shows a plants change refused for a stale version as the version conflict, with the typed plants kept', async () => {
     const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm', 3);
-    const saved = withPlants({ ...axle, version: 4 }, false, [plants.a, plants.c]);
-    renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
       articleQuery(axle),
       assigner(),
       companiesQuery(),
-      {
-        request: {
-          query: CoreSetArticlePlants,
-          variables: {
-            input: {
-              id: axle.id,
-              expectedVersion: 3,
-              allPlants: false,
-              plants: ['plant-a', 'plant-b'],
-            },
+      updateOf(axle, { data: { coreUpdateArticle: { ...axle, version: 4 } } }),
+      plantsAnswer(axle.id, 4, {
+        data: null,
+        errors: [
+          {
+            message: `Article ${axle.id} is at version 5, and the change was made on version 4`,
+            path: ['coreSetArticlePlants'],
+            extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
           },
-        },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: `Article ${axle.id} is at version 4, and the change was made on version 3`,
-              path: ['coreSetArticlePlants'],
-              extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
-            },
-          ],
-        },
-      },
-      articleQuery(saved),
+        ],
+      }),
     ]);
 
     const plantsSection = await screen.findByRole('region', { name: 'Plants' });
     await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
-    await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
 
-    const conflict =
-      'Someone changed this article after you opened it. The page now shows the saved plants. Check them, then save again.';
-    expect(await within(plantsSection).findByText(conflict)).toBeDefined();
-    await waitFor(() => expect(spoken()).toBe(conflict));
-    expect(within(plantsSection).queryByRole('alert')).toBeNull();
-    const checked = (name: string) =>
-      within(plantsSection).getByRole('checkbox', { name }).getAttribute('aria-checked');
-    expect([checked('Plant A'), checked('Plant B'), checked('Plant C')]).toEqual([
-      'true',
-      'false',
-      'true',
-    ]);
+    expect(
+      await screen.findByRole('group', { name: 'This article changed while you edited it' }),
+    ).toBeDefined();
+    expect(
+      within(plantsSection).getByRole('checkbox', { name: 'Plant B' }).getAttribute('aria-checked'),
+    ).toBe('true');
   });
 
-  it('ADR0073-W2 Save plants refused with core.forbidden names the permission at the company, core.archived says the article is archived, another refusal shows the API message, and only a save without an answer asks to check the connection', async () => {
+  it('ADR0073-W2 Edit article shows a plants change refused with core.forbidden as the permission to assign at the company, with the entries kept', async () => {
+    const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm', 3);
-    const refusal = (message: string, code: string, errorCode: string) => ({
-      result: {
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
+      articleQuery(axle),
+      assigner(),
+      companiesQuery(),
+      updateOf(axle, { data: { coreUpdateArticle: { ...axle, version: 4 } } }),
+      plantsAnswer(axle.id, 4, {
         data: null,
-        errors: [{ message, path: ['coreSetArticlePlants'], extensions: { code, errorCode } }],
-      },
-    });
-    const cases = [
-      {
-        answer: refusal(
-          `You need core.article:assign at scope ${axle.id}`,
-          'FORBIDDEN',
-          'core.forbidden',
-        ),
-        shown:
-          'You do not have permission to change the plants of this article. This needs the permission to assign articles to plants (core.article:assign) at Acme AB.',
-      },
-      {
-        answer: refusal(
-          'Article AX-500 is archived, and an archived article cannot be changed until it is restored',
-          'PRECONDITION',
-          'core.archived',
-        ),
-        shown:
-          'This article is archived. Archived articles cannot be changed until they are restored.',
-      },
-      {
-        answer: refusal(
-          'No plant of the company has the slug plant-b.',
-          'BAD_USER_INPUT',
-          'core.plant_unknown',
-        ),
-        shown: 'Could not save the plants. No plant of the company has the slug plant-b.',
-      },
-      {
-        answer: { error: new Error('Failed to fetch') },
-        shown: 'Could not save the plants. Check the connection, then try again.',
-      },
-    ];
-    for (const { answer, shown } of cases) {
-      const user = userEvent.setup();
-      renderCoreAt(coreLinks.articles.article({ plant, articleId: axle.id }).href, [
-        articleQuery(axle),
-        assigner(),
-        companiesQuery(),
-        {
-          request: {
-            query: CoreSetArticlePlants,
-            variables: {
-              input: {
-                id: axle.id,
-                expectedVersion: 3,
-                allPlants: false,
-                plants: ['plant-a', 'plant-b'],
-              },
-            },
+        errors: [
+          {
+            message: `You need core.article:assign at scope ${axle.id}`,
+            path: ['coreSetArticlePlants'],
+            extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
           },
-          ...answer,
-        } as MockLink.MockedResponse,
-      ]);
+        ],
+      }),
+    ]);
 
-      const plantsSection = await screen.findByRole('region', { name: 'Plants' });
-      await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
-      await user.click(within(plantsSection).getByRole('button', { name: 'Save plants' }));
+    const plantsSection = await screen.findByRole('region', { name: 'Plants' });
+    await user.click(await within(plantsSection).findByRole('checkbox', { name: 'Plant B' }));
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
 
-      expect(await within(plantsSection).findByText(shown)).toBeDefined();
-      cleanup();
-    }
+    const summary = await screen.findByRole('group', { name: 'Could not save the article' });
+    expect(summary.textContent).toContain(
+      'You do not have permission to change the plants of this article. This needs the permission to assign articles to plants (core.article:assign) at Acme AB. Your entries are kept.',
+    );
   });
 });
