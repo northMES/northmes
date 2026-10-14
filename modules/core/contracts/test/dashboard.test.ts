@@ -60,9 +60,7 @@ describe('dashboardLayout (design shell-454)', () => {
   });
 
   it('holds at most 40 widgets', () => {
-    const many = Array.from({ length: 41 }, (_, index) =>
-      list({ id: `w${index}`, y: index * 4 }),
-    );
+    const many = Array.from({ length: 41 }, (_, index) => list({ id: `w${index}`, y: index * 4 }));
 
     expect(dashboardLayout.safeParse(many).success).toBe(false);
     expect(dashboardLayout.safeParse(many.slice(0, 40)).success).toBe(true);
