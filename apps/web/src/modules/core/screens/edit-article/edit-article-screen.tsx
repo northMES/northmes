@@ -39,10 +39,15 @@ function sameChoice(a: PlantsChoice, b: PlantsChoice): boolean {
   return b.plants.every((slug) => named.has(slug));
 }
 
-/** The form's values for a saved article. */
-function formValues(article: Article) {
+/**
+ * The form's values for a saved article, with its plants only where the form shows the Plants
+ * field, so a field the user cannot see never holds back a save.
+ */
+function formValues(article: Article, assigns: boolean) {
   return {
-    plants: { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) },
+    ...(assigns && {
+      plants: { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) },
+    }),
     code: article.code,
     name: article.name,
     stockUnit: article.stockUnit,
@@ -54,6 +59,8 @@ function formValues(article: Article) {
 
 interface EditArticleFormProps {
   readonly article: Article;
+  /** Whether the user holds core.article:assign at the company, so the form has the Plants field. */
+  readonly assigns: boolean;
   readonly reload: () => Promise<Article | undefined>;
 }
 
@@ -62,7 +69,7 @@ interface EditArticleFormProps {
  * filled from as expectedVersion, so a change someone saved in between is refused with
  * core.version_conflict (ADR 0017), not overwritten.
  */
-function EditArticleForm({ article, reload }: EditArticleFormProps) {
+function EditArticleForm({ article, assigns, reload }: EditArticleFormProps) {
   const { plant } = useShell();
   const navigate = useNavigate();
   // The version the form was filled from; only a save reads it, so it is no render state.
@@ -73,9 +80,8 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
   // An archived article refuses changes, so its form offers Restore article (DE31).
   const [archived, setArchived] = useState(article.archivedAt !== null);
   const form = useZodForm(articleFormFields, {
-    defaultValues: formValues(article),
+    defaultValues: formValues(article, assigns),
   });
-  const assigns = useViewer().canAtCompany('core.article:assign');
   const places = usePlaces({ skip: !assigns });
   const [update] = useMutation(CoreUpdateArticle);
   const [setPlants] = useMutation(CoreSetArticlePlants);
@@ -168,7 +174,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
       return;
     }
     if (saved === undefined) return;
-    form.reset(formValues(saved));
+    form.reset(formValues(saved, assigns));
     expectedVersion.current = saved.version;
     savedPlants.current = choiceOf(saved);
     setConflict(false);
@@ -235,6 +241,7 @@ function EditArticleForm({ article, reload }: EditArticleFormProps) {
 export function EditArticleScreen() {
   const { plant } = useShell();
   const { article, state, reload } = useArticle();
+  const assigns = useViewer().canAtCompany('core.article:assign');
   const articles = { label: 'Articles', href: coreLinks.articles({ plant }).href };
   return (
     <PageFrame
@@ -253,7 +260,14 @@ export function EditArticleScreen() {
       state={state}
     >
       {article !== undefined && (
-        <EditArticleForm key={article.id} article={article} reload={reload} />
+        // The viewer's answer can arrive after the article; the form starts again with the Plants
+        // field then, which the article's page usually answers from the cache before Edit.
+        <EditArticleForm
+          key={`${article.id}:${assigns}`}
+          article={article}
+          assigns={assigns}
+          reload={reload}
+        />
       )}
     </PageFrame>
   );
