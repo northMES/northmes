@@ -4942,7 +4942,7 @@ Acceptance criteria:
 
 - `northmes migrate` writes one `northmes_meta.release(version, image_digest, applied_at)` row at the end of a successful run; System health and `/health` show the installed release.
 - The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
-- `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing.
+- `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing; when the release check passes it runs boot steps 1 to 10, lists pending files at step 5 and stops before the first file.
 - The story lands before the first release, so every released installation has a `northmes_meta.release` row; `migrate --check` refuses a database with applied migrations and no such row, naming its newest applied file.
 - The upgrade guide in `apps/docs` lists the upgrade stops.
 
@@ -4963,9 +4963,9 @@ ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-resto
 
 Acceptance criteria:
 
-- `upgrade.sh --rehearse` restores the latest backup into a throwaway database with the drill isolation of ADR 0045, runs the new image's `plugin check`, `migrate --check`, `migrate`, boot and smoke check there, prints each file's duration and the total, writes `rehearsal-state.json` and removes the copy.
+- `upgrade.sh --rehearse` restores the latest backup into a throwaway database with the drill isolation of ADR 0045, runs the new image's `plugin check`, `migrate --check`, `migrate`, boot and smoke check there, prints each file's duration and the total, writes `rehearsal-state.json` with the backup label and `peakDiskBytes`, and removes the copy.
 - The pre-flight checks disk space for the copy and takes the host lock; `app` keeps serving during the rehearsal.
-- `upgrade.sh` refuses a `restore`-class release without a passing rehearsal of that version from the last 72 hours and names the command.
+- `upgrade.sh` refuses a `restore`-class release without a passing rehearsal of that version from the last 72 hours and names the command; a backup newer than the rehearsed one makes the rehearsal stale.
 - System health shows the last rehearsal's version, result and time.
 
 Tests first:
@@ -5088,7 +5088,7 @@ ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-co
 Acceptance criteria:
 
 - `upgrade.sh` runs as a transient systemd unit, records each finished step in `upgrade-state.json`, and has `--status` and `--resume`; every step is safe to run twice.
-- It verifies the bundle's digest and attestation, refuses an older version, checks disk space against the rehearsal's peak plus 20 percent, and lets running jobs finish before it stops `app`.
+- It verifies the bundle's digest and attestation, refuses an older version, checks free disk space against the rehearsal's `peakDiskBytes` plus 20 percent (without a rehearsal it refuses when free space is under twice the database size), and lets running jobs finish before it stops `app`.
 - `upgrade.sh` and `rollback.sh` write a security event with the versions, bundle digest, rollback class, rehearsal result, outcome and reason.
 - The smoke check reads only, through a health account with no role, and a 30-minute watch reports readiness, log errors and browser errors.
 - For the restore class, `rollback.sh` refuses after the deadline set at upgrade time and names the forward fix.
