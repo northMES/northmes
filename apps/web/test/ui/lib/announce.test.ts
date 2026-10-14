@@ -2,7 +2,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import indexHtml from '../../../index.html?raw';
-import { announce } from '../../../src/ui/lib/announce.ts';
+import { announce, resetAnnouncements } from '../../../src/ui/lib/announce.ts';
 
 /**
  * The body of the web's index.html before the app renders, without the app's script. It goes
@@ -85,5 +85,16 @@ describe('announce', () => {
     vi.unstubAllGlobals();
     announce('Article AX-20411 created');
     expect((await spoken()).at(-1)).toBe('Article AX-20411 created');
+  });
+
+  it('E04-S07 a reset drops the queued messages and their timer, and the next message speaks', async () => {
+    announce('Article AX-20410 created');
+    announce('Article AX-20411 created');
+
+    resetAnnouncements();
+    expect(vi.getTimerCount()).toBe(0);
+
+    announce('Article AX-20412 created');
+    expect(await spoken()).toEqual(['', 'Article AX-20412 created']);
   });
 });
