@@ -4794,9 +4794,9 @@ Goal: every release produces signed, attested images, SBOMs and an offline amd64
 
 Who it is for: Plant admin. Also: Maintainer.
 
-ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md).
+ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
 
-Out of scope: `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
+Out of scope: upgrade requests from the web (trigger in ADR 0078); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
 
 Estimate: not estimated. Depends on: E17, E01-S03. Milestone: the pilot install.
 
@@ -4927,6 +4927,90 @@ Tests first:
 - A session check: the rehearsal log and the signed-off checklist attached to the issue.
 
 Notes: labelled `human`.
+
+#### E18-S07 platform: Record the installed release and refuse an unsupported upgrade path
+
+Issue: not created yet.
+
+As a plant admin, I want the upgrade check to tell me which version to install first when I skip too far, so that I never start an upgrade that cannot work.
+
+Module: platform, ops. Blocked by: E18-S03. Design: none.
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+
+Acceptance criteria:
+
+- `northmes migrate` writes one `northmes_meta.release(version, image_digest, applied_at)` row at the end of a successful run; System health and `/health` show the installed release.
+- The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
+- `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing.
+- A database without `northmes_meta.release` reports the release of its newest applied migration file.
+- The upgrade guide in `apps/docs` lists the upgrade stops.
+
+Tests first:
+
+- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release".
+- `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
+
+#### E18-S08 ops: Rehearse an upgrade on a restored copy before the window
+
+Issue: not created yet.
+
+As a plant admin, I want to run the upgrade on a copy of my own data while the plant keeps working, so that I know before the window that the migrations work and how long they take.
+
+Module: ops. Blocked by: E18-S03, E18-S04. Design: none.
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
+
+Acceptance criteria:
+
+- `upgrade.sh --rehearse` restores the latest backup into a throwaway database with the drill isolation of ADR 0045, runs the new image's `plugin check`, `migrate --check`, `migrate`, boot and smoke check there, prints each file's duration and the total, writes `rehearsal-state.json` and removes the copy.
+- The pre-flight checks disk space for the copy and takes the host lock; `app` keeps serving during the rehearsal.
+- `upgrade.sh` refuses a `restore`-class release without a passing rehearsal of that version from the last 72 hours and names the command.
+- System health shows the last rehearsal's version, result and time.
+
+Tests first:
+
+- `infra/test/rehearse.int.test.ts` (nightly): "a failing migration on the copy is reported and the production database and archive are unchanged"; "a restore-class upgrade without a rehearsal is refused".
+
+#### E18-S09 ops: Test every supported upgrade path on each release
+
+Issue: not created yet.
+
+As a maintainer, I want CI to upgrade a seeded database of every supported release to the candidate, so that a broken upgrade path blocks the release instead of a plant.
+
+Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- The release workflow attaches a seeded snapshot (`pg_dump` of an installation built with that release's CLI and fixtures, the example plugins included) to each release.
+- The upgrade matrix restores the snapshot of every release from the candidate's `minimumUpgradeFrom`, runs the candidate's `migrate`, boots it, runs the smoke check and data assertions and loads the example plugins; it runs on the release-please pull request and nightly.
+- The sorted `pg_dump --schema-only` of a fresh install equals that of every upgraded snapshot, and a difference is printed.
+- A snapshot older than `minimumUpgradeFrom` is refused by `migrate --check`.
+
+Tests first:
+
+- `infra/test/upgrade-matrix.int.test.ts`: "every supported snapshot upgrades and passes the smoke check"; "a fresh install and an upgraded snapshot have the same schema".
+
+#### E18-S10 ops: Name incompatible plugins in the upgrade check and warn early
+
+Issue: not created yet.
+
+As a plant admin, I want the upgrade check to name each plugin that does not support the new release, and System health to warn before the window, so that I can get new plugin versions in time.
+
+Module: ops, core. Blocked by: E18-S07 and the plugin compatibility check of proposed ADR 0075. Design: System health and Plugins page warning (part of D2).
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- `upgrade.sh` stops before the maintenance page when an installed plugin has no version for the new release, and names each plugin's id, version and NorthMES range, and a newer compatible version when its index has one.
+- System health and the Plugins page show "N plugins have no version for <release>" once the installation knows of a newer release.
+
+Tests first:
+
+- `plugin-check.test.ts`: "a plugin whose range excludes the new release is named with its range and the upgrade stops".
 
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
