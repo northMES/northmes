@@ -4794,7 +4794,7 @@ Goal: every release produces signed, attested images, SBOMs and an offline amd64
 
 Who it is for: Plant admin. Also: Maintainer.
 
-ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
+ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md).
 
 Out of scope: upgrade requests from the web (trigger in ADR 0078); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
 
@@ -5033,6 +5033,88 @@ Tests first:
 
 - `test/meta/release-workflow.test.ts`: "a candidate tag publishes a pre-release with no X.Y or latest image tag".
 - `infra/test/upgrade.int.test.ts`: "upgrade.sh refuses 0.6.0-rc.1 without --allow-prerelease".
+
+#### E18-S12 platform: Compute the rollback class and keep contract steps a release later
+
+Issue: not created yet.
+
+As a plant admin, I want almost every release to roll back by starting the previous image, and the rollback class to be computed rather than written by hand, so that a failed upgrade rarely costs data.
+
+Module: platform, ci. Blocked by: E18-S03. Design: none.
+
+ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+
+Acceptance criteria:
+
+- CI computes the rollback class and the schema compatibility number from the migration markers since the previous release, the example plugins' migrations and the recorded third-party schema changes, writes them into the release manifest, and fails the release when a hand-written value disagrees.
+- The pull request template asks a pull request with a `contract` file for the release whose code stopped using what it removes.
+- The runner sets a `statement_timeout` from the release manifest's migration time budget on each file.
+
+Tests first:
+
+- `rollback-class.test.ts`: "a release with one contract file computes restore"; "a manifest that says image for it fails the release".
+- `migrate-timeout.int.test.ts`: "a file over its statement_timeout fails and is not recorded".
+
+#### E18-S13 platform: Run long backfills as background migrations after start
+
+Issue: not created yet.
+
+As a plant admin, I want large data changes to run after NorthMES is back up, so that the upgrade window holds only the schema change.
+
+Module: platform. Blocked by: E18-S07. Design: none.
+
+ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0071](../adr/0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md).
+
+Acceptance criteria:
+
+- A migration file registers a batched, idempotent background migration that runs after start in batches with a pause; `northmes_meta.background_migration` records its progress, and System health shows it.
+- A release that needs a background migration finished declares it, and `migrate --check` refuses until it has finished, naming it.
+
+Tests first:
+
+- `background-migration.int.test.ts`: "a backfill survives a restart halfway"; "migrate --check refuses a release whose required backfill is unfinished".
+
+#### E18-S14 ops: Make the upgrade resumable, verified and audited
+
+Issue: not created yet.
+
+As a plant admin, I want an upgrade that survives my connection dropping, refuses a tampered or older bundle, is recorded in the audit trail and watches the installation after it starts, so that a failure is caught and recoverable.
+
+Module: ops. Blocked by: E18-S03, E18-S04. Design: none.
+
+ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+
+Acceptance criteria:
+
+- `upgrade.sh` runs as a transient systemd unit, records each finished step in `upgrade-state.json`, and has `--status` and `--resume`; every step is safe to run twice.
+- It verifies the bundle's digest and attestation, refuses an older version, checks disk space against the rehearsal's peak plus 20 percent, and lets running jobs finish before it stops `app`.
+- `upgrade.sh` and `rollback.sh` write a security event with the versions, bundle digest, rollback class, rehearsal result, outcome and reason.
+- The smoke check reads only, through a health account with no role, and a 30-minute watch reports readiness, log errors and browser errors.
+- For the restore class, `rollback.sh` refuses after the deadline set at upgrade time and names the forward fix.
+
+Tests first:
+
+- `infra/test/upgrade-crash.int.test.ts` (nightly): "an upgrade killed after the backup, during migrate or after the start ends working after resume or rollback, with no lost rows".
+- `infra/test/upgrade.int.test.ts`: "an older bundle is refused before the stop"; "an upgrade writes its security event".
+
+#### E18-S15 ops: Time migrations on a large snapshot nightly
+
+Issue: not created yet.
+
+As a maintainer, I want each release's migrations timed on a database five times the pilot's size, so that a slow migration shows up before a plant runs it.
+
+Module: ops, ci. Blocked by: E18-S09. Design: none.
+
+ADRs: [0079](../adr/0079-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
+
+Acceptance criteria:
+
+- The nightly matrix upgrades a large seeded snapshot and records the time; the release manifest carries the result as the migration time budget.
+- The nightly job fails when a release candidate's migrations exceed the previous budget by more than a set factor.
+
+Tests first:
+
+- `infra/test/upgrade-matrix.int.test.ts`: "the large snapshot upgrades within the release's time budget".
 
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
