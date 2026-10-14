@@ -41,13 +41,17 @@ function sameChoice(a: PlantsChoice, b: PlantsChoice): boolean {
 
 /**
  * The form's values for a saved article, with its plants only where the form shows the Plants
- * field, so a field the user cannot see never holds back a save.
+ * field, so a field the user cannot see never holds back a save. An article without plants, which
+ * only company views show (ADR 0073), leaves the field unset, so another change saves and keeps it
+ * so; a choice the user makes there is checked as on New article.
  */
 function formValues(article: Article, assigns: boolean) {
+  const placed = article.allPlants || article.plants.length > 0;
   return {
-    ...(assigns && {
-      plants: { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) },
-    }),
+    ...(assigns &&
+      placed && {
+        plants: { allPlants: article.allPlants, plants: article.plants.map(({ slug }) => slug) },
+      }),
     code: article.code,
     name: article.name,
     stockUnit: article.stockUnit,
