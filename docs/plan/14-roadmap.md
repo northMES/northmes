@@ -5160,6 +5160,28 @@ Tests first:
 
 - `modules/core/test/notice.int.test.ts`: "an admin without core.notice:manage is refused"; "a company notice is not visible to another company's users"; "a notice past its end time is not returned".
 
+#### E18-S18 ops: Publish the web build and upgrade a split installation
+
+Issue: not created yet.
+
+As an operator who hosts the backend, the web and the database on separate services, I want a published web build and an upgrade guide for my setup, so that I can upgrade without the appliance scripts and without users losing work while the web catches up.
+
+Module: ops, web. Blocked by: E18-S01, E18-S07. Design: the "web host not updated" state of the reload dialog (part of the Updates page design task).
+
+ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0070](../adr/0070-one-nestjs-backend-with-one-graphql-schema-and-one-static-web-app.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md).
+
+Acceptance criteria:
+
+- The release workflow publishes `northmes-web-<version>.tar.gz` with its digest and attestation beside the bundle and the backend image.
+- `upgrade.sh` refuses to run against an external database and names the upgrade guide.
+- The upgrade guide in `apps/docs` covers a split installation: provider snapshot after the backend stops, a rehearsal on a clone with `northmes migrate` from the new image, the backend first and then the web build of the same version, and rollback by restoring the snapshot.
+- When a reload still serves the old web build, the shell stops reloading and says that the web host has not been updated, naming both versions; queries keep working and mutations stay refused.
+
+Tests first:
+
+- `e2e/web-lag.spec.ts`: "a web on the old build says the web host is not updated and sends no mutation".
+- `infra/test/upgrade.int.test.ts`: "upgrade.sh refuses an external database and names the guide".
+
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
 Issue: northMES/northmes#163.
