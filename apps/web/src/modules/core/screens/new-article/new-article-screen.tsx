@@ -4,20 +4,18 @@ import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Controller } from 'react-hook-form';
 import { v7 as uuidv7 } from 'uuid';
-import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { CoreArticle } from '../../article.graphql.ts';
 import {
   ArticleForm,
+  ArticleFormPlants,
   type ArticleValues,
   articleFormFields,
   showSaveError,
 } from '../../components/article-form/index.ts';
-import { ArticlePlantsField } from '../../components/article-plants-field/index.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreCreateArticle } from './create-article.graphql.ts';
@@ -101,25 +99,7 @@ export function NewArticleScreen() {
       crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant }).href }]}
     >
       <ArticleForm form={form} onSave={save} cancelHref={coreLinks.articles({ plant }).href}>
-        {assigns && (
-          <FormSection
-            title="Plants"
-            description="The plants whose lists and pickers show the article."
-          >
-            <Controller
-              control={form.control}
-              name="plants"
-              render={({ field, fieldState }) => (
-                <ArticlePlantsField
-                  options={places.plants}
-                  value={field.value ?? { allPlants: false, plants: [] }}
-                  onChange={field.onChange}
-                  error={fieldState.error?.message}
-                />
-              )}
-            />
-          </FormSection>
-        )}
+        {assigns && <ArticleFormPlants form={form} options={places.plants} />}
       </ArticleForm>
     </PageFrame>
   );
