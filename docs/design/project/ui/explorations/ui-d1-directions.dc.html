@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 directions overview</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=Atkinson+Hyperlegible+Mono:wght@400;700&amp;family=Atkinson+Hyperlegible+Next:wght@400;700&amp;family=IBM+Plex+Mono:wght@400;600;700&amp;family=IBM+Plex+Sans:wght@400;600;700&amp;family=Source+Sans+3:wght@400;600;700&amp;family=Source+Serif+4:wght@600&amp;display=swap" />
+        <style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#f0eee9}
+.ov{min-width:1360px;background:#f0eee9;color:#1a1a1a;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.45}
+.ov a{color:#2a5fb0;text-underline-offset:2px}
+.ov a:hover{color:#1a1a1a}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ic{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ov-h{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px;padding:40px 44px 28px;border-bottom:1px solid rgba(0,0,0,.1)}
+.ov-k{margin:0 0 8px;font-size:12px;color:#55524c}
+.ov-t{margin:0 0 10px;font-size:30px;line-height:1.15;font-weight:700}
+.ov-l{margin:0;max-width:72ch;font-size:15px;line-height:1.55;text-wrap:pretty}
+.ov-n{margin:0;padding:0 0 0 18px;display:grid;align-content:start;gap:6px;font-size:13px;color:#55524c}
+.dv-turn{padding:32px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.ov a.dv-tid{color:#fff}
+.dv-tname{font-weight:600;font-size:13px}
+.cols{display:grid;grid-template-columns:repeat(5,minmax(250px,1fr));gap:20px;align-items:start}
+.dv-opt{display:grid;gap:10px;scroll-margin-top:16px}
+.dv-olabel{display:flex;align-items:baseline;gap:8px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);border-radius:5px;text-decoration:none}
+.ov a.dv-oid{color:#1a1a1a}
+.dv-opt:target .dv-oid{background:#2a5fb0;color:#fff}
+.o-name{font-family:var(--fh);font-weight:var(--hw);font-size:19px;line-height:1.2;text-transform:var(--tth)}
+.o-line{margin:0;font-size:13px;line-height:1.45;text-wrap:pretty;min-height:57px}
+.o-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 10px;margin:0;font-size:12px;min-height:76px;align-content:start}
+.o-facts dt{color:#55524c}
+.o-facts dd{margin:0;overflow-wrap:anywhere}
+.o-open{font-size:13px;font-weight:600}
+.mini{display:grid;gap:8px;padding:12px;background:var(--bg);color:var(--fg);border:1px solid rgba(0,0,0,.14);border-radius:8px;font-family:var(--f);font-size:12px}
+.mn-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 0 8px;border-bottom:1px solid var(--border)}
+.mn-t{font-family:var(--fh);font-weight:var(--hw);font-size:13px;white-space:nowrap;text-transform:var(--tth)}
+.mn-btn{padding:5px 10px;background:var(--primary);color:var(--primary-fg);border:var(--bw) solid var(--btnb);border-radius:var(--r);font-weight:700;font-size:11px;text-transform:var(--ttb);white-space:nowrap}
+.mn-board{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.mn-row{display:grid;grid-template-columns:62px minmax(0,1fr);height:38px;background:var(--lane)}
+.mn-row + .mn-row{border-top:1px solid var(--border)}
+.mn-rh{display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;white-space:nowrap;background:var(--surface);border-right:1px solid var(--border)}
+.mn-lane{position:relative}
+.mn-b{position:absolute;top:5px;bottom:5px;display:flex;align-items:center;gap:4px;padding:0 7px;border:1px solid var(--block-border);border-radius:var(--rb);font-family:var(--fn);font-size:10.5px;font-weight:700;white-space:nowrap;overflow:hidden}
+.st-draft{outline:3px double currentColor;outline-offset:-5px}
+.st-held{outline:2px dashed currentColor;outline-offset:-4px}
+.st-lock{outline:2px solid currentColor;outline-offset:-4px}
+.ini{padding:0 3px;border:1.5px solid currentColor;border-radius:999px;font-size:9px;line-height:11px}
+.mn-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mn-inp{padding:3px 8px;border:var(--bw) solid var(--input);border-radius:var(--r);background:var(--surface);font-family:var(--fn);font-size:11px}
+.mn-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:var(--rc);background:var(--cb);color:var(--cf);font-size:11px;font-weight:700;text-transform:var(--ttb)}
+.c-ok{--cb:var(--ok-subtle);--cf:var(--ok)}
+.c-danger{--cb:var(--danger-subtle);--cf:var(--danger)}
+.mn-sw{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:3px}
+.mn-s{height:16px;border-radius:2px;box-shadow:0 0 0 1px var(--border)}
+.mn-cap{font-size:11px;color:var(--muted-fg)}
+.d-a{--f:"IBM Plex Sans",system-ui,sans-serif;--fh:"IBM Plex Sans",system-ui,sans-serif;--fn:"IBM Plex Mono",ui-monospace,monospace;--hw:600;--r:6px;--rb:4px;--rc:999px;--bw:1px;--tth:none;--ttb:none}
+.d-b{--f:"Atkinson Hyperlegible Next",system-ui,sans-serif;--fh:"Atkinson Hyperlegible Next",system-ui,sans-serif;--fn:"Atkinson Hyperlegible Mono",ui-monospace,monospace;--hw:700;--r:2px;--rb:2px;--rc:2px;--bw:1px;--tth:uppercase;--ttb:none}
+.d-c{--f:"Source Sans 3",system-ui,sans-serif;--fh:"Source Serif 4",Georgia,serif;--fn:"Source Sans 3",system-ui,sans-serif;--hw:600;--r:4px;--rb:3px;--rc:4px;--bw:1px;--tth:none;--ttb:none}
+.d-d{--f:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--fh:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--fn:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--hw:700;--r:8px;--rb:6px;--rc:999px;--bw:1px;--tth:none;--ttb:none}
+.d-e{--f:"Archivo",system-ui,sans-serif;--fh:"Archivo",system-ui,sans-serif;--fn:"Archivo",system-ui,sans-serif;--hw:800;--r:0px;--rb:0px;--rc:0px;--bw:2px;--tth:uppercase;--ttb:uppercase}
+.d-b .mn-board{border-color:var(--input)}
+.d-c .mn-chip{box-shadow:inset 0 0 0 1px var(--cf)}
+.d-d .mini{box-shadow:0 1px 3px rgba(16,24,40,.14)}
+.d-e .mn-board{border:2px solid var(--fg)}
+.d-e .mn-chip{box-shadow:inset 0 0 0 2px var(--cf)}
+.d-e .o-name{font-stretch:112%}
+.dv-next{margin:22px 0 0;font-size:12px;line-height:1.5;color:#55524c}
+.sec{padding:28px 44px 36px;border-bottom:1px solid rgba(0,0,0,.08)}
+.sec-t{margin:0 0 12px;font-size:17px;font-weight:700}
+.gl{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1.2fr) 190px 190px 170px;border:1px solid rgba(0,0,0,.14);border-radius:8px;overflow:hidden;background:#fff}
+.gc{padding:9px 12px;border-top:1px solid rgba(0,0,0,.08);font-size:13px;overflow-wrap:anywhere}
+.gh{border-top:0;background:#f7f6f3;font-size:12px;font-weight:600;color:#55524c}
+.gn{font-weight:600}
+.qs{margin:0;padding:0 0 0 20px;display:grid;gap:6px;max-width:110ch;font-size:14px}
+        </style>
+      </helmet>
+      <div class="ov">
+        <svg class="sprite" aria-hidden="true">
+          <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></symbol>
+          <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></symbol>
+          <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+          <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"></path></symbol>
+        </svg>
+        <header class="ov-h" data-screen-label="Overview header">
+          <div>
+            <p class="ov-k">NorthMES · Design task D1, tokens and contrast · Area ui, packages/ui · Personas: Planner, Operator</p>
+            <h1 class="ov-t">Five look-and-feel directions</h1>
+            <p class="ov-l">A variations round to choose the base for D1. It explores direction only and does not set the final tokens. Each direction page shows the same invented content: palette and contrast pairs, type, controls in every state, a planning board slice, a list page and an operator station at 1280 by 800, in a light and a dark theme. Each page computes its ratios from its own hex values, and every required pair passes WCAG 2.2 AA.</p>
+          </div>
+          <ul class="ov-n">
+            <li>The project is bound to the Broadsheet design system. These pages define their own CSS variables and do not load its stylesheet.</li>
+            <li>Fonts load from Google Fonts on these pages. The app self-hosts its fonts and makes no CDN calls.</li>
+            <li>Icons are Lucide shapes, the set @northmes/ui uses.</li>
+          </ul>
+        </header>
+        <section class="dv-turn" id="t1" data-screen-label="Directions">
+          <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Directions A to E, light and dark</span></div>
+          <div class="cols">
+            <sc-for list="{{ dirs }}" as="d">
+              <div class="{{ d.cls }}" id="{{ d.id }}">
+                <div class="dv-olabel"><a class="dv-oid" href="{{ d.hash }}">{{ d.id }}</a><span class="o-name">{{ d.name }}</span></div>
+                <p class="o-line">{{ d.line }}</p>
+                <dl class="o-facts"><dt>Font</dt><dd>{{ d.font }}</dd><dt>Primary</dt><dd>{{ d.primary }}</dd><dt>Surface</dt><dd>{{ d.surface }}</dd><dt>Themes</dt><dd>{{ d.order }}</dd></dl>
+                <sc-for list="{{ d.minis }}" as="m">
+                  <div class="mini" style="{{ m.vars }}">
+                    <div class="mn-bar"><span class="mn-t">Planning board</span><span class="mn-btn">Save draft</span></div>
+                    <div class="mn-board">
+                      <div class="mn-row"><span class="mn-rh">Mill 1</span><span class="mn-lane"><span class="mn-b" style="{{ m.b1 }}">5001.10</span><span class="mn-b st-draft" style="{{ m.b2 }}">5002.10<svg class="ic" aria-hidden="true"><use href="#i-pencil"></use></svg></span></span></div>
+                      <div class="mn-row"><span class="mn-rh">Lathe 1</span><span class="mn-lane"><span class="mn-b st-lock" style="{{ m.b3 }}">5003.10<svg class="ic" aria-hidden="true"><use href="#i-lock"></use></svg></span><span class="mn-b st-held" style="{{ m.b4 }}">5004.10<span class="ini">PB</span></span></span></div>
+                    </div>
+                    <div class="mn-ctl"><span class="mn-inp">40 pcs</span><span class="mn-chip c-ok"><svg class="ic" aria-hidden="true"><use href="#i-play"></use></svg>Active</span><span class="mn-chip c-danger"><svg class="ic" aria-hidden="true"><use href="#i-clock"></use></svg>Late</span></div>
+                    <div class="mn-sw"><sc-for list="{{ m.sw }}" as="s"><span class="mn-s" style="{{ s.st }}"></span></sc-for></div>
+                    <div class="mn-cap">{{ m.label }}</div>
+                  </div>
+                </sc-for>
+                <a class="o-open" href="{{ d.file }}">{{ d.open }}</a>
+              </div>
+            </sc-for>
+          </div>
+          <p class="dv-next">Try next: "continue with 1a but take the font from 1c" · "make 1b light first" · "use 1d for planner screens and 1e for the station"</p>
+        </section>
+        <section class="sec" data-screen-label="At a glance">
+          <h2 class="sec-t">At a glance</h2>
+          <div class="gl">
+            <div class="gc gh">Direction</div><div class="gc gh">Font</div><div class="gc gh">Scripts covered</div><div class="gc gh">Primary, light and dark</div><div class="gc gh">Surface, light and dark</div><div class="gc gh">Theme order</div>
+            <sc-for list="{{ dirs }}" as="d"><div class="gc gn">{{ d.name }}</div><div class="gc">{{ d.font }}</div><div class="gc">{{ d.scripts }}</div><div class="gc">{{ d.primary }}</div><div class="gc">{{ d.surface }}</div><div class="gc">{{ d.order }}</div></sc-for>
+          </div>
+        </section>
+        <section class="sec" data-screen-label="Choices before D1 continues">
+          <h2 class="sec-t">Choices before D1 continues</h2>
+          <ol class="qs">
+            <li>Which direction continues as the D1 base, or which parts to combine, for example one palette with another font.</li>
+            <li>The font: IBM Plex Sans, Atkinson Hyperlegible Next, Source Sans 3 with Source Serif 4, Archivo, or the system stack. Greek and Cyrillic coverage differs between them.</li>
+            <li>Light first or dark first, and whether the station layout gets its own default theme.</li>
+            <li>Keep or remove the Broadsheet binding on this project, or move D1 to a new project.</li>
+            <li>The block border in dark themes. The plan names the background token, which measures about 1.0:1 against the lane on every page here, so each page uses a light block border token instead.</li>
+          </ol>
+        </section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+const T = {"a":{"light":{"bg":"#f9fafb","surface":"#ffffff","muted":"#eef0f3","fg":"#171b1f","mutedFg":"#575b60","border":"#dbdee1","input":"#7c8186","primary":"#22272c","primaryFg":"#fcfcfc","ok":"#246e3a","okSubtle":"#e1f5e4","warn":"#8d5406","danger":"#b02b27","dangerSubtle":"#ffebe8","info":"#1a609e","lane":"#ffffff","laneAlt":"#f6f8fa","blockBorder":"#171b1f","orders":["#eba295","#7ecaa9","#90baf1","#c0abe9"]},"dark":{"bg":"#151719","surface":"#1d2022","muted":"#26292c","fg":"#f0f2f4","mutedFg":"#aaaeb3","border":"#3a3d41","input":"#7c8186","primary":"#e9ebee","primaryFg":"#13161a","ok":"#76cf8a","okSubtle":"#15301b","warn":"#f0be67","danger":"#f7857d","dangerSubtle":"#481b19","info":"#85bcf5","lane":"#1a1c1e","laneAlt":"#1e2123","blockBorder":"#c2c4c7","orders":["#d0897d","#65b090","#78a1d6","#a792ce"]}},"b":{"light":{"bg":"#f4f7f9","surface":"#ffffff","muted":"#e6ecef","fg":"#09131a","mutedFg":"#4c575f","border":"#cbd2d7","input":"#6a767f","primary":"#006678","primaryFg":"#fdfdfd","ok":"#146d34","okSubtle":"#dff6e2","warn":"#8d5406","danger":"#b32228","dangerSubtle":"#ffebe9","info":"#4953ab","lane":"#ffffff","laneAlt":"#f3f7f9","blockBorder":"#09131a","orders":["#f28881","#69c27e","#52b5f4","#a39ef9"]},"dark":{"bg":"#050b10","surface":"#0b141a","muted":"#131d24","fg":"#f2f6f7","mutedFg":"#b1bdc2","border":"#2a343c","input":"#748a95","primary":"#36dcec","primaryFg":"#040c13","ok":"#65e287","okSubtle":"#0f3118","warn":"#fec84b","danger":"#ff7d7d","dangerSubtle":"#4f1a1b","info":"#abb9fe","lane":"#080f15","laneAlt":"#0c151b","blockBorder":"#d1d9dc","orders":["#f07f77","#5bbd74","#3faff3","#9c96f8"]}},"c":{"light":{"bg":"#f9f5ee","surface":"#fefcf7","muted":"#f2ece3","fg":"#251e18","mutedFg":"#61564d","border":"#dcd3c6","input":"#877768","primary":"#672e63","primaryFg":"#fcfaf6","ok":"#326935","okSubtle":"#dff1db","warn":"#8a5619","danger":"#a13124","dangerSubtle":"#ffe5de","info":"#135f83","lane":"#fcfaf6","laneAlt":"#f6f3ec","blockBorder":"#251e18","orders":["#e4a5a4","#a8c28f","#7fc3d9","#a0b7e8"]},"dark":{"bg":"#1a1511","surface":"#231d18","muted":"#2c251f","fg":"#f0ebe0","mutedFg":"#bcb3a7","border":"#453b33","input":"#847465","primary":"#dcabd6","primaryFg":"#1a1511","ok":"#90d192","okSubtle":"#1d341e","warn":"#edc47d","danger":"#f49383","dangerSubtle":"#4a241e","info":"#8ac7ea","lane":"#1f1915","laneAlt":"#261f19","blockBorder":"#d2cdc3","orders":["#c98c8b","#8fa877","#66aabf","#889ece"]}},"d":{"light":{"bg":"#f4f7fb","surface":"#ffffff","muted":"#ecf0f7","fg":"#151d2b","mutedFg":"#545e6f","border":"#d9dee6","input":"#758193","primary":"#105fd9","primaryFg":"#ffffff","ok":"#007742","okSubtle":"#dff8e6","warn":"#9a5505","danger":"#be222a","dangerSubtle":"#ffedeb","info":"#006a9d","lane":"#ffffff","laneAlt":"#f6f9fd","blockBorder":"#151d2b","orders":["#f7b3b2","#a7d6a8","#94d0f4","#bcc2fb"]},"dark":{"bg":"#0a111f","surface":"#121a2b","muted":"#192437","fg":"#f0f4f9","mutedFg":"#acb8cb","border":"#2d384d","input":"#6e819e","primary":"#60a7ff","primaryFg":"#080f1c","ok":"#6ad895","okSubtle":"#0f3620","warn":"#fcbe62","danger":"#ff7e77","dangerSubtle":"#521d1b","info":"#78c7fd","lane":"#0e1625","laneAlt":"#131c2c","blockBorder":"#c9d2de","orders":["#dc8b8b","#7cb57d","#61afda","#989ee2"]}},"e":{"light":{"bg":"#f5f5f5","surface":"#ffffff","muted":"#e4e4e4","fg":"#0b0b0b","mutedFg":"#484848","border":"#b7b7b7","input":"#0b0b0b","primary":"#f8d219","primaryFg":"#0b0b0b","ok":"#106e20","okSubtle":"#beedbe","warn":"#9c4700","danger":"#bb0916","dangerSubtle":"#ffdbd6","info":"#1c55b2","lane":"#ffffff","laneAlt":"#f2f2f2","blockBorder":"#0b0b0b","orders":["#f97770","#69bc57","#19affe","#a491ff"]},"dark":{"bg":"#090909","surface":"#141414","muted":"#1f1f1f","fg":"#f8f8f8","mutedFg":"#bebebe","border":"#484848","input":"#dedede","primary":"#f8d219","primaryFg":"#0b0b0b","ok":"#68db70","okSubtle":"#133716","warn":"#ff9b51","danger":"#ff716b","dangerSubtle":"#521615","info":"#85baff","lane":"#0d0d0d","laneAlt":"#141414","blockBorder":"#eeeeee","orders":["#f97770","#69bc57","#19affe","#a491ff"]}}};
+const D = [
+  { k: 'a', id: '1a', name: 'A · Graphite', line: 'Calm industrial neutral: cool grays, a near-black primary and IBM Plex. Closest to the shadcn neutral theme.', font: 'IBM Plex Sans, IBM Plex Mono', scripts: 'Latin, Greek and Cyrillic in Plex Sans; Plex Mono has no Greek', order: ['light', 'dark'], btnb: { light: 'primary', dark: 'primary' } },
+  { k: 'b', id: '1b', name: 'B · Control room', line: 'Dark first and high contrast: blue-black surfaces, a bright cyan primary, square corners and dense rows.', font: 'Atkinson Hyperlegible Next and Mono', scripts: 'Latin only', order: ['dark', 'light'], btnb: { light: 'primary', dark: 'primary' } },
+  { k: 'c', id: '1c', name: 'C · Ledger', line: 'Warm paper and ink: off-white paper, an aubergine primary, serif headings and ruled tables.', font: 'Source Serif 4, Source Sans 3', scripts: 'Latin, Greek and Cyrillic', order: ['light', 'dark'], btnb: { light: 'primary', dark: 'primary' } },
+  { k: 'd', id: '1d', name: 'D · Azure', line: 'Crisp blue enterprise: cool white, an azure primary, soft shadows, rounded controls and the system font.', font: 'System font stack', scripts: 'Follows the operating system', order: ['light', 'dark'], btnb: { light: 'primary', dark: 'primary' } },
+  { k: 'e', id: '1e', name: 'E · Signal', line: 'Bold shop floor: black, white and safety yellow, 2 px borders, uppercase labels and large type.', font: 'Archivo', scripts: 'Latin only', order: ['light', 'dark'], btnb: { light: 'fg', dark: 'primary' } }
+];
+function lum(h) { const n = [1, 3, 5].map((i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }); return 0.2126 * n[0] + 0.7152 * n[1] + 0.0722 * n[2]; }
+function cr(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+function textOn(f) { return cr('#000000', f) >= cr('#ffffff', f) ? '#000000' : '#ffffff'; }
+function blk(f, l, w) { return { left: l + '%', width: w + '%', background: f, color: textOn(f) }; }
+class Component extends DCLogic {
+  renderVals() {
+    const dirs = D.map((d) => {
+      const L = T[d.k].light, K = T[d.k].dark;
+      return {
+        id: d.id, hash: '#' + d.id, cls: 'dv-opt d-' + d.k, name: d.name, line: d.line, font: d.font, scripts: d.scripts,
+        primary: L.primary + ' light, ' + K.primary + ' dark', surface: L.surface + ' light, ' + K.surface + ' dark',
+        order: d.order[0] === 'light' ? 'Light first, dark second' : 'Dark first, light second',
+        file: 'ui-d1-direction-' + d.k + '.dc.html', open: 'Open direction ' + d.k.toUpperCase(),
+        minis: d.order.map((key) => {
+          const t = T[d.k][key];
+          return {
+            vars: { '--bg': t.bg, '--surface': t.surface, '--muted': t.muted, '--fg': t.fg, '--muted-fg': t.mutedFg, '--border': t.border, '--input': t.input, '--primary': t.primary, '--primary-fg': t.primaryFg, '--ok': t.ok, '--ok-subtle': t.okSubtle, '--danger': t.danger, '--danger-subtle': t.dangerSubtle, '--lane': t.lane, '--block-border': t.blockBorder, '--btnb': t[d.btnb[key]] },
+            label: (key === 'light' ? 'Light theme' : 'Dark theme') + (key === d.order[0] ? ', first' : ', second'),
+            b1: blk(t.orders[0], 1, 45), b2: blk(t.orders[1], 48, 50), b3: blk(t.orders[2], 2, 47), b4: blk(t.orders[3], 52, 46),
+            sw: ['bg', 'surface', 'fg', 'mutedFg', 'primary', 'ok', 'warn', 'danger', 'info'].map((k) => ({ st: { background: t[k] } }))
+          };
+        })
+      };
+    });
+    return { dirs: dirs };
+  }
+}
+    </script>
+  </body>
+</html>

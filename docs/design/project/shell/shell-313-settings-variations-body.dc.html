@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings page bodies</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="set-body" data-screen-label="{{ label }}">
+        <sc-if value="{{ isList }}">
+          <sc-if value="{{ wide }}">
+            <div class="lf-tool">
+              <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">{{ L.search }}</span></span>
+              <sc-for list="{{ L.filters }}" as="b"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">{{ b }}<span class="ic" data-icon="ChevronDown"></span></button></sc-for>
+              <span class="lf-tool-end"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>Columns<span class="ic" data-icon="ChevronDown"></span></button></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ narrow }}">
+            <span class="inp lf-search full"><span class="ic" data-icon="Search"></span><span class="ph">{{ L.search }}</span></span>
+            <div class="lf-tool">
+              <button class="btn v-outline lf-fb" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>Filters</button>
+              <button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>Columns</button>
+            </div>
+          </sc-if>
+          <div class="lf-card auto" style="{{ colsStyle }}">
+            <div class="lf-scroll" tabindex="{{ scrollTab }}" role="{{ scrollRole }}" aria-label="{{ scrollLabel }}">
+              <div class="lf-grid" role="table" aria-label="{{ L.name }}">
+                <div class="lf-tr hd" role="row">
+                  <sc-for list="{{ heads }}" as="h">
+                    <span class="lf-td {{ h.cls }}" role="columnheader"><sc-if value="{{ h.vh }}"><span class="lf-vh">{{ h.t }}</span></sc-if><sc-if value="{{ h.plain }}"><span>{{ h.t }}</span></sc-if></span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ rows }}" as="r">
+                  <div class="lf-tr" role="row">
+                    <sc-for list="{{ r.cells }}" as="c">
+                      <span class="lf-td {{ c.cls }}" role="cell">
+                        <sc-if value="{{ c.isLink }}"><a class="lf-cl" href="#">{{ c.v }}</a></sc-if>
+                        <sc-if value="{{ c.isText }}"><span class="{{ c.tcls }}">{{ c.v }}</span></sc-if>
+                        <sc-if value="{{ c.isSw }}"><span class="set-swatch {{ c.sw }}" aria-hidden="true"></span><span>{{ c.v }}</span></sc-if>
+                        <sc-if value="{{ c.isBadge }}"><span class="badge lf-st-active">{{ c.v }}</span></sc-if>
+                        <sc-if value="{{ c.isMenu }}"><button class="btn icon v-ghost" type="button" aria-label="{{ c.v }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button></sc-if>
+                      </span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="lf-pager">
+              <span>Rows <span class="lf-mono">1</span> to <span class="lf-mono">{{ count }}</span> of <span class="lf-mono">{{ count }}</span></span>
+              <span class="lf-pg">
+                <sc-if value="{{ wide }}">
+                  <button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Previous</button>
+                  <button class="btn v-outline is-dis" type="button" aria-disabled="true">Next<span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+                <sc-if value="{{ narrow }}">
+                  <button class="btn icon v-outline is-dis" type="button" aria-disabled="true" aria-label="Previous page"><span class="ic" data-icon="ChevronLeft"></span></button>
+                  <button class="btn icon v-outline is-dis" type="button" aria-disabled="true" aria-label="Next page"><span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+              </span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isLanding }}">
+          <sc-for list="{{ land }}" as="g">
+            <sc-if value="{{ g.hasHead }}"><h2 class="set-h2" id="{{ g.hid }}">{{ g.head }}</h2></sc-if>
+            <ul class="set-land" role="list" aria-labelledby="{{ g.lby }}" aria-label="{{ g.alabel }}">
+              <sc-for list="{{ g.items }}" as="i"><li><a class="set-lr" href="#"><span class="ic" data-icon="{{ i.icon }}"></span><span>{{ i.t }}</span><span class="ic set-lr-c" data-icon="ChevronRight"></span></a></li></sc-for>
+            </ul>
+          </sc-for>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"page":{"editor":"enum","options":["users","machines","calendars","landing"],"default":"users","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"uid":{"editor":"text","default":"","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, opts, d) => { const s = v === undefined || v === null ? "" : String(v).trim(); return opts.indexOf(s) >= 0 ? s : d; };
+          const page = pick(P.page, ["users", "machines", "calendars", "landing"], "users");
+          const narrow = pick(P.size, ["wide", "narrow"], "wide") === "narrow";
+          if (!this.uid) { window.__nmSetBodySeq = (window.__nmSetBodySeq || 0) + 1; this.uid = "setb" + window.__nmSetBodySeq; }
+          const u = String(P.uid || "") || this.uid;
+          // Cells: link (the row's own page), text, swatch with text, badge, row menu. All values are fictional.
+          const lk = (v) => ({ v: v, isLink: true, cls: "" });
+          const tx = (v, tcls, cls) => ({ v: v, isText: true, tcls: tcls || "", cls: cls || "" });
+          const sw = (v, s) => ({ v: v, isSw: true, sw: s, cls: "" });
+          const bd = (v) => ({ v: v, isBadge: true, cls: "" });
+          const mn = (v) => ({ v: "Actions for " + v, isMenu: true, cls: "end" });
+          const LISTS = {
+            users: {
+              name: "Users", search: "Search users", filters: ["Role", "Place"],
+              heads: ["Name", "Username", "Roles", "Status"], cols: "minmax(160px,1.1fr) minmax(120px,1fr) minmax(200px,1.6fr) 120px 52px", minw: "720px",
+              rows: [["Alex Lund", "alex.lund", "Planner at Plant A"], ["Anna Berg", "anna.berg", "Operator at Plant A"], ["Erik Lind", "erik.lind", "Plant admin at Plant A"], ["Jonas Holm", "jonas.holm", "Company admin at Acme AB"]]
+                .map((r) => [lk(r[0]), tx(r[1], "lf-mono lf-mut"), tx(r[2]), bd("Active"), mn(r[0])])
+            },
+            machines: {
+              name: "Machines", search: "Search machines", filters: ["Equipment group", "Plannable"],
+              heads: ["Machine", "Equipment group", "Plannable", "Last changed"], cols: "minmax(140px,1fr) minmax(160px,1.2fr) 120px 140px 52px", minw: "640px",
+              rows: [["Press 2", "Presses", "set-g6", "Yes", "2026-09-14"], ["Press 4", "Presses", "set-g6", "Yes", "2026-09-14"], ["Mill 1", "Mills", "set-g3", "Yes", "2026-09-21"], ["Mill 2", "Mills", "set-g3", "No", "2026-09-21"], ["Lathe 3", "", "", "Yes", "2026-09-28"]]
+                .map((r) => [lk(r[0]), r[1] ? sw(r[1], r[2]) : tx("No group", "lf-mut"), tx(r[3]), tx(r[4], "lf-mono"), mn(r[0])])
+            },
+            calendars: {
+              name: "Calendars", search: "Search calendars", filters: ["Machine"],
+              heads: ["Calendar", "Current version from", "Working hours", "Machines", "Deviations"], cols: "minmax(220px,1.6fr) 170px 150px 100px 110px 52px", minw: "760px",
+              rows: [["Two shifts, Monday to Friday", "2026-09-28", "06:00 to 22:00", "4", "1"], ["Day shift, Monday to Friday", "2026-09-28", "06:00 to 14:00", "1", "1"]]
+                .map((r) => [lk(r[0]), tx(r[1], "lf-mono"), tx(r[2], "lf-mono"), tx(r[3], "lf-mono", "num"), tx(r[4], "lf-mono", "num"), mn(r[0])])
+            }
+          };
+          const isList = page !== "landing";
+          const Ld = isList ? LISTS[page] : LISTS.users;
+          const heads = Ld.heads.map((t) => ({ t: t, plain: true, vh: false, cls: (page === "calendars" && (t === "Machines" || t === "Deviations")) ? "num" : "" })).concat([{ t: "Actions", plain: false, vh: true, cls: "end" }]);
+          const rows = Ld.rows.map((cells) => ({ cells: cells }));
+          const I = (t, icon) => ({ t: t, icon: icon });
+          return {
+            label: "Settings page body, " + page,
+            isList: isList, isLanding: !isList, wide: !narrow, narrow: narrow,
+            L: Ld, heads: heads, rows: rows, count: String(Ld.rows.length),
+            colsStyle: "--cols:" + Ld.cols + (narrow ? ";--minw:" + Ld.minw : ""),
+            scrollTab: narrow ? "0" : null, scrollRole: narrow ? "region" : null, scrollLabel: narrow ? Ld.name + " table, scrolls sideways" : null,
+            land: [
+              { hasHead: false, head: "", hid: null, lby: null, alabel: "Company", items: [I("General", "Building2"), I("Formats", "SlidersHorizontal"), I("Plants", "LayoutGrid"), I("Users", "Users"), I("Roles", "Shield"), I("Integrations", "Plug"), I("Audit log", "ScrollText")] },
+              { hasHead: true, head: "Modules", hid: u + "-lh1", lby: u + "-lh1", alabel: null, items: [I("Planning rules", "CalendarCog"), I("AI assistant", "Sparkles"), I("Pyramid connector", "ServerCog")] }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

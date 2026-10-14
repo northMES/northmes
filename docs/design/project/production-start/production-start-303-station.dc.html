@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 operator station</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+        <style>
+/* D4 spec page: the header frame F0, the build notes F1 for row 1, then rows 1 to 4, one per part file. Classes start with
+   sp-, so they never meet a D1, shell, station, ps-, si-, jo-, of- or re- class. Row labels are canvas annotations in the D1
+   label colors. */
+body{margin:0}
+.sp-sheet{width:1440px}
+.sp-sheet code{font:400 13px/18px var(--font-mono);white-space:nowrap}
+.sp-h{margin:0 0 10px;font-size:16px;line-height:24px;font-weight:600}
+.sp-h3{margin:0 0 8px;font-size:15px;line-height:20px;font-weight:600}
+.sp-ul{display:grid;gap:8px;margin:0;padding:0 0 0 18px}
+.sp-ul.sp-two{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 56px}
+.sp-facts{display:grid;grid-template-columns:180px minmax(0,1fr);gap:8px 24px;margin:24px 0 0}
+.sp-facts dt{font-weight:600}
+.sp-facts dd{margin:0}
+.sp-dir{display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:32px;align-items:start}
+.sp-dir p{margin:0}
+.sp-dir p + p{margin-top:10px}
+.sp-tbl{width:100%;border-collapse:collapse;font-size:13px;line-height:18px}
+.sp-tbl th,.sp-tbl td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+.sp-tbl thead th{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+.sp-tbl td.sp-fn code{white-space:nowrap}
+.sp-tbl td.sp-id{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sp-tbl td.sp-nw{white-space:nowrap}
+.sp-nd{display:block;margin-top:4px;font-family:var(--font-sans);color:var(--muted-foreground)}
+.sp-tbl tr.sp-gap td{background:var(--warning-subtle)}
+.sp-st{display:inline-flex;margin:0 6px 0 0;padding:0 7px;border-radius:999px;font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;background:var(--warning-subtle);color:var(--warning)}
+.sp-st.none{background:var(--muted);color:var(--muted-foreground)}
+.sp-st.ok{background:var(--success-subtle);color:var(--success)}
+.sp-note{margin:12px 0 0;color:var(--muted-foreground)}
+.sp-grp{margin:0 0 6px;font-size:13px;line-height:18px;font-weight:600;color:var(--muted-foreground)}
+.sp-grps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 56px}
+.sp-nh{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.sp-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 40px;margin-top:28px}
+.sp-cols section{min-width:0}
+.sp-row{display:flex;flex-direction:column;align-items:flex-start}
+.sp-rh{position:relative;z-index:30;display:grid;gap:6px;max-width:1440px;margin:0 0 32px;padding:14px 20px 16px;border-radius:8px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);cursor:grab;user-select:none}
+.sp-rh1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font:600 28px/36px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.01em}
+.sp-rn{padding:3px 10px;border-radius:5px;background:#1a1a1a;color:#ffffff;font:600 18px/26px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0}
+.sp-ids{font:500 18px/26px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;letter-spacing:0}
+.sp-rh2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;font:400 16px/24px "IBM Plex Sans",system-ui,sans-serif;color:#4f4c46}
+.sp-file{font:400 14px/20px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.sp-part{position:relative;z-index:1}
+.sp-part.pad{margin:-80px 0 0 -80px}
+        </style>
+      </helmet>
+      <div class="frame" style="left:80px;top:80px;width:1440px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, direction, rows, acceptance criteria, frames per item, assumptions, proposals, known limits and open questions</span></div>
+        <article class="sheet sp-sheet">
+          <p class="kick">Design task D4, spec page, in review. Every name, number and time on this page is fictional.</p>
+          <h1 class="t1">Operator station</h1>
+          <p class="lede">The production-start station screen inside the D2 station frame: pairing a station, badge sign-in and Switch operator, the job list beside the selected job with Start, Pause and Finish, the report form with the docked keypad, the last reports, the report dialogs and corrections, a lost connection, idle sign-off and the page states. Rows 1 to 4 below hold the frames; each frame names its theme and size.</p>
+          <dl class="sp-facts">
+            <dt>Issue</dt><dd>#303, production-start: Design the operator station (D4), plan id E11-S01-T01</dd>
+            <dt>Story</dt><dd>E11-S01 (#115), register a station as a device. The station UI tasks of E11-S01 to E11-S06 (#115 to #120) wait on this page.</dd>
+            <dt>Area</dt><dd>production-start for the station screens, built in <code>modules/production-start/web</code>; core for the admin's Stations page, its Pairing requests and the approval Dialog, built in <code>modules/core/web</code></dd>
+            <dt>Route</dt><dd><code>/station/$stationId</code>, a full-screen station layout with no sidebar, document title "Press 4 · Plant A · NorthMES". The route of the pairing screen before a station has an id, and the admin's Stations route (drawn as Administration, Stations), are open (question 21.13).</dd>
+            <dt>Persona</dt><dd>Operator at the station: Anna Berg, Omar Haddad and Liisa Korhonen. Plant admin for the pairing approval on their own computer: Jonas Holm.</dd>
+            <dt>Frame</dt><dd>The station frames mount <code>shell/StationFrame.dc.html</code> from D2 through the byte-equal copy <code>production-start/StationFrame.dc.html</code>. The admin frames mount <code>shell/Shell.dc.html</code> through the byte-equal copy <code>production-start/Shell.dc.html</code>. Neither copy is edited.</dd>
+            <dt>Data drawn</dt><dd>Acme AB, Plant A, Tue 3 Nov 2026 at 14:06 plant time. The station Press 4 is bound to one machine; the station Press cell 1 has Press 3 and Press 4. Jobs 5001.20 to 5009.10. Press 1 at Plant D, a plant in onboarding, appears only in SI37 to SI40.</dd>
+            <dt>Shared files</dt><dd><code>production-start-303-station.css</code>, <code>production-start-303-station-data.js</code> and the parts <code>-header</code> (machine switch), <code>-joblist</code>, <code>-job</code>, <code>-report</code>, <code>-reports</code> and <code>-dialog</code>, which rows 2 to 4 mount.</dd>
+          </dl>
+          <section class="sec sp-dir">
+            <div>
+              <h2 class="sp-h">Chosen direction</h2>
+              <p>Option A of the variations round, with option B's docked keypad, as the design workflow recorded Krister Johansson's choice of 2026-10-08. Krister has not confirmed that choice on this page or in the README yet, and the page is built on it. Option A puts the job list beside the selected job, with the last reports as a third column at 1920 by 1080 and one scroll below the report form at 1280 by 800. From option B the page takes the docked keypad: on a station without a keyboard it shows by default with a System keyboard toggle, and on a station with a keyboard it starts hidden behind a Keypad toggle. Whether stations have a keyboard stays open (question 21.3), so the frames draw both kinds of station.</p>
+            </div>
+            <div>
+              <h2 class="sp-h">Variations round</h2>
+              <p><code>production-start/production-start-303-station-variations.dc.html</code> with options A, B and C, their notes and the comparison frame R. Its README row still reads "variations, in review" and records the choice once Krister confirms it.</p>
+              <p>Everything else follows A: the StatusBadge, the scrap reasons always in view, Sending on the pressed button with the error under it, the last reports as a table, a correction in a Dialog, the Change job bar in portrait and A5's badge-first sign-in.</p>
+            </div>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Rows on this page</h2>
+            <table class="sp-tbl">
+              <thead>
+                <tr><th>Row</th><th>Frames</th><th>Part file</th><th>What the row shows</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1 Pairing and sign-in</td><td class="sp-id sp-nw">SI1 to SI53</td><td class="sp-fn"><code>production-start-303-station-signin.dc.html</code></td><td>A new station's pairing code, the admin approving the request in the shell, the paired station, badge sign-in, the PIN after the badge with the docked keypad, an unknown badge, badge sign-in locked, sign-in with username, Switch operator and a plant in onboarding, each station state at 1920 by 1080 in light and dark, at 1280 by 800 and in portrait. Then an expired code, an approval that came too late, the admin page at 1920, 1280 and 320, a wrong username or password, a wrong PIN and the PIN lock. F1 holds the build notes for the row.</td></tr>
+                <tr><td>2 Station home, commands and page states</td><td class="sp-id sp-nw">JO1 to JO31</td><td class="sp-fn"><code>production-start-303-station-jobs.dc.html</code></td><td>The station home at the three sizes in light and dark; a planned, a paused and a finished job; Sending on Pause, Start and Send, with Send <code>aria-disabled</code> while a command waits; the 15 s timeouts; loading; the empty list at one and at two machines; the list error and the list not refreshed; the Change job Sheet in portrait and the job chosen in it; the machine switch to Press 3. JO26 holds the build notes for the row.</td></tr>
+                <tr><td>3 Lost connection, idle, reload, long strings, keyboard and focus</td><td class="sp-id sp-nw">OF1 to OF27</td><td class="sp-fn"><code>production-start-303-station-offline-keyboard.dc.html</code></td><td>Send, Pause, Start and Finish while disconnected; the connection back; a session ended on Send, then the same badge and another badge; the idle warning and the sign-off; Send after an update and the reload; German and Finnish strings in light and dark; Tab order; focus after Start, Send and an error; Switch operator; a badge scanned into Good quantity; targets for gloved hands and the D1 focus ring. OF26 holds the build notes for the row.</td></tr>
+                <tr><td>4 Reporting and corrections</td><td class="sp-id sp-nw">RE1 to RE31</td><td class="sp-fn"><code>production-start-303-station-reporting.dc.html</code></td><td>The large-quantity and "Report again?" Alert Dialogs; the correction Dialog with the docked keypad in its default, invalid, refused and sending states at the three sizes and at a keyboard station; the last reports after a correction and the supervisor case; the searchable list of 14 reasons; a quantity in kg with the decimal key; a server error that keeps the entries; the field errors with the summary; the keypad toggles on both kinds of station. RE31 holds the build notes for the row.</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Acceptance criteria of #303</h2>
+            <table class="sp-tbl">
+              <thead>
+                <tr><th>Criterion</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Every frame in the list exists in light and dark.</td><td><span class="sp-st ok">Met</span>Every item of #303's frame list has light and dark frames; the table below names them.</td></tr>
+                <tr><td>No comment thread on the page is open.</td><td><span class="sp-st none">At approval</span>The page has no comment threads.</td></tr>
+                <tr><td>Krister approved the page and the design project's README row holds the etag.</td><td><span class="sp-st">Not met</span>The page is in review; its README row has no etag yet.</td></tr>
+                <tr><td>The design pull request with PNGs and build notes is merged.</td><td><span class="sp-st">Not met</span>It follows the approval.</td></tr>
+                <tr><td>The waiting UI tasks carry the Design section.</td><td><span class="sp-st">Not met</span>It follows the approval.</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">The frames #303 lists, and where they are</h2>
+            <table class="sp-tbl">
+              <thead>
+                <tr><th>Item in #303</th><th>Light</th><th>Dark</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Pairing: the station shows a pairing code; the plant admin approves it from their own PC, drawn in the shell</td><td class="sp-id">SI1, SI3, SI4, SI5, SI7, SI9, SI11, SI12, SI41, SI43, SI44, SI45, SI47</td><td class="sp-id">SI2, SI6, SI8, SI10, SI42, SI46</td></tr>
+                <tr><td>Badge sign-in in the focused badge field, an optional PIN field that accepts paste, unknown badge, sign-in locked for 5 minutes after five unknown badges, and Switch operator</td><td class="sp-id">SI13, SI15 to SI17, SI19 to SI21, SI23 to SI25, SI27 to SI29, SI31 to SI33, SI35, SI36, SI48, SI50, SI52</td><td class="sp-id">SI14, SI18, SI22, SI26, SI30, SI34, SI49, SI51, SI53, OF20</td></tr>
+                <tr><td>The job list for the station's equipment, sorted by planned start with priority, plus jobs with an open run; the selected job's header with who started it and the last report time</td><td class="sp-id">JO1, JO3, JO5, JO6, JO8, JO27, JO29, JO30, OF21, RE22</td><td class="sp-id">JO2, JO4, JO7, JO28, JO31, RE23</td></tr>
+                <tr><td>Start, pause and finish, with "Sending" and Send aria-disabled while a command waits (15 s timeout, no optimistic result)</td><td class="sp-id">JO6, JO8, JO9, JO11, JO12, JO14, JO16, OF17</td><td class="sp-id">JO7, JO10, JO13, JO15, JO17</td></tr>
+                <tr><td>Reporting good and scrap with a scrap reason; Enter never submits; the large-quantity confirmation; "Report again?"</td><td class="sp-id">JO1, JO3, JO5, JO12, OF19, RE1, RE3, RE4, RE20, RE22, RE24, RE27 to RE30</td><td class="sp-id">JO2, JO4, JO13, OF18, OF22, RE2, RE5, RE21, RE23, RE25, RE26</td></tr>
+                <tr><td>The last five reports on the selected job, and correcting one with a reason</td><td class="sp-id">JO1, JO8, OF24, RE6, RE8, RE9, RE11, RE13, RE15, RE16, RE18</td><td class="sp-id">JO2, JO10, JO15, OF2, RE7, RE10, RE12, RE14, RE17, RE19</td></tr>
+                <tr><td>Lost connection: the role=status banner, inline errors on Send, Start, Pause and Finish, entries kept; the idle warning 30 s before sign-off with "Stay signed in"</td><td class="sp-id">OF1, OF3, OF5, OF6, OF8, OF9, OF12, OF14</td><td class="sp-id">OF2, OF4, OF7, OF10, OF11, OF13</td></tr>
+                <tr><td>Empty, loading and error states; a plant in onboarding (core.plant_not_ready)</td><td class="sp-id">JO18, JO20, JO22, JO23, JO25, SI37, SI39, SI40</td><td class="sp-id">JO19, JO21, JO24, SI38</td></tr>
+                <tr><td>Station widths 1280 by 800, 1920 by 1080 and portrait; light and dark; one frame with long German or Finnish labels and data</td><td class="sp-id">JO1 (1920), JO3 (1280), JO5 (portrait), OF15 (long strings)</td><td class="sp-id">JO2 (1920), JO4 (1280), JO28, OF11 and OF25 (portrait), OF27 (long strings)</td></tr>
+                <tr><td>Keyboard, touch and focus frames: targets for gloved hands, tab order, where focus goes after each action</td><td class="sp-id">OF16, OF17, OF19, OF21, OF23, OF24, JO6, JO27, JO29, JO30, RE27 to RE30; F1 for row 1</td><td class="sp-id">OF7, OF13, OF18, OF22, OF25, JO28, JO31</td></tr>
+              </tbody>
+            </table>
+            <p class="sp-note">A dark twin repeats its light frame with the dark tokens and names that frame in its chip. Portrait frames are light, apart from OF11, OF25, JO28 and RE10. Single states inside an item, such as the keyboard station in OF4, the keypad toggles RE27 to RE30 and the admin page at 1920, 1280 and 320 (SI43, SI44, SI47), are drawn in one theme.</p>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Assumptions</h2>
+            <ul class="sp-ul sp-two">
+              <li>Every value is fictional: Acme AB, Plant A, Plant D, the people, the stations, the pairing code and address, and the job, article and machine numbers. The implementer takes layout, region order, states, copy, the keyboard model and slot placements, not demo numbers.</li>
+              <li>Now is Tue 3 Nov 2026 at 14:06 plant time; the frames after a code ran out, SI41, SI42, SI45 and SI46, are at 14:17. Report times are record times (proposal 21.25).</li>
+              <li>Press 4 is bound to one machine, so it shows no machine switch. Press cell 1 has Press 3 and Press 4 and shows the switch in the frame's header slot (JO22, JO30, JO31, RE22, RE23).</li>
+              <li>Finished jobs stay on the station for the production day under "Finished today" (question 21.2).</li>
+              <li>Overdue and planned on another machine show as words only: "Start overdue", "Planned on Press 3" (question 21.1).</li>
+              <li>Anna Berg typed 80 good on 5002.10 and changed job without sending, so 5002.10 carries the Unsent entries badge.</li>
+              <li>The start of a job is a row among the last five reports, with no Correct (question 21.5).</li>
+              <li>Anna Berg may correct the station's reports today, as the proposed operator rule says (question 21.6). The report has no note field (question 21.8).</li>
+              <li>Quantity fields are 56 px high, the sign-in fields, buttons and reason rows 48 px, keypad keys 72 px at 1920 and 64 px at 1280 and in portrait. No D1 token holds these sizes (question 21.9).</li>
+              <li>The D2 frame is frozen: the long-strings frame keeps its English top bar (question 21.33), and the parts set <code>aria-busy</code> on their own regions because the frame has no busy prop (question 21.32).</li>
+              <li>Five wrong PINs for one badge pause PIN sign-in for that badge for 5 minutes, as five unknown badges pause badge sign-in (question 21.35).</li>
+              <li>Every color is a D1 token.</li>
+            </ul>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Proposals that need Krister's yes</h2>
+            <div class="sp-grps">
+              <div>
+                <p class="sp-grp">Row 1, pairing and sign-in</p>
+                <ul class="sp-ul">
+                  <li>The pairing screen's top bar reads New station and Not paired, the h1 is "Pair this station", and a new code replaces an expired one by itself (SI1 to SI4).</li>
+                  <li>The admin approves in a Dialog from the Pairing requests section of the Stations page. The Dialog shows the request's facts, including the address it came from, and a Select of the stations without a paired computer. Nothing is transcribed, and no Decline action is drawn (SI5, SI6).</li>
+                  <li>After the approval the admin's focus moves to the station's name in the list, and the station shows a success Alert above the badge card until the first sign-in (SI7 to SI12).</li>
+                  <li>While badge sign-in is paused, the Badge field keeps focus with <code>aria-disabled</code>, so a scan goes nowhere, and Sign in with username becomes the primary button (SI25 to SI28).</li>
+                  <li>The PIN screen says "Badge read. Enter your PIN." and shows no name before the PIN is checked (SI17 to SI20).</li>
+                  <li>At a plant in onboarding the station shows no sign-in form and says that sign-in opens there by itself (SI37 to SI40).</li>
+                  <li>When a code runs out, the station shows a new one with a status line, and an approval that comes too late shows the error in the Dialog with Close only; the new request is in the list (SI41, SI42, SI45, SI46).</li>
+                  <li>A wrong username or password keeps the username, clears the password and shows one error under the form; a wrong PIN clears the field and keeps focus there (SI48 to SI51).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="sp-grp">Row 2, station home</p>
+                <ul class="sp-ul">
+                  <li>"No job selected" with one line of guidance in the empty and error states (JO20 to JO24).</li>
+                  <li>The job column's Scroll Area thumb at 1280 and in portrait, at the screen edge outside the cards.</li>
+                  <li>Focus moves to the list heading after a successful Try again.</li>
+                  <li>Skeletons of the report card and the last reports while the list loads, naming no job (JO18, JO19).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="sp-grp">Row 3, lost connection, idle and focus</p>
+                <ul class="sp-ul">
+                  <li>A session that ends on Send goes to the sign-in screen with a Report not sent notice, and the same operator's scan sends the kept report without a second press (OF6, OF7, OFQ5).</li>
+                  <li>Another operator's scan signs that operator in, and the kept entries stay hidden on the station (OF8, OFQ2).</li>
+                  <li>A message under Send scrolls the job column so that it shows. At 1280 by 800 the strip takes 53 px, so the column scrolls about 105 px and the job number leaves the view (OF1, OFQ8).</li>
+                  <li>The error under Send stays after the connection is back, since it says to press Send again (OF5, OFQ4).</li>
+                  <li>"Your entries are back" sits beside the h1, so Send stays in view (OF13, OFQ7).</li>
+                  <li>The automatic reload is drawn at the sign-in screen (OF14, OFQ3), and the notices use the Info icon on <code>--info-subtle</code>.</li>
+                </ul>
+              </div>
+              <div>
+                <p class="sp-grp">Row 4, reporting and corrections</p>
+                <ul class="sp-ul">
+                  <li>The copy of the large-quantity and "Report again?" Alert Dialogs, the safe choice focused first and Escape as the safe choice (RE1 to RE5).</li>
+                  <li>The correction Dialog with corrected totals and the computed change, and the keypad docked in it (RE6 to RE15).</li>
+                  <li>After a correction, focus back on the row's Correct and "Correction of 13:58 saved" in the polite region; a correction counts as the job's last report (RE16, RE17).</li>
+                  <li>A searchable list for more than eight reasons, with the count under the search (RE20, RE21).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="sp-grp">Shared parts (rules 19.1 to 19.25 of the foundation)</p>
+                <ul class="sp-ul">
+                  <li>At 1920 the list 420 px, the job column and the last reports 600 px; at 1280 a 320 px list with a compact job header and report card.</li>
+                  <li>Start, Pause and Finish in fixed slots; a command that is not allowed leaves its slot empty, and focus moves to the job heading when the pressed button leaves.</li>
+                  <li>The keypad's caption follows the last focused field, its keys stay out of the tab order, and the toggle moves between the fields row and the keypad's caption row.</li>
+                  <li>The inline error copy, the field errors with the summary, and the line after a confirmed report.</li>
+                  <li>The machine switch in the frame's header slot, with focus on the list heading after a switch.</li>
+                  <li>The copy of the large-quantity, "Report again?" and correction dialogs.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Known limits</h2>
+            <ul class="sp-ul sp-two">
+              <li>The report part's markup puts the keypad, and with it the System keyboard toggle, after Send. OF16 numbers the toggle right after the fields, as rule 12.1 says, so the build follows OF16.</li>
+              <li>At 1920 by 1080 the German strings push Senden below the fold, so the job column scrolls at 1920 too (OF15, OF27, OFQ9). Option A drew no scroll at 1920.</li>
+              <li>Row 1 does not draw the keyboard station's PIN screen (its keypad behind Keypad, as RE27 shows for the report form), an unknown badge inside Switch operator, or the screen after revocation (close code 4403, question 21.13).</li>
+              <li>The admin frames SI5 to SI8 and SI43 to SI47 mount <code>production-start/Shell.dc.html</code>, the byte copy of <code>shell/Shell.dc.html</code> that came with this page.</li>
+            </ul>
+          </section>
+          <section class="sec">
+            <h2 class="sp-h">Open questions</h2>
+            <ul class="sp-ul sp-two">
+              <li>21.1 Which words and icons show overdue, finish pending and planned on another machine? Words only are drawn.</li>
+              <li>21.2 Do finished jobs stay in the list for the production day, and do cancelled jobs show?</li>
+              <li>21.3 Is the station touch only, or does it have a keyboard? Both kinds are drawn.</li>
+              <li>21.4 While a command waits, are the other commands <code>aria-disabled</code> too? Send is, as ADR 0033 says; the frames disable the pressed command and Send.</li>
+              <li>21.5 Do start, pause and finish rows count among the last five reports?</li>
+              <li>21.6 Who may correct (PO-60), and what does an operator see on a report they may not correct? "Needs a supervisor" is proposed.</li>
+              <li>21.7 Is Switch operator a route, or a Dialog or Sheet on the job route?</li>
+              <li>21.8 Does the report get a note field, and with which label?</li>
+              <li>21.9 Station buttons at 48 or 44 px, and keypad key sizes for gloves (IT-22)?</li>
+              <li>21.10 The inline error copy on Send, Start, Pause and Finish, as rule 19.9 proposes it.</li>
+              <li>21.11 Is the form cleared after a confirmed report, and does the scrap reason stay?</li>
+              <li>21.12 Does the no-break space as group sign read well in Plex Mono at 32 px?</li>
+              <li>21.13 Pairing: the registration route, the code's shape and lifetime, WCAG 3.3.8 for the admin, the admin route and permission, and the screen after revocation.</li>
+              <li>21.14 Is sign-in with username allowed while badge sign-in is locked? Proposed yes.</li>
+              <li>21.15 What does the next operator see of kept entries, and when are they discarded?</li>
+              <li>21.16 Is priority a sort key or only shown? Shown only is drawn.</li>
+              <li>21.17 What happens when the planner moves the selected job off this machine while it has unsent entries?</li>
+              <li>21.19 "Start" or "Resume" on a paused job? The frames say Start.</li>
+              <li>21.20 Does Finish ask for confirmation? None is drawn.</li>
+              <li>21.22 May the operator report on planned, paused and finished jobs? The form shows on every job.</li>
+              <li>21.23 Must good or scrap be above 0, and which range applies per unit?</li>
+              <li>21.24 The copy of the large-quantity and "Report again?" dialogs, as rule 19.18 proposes it (RE1 to RE5).</li>
+              <li>21.25 Record time or device time on a report? Record time is drawn.</li>
+              <li>21.26 What separates the frame's reconnecting state from offline?</li>
+              <li>21.28 Who draws the plant-in-onboarding state? D4 draws it inside the frame.</li>
+              <li>21.29 Does the station need a 320 px reflow frame?</li>
+              <li>21.30 Does D4 draw the station form, or the canonical list and form page?</li>
+              <li>21.31 Who owns the scrap reason register, and do reasons show a code?</li>
+              <li>21.32 Does D2 owe a busy prop, so that main carries <code>aria-busy</code>?</li>
+              <li>21.33 Does D2 owe a German top bar for the long-strings frames (OF15, OF27)?</li>
+              <li>21.34 How is the correction reason typed on a station without a keyboard?</li>
+              <li>21.35 Do wrong PINs lock PIN sign-in, and with which limit? Five wrong PINs for one badge pause it for 5 minutes (SI52, SI53).</li>
+              <li>OFQ1 to OFQ9 in OF26: a username sign-in sending kept entries, when kept entries are discarded, what counts as idle for the reload, the Send error after the connection is back, the scan that sends a kept report, the badge on the selected job, the line after a reload, and the job column's scroll at 1280 with the strip and at 1920 with German strings.</li>
+            </ul>
+          </section>
+        </article>
+      </div>
+      <div class="frame" style="left:1600px;top:80px;width:1440px" data-screen-label="F1 Build notes for row 1">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F1</span>Build notes for row 1<span class="fth">Not part of the UI. What SI1 to SI53 fix for the build</span></div>
+        <article class="sheet sp-sheet">
+          <div class="sp-nh"><p class="kick" style="margin:0">Build notes, D4 operator station, row 1</p><span class="ps-notui">Not part of the UI</span></div>
+          <h2 class="t2" style="margin-top:8px">Pairing and sign-in: build notes for SI1 to SI53</h2>
+          <p class="lede">The implementer takes the layout, the region order, the states, the copy in quotes verbatim, the badge-reader and keyboard model and the focus targets; never the markup, class names, token values or demo values. Every person, station, code and address on these frames is fictional.</p>
+          <div class="sp-cols">
+            <section>
+              <h3 class="sp-h3">Frame and routes</h3>
+              <ul class="sp-ul">
+                <li>Station screens mount the D2 station frame through <code>production-start/StationFrame.dc.html</code> with <code>size</code>, <code>theme</code>, <code>connection</code>, <code>station</code>, <code>plant</code>, <code>operator</code>, <code>title</code>, <code>doc-title</code>, <code>screen</code> and <code>focus</code>. The frame owns the top bar, the h1 and the skip link; the sign-in card is the station's main area.</li>
+                <li>With nobody signed in the top bar keeps More and has no Switch operator or Sign out. Before pairing it reads New station and Not paired (SI1 to SI4).</li>
+                <li>Sign-in is on <code>/station/$stationId</code> with the h1 "Sign in at Press 4". Switch operator has the h1 "Switch operator" and the document title "Switch operator · Press 4 · Plant A · NorthMES". The pairing screen's route is open (21.13).</li>
+                <li>The admin side is the core module's (<code>modules/core/web</code>) and mounts the D2 shell through <code>production-start/Shell.dc.html</code> with <code>role="admin"</code>: Administration, Stations current, New station in the top bar, the release 1 top bar without the bell. The Stations page is the canonical list of #222; D4 adds only the Pairing requests section and the approval Dialog.</li>
+                <li>The admin frames: 1440 by 900 (SI5 to SI8, SI45, SI46), 1920 by 1080 (SI43), 1280 by 800 (SI44), and 320 by 640 with the Dialog open (SI47). At 320 both tables scroll sideways inside a named region with the first column kept in place, and the Dialog takes the narrow layout with its facts in one column.</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">Components by their shadcn names, and tokens</h3>
+              <ul class="sp-ul">
+                <li>Card: the pairing card and the sign-in card (A5).</li>
+                <li>Field with Label and description; Input for Badge, PIN, Username and Password, 48 px high; Separator with "or" between the Badge field and Sign in with username.</li>
+                <li>Button: Sign in with username (outline, the default button while badge sign-in is paused), Sign in, Scan again, Scan a badge instead and Cancel. Show password is an icon Button with <code>aria-pressed</code>; System keyboard is a Toggle.</li>
+                <li>Alert: "Paired." on the success pair, "New code." on the info pair, and "Badge sign-in is paused until 14:08." and "PIN sign-in for this badge is paused until 14:11." on the warning pair.</li>
+                <li>Admin side: Table for Pairing requests and Stations, Dialog "Approve pairing request" with a description list and the Select "Station", Dropdown Menu behind each row's actions button, the success note over the page, and the destructive note in the Dialog when the request ran out.</li>
+                <li>D1 tokens only: <code>--destructive</code> for the unknown badge, <code>--muted</code> for the paused Badge field, the D1 focus ring. The 48 px Plex Mono pairing code, the 48 px fields and buttons and the 72 and 64 px keys are proposals (21.9); 56 px is the quantity NumberField of the report form (rule 6.3).</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">Badge reader, PIN and keyboard model</h3>
+              <ul class="sp-ul">
+                <li>The Badge field takes focus through a ref when the screen loads, never <code>autofocus</code>. The reader types the badge number into that field and ends with Enter. No global key listener reads badges anywhere.</li>
+                <li>After a scan that matched no badge the field is cleared and keeps focus, so the next scan lands in it. While badge sign-in is paused the field keeps focus with <code>aria-disabled="true"</code> and takes no input.</li>
+                <li>PIN: one input with <code>type="password"</code>, <code>inputmode="numeric"</code> and <code>autocomplete="current-password"</code> that accepts paste and autofill, never one box per digit. On a station without a keyboard the docked keypad shows beside the card with System keyboard (<code>aria-pressed="false"</code>); on a station with a keyboard it starts hidden behind Keypad. Keys are buttons with <code>tabindex="-1"</code> that add to the field and keep focus there.</li>
+                <li>Username: <code>type="text"</code>, <code>autocomplete="username"</code>, <code>autocapitalize="none"</code>, <code>spellcheck="false"</code>. Password: <code>type="password"</code>, <code>autocomplete="current-password"</code>, paste allowed. The password needs letters, so this screen has no keypad. No CAPTCHA.</li>
+                <li>Five unknown badges within 60 s pause badge sign-in on the station for 5 minutes; the sixth attempt returns 429. Five wrong PINs for one badge pause PIN sign-in for that badge for 5 minutes (proposal, question 21.35).</li>
+                <li>A code is valid for 10 minutes. When it runs out the station asks for a new one and shows it by itself, with the "New code." line as <code>role=status</code> (SI41, SI42); the old request leaves the admin's list and the new one appears.</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">ARIA, names and announcements</h3>
+              <ul class="sp-ul">
+                <li>Badge is labelled "Badge" and described by "Hold your badge to the reader."; after an unknown badge also by the error, with <code>aria-invalid="true"</code>. While paused the field is described by the Alert.</li>
+                <li>The polite region says "Badge not recognized. Scan again or sign in with your user name", "Badge sign-in is paused until 14:08.", "Username or password not correct. Check both and sign in again." and "PIN not correct. Enter it again, or scan your badge again." once each.</li>
+                <li>After a wrong username or password, Password is cleared and described by the error under the form; neither field gets <code>aria-invalid</code>, since the server does not say which one is wrong. After a wrong PIN, PIN is cleared, gets <code>aria-invalid="true"</code> and is described by its hint and the error. While PIN sign-in is paused, PIN keeps focus with <code>aria-disabled="true"</code>, described by the Alert.</li>
+                <li>The keypad is a group named by its caption "Keypad for PIN"; Clear is named "Clear PIN" and Delete "Delete last digit". The pairing code is named by "Pairing code"; the admin's steps are an ordered list named by its lead line.</li>
+                <li>Approve is named "Approve pairing request HX7K-29PQ" with <code>aria-haspopup="dialog"</code>. The Dialog is modal, named by its title and described by its first line, or by the note when the request ran out. Station is a combobox described by the line under it. Row menus are named "Actions for Press cell 1". The note after the approval is <code>role=status</code>. At 320 the table regions are named "Pairing requests table, scrolls sideways" and "Stations table, scrolls sideways".</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">Focus after each action</h3>
+              <ul class="sp-ul">
+                <li>The sign-in screen and Switch operator open with focus in Badge. An unknown badge keeps it there. A badge read with the PIN option on moves it to PIN.</li>
+                <li>After sign-in: the h1 of the job screen, "Press 4, Anna Berg". Cancel on Switch operator returns to the job screen with focus on Switch operator.</li>
+                <li>A plant in onboarding: the h1 "Plant D is not open yet". The pairing screen takes no input and has no focus target, also when a new code replaces one that ran out.</li>
+                <li>A wrong username or password: focus in the cleared Password. A wrong PIN: focus stays in the cleared PIN. PIN sign-in paused: focus stays in PIN.</li>
+                <li>Admin: Approve opens the Dialog with focus on Station. After Approve pairing the request row is gone, so focus moves to the station's link in the table; Cancel returns focus to Approve. When the request ran out, the Dialog keeps only Close, with focus on it; Close moves focus to the Pairing requests heading, since the request's row is gone.</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">Tab order</h3>
+              <ul class="sp-ul">
+                <li>Sign-in (rule 12.1, nobody signed in): Skip to main content, More, Badge, Sign in with username.</li>
+                <li>PIN: Skip to main content, More, PIN, System keyboard (or Keypad), Sign in, Scan again. The toggle follows the field it serves, as on the report form (OF16), although the keypad column sits after the card; keypad keys stay out of the tab order. PIN paused: Skip to main content, More, PIN, Sign in with username, Scan again.</li>
+                <li>Sign in with username: Skip to main content, More, Username, Password, Show password, Sign in, Scan a badge instead.</li>
+                <li>Switch operator (an operator is signed in, the screen leaves Switch operator out of the top bar): Skip to main content, Sign out, More, Badge, Sign in with username, Cancel.</li>
+                <li>Pairing screen: Skip to main content, More; the code and the steps take no focus.</li>
+                <li>Admin Dialog: Station, Cancel, Approve pairing; Close alone when the request ran out. Focus stays inside the Dialog until it closes.</li>
+              </ul>
+            </section>
+            <section>
+              <h3 class="sp-h3">WCAG 2.2 criteria</h3>
+              <ul class="sp-ul">
+                <li>1.3.1 labels, the ordered steps and the tables; 1.3.5 <code>autocomplete</code> on Username, Password and PIN; 1.4.1 and 1.4.11 the error and paused states carry text and borders; 1.4.3 D1 token pairs.</li>
+                <li>2.1.1 every control by keyboard; 2.1.4 no character key shortcuts, the reader types only into the focused field; 2.2.1 the 10-minute code is a security time limit; when it runs out the station shows a new code and a new request appears, which the admin picks without typing (3.3.8); 2.4.3 and 2.4.7 focus order and the D1 ring; 2.4.11 the docked keypad never covers the PIN field; 2.5.8 targets of at least 44 px at the station.</li>
+                <li>3.3.1 the unknown badge, the wrong username or password, the wrong PIN and the expired request in text; 3.3.2 labels and descriptions; 3.3.8 badge sign-in, paste in PIN and Password, Show password, and an admin who picks the request instead of typing the code; 4.1.2 <code>aria-invalid</code>, <code>aria-disabled</code>, <code>aria-pressed</code> and <code>aria-haspopup</code>; 4.1.3 the polite messages and the status note.</li>
+              </ul>
+            </section>
+          </div>
+          <section class="sec">
+            <h3 class="sp-h3">Final English copy</h3>
+            <p class="sp-note" style="margin:0 0 12px">Only the unknown badge message is doc copy; every other string is a proposal. The doc says "user name" where the sign-in screen says Username (conflict 22.2). Pairing codes are eight characters in two groups of four and valid for 10 minutes, as proposals (21.13).</p>
+            <div class="sp-grps">
+              <ul class="sp-ul">
+                <li>"Pair this station", "Pairing code", "Valid until 14:16. A new code shows when this one runs out.", "Waiting for a plant admin to approve this station.", "New code. HX7K-29PQ ran out at 14:16, so this station shows a new code."</li>
+                <li>"A plant admin approves it from their own computer:", "Open NorthMES and go to Administration, then Stations.", "Under Pairing requests, choose Approve next to HX7K-29PQ.", "Pick the station record for this computer.", "No password is entered on this computer."</li>
+                <li>"Sign in at Press 4", "Badge", "Hold your badge to the reader.", "or", "Sign in with username"</li>
+                <li>"Paired. This station is Press cell 1 at Plant A. Operators can sign in now."</li>
+                <li>"Badge read. Enter your PIN.", "PIN", "Type or paste your PIN, or use the keypad.", "Sign in", "Scan again", "Keypad for PIN", "System keyboard", "Clear PIN", "Delete last digit"</li>
+                <li>"Badge not recognized. Scan again or sign in with your user name"</li>
+                <li>"PIN not correct. Enter it again, or scan your badge again.", "PIN sign-in for this badge is paused until 14:11. Five wrong PINs were entered. Sign in with your username, or scan your badge again after 14:11.", "Paused until 14:11"</li>
+                <li>"Badge sign-in is paused until 14:08. Five unknown badges were scanned at this station. Sign in with your username, or scan your badge again after 14:08.", "Paused until 14:08"</li>
+              </ul>
+              <ul class="sp-ul">
+                <li>"Username", "Password", "Show password", "Scan a badge instead", "Username or password not correct. Check both and sign in again."</li>
+                <li>"Switch operator", "Anna Berg stays signed in until the next operator signs in.", "Cancel"</li>
+                <li>"Plant D is not open yet", "Onboarding of Plant D is not complete.", "This station is paired with Plant D. Sign-in opens on this screen once an admin completes onboarding."</li>
+                <li>"Pairing requests", "Approve the request whose code the station screen shows. A code is valid for 10 minutes.", "Pairing code", "Requested", "From address", "Valid until", "Approve"</li>
+                <li>"Approve pairing request", "Check that the station screen shows this code before you approve.", "Station", "Only stations without a paired computer are listed.", "Approve pairing", "This request ran out at 14:16 and can no longer be approved. The station shows a new code now. Close this dialog and approve the request with that code.", "Close"</li>
+                <li>"Press cell 1 is paired. The station shows its sign-in screen now.", "No pairing requests. When a new station computer shows a pairing code, its request appears here."</li>
+                <li>"Search stations", "Name", "Machines", "Pairing", "Last seen", "Paired", "Not paired", "Never"</li>
+              </ul>
+            </div>
+          </section>
+        </article>
+      </div>
+      <div class="frame sp-row" style="left:80px;top:5200px;width:6240px" data-screen-label="Row 1 Pairing and sign-in">
+        <div class="sp-rh" data-drags-parent="1">
+          <div class="sp-rh1"><span class="sp-rn">Row 1</span><span>Pairing and sign-in</span><span class="sp-ids">SI1 to SI53</span></div>
+          <div class="sp-rh2"><span>The pairing code on a new station, the plant admin approving the request in the shell and the result, the paired station, badge sign-in, the PIN after the badge with the docked keypad, an unknown badge, badge sign-in locked, sign-in with username, Switch operator and a plant in onboarding. Each station row reads 1920 by 1080 light, 1920 by 1080 dark, 1280 by 800 light and portrait light. The last four rows add an expired code, a request that ran out, the admin page at 1920, 1280 and 320, a wrong username or password, a wrong PIN and the PIN lock. F1 holds the build notes.</span><span class="sp-file">production-start-303-station-signin.dc.html</span></div>
+        </div>
+        <div class="sp-part pad"><dc-import name="production-start-303-station-signin" hint-size="6320px,18640px"></dc-import></div>
+      </div>
+      <div class="frame sp-row" style="left:80px;top:24200px;width:4640px" data-screen-label="Row 2 Station home, commands and page states">
+        <div class="sp-rh" data-drags-parent="1">
+          <div class="sp-rh1"><span class="sp-rn">Row 2</span><span>Station home, commands and page states</span><span class="sp-ids">JO1 to JO31</span></div>
+          <div class="sp-rh2"><span>The station home at 1920 by 1080 and 1280 by 800 in light and dark and in portrait; a planned job with Start, a paused job with Start and Finish, a finished job with no commands; Sending on Pause, Start and Send, with Send aria-disabled while a command waits; the 15 s timeouts on Pause and Send; loading; the empty list at one and at two machines; the list error and the list not refreshed; the Change job Sheet in portrait and the job chosen in it; the machine switch to Press 3; JO26 holds the build notes for the row.</span><span class="sp-file">production-start-303-station-jobs.dc.html</span></div>
+        </div>
+        <div class="sp-part"><dc-import name="production-start-303-station-jobs" hint-size="4640px,16840px"></dc-import></div>
+      </div>
+      <div class="frame sp-row" style="left:80px;top:41480px;width:5696px" data-screen-label="Row 3 Lost connection, idle, reload, long strings, keyboard and focus">
+        <div class="sp-rh" data-drags-parent="1">
+          <div class="sp-rh1"><span class="sp-rn">Row 3</span><span>Lost connection, idle, reload, long strings, keyboard and focus</span><span class="sp-ids">OF1 to OF27</span></div>
+          <div class="sp-rh2"><span>Send, Pause, Start and Finish while disconnected; the connection back with nothing sent by itself; a session ended on Send, then the same badge and another badge; the idle warning, with and without a connection, and the sign-off; Send after an update and the entries back after Reload; the reload when idle; German and Finnish strings in light and dark; Tab order; focus after Start, Send and an error; Switch operator and after it; a badge scanned into Good quantity; targets for gloved hands in light and dark; the D1 focus ring; OF26 holds the build notes for the row.</span><span class="sp-file">production-start-303-station-offline-keyboard.dc.html</span></div>
+        </div>
+        <div class="sp-part"><dc-import name="production-start-303-station-offline-keyboard" hint-size="5696px,18280px"></dc-import></div>
+      </div>
+      <div class="frame sp-row" style="left:80px;top:60200px;width:5520px" data-screen-label="Row 4 Reporting and corrections">
+        <div class="sp-rh" data-drags-parent="1">
+          <div class="sp-rh1"><span class="sp-rn">Row 4</span><span>Reporting and corrections</span><span class="sp-ids">RE1 to RE31</span></div>
+          <div class="sp-rh2"><span>The large-quantity and Report again Alert Dialogs; the correction Dialog with the docked keypad, a missing reason, a refusal and Sending, at the three sizes and at a keyboard station; the last reports after a correction and the supervisor case; the searchable list of 14 reasons; a quantity in kg with the decimal key; a server error that keeps the entries; the field errors with the summary; the keypad toggles on both kinds of station; RE31 holds the build notes for the row.</span><span class="sp-file">production-start-303-station-reporting.dc.html</span></div>
+        </div>
+        <div class="sp-part"><dc-import name="production-start-303-station-reporting" hint-size="5520px,16192px"></dc-import></div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

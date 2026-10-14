@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Option notes">
+        <h2 class="t2">{{ o.title }}</h2>
+        <p class="lede">{{ o.lede }}</p>
+        <div class="lf-cols3">
+          <div>
+            <h3 class="t3">What it optimizes</h3>
+            <ul class="lf-pts">
+              <sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">What it costs</h3>
+            <ul class="lf-pts">
+              <sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">How it meets the fixed rules</h3>
+            <div class="lf-rk">
+              <sc-for list="{{ o.rules }}" as="r">
+                <div class="lf-rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const R = (k, v) => ({ k: k, v: v });
+          const O = {
+            A: {
+              title: "A. Pages",
+              lede: "The shape plan 06 and ADR 0062 describe: the list, the detail and the create and edit forms are their own screenRoute entries (masterDataRoutes for registers), so no ADR changes. Articles render with EntityListPage, EntityDetailPage and the command forms; registers render with EntityForm.",
+              gains: [
+                "Each view has its own route, title and h1, so focus after navigation, Back and copied links work with no new URL key and no ADR change.",
+                "The table gets the whole width of main: 1134 px at 1440 and about 974 px at 1280, enough for seven columns and the row menu.",
+                "Long forms such as a production order or a routing with operations get a page with field groups and a sticky Save; short forms use the same pattern.",
+                "The reason field is always on the form, never behind a disclosure, so a contract that makes it required needs no new UI.",
+                "The row menu and the bulk bar are the common DataTable pattern; one Tab stop per row reaches every row action."
+              ],
+              costs: [
+                "Reading an article leaves the list. Comparing two articles takes Back or a second tab; the URL keeps the filters, so Back returns to the same rows.",
+                "The chips show the counts of the picked values; the counts of the other values are one click away, inside each filter menu.",
+                "A one-field fix is a full page change: open, Edit, Save, back to the list.",
+                "Each row adds a Tab stop for its menu; arrow keys inside the table (D1 Q11) would remove them."
+              ],
+              rules: [
+                R("Routes and titles", "Articles · Plant A · NorthMES; Article AX-20410 · Plant A · NorthMES; Edit article AX-20410 · Plant A · NorthMES. Each h1 takes focus on arrival."),
+                R("URL state", "?articleGroup=Hoses,Shafts on the list and ?tab=history on the detail. The open filter menu and the selection stay in component state."),
+                R("Page actions", "New article in the top bar on the list; Edit (default) and Archive on the detail; Save article and Cancel at the foot of the form, which stays in view while the form scrolls. The form scroller keeps scroll-padding-bottom at the bar height plus 8 px, so a focused field never sits under it (WCAG 2.4.11)."),
+                R("Errors", "The summary takes focus after Save and links to Article number and Name; the typed values stay."),
+                R("Selection", "Checkbox plus info-subtle; the bulk bar replaces the toolbar and names the count (A4)."),
+                R("320 px", "Filters and Columns replace the toolbar; Group by and Show archived move into the Filters sheet. The table keeps every column, the selection and the row menu and scrolls in its own region with the article number sticky (at most 40 percent); scroll padding keeps a focused cell clear of the sticky column, and the pager stays in view.")
+              ]
+            },
+            B: {
+              title: "B. Side sheet",
+              lede: "The list stays in place. Opening an article slides a modal sheet in from the right with the General and History tabs; Edit turns the sheet into the form.",
+              gains: [
+                "The list stays where it was while one article is read or edited; closing the sheet returns focus to the row.",
+                "Facet counts are always in view, so the spread of the register reads at a glance.",
+                "A quick fix stays quick: Edit, Save, and the row updates under the sheet.",
+                "Row actions are one click away without opening a menu."
+              ],
+              costs: [
+                "The modal sheet covers the list, so comparing rows still means closing it; the docked assistant cannot be used while it is open.",
+                "The facet column takes 224 px: at 1280 the table keeps about 750 px, too little for seven columns without wrapping.",
+                "Create and edit lose their own routes and titles, so ADR 0062 changes, and masterDataRoutes with it for registers; the h1 stays Articles while the sheet is open.",
+                "The 560 px sheet pushes long forms such as production orders and routings into one column.",
+                "Buttons that appear on hover must also appear on focus and on touch (1.4.13), and three buttons per row add Tab stops.",
+                "A reason behind a disclosure is easy to skip, and a contract that requires one has to open it."
+              ],
+              rules: [
+                R("URL state", "?selected=$articleId&tab=history pushes a history entry, so Back closes the sheet. The title becomes Article AX-20410 · Plant A · NorthMES and the last crumb names the article."),
+                R("Focus", "Opening moves focus to the sheet heading (B2) or to the error summary after Save (B3); Escape and Close return it to the row link."),
+                R("Filters", "One URL key per facet; a change never moves focus; Clear filters appears once a facet is set."),
+                R("Bulk", "The Actions menu is disabled until a selection exists, then names the count (B4)."),
+                R("Errors", "Summary at the top of the sheet body, field errors inline, Save article and Cancel in the sheet footer."),
+                R("320 px", "Filters opens the facets in a sheet, where Group by and Show archived also sit. The table shows the selection and three columns, Columns adds the rest, and the region scrolls when it needs to; the Actions menu stays in the toolbar and the detail sheet becomes full width.")
+              ]
+            },
+            C: {
+              title: "C. Split view",
+              lede: "A narrow list on the left and the selected article on the right, both always in view. Preset views sit as tabs above the list; Edit opens a dialog and Save goes through a review step.",
+              gains: [
+                "The list and one article are in view together: move down the rows and read each article without leaving the list.",
+                "Focus stays in the list while the pane follows, and the pane is announced (Article AX-20410 shown).",
+                "Preset views as tabs put the common slices one click away.",
+                "The review step shows exactly what a save changes, with the reason beside it."
+              ],
+              costs: [
+                "The 452 px list shows three columns; group, source and dates move into the pane. At 1280 the pane keeps about 520 px, and with the docked assistant the split does not fit.",
+                "Two patterns for forms: a dialog for short forms and a page for long ones.",
+                "The edit dialog is component state, so it has no route or title (C3 keeps Article AX-20410); ADR 0062 changes, and masterDataRoutes with it for registers.",
+                "The review step adds a step to every save; plan 06 asks for a review or confirmation only for saving a draft, breaking a lock and releasing an order (3.3.4), and a master data edit is already checked and reversible.",
+                "Presets need views that each route declares; views a user saves wait (ADR 0016).",
+                "Cards at 320 px change the documented table pattern and need their own decision."
+              ],
+              rules: [
+                R("URL state", "?selected=$articleId&tab=history; the title and the last crumb follow the selected article, the h1 stays Articles."),
+                R("Selection", "Checkbox plus info-subtle for selected rows; the open row uses accent with a 3 px foreground bar and aria-current, so the two states differ without color alone."),
+                R("Toolbar", "Search, Filters and Group by; Show archived is a checkbox in the Filters dialog."),
+                R("Actions", "Edit and Archive as outline buttons in the pane header, so New article in the top bar stays the one default; no row menu."),
+                R("Errors", "The dialog's summary takes focus and links to the fields; Review changes leads to the review step, where the reason field takes focus (C4)."),
+                R("History", "The pane's History tab is the same timeline as in B."),
+                R("320 px", "The presets become a View select; Filters opens a sheet, where Group by and Show archived also sit; a Sort menu orders the rows; rows show as cards with a checkbox each and a switch back to the table; the pane becomes a full-width sheet.")
+              ]
+            }
+          };
+          const key = O[P.option] ? P.option : "A";
+          return { o: O[key] };
+        }
+      }
+    </script>
+  </body>
+</html>

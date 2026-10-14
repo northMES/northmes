@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comparison and recommendation</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the layout axes and their constraints in the spec for this round and from issue #303. Sizes are measured on the frames: at 1280 by 800 the station main area under the top bar and the h1 is about 1230 by 620 px. A check mark shows the strongest option on a row; rows without one are a tie.</p>
+        <div class="ps-cmp">
+          <div class="ps-cmp-r h"><span>Criterion</span><span>A. List beside the job</span><span>B. One job at a time</span><span>C. Job tiles</span></div>
+          <sc-for list="{{ rows }}" as="r">
+            <div class="ps-cmp-r">
+              <span class="k">{{ r.k }}<span class="src">{{ r.src }}</span></span>
+              <sc-for list="{{ r.cells }}" as="c">
+                <span><sc-if value="{{ c.best }}"><span class="ps-best"><span class="ic" data-icon="Check"></span><span>{{ c.t }}</span></span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div class="ps-rec">
+          <h3 class="t2">Recommendation: A, list beside the job, with the docked keypad from B</h3>
+          <p>A keeps the most in view for the least new code. The operator sees every job on the machine, the selected job and its form at once, so changing job is one tap, the job with unsent entries carries an Unsent entries badge in the list, and the last reports sit beside the form at 1920 and one scroll below it at 1280. Status stays the StatusBadge that every other NorthMES screen uses, Sending shows on the pressed button with a polite status, errors appear under it, and corrected totals in a Dialog need no minus key. Its weak spot is quantity entry on a touch-only station, where the system keyboard covers half the screen. B's docked keypad covers that, so the spec page draws A with the keypad docked beside the fields. On a station without a keyboard the keypad shows by default, and the docked keypad keeps B's System keyboard toggle; on a station with a keyboard the keypad starts hidden and the Keypad toggle shows it (Q3). B's other parts cost context, since the list and the last reports hide behind Change job and a tab. C's tiles read well from a distance but put a screen between every two reports; its steppers could come back as 1 and 10 keys on the keypad if the glove test shows that small counts are common.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // The check marks are lucide icons; this part fills them itself, since no frame is mounted here.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const row = (k, src, best, a, b, c) => ({ k: k, src: src, cells: [a, b, c].map((t, i) => ({ t: t, best: best === i, plain: best !== i })) });
+          return {
+            rows: [
+              row("Changing job", "P09 4.1, I303 Frames", 0,
+                "One tap on the list; every job stays in view",
+                "Change job, then a job: two taps; the list is hidden while reporting",
+                "All jobs, then a tile: two taps; the job screen hides the tiles"),
+              row("What stays in view while reporting", "P09 3.2 and 4.2, E11-S03", 0,
+                "List, job, form and the last reports at 1920; the last reports one scroll down at 1280",
+                "The job and the form; the list and the last reports are one tap away",
+                "The job, the form and the last reports; the other jobs are one screen back"),
+              row("Entering 96 with gloves", "P09 4.4, WCAG 2.5.8", 1,
+                "System keyboard over the lower half, or the keypad once Keypad is on",
+                "Two presses on 64 to 88 px keys, with no system keyboard",
+                "Ten presses on +10 and four on -1, or type it"),
+              row("Scrap and its reason", "P09 4.4, WCAG 3.2.2", 0,
+                "Always in view; nothing moves",
+                "Appears when scrap is above 0 and moves Send down (B6 against B3)",
+                "In a Sheet: one more step, and the Sheet covers the top bar"),
+              row("Status without color", "P06 Patterns, D1, WCAG 1.4.1", 0,
+                "StatusBadge everywhere, as on the other screens",
+                "Step row; reads as a sequence, which statuses are not",
+                "StatusBadge plus an edge line that echoes board markers"),
+              row("Sending and errors near the pressed button", "P09 7 and 9, ADR 0033", 0,
+                "On Send, with a polite status and the error under it",
+                "On a line beside Send",
+                "Under the job header, away from Send"),
+              row("Last reports and correction", "P09 6, ADR 0051", 0,
+                "Table in view; a Dialog with corrected totals, digits only",
+                "Behind a tab; signed changes need a minus key",
+                "Column in view; its own screen with corrected totals"),
+              row("1280 by 800", "D2 SF1, I303 Frames", 1,
+                "List, job, form and Send in view; the last reports need a scroll",
+                "Job, form, Send and keypad in view without scrolling",
+                "Job screen with the form and Send in view, and four of the last reports"),
+              row("Portrait 800 by 1280", "D2 SF3, IT-22", -1,
+                "Change job bar, then the job and the last reports",
+                "Keypad under the fields; the correction fits with its keypad",
+                "Two columns of tiles, then a one-column job screen"),
+              row("Unsent entries when changing job", "P09 9, ADR 0033, spec 15.1", 0,
+                "Unsent entries badge on the job's row, in view at 1920; at 1280 the row can scroll away, and in portrait the badge sits on the Change job bar",
+                "Badge next to Change job; the job and its row stay behind it",
+                "Badge on the tile, and next to All jobs on the job screen"),
+              row("Badge sign-in", "P09 3.3, D2 SF9 to SF12", -1,
+                "Badge first, username behind a button (the D2 proposal)",
+                "Badge and Username tabs; a PIN keypad beside them",
+                "Both methods in view side by side"),
+              row("New parts to build", "D1 components, I303 Build notes", 0,
+                "None beyond shadcn parts; the keypad when Q3 says so",
+                "Keypad, step row and Tabs",
+                "Tiles, steppers, the scrap Sheet and a correction route")
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

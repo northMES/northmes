@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Canonical list and form page: list frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+        <style>
+          /* List frames (LI) of the spec page ui/ui-222-list-form.dc.html, issue northMES/northmes#222: the articles
+             list, then the same DataTable on production orders, the tools register and the audit log. Light frames left,
+             dark frames right. Every frame mounts ./Shell.dc.html (the byte copy of shell/Shell.dc.html) with the toolbar
+             and table parts as its route content. Each frame element has the frame's real size: the screen plus the 36 px document
+             title. Its chip sits 12 px above it in the D1 canvas label colors and is not part of the UI. */
+          .li-part{position:relative}
+          .li-fr{position:absolute}
+          .flabel.li-chip{position:absolute;left:0;bottom:calc(100% + 12px);flex-wrap:wrap;row-gap:4px;max-width:100%;box-sizing:border-box;margin:0;cursor:default}
+        </style>
+      </helmet>
+      <div class="li-part" style="width:3920px;height:23456px">
+        <div class="li-fr" style="left:0px;top:120px;width:1440px;height:936px" data-screen-label="LI1 Articles list, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI1</span>Articles list<span class="fth">Light, 1440. Default view: Last changed, newest first, Rows 1 to 25 of 248</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:120px;width:1440px;height:936px" data-screen-label="LI2 Articles list, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI2</span>Articles list<span class="fth">Dark, 1440. As LI1</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:1232px;width:1440px;height:936px" data-screen-label="LI3 Filter menu and chips, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI3</span>Filter menu and chips<span class="fth">Light, 1440. Article group menu with every count, keyboard focus on Shafts; chips with the picked counts</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" menu="filter" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:1232px;width:1440px;height:936px" data-screen-label="LI4 Filter menu and chips, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI4</span>Filter menu and chips<span class="fth">Dark, 1440. As LI3</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" menu="filter" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:2344px;width:1440px;height:936px" data-screen-label="LI5 Sorted by article number, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI5</span>Sorted by article number<span class="fth">Light, 1440. Ascending, focus stays on the header; the filter stays, the cursor and page drop</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts&amp;sort=code</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" sort="code" focus="sort" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:2344px;width:1440px;height:936px" data-screen-label="LI6 Sorted by article number, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI6</span>Sorted by article number<span class="fth">Dark, 1440. As LI5</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts&amp;sort=code</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" sort="code" focus="sort" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:3456px;width:1440px;height:936px" data-screen-label="LI7 Search, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI7</span>Search<span class="fth">Light, 1440. Focus stays in the field; the table keeps its header while the matching rows load</span><span class="lf-url">/plant-a/core/articles?q=fläns</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" q="fläns" focus="search" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" state="loading" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:3456px;width:1440px;height:936px" data-screen-label="LI8 Search, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI8</span>Search<span class="fth">Dark, 1440. As LI7</span><span class="lf-url">/plant-a/core/articles?q=fläns</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" q="fläns" focus="search" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" state="loading" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:4568px;width:1440px;height:936px" data-screen-label="LI9 Next page, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI9</span>Next page<span class="fth">Light, 1440. Sorted by name; Previous is disabled and skipped by Tab, focus on Next, which adds page and after</span><span class="lf-url">/plant-a/core/articles?sort=name</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" sort="name" focus="next" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:4568px;width:1440px;height:936px" data-screen-label="LI10 Next page, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI10</span>Next page<span class="fth">Dark, 1440. As LI9</span><span class="lf-url">/plant-a/core/articles?sort=name</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" sort="name" focus="next" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:5680px;width:1440px;height:936px" data-screen-label="LI11 Column choice, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI11</span>Column choice<span class="fth">Light, 1440. Columns menu: a checkbox per column, Article number always shown, keyboard focus on Name</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" menu="columns" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:5680px;width:1440px;height:936px" data-screen-label="LI12 Column choice, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI12</span>Column choice<span class="fth">Dark, 1440. As LI11</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" menu="columns" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:6792px;width:1440px;height:936px" data-screen-label="LI13 Column hidden, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI13</span>Column hidden<span class="fth">Light, 1440. Source unchecked in Columns, so the table drops it and Name takes the width</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hide="source" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:6792px;width:1440px;height:936px" data-screen-label="LI14 Column hidden, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI14</span>Column hidden<span class="fth">Dark, 1440. As LI13</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hide="source" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:7904px;width:1440px;height:936px" data-screen-label="LI15 Selection and row menu, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI15</span>Selection and row menu<span class="fth">Light, 1440. Three rows selected, the bulk bar replaces the toolbar; the menu of AX-20411 open</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" bulk="3" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" select="some" menu="AX-20411" hover="AX-20411" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:7904px;width:1440px;height:936px" data-screen-label="LI16 Selection and row menu, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI16</span>Selection and row menu<span class="fth">Dark, 1440. As LI15</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" bulk="3" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" select="some" menu="AX-20411" hover="AX-20411" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:9016px;width:1440px;height:936px" data-screen-label="LI17 Plant B presentation, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI17</span>Plant B presentation<span class="fth">Light, 1440. Day first with dots and the 12-hour clock; Stock unit menu with each unit and its count</span><span class="lf-url">/plant-b/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" plant="Plant B" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" menu="filter2" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" presentation="plant-b" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:9016px;width:1440px;height:936px" data-screen-label="LI18 Plant B presentation, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI18</span>Plant B presentation<span class="fth">Dark, 1440. As LI17</span><span class="lf-url">/plant-b/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" plant="Plant B" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" menu="filter2" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" presentation="plant-b" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:10128px;width:1280px;height:836px" data-screen-label="LI19 Articles list, light, 1280 by 800">
+          <div class="flabel li-chip"><span class="fid">LI19</span>Articles list<span class="fth">Light, 1280. As LI1; Show archived and Columns wrap to a second row, right-aligned</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1280" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1280px,836px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1360px;top:10128px;width:1280px;height:836px" data-screen-label="LI23 Articles list, dark, 1280 by 800">
+          <div class="flabel li-chip"><span class="fid">LI23</span>Articles list<span class="fth">Dark, 1280. As LI19</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1280" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1280px,836px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:11140px;width:1280px;height:836px" data-screen-label="LI20 Filters and Columns menu, light, 1280 by 800">
+          <div class="flabel li-chip"><span class="fid">LI20</span>Filters and Columns menu<span class="fth">Light, 1280. The chips under the wrapped toolbar; the Columns menu opens inside main</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts</span></div>
+          <dc-import name="Shell" width="1280" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1280px,836px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" menu="columns" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1360px;top:11140px;width:1280px;height:836px" data-screen-label="LI24 Filters and Columns menu, dark, 1280 by 800">
+          <div class="flabel li-chip"><span class="fid">LI24</span>Filters and Columns menu<span class="fth">Dark, 1280. As LI20</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts</span></div>
+          <dc-import name="Shell" width="1280" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1280px,836px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="on" menu="columns" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" filtered="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:12152px;width:1920px;height:1116px" data-screen-label="LI21 Articles list, light, 1920 by 1080">
+          <div class="flabel li-chip"><span class="fid">LI21</span>Articles list<span class="fth">Light, 1920. As LI1; Name takes the extra width</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1920" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:2000px;top:12152px;width:1920px;height:1116px" data-screen-label="LI25 Articles list, dark, 1920 by 1080">
+          <div class="flabel li-chip"><span class="fid">LI25</span>Articles list<span class="fth">Dark, 1920. As LI21</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1920" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:13444px;width:1920px;height:1116px" data-screen-label="LI22 Zone label, light, 1920 by 1080">
+          <div class="flabel li-chip"><span class="fid">LI22</span>Zone label<span class="fth">Light, 1920. This browser runs in another time zone, so Last changed carries CEST, the zone of Plant A</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1920" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" zone="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:2000px;top:13444px;width:1920px;height:1116px" data-screen-label="LI26 Zone label, dark, 1920 by 1080">
+          <div class="flabel li-chip"><span class="fid">LI26</span>Zone label<span class="fth">Dark, 1920. As LI22</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1920" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" zone="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:14736px;width:1440px;height:936px" data-screen-label="LI27 Ignored link setting, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI27</span>Ignored link setting<span class="fth">Light, 1440. The link had sort=weight, which no longer applies: the list fell back to its default sort with a replace navigation, and the PageFrame status line says so once</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" notice="ignored" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:14736px;width:1440px;height:936px" data-screen-label="LI28 Ignored link setting, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI28</span>Ignored link setting<span class="fth">Dark, 1440. As LI27</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" notice="ignored" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:15848px;width:1440px;height:936px" data-screen-label="LI29 Grouped by article group, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI29</span>Grouped by article group<span class="fth">Light, 1440. Group by menu open with focus on Article group; group rows with their counts, Consumables open; 6 groups, 248 articles</span><span class="lf-url">/plant-a/core/articles?group=articleGroup</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" group="on" menu="group" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" group="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:15848px;width:1440px;height:936px" data-screen-label="LI30 Grouped by article group, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI30</span>Grouped by article group<span class="fth">Dark, 1440. As LI29</span><span class="lf-url">/plant-a/core/articles?group=articleGroup</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" group="on" menu="group" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" group="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:16960px;width:1440px;height:936px" data-screen-label="LI31 Archived rows shown, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI31</span>Archived rows shown<span class="fth">Light, 1440. Show archived checked: AX-20417 carries the Archived StatusBadge, and its row menu offers Restore</span><span class="lf-url">/plant-a/core/articles?archived=1</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" archived="on" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" archived="on" menu="AX-20417" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:16960px;width:1440px;height:936px" data-screen-label="LI32 Archived rows shown, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI32</span>Archived rows shown<span class="fth">Dark, 1440. As LI31</span><span class="lf-url">/plant-a/core/articles?archived=1</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" archived="on" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" archived="on" menu="AX-20417" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:18072px;width:1440px;height:936px" data-screen-label="LI33 Read-only list, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI33</span>Read-only list<span class="fth">Light, 1440. Alex Lund, a planner, reads articles but cannot change them: no New article, no selection column, no row menu</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="core.articles" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" readonly="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:18072px;width:1440px;height:936px" data-screen-label="LI34 Read-only list, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI34</span>Read-only list<span class="fth">Dark, 1440. As LI33</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="core.articles" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" readonly="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:19184px;width:1440px;height:936px" data-screen-label="LI35 Production orders, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI35</span>Production orders<span class="fth">Light, 1440. Quantities in each article's stock unit, statuses with Late by 2 days, and a cell state for the article of order 1011, which the reader cannot see</span><span class="lf-url">/plant-a/planning/orders</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" actions="*New order" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="orders" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="orders" cellstate="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:19184px;width:1440px;height:936px" data-screen-label="LI36 Production orders, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI36</span>Production orders<span class="fth">Dark, 1440. As LI35</span><span class="lf-url">/plant-a/planning/orders</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" actions="*New order" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="orders" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="orders" cellstate="on" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:20296px;width:1440px;height:936px" data-screen-label="LI37 Production orders at Plant B, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI37</span>Production orders at Plant B<span class="fth">Light, 1440. Plant B's number format, 1,200 pcs and 12.5 kg, with day first dates and the 12-hour clock</span><span class="lf-url">/plant-b/planning/orders</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" actions="*New order" plant="Plant B" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="orders" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="orders" presentation="plant-b" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:20296px;width:1440px;height:936px" data-screen-label="LI38 Production orders at Plant B, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI38</span>Production orders at Plant B<span class="fth">Dark, 1440. As LI37</span><span class="lf-url">/plant-b/planning/orders</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" actions="*New order" plant="Plant B" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="orders" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="orders" presentation="plant-b" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:21408px;width:1440px;height:936px" data-screen-label="LI39 Tools register, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI39</span>Tools register<span class="fth">Light, 1440. The master-data kit's register: Scope reads Company or Plant; the row menu of T-100 offers Move to company</span><span class="lf-url">/plant-a/core/tools</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.tools" actions="*New tool" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="tools" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="tools" menu="T-100" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:21408px;width:1440px;height:936px" data-screen-label="LI40 Tools register, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI40</span>Tools register<span class="fth">Dark, 1440. As LI39</span><span class="lf-url">/plant-a/core/tools</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.tools" actions="*New tool" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" list="tools" hint-size="100%,48px"></dc-import></div>
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="tools" menu="T-100" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:0px;top:22520px;width:1440px;height:936px" data-screen-label="LI41 Audit log, light, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI41</span>Audit log<span class="fth">Light, 1440. Other principals and surfaces: the planning assistant for Alex Lund, Anna Berg at Press 4, a pseudonymized user, a redacted key; no totalCount, so Newest first with Previous and Next</span><span class="lf-url">/plant-a/audit/log</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="audit.log" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="audit" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="li-fr" style="left:1520px;top:22520px;width:1440px;height:936px" data-screen-label="LI42 Audit log, dark, 1440 by 900">
+          <div class="flabel li-chip"><span class="fid">LI42</span>Audit log<span class="fth">Dark, 1440. As LI41</span><span class="lf-url">/plant-a/audit/log</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="audit.log" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page">
+              <div class="lf-fill"><dc-import name="ui-222-list-form-table" list="audit" hint-size="100%,600px"></dc-import></div>
+            </div>
+          </dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), installed once per document.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

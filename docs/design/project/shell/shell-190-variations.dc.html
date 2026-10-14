@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 shell, navigation and station frame: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="frame w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">What is decided and how to compare</span></div>
+        <dc-import name="shell-190-variations-header" hint-size="1440px,2210px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">Planner shell and station frame</span></div>
+        <dc-import name="shell-190-variations-compare" hint-size="1440px,2056px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:2458px" data-screen-label="A1 Labelled sidebar, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A1</span>Labelled sidebar<span class="fth">Light, 1440 by 900, populated, skip link focused</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-a" size="wide" state="normal" marks="on" focus="skip" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440 dark" style="left:1600px;top:2458px" data-screen-label="A2 Labelled sidebar, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A2</span>Labelled sidebar<span class="fth">Dark. Collapsed to the rail, live updates paused, Pyramid connector unavailable, assistant docked, focus on Co</span></div>
+        <dc-import name="shell-190-variations-a" size="wide" state="trouble" focus="nav" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:2458px" data-screen-label="A3 Labelled sidebar, light, 320, page">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A3</span>320 by 640<span class="fth">Page</span></div>
+        <dc-import name="shell-190-variations-a" size="narrow" view="page" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3520px;top:2458px" data-screen-label="A4 Labelled sidebar, light, 320, navigation sheet">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A4</span>320 by 640<span class="fth">Sheet open</span></div>
+        <dc-import name="shell-190-variations-a" size="narrow" view="sheet" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:3466px" data-screen-label="A notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A</span>Labelled sidebar<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="A" hint-size="1440px,980px"></dc-import>
+      </div>
+      <div class="frame w720" style="left:1600px;top:3466px" data-screen-label="A5 Labelled sidebar, light, plant menu open">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A5</span>Plant switcher open<span class="fth">Light, top left of the 1440 frame</span></div>
+        <div class="crop"><dc-import name="shell-190-variations-a" size="wide" state="menu" hint-size="1440px,900px"></dc-import></div>
+      </div>
+      <div class="frame w1440" style="left:80px;top:4614px" data-screen-label="B1 Module bar, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B1</span>Module bar<span class="fth">Light, 1440 by 900, populated, skip link focused</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-b" size="wide" state="normal" marks="on" focus="skip" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440 dark" style="left:1600px;top:4614px" data-screen-label="B2 Module bar, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B2</span>Module bar<span class="fth">Dark. Module menu hidden, live updates paused, Pyramid connector unavailable, assistant docked, focus on Core</span></div>
+        <dc-import name="shell-190-variations-b" size="wide" state="trouble" focus="nav" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:4614px" data-screen-label="B3 Module bar, light, 320, page">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B3</span>320 by 640<span class="fth">Page</span></div>
+        <dc-import name="shell-190-variations-b" size="narrow" view="page" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3520px;top:4614px" data-screen-label="B4 Module bar, light, 320, navigation sheet">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B4</span>320 by 640<span class="fth">Sheet open</span></div>
+        <dc-import name="shell-190-variations-b" size="narrow" view="sheet" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:5622px" data-screen-label="B notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>Module bar<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="B" hint-size="1440px,876px"></dc-import>
+      </div>
+      <div class="frame w720" style="left:1600px;top:5622px" data-screen-label="B5 Module bar, light, plant menu open">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B5</span>Plant switcher open<span class="fth">Light, top left of the 1440 frame</span></div>
+        <div class="crop"><dc-import name="shell-190-variations-b" size="wide" state="menu" hint-size="1440px,900px"></dc-import></div>
+      </div>
+      <div class="frame w1440" style="left:2400px;top:5622px" data-screen-label="B6 Module bar, light, breadcrumb in main">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B6</span>Breadcrumb in main<span class="fth">Light, top of the 1440 frame: one header row with the page actions, the breadcrumb above the h1 (V4)</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <div class="crop wide"><dc-import name="shell-190-variations-b" size="wide" state="crumbmain" hint-size="1440px,900px"></dc-import></div>
+      </div>
+      <div class="frame w1440" style="left:80px;top:6666px" data-screen-label="C1 Rail with flyouts, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C1</span>Rail with flyouts<span class="fth">Light, 1440 by 900, populated, Planning flyout open, focus on Production orders</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-c" size="wide" state="normal" marks="on" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440 dark" style="left:1600px;top:6666px" data-screen-label="C2 Rail with flyouts, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C2</span>Rail with flyouts<span class="fth">Dark. Live updates paused, restore banner, Pyramid connector unavailable, assistant docked, skip link focused</span></div>
+        <dc-import name="shell-190-variations-c" size="wide" state="trouble" focus="skip" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:6666px" data-screen-label="C3 Rail with flyouts, light, 320, page">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C3</span>320 by 640<span class="fth">Page</span></div>
+        <dc-import name="shell-190-variations-c" size="narrow" view="page" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3520px;top:6666px" data-screen-label="C4 Rail with flyouts, light, 320, navigation sheet">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C4</span>320 by 640<span class="fth">Sheet open</span></div>
+        <dc-import name="shell-190-variations-c" size="narrow" view="sheet" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:7674px" data-screen-label="C notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C</span>Rail with flyouts<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="C" hint-size="1440px,876px"></dc-import>
+      </div>
+      <div class="frame w720" style="left:1600px;top:7674px" data-screen-label="C5 Rail with flyouts, light, plant menu open">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C5</span>Plant switcher open<span class="fth">Light, top left of the 1440 frame</span></div>
+        <div class="crop"><dc-import name="shell-190-variations-c" size="wide" state="menu" hint-size="1440px,900px"></dc-import></div>
+      </div>
+      <div class="frame w1280" style="left:80px;top:8718px" data-screen-label="S1 Station top bar, light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S1</span>Station top bar<span class="fth">Light, 1280 by 800, signed in, skip link focused</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-station" frame="s1" focus="skip" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:1440px;top:8718px" data-screen-label="S2 Station bottom bar, light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S2</span>Station bottom bar<span class="fth">Light, 1280 by 800, signed in</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-station" frame="s2" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:2800px;top:8718px" data-screen-label="S3 Station tall header, light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S3</span>Station tall header<span class="fth">Light, 1280 by 800, signed in</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="shell-190-variations-station" frame="s3" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:80px;top:9626px" data-screen-label="S1 notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S1</span>Station top bar<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="S1" hint-size="1280px,770px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:1440px;top:9626px" data-screen-label="S2 notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S2</span>Station bottom bar<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="S2" hint-size="1280px,696px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:2800px;top:9626px" data-screen-label="S3 notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">S3</span>Station tall header<span class="fth">What it optimizes, what it costs, how it keeps the rules</span></div>
+        <dc-import name="shell-190-variations-notes" option="S3" hint-size="1280px,680px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 # Error and system pages
 
-This is the approval record of design task E04-S02-T02, issue [northMES/northmes#306](https://github.com/northMES/northmes/issues/306), "web: Design the error and system pages (400, 404, 500, maintenance)", for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The design page is [shell/shell-306-errors.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=shell%2Fshell-306-errors.dc.html) in the Claude Design project.
+This is the approval record of design task E04-S02-T02, issue [northMES/northmes#306](https://github.com/northMES/northmes/issues/306), "web: Design the error and system pages (400, 404, 500, maintenance)", for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The design page is [shell/shell-306-errors.dc.html](../project/shell/shell-306-errors.dc.html) in the design project.
 
 Issue #306 had no variations round. The page reuses the ErrorState and EmptyState patterns, the error panel and the pages without a plant that the approved D2 page drew, so it builds on the D2 record ([shell-190-navigation.md](shell-190-navigation.md)) and on the tokens and components of D1 ([ui-189-tokens.md](../ui/ui-189-tokens.md)). D2 stays frozen: the new page mounts `shell/Shell.dc.html` and links the D1 and D2 sheets read only.
 

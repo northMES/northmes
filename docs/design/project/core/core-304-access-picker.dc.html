@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Role picker</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+      </helmet>
+      <div class="lf-part fit {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ isField }}">
+          <section class="{{ boxCls }}" aria-labelledby="{{ boxRef }}">
+            <sc-if value="{{ hasBoxHead }}"><h2 class="lf-fs-h" id="{{ ids.box }}">{{ tx.roleAndPlace }}</h2></sc-if>
+            <div class="fld">
+              <span class="lbl" id="{{ ids.wl }}">{{ tx.where }}</span>
+              <div class="ca-rg" role="radiogroup" aria-labelledby="{{ ids.wl }}">
+                <sc-for list="{{ places }}" as="w">
+                  <div class="ca-rad {{ w.fcls }}" role="radio" aria-checked="{{ w.on }}" aria-describedby="{{ w.did }}" tabindex="{{ w.tab }}"><span class="ca-rd {{ w.rcls }}"></span><span>{{ w.label }}</span><span class="d" id="{{ w.did }}">{{ w.desc }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="fld">
+              <span class="lbl" id="{{ ids.rl }}">{{ tx.role }}</span>
+              <div class="ca-cbw">
+                <span class="inp ca-sel {{ cbCls }}" role="combobox" aria-expanded="{{ isOpen }}" aria-haspopup="listbox" aria-controls="{{ cbCtl }}" aria-labelledby="{{ ids.rl }}" aria-describedby="{{ cbDesc }}" aria-invalid="{{ cbInv }}" aria-activedescendant="{{ activeId }}" tabindex="0">
+                  <sc-if value="{{ hasValue }}"><span lang="{{ value.lang }}">{{ value.name }}</span><span class="ca-k">{{ value.kind }}</span></sc-if>
+                  <sc-if value="{{ noValue }}"><span class="ph">{{ tx.chooseRole }}</span></sc-if>
+                  <span class="ic ca-chev" data-icon="ChevronsUpDown"></span>
+                </span>
+                <sc-if value="{{ isOpen }}">
+                  <div class="pop ca-lb" role="listbox" id="{{ ids.lb }}" aria-labelledby="{{ ids.rl }}">
+                    <sc-for list="{{ optGroups }}" as="og">
+                      <sc-if value="{{ og.sep }}"><div class="msep" role="presentation"></div></sc-if>
+                      <div role="group" aria-labelledby="{{ og.hid }}">
+                        <div class="ca-lbh" id="{{ og.hid }}">{{ og.title }}</div>
+                        <sc-for list="{{ og.opts }}" as="o">
+                          <div class="ca-opt {{ o.cls }}" role="option" id="{{ o.oid }}" aria-selected="{{ o.sel }}" aria-disabled="{{ o.dis }}"><span class="ic" data-icon="{{ o.icon }}"></span><span class="t" lang="{{ o.lang }}">{{ o.name }}</span><sc-if value="{{ o.isSel }}"><span class="ic ca-sc" data-icon="Check"></span></sc-if><span class="d">{{ o.d }}</span></div>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ hasErr }}"><span class="err" id="{{ ids.re }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ errText }}</span></span></sc-if>
+              <span class="desc" id="{{ ids.rd }}">{{ roleDesc }}</span>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ isNeed }}">
+          <section class="lf-fs" aria-labelledby="{{ ids.nh }}">
+            <div><h2 class="lf-fs-h" id="{{ ids.nh }}">{{ need.title }}</h2><p class="ca-desc">{{ need.desc }}</p></div>
+            <ul class="ca-kv">
+              <sc-for list="{{ need.rows }}" as="n"><li><span class="ic {{ n.cls }}" data-icon="{{ n.icon }}"></span><span class="ca-pt"><span lang="{{ n.lang }}">{{ n.label }}</span><span class="ca-pid">{{ n.id }}</span><span class="ca-sm ca-mut">{{ n.state }}</span></span></li></sc-for>
+            </ul>
+          </section>
+        </sc-if>
+        <sc-if value="{{ isPerson }}">
+          <section class="lf-fs" aria-labelledby="{{ ids.ph }}">
+            <h2 class="lf-fs-h" id="{{ ids.ph }}" lang="{{ person.lang }}">{{ person.name }}</h2>
+            <dl class="lf-dl">
+              <dt>{{ tx.username }}</dt><dd class="ca-mono">{{ person.user }}</dd>
+              <dt>{{ tx.email }}</dt><dd>{{ person.email }}</dd>
+              <dt>{{ tx.rolesHere }}</dt><dd>{{ person.roles }}</dd>
+            </dl>
+          </section>
+        </sc-if>
+        <sc-if value="{{ isNote }}">
+          <div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>{{ note }}</span></div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"view":{"editor":"enum","options":["field","need","person","note"],"default":"field","tsType":"string"},"assigner":{"editor":"text","default":"plantAdmin","tsType":"string"},"cheld":{"editor":"text","default":"","tsType":"string"},"person":{"editor":"text","default":"anna.berg","tsType":"string"},"where":{"editor":"enum","options":["plant","company"],"default":"plant","tsType":"string"},"value":{"editor":"text","default":"","tsType":"string"},"open":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"active":{"editor":"text","default":"","tsType":"string"},"err":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"box":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"focus":{"editor":"enum","options":["none","where","where-company","role"],"default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons alone.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.CA ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.CA) ready();
+          // An open listbox shows its active option (aria-activedescendant), scrolled into view the way a browser would.
+          let tries = 0;
+          const reveal = () => {
+            document.querySelectorAll(".pop.ca-lb").forEach((lb) => {
+              const o = lb.querySelector(".ca-opt.kfocus");
+              if (!o || lb.scrollHeight <= lb.clientHeight) return;
+              const top = o.offsetTop, bottom = top + o.offsetHeight;
+              if (bottom > lb.scrollTop + lb.clientHeight - 8) lb.scrollTop = bottom - lb.clientHeight + 8;
+              else if (top < lb.scrollTop) lb.scrollTop = Math.max(0, top - 8);
+            });
+            if (tries++ < 40) setTimeout(reveal, 250);
+          };
+          reveal();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__caSeq = (window.__caSeq || 0) + 1;
+            this.uid = "ca-p" + window.__caSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const narrow = P.size === "narrow";
+          const lang = P.strings === "long" ? "de" : "en";
+          const view = pick(P.view, ["field", "need", "person", "note"], "field");
+          const ids = { box: uid + "-box", wl: uid + "-wl", rl: uid + "-rl", rd: uid + "-rd", re: uid + "-re", lb: uid + "-lb", nh: uid + "-nh", ph: uid + "-ph" };
+          const base = { label: "Role picker", lang: lang, rootCls: "", ids: ids, tx: {}, isField: false, isNeed: false, isPerson: false, isNote: false, places: [], optGroups: [] };
+          const C = window.CA;
+          if (!C) return base;
+          const t = (k, v) => C.t(lang, k, v);
+          const plant = C.place("pl", lang), company = C.place("co", lang);
+          const keys = (s, d) => { const a = String(s == null ? d : s).split(",").map((x) => x.trim()).filter((x) => C.ROLE[x]); return a; };
+          const assigner = keys(P.assigner, "plantAdmin");
+          const cheld = keys(P.cheld, "");
+          const person = C.PERSON[P.person] || C.PERSON["anna.berg"];
+          const pName = person.name;
+          const where = pick(P.where, ["plant", "company"], "plant");
+          const tok = where === "company" ? "co" : "pl";
+          const focus = pick(P.focus, ["none", "where", "where-company", "role"], "none");
+          const named = (ids2) => ids2.map((id) => C.permLabel(id, lang) + " (" + id + ")");
+          const and = lang === "de" ? " und " : " and ";
+          const heldAt = (key, pt) => person.a.some((x) => x[0] === key && x[1] === pt);
+          // Role options in the order of the roles list (RO1): custom roles of Acme AB, then default roles, each by name. A role
+          // is assignable at Plant A when the assigner holds every permission of it there; the client cannot check Acme AB, so
+          // there the same split reads "checked when you add".
+          const byName = (a, b) => C.ROLE[a].en.localeCompare(C.ROLE[b].en);
+          const keysOf = (f) => C.ROLES.filter((r) => f(r) && r.key !== "nightPlanner").map((r) => r.key).sort(byName);
+          const ORDER = keysOf((r) => r.custom).concat(keysOf((r) => r.def));
+          const valueKey = C.ROLE[P.value] ? P.value : "";
+          const activeKey = C.ROLE[P.active] ? P.active : "";
+          const opts = ORDER.map((key) => {
+            const r = C.ROLE[key];
+            const miss = C.missing(key, assigner);
+            const n = miss.length;
+            const nm = named(miss);
+            const lst = n <= 3 ? C.joinAnd(nm, and) : t("more", { list: nm.slice(0, 3).join(", "), n: n - 3 });
+            const kind = C.roleKind(key, lang);
+            const held = heldAt(key, tok);
+            // A role the person already holds says so first, then still names what the assigner lacks (rule 18.5).
+            const missText = n === 0 || r.all ? "" : n === 1 ? t("miss1", { plant: plant, list: lst }) : t("missN", { plant: plant, n: n, list: lst });
+            const d = held ? t("optHeld", { kind: kind, person: pName, place: C.place(tok, lang) }) + (missText ? " " + missText : "") :
+              r.all && n > 0 ? t("optAll", { kind: kind, company: company }) :
+              n === 0 ? (r.perms.length === 1 ? t("optOne", { kind: kind }) : t("optOk", { kind: kind, n: r.perms.length })) :
+              n === 1 ? t("optMiss1", { kind: kind, plant: plant, list: lst }) : t("optMissN", { kind: kind, plant: plant, n: n, list: lst });
+            const can = n === 0;
+            const dis = held || !can;
+            return { key: key, name: C.roleName(key, lang), lang: C.roleLang(key, lang), d: d, can: can, dis: dis, oid: uid + "-o-" + key };
+          });
+          const firstOk = opts.filter((o) => !o.dis)[0];
+          const act = activeKey || (valueKey || (firstOk ? firstOk.key : ""));
+          const decorate = (o) => Object.assign(o, {
+            cls: (o.dis ? "dis " : "") + (o.key === act ? "kfocus" : ""), sel: o.key === valueKey ? "true" : "false", isSel: o.key === valueKey,
+            dis: o.dis ? "true" : null, icon: o.dis ? "Lock" : "ShieldCheck"
+          });
+          const canOpts = opts.filter((o) => o.can).map(decorate), cantOpts = opts.filter((o) => !o.can).map(decorate);
+          const optGroups = [
+            { hid: uid + "-g1", title: where === "company" ? t("canCo") : t("canHere", { plant: plant }), opts: canOpts, sep: false },
+            { hid: uid + "-g2", title: where === "company" ? t("cantCo") : t("cantHere", { plant: plant }), opts: cantOpts, sep: true }
+          ].filter((g) => g.opts.length);
+          if (optGroups.length) optGroups[0].sep = false;
+          const isOpen = P.open === "on";
+          const places = [
+            { key: "plant", label: t("plantOnly", { plant: plant }), desc: t("plantOnlyD", { plant: plant }) },
+            { key: "company", label: t("companyAll", { company: company }), desc: t("companyAllD", { company: company }) }
+          ].map((w) => ({
+            label: w.label, desc: w.desc, did: uid + "-wd-" + w.key, on: w.key === where ? "true" : "false", rcls: w.key === where ? "on" : "",
+            tab: w.key === where ? "0" : "-1", fcls: (focus === "where" && w.key === where) || (focus === "where-company" && w.key === "company") ? "is-focus" : ""
+          }));
+          // A refusal from the server for Acme AB: the role's permissions the assigner lacks there (cheld: roles at Acme AB).
+          const hasErr = P.err === "on" && !!valueKey;
+          let errText = "";
+          if (hasErr) {
+            const missCo = C.missing(valueKey, cheld);
+            errText = t("refuseCo", { role: C.roleName(valueKey, lang), company: company, n: missCo.length, list: C.joinAnd(named(missCo), and) });
+            if (!C.heldBy(cheld)["core.roleAssignment:manage"]) errText += " " + t("refuseCoAssign", { company: company });
+            errText += " " + t("refuseAsk", { company: company });
+          }
+          const vObj = valueKey ? { name: C.roleName(valueKey, lang), lang: C.roleLang(valueKey, lang), kind: C.roleKind(valueKey, lang) } : {};
+          // The highlighted role's permissions, and whether the assigner holds each at Plant A (side card).
+          const needKey = activeKey || valueKey || "shiftLead";
+          const needMiss = C.missing(needKey, assigner);
+          const need = {
+            title: t("needH", { role: C.roleName(needKey, lang), plant: plant }), desc: t("needD", { plant: plant }),
+            rows: C.ROLE[needKey].perms.filter((id) => !C.PERM[id].ni).map((id) => {
+              const no = needMiss.indexOf(id) >= 0;
+              return { label: C.permLabel(id, lang), lang: C.permLang(id, lang), id: id, state: no ? t("notHoldIt", { plant: plant }) : t("holdIt", { plant: plant }), icon: no ? "CircleX" : "CircleCheck", cls: no ? "ca-no" : "ca-ok" };
+            })
+          };
+          const pRoles = person.a.map((x) => t("at", { role: C.roleName(x[0], lang), place: C.place(x[1], lang) }));
+          return Object.assign(base, {
+            label: "Role picker, " + view + ", " + where + (isOpen ? ", open" : "") + (hasErr ? ", refused" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            tx: { roleAndPlace: t("roleAndPlace"), where: t("where"), role: t("role"), chooseRole: t("chooseRole"), username: t("username"), email: t("email"), rolesHere: t("rolesHere") },
+            isField: view === "field", isNeed: view === "need", isPerson: view === "person", isNote: view === "note",
+            boxCls: P.box === "off" ? "lf-g1" : "lf-fs", hasBoxHead: P.box !== "off", boxRef: P.box !== "off" ? ids.box : null,
+            places: places, optGroups: optGroups, isOpen: isOpen,
+            cbCtl: isOpen ? ids.lb : null, cbCls: (focus === "role" ? "is-focus " : "") + (hasErr ? "is-err" : ""), cbInv: hasErr ? "true" : null,
+            cbDesc: hasErr ? ids.re + " " + ids.rd : ids.rd, activeId: isOpen && act ? uid + "-o-" + act : null,
+            hasValue: !!valueKey, noValue: !valueKey, value: vObj,
+            roleDesc: where === "company" ? t("roleDescCo", { company: company }) : t("roleDesc", { plant: plant }),
+            hasErr: hasErr, errText: errText,
+            need: need,
+            person: { name: pName, lang: person.lang || null, user: person.user, email: person.noEmail ? t("noEmail") : person.email, roles: pRoles.length ? pRoles.join(", ") : t("noneRoles") },
+            note: t("assignNote", { plant: plant, company: company })
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 reporting and corrections frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+        <style>
+          /* Row 4 of the D4 spec page production-start-303-station.dc.html (issue northMES/northmes#303): reporting and
+             corrections. RE1 to RE30 mount the folder's StationFrame copy and the shared parts (job list, job, report form, last
+             reports, dialogs, machine switch); RE31 holds the build notes, not part of the UI. Classes start with re-; every UI
+             color is a D1 token; the chips use the D1 canvas label styles. */
+          body{margin:0}
+          a{color:var(--link)}
+          a:hover{color:var(--foreground)}
+          .re-part{position:relative}
+          .re-fr{position:absolute}
+          .re-chip{position:absolute;left:0;bottom:calc(100% + 12px);max-width:100%;box-sizing:border-box;margin:0;white-space:nowrap;cursor:default}
+          .re-colw{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+          .re-colw > .ps-col{flex:1 1 auto}
+          .ps-sb.re-sb{right:-15px;display:none}
+          .re-notes{box-sizing:border-box;height:100%;overflow:hidden}
+          .re-notes .lede{max-width:none}
+          .re-nh{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+          .re-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 56px;margin-top:28px}
+          .re-h{margin:0 0 8px;font-size:15px;line-height:20px;font-weight:600}
+          .re-ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px}
+          .re-notes code{font:400 13px/18px var(--font-mono);white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="re-part" style="{{ rootStyle }}" data-reu="{{ uid }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="re-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel re-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span></div>
+            <dc-import name="StationFrame" dc-props="{{ f.frame }}" hint-size="{{ f.hint }}">
+              <div class="ps-a {{ f.grid }}">
+                <dc-import name="production-start-303-station-joblist" dc-props="{{ f.list }}"></dc-import>
+                <div class="re-colw">
+                  <div class="ps-col {{ f.colCls }}" data-re-col="{{ f.key }}" data-re-reveal="{{ f.reveal }}">
+                    <dc-import name="production-start-303-station-job" dc-props="{{ f.job }}"></dc-import>
+                    <dc-import name="production-start-303-station-report" dc-props="{{ f.rep }}"></dc-import>
+                    <sc-if value="{{ f.colReps }}">
+                      <dc-import name="production-start-303-station-reports" dc-props="{{ f.reps }}"></dc-import>
+                    </sc-if>
+                  </div>
+                  <span class="ps-sb re-sb" aria-hidden="true"></span>
+                </div>
+                <sc-if value="{{ f.sideReps }}">
+                  <dc-import name="production-start-303-station-reports" dc-props="{{ f.reps }}"></dc-import>
+                </sc-if>
+              </div>
+              <sc-if value="{{ f.hasDlg }}">
+                <dc-import name="production-start-303-station-dialog" dc-props="{{ f.dlg }}"></dc-import>
+              </sc-if>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-for list="{{ mfs }}" as="m">
+          <div class="re-fr" style="{{ m.style }}" data-screen-label="{{ m.label }}">
+            <div class="flabel re-chip"><span class="fid">{{ m.id }}</span>{{ m.title }}<span class="fth">{{ m.fth }}</span></div>
+            <dc-import name="StationFrame" dc-props="{{ m.frame }}" hint-size="{{ m.hint }}">
+              <div data-slot="header"><dc-import name="production-start-303-station-header" dc-props="{{ m.mach }}"></dc-import></div>
+              <div class="ps-a {{ m.grid }}">
+                <dc-import name="production-start-303-station-joblist" dc-props="{{ m.list }}"></dc-import>
+                <div class="re-colw">
+                  <div class="ps-col {{ m.colCls }}" data-re-col="{{ m.key }}" data-re-reveal="{{ m.reveal }}">
+                    <dc-import name="production-start-303-station-job" dc-props="{{ m.job }}"></dc-import>
+                    <dc-import name="production-start-303-station-report" dc-props="{{ m.rep }}"></dc-import>
+                    <sc-if value="{{ m.colReps }}">
+                      <dc-import name="production-start-303-station-reports" dc-props="{{ m.reps }}"></dc-import>
+                    </sc-if>
+                  </div>
+                  <span class="ps-sb re-sb" aria-hidden="true"></span>
+                </div>
+                <sc-if value="{{ m.sideReps }}">
+                  <dc-import name="production-start-303-station-reports" dc-props="{{ m.reps }}"></dc-import>
+                </sc-if>
+              </div>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-if value="{{ notes.show }}">
+          <div class="re-fr" style="{{ notes.style }}" data-screen-label="{{ notes.label }}">
+            <div class="flabel re-chip"><span class="fid">RE31</span>Build notes for reporting and corrections<span class="fth">Not part of the UI. What RE1 to RE30 fix for the build</span></div>
+            <article class="sheet re-notes">
+              <div class="re-nh"><p class="kick" style="margin:0">Build notes, D4 operator station, row of reporting and corrections</p><span class="ps-notui">Not part of the UI</span></div>
+              <h2 class="t2" style="margin-top:8px">Reporting and corrections: build notes for RE1 to RE30</h2>
+              <p class="lede">The implementer takes the layout, the region order, the states and transitions, the copy in quotes verbatim, the keyboard and keypad model and the focus targets; never the markup, class names, token values, canvas icons or demo numbers. Every person, job, article, machine and number on these frames is fictional.</p>
+              <div class="re-cols">
+                <section>
+                  <h3 class="re-h">Frames and parts</h3>
+                  <ul class="re-ul">
+                    <li>Every frame mounts the D2 station frame through the byte-equal copy <code>production-start/StationFrame.dc.html</code>, with the job list, the job, the report form and the last reports in option A's layout and option B's docked keypad (decision of 2026-10-08, rules D.1 to D.4).</li>
+                    <li>The dialogs mount over the frame's overlay and are centered on the station screen; the station content keeps its layout under the overlay (rule 19.25).</li>
+                    <li>RE1 to RE5: the Alert Dialogs for a large quantity and for the same report within 10 minutes. RE6 to RE15: the correction Dialog in its states, with the docked keypad on a station without a keyboard and behind Keypad on a station with one. RE16 and RE17: the last reports after a correction. RE18 and RE19: reports from an earlier production day.</li>
+                    <li>RE20 to RE26: the report form's own states: the searchable list of 14 reasons, a quantity in kg with the decimal key at a station with two machines, a server error that keeps the entries, and the field errors with the summary. RE27 to RE30: the keypad toggles on both kinds of station.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Components by their shadcn names, and tokens</h3>
+                  <ul class="re-ul">
+                    <li>Alert Dialog: "Report 900 good?" and "Report again?", each with the safe choice first and focused. Dialog: the correction, 900 px wide with the keypad and 640 px without it, with Close as a 48 px ghost IconButton.</li>
+                    <li>Field, Label and NumberField (QuantityInput) for Good quantity and Scrap quantity, 56 px; Textarea for Reason (required); Command for the searchable reasons with its search field and option list; Radio Group for eight reasons or fewer; Alert for the refusal; Table for the last reports; Toggle for System keyboard and Keypad; Toggle Group for the machine switch.</li>
+                    <li>D1 tokens only: <code>--destructive</code> and <code>--destructive-subtle</code> for the refusal, the error summary and the field errors; <code>--muted</code> for the original report and the correction row; <code>--accent</code> for the active option and a pressed key; the D1 disabled look for an <code>aria-disabled</code> button; the D1 focus ring.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Large quantity and Report again</h3>
+                  <ul class="re-ul">
+                    <li>Large quantity: good plus scrap above the remaining quantity times the plant setting (default 1.5) asks first, before anything is sent. On 5001.20 the limit is 822 pcs. "Report 900 good" sends with <code>confirmedLargeQuantity</code>; "Change quantity" closes the dialog and moves focus to Good quantity with the entries kept.</li>
+                    <li>Report again: the same job and quantities within 10 minutes under a new <code>client_report_id</code> asks first. "Report again" sends with <code>confirmedRepeat</code>; "Do not report" closes the dialog, keeps the entries and returns focus to Send. The 13:58 report is in view in the last reports at 1920 (RE4).</li>
+                    <li>Both are <code>role=alertdialog</code>, modal, named by the title and described by the text. Escape is the safe choice. After a confirmed send, focus stays on Send and the line under it says what was reported.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Correcting a report</h3>
+                  <ul class="re-ul">
+                    <li>Correct on a quantity report of the current production day opens the Dialog "Correct the report of 13:58", named by its title and described by "The report stays as it is. Saving adds a correction row that refers to it." Focus goes to Good quantity.</li>
+                    <li>The fields hold the corrected totals, so no minus sign is typed; "Change: -2 good, scrap unchanged" is computed under them and is part of the reading order. Reason (required) is free text.</li>
+                    <li>Save correction with no reason: focus moves to Reason, which gets <code>aria-invalid="true"</code> and is described by "Enter a reason for the correction." (RE9, RE10).</li>
+                    <li>While it waits, Save correction reads "Sending" with <code>aria-disabled</code> and <code>aria-busy</code> and keeps focus; a hidden status says "Sending" (RE13, RE14). A refusal (<code>CORRECTION_EXCEEDS_ORIGINAL</code> after another correction landed first) shows the Alert above the footer, keeps the values, and Save correction is described by it and keeps focus (RE11, RE12).</li>
+                    <li>After a saved correction the Dialog closes, focus returns to that row's Correct, the polite region says "Correction of 13:58 saved", the correction row leads the last reports, and the job's figures and list row show the new totals: Good 638, Remaining 550 pcs, last report 14:06 (RE16, RE17). Cancel, Close and Escape also return focus to Correct.</li>
+                    <li>A report from an earlier production day shows "Needs a supervisor" in place of Correct, with the note under the table (RE18, RE19; question 21.6).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Keypad and toggles</h3>
+                  <ul class="re-ul">
+                    <li>Station without a keyboard: the keypad is docked beside the fields (beside the reasons in portrait) with System keyboard in its caption row, <code>aria-pressed="false"</code>. Pressing it hides the keypad, gives the field <code>inputmode="numeric"</code> (<code>decimal</code> for kg) and returns focus to the field; the pressed toggle then ends the fields row (RE29).</li>
+                    <li>Station with a keyboard: the keypad starts hidden and Keypad ends the fields row, <code>aria-pressed="false"</code>; the reasons take two columns at 1920 and in portrait and four at 1280 (RE27, RE28). Pressing Keypad docks it, and the pressed toggle moves into the keypad's caption row with focus on it (RE30). The station keeps the choice in localStorage.</li>
+                    <li>The correction Dialog docks the keypad the same way; with the keypad hidden, the toggle starts the footer (RE15). The keypad cannot type the reason (question 21.34).</li>
+                    <li>A unit with display decimals adds the key "," named "Decimal comma"; Clear moves to the caption row beside the toggle, so the keypad keeps four rows (RE22, RE23).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Report form states</h3>
+                  <ul class="re-ul">
+                    <li>More than eight reasons: a Command with "Search scrap reasons", the count "2 of 14 reasons" under it and the option list; the chosen reason has Check and <code>aria-selected="true"</code>; arrow keys move the active option (RE20, RE21).</li>
+                    <li>Server error on Send: "Not sent. NorthMES could not save the report. Your entries are kept. Press Send again. Error id 7f3a91c2." under Send, which names it with <code>aria-describedby</code> and keeps focus; the entries and the <code>client_report_id</code> stay, so the report counts once (RE24, RE25).</li>
+                    <li>Field errors: the summary "2 fields need attention" at the top of the report card takes focus and links to Good quantity and to the Scrap reason group; "Enter whole pieces, for example 96." and "Choose a scrap reason. Scrap is above 0." sit next to their controls (RE26, OF19).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Final English copy</h3>
+                  <ul class="re-ul">
+                    <li>"Report 900 good?", "900 good is more than 1.5 times the remaining 548 pcs. Check the count before you send it.", "Change quantity", "Report 900 good".</li>
+                    <li>"Report again?" (doc), "You reported 120 good, 3 scrap on 5001.20 at 13:58, 8 minutes ago.", "Do not report", "Report again".</li>
+                    <li>"Correct the report of 13:58", "The report stays as it is. Saving adds a correction row that refers to it.", "Reported by", "Good", "Scrap, Burr", "Change: -2 good, scrap unchanged", "Reason (required)", "Cancel", "Save correction", "Sending", "Close".</li>
+                    <li>"Enter a reason for the correction.", "Not saved. Another correction of this report was saved first. It now counts 118 good, 3 scrap. Check the totals and save again.", "Correction of 13:58 saved".</li>
+                    <li>"Correction of 13:58: Two pieces counted twice", "Needs a supervisor", "Reports from earlier production days are corrected by a supervisor.", "Correct the report of 13:58".</li>
+                    <li>"Search scrap reasons", "2 of 14 reasons", "Good quantity (kg)", "Decimal comma", "Keypad", "System keyboard".</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Units, ranges and WCAG 2.2 criteria</h3>
+                  <ul class="re-ul">
+                    <li>pcs: whole pieces, 0 or more. kg: one display decimal, typed with the decimal comma ("12,5"). A correction keeps the net per original at 0 or more.</li>
+                    <li>1.3.1 the dialogs, the fieldset and the keypad group; 2.1.1 every control by keyboard; 2.1.2 the modal dialogs release focus on their buttons and Escape; 2.4.3 focus into each dialog and back to its trigger; 2.4.11 the docked keypad never covers the focused field.</li>
+                    <li>2.5.8 targets of at least 44 px; 3.2.2 nothing is sent without Send or a dialog choice; 3.3.1 and 3.3.3 errors in text with the fix; 3.3.4 the confirmations and the correction row; 3.3.7 entries kept after an error; 4.1.2 <code>aria-pressed</code>, <code>aria-disabled</code>, <code>aria-busy</code>, <code>aria-invalid</code>, <code>aria-selected</code>; 4.1.3 "Sending" and the results as status messages.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="re-h">Proposals and open questions</h3>
+                  <ul class="re-ul">
+                    <li>The dialog copy, the safe choice focused first and Escape as the safe choice (rule 19.18, question 21.24).</li>
+                    <li>The correction Dialog with corrected totals and the computed change; the keypad docked in it (rule 19.24); "Correction of 13:58 saved" in the polite region.</li>
+                    <li>A correction counts as the job's last report in the meta line (RE16).</li>
+                    <li>21.6 who may correct, and "Needs a supervisor"; 21.31 whether reasons show a code; 21.34 how the reason is typed on a station without a keyboard.</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"text","default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler the frame and the parts install (one per document, guarded by the same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The job column scrolls at 1280 and in portrait (rule 19.23). Once the parts have drawn, a column with a reveal
+          // selector scrolls that element into view (the message under Send, or the last reports behind a correction), and each
+          // column that overflows gets its Scroll Area thumb. Offsets come from offsetTop, so the canvas zoom does not change them.
+          this.__fit = () => {
+            const root = document.querySelector('[data-reu="' + this.__uid + '"]');
+            if (!root) return;
+            root.querySelectorAll("[data-re-col]").forEach((col) => {
+              const sb = col.parentElement ? col.parentElement.querySelector(".re-sb") : null;
+              if (!sb) return;
+              const ch = col.clientHeight, sh = col.scrollHeight;
+              if (sh <= ch + 1) { sb.style.display = "none"; return; }
+              const sel = col.getAttribute("data-re-reveal");
+              const list = sel && sel !== "none" ? col.querySelectorAll(sel) : [];
+              const m = list.length ? list[list.length - 1] : null;
+              if (m) {
+                let y = 0, e = m;
+                while (e && e !== col) { y += e.offsetTop; e = e.offsetParent; }
+                if (e === col) {
+                  const want = Math.max(0, Math.min(sh - ch, Math.ceil(y + m.offsetHeight + 16 - ch)));
+                  if (Math.abs(col.scrollTop - want) > 1) col.scrollTop = want;
+                }
+              }
+              const th = Math.max(48, Math.round((ch * ch) / sh));
+              const top = Math.round(((ch - th) * col.scrollTop) / (sh - ch));
+              sb.style.display = "block";
+              sb.style.top = top + "px";
+              sb.style.height = th + "px";
+            });
+          };
+          [300, 1000, 2000, 3500, 5000, 7000, 10000, 14000, 20000].forEach((t) => setTimeout(() => this.__fit && this.__fit(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__fit && this.__fit());
+        }
+        componentDidUpdate() {
+          if (this.__fit) setTimeout(() => this.__fit && this.__fit(), 600);
+        }
+        componentWillUnmount() {
+          this.__fit = null;
+        }
+        renderVals() {
+          const P = this.props || {};
+          this.__uid = this.__uid || "re" + Math.random().toString(36).slice(2, 9);
+          // Screen sizes as the frame takes them; the grid class, the job column and where the last reports sit.
+          const SZ = {
+            "1920x1080": { w: 1920, h: 1080, words: "1920 by 1080", grid: "s1920", col: "", side: true },
+            "1280x800": { w: 1280, h: 800, words: "1280 by 800", grid: "s1280", col: "scroll", side: false },
+            "800x1280": { w: 800, h: 1280, words: "800 by 1280", grid: "s800", col: "scroll", side: false },
+          };
+          // Report values behind a dialog: the 900 good that asks first, and the same report as 13:58.
+          const big = { good: "900", scrap: "", reason: "none", focus: "none" };
+          const same = { good: "120", scrap: "3", reason: "Burr", focus: "none" };
+          const LR = ".ps-lr";
+          const MSG = ".ps-msgrow";
+          // dlg: the dialog part's props; after: the totals once the server has answered; reveal: what the scrolled column shows.
+          const ALL = [
+            { id: "RE1", title: "Large quantity", theme: "light", size: "1280x800", rep: big, dlg: { kind: "large" },
+              detail: "900 good on 5001.20, limit 822 pcs; focus on Change quantity" },
+            { id: "RE2", title: "Large quantity", theme: "dark", size: "1920x1080", rep: big, dlg: { kind: "large" }, detail: "As RE1" },
+            { id: "RE3", title: "Large quantity", theme: "light", size: "800x1280", rep: big, dlg: { kind: "large" }, detail: "As RE1" },
+            { id: "RE4", title: "Report again", theme: "light", size: "1920x1080", rep: same, dlg: { kind: "again" },
+              detail: "The report of 13:58 again, 8 minutes later; focus on Do not report" },
+            { id: "RE5", title: "Report again", theme: "dark", size: "1280x800", rep: same, dlg: { kind: "again" }, detail: "As RE4" },
+            { id: "RE6", title: "Correct a report", theme: "light", size: "1280x800", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct" },
+              detail: "Correct on 13:58: corrected totals, the docked keypad, focus on Good quantity" },
+            { id: "RE7", title: "Correct a report", theme: "dark", size: "1920x1080", rep: { focus: "none" }, dlg: { kind: "correct" }, detail: "As RE6" },
+            { id: "RE8", title: "Correct a report", theme: "light", size: "800x1280", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct" },
+              detail: "As RE6; the keypad under the fields" },
+            { id: "RE9", title: "Reason missing", theme: "light", size: "1280x800", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct", state: "invalid" },
+              detail: "Save correction with no reason; focus on Reason" },
+            { id: "RE10", title: "Reason missing", theme: "dark", size: "800x1280", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct", state: "invalid" }, detail: "As RE9" },
+            { id: "RE11", title: "Correction refused", theme: "light", size: "1920x1080", rep: { focus: "none" }, dlg: { kind: "correct", state: "refused" },
+              detail: "Another correction of 13:58 was saved first; values kept, focus on Save correction" },
+            { id: "RE12", title: "Correction refused", theme: "dark", size: "1280x800", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct", state: "refused" }, detail: "As RE11" },
+            { id: "RE13", title: "Correction sending", theme: "light", size: "800x1280", rep: { focus: "none" }, reveal: LR, dlg: { kind: "correct", state: "sending" },
+              detail: "Save correction reads Sending" },
+            { id: "RE14", title: "Correction sending", theme: "dark", size: "1920x1080", rep: { focus: "none" }, dlg: { kind: "correct", state: "sending" }, detail: "As RE13" },
+            { id: "RE15", title: "Correct at a keyboard station", theme: "light", size: "1280x800", rep: { focus: "none", input: "keyboard" }, reveal: LR, dlg: { kind: "correct", input: "keyboard" },
+              detail: "The keypad hidden, Keypad starts the footer" },
+            { id: "RE16", title: "Correction saved", theme: "light", size: "1920x1080", after: "corrected", rep: { focus: "none" }, reps: { focus: "13:58" },
+              detail: "The correction row leads, Good 638, focus back on Correct of 13:58" },
+            { id: "RE17", title: "Correction saved", theme: "dark", size: "1280x800", after: "corrected", rep: { focus: "none" }, reps: { focus: "13:58" }, reveal: LR, detail: "As RE16" },
+            { id: "RE18", title: "Needs a supervisor", theme: "light", size: "1920x1080", sel: "5002.10", unsent: "none", rep: { good: "80", scrap: "", reason: "none", focus: "none" },
+              detail: "5002.10: two reports of Mon 2 Nov have no Correct" },
+            { id: "RE19", title: "Needs a supervisor", theme: "dark", size: "1280x800", sel: "5002.10", unsent: "none", rep: { good: "80", scrap: "", reason: "none", focus: "none" }, reveal: LR, detail: "As RE18" },
+            { id: "RE20", title: "Searchable reasons", theme: "light", size: "1920x1080", rep: { reasons: "14", query: "dam", reason: "Surface damage", focus: "search" },
+              detail: "A register of 14 reasons, the search dam finds 2" },
+            { id: "RE21", title: "Searchable reasons", theme: "dark", size: "1920x1080", rep: { reasons: "14", focus: "reason" },
+              detail: "All 14 reasons, Burr chosen and active" },
+            { id: "RE24", title: "Server error on Send", theme: "light", size: "1920x1080", rep: { state: "server" },
+              detail: "Not sent, entries kept, focus on Send" },
+            { id: "RE25", title: "Server error on Send", theme: "dark", size: "1280x800", rep: { state: "server" }, reveal: MSG, detail: "As RE24" },
+            { id: "RE26", title: "Field errors", theme: "dark", size: "1280x800", rep: { state: "invalid" },
+              detail: "12,5 in pcs and no reason; focus on the summary" },
+            { id: "RE27", title: "Keyboard station", theme: "light", size: "1920x1080", rep: { input: "keyboard", focus: "good" },
+              detail: "The keypad hidden, Keypad ends the fields row" },
+            { id: "RE28", title: "Keyboard station", theme: "light", size: "800x1280", rep: { input: "keyboard", focus: "good" },
+              detail: "As RE27; reasons in two columns" },
+            { id: "RE29", title: "After System keyboard", theme: "light", size: "1280x800", rep: { input: "touch", keypad: "hidden", focus: "good" },
+              detail: "Touch station: the keypad hidden, the pressed toggle ends the fields row" },
+            { id: "RE30", title: "After Keypad", theme: "light", size: "1280x800", rep: { input: "keyboard", keypad: "shown", focus: "toggle" },
+              detail: "Keyboard station: the keypad docked, Keypad pressed in its caption row" },
+          ];
+          // RE22 and RE23 are at Press cell 1, with the machine switch in the frame's header slot, so they have their own block.
+          const MFS = [
+            { id: "RE22", title: "Quantity in kg", theme: "light", size: "1280x800", detail: "5008.10 on Press 3: 12,5 typed with the decimal key" },
+            { id: "RE23", title: "Quantity in kg", theme: "dark", size: "1920x1080", detail: "As RE22" },
+          ];
+          const NOTES = { id: "RE31", w: 1440, h: 1840 };
+          const LINES = [
+            ["RE1", "RE2", "RE3"],
+            ["RE4", "RE5"],
+            ["RE6", "RE7", "RE8"],
+            ["RE9", "RE10", "RE11"],
+            ["RE12", "RE13", "RE14"],
+            ["RE15", "RE16", "RE17"],
+            ["RE18", "RE19"],
+            ["RE20", "RE21"],
+            ["RE22", "RE23"],
+            ["RE24", "RE25", "RE26"],
+            ["RE27", "RE28", "RE29", "RE30"],
+            ["RE31"],
+          ];
+          const CHIP = 64, GAPX = 80, GAPY = 128;
+          const by = {};
+          ALL.concat(MFS).forEach((x) => { by[x.id] = x; });
+          const dims = (id) => (id === "RE31" ? { w: NOTES.w, h: NOTES.h } : SZ[by[id].size]);
+          const pick = String(P.frame || "all").trim();
+          const one = LINES.some((l) => l.indexOf(pick) >= 0);
+          const lines = one ? [[pick]] : LINES;
+          const pos = {};
+          let top = CHIP, width = 0;
+          lines.forEach((line) => {
+            let left = 0, lineH = 0;
+            line.forEach((id) => {
+              const d = dims(id);
+              pos[id] = "left:" + left + "px;top:" + top + "px;width:" + d.w + "px;height:" + d.h + "px";
+              left += d.w + GAPX;
+              lineH = Math.max(lineH, d.h);
+            });
+            width = Math.max(width, left - GAPX);
+            top += lineH + GAPY;
+          });
+          const height = top - GAPY;
+          const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+          const build = (x, station) => {
+            const s = SZ[x.size];
+            const key = x.id.toLowerCase();
+            const sel = x.sel || (station ? "5008.10" : "5001.20");
+            const after = x.after || "none";
+            return {
+              key: key,
+              id: x.id,
+              title: x.title,
+              fth: cap(x.theme) + ", " + s.words + ". " + x.detail,
+              label: x.id + " " + x.title + ", " + x.theme + ", " + s.words,
+              style: pos[x.id],
+              hint: s.w + "px," + s.h + "px",
+              frame: Object.assign({ size: x.size, theme: x.theme, connection: "connected" }, station ? { station: station } : {}),
+              grid: s.grid,
+              colCls: s.col,
+              reveal: x.reveal || "none",
+              list: Object.assign({ size: x.size, idp: key + "l", selected: sel, after: after }, x.unsent ? { unsent: x.unsent } : {}, station ? { machine: "Press 3", unsent: "none" } : {}),
+              job: { size: x.size, idp: key + "j", job: sel, after: after },
+              rep: Object.assign({ size: x.size, idp: key + "r", job: sel }, x.rep || {}),
+              reps: Object.assign({ size: x.size, idp: key + "t", job: sel, after: after }, x.reps || {}),
+              colReps: !s.side,
+              sideReps: s.side,
+              hasDlg: !!x.dlg,
+              dlg: x.dlg ? Object.assign({ size: x.size, idp: key + "d" }, x.dlg) : {},
+            };
+          };
+          const frames = ALL.filter((x) => pos[x.id]).map((x) => build(x, ""));
+          const mfs = MFS.filter((x) => pos[x.id]).map((x) => Object.assign(build(Object.assign({ rep: { good: "12,5", scrap: "", reason: "none", focus: "good", press: "," } }, x), "Press cell 1"), {
+            mach: { shown: "Press 3", idp: x.id.toLowerCase() + "h" },
+          }));
+          const notes = { show: !!pos.RE31, style: pos.RE31 || "", label: "RE31 Build notes for reporting and corrections, light, " + NOTES.w + " by " + NOTES.h };
+          return { uid: this.__uid, frames, mfs, notes, rootStyle: "width:" + width + "px;height:" + height + "px" };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings form</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <div class="lf-fscroll" data-lf-scrolly="{{ scrolly }}">
+          <div class="lf-form">
+            <sc-if value="{{ hasNote }}">
+              <div class="lf-note ok" role="status"><span class="ic" data-icon="CircleCheck"></span><span>{{ note }}</span></div>
+            </sc-if>
+            <sc-if value="{{ hasSummary }}">
+              <div class="lf-summary {{ f.summary }}" tabindex="-1" role="group" aria-labelledby="{{ ids.sum }}">
+                <h2 class="lf-summary-h" id="{{ ids.sum }}"><span class="ic" data-icon="CircleAlert"></span>{{ sum.title }}</h2>
+                <sc-if value="{{ sum.hasList }}"><ul><sc-for list="{{ sum.items }}" as="i"><li><a href="#">{{ i }}</a></li></sc-for></ul></sc-if>
+                <sc-if value="{{ sum.hasText }}"><p>{{ sum.text }}</p></sc-if>
+                <sc-if value="{{ sum.hasCid }}"><span class="lf-cid lf-cid-l"><span>{{ t.cid }}</span><span class="v">{{ sum.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ t.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+              </div>
+            </sc-if>
+            <sc-for list="{{ sections }}" as="s">
+              <section class="lf-fs" aria-labelledby="{{ s.hid }}">
+                <h2 class="lf-fs-h" id="{{ s.hid }}">{{ s.title }}</h2>
+                <sc-if value="{{ s.hasDesc }}"><p class="lf-fs-d">{{ s.desc }}</p></sc-if>
+                <sc-for list="{{ s.rows }}" as="row">
+                  <div class="{{ row.cls }}">
+                    <sc-for list="{{ row.fields }}" as="fd">
+                      <div class="fld">
+                        <sc-if value="{{ fd.hasLabel }}"><span class="lbl">{{ fd.label }}<sc-if value="{{ fd.opt }}"><span class="lf-req">{{ t.optional }}</span></sc-if></span></sc-if>
+                        <sc-if value="{{ fd.isSetting }}">
+                          <span class="lf-src-row"><span class="lf-srcm {{ fd.mcls }}"><span class="ic" data-icon="{{ fd.micon }}"></span>{{ fd.mtext }}</span><sc-if value="{{ fd.hasClear }}"><button class="btn v-link {{ fd.ccls }}" type="button">{{ fd.clearText }}</button></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isInput }}">
+                          <span class="inp {{ fd.icls }}"><sc-if value="{{ fd.hasV }}"><span class="lf-iv {{ fd.vcls }}">{{ fd.v }}</span></sc-if><sc-if value="{{ fd.hasPh }}"><span class="lf-ph">{{ fd.ph }}</span></sc-if><sc-if value="{{ fd.hasUnit }}"><span class="lf-unit">{{ fd.unit }}</span></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isSelect }}">
+                          <span class="lf-selw">
+                            <span class="inp lf-sel {{ fd.icls }}" role="combobox" aria-expanded="{{ fd.open }}" aria-controls="{{ fd.lid }}"><sc-if value="{{ fd.hasV }}"><span class="lf-iv {{ fd.vcls }}">{{ fd.v }}</span></sc-if><sc-if value="{{ fd.hasPh }}"><span class="lf-ph">{{ fd.ph }}</span></sc-if><span class="ic lf-chev" data-icon="ChevronDown"></span></span>
+                            <sc-if value="{{ fd.open }}">
+                              <div class="pop lf-pop below lf-lb" id="{{ fd.lid }}" role="listbox" aria-label="{{ fd.label }}">
+                                <sc-for list="{{ fd.opts }}" as="o"><div class="mi {{ o.cls }}" role="option" aria-selected="{{ o.sel }}"><span>{{ o.t }}</span><sc-if value="{{ o.sel }}"><span class="ic end" data-icon="Check"></span></sc-if></div></sc-for>
+                              </div>
+                            </sc-if>
+                          </span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isArea }}">
+                          <span class="inp lf-ta {{ fd.icls }}"><sc-if value="{{ fd.hasV }}"><span>{{ fd.v }}</span></sc-if><sc-if value="{{ fd.hasPh }}"><span class="lf-ph">{{ fd.ph }}</span></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isRead }}">
+                          <span class="lf-ro {{ fd.vcls }}">{{ fd.v }}</span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isCheck }}">
+                          <span class="cb {{ fd.cb }}"><span class="cb-hit"><span class="cb-box {{ fd.icls }}"><span class="ic" data-icon="Check"></span></span></span>{{ fd.cbLabel }}</span>
+                        </sc-if>
+                        <sc-if value="{{ fd.hasErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ fd.err }}</span></sc-if>
+                        <sc-if value="{{ fd.hasDesc }}"><span class="desc">{{ fd.desc }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-for>
+            <div class="lf-foot">
+              <button class="btn v-default {{ f.save }}" type="button">{{ save }}</button>
+              <button class="btn v-outline {{ f.cancel }}" type="button">{{ t.cancel }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"form":{"editor":"enum","options":["formats","plant","general","planning","new-plant","machine"],"default":"formats","tsType":"string"},"scope":{"editor":"enum","options":["company","plant"],"default":"company","tsType":"string"},"plant":{"editor":"enum","options":["a","b"],"default":"a","tsType":"string"},"mode":{"editor":"enum","options":["edit","create"],"default":"edit","tsType":"string"},"state":{"editor":"enum","options":["clean","errors","server","saved","taken"],"default":"clean","tsType":"string"},"open":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"scroll":{"editor":"int","default":0,"tsType":"number"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // A form can be drawn scrolled (prop scroll), so its lower field groups and the sticky footer show.
+          let tries = 0;
+          const scroll = () => {
+            document.querySelectorAll("[data-lf-scrolly]").forEach((el) => {
+              const y = parseInt(el.getAttribute("data-lf-scrolly"), 10) || 0;
+              if (y > 0 && el.scrollTop !== y) el.scrollTop = y;
+            });
+            if (tries++ < 40) setTimeout(scroll, 250);
+          };
+          scroll();
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) { window.__nmSetFormSeq = (window.__nmSetFormSeq || 0) + 1; this.uid = "set-f" + window.__nmSetFormSeq; }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const form = pick(P.form, ["formats", "plant", "general", "planning", "new-plant", "machine"], "formats");
+          const scope = form === "planning" ? pick(P.scope, ["company", "plant"], "company") : form === "formats" || form === "general" || form === "new-plant" ? "company" : "plant";
+          const state = pick(P.state, ["clean", "errors", "server", "saved", "taken"], "clean");
+          const create = form === "new-plant" || (form === "machine" && P.mode === "create");
+          const narrow = P.size === "narrow";
+          const plantB = P.plant === "b";
+          const P0 = plantB ? "Plant B" : "Plant A";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const focus = String(P.focus || "none");
+          const openSel = String(P.open || "");
+          const fc = (k) => (focus === k ? "is-focus" : "");
+          const t = { optional: "(optional)", cancel: "Cancel", cid: "Correlation id", copyCid: "Copy correlation id", reasonT: "Reason for change", reasonL: "Reason", reasonPh: "Why you made this change" };
+
+          // Field helpers, as in the #222 form part: every field has its label, description and error.
+          const F = (kind, id, label, o) => Object.assign({ kind: kind, id: id, label: label, opt: false, v: "", ph: "", err: "", desc: "", unit: "", vcls: "" }, o || {});
+          const finish = (fd) => {
+            const k = fd.kind;
+            const icls = (fd.err ? "is-err " : "") + (fc("field:" + fd.id) ? "is-focus " : "");
+            const open = k === "select" && openSel === fd.id;
+            return Object.assign(fd, {
+              hasLabel: !!fd.label && !fd.hideLabel, icls: icls.trim(), hasV: fd.v !== "" && fd.v != null, hasPh: !fd.v && !!fd.ph, hasUnit: !!fd.unit,
+              hasErr: !!fd.err, hasDesc: !!fd.desc, open: open, lid: open ? uid + "-lb-" + fd.id : null,
+              opts: (fd.opts || []).map((o) => ({ t: o, sel: o === fd.v, cls: o === fd.v ? "kfocus" : "" })),
+              isInput: k === "input", isSelect: k === "select", isArea: k === "area", isRead: k === "read", isCheck: k === "check", isSetting: k === "setting",
+              ccls: fc("clear:" + fd.id), hasClear: !!fd.hasClear, clearText: fd.clearText || ""
+            });
+          };
+          const R = (cols, fields, extra) => ({ cls: (cols === 2 ? "lf-g2" : "lf-g1") + (extra ? " " + extra : ""), fields: fields.map(finish) });
+          let sn = 0;
+          const Sec = (title, rows, desc) => ({ title: title, desc: desc || "", hasDesc: !!desc, rows: rows, hid: uid + "-s" + (sn += 1) });
+          // A setting field is the source marker row plus its Select, under one label (#222 settings form, LF 11.2).
+          const SRC = {
+            default: { mcls: "", micon: "CircleDot", mtext: "Default" },
+            company: { mcls: "", micon: "Building2", mtext: "From Acme AB" },
+            companySet: { mcls: "set", micon: "Building2", mtext: "Set for Acme AB" },
+            plantSet: { mcls: "set", micon: "Factory", mtext: "Set for " + P0 },
+            none: { mcls: "", micon: "CircleDashed", mtext: "No value yet" }
+          };
+          const setting = (id, label, src, field) => {
+            const clear = src === "plantSet" ? "Clear plant value" : src === "companySet" ? "Clear company value" : "";
+            return R(1, [F("setting", id + "-src", label, Object.assign({ hasClear: !!clear, clearText: clear, id: id }, SRC[src])), Object.assign(field, { label: label, hideLabel: true })], "lf-pair");
+          };
+          const reasonField = () => {
+            const typed = state === "server" ? REASON[form] : "";
+            return F("area", "reason", t.reasonL, { opt: true, v: typed, ph: typed ? "" : t.reasonPh, desc: "Shown in the settings history. Do not enter personal data. Up to 500 characters." });
+          };
+          const REASON = { formats: "Same clock as the shift plans", plant: "Plant A reads numbers as 1 234,5", general: "Data language follows the Pyramid article names", planning: "Night shift needs a full day of frozen plan", "new-plant": "", machine: "Press 5 arrives in week 2026-W44" };
+          const DF = ["2026-10-25, year first (ISO)", "25.10.2026, day first with dots", "25/10/2026, day first with slashes", "10/25/2026, month first with slashes"];
+          const HC = ["24-hour, 14:05", "12-hour, 2:05 pm"];
+          const NF = ["1 234,5, space and comma", "1,234.5, comma and point", "1.234,5, point and comma"];
+          let sections = [];
+          let sum = null;
+          let save = "Save settings";
+          let note = "";
+          let noun = "settings";
+
+          if (form === "formats") {
+            // Company Formats (E06-S13): core.presentation at Acme AB; a plant can set its own value.
+            sections.push(Sec("Formats", [
+              setting("dateFormat", "Date format", "default", F("select", "dateFormat", "Date format", { v: DF[0], opts: DF, desc: "How dates are written in lists, forms and on the board." })),
+              setting("hourCycle", "Clock", "companySet", F("select", "hourCycle", "Clock", { v: HC[0], opts: HC, desc: "How clock times are written. Clearing uses the default, 24-hour." })),
+              setting("numberFormat", "Number format", "companySet", F("select", "numberFormat", "Number format", { v: NF[1], opts: NF, desc: "How numbers are written and typed. Clearing uses the default, 1 234,5." }))
+            ], "How dates, clock times and numbers look at every plant of Acme AB. A plant can set its own value. Saved changes show after the next page load or plant switch."));
+          } else if (form === "plant") {
+            // The plant record (E06-S05) with its formats override (E06-S13), as #222 drew the settings form (LF 14.8).
+            noun = "plant";
+            const err = state === "errors";
+            sections.push(Sec("Plant", [
+              R(2, [F("input", "name", "Name", { v: err ? "" : P0, err: err ? "Enter a name." : "" }), F("input", "slug", "Slug", { v: plantB ? "plant-b" : "plant-a", vcls: "lf-mono", desc: "The slug appears in every URL of the plant, such as /" + (plantB ? "plant-b" : "plant-a") + "/planning/board." })]),
+              R(2, [F("read", "zone", "Time zone", { v: "Europe/Stockholm", desc: "Fixed once the plant has a calendar version." }), F("read", "start", "Production day start", { v: "06:00", vcls: "lf-mono", desc: "Fixed once the plant has a calendar version." })])
+            ]));
+            const S1 = plantB
+              ? [["dateFormat", "Date format", DF[1], "plantSet", "How dates are written in lists, forms and on the board. Clearing uses the default, 2026-10-25.", DF],
+                 ["hourCycle", "Clock", HC[1], "plantSet", "How clock times are written. Clearing uses the Acme AB value, 24-hour.", HC],
+                 ["numberFormat", "Number format", NF[1], "company", "How numbers are written and typed.", NF]]
+              : [["dateFormat", "Date format", DF[0], "default", "How dates are written in lists, forms and on the board.", DF],
+                 ["hourCycle", "Clock", HC[0], "company", "How clock times are written.", HC],
+                 ["numberFormat", "Number format", NF[0], "plantSet", "How numbers are written and typed. A point also works as the decimal sign. Clearing uses the Acme AB value, 1,234.5.", NF]];
+            sections.push(Sec("Formats", S1.map((s) => setting(s[0], s[1], s[3], F("select", s[0], s[1], { v: s[2], opts: s[5], desc: s[4] }))),
+              "How dates, clock times and numbers look for everyone at " + P0 + ". Saved changes show after the next page load or plant switch."));
+            save = "Save plant";
+            if (err) sum = { title: "Fix 1 field to save the plant", items: ["Enter a name."] };
+          } else if (form === "general") {
+            noun = "company";
+            const err = state === "errors";
+            sections.push(Sec("Company", [
+              R(1, [F("input", "companyName", "Company name", { v: err ? "" : "Acme AB", err: err ? "Enter a company name." : "", desc: "Shown in the plant switcher, the trail and the title of company pages." })]),
+              R(1, [F("select", "dataLanguage", "Data language", { v: "Swedish", opts: ["English", "Finnish", "German", "Swedish"], desc: "The language of article names and other master data text, so screen readers read it right." })])
+            ]));
+            save = "Save company";
+            if (err) sum = { title: "Fix 1 field to save the company", items: ["Enter a company name."] };
+          } else if (form === "planning") {
+            // Planning rules: the setting names and documented defaults of plan 07; labels proposed. frozenHours has no default.
+            const atPlant = scope === "plant";
+            const PF = ["OEE target of the operation", "One factor for the plant", "No factor"];
+            const LT = ["Elapsed time", "Working time of the machine"];
+            const YN = ["Yes", "No"];
+            const DR = ["Start of the deadline day", "End of the last shift on the deadline day"];
+            const err = state === "errors";
+            sections.push(Sec("Planning rules", [
+              setting("planningFactorSource", "Planning factor source", atPlant ? "company" : "default", F("select", "planningFactorSource", "", { v: PF[0], opts: PF, desc: "What divides the cycle time when the board plans an operation." })),
+              setting("leadTimeBasis", "Lead time basis", atPlant ? "company" : "default", F("select", "leadTimeBasis", "", { v: LT[0], opts: LT, desc: "How the lead time between two operations is counted." })),
+              setting("retoolOverlapsLeadTime", "Retool overlaps lead time", atPlant ? "company" : "default", F("select", "retoolOverlapsLeadTime", "", { v: YN[0], opts: YN, desc: "Whether retooling may run during the lead time." })),
+              setting("deadlineRule", "Deadline rule", atPlant ? "plantSet" : "default", F("select", "deadlineRule", "", { v: atPlant ? DR[1] : DR[0], opts: DR, desc: "When on the deadline day an order must be done." })),
+              setting("frozenHours", "Frozen hours", atPlant ? "plantSet" : "none", F("input", "frozenHours", "", { v: atPlant && !err ? "24" : "", vcls: "lf-mono", unit: "h", err: err ? "Enter a number of hours from 0 to 168." : "", desc: atPlant ? "Hours from now in which planned jobs keep their machine and order." : "Hours from now in which planned jobs keep their machine and order. A plant cannot open while this has no value." }))
+            ], atPlant ? "This plant's planning rules. A rule without a plant value uses the Acme AB value. Saved changes apply to the next planning run." : "Planning rules for every plant of Acme AB. A plant can set its own value. Saved changes apply to the next planning run."));
+            save = "Save planning rules";
+            noun = "planning rules";
+            if (err) sum = { title: "Fix 1 field to save the planning rules", items: ["Enter a number of hours from 0 to 168."] };
+          } else if (form === "new-plant") {
+            // New plant at Acme AB (E05-S15): no defaults for the zone and the day start; a slug clash names no company.
+            noun = "plant";
+            const err = state === "errors";
+            const taken = state === "taken";
+            const ZONES = ["Europe/Helsinki", "Europe/Oslo", "Europe/Stockholm"];
+            sections.push(Sec("Plant", [
+              R(2, [F("input", "name", "Name", { v: err ? "" : "Plant E", err: err ? "Enter a name." : "" }),
+                F("input", "slug", "Slug", { v: taken ? "plant-a" : err ? "" : "plant-e", vcls: "lf-mono", err: taken ? "Slug plant-a is already in use. Choose another slug." : err ? "Enter a slug." : "", desc: "Lower-case letters, digits and hyphens, such as plant-e. The slug appears in every URL of the plant." })]),
+              R(2, [F("select", "zone", "Time zone", { v: err ? "" : "Europe/Stockholm", ph: err ? "Choose a time zone" : "", opts: ZONES, err: err ? "Choose a time zone." : "", desc: "The plant's IANA time zone. Plan times and shifts are read in it." }),
+                F("input", "start", "Production day start", { v: err ? "" : "06:00", vcls: "lf-mono", ph: err ? "HH:MM" : "", err: err ? "Enter a time such as 06:00." : "", desc: "When the production day starts, in plant time." })])
+            ], "The plant belongs to Acme AB. Its people can work in it as soon as it exists."));
+            save = "Create plant";
+            if (err) sum = { title: "Fix 4 fields to create the plant", items: ["Enter a name.", "Enter a slug.", "Choose a time zone.", "Enter a time such as 06:00."] };
+            if (taken) sum = { title: "Fix 1 field to create the plant", items: ["Slug plant-a is already in use. Choose another slug."] };
+          } else {
+            // A machine at Plant A (E06-S05): always at plant level, in a group, with the plannable and OEE flags.
+            noun = "machine";
+            const err = state === "errors";
+            const GROUPS = ["Presses", "Mills", "Lathes", "Assembly (Acme AB)"];
+            sections.push(Sec("Machine", [
+              R(2, [F("input", "name", "Name", { v: create ? (err ? "" : "Press 5") : "Press 4", err: err ? "Enter a name." : "" }),
+                F("select", "group", "Equipment group", { v: create && err ? "" : "Presses", ph: create && err ? "Choose a group" : "", opts: GROUPS, err: err ? "Choose an equipment group." : "", desc: "The group sets the machine's color on the board." })]),
+              R(1, [F("check", "plannable", "", { cb: "on", cbLabel: "Plannable", desc: "Shows on the planning board and takes jobs." })]),
+              R(1, [F("check", "oee", "", { cb: create ? "" : "on", cbLabel: "Counts toward OEE", desc: "Its reports count in the plant's OEE." })])
+            ]));
+            save = create ? "Create machine" : "Save machine";
+            if (err) sum = { title: "Fix 2 fields to " + (create ? "create" : "save") + " the machine", items: ["Enter a name.", "Choose an equipment group."] };
+          }
+          if (state === "server") sum = { title: "Could not save the " + noun, text: "Your entries are kept. Try again; if it fails again, give your plant admin the correlation id.", cid: "01J9Z7C8MV3Q5S7T9W1X3Y5Z7A" };
+          if (state === "saved" && !create) note = noun === "settings" || form === "plant" ? "Settings saved. Dates, clock times and numbers change after the next page load or plant switch." : form === "planning" ? "Planning rules saved. The next planning run uses them." : "Saved.";
+          if (form !== "new-plant") sections.push(Sec(t.reasonT, [R(1, [reasonField()])]));
+          return {
+            label: "Settings form, " + form + (form === "planning" ? ", " + scope : "") + (create ? ", create" : "") + ", " + state + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: null,
+            t: t, ids: { sum: uid + "-sum" },
+            f: { summary: fc("summary"), save: fc("save"), cancel: fc("cancel") },
+            scrolly: String(Math.max(0, parseInt(P.scroll, 10) || 0)),
+            hasNote: !!note, note: note,
+            hasSummary: !!sum,
+            sum: sum ? { title: sum.title, hasList: !!(sum.items && sum.items.length), items: sum.items || [], hasText: !!sum.text, text: sum.text || "", hasCid: !!sum.cid, cid: sum.cid || "" } : null,
+            sections: sections, save: save
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

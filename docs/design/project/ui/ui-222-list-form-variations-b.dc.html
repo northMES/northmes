@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variation B, side sheet</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form-variations.css" />
+      </helmet>
+      <div class="lf-opt" data-screen-label="{{ label }}">
+        <sc-if value="{{ isWide }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.articles" actions="*New article" crumbs="{{ crumbs }}" doc-title="{{ docTitle }}" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-row" data-underlay="{{ underlay }}">
+              <section class="lf-facets" aria-labelledby="{{ ids.facets }}">
+                <div class="lf-fg-h"><h2 class="lf-h3" id="{{ ids.facets }}">Filters</h2></div>
+                <sc-for list="{{ facets }}" as="f">
+                  <div class="lf-fg" role="group" aria-label="{{ f.label }}">
+                    <div class="lf-fg-h" aria-hidden="true">{{ f.label }}</div>
+                    <sc-for list="{{ f.values }}" as="v">
+                      <div class="lf-fv"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span>{{ v.label }}</span><span class="c">{{ v.count }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+                <div class="lf-fg"><div class="lf-fv"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span>Show archived</span></div></div>
+              </section>
+              <div class="lf-col">
+                <div class="lf-tool">
+                  <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search articles</span></span>
+                  <button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Group"></span>Group by<span class="ic" data-icon="ChevronDown"></span></button>
+                  <span class="lf-grow"></span>
+                  <span class="lf-wrap">
+                    <button class="btn v-outline lf-fb {{ actCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ actOpen }}" aria-disabled="{{ actDis }}">Actions<sc-if value="{{ bulk }}"><span class="lf-n" aria-hidden="true">2</span><span class="lf-vh">, 2 selected</span></sc-if><span class="ic" data-icon="ChevronDown"></span></button>
+                    <sc-if value="{{ actOpen }}">
+                      <div class="pop lf-pop below-r" style="width:240px" role="menu" aria-label="Actions" data-layer="1">
+                        <div class="mi kfocus" role="menuitem"><span class="ic" data-icon="Archive"></span>Archive 2 articles</div>
+                        <div class="msep" role="separator"></div>
+                        <div class="mi" role="menuitem"><span class="ic" data-icon="X"></span>Clear selection</div>
+                      </div>
+                    </sc-if>
+                  </span>
+                  <button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>Columns<span class="ic" data-icon="ChevronDown"></span></button>
+                </div>
+                <div class="lf-card">
+                  <div class="lf-scroll">
+                    <div class="lf-tr hd lf-cb">
+                      <span class="lf-td cbx"><span class="cb {{ allCb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="{{ allIcon }}"></span></span></span><span class="lf-vh">Select all rows on this page</span></span></span>
+                      <span class="lf-td"><button class="lf-sortb on" type="button">Article number<span class="ic" data-icon="ArrowUp"></span></button></span>
+                      <span class="lf-td"><button class="lf-sortb" type="button">Name<span class="ic" data-icon="ArrowUpDown"></span></button></span>
+                      <span class="lf-td">Article group</span>
+                      <span class="lf-td">Stock unit</span>
+                      <span class="lf-td">Source</span>
+                      <span class="lf-td"><button class="lf-sortb" type="button">Last changed<span class="ic" data-icon="ArrowUpDown"></span></button></span>
+                      <span class="lf-td"><span class="lf-vh">Actions</span></span>
+                    </div>
+                    <sc-for list="{{ rows }}" as="r">
+                      <div class="lf-tr lf-cb {{ r.cls }}">
+                        <span class="lf-td cbx"><span class="cb {{ r.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="lf-vh">Select {{ r.code }}</span></span></span>
+                        <span class="lf-td"><a class="lf-id" href="#">{{ r.code }}</a></span>
+                        <span class="lf-td" lang="sv">{{ r.name }}</span>
+                        <span class="lf-td">{{ r.group }}</span>
+                        <span class="lf-td">{{ r.unit }}</span>
+                        <span class="lf-td">{{ r.source }}</span>
+                        <span class="lf-td lf-mono lf-nowrap">{{ r.changed }}</span>
+                        <span class="lf-td end">
+                          <sc-if value="{{ r.inline }}">
+                            <button class="btn icon v-ghost" type="button" aria-label="Edit {{ r.code }}"><span class="ic" data-icon="Pencil"></span></button>
+                            <span class="lf-wrap">
+                              <button class="btn icon v-ghost is-hover" type="button" aria-label="Archive {{ r.code }}"><span class="ic" data-icon="Archive"></span></button>
+                              <span class="sh-tip sh-tip-b" role="tooltip" data-layer="1">Archive {{ r.code }}</span>
+                            </span>
+                            <button class="btn icon v-ghost" type="button" aria-label="More actions for {{ r.code }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button>
+                          </sc-if>
+                        </span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div class="lf-pager"><span>Rows <span class="lf-mono">1</span> to <span class="lf-mono">25</span> of <span class="lf-mono">248</span></span><span class="lf-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Previous</button><button class="btn v-outline" type="button">Next<span class="ic" data-icon="ChevronRight"></span></button></span></div>
+                </div>
+              </div>
+            </div>
+            <sc-if value="{{ sheet }}">
+              <div class="lf-ov"></div>
+              <div class="lf-sheet" role="dialog" aria-modal="true" aria-labelledby="{{ ids.title }}" data-modal="1">
+                <div class="lf-sh-h">
+                  <div class="lf-grow"><h2 class="lf-h2 {{ titleFocus }}" id="{{ ids.title }}" tabindex="-1">{{ sheetTitle }}</h2><span class="lf-sub" lang="sv">Fläns DN50 rostfri</span></div>
+                  <sc-if value="{{ isDetail }}">
+                    <button class="btn v-outline" type="button"><span class="ic" data-icon="Pencil"></span>Edit</button>
+                    <button class="btn icon v-ghost" type="button" aria-label="More actions for AX-20410" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button>
+                  </sc-if>
+                  <button class="btn icon v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button>
+                </div>
+                <sc-if value="{{ isDetail }}">
+                  <div class="lf-sh-b">
+                    <div class="lf-tabs" role="tablist" aria-label="Article AX-20410">
+                      <button class="lf-tab" type="button" role="tab" aria-selected="false">General</button>
+                      <button class="lf-tab on" type="button" role="tab" aria-selected="true">History</button>
+                    </div>
+                    <div role="tabpanel" aria-label="History">
+                    <ol class="lf-tl">
+                      <sc-for list="{{ hist }}" as="h">
+                        <li class="{{ h.liCls }}">
+                          <span class="lf-dot"><span class="ic" data-icon="{{ h.icon }}"></span></span>
+                          <div class="lf-ent">
+                            <div class="lf-ent-h"><span class="lf-b">{{ h.who }}</span><span class="badge lf-surf"><span class="ic" data-icon="{{ h.surfIcon }}"></span>{{ h.surface }}</span><span class="lf-grow"></span><span class="lf-mono lf-mut lf-sm">{{ h.when }}</span></div>
+                            <div class="lf-sm"><span class="lf-mut">{{ h.what }}</span></div>
+                            <div class="lf-chg">
+                              <sc-for list="{{ h.changes }}" as="c">
+                                <span class="k">{{ c.field }}</span>
+                                <span><sc-if value="{{ c.hasBefore }}"><span class="{{ c.bCls }}" lang="{{ c.lang }}">{{ c.before }}</span><span class="lf-mut"> to </span></sc-if><span class="{{ c.aCls }}" lang="{{ c.lang }}">{{ c.after }}</span></span>
+                              </sc-for>
+                            </div>
+                            <sc-if value="{{ h.hasReason }}"><div class="lf-sm"><span class="lf-mut">Reason: </span>{{ h.reason }}</div></sc-if>
+                          </div>
+                        </li>
+                      </sc-for>
+                    </ol>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ isEdit }}">
+                  <div class="lf-sh-b">
+                    <div class="lf-summary is-focus" tabindex="-1" role="group" aria-label="Fix 2 fields to save the article">
+                      <h3 class="lf-summary-h"><span class="ic" data-icon="CircleAlert"></span>Fix 2 fields to save the article</h3>
+                      <ul>
+                        <li><a href="#">Article number can be 1 to 32 characters. It has 34.</a></li>
+                        <li><a href="#">Enter a name.</a></li>
+                      </ul>
+                    </div>
+                    <div class="fld"><span class="lbl">Article number</span><span class="inp is-err"><span class="lf-mono">AX-20410-FLANS-DN50-ROSTFRI-REV-C1</span></span><span class="err"><span class="ic" data-icon="CircleAlert"></span>Article number can be 1 to 32 characters. It has 34.</span></div>
+                    <div class="fld"><span class="lbl">Name</span><span class="inp is-err"><span class="lf-lang">sv</span></span><span class="err"><span class="ic" data-icon="CircleAlert"></span>Enter a name.</span><span class="desc">In Swedish, the data language of Acme AB.</span></div>
+                    <div class="fld">
+                      <span class="lbl">Translations <span class="lf-req">(optional)</span></span>
+                      <sc-for list="{{ trans }}" as="t">
+                        <div class="lf-trans"><span class="inp lf-sel"><span>{{ t.language }}</span><span class="ic" data-icon="ChevronDown"></span></span><span class="inp" lang="{{ t.code }}">{{ t.text }}</span><button class="btn icon v-ghost" type="button" aria-label="Remove the {{ t.language }} translation"><span class="ic" data-icon="X"></span></button></div>
+                      </sc-for>
+                      <button class="btn v-ghost" type="button"><span class="ic" data-icon="Plus"></span>Add translation</button>
+                    </div>
+                    <div class="lf-g2">
+                      <div class="fld"><span class="lbl">Article group <span class="lf-req">(optional)</span></span><span class="inp lf-sel"><span>Flanges</span><span class="ic" data-icon="ChevronDown"></span></span></div>
+                      <div class="fld"><span class="lbl">Stock unit</span><span class="inp lf-sel"><span>Pieces (pcs)</span><span class="ic" data-icon="ChevronDown"></span></span></div>
+                    </div>
+                    <div class="fld"><span class="lbl">Note <span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Drawing rev C applies from week 2026-W41.</span></span></div>
+                  </div>
+                  <div class="lf-sh-f">
+                    <button class="btn v-ghost" type="button" aria-expanded="false"><span class="ic" data-icon="Plus"></span>Add a reason</button>
+                    <span class="lf-grow"></span>
+                    <button class="btn v-outline" type="button">Cancel</button>
+                    <button class="btn v-default" type="button">Save article</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isNarrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="320px,676px">
+            <div class="lf-page">
+              <span class="inp lf-search full"><span class="ic" data-icon="Search"></span><span class="ph">Search articles</span></span>
+              <div class="lf-tool">
+                <button class="btn v-outline lf-fb" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>Filters</button>
+                <button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>Columns<span class="lf-mut lf-sm">3 of 6</span></button>
+                <button class="btn v-outline lf-fb is-dis" type="button" aria-haspopup="menu" aria-expanded="false" aria-disabled="true">Actions<span class="ic" data-icon="ChevronDown"></span></button>
+              </div>
+              <div class="lf-xs" tabindex="0" role="region" aria-label="Articles table">
+                <div class="lf-tr hd lf-cr">
+                  <span class="lf-td cbx"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="lf-vh">Select all rows on this page</span></span></span>
+                  <span class="lf-td"><button class="lf-sortb on" type="button">Article number<span class="ic" data-icon="ArrowUp"></span></button></span>
+                  <span class="lf-td"><button class="lf-sortb" type="button">Name<span class="ic" data-icon="ArrowUpDown"></span></button></span>
+                  <span class="lf-td">Stock unit</span>
+                </div>
+                <sc-for list="{{ narrowRows }}" as="r">
+                  <div class="lf-tr lf-cr">
+                    <span class="lf-td cbx"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="lf-vh">Select {{ r.code }}</span></span></span>
+                    <span class="lf-td"><a class="lf-id" href="#">{{ r.code }}</a></span>
+                    <span class="lf-td" lang="sv">{{ r.name }}</span>
+                    <span class="lf-td">{{ r.unit }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="lf-pager"><span>Rows <span class="lf-mono">1</span> to <span class="lf-mono">25</span> of <span class="lf-mono">248</span></span><span class="lf-pg"><button class="btn icon v-outline is-dis" type="button" aria-disabled="true" aria-label="Previous page"><span class="ic" data-icon="ChevronLeft"></span></button><button class="btn icon v-outline" type="button" aria-label="Next page"><span class="ic" data-icon="ChevronRight"></span></button></span></div>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["list","detail","edit","bulk","narrow"],"default":"list","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-b" + window.__lfSeq;
+          }
+          const STATES = ["list", "detail", "edit", "bulk", "narrow"];
+          const state = STATES.indexOf(P.state) >= 0 ? P.state : "list";
+          const theme = P.theme === "dark" ? "dark" : "light";
+          // Fictional articles of Acme AB, sorted by article number. Names are in Swedish, the company data language.
+          const A = (code, name, group, unit, source, changed) => ({ code: code, name: name, group: group, unit: unit, source: source, changed: changed });
+          const ALL = [
+            A("AX-20405", "Fläns DN25 rostfri", "Flanges", "pcs", "NorthMES", "2026-09-22 10:14"),
+            A("AX-20410", "Fläns DN50 rostfri", "Flanges", "pcs", "NorthMES", "2026-10-05 14:05"),
+            A("AX-20411", "Fläns DN80 rostfri", "Flanges", "pcs", "NorthMES", "2026-10-05 14:07"),
+            A("AX-31007", "Hydraulslang 12 mm", "Hoses", "m", "Pyramid", "2026-10-04 06:40"),
+            A("AX-31008", "Hydraulslang 16 mm", "Hoses", "m", "Pyramid", "2026-10-04 06:40"),
+            A("AX-31012", "Hydraulslang 20 mm", "Hoses", "m", "Pyramid", "2026-10-04 06:40"),
+            A("AX-31020", "Tryckslang 25 mm", "Hoses", "m", "Pyramid", "2026-10-04 06:40"),
+            A("AX-31021", "Tryckslang 32 mm", "Hoses", "m", "Pyramid", "2026-10-04 06:40"),
+            A("AX-31040", "Sugslang 50 mm", "Hoses", "m", "Pyramid", "2026-10-03 06:40"),
+            A("AX-45020", "Lagerhus 62 mm", "Housings", "pcs", "Pyramid", "2026-10-02 09:12"),
+            A("AX-45031", "Lagerhus 72 mm", "Housings", "pcs", "Pyramid", "2026-10-02 09:12"),
+            A("AX-52001", "Smörjfett EP2", "Consumables", "kg", "NorthMES", "2026-09-30 11:30"),
+            A("AX-52014", "Kylvätska koncentrat", "Consumables", "l", "NorthMES", "2026-09-28 15:45"),
+            A("AX-60300", "Axeltapp 40 h6", "Shafts", "pcs", "Pyramid", "2026-09-27 08:02"),
+            A("AX-60310", "Axeltapp 50 h6", "Shafts", "pcs", "Pyramid", "2026-09-27 08:02")
+          ];
+          const bulk = state === "bulk";
+          const SEL = ["AX-31007", "AX-31008"];
+          const rows = ALL.map((r) => {
+            const sel = bulk && SEL.indexOf(r.code) >= 0;
+            const hov = state === "list" && r.code === "AX-20411";
+            return Object.assign({}, r, { cls: sel ? "sel" : hov ? "hov" : "", cb: sel ? "on" : "", inline: hov });
+          });
+          const F = (label, values) => ({ label: label, values: values.map((v) => ({ label: v[0], count: v[1] })) });
+          const facets = [
+            F("Article group", [["Consumables", 12], ["Flanges", 34], ["Hoses", 21], ["Housings", 18], ["Shafts", 40]]),
+            F("Stock unit", [["Pieces (pcs)", 201], ["Metres (m)", 21], ["Kilograms (kg)", 14], ["Litres (l)", 12]]),
+            F("Source", [["NorthMES", 96], ["Pyramid", 152]])
+          ];
+          const C = (field, before, after, o) => Object.assign({ field: field, before: before, after: after, hasBefore: before !== null, bCls: before === "Empty" ? "lf-empty" : "", aCls: "", lang: null }, o || {});
+          const hist = [
+            { when: "2026-10-05 14:05", who: "Jonas Holm", surface: "web", surfIcon: "Monitor", icon: "Pencil", what: "Changed 1 field", reason: "New drawing from engineering, change note 118",
+              changes: [C("Note", "Empty", "Drawing rev C applies from week 2026-W41.")] },
+            { when: "2026-10-01 10:22", who: "Jonas Holm", surface: "web", surfIcon: "Monitor", icon: "Pencil", what: "Changed 1 field", reason: "",
+              changes: [C("Article group", "Fittings", "Flanges")] },
+            { when: "2026-09-12 07:15", who: "Jonas Holm", surface: "web", surfIcon: "Monitor", icon: "Plus", what: "Created the article", reason: "",
+              changes: [C("Article number", null, "AX-20410", { aCls: "lf-mono" }), C("Name", null, "Fläns DN50 rostfri", { lang: "sv" }), C("Stock unit", null, "Pieces (pcs)")] }
+          ].map((h, i, a) => Object.assign(h, { hasReason: !!h.reason, liCls: i === a.length - 1 ? "last" : "" }));
+          const trans = [
+            { language: "English", code: "en", text: "Flange DN50 stainless" },
+            { language: "German", code: "de", text: "Flansch DN50 Edelstahl" }
+          ];
+          const sheet = state === "detail" || state === "edit";
+          const NAMES = { list: "B1 list with facets, a row under the pointer", detail: "B2 side sheet, History tab", edit: "B3 side sheet in edit mode with errors", bulk: "B4 list with a selection and the Actions menu", narrow: "B5 list at 320" };
+          return {
+            label: "Option B, " + NAMES[state] + ", " + theme,
+            theme: theme,
+            ids: { facets: this.uid + "-facets", title: this.uid + "-sheet-t" },
+            isWide: state !== "narrow",
+            isNarrow: state === "narrow",
+            isDetail: state === "detail",
+            isEdit: state === "edit",
+            sheet: sheet,
+            underlay: sheet ? "1" : null,
+            // Edit in the sheet has no route of its own, so the title and the last crumb stay on the article (as in C3).
+            crumbs: sheet ? "Core|Master data|Articles|Article AX-20410" : "",
+            docTitle: sheet ? "Article AX-20410 · Plant A · NorthMES" : "",
+            sheetTitle: state === "edit" ? "Edit article AX-20410" : "Article AX-20410",
+            titleFocus: state === "detail" ? "is-focus" : "",
+            bulk: bulk,
+            actOpen: bulk,
+            actDis: bulk ? null : "true",
+            actCls: bulk ? "open" : "is-dis",
+            allCb: bulk ? "mixed" : "",
+            allIcon: bulk ? "Minus" : "Check",
+            facets: facets,
+            rows: rows,
+            hist: hist,
+            trans: trans,
+            narrowRows: ALL.slice(0, 5)
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

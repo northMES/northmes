@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 reflow at 320 and long strings</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+/* Part NA of the D2 page: reflow at 320 by 640 in three bands (the page, the navigation sheet and Administration; the user
+   menu, one plant and the deep trail; the switcher menu, a company admin's switcher menu with a plant in onboarding, the assistant
+   sheet and the switcher menu with long names), then the long-strings frames at 1440. Every frame mounts Shell.dc.html.
+   The orders list uses the same rows as the keyboard part; at 320 the table scrolls sideways in its own container (spec 6.2). */
+.na-root{display:flex;flex-direction:column;gap:120px;width:max-content}
+.na-band{display:flex;align-items:flex-start;gap:80px}
+.na-root .frame{position:relative;flex:none}
+.na-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.na-search{flex:1 1 240px;width:auto}
+.na-sel{flex:1 1 120px;width:auto}
+.na-tools.wide .na-search{flex:0 1 320px}
+.na-tools.wide .na-sel{flex:0 1 180px}
+.na-tw{flex:none;max-width:100%;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);overflow-x:auto}
+.na-tw::-webkit-scrollbar{height:10px}
+.na-tw::-webkit-scrollbar-track{background:var(--muted)}
+.na-tw::-webkit-scrollbar-thumb{border:2px solid var(--muted);border-radius:999px;background:var(--muted-foreground)}
+.na-g{display:grid;width:max-content;min-width:100%;font-size:14px;line-height:20px}
+.na-g.c5{grid-template-columns:repeat(5,auto)}
+.na-g.de{grid-template-columns:auto minmax(240px,1fr) auto auto auto}
+.na-g.fi{grid-template-columns:auto minmax(240px,1fr) auto auto}
+.na-row{display:contents}
+.na-th{display:flex;align-items:center;min-height:38px;padding:0 12px;background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600;white-space:nowrap}
+.na-td{display:flex;align-items:center;gap:4px;min-height:44px;padding:6px 12px;border-top:1px solid var(--border);white-space:nowrap}
+.na-td.wr{white-space:normal}
+.na-th.r,.na-td.r{justify-content:flex-end;text-align:right}
+.na-td a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+.na-sort{display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 4px;margin:0 -4px;border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.na-sort.on{color:var(--foreground)}
+.na-pager{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.na-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+.na-di{display:grid;gap:2px;min-width:0}
+.na-di .v{overflow-wrap:anywhere}
+        </style>
+      </helmet>
+      <div class="na-root">
+        <sc-for list="{{ bands }}" as="b">
+          <div class="na-band">
+            <sc-for list="{{ b.orders }}" as="f">
+              <div class="frame w320" data-screen-label="{{ f.screen }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.sub }}</span></div>
+                <dc-import name="Shell" width="320" theme="{{ f.theme }}" role="{{ f.role }}" nav="planning.orders" open="{{ f.open }}" sidebar="{{ f.sidebar }}" access="{{ f.access }}" companies="{{ f.companies }}" onboarding="{{ f.onboarding }}" bell="{{ f.bell }}" menu="{{ f.menu }}" focus="{{ f.focus }}" assistant="{{ f.assistant }}" hint-size="320px,640px">
+                  <div class="na-tools">
+                    <span class="inp na-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span>
+                    <span class="inp na-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                    <button class="btn v-ghost" type="button">Clear filters</button>
+                  </div>
+                  <div class="na-tw" role="region" aria-label="Production orders" tabindex="0">
+                    <div class="na-g c5" role="table" aria-label="Production orders">
+                      <div class="na-row" role="row">
+                        <span class="na-th" role="columnheader" aria-sort="ascending"><button class="na-sort on" type="button">Order<span class="ic ic14" data-icon="ArrowUp"></span></button></span>
+                        <span class="na-th" role="columnheader">Article</span>
+                        <span class="na-th r" role="columnheader">Quantity</span>
+                        <span class="na-th" role="columnheader"><button class="na-sort" type="button">Deadline<span class="ic ic14" data-icon="ArrowUpDown"></span></button></span>
+                        <span class="na-th" role="columnheader">Status</span>
+                      </div>
+                      <sc-for list="{{ rows }}" as="r">
+                        <div class="na-row" role="row">
+                          <span class="na-td" role="cell"><a class="num" href="#">{{ r.num }}</a></span>
+                          <span class="na-td" role="cell">{{ r.art }}</span>
+                          <span class="na-td r" role="cell"><span class="num">{{ r.qty }}</span>{{ r.unit }}</span>
+                          <span class="na-td num" role="cell">{{ r.date }}</span>
+                          <span class="na-td" role="cell"><span class="badge" style="{{ r.bst }}"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.st }}</span></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="na-pager">
+                    <button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Previous</button>
+                    <button class="btn v-outline" type="button">Next<span class="ic" data-icon="ChevronRight"></span></button>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-for>
+            <sc-for list="{{ b.users }}" as="f">
+              <div class="frame w320" data-screen-label="{{ f.screen }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.sub }}</span></div>
+                <dc-import name="Shell" width="320" theme="{{ f.theme }}" role="admin" nav="core.users" sidebar="sheet" nav-scroll="end" hint-size="320px,640px">
+                  <div class="sh-phbox"><span class="sh-phl">Users page, designed with the Administration pages in a later task</span></div>
+                </dc-import>
+              </div>
+            </sc-for>
+            <sc-for list="{{ b.deep }}" as="f">
+              <div class="frame w320" data-screen-label="{{ f.screen }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.sub }}</span></div>
+                <dc-import name="Shell" width="320" theme="{{ f.theme }}" role="admin" access="companies" nav="core.machines" entity="Mill 1" actions="Edit machine" menu="{{ f.menu }}" focus="{{ f.focus }}" hint-size="320px,640px">
+                  <div class="panel na-panel">
+                    <div class="na-di"><span class="lbl mut">Machine group</span><span class="v">Milling</span></div>
+                    <div class="na-di"><span class="lbl mut">Plant</span><span class="v">Plant A</span></div>
+                    <div class="na-di"><span class="lbl mut">Calendar</span><span class="v">Two shifts</span></div>
+                    <div class="na-di"><span class="lbl mut">Status</span><span class="v">In use</span></div>
+                  </div>
+                  <div class="sh-phbox"><span class="sh-phl">Machine detail content, designed in the core master-data pages</span></div>
+                </dc-import>
+              </div>
+            </sc-for>
+            <sc-for list="{{ b.longsw }}" as="f">
+              <div class="frame w320" data-screen-label="{{ f.screen }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.sub }}</span></div>
+                <dc-import name="Shell" width="320" theme="{{ f.theme }}" strings="long" access="companies" nav="planning.orders" open="none" sidebar="sheet" menu="plant" hint-size="320px,640px">
+                  <div class="na-tools">
+                    <span class="inp na-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Fertigungsaufträge durchsuchen</span></span>
+                    <span class="inp na-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                    <button class="btn v-ghost" type="button">Filter zurücksetzen</button>
+                  </div>
+                  <div class="na-tw" role="region" aria-label="Fertigungsaufträge" tabindex="0">
+                    <div class="na-g c5" role="table" aria-label="Fertigungsaufträge">
+                      <div class="na-row" role="row">
+                        <span class="na-th" role="columnheader" aria-sort="ascending"><button class="na-sort on" type="button">Auftrag<span class="ic ic14" data-icon="ArrowUp"></span></button></span>
+                        <span class="na-th" role="columnheader">Artikel</span>
+                        <span class="na-th r" role="columnheader">Menge</span>
+                        <span class="na-th" role="columnheader"><button class="na-sort" type="button">Liefertermin<span class="ic ic14" data-icon="ArrowUpDown"></span></button></span>
+                        <span class="na-th" role="columnheader">Status</span>
+                      </div>
+                      <sc-for list="{{ rowsDe }}" as="r">
+                        <div class="na-row" role="row">
+                          <span class="na-td" role="cell"><a class="num" href="#">{{ r.num }}</a></span>
+                          <span class="na-td" role="cell">{{ r.art }}</span>
+                          <span class="na-td r" role="cell"><span class="num">{{ r.qty }}</span>{{ r.unit }}</span>
+                          <span class="na-td num" role="cell">{{ r.date }}</span>
+                          <span class="na-td" role="cell"><span class="badge" style="{{ r.bst }}"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.st }}</span></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="na-pager">
+                    <button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Zurück</button>
+                    <button class="btn v-outline" type="button">Weiter<span class="ic" data-icon="ChevronRight"></span></button>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+
+        <sc-for list="{{ longBands }}" as="b">
+          <div class="na-band">
+            <div class="frame w1440" data-screen-label="{{ b.de.screen }}">
+              <div class="flabel"><span class="fid">{{ b.de.id }}</span>Long strings, German<span class="fth">{{ b.de.sub }}</span></div>
+              <dc-import name="Shell" width="1440" theme="{{ b.theme }}" strings="long" access="companies" nav="planning.orders" open="core.master-data,planning.board" title="Fertigungsaufträge planen" crumbs="Produktionsplanung|Fertigungsaufträge planen" show-title="on" hint-size="1440px,936px">
+                <div class="na-tools wide">
+                  <span class="inp na-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Fertigungsaufträge durchsuchen</span></span>
+                  <span class="inp na-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                  <button class="btn v-ghost" type="button">Filter zurücksetzen</button>
+                </div>
+                <div class="na-tw" role="region" aria-label="Fertigungsaufträge" tabindex="0">
+                  <div class="na-g de" role="table" aria-label="Fertigungsaufträge">
+                    <div class="na-row" role="row">
+                      <span class="na-th" role="columnheader" aria-sort="ascending"><button class="na-sort on" type="button">Auftrag<span class="ic ic14" data-icon="ArrowUp"></span></button></span>
+                      <span class="na-th" role="columnheader">Artikel</span>
+                      <span class="na-th r" role="columnheader">Menge</span>
+                      <span class="na-th" role="columnheader"><button class="na-sort" type="button">Liefertermin<span class="ic ic14" data-icon="ArrowUpDown"></span></button></span>
+                      <span class="na-th" role="columnheader">Status</span>
+                    </div>
+                    <sc-for list="{{ rowsDe }}" as="r">
+                      <div class="na-row" role="row">
+                        <span class="na-td" role="cell"><a class="num" href="#">{{ r.num }}</a></span>
+                        <span class="na-td wr" role="cell">{{ r.art }}</span>
+                        <span class="na-td r" role="cell"><span class="num">{{ r.qty }}</span>{{ r.unit }}</span>
+                        <span class="na-td num" role="cell">{{ r.date }}</span>
+                        <span class="na-td" role="cell"><span class="badge" style="{{ r.bst }}"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.st }}</span></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div class="na-pager">
+                  <button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Zurück</button>
+                  <button class="btn v-outline" type="button">Weiter<span class="ic" data-icon="ChevronRight"></span></button>
+                </div>
+              </dc-import>
+            </div>
+            <div class="frame w1440" data-screen-label="{{ b.fi.screen }}">
+              <div class="flabel"><span class="fid">{{ b.fi.id }}</span>Long strings, Finnish plugin page<span class="fth">{{ b.fi.sub }}</span></div>
+              <dc-import name="Shell" width="1440" theme="{{ b.theme }}" strings="long" nav="acme.tool-changes" title="Työkalunvaihtojen suunnittelu" crumbs="Acme-työkalujen hallinta|Työkalunvaihtojen suunnittelu" status="reconnecting" actions="Vie luettelo|*Uusi työkalunvaihto" menu="actions" show-title="on" hint-size="1440px,936px">
+                <div class="na-tw" role="region" aria-label="Työkalunvaihdot" tabindex="0">
+                  <div class="na-g fi" role="table" aria-label="Työkalunvaihdot">
+                    <div class="na-row" role="row">
+                      <span class="na-th" role="columnheader">Kone</span>
+                      <span class="na-th" role="columnheader">Työkalu</span>
+                      <span class="na-th" role="columnheader" aria-sort="ascending"><button class="na-sort on" type="button">Suunniteltu vaihto<span class="ic ic14" data-icon="ArrowUp"></span></button></span>
+                      <span class="na-th" role="columnheader">Tila</span>
+                    </div>
+                    <sc-for list="{{ rowsFi }}" as="r">
+                      <div class="na-row" role="row">
+                        <span class="na-td" role="cell" lang="de">{{ r.machine }}</span>
+                        <span class="na-td wr" role="cell" lang="de">{{ r.tool }}</span>
+                        <span class="na-td num" role="cell">{{ r.when }}</span>
+                        <span class="na-td" role="cell"><span class="badge" style="{{ r.bst }}"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.st }}</span></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </dc-import>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const B = (s) => "--bb:var(--" + s + ");--bf:var(--" + s + "-foreground)";
+          // The same five orders as the keyboard part (KE1). Production orders are numbered from 1001 (plan 07);
+          // articles, quantities and dates are invented.
+          const rows = [
+            { num: "1001", art: "Bearing housing BH-40", qty: "120", unit: " pcs", date: "2026-10-12", st: "Planned", icon: "Info", bst: B("status-planned") },
+            { num: "1002", art: "Flange DN50", qty: "400", unit: " pcs", date: "2026-10-13", st: "Active", icon: "Play", bst: B("status-active") },
+            { num: "1003", art: "Drive shaft 40 mm", qty: "60", unit: " pcs", date: "2026-10-14", st: "Registered", icon: "CircleDashed", bst: B("status-registered") },
+            { num: "1004", art: "Pump cover PC-12", qty: "250", unit: " pcs", date: "2026-10-15", st: "Planned", icon: "Info", bst: B("status-planned") },
+            { num: "1005", art: "Gear blank 32T", qty: "90", unit: " pcs", date: "2026-10-16", st: "Paused", icon: "Pause", bst: B("status-paused") }
+          ];
+          // Long-strings data: the same order numbers with invented German article names at full length.
+          const rowsDe = [
+            { num: "1001", art: "Gehäusedeckel Aluminium eloxiert, Ausführung links mit Dichtungsnut", qty: "120", unit: " Stk.", date: "2026-10-12", st: "Eingeplant", icon: "Info", bst: B("status-planned") },
+            { num: "1002", art: "Lagerbuchse Messing für Hydraulikzylinder-Baugruppe", qty: "400", unit: " Stk.", date: "2026-10-13", st: "In Fertigung", icon: "Play", bst: B("status-active") },
+            { num: "1003", art: "Antriebswelle gehärtet und geschliffen, Toleranzklasse h6", qty: "60", unit: " Stk.", date: "2026-10-14", st: "Erfasst", icon: "CircleDashed", bst: B("status-registered") },
+            { num: "1004", art: "Flanschplatte Edelstahl mit Gewindebohrungen", qty: "250", unit: " Stk.", date: "2026-10-15", st: "Eingeplant", icon: "Info", bst: B("status-planned") }
+          ];
+          const rowsFi = [
+            { machine: "Fräszentrum 1", tool: "Schaftfräser Vollhartmetall Ø12 Z4, Überlänge", when: "2026-10-06 06:00", st: "Suunniteltu", icon: "Info", bst: B("status-planned") },
+            { machine: "Fräszentrum 2", tool: "Wendeplattenbohrer Ø25 mit innerer Kühlmittelzufuhr", when: "2026-10-06 14:00", st: "Suunniteltu", icon: "Info", bst: B("status-planned") },
+            { machine: "Drehzentrum 1", tool: "Abstechhalter mit Schneidplatte 3 mm", when: "2026-10-07 06:00", st: "Käynnissä", icon: "Play", bst: B("status-active") }
+          ];
+          // 320 by 640 frames: id, chip title, theme, sidebar, access, bell, menu, focus, assistant, screen label title,
+          // then for an admin: role, companies and the plants in onboarding.
+          // access "companies" adds Nordic Tools AB with Plant C to Acme AB's Plant A and Plant B (invented names).
+          // With the switcher menu open, Board's nested list stays closed, so the current entry sits fully under the menu.
+          const frame = (n) => ({
+            id: n[0],
+            title: n[1],
+            theme: n[2],
+            sidebar: n[3],
+            access: n[4],
+            bell: n[5],
+            menu: n[6],
+            focus: n[7],
+            assistant: n[8],
+            role: n[10] || "planner",
+            companies: n[11] || "",
+            onboarding: n[12] || "",
+            open: n[6] === "plant" ? "none" : "planning.board",
+            sub: (n[2] === "dark" ? "Dark" : "Light") + ", 320 by 640",
+            screen: n[0] + " " + n[9] + ", " + n[2] + ", 320 by 640"
+          });
+          const pageFrames = [
+            ["NA1", "Page", "light", "expanded", "one-company", "none", "none", "none", "closed", "Page with the menu button"],
+            ["NA2", "Page", "dark", "expanded", "one-company", "none", "none", "none", "closed", "Page with the menu button"],
+            ["NA3", "Sheet open", "light", "sheet", "one-company", "unread", "none", "toggle", "closed", "Navigation sheet open"],
+            ["NA4", "Sheet open", "dark", "sheet", "one-company", "unread", "none", "toggle", "closed", "Navigation sheet open"]
+          ].map(frame);
+          // The user menu inside the sheet, and the sheet of a user with roles in one plant: a static head, no switcher.
+          const sheetFrames = [
+            ["NA17", "User menu", "light", "sheet", "one-company", "none", "user", "none", "closed", "User menu open in the sheet"],
+            ["NA16", "User menu", "dark", "sheet", "one-company", "none", "user", "none", "closed", "User menu open in the sheet"],
+            ["NA21", "One plant", "light", "sheet", "one-plant", "none", "none", "none", "closed", "Navigation sheet with one plant"],
+            ["NA22", "One plant", "dark", "sheet", "one-plant", "none", "none", "none", "closed", "Navigation sheet with one plant"]
+          ].map(frame);
+          const menuFrames = [
+            ["NA5", "Switcher menu", "light", "sheet", "companies", "none", "plant", "none", "closed", "Switcher menu open in the sheet"],
+            ["NA6", "Switcher menu", "dark", "sheet", "companies", "none", "plant", "none", "closed", "Switcher menu open in the sheet"],
+            // A company admin's switcher menu: Plant D is in onboarding, so it carries an Onboarding badge and reads Plant D, Onboarding, and
+            // Admin follows All plants (ADR 0067).
+            ["NA23", "In onboarding", "light", "sheet", "companies", "none", "plant", "none", "closed", "Switcher menu with a plant in onboarding in the sheet", "company-admin", "Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C", "Plant D"],
+            ["NA9", "Assistant sheet", "light", "expanded", "one-company", "none", "none", "message", "sheet", "Assistant sheet open"],
+            ["NA10", "Assistant sheet", "dark", "expanded", "one-company", "none", "none", "message", "sheet", "Assistant sheet open"]
+          ].map(frame);
+          // An admin's navigation sheet scrolled to its end: the Administration section above the footer, Users current.
+          const users = [
+            { id: "NA15", title: "Administration", theme: "light", sub: "Light, 320 by 640", screen: "NA15 Navigation sheet with Administration, light, 320 by 640" },
+            { id: "NA18", title: "Administration", theme: "dark", sub: "Dark, 320 by 640", screen: "NA18 Navigation sheet with Administration, dark, 320 by 640" }
+          ];
+          // The switcher menu with the long-strings set at 320: German chrome, plants in two companies. Long company and
+          // plant names wrap inside the menu, so the full names show and nothing runs past the screen edge.
+          const longsw = [
+            { id: "NA19", title: "Long names", theme: "light", sub: "Light, 320 by 640", screen: "NA19 Switcher menu with long names in the sheet, light, 320 by 640" },
+            { id: "NA20", title: "Long names", theme: "dark", sub: "Dark, 320 by 640", screen: "NA20 Switcher menu with long names in the sheet, dark, 320 by 640" }
+          ];
+          // A trail deeper than two levels at 320, for a user with plants in two companies:
+          // Acme AB / Plant A / Core / Master data / Machines / Mill 1.
+          const deep = [
+            { id: "NA11", title: "Deep trail", theme: "light", menu: "none", focus: "path", sub: "Light, 320 by 640", screen: "NA11 Deep trail, ellipsis focused, light, 320 by 640" },
+            { id: "NA12", title: "Full path", theme: "dark", menu: "path", focus: "none", sub: "Dark, 320 by 640", screen: "NA12 Deep trail, full path menu open, dark, 320 by 640" }
+          ];
+          const bands = [
+            { orders: pageFrames, users: users, deep: [], longsw: [] },
+            { orders: sheetFrames, users: [], deep: deep, longsw: [] },
+            { orders: menuFrames, users: [], deep: [], longsw: longsw }
+          ];
+          const longBands = [
+            { theme: "light",
+              de: { id: "NA7", sub: "Light, 1440 by 900, plants in two companies: long names truncated in the switcher head and the trail, crumbs and page actions folded, a wrapped entry", screen: "NA7 Long strings, German, light, 1440 by 900" },
+              fi: { id: "NA8", sub: "Light, 1440 by 900, lang fi on the route text, top bar folded: crumbs, page actions, then the Assistant label; menu open", screen: "NA8 Long strings, Finnish plugin page, light, 1440 by 900" } },
+            { theme: "dark",
+              de: { id: "NA13", sub: "Dark, 1440 by 900, as NA7", screen: "NA13 Long strings, German, dark, 1440 by 900" },
+              fi: { id: "NA14", sub: "Dark, 1440 by 900, as NA8", screen: "NA14 Long strings, Finnish plugin page, dark, 1440 by 900" } }
+          ];
+          return { bands: bands, rows: rows, rowsDe: rowsDe, rowsFi: rowsFi, longBands: longBands };
+        }
+      }
+    </script>
+  </body>
+</html>

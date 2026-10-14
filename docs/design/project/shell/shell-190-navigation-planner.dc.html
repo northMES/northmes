@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 planner shell frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+          /* Planner shell frames of the D2 page (issue northMES/northmes#190). Every frame mounts Shell.dc.html;
+             this part adds the planning board page as the route content, except in the admin frames at /admin,
+             whose content is the Shell's own placeholder. Classes start with pl-.
+             Every UI color is a D1 token; the frame chips use the D1 canvas label styles. */
+          .pl-part{position:relative}
+          .pl-fr{position:absolute}
+          .pl-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+          /* Planning board page: toolbar, board grid placeholder (D3) and the planning/board/side/v1 slot */
+          .pl-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+          .pl-seg{display:inline-flex;gap:2px;padding:3px;border-radius:var(--radius);background:var(--muted)}
+          .pl-s{display:inline-flex;align-items:center;height:30px;padding:0 12px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--muted-foreground);font:500 14px/20px var(--font-sans);cursor:pointer}
+          .pl-s.on{background:var(--card);color:var(--foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+          .pl-w140{width:140px}
+          .pl-date{font-size:14px;line-height:20px}
+          .pl-bd{display:flex;gap:16px;flex:1;min-height:0}
+          .pl-side{display:flex;flex-direction:column;flex:none;width:280px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+          .pl-wf-h{display:grid;gap:2px;padding:12px 14px;border-bottom:1px solid var(--border)}
+          .pl-wf-t{margin:0;font-size:14px;line-height:20px;font-weight:600}
+          .pl-meta{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+          .pl-wf-b{display:grid;place-items:center;flex:1;margin:12px;border-radius:var(--radius);background:var(--muted)}
+          .pl-tag{left:12px;top:-13px}
+          .pl-wf-b .sh-phl{max-width:92%}
+          .pl-nw{white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="pl-part" style="{{ rootStyle }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="pl-fr {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel pl-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><sc-if value="{{ f.hasDoc }}"><span class="ftitle">{{ f.doc }}</span></sc-if></div>
+            <dc-import name="Shell" dc-props="{{ f.props }}" hint-size="{{ f.hint }}">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="pl-tools">
+                <div class="pl-seg" role="group" aria-label="View"><button class="pl-s on" type="button" aria-pressed="true">Board</button><button class="pl-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp pl-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num pl-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="pl-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="pl-side {{ f.sideCls }}" aria-labelledby="{{ f.sideId }}">
+                  <sc-if value="{{ f.outline }}"><span class="sh-lm pl-tag">Slot planning/board/side/v1</span></sc-if>
+                  <div class="pl-wf-h"><h2 class="pl-wf-t" id="{{ f.sideId }}">Large orders</h2><span class="pl-meta">example-widget</span></div>
+                  <div class="pl-wf-b"><span class="sh-phl">Contribution <span class="pl-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-for list="{{ adminFrames }}" as="f">
+          <div class="pl-fr {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel pl-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><sc-if value="{{ f.hasDoc }}"><span class="ftitle">{{ f.doc }}</span></sc-if></div>
+            <dc-import name="Shell" dc-props="{{ f.props }}" hint-size="{{ f.hint }}"></dc-import>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","PL1","PL2","PL3","PL4","PL5","PL6","PL7","PL8","PL9","PL10","PL11","PL12","PL13","PL14","PL15","PL16","PL17","PL18","PL19","PL20","PL21","PL22","PL23","PL24","PL25","PL26","PL27","PL28","PL29","PL30","PL31","PL32","PL33","PL34","PL35","PL36","PL37","PL38","PL39","PL40","PL41","PL42","PL43","PL44","PL45","PL46","PL47","PL48","PL49"],"default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler the frames install (one per document, guarded by the same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          const DOC = "Planning board · Plant A · NorthMES";
+          // Every frame shows the planning board route at Plant A, except the admin frames (kind admin), which show
+          // /admin/core/plants without a plant. Planner frames show Alex Lund; the admin frames (PL30 to PL33 and
+          // PL42 to PL47) show Jonas Holm, a plant admin in PL30 and PL31 and a company admin in the others. Rows: the
+          // board at 1440 in both themes; at 1280 and 1920; the expanded sidebar and the rail; the rail tooltip; the
+          // rail flyout; the switcher, help and user menus in light, then in dark; one plant; plants in two companies;
+          // the bell states and the release 1 top bar in light, then in dark; the plant admin sidebar, and a company
+          // admin's switcher menu with a plant in onboarding and Admin; the skip link and landmarks; the rail's own menus
+          // and its one plant head; then the failed top bar item, a company admin with one plant, whose user menu
+          // holds Admin, the admin frame at /admin and its switcher menu, and the switcher menu of one company.
+          const CO = "Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C";
+          const ALL = [
+            { id: "PL1", title: "Planning board", theme: "light", w: 1440, h: 900, row: 0, col: 0, detail: "Light, 1440 by 900, switcher in the sidebar head, user menu in the footer, bell in the top bar, plugin side slot outlined", props: { width: "1440", theme: "light" }, outline: true, doc: true },
+            { id: "PL2", title: "Planning board", theme: "dark", w: 1440, h: 900, row: 0, col: 1, detail: "Dark, 1440 by 900, as PL1", props: { width: "1440", theme: "dark" }, outline: true, doc: true },
+            { id: "PL3", title: "Planning board", theme: "light", w: 1280, h: 800, row: 1, col: 0, detail: "Light, 1280 by 800, expanded sidebar, plugin side slot outlined", props: { width: "1280", theme: "light" }, outline: true, doc: true },
+            { id: "PL4", title: "Planning board", theme: "light", w: 1920, h: 1080, row: 1, col: 1, detail: "Light, 1920 by 1080, expanded sidebar, plugin side slot outlined", props: { width: "1920", theme: "light" }, outline: true, doc: true },
+            { id: "PL10", title: "Planning board", theme: "dark", w: 1920, h: 1080, row: 1, col: 2, detail: "Dark, 1920 by 1080, as PL4", props: { width: "1920", theme: "dark" }, outline: true, doc: true },
+            { id: "PL5", title: "Expanded sidebar", theme: "light", w: 1440, h: 900, row: 2, col: 0, detail: "Light, 1440 by 900, core, module and plugin sections, an icon on every entry; Master data and Board open one level", props: { width: "1440", theme: "light", open: "core.master-data,planning.board" } },
+            { id: "PL6", title: "Collapsed rail", theme: "light", w: 1440, h: 900, row: 2, col: 1, detail: "Light, 1440 by 900, company mark, one icon per top-level entry, a rule between module groups, avatar; Board current", props: { width: "1440", theme: "light", sidebar: "rail" } },
+            { id: "PL16", title: "Rail tooltip", theme: "light", w: 1440, h: 900, row: 3, col: 0, detail: "Light, 1440 by 900, pointer on the Production orders icon: its label in a tooltip beside the rail", props: { width: "1440", theme: "light", sidebar: "rail", tip: "planning.orders" } },
+            { id: "PL17", title: "Rail tooltip", theme: "dark", w: 1440, h: 900, row: 3, col: 1, detail: "Dark, 1440 by 900, as PL16", props: { width: "1440", theme: "dark", sidebar: "rail", tip: "planning.orders" } },
+            { id: "PL18", title: "Rail flyout open", theme: "light", w: 1440, h: 900, row: 4, col: 0, detail: "Light, 1440 by 900, the Board icon opens a flyout headed Planning: Board, checked, and Job table", props: { width: "1440", theme: "light", sidebar: "rail", flyout: "planning.board" } },
+            { id: "PL19", title: "Rail flyout open", theme: "dark", w: 1440, h: 900, row: 4, col: 1, detail: "Dark, 1440 by 900, as PL18", props: { width: "1440", theme: "dark", sidebar: "rail", flyout: "planning.board" } },
+            { id: "PL7", title: "Switcher menu open", theme: "light", w: 1440, h: 900, row: 5, col: 0, detail: "Light, 1440 by 900, plants grouped by company: Acme AB, Nordic Tools AB, then All plants", props: { width: "1440", theme: "light", menu: "plant", access: "companies" } },
+            { id: "PL8", title: "Help menu open", theme: "light", w: 1440, h: 900, row: 5, col: 1, detail: "Light, 1440 by 900, entries grouped by module, then All pages and Accessibility", props: { width: "1440", theme: "light", menu: "help" } },
+            { id: "PL9", title: "User menu open", theme: "light", w: 1440, h: 900, row: 5, col: 2, detail: "Light, 1440 by 900, opens upward from the sidebar footer: Profile, Theme, Presentation settings, Sign out", props: { width: "1440", theme: "light", menu: "user" } },
+            { id: "PL11", title: "Switcher menu open", theme: "dark", w: 1440, h: 900, row: 6, col: 0, detail: "Dark, 1440 by 900, as PL7", props: { width: "1440", theme: "dark", menu: "plant", access: "companies" } },
+            { id: "PL12", title: "Help menu open", theme: "dark", w: 1440, h: 900, row: 6, col: 1, detail: "Dark, 1440 by 900, as PL8", props: { width: "1440", theme: "dark", menu: "help" } },
+            { id: "PL13", title: "User menu open", theme: "dark", w: 1440, h: 900, row: 6, col: 2, detail: "Dark, 1440 by 900, as PL9; Dark is checked", props: { width: "1440", theme: "dark", menu: "user" } },
+            { id: "PL20", title: "One plant", theme: "light", w: 1440, h: 900, row: 7, col: 0, detail: "Light, 1440 by 900, roles in Plant A only: the sidebar head is static text with no chevron, no switcher", props: { width: "1440", theme: "light", access: "one-plant" }, doc: true },
+            { id: "PL21", title: "One plant", theme: "dark", w: 1440, h: 900, row: 7, col: 1, detail: "Dark, 1440 by 900, as PL20", props: { width: "1440", theme: "dark", access: "one-plant" }, doc: true },
+            { id: "PL22", title: "Plants in two companies", theme: "light", w: 1440, h: 900, row: 8, col: 0, detail: "Light, 1440 by 900, the trail starts with the company: Acme AB, Plant A, Planning, Planning board", props: { width: "1440", theme: "light", access: "companies" }, doc: true },
+            { id: "PL23", title: "Plants in two companies", theme: "dark", w: 1440, h: 900, row: 8, col: 1, detail: "Dark, 1440 by 900, as PL22", props: { width: "1440", theme: "dark", access: "companies" }, doc: true },
+            { id: "PL24", title: "Unread notifications", theme: "light", w: 1440, h: 900, row: 9, col: 0, detail: "Light, 1440 by 900, the bell with a count badge, named Notifications, 3 unread", props: { width: "1440", theme: "light", bell: "unread", bellCount: 3 } },
+            { id: "PL25", title: "Notifications open", theme: "light", w: 1440, h: 900, row: 9, col: 1, detail: "Light, 1440 by 900, the panel under the bell with the empty state No notifications", props: { width: "1440", theme: "light", bell: "open" } },
+            { id: "PL26", title: "Release 1 top bar", theme: "light", w: 1440, h: 900, row: 9, col: 2, detail: "Light, 1440 by 900, no bell: release 1 ships without the notifications module (ADR 0055)", props: { width: "1440", theme: "light", bell: "off" } },
+            { id: "PL27", title: "Unread notifications", theme: "dark", w: 1440, h: 900, row: 10, col: 0, detail: "Dark, 1440 by 900, as PL24", props: { width: "1440", theme: "dark", bell: "unread", bellCount: 3 } },
+            { id: "PL28", title: "Notifications open", theme: "dark", w: 1440, h: 900, row: 10, col: 1, detail: "Dark, 1440 by 900, as PL25", props: { width: "1440", theme: "dark", bell: "open" } },
+            { id: "PL29", title: "Release 1 top bar", theme: "dark", w: 1440, h: 900, row: 10, col: 2, detail: "Dark, 1440 by 900, as PL26", props: { width: "1440", theme: "dark", bell: "off" } },
+            { id: "PL30", title: "Plant admin", theme: "light", w: 1440, h: 900, row: 11, col: 0, detail: "Light, 1440 by 900, module admin entries; Administration above the user footer, the nav scrolled to its end", props: { width: "1440", theme: "light", role: "admin", navScroll: "end" } },
+            { id: "PL31", title: "Plant admin", theme: "dark", w: 1440, h: 900, row: 11, col: 1, detail: "Dark, 1440 by 900, as PL30", props: { width: "1440", theme: "dark", role: "admin", navScroll: "end" } },
+            { id: "PL32", title: "Company admin, plant in onboarding", theme: "light", w: 1440, h: 900, row: 12, col: 0, detail: "Light, 1440 by 900, a company admin's switcher menu: Plant D is in onboarding, so its link reads Plant D, Onboarding, with a badge; after All plants, Admin opens /admin", props: { width: "1440", theme: "light", role: "company-admin", menu: "plant", companies: CO, onboarding: "Plant D" } },
+            { id: "PL33", title: "Company admin, plant in onboarding", theme: "dark", w: 1440, h: 900, row: 12, col: 1, detail: "Dark, 1440 by 900, as PL32", props: { width: "1440", theme: "dark", role: "company-admin", menu: "plant", companies: CO, onboarding: "Plant D" } },
+            { id: "PL14", title: "Skip link and landmarks", theme: "light", w: 1440, h: 900, row: 13, col: 0, detail: "Light, 1440 by 900, the skip link focused; nav, header, the breadcrumb nav, main and aside outlined", props: { width: "1440", theme: "light", marks: "landmarks", assistant: "docked", focus: "skip" }, doc: true },
+            { id: "PL15", title: "Skip link and landmarks", theme: "dark", w: 1440, h: 900, row: 13, col: 1, detail: "Dark, 1440 by 900, as PL14", props: { width: "1440", theme: "dark", marks: "landmarks", assistant: "docked", focus: "skip" }, doc: true },
+            { id: "PL34", title: "Rail user menu open", theme: "light", w: 1440, h: 900, row: 14, col: 0, detail: "Light, 1440 by 900, the avatar at the rail foot opens the user menu to its right: Profile, Theme, Presentation settings, Sign out", props: { width: "1440", theme: "light", sidebar: "rail", menu: "user" } },
+            { id: "PL35", title: "Rail user menu open", theme: "dark", w: 1440, h: 900, row: 14, col: 1, detail: "Dark, 1440 by 900, as PL34; Dark is checked", props: { width: "1440", theme: "dark", sidebar: "rail", menu: "user" } },
+            { id: "PL36", title: "Rail switcher menu open", theme: "light", w: 1440, h: 900, row: 15, col: 0, detail: "Light, 1440 by 900, the company mark opens the switcher menu to its right: plants grouped by company, then All plants", props: { width: "1440", theme: "light", sidebar: "rail", menu: "plant", access: "companies" } },
+            { id: "PL37", title: "Rail switcher menu open", theme: "dark", w: 1440, h: 900, row: 15, col: 1, detail: "Dark, 1440 by 900, as PL36", props: { width: "1440", theme: "dark", sidebar: "rail", menu: "plant", access: "companies" } },
+            { id: "PL38", title: "One plant in the rail", theme: "light", w: 1440, h: 900, row: 16, col: 0, detail: "Light, 1440 by 900, roles in Plant A only: the rail head shows the company mark as static text, not a button", props: { width: "1440", theme: "light", sidebar: "rail", access: "one-plant" } },
+            { id: "PL39", title: "One plant in the rail", theme: "dark", w: 1440, h: 900, row: 16, col: 1, detail: "Dark, 1440 by 900, as PL38", props: { width: "1440", theme: "dark", sidebar: "rail", access: "one-plant" } },
+            { id: "PL40", title: "Top bar item failed", theme: "light", w: 1440, h: 900, row: 17, col: 0, detail: "Light, 1440 by 900, the notifications contribution threw at stage slot: its place holds an icon button with a dashed border, named Notifications (unavailable); focus opens its tooltip", props: { width: "1440", theme: "light", bell: "failed", focus: "bell" } },
+            { id: "PL41", title: "Top bar item failed", theme: "dark", w: 1440, h: 900, row: 17, col: 1, detail: "Dark, 1440 by 900, as PL40", props: { width: "1440", theme: "dark", bell: "failed", focus: "bell" } },
+            { id: "PL42", title: "Company admin, one plant", theme: "light", w: 1440, h: 900, row: 18, col: 0, detail: "Light, 1440 by 900, roles in Plant A only, so no switcher: the user menu holds Admin, the link to /admin", props: { width: "1440", theme: "light", role: "company-admin", access: "one-plant", menu: "user" } },
+            { id: "PL43", title: "Company admin, one plant", theme: "dark", w: 1440, h: 900, row: 18, col: 1, detail: "Dark, 1440 by 900, as PL42", props: { width: "1440", theme: "dark", role: "company-admin", access: "one-plant", menu: "user" } },
+            { id: "PL44", title: "Admin frame", theme: "light", w: 1440, h: 900, row: 19, col: 0, kind: "admin", detail: "Light, 1440 by 900, /admin/core/plants: no plant crumb and no Assistant; the switcher reads Admin, Choose a plant", props: { width: "1440", theme: "light", mount: "admin", role: "company-admin", nav: "core.admin-plants", companies: CO, onboarding: "Plant D" }, doc: "Plants · Admin · NorthMES" },
+            { id: "PL45", title: "Admin frame", theme: "dark", w: 1440, h: 900, row: 19, col: 1, kind: "admin", detail: "Dark, 1440 by 900, as PL44", props: { width: "1440", theme: "dark", mount: "admin", role: "company-admin", nav: "core.admin-plants", companies: CO, onboarding: "Plant D" }, doc: "Plants · Admin · NorthMES" },
+            { id: "PL46", title: "Admin frame, switcher menu open", theme: "light", w: 1440, h: 900, row: 20, col: 0, kind: "admin", detail: "Light, 1440 by 900, the way back to the plants: the user's plants by company with none current, Plant D with Onboarding, then All plants", props: { width: "1440", theme: "light", mount: "admin", role: "company-admin", nav: "core.admin-plants", menu: "plant", companies: CO, onboarding: "Plant D" } },
+            { id: "PL47", title: "Admin frame, switcher menu open", theme: "dark", w: 1440, h: 900, row: 20, col: 1, kind: "admin", detail: "Dark, 1440 by 900, as PL46", props: { width: "1440", theme: "dark", mount: "admin", role: "company-admin", nav: "core.admin-plants", menu: "plant", companies: CO, onboarding: "Plant D" } },
+            { id: "PL48", title: "Switcher menu, one company", theme: "light", w: 1440, h: 900, row: 21, col: 0, detail: "Light, 1440 by 900, plants of one company: the menu has no company label (ADR 0067); Plant A current, then All plants", props: { width: "1440", theme: "light", menu: "plant" } },
+            { id: "PL49", title: "Switcher menu, one company", theme: "dark", w: 1440, h: 900, row: 21, col: 1, detail: "Dark, 1440 by 900, as PL48", props: { width: "1440", theme: "dark", menu: "plant" } }
+          ];
+          // Layout: each frame element is exactly its screen size; its chip sits 48 px above it.
+          const CHIP = 48;
+          const GAPX = 80;
+          const GAPY = 112;
+          const pick = String(P.frame || "all").trim();
+          const one = ALL.some((x) => x.id === pick);
+          const list = one ? ALL.filter((x) => x.id === pick) : ALL;
+          const rows = [];
+          list.forEach((x) => {
+            const r = one ? 0 : x.row;
+            rows[r] = rows[r] || [];
+            rows[r].push(x);
+          });
+          let top = CHIP;
+          let width = 0;
+          const frames = [];
+          const adminFrames = [];
+          rows.forEach((row) => {
+            if (!row) return;
+            let left = 0;
+            let rowH = 0;
+            row.sort((a, b) => a.col - b.col).forEach((x) => {
+              const key = x.id.toLowerCase();
+              (x.kind === "admin" ? adminFrames : frames).push({
+                id: x.id,
+                title: x.title,
+                detail: x.detail,
+                hasDoc: !!x.doc,
+                doc: typeof x.doc === "string" ? x.doc : DOC,
+                label: x.id + " " + x.title + ", " + x.theme + ", " + x.w + " by " + x.h,
+                cls: x.theme === "dark" ? "dark" : "",
+                style: "left:" + left + "px;top:" + top + "px;width:" + x.w + "px;height:" + x.h + "px",
+                props: x.props,
+                hint: x.w + "px," + x.h + "px",
+                outline: !!x.outline,
+                sideCls: x.outline ? "sh-slot" : "",
+                sideId: "pl-" + key + "-large-orders"
+              });
+              left += x.w + GAPX;
+              rowH = Math.max(rowH, x.h);
+            });
+            width = Math.max(width, left - GAPX);
+            top += rowH + GAPY;
+          });
+          const height = top - GAPY;
+          return { frames: frames, adminFrames: adminFrames, rootStyle: "width:" + width + "px;height:" + height + "px" };
+        }
+      }
+    </script>
+  </body>
+</html>

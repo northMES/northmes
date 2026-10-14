@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Static maintenance and browser pages</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <div class="er-lines {{ partCls }}">
+        <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="1">
+          <div class="er-line">
+            <sc-for list="{{ ln.frames }}" as="f" hint-placeholder-count="2">
+              <section class="er-f {{ f.wcls }}" data-screen-label="{{ f.label }}">
+                <sc-if value="{{ f.chip }}"><div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span></div></sc-if>
+                <sc-if value="{{ f.hasUrl }}"><div class="sh-doc er-url"><span class="sh-doc-k">url</span><span>{{ f.url }}</span></div></sc-if>
+                <sc-if value="{{ f.titles }}"><div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ f.docTitle }}</span></div></sc-if>
+                <div class="er-x-scr {{ f.scrCls }}" lang="{{ f.lang }}">
+                  <header class="er-x-hd"><span class="er-x-mark"><span class="er-x-sq" aria-hidden="true">N</span>NorthMES</span></header>
+                  <main class="er-x-main">
+                    <div class="er-x-card">
+                      <h1 class="er-x-h1">{{ f.h1 }}</h1>
+                      <sc-if value="{{ f.isMa }}">
+                        <p class="er-x-p">{{ f.t.p1 }}</p>
+                        <p class="er-x-p" role="status">{{ f.t.p2 }}</p>
+                        <sc-if value="{{ f.t.hasP3 }}"><p class="er-x-mut">{{ f.t.p3 }}</p></sc-if>
+                        <a class="er-x-btn {{ f.btnCls }}" href="#">{{ f.t.btn }}</a>
+                      </sc-if>
+                      <sc-if value="{{ f.isUb }}">
+                        <p class="er-x-p">NorthMES runs in these browsers, in this version or newer:</p>
+                        <ul class="er-x-ul"><li>Chrome 111</li><li>Edge 111</li><li>Firefox 128</li><li>Safari 16.4</li></ul>
+                        <p class="er-x-p">This browser is Chrome 109.</p>
+                        <p class="er-x-p">Update this browser, or open NorthMES in one of the browsers above. If you cannot update it, ask your IT department.</p>
+                      </sc-if>
+                    </div>
+                  </main>
+                </div>
+                <sc-if value="{{ f.hasNote }}"><div class="er-leg er-leg-out"><span>{{ f.note }}</span></div></sc-if>
+              </section>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"row": {"editor": "enum", "options": ["all", "MA", "UB", "LS"], "default": "all", "tsType": "string"}, "frame": {"editor": "text", "default": "", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}, "titles": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}, "focus": {"editor": "enum", "options": ["none", "try"], "default": "none", "tsType": "string"}, "crop": {"editor": "enum", "options": ["off", "on"], "default": "off", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Part of shell-306-errors.dc.html: the two static pages, drawn as they render in a browser. They load no tokens and no
+          // fonts, so the er-x- classes hold the hex values that BN lists and system fonts. The real maintenance file picks the dark
+          // values through prefers-color-scheme and the narrow sizes below 768 px through media queries; here er-x-dark and er-x-n
+          // stand in for them. frame="MA1" draws one frame without chip and label, for the keyboard part; focus="try" rings Try again.
+          const P = this.props || {};
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const row = pick(P.row, "all").toUpperCase();
+          const only = pick(P.frame, "").toUpperCase();
+          const labels = pick(P.labels, "on") !== "off";
+          const titles = pick(P.titles, "on") !== "off";
+          const focus = pick(P.focus, "none");
+          const EN = {
+            h1: "NorthMES is not available right now",
+            p1: "NorthMES is restarting or being updated. Saved data is not affected.",
+            p2: "This page checks every 10 seconds and opens NorthMES again by itself when it is back. You do not need to reload.",
+            p3: "If NorthMES stays unavailable, tell your plant admin.",
+            btn: "Try again",
+            title: "NorthMES is not available right now · NorthMES"
+          };
+          const BACK = Object.assign({}, EN, { p2: "NorthMES is back. Opening it now." });
+          const DE = {
+            h1: "NorthMES ist gerade nicht verfügbar",
+            p1: "NorthMES wird neu gestartet oder aktualisiert. Gespeicherte Daten sind nicht betroffen.",
+            p2: "Diese Seite prüft alle 10 Sekunden und öffnet NorthMES wieder von selbst, sobald es zurück ist. Sie müssen nicht neu laden.",
+            p3: "Wenn NorthMES nicht verfügbar bleibt, wenden Sie sich an Ihre Werksadministration.",
+            btn: "Erneut versuchen",
+            title: "NorthMES ist gerade nicht verfügbar · NorthMES"
+          };
+          const UB = { h1: "NorthMES needs a newer browser", title: "NorthMES needs a newer browser · NorthMES" };
+          const BOARD = "/plant-a/planning/board";
+          // [row, id, name, theme, width, height, chip text, config]; config.note is the note under the screen and config.join keeps a
+          // frame on the line before it. A 320 chip holds only the theme and the size, as D2 draws it.
+          const L = [
+            ["MA", "MA1", "NorthMES not available", "light", 1440, 900, "Caddy's static page while app is down, here at /plant-a/planning/board", { kind: "ma", t: EN, url: BOARD, note: "The mark, a card with the h1, three paragraphs (the middle one is the role=status line) and Try again. No Shell, no tokens, no Plex." }],
+            ["MA", "MA2", "NorthMES not available", "dark", 1440, 900, "As MA1, dark by prefers-color-scheme", { kind: "ma", t: EN, url: BOARD }],
+            ["MA", "MA3", "Not available", "light", 320, 640, "", { kind: "ma", t: EN, url: BOARD, note: "As MA1: the card loses its border and padding; Try again spans the width." }],
+            ["MA", "MA4", "Not available", "dark", 320, 640, "", { kind: "ma", t: EN, url: BOARD }],
+            ["MA", "MA5", "At a station", "light", 1280, 800, "/station/press-4 at the station landscape size", { kind: "ma", t: EN, url: "/station/press-4" }],
+            ["MA", "MA6", "At a station", "dark", 800, 1280, "As MA5 in portrait", { kind: "ma", t: EN, url: "/station/press-4", join: true }],
+            ["MA", "MA7", "NorthMES not available", "light", 1920, 1080, "As MA1", { kind: "ma", t: EN, url: BOARD }],
+            ["MA", "MA8", "NorthMES is back", "light", 1440, 900, "The check got an answer from /health/ready: the status line changes just before the page reloads the same URL", { kind: "ma", t: BACK, url: BOARD }],
+            ["MA", "MA9", "NorthMES is back", "dark", 1440, 900, "As MA8", { kind: "ma", t: BACK, url: BOARD }],
+            ["UB", "UB1", "Newer browser needed", "light", 1440, 900, "The plain page that /assets/browser-check.js builds; no controls", { kind: "ub", t: UB, url: BOARD, note: "The mark, the minimum versions as a list, the browser it found and what to do. System fonts and hex colors only." }],
+            ["UB", "UB2", "Newer browser needed", "dark", 1440, 900, "As UB1 with the stored dark theme", { kind: "ub", t: UB, url: BOARD }],
+            ["UB", "UB3", "Newer browser", "light", 320, 640, "", { kind: "ub", t: UB, url: BOARD }],
+            ["LS", "LS4", "Maintenance", "light", 320, 640, "", { kind: "ma", t: DE, url: BOARD, lang: "de", note: "MA3 with the German layout text." }]
+          ];
+          const frames = L.filter((r) => (only ? r[1] === only : row === "ALL" || r[0] === row)).map((r) => {
+            const c = r[7];
+            const w = r[4];
+            const n = w === 320;
+            const theme = r[3];
+            const wh = w + " by " + r[5];
+            const th = (theme === "dark" ? "Dark, " : "Light, ") + wh + (n || !r[6] ? "" : ". " + r[6]);
+            const crop = only && pick(P.crop, "off") === "on";
+            return {
+              id: r[1],
+              name: r[2],
+              th: th,
+              w: w,
+              join: !!c.join,
+              hasNote: labels && !only && !!c.note,
+              note: c.note || "",
+              label: only ? null : r[1] + " " + r[2] + ", " + theme + ", " + wh,
+              chip: labels && !only,
+              titles: titles,
+              hasUrl: titles && !!c.url,
+              url: c.url,
+              docTitle: c.t.title,
+              wcls: "w" + w,
+              scrCls: (crop ? "er-x-1440" : "er-x-" + w) + (theme === "dark" ? " er-x-dark" : "") + (n ? " er-x-n" : ""),
+              lang: c.lang || "en",
+              h1: c.t.h1,
+              isMa: c.kind === "ma",
+              isUb: c.kind === "ub",
+              t: Object.assign({}, c.t, { hasP3: !!c.t.p3 }),
+              btnCls: focus === "try" ? "er-x-focus" : ""
+            };
+          });
+          // One size of screen per line, so every screen in a line starts at one y; a pair of 1440 frames sits two across.
+          const lines = [];
+          frames.forEach((f) => {
+            const cur = lines[lines.length - 1];
+            const used = cur ? cur.frames.reduce((t, g) => t + g.w + 80, -80) : 0;
+            if (cur && (cur.w === f.w || f.join) && used + 80 + f.w <= 2960) cur.frames.push(f);
+            else lines.push({ w: f.w, frames: [f] });
+          });
+          return { lines: lines, partCls: only ? "one" : "" };
+        }
+      }
+    </script>
+  </body>
+</html>

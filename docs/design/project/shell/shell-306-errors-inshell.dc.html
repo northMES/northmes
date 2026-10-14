@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error pages inside the shell</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <div class="er-lines {{ partCls }}">
+        <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="1">
+          <div class="er-line">
+            <sc-for list="{{ ln.frames }}" as="f" hint-placeholder-count="2">
+              <section class="er-f {{ f.wcls }}" data-screen-label="{{ f.label }}">
+                <sc-if value="{{ f.chip }}"><div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span></div></sc-if>
+                <sc-if value="{{ f.hasUrl }}"><div class="sh-doc er-url"><span class="sh-doc-k">url</span><span>{{ f.url }}</span></div></sc-if>
+                <dc-import name="Shell" dc-props="{{ f.shell }}" hint-size="{{ f.hint }}">
+                  <div class="er-c">
+                    <sc-if value="{{ f.ownH1 }}">
+                      <div class="sh-ph"><h1 class="sh-h1 {{ f.h1Cls }}" tabIndex="-1"><sc-for list="{{ f.h1 }}" as="p"><span lang="{{ p.lang }}">{{ p.t }}</span></sc-for></h1></div>
+                    </sc-if>
+                    <sc-if value="{{ f.isAlert }}">
+                      <div class="er-alert"><span class="ic" data-icon="Info"></span><p class="er-alert-t">This link had <span class="num">1</span> setting that no longer applies, so it was ignored.</p></div>
+                    </sc-if>
+                    <sc-if value="{{ f.isPanel }}">
+                      <div class="panel er-state {{ f.n }}">
+                        <div class="er-head"><span class="ic ic24 {{ f.p.tone }}" data-icon="{{ f.p.icon }}"></span><p class="er-lead"><sc-for list="{{ f.p.lead }}" as="p"><sc-if value="{{ p.m }}"><span class="er-data">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></div>
+                        <sc-for list="{{ f.p.ps }}" as="q"><p class="er-p">{{ q }}</p></sc-for>
+                        <sc-if value="{{ f.p.hasDl }}">
+                          <dl class="er-dl {{ f.n }}">
+                            <sc-for list="{{ f.p.dl }}" as="r">
+                              <div class="er-dr"><dt class="er-dt">{{ r.k }}</dt><dd class="er-dd"><span class="er-data">{{ r.v }}</span><sc-if value="{{ r.hasCopy }}"><button class="btn icon v-ghost {{ r.cls }}" type="button" aria-label="{{ r.copy }}"><span class="ic" data-icon="Copy"></span></button></sc-if></dd></div>
+                            </sc-for>
+                          </dl>
+                        </sc-if>
+                        <div class="er-acts {{ f.n }}">
+                          <sc-for list="{{ f.p.acts }}" as="a">
+                            <sc-if value="{{ a.isLink }}"><a class="btn {{ a.cls }}" href="#"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.label }}</a></sc-if>
+                            <sc-if value="{{ a.isBtn }}"><button class="btn {{ a.cls }}" type="button" aria-busy="{{ a.busy }}" aria-disabled="{{ a.dis }}"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.label }}</button></sc-if>
+                          </sc-for>
+                        </div>
+                        <sc-if value="{{ f.p.hasNote }}"><p class="er-note"><sc-for list="{{ f.p.note }}" as="p"><sc-if value="{{ p.m }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-if>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.isPh }}">
+                      <div class="sh-phbox"><span class="sh-phl">{{ f.ph }}</span></div>
+                    </sc-if>
+                    <sc-if value="{{ f.isSk }}">
+                      <div class="er-sk-tools"><span class="sk er-skc er-k240"></span><span class="sk er-skc er-k160"></span><span class="sk er-skc er-k104"></span></div>
+                      <div class="er-sk-tbl">
+                        <div class="er-sk-r h"><span class="sk er-skl er-k48"></span><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k64"></span><span class="sk er-skl er-k48"></span></div>
+                        <div class="er-sk-r"><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k200"></span><span class="sk er-skl er-k64"></span><span class="sk er-skl er-k88"></span><span class="sk er-skl er-k80"></span></div>
+                        <div class="er-sk-r"><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k120"></span><span class="sk er-skl er-k64"></span><span class="sk er-skl er-k88"></span><span class="sk er-skl er-k72"></span></div>
+                        <div class="er-sk-r"><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k160"></span><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k88"></span><span class="sk er-skl er-k96"></span></div>
+                        <div class="er-sk-r"><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k144"></span><span class="sk er-skl er-k64"></span><span class="sk er-skl er-k88"></span><span class="sk er-skl er-k80"></span></div>
+                        <div class="er-sk-r"><span class="sk er-skl er-k56"></span><span class="sk er-skl er-k112"></span><span class="sk er-skl er-k48"></span><span class="sk er-skl er-k88"></span><span class="sk er-skl er-k72"></span></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </dc-import>
+                <sc-if value="{{ f.hasNote }}"><div class="er-leg er-leg-out"><span>{{ f.note }}</span></div></sc-if>
+              </section>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"row": {"editor": "enum", "options": ["all", "BL", "NF", "SE", "NC", "SO", "LS"], "default": "all", "tsType": "string"}, "frame": {"editor": "text", "default": "", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}, "titles": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}, "focus": {"editor": "text", "default": "", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Part of shell-306-errors.dc.html: every frame that renders inside Shell.dc.html.
+          // row picks one row; frame="SE1" draws one frame without its chip and label, for the keyboard part, which can move
+          // the ring with focus (h1, open, back, copy, try, goto, none) and hide the title annotations with titles="off".
+          const P = this.props || {};
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const row = pick(P.row, "all").toUpperCase();
+          const only = pick(P.frame, "").toUpperCase();
+          const labels = pick(P.labels, "on") !== "off";
+          const titles = pick(P.titles, "on") !== "off";
+          const focusOver = pick(P.focus, "");
+          // Text with `backticks` marks the parts set in Plex Mono (paths, ids, times).
+          const parts = (s) => String(s || "").split("`").map((t, i) => ({ t: t, m: i % 2 === 1, x: i % 2 === 0 })).filter((p) => p.t !== "");
+          const act = (key, label, v, icon, link) => ({ key: key, label: label, v: v, icon: icon || "", link: !!link });
+          const ORDERS = "/plant-a/planning/production-orders";
+          const CID = "0199c4e2-7b1d-7a52-8f3e-5d21c6a9b04e";
+
+          // Page bodies. Copy is final English; LS uses the German layout text that BN lists.
+          const BODY = {
+            bl: (o) => ({ icon: "Link2Off", tone: "er-mut",
+              lead: "The link holds settings this page cannot use, such as a filter value or a position in the list that no longer exists.",
+              ps: [o.back ? "Open the page without these settings, or go back to the page you came from." : "Open the page without these settings."],
+              acts: [act("open", "Open Production orders without these settings", "v-default", "", true)].concat(o.back ? [act("back", "Go back", "v-outline", "ArrowLeft", false)] : []) }),
+            nf: () => ({ icon: "SearchX", tone: "er-mut", lead: "Plant A has no page at `/plant-a/reports`. The link may be out of date.",
+              acts: [act("goto", "Go to Plant A", "v-default", "", true), act("all", "See all pages", "v-outline", "", true)] }),
+            nfa: () => ({ icon: "SearchX", tone: "er-mut", lead: "Admin has no page at `/admin/reports`. The link may be out of date.",
+              acts: [act("goto", "Go to Overview", "v-default", "", true), act("all", "See all pages", "v-outline", "", true)] }),
+            rec: () => ({ icon: "SearchX", tone: "er-mut", lead: "This production order does not exist in Plant A, or you cannot open it. The link may be out of date.",
+              acts: [act("back", "Back to Production orders", "v-default", "ArrowLeft", true)] }),
+            se: () => ({ icon: "CircleAlert", tone: "er-err", lead: "The server stopped with an error while it loaded the data for this page. Saved data is not affected.",
+              ps: ["Try again. If the error comes back, give your plant admin the correlation id."],
+              dl: [{ k: "Correlation id", v: CID, copy: "Copy correlation id" }, { k: "Code", v: "core.internal" }],
+              acts: [act("try", "Try again", "v-default", "RotateCw", false), act("goto", "Go to Planning board", "v-outline", "", true)], busyLabel: "Trying again" }),
+            de: (o) => ({ icon: "CircleAlert", tone: "er-err", lead: "Beim Laden der Daten für diese Seite ist auf dem Server ein Fehler aufgetreten. Gespeicherte Daten sind nicht betroffen.",
+              ps: ["Versuchen Sie es erneut. Wenn der Fehler wieder auftritt, geben Sie Ihrer Werksadministration die Korrelations-ID."],
+              dl: [{ k: "Korrelations-ID", v: CID, copy: "Korrelations-ID kopieren" }, { k: "Code", v: "core.internal" }],
+              acts: [act("try", "Erneut versuchen", "v-default", "RotateCw", false), act("goto", o.all ? "Alle Seiten anzeigen" : "Zur Plantafel", "v-outline", "", true)] }),
+            nc: (o) => ({ icon: "WifiOff", tone: "er-warn", lead: "Proposals could not load, because this browser cannot reach the NorthMES server. Check the network connection of this computer.",
+              ps: ["The page loads by itself when the connection is back."],
+              acts: [act("try", "Try again", "v-default", "RotateCw", false)], note: o.still ? "Still no connection at `09:42`." : "" })
+          };
+
+          const SE = { nav: "planning.orders", title: "Production orders could not be loaded", actions: "none" };
+          const BL = { nav: "planning.orders", title: "Production orders could not open this link", actions: "none" };
+          const NF = { nav: "none", title: "Page not found", crumbs: "Page not found", docTitle: "Page not found · Plant A · NorthMES" };
+          const NFA = { role: "company-admin", mount: "admin", nav: "none", title: "Page not found", crumbs: "Admin|Page not found", docTitle: "Page not found · Admin · NorthMES" };
+          const REC = { nav: "planning.orders", title: "Production order not found", crumbs: "Planning|Production orders|Production order not found", actions: "none", docTitle: "Production order not found · Plant A · NorthMES" };
+          const NC = { nav: "planning.proposals", title: "No connection to NorthMES", actions: "none", status: "reconnecting", docTitle: "No connection to NorthMES · Plant A · NorthMES" };
+          const RS = { nav: "planning.orders", status: "both", bannerKind: "warning", banner: "NorthMES is restarting. Changes are paused until it is back; you do not need to reload.", actions: "none", busy: "true" };
+          const LS = { strings: "long", nav: "planning.orders", title: "Fertigungsaufträge konnten nicht geladen werden", actions: "none" };
+          const LS3 = { strings: "long", nav: "acme.tool-life", heading: "none", actions: "none", pageLang: "de", docTitle: "Työkalujen käyttöikä konnte nicht geladen werden · Präzisionsfertigung Oberschwaben Werk Süd · NorthMES" };
+          const BLURL = ORDERS + "?status=planned&sort=deadlineAt&after=c2Vlay0xMDA0";
+          const RECURL = ORDERS + "/0199c4e1-3f20-7d11-b2c4-8e0f1a2b3c4d";
+          const LISTPH = "Production orders list, drawn on the list and form page ui/ui-222-list-form.dc.html";
+
+          // [row, id, name, theme, width, chip text, config]; config.note is the note under the screen. A 320 chip holds only the theme
+          // and the size, as D2 draws it.
+          const L = [
+            ["BL", "BL1", "Link cannot be used", "light", 1440, "The route's error component in main; the h1 has focus", { shell: BL, url: BLURL, body: BODY.bl({ back: true }), note: "The list query was refused with BAD_USER_INPUT, core.list.invalid_cursor. Page actions are gone; no raw parameters and no code." }],
+            ["BL", "BL2", "Link cannot be used", "dark", 1440, "As BL1", { shell: BL, url: BLURL, body: BODY.bl({ back: true }) }],
+            ["BL", "BL3", "In a new tab", "light", 320, "", { shell: BL, url: BLURL, body: BODY.bl({ back: false }), note: "As BL1 with no earlier entry in this tab, so no Go back." }],
+            ["BL", "BL4", "In a new tab", "dark", 320, "", { shell: BL, url: BLURL, body: BODY.bl({ back: false }) }],
+            ["BL", "BL5", "One setting ignored", "light", 1440, "The page renders with the inline status", { shell: { nav: "planning.orders" }, url: ORDERS + "?q=100", alert: true, ph: LISTPH, note: "Opened as ?status=shipped&q=100. The status key fell back to its default and the route dropped it with a replace navigation." }],
+            ["BL", "BL6", "One setting ignored", "dark", 1440, "As BL5", { shell: { nav: "planning.orders" }, url: ORDERS + "?q=100", alert: true, ph: LISTPH }],
+            ["NF", "NF1", "Unknown path in a plant", "light", 1440, "No route matches under the plant layout, so defaultNotFoundComponent renders inside it; no current sidebar entry, the h1 has focus", { shell: NF, url: "/plant-a/reports", body: BODY.nf() }],
+            ["NF", "NF2", "Unknown path in a plant", "dark", 1440, "As NF1", { shell: NF, url: "/plant-a/reports", body: BODY.nf() }],
+            ["NF", "NF3", "Unknown path under /admin", "light", 1440, "Company admin Jonas Holm: defaultNotFoundComponent inside the admin frame; trail Admin, Page not found", { shell: NFA, url: "/admin/reports", body: BODY.nfa() }],
+            ["NF", "NF4", "Unknown path under /admin", "dark", 1440, "As NF3", { shell: NFA, url: "/admin/reports", body: BODY.nfa() }],
+            ["NF", "NF5", "Record not found", "light", 1440, "The owner threw NOT_FOUND for an unknown or hidden id: EmptyState, Back to Production orders; the id is not shown, page actions gone", { shell: REC, url: RECURL, body: BODY.rec() }],
+            ["NF", "NF6", "Record not found", "dark", 1440, "As NF5", { shell: REC, url: RECURL, body: BODY.rec() }],
+            ["NF", "NF7", "Record not found", "light", 320, "", { shell: REC, url: RECURL, body: BODY.rec() }],
+            ["NF", "NF8", "Record not found", "dark", 320, "", { shell: REC, url: RECURL, body: BODY.rec() }],
+            ["SE", "SE1", "Server error", "light", 1440, "The list query returned INTERNAL_SERVER_ERROR, core.internal: a full page state in main with the correlation id, Try again and a way out; the h1 has focus", { shell: SE, body: BODY.se() }],
+            ["SE", "SE2", "Server error", "dark", 1440, "As SE1", { shell: SE, body: BODY.se() }],
+            ["SE", "SE3", "Server error", "light", 1280, "As SE1", { shell: SE, body: BODY.se() }],
+            ["SE", "SE4", "Server error", "dark", 1920, "As SE1", { shell: SE, body: BODY.se() }],
+            ["SE", "SE5", "Server error", "light", 320, "", { shell: SE, body: BODY.se(), note: "As SE1; the id wraps and the buttons stack." }],
+            ["SE", "SE6", "Server error", "dark", 320, "", { shell: SE, body: BODY.se() }],
+            ["SE", "SE7", "Try again in progress", "light", 1440, "Try again in the D1 Button loading state with aria-busy and aria-disabled; focus stays on it", { shell: SE, body: BODY.se(), focus: "try", busy: true }],
+            ["SE", "SE8", "Try again in progress", "dark", 1440, "As SE7", { shell: SE, body: BODY.se(), focus: "try", busy: true }],
+            ["NC", "NC1", "No connection", "light", 1440, "Proposals opened from the sidebar while the network is down: no response. The socket dropped too, so the top bar shows the reconnecting chip; the h1 has focus", { shell: NC, body: BODY.nc({}) }],
+            ["NC", "NC2", "No connection", "dark", 1440, "As NC1", { shell: NC, body: BODY.nc({}) }],
+            ["NC", "NC3", "Still no connection", "light", 1440, "Try again failed: focus stays on Try again, the time of the last attempt under it", { shell: NC, body: BODY.nc({ still: true }), focus: "try" }],
+            ["NC", "NC4", "Still no connection", "dark", 1440, "As NC3", { shell: NC, body: BODY.nc({ still: true }), focus: "try" }],
+            ["NC", "NC5", "No connection", "light", 320, "", { shell: NC, body: BODY.nc({}), note: "As NC1; the chip is a strip." }],
+            ["NC", "NC6", "No connection", "dark", 320, "", { shell: NC, body: BODY.nc({}) }],
+            ["NC", "NC7", "Load while NorthMES restarts", "light", 1440, "503 from Caddy at page load: no error page, the restarting strip and chip", { shell: RS, sk: true, note: "Main has aria-busy with the ST23 skeleton; the shell retries and renders the page." }],
+            ["NC", "NC8", "Load while NorthMES restarts", "dark", 1440, "As NC7", { shell: RS, sk: true }],
+            ["SO", "SO4", "Back on the page", "light", 1440, "After Sign in: the return URL with its search kept, the h1 has focus", { shell: { nav: "planning.orders" }, url: ORDERS + "?status=planned", ph: "Production orders list with the Planned filter, drawn on the list and form page ui/ui-222-list-form.dc.html" }],
+            ["SO", "SO5", "Back on the page", "dark", 1440, "As SO4", { shell: { nav: "planning.orders" }, url: ORDERS + "?status=planned", ph: "Production orders list with the Planned filter, drawn on the list and form page ui/ui-222-list-form.dc.html" }],
+            ["LS", "LS1", "Server error, German", "light", 1440, "SE1 with German chrome, company, plant and user, and the page text in German", { shell: LS, body: BODY.de({}), note: "The long plant name truncates in the switcher head and the plant crumb, as D2 draws it." }],
+            ["LS", "LS2", "Server error, German", "dark", 1440, "As LS1", { shell: LS, body: BODY.de({}) }],
+            ["KF", "KFPO", "Production orders", "light", 1440, "Production orders after Try again succeeded or after the settings were dropped; drawn only inside KF3 and KF6", { shell: { nav: "planning.orders" }, url: ORDERS, ph: "Production orders list in its default view, drawn on the list and form page ui/ui-222-list-form.dc.html" }],
+            ["LS", "LS3", "Finnish plugin page, server error", "light", 1280, "Tool life of the plugin Acme tooling; the route title in the h1 carries lang fi", { shell: LS3, body: BODY.de({ all: true }), note: "Tool life is the module's first entry, so the way out is Alle Seiten anzeigen.", h1: [{ t: "Työkalujen käyttöikä", lang: "fi" }, { t: " konnte nicht geladen werden", lang: null }] }]
+          ];
+          const HGT = { 1920: 1080, 1440: 900, 1280: 800, 320: 640 };
+          const frames = L.filter((r) => (only ? r[1] === only : row === "ALL" ? r[0] !== "KF" : r[0] === row)).map((r) => {
+            const c = r[6];
+            const w = r[4];
+            const n = w === 320;
+            const focus = focusOver || c.focus || "h1";
+            const own = !!c.h1;
+            const b = c.body || null;
+            const theme = r[3];
+            const shell = Object.assign({ width: String(w), theme: theme, bell: "off", showTitle: titles ? "on" : "off" }, c.shell);
+            shell.focus = focus === "h1" && !own ? "h1" : "none";
+            const p = b ? {
+              icon: b.icon,
+              tone: b.tone,
+              lead: parts(b.lead),
+              ps: b.ps || [],
+              hasDl: !!b.dl,
+              dl: (b.dl || []).map((d) => ({ k: d.k, v: d.v, hasCopy: !!d.copy, copy: d.copy || "", cls: focus === "copy" ? "is-focus" : "" })),
+              acts: b.acts.map((a) => {
+                const busy = !!c.busy && a.key === "try";
+                return {
+                  label: busy ? b.busyLabel || a.label : a.label,
+                  icon: busy ? "LoaderCircle" : a.icon,
+                  hasIcon: busy || !!a.icon,
+                  isLink: a.link,
+                  isBtn: !a.link,
+                  busy: busy ? "true" : null,
+                  dis: busy ? "true" : null,
+                  cls: [a.v, focus === a.key ? "is-focus" : "", busy ? "er-busy" : ""].join(" ").trim()
+                };
+              }),
+              hasNote: !!b.note,
+              note: parts(b.note)
+            } : null;
+            const wh = w + " by " + HGT[w];
+            const th = (theme === "dark" ? "Dark, " : "Light, ") + wh + (n || !r[5] ? "" : ". " + r[5]);
+            return {
+              id: r[1],
+              name: r[2],
+              th: th,
+              w: w,
+              hasNote: labels && !only && !!c.note,
+              note: c.note || "",
+              label: only ? null : r[1] + " " + r[2] + ", " + theme + ", " + wh,
+              chip: labels && !only,
+              wcls: "w" + w,
+              hint: w + "px," + (HGT[w] + (titles ? 36 : 0)) + "px",
+              hasUrl: titles && !!c.url,
+              url: c.url || "",
+              shell: shell,
+              ownH1: own,
+              h1: own ? c.h1 : [],
+              h1Cls: focus === "h1" ? "is-focus" : "",
+              n: n ? "n" : "",
+              isAlert: !!c.alert,
+              isPanel: !!b,
+              p: p,
+              isPh: !!c.ph,
+              ph: c.ph || "",
+              isSk: !!c.sk
+            };
+          });
+          // One size of screen per line, so every screen in a line starts at one y; a pair of 1440 frames sits two across.
+          const lines = [];
+          frames.forEach((f) => {
+            const cur = lines[lines.length - 1];
+            const used = cur ? cur.frames.reduce((t, g) => t + g.w + 80, -80) : 0;
+            if (cur && cur.w === f.w && used + 80 + f.w <= 2960) cur.frames.push(f);
+            else lines.push({ w: f.w, frames: [f] });
+          });
+          return { lines: lines, partCls: only ? "one" : "" };
+        }
+      }
+    </script>
+  </body>
+</html>

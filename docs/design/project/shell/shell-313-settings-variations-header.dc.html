@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">Frame F0</p>
+        <h2 class="t1">Settings area with a secondary sidebar: variations</h2>
+        <p class="lede">Issue #313 asks for a variations round before the spec page, because the settings area is a new kind of screen. Krister Johansson decided on 2026-10-08 that one Settings area with its own secondary sidebar holds the administration, grouped by scope, and replaces both the /admin mount and the Administration section at the foot of the plant sidebar; master data used in daily work stays in the main sidebar. This page draws three whole options: A, its own sidebar; B, the rail and a scope picker; C, in the page. Each draws Users at Acme AB and Machines at Plant A at 1440 in light, a plant admin who administers Plant A only and the way in from Plant A's board, both in dark, and the 320 reflow; B and C add a second 320 frame for the control their reflow adds. The rest of the issue's frame list (1280 and 1920, empty, onboarding and no-plant states, long strings, keyboard and focus) follows on the spec page for the chosen option.</p>
+        <div class="set-cols2 sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="set-facts">
+              <sc-for list="{{ facts }}" as="f"><dt>{{ f.k }}</dt><dd><sc-if value="{{ f.plain }}">{{ f.v }}</sc-if><sc-if value="{{ f.isRoutes }}"><span class="set-rts"><sc-for list="{{ f.routes }}" as="r"><span class="set-rtl"><span class="set-rto">{{ r.o }}</span><span class="set-route">{{ r.a }}</span><span>and</span><span class="set-route">{{ r.b }}</span></span></sc-for><span>{{ f.v }}</span></span></sc-if></dd></sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Rules the options are judged against</h2>
+            <ul class="set-pts">
+              <sc-for list="{{ rules }}" as="r"><li>{{ r.t }}<sc-if value="{{ r.x }}"> <span class="set-brk">({{ r.x }})</span></sc-if> <span class="set-src">{{ r.s }}</span></li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">What is decided</h2>
+          <p class="lede">Eight axes from the spec for this round. Each option takes one answer per axis, so its frames show a whole product; the axes are independent, and the comparison frame R judges each one on its own. B takes the second sheet (N3) instead of the navigation sheet that spec 7.7 grouped with it, so each 320 pattern is drawn once.</p>
+          <div class="set-tbl">
+            <div class="set-tbl-r set-axes h"><span>Axis</span><span>A. Own sidebar</span><span>B. Rail and scope picker</span><span>C. In the page</span></div>
+            <sc-for list="{{ axes }}" as="a"><div class="set-tbl-r set-axes"><span class="k">{{ a.k }}<span class="set-src">{{ a.f }}</span></span><span>{{ a.a }}</span><span>{{ a.b }}</span><span>{{ a.c }}</span></div></sc-for>
+          </div>
+        </div>
+        <div class="set-cols2 sec">
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="set-pts">
+              <sc-for list="{{ how }}" as="h"><li>{{ h }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h2 class="t2">What leaves the main sidebar</h2>
+            <p class="lede">Every D2 entry and where every option draws it (spec 1.5). The reach frames A4, B4 and C4 show the main sidebar after the move.</p>
+            <div class="set-tbl">
+              <div class="set-tbl-r set-moves h"><span>D2 entry</span><span>Drawn in</span><span>Source</span></div>
+              <sc-for list="{{ moves }}" as="m"><div class="set-tbl-r set-moves"><span>{{ m.e }}</span><span>{{ m.to }}</span><span class="set-src">{{ m.s }}</span></div></sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="set-cols2 sec">
+          <div>
+            <h2 class="t2">Companies and plants</h2>
+            <p class="lede">All fictional, from D2 and #222; zones other than Europe/Stockholm and every day start are invented.</p>
+            <div class="set-tbl">
+              <div class="set-tbl-r set-pls h"><span>Plant</span><span>Company</span><span>Starts</span><span>Slug, zone, state</span></div>
+              <sc-for list="{{ plants }}" as="p"><div class="set-tbl-r set-pls"><span class="k">{{ p.n }}</span><span>{{ p.c }}</span><span class="mono">{{ p.d }}</span><span><span class="mono">{{ p.s }}</span>, {{ p.z }}, {{ p.st }}</span></div></sc-for>
+            </div>
+          </div>
+          <div>
+            <h2 class="t2">People</h2>
+            <p class="lede">Names from D2 and #222. Only Jonas Holm and Erik Lind appear in the navigation frames; the others are rows on the Users page.</p>
+            <div class="set-tbl">
+              <div class="set-tbl-r set-ppl h"><span>Name</span><span>Username</span><span>Role and place</span></div>
+              <sc-for list="{{ people }}" as="p"><div class="set-tbl-r set-ppl"><span class="k">{{ p.n }}</span><span class="mono">{{ p.u }}</span><span>{{ p.r }}</span></div></sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <ul class="set-pts">
+            <sc-for list="{{ assume }}" as="a"><li>{{ a }}</li></sc-for>
+          </ul>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">From the spec for this round, plus question 20 from drawing it. Round marks a question that the choice of option answers; the rest stay open for Krister, the product owner or the task that builds the field.</p>
+          <div class="set-qgrid">
+            <sc-for list="{{ qs }}" as="q"><div class="set-qrow"><span class="tag {{ q.cls }}">{{ q.n }}</span><span>{{ q.t }}<sc-if value="{{ q.round }}"> <span class="set-src">{{ q.rnote }}</span></sc-if></span></div></sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const F = (k, v) => ({ k: k, v: v, plain: true, isRoutes: false, routes: [] });
+          const W = (t, s, x) => ({ t: t, s: s, x: x || "" });
+          const X = (k, f, a, b, c) => ({ k: k, f: f, a: a, b: b, c: c });
+          const MV = (e, to, s) => ({ e: e, to: to, s: s });
+          // Questions the choice of option answers, with the note shown after each
+          const ROUND = { 14: "Round answers the first half", 18: "Round" };
+          const Q = [
+            "The issue and the decision say Organization, while the glossary lists organization outside the auth module among the words to avoid for company. Is the group label the company's name, Company, or Organization with a glossary change? Drawn: the company's name.",
+            "A company segment in the URL holds the company's uuidv7, because companies have no slug. Keep the id, add a company slug, or keep the company out of the URL and pick it in the page?",
+            "Does admin stay a reserved plant slug once /admin goes, and does /admin redirect to /settings? It never shipped.",
+            "Where does /settings land, and where does / send a company admin of a company in onboarding, or a user with no open plant and an admin page, whom ADR 0066 sends to /admin?",
+            "Does Settings appear in the document title of settings pages, so a plant's Machines page in Settings and a planner page never share a pattern?",
+            "Tools and Warehouses: stay in the main sidebar as daily master data, or move to Settings? Drawn: they stay.",
+            "Is the ERP connection an Integrations card on a core page, a module settings entry of the Pyramid connector, or both? Drawn: both entries.",
+            "System health shows installation-wide facts and plant gaps. Under each plant as the issue says, once at company scope, or in a group of its own? Drawn: under each plant.",
+            "Import inbox and AI usage: main sidebar or Settings? Drawn: Import inbox stays in the main sidebar, AI usage moves into the AI assistant settings.",
+            "Does the company scope keep an Overview page like /admin/core, or do the scope groups replace it?",
+            "Does a planner see the Settings entry with Profile only, or keep Profile in the user menu and see no Settings entry? Does Presentation settings stay in the user menu once Formats live in Settings?",
+            "Which lucide icon marks Settings everywhere, and which marks Formats? Drawn: Settings and SlidersHorizontal.",
+            "Users and Roles at company scope need plant-free fields beyond ADR 0066's release 1 list. Add those fields, or run company pages on a plant route? Where does a plant admin with no company permission manage the people at their plant?",
+            "On plant scope settings pages, does the shell show the Assistant and the plant crumb? On company pages, does PresentationProvider use the company's Formats or DEFAULT_PRESENTATION?",
+            "Names: D2 drew Jonas Holm as company admin; the #304 spec proposes Karin Dahl as company admin and Jonas Holm as plant admin. Which pair do #304 and #313 share?",
+            "The approved #306 error pages page draws Page not found · Admin · NorthMES under /admin (NF3, NF4). Which issue carries that change once the settings routes are chosen?",
+            "Equipment groups exist at company and plant level. Does a plant's Equipment groups page show the company groups read only, and where does a company admin edit them?",
+            "Should a module settings entry carry its company and plant views on one page with a scope field, or appear once per scope in the nav?",
+            "core.audit:read grants the audit list at the scope where it is held. Does Audit log appear only at company scope, or also under each plant for a plant admin who holds it there?",
+            "Does the settings layout come from a new Shell prop or from a separate frame part next to Shell.dc.html? This page drew it in a part of its own."
+          ];
+          return {
+            facts: [
+              F("Issue", "#313, web: Design the settings area with a secondary sidebar (plan E04-S02-T03)"),
+              F("Story", "E04-S02 (#40). Waiting UI tasks: the admin pages of E05-S15; roles and users of E05-S06 (#54) and E05-S08 (#56), designed in #304; settings pages of E06-S08 (#70) and E06-S13 (#75); the registers that move into Settings, E06-S04 (#66), E06-S05 (#67), E06-S09 (#71) and E06-S10 (#72)"),
+              F("Area", "shell, which maps to apps/web. Shell.dc.html has no prop for a replaced or a second sidebar, so the frames draw the D2 shell classes in this page's frame part; page bodies use the classes of the canonical list page #222, linked read only"),
+              { k: "Routes", v: "All proposed", plain: false, isRoutes: true, routes: [
+                { o: "A", a: "/settings/company/$companyId/core/users", b: "/settings/plant/plant-a/core/machines" },
+                { o: "B", a: "/settings/$companyId/core/users", b: "/plant-a/settings/core/machines" },
+                { o: "C", a: "/settings/$companyId/core/users", b: "/plant-a/core/machines" }
+              ] },
+              F("Personas", "Plant admin, the README persona. Jonas Holm holds core's Company admin role at Acme AB and at Nordic Tools AB (frames 1, 2 and 4 to 6). Erik Lind holds Plant admin at Plant A only (frame 3). The planner Alex Lund reaches only his profile and is not drawn (question 11)"),
+              F("In this round", "Per option: Users and Machines at 1440 in light; the plant admin of Plant A and the way in on Plant A's board in dark; the 320 reflow, with a second 320 frame for B and C; the notes under each option; the comparison R")
+            ],
+            rules: [
+              W("One Settings area holds the administration, grouped by scope; articles, routings, customers and production orders stay in the main sidebar.", "K1008, I313", "C breaks this"),
+              W("The shell never picks a default plant: Back returns to the plant the user came from, or to Your plants at /.", "ADR 0007, ADR 0066"),
+              W("Every request carries one plant, in /$plant and x-northmes-plant; a company page runs without a plant and needs plant-free fields.", "ADR 0007, ADR 0066", "A breaks this: R1"),
+              W("A scope shows only when the user holds a permission of an entry there, and only the permitted entries show; the server decides every read and command.", "I313, plan 06, ADR 0068"),
+              W("Nothing reaches above a company: companies come from the CLI, installation settings have no page.", "ADR 0066, plan 04"),
+              W("Each navigation region is a nav landmark with its own name, Main or Settings; the current entry carries aria-current; icons are decorative.", "WCAG 1.3.1, 2.4.1, 4.1.2; D2"),
+              W("The skip link is the first stop and lands after every navigation region.", "WCAG 2.4.1; spec 4.5", "C breaks this"),
+              W("The settings navigation keeps one order on every settings page: core, modules in manifest order, plugins.", "WCAG 3.2.3; plan 06"),
+              W("The Settings entry has one name and one icon wherever it appears, and its visible text starts its name.", "WCAG 3.2.4, 2.5.3"),
+              W("Help keeps its place in the top bar; the release 1 top bar has no bell.", "WCAG 3.2.6; D2 PL26"),
+              W("Pages follow the canonical page, option A: list, detail and form are routes, and the table keeps the width of main.", "#222", "C breaks this"),
+              W("Titles read specific part, scope, NorthMES; one h1 per route; focus moves to the h1 on a path change.", "ADR 0021, D2"),
+              W("A plant in onboarding shows only to a holder of core.onboarding:manage, with Onboarding in its name.", "ADR 0066, ADR 0067, WCAG 1.4.1"),
+              W("At 320 only data tables scroll in two directions; a navigation sheet is modal and holds focus.", "Plan 06 Reflow; WCAG 1.4.10, 2.1.2"),
+              W("Targets are at least 24 by 24 px; every color is a D1 token.", "WCAG 2.5.8; D1")
+            ],
+            axes: [
+              X("Way in", "Spec 7.1", "Settings link at the sidebar foot, where D2 drew Administration", "Settings in the user menu, in place of Admin and Presentation settings", "Settings icon button in the top bar, before Help"),
+              X("Layout", "Spec 7.2", "The settings sidebar replaces the main sidebar, 256 px", "The main sidebar collapses to the 64 px rail; a 240 px settings navigation sits beside it", "The main sidebar stays; a 220 px settings navigation sits in main beside the page"),
+              X("Scope", "Spec 7.3", "One grouped list: a collapsible group per company and per plant, then Modules and Plugins", "A scope picker heads the settings navigation; the chosen scope's entries below", "Separate company settings and plant settings, each with a short list"),
+              X("Routes", "Spec 7.4", "R1: one /settings tree with a scope segment", "R2: /settings/$companyId and /$plant/settings", "R3: /settings/$companyId; plant pages keep module paths"),
+              X("320", "Spec 7.5", "N1: the settings navigation in the navigation sheet", "N3: a second sheet, Settings menu", "N2: drill-in, the landing lists the entries"),
+              X("Back to work", "Spec 4.1.4, 7.1", "Back to Plant A at the head of the settings sidebar", "The rail: its switcher mark and module icons", "The main sidebar on plant pages; Back to Plant A on company pages"),
+              X("Module settings", "Spec 3.4, 7.6.2", "One Modules group; the page picks company or plant", "Under each scope, at the levels each module supports", "In both areas: company values and plant overrides"),
+              X("Assistant on plant pages", "Question 14", "No: the R1 tree has no plant route", "Yes, as on any plant page", "Yes, as on any plant page")
+            ],
+            how: [
+              "Read the frames per task. Jonas Holm opens Users at Acme AB: A1, B1, C1. He opens Machines at Plant A: A2, B2 with the scope picker open, C2.",
+              "Frames A3, B3 and C3, in dark, show Erik Lind, who administers Plant A only: no company scope, Plant A's entries and the module and plugin settings he holds there.",
+              "Frames A4, B4 and C4, in dark, show the way in from Plant A's board: the Settings link at the sidebar foot (A4), the user menu (B4) and the top bar button (C4), each with focus on the entry. They also show the main sidebar after the move.",
+              "The 320 frames show the settings navigation at 320: in the navigation sheet (A5), in a second sheet (B5) and as the landing page (C5). B6 shows the Settings menu button that opens B's second sheet, beside Open navigation; C6 shows a settings page reached from the landing, with the link back to it above the h1.",
+              "Under each option, its notes list what it optimizes, what it costs and how it meets the rules. The comparison R sets the options against the criteria of the spec and ends with the recommendation."
+            ],
+            moves: [
+              MV("Articles, Routings, Customers (Master data); Production orders", "Main sidebar", "K1008"),
+              MV("Machines, Equipment groups, Calendars (Master data)", "Settings, each plant", "I313"),
+              MV("Tools, Warehouses (Master data)", "Main sidebar", "Question 6"),
+              MV("Users, Roles, Integrations (Administration)", "Settings, company", "I313"),
+              MV("Stations, System health (Administration)", "Settings, each plant", "I313; question 8"),
+              MV("Settings, core's presentation page (Administration)", "Formats at the company; override in Plant", "I313, plan 04"),
+              MV("Planning settings; Pyramid connector settings", "Settings, module settings", "I313; question 7"),
+              MV("Import inbox (Pyramid connector)", "Main sidebar", "Question 9"),
+              MV("AI usage (AI); Audit log (Audit)", "AI assistant settings; Settings, company", "Question 9; I313"),
+              MV("Overview and Plants at /admin", "Plants at the company", "ADR 0066; question 10")
+            ],
+            plants: [
+              { n: "Plant A", c: "Acme AB", d: "06:00", s: "plant-a", z: "Europe/Stockholm", st: "open" },
+              { n: "Plant B", c: "Acme AB", d: "06:00", s: "plant-b", z: "Europe/Stockholm", st: "open" },
+              { n: "Plant D", c: "Acme AB", d: "06:00", s: "plant-d", z: "Europe/Stockholm", st: "in onboarding" },
+              { n: "Plant C", c: "Nordic Tools AB", d: "07:00", s: "plant-c", z: "Europe/Oslo", st: "open" }
+            ],
+            people: [
+              { n: "Jonas Holm", u: "jonas.holm", r: "Company admin at Acme AB and at Nordic Tools AB" },
+              { n: "Erik Lind", u: "erik.lind", r: "Plant admin at Plant A" },
+              { n: "Alex Lund", u: "alex.lund", r: "Planner at Plant A" },
+              { n: "Anna Berg", u: "anna.berg", r: "Operator at Plant A" }
+            ],
+            assume: [
+              "Labels of groups, entries and pages, their icons, the titles, crumbs and copy are proposals (spec section 9, question 12). The company's name labels its group, not Organization (question 1).",
+              "Erik Lind holds Plant admin at Plant A in this round, so that frame 3 shows a plant admin of Plant A; spec 8.1 placed him at Plant B. His role is assumed to hold the planning settings and the Acme tooling setting at Plant A.",
+              "The Users columns (Name, Username, Roles, Status) wait for #304. The machines, calendars, dates and counts are invented; Press 4 and Mill 1 are D2 names.",
+              "Tools and Warehouses stay in the main sidebar (question 6); Import inbox stays and AI usage moves into the AI assistant settings (question 9).",
+              "Frames A4, B4 and C4 show Plant A's board as a placeholder; the board is the page of #221. They draw the main sidebar with Master data and Board open, so every entry left after the move shows.",
+              "Option B at company scope draws the rail with the switcher mark and the avatar only: R2's company pages have no plant, so the shell has no module set to draw. Option C's company area draws no sidebar, as D2 draws the pages without a plant (ST38, K15).",
+              "The options draw no Assistant on company pages, as D2 drew none on /admin; option A draws none on plant pages either, because R1 has no plant route (question 14).",
+              "The plugin's settings entry, Acme tooling, sits in a Plugins group of its own after Modules in every option, as plugins have their own section in the main sidebar (plan 06, ADR 0062).",
+              "ADR 0021's route title test follows Integrations from the board as a plant page; with Integrations at company scope, that test needs another page or the title Integrations · Acme AB · NorthMES."
+            ],
+            qs: Q.map((t, i) => ({ n: String(i + 1), t: t, round: !!ROUND[i + 1], rnote: ROUND[i + 1] || "", cls: ROUND[i + 1] ? "fix" : "q" }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

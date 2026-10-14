@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 station home frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+        <style>
+          /* Station home frames of the D4 spec page (issue northMES/northmes#303, story E11-S01): option A, the job list
+             beside the selected job, with option B's docked keypad. JO1 to JO25 and JO27 to JO31 mount the folder's
+             StationFrame copy and the shared parts (job list, job, report, last reports, machine switch); the grid, the job
+             column, the report card and last reports skeletons and the "No job selected" card are page markup. JO26 holds
+             the build notes, not part of the UI.
+             Classes start with jo-; every UI color is a D1 token; the chips use the D1 canvas label styles. */
+          body{margin:0}
+          a{color:var(--link)}
+          a:hover{color:var(--foreground)}
+          .jo-part{position:relative}
+          .jo-fr{position:absolute}
+          .jo-chip{position:absolute;left:0;bottom:calc(100% + 12px);max-width:100%;box-sizing:border-box;margin:0;cursor:default}
+          .jo-chip .fth{min-width:0}
+          .jo-ct,.jo-chip .ftitle{white-space:nowrap}
+          .jo-colw{position:relative}
+          .jo-colw > .ps-col{flex:1 1 auto}
+          .ps-sb.jo-sb{right:-15px;display:none}
+          .ps-a > .jo-none{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+          .ps-a.s1920 > .jo-none{grid-column:2 / -1}
+          .jo-none p{margin:0;max-width:44ch}
+          .jo-sk-g{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+          .jo-sk.cmp .jo-sk-g{grid-template-columns:minmax(0,1fr) 280px;gap:20px}
+          .jo-sk.por .jo-sk-g{grid-template-columns:minmax(0,1fr) 280px;gap:20px}
+          .jo-sk-l{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;align-content:start}
+          .jo-sk-f{display:grid;gap:8px}
+          .jo-sk .sk{display:block}
+          .jo-sk-lb{width:160px;height:16px}
+          .jo-sk-in{height:56px}
+          .jo-sk-wide{grid-column:1 / -1}
+          .jo-sk-rads{grid-column:1 / -1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+          .jo-sk.por .jo-sk-rads{grid-template-columns:minmax(0,1fr)}
+          .jo-sk-rad{height:48px}
+          .jo-sk-send{width:200px;height:48px}
+          .jo-sk-k{display:grid;gap:12px}
+          .jo-sk-tog{width:150px;height:48px}
+          .jo-sk-keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+          .jo-sk-keys .sk{height:72px}
+          .jo-sk.cmp .jo-sk-keys .sk,.jo-sk.por .jo-sk-keys .sk{height:64px}
+          .jo-note{box-sizing:border-box;height:100%;overflow:hidden}
+          .jo-note .lede{max-width:none}
+          .jo-nh{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+          .jo-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 56px;margin-top:28px}
+          .jo-h{margin:0 0 8px;font-size:15px;line-height:20px;font-weight:600}
+          .jo-ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px}
+          .jo-note code{font:400 13px/18px var(--font-mono);white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="jo-part" style="{{ rootStyle }}" data-jou="{{ uid }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="jo-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel jo-chip"><span class="fid">{{ f.id }}</span><span class="jo-ct">{{ f.title }}</span><span class="fth">{{ f.detail }}</span><sc-if value="{{ f.hasDoc }}"><span class="ftitle">Press 4 · Plant A · NorthMES</span></sc-if></div>
+            <dc-import name="StationFrame" dc-props="{{ f.frame }}" hint-size="{{ f.hint }}">
+              <div class="ps-a {{ f.grid }}">
+                <dc-import name="production-start-303-station-joblist" dc-props="{{ f.list }}"></dc-import>
+                <sc-if value="{{ f.hasCol }}">
+                  <div class="jo-colw">
+                    <div class="ps-col {{ f.colCls }}" data-jo-col="{{ f.key }}" data-jo-scroll="{{ f.scroll }}">
+                      <dc-import name="production-start-303-station-job" dc-props="{{ f.job }}"></dc-import>
+                      <sc-if value="{{ f.hasRep }}">
+                        <dc-import name="production-start-303-station-report" dc-props="{{ f.rep }}"></dc-import>
+                      </sc-if>
+                      <sc-if value="{{ f.repSk }}">
+                        <section class="ps-card jo-sk {{ f.skCls }}" aria-busy="true" aria-labelledby="{{ f.skId }}">
+                          <h3 class="ps-vh" id="{{ f.skId }}">Report</h3>
+                          <div class="jo-sk-g" aria-hidden="true">
+                            <div class="jo-sk-l">
+                              <div class="jo-sk-f"><span class="sk jo-sk-lb"></span><span class="sk jo-sk-in"></span></div>
+                              <div class="jo-sk-f"><span class="sk jo-sk-lb"></span><span class="sk jo-sk-in"></span></div>
+                              <span class="sk jo-sk-lb jo-sk-wide"></span>
+                              <div class="jo-sk-rads">
+                                <span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span>
+                                <span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span><span class="sk jo-sk-rad"></span>
+                              </div>
+                              <span class="sk jo-sk-send"></span>
+                            </div>
+                            <div class="jo-sk-k">
+                              <span class="sk jo-sk-lb"></span>
+                              <span class="sk jo-sk-tog"></span>
+                              <div class="jo-sk-keys">
+                                <span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span>
+                                <span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span><span class="sk"></span>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+                      </sc-if>
+                      <sc-if value="{{ f.colReps }}">
+                        <dc-import name="production-start-303-station-reports" dc-props="{{ f.reps }}"></dc-import>
+                      </sc-if>
+                      <sc-if value="{{ f.colRepsSk }}">
+                        <section class="ps-card ps-lr jo-lrsk {{ f.lrCls }}" aria-busy="true" aria-labelledby="{{ f.lrId }}">
+                          <div class="ps-cardh"><h3 class="ps-h3" id="{{ f.lrId }}">Last reports</h3></div>
+                          <span class="ps-vh">Loading reports</span>
+                          <div class="ps-tbl" aria-hidden="true">
+                            <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:70%"></span><span></span></div>
+                            <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:70%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:60%"></span><span></span></div>
+                            <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:50%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:66%"></span><span></span></div>
+                            <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:66%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:50%"></span><span></span></div>
+                            <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:56%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:56%"></span><span></span></div>
+                          </div>
+                        </section>
+                      </sc-if>
+                    </div>
+                    <span class="ps-sb jo-sb" aria-hidden="true"></span>
+                  </div>
+                  <sc-if value="{{ f.sideReps }}">
+                    <dc-import name="production-start-303-station-reports" dc-props="{{ f.reps }}"></dc-import>
+                  </sc-if>
+                  <sc-if value="{{ f.sideRepsSk }}">
+                    <section class="ps-card ps-lr jo-lrsk {{ f.lrCls }}" aria-busy="true" aria-labelledby="{{ f.lrId }}">
+                      <div class="ps-cardh"><h3 class="ps-h3" id="{{ f.lrId }}">Last reports</h3></div>
+                      <span class="ps-vh">Loading reports</span>
+                      <div class="ps-tbl" aria-hidden="true">
+                        <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:70%"></span><span></span></div>
+                        <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:70%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:60%"></span><span></span></div>
+                        <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:50%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:66%"></span><span></span></div>
+                        <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:66%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:50%"></span><span></span></div>
+                        <div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="width:56%"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:56%"></span><span></span></div>
+                      </div>
+                    </section>
+                  </sc-if>
+                </sc-if>
+                <sc-if value="{{ f.none }}">
+                  <section class="ps-card jo-none" aria-labelledby="{{ f.noneId }}">
+                    <h2 class="ps-h2" id="{{ f.noneId }}">No job selected</h2>
+                    <p class="ps-mut">{{ f.noneText }}</p>
+                  </section>
+                </sc-if>
+              </div>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-for list="{{ mfs }}" as="m">
+          <div class="jo-fr" style="{{ m.style }}" data-screen-label="{{ m.label }}">
+            <div class="flabel jo-chip"><span class="fid">{{ m.id }}</span><span class="jo-ct">{{ m.title }}</span><span class="fth">{{ m.detail }}</span></div>
+            <dc-import name="StationFrame" dc-props="{{ m.frame }}" hint-size="{{ m.hint }}">
+              <div data-slot="header"><dc-import name="production-start-303-station-header" dc-props="{{ m.mach }}"></dc-import></div>
+              <div class="ps-a s1280">
+                <dc-import name="production-start-303-station-joblist" dc-props="{{ m.list }}"></dc-import>
+                <sc-if value="{{ m.none }}">
+                  <section class="ps-card jo-none" aria-labelledby="{{ m.noneId }}">
+                    <h2 class="ps-h2" id="{{ m.noneId }}">No job selected</h2>
+                    <p class="ps-mut">{{ m.noneText }}</p>
+                  </section>
+                </sc-if>
+                <sc-if value="{{ m.hasCol }}">
+                  <div class="jo-colw">
+                    <div class="ps-col scroll" data-jo-col="{{ m.key }}" data-jo-scroll="none">
+                      <dc-import name="production-start-303-station-job" dc-props="{{ m.job }}"></dc-import>
+                      <dc-import name="production-start-303-station-report" dc-props="{{ m.rep }}"></dc-import>
+                      <dc-import name="production-start-303-station-reports" dc-props="{{ m.reps }}"></dc-import>
+                    </div>
+                    <span class="ps-sb jo-sb" aria-hidden="true"></span>
+                  </div>
+                </sc-if>
+              </div>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-if value="{{ notes.show }}">
+          <div class="jo-fr" style="{{ notes.style }}" data-screen-label="{{ notes.label }}">
+            <div class="flabel jo-chip"><span class="fid">JO26</span><span class="jo-ct">Build notes for the station home</span><span class="fth">Not part of the UI. What JO1 to JO25 and JO27 to JO31 fix for the build</span></div>
+            <article class="sheet jo-note">
+              <div class="jo-nh"><p class="kick" style="margin:0">Build notes, D4 operator station, row of the station home</p><span class="ps-notui">Not part of the UI</span></div>
+              <h2 class="t2" style="margin-top:8px">Station home: build notes for JO1 to JO25 and JO27 to JO31</h2>
+              <p class="lede">The implementer takes the layout, the region order, the states and transitions, the copy in quotes verbatim, the keyboard model and the slot placements; never the markup, class names, token values, canvas icons or demo numbers. Every person, job, article and machine on these frames is fictional.</p>
+              <div class="jo-cols">
+                <section>
+                  <h3 class="jo-h">Layout and frame</h3>
+                  <ul class="jo-ul">
+                    <li>The D2 station frame through the byte-equal copy <code>production-start/StationFrame.dc.html</code>, with the props <code>size</code>, <code>theme</code>, <code>connection</code> and <code>station</code>. The frame owns the top bar, the h1 "Press 4, Anna Berg", the connection chip, the Disconnected strip and the idle warning; the station screen adds no second top bar.</li>
+                    <li>Route <code>/station/$stationId</code>, document title "Press 4 · Plant A · NorthMES".</li>
+                    <li>1920 by 1080: the job list 420 px, the job column, the last reports 600 px, gaps of 20 px. 1280 by 800: the job list 320 px and the job column, which scrolls, with the last reports under the report card. Portrait 800 by 1280: the Change job bar over the job column, which scrolls. These widths are proposals (rules 19.1 to 19.3).</li>
+                    <li>At a station with several machines the machine switch sits in the frame's header slot beside the h1 (JO22, JO30, JO31). Release 1 draws nothing for the later slot <code>production-start/station/panels/v1</code>.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Components by their shadcn names, and tokens</h3>
+                  <ul class="jo-ul">
+                    <li>Card: the list column, the job header, the report card, the last reports and "No job selected".</li>
+                    <li>Button: each job row is one button at least 96 px high; Start, Pause and Finish are large outline buttons (48 px) in fixed slots; Send is the default button, at least 200 px wide; Try again and "Show jobs on Press 3" are large outline buttons.</li>
+                    <li>Badge: StatusBadge with icon and word (planned Info, active Play, paused Pause, finished CircleCheck); the flags "Start overdue" and "Planned on Press 3"; "Unsent entries" with Upload.</li>
+                    <li>Scroll Area for the job list and for the job column at 1280 and in portrait; Skeleton while loading; Alert for the job list error and the stale list; Sheet for Change job in portrait (JO27, JO28); Table for the last reports; Toggle Group for the machine switch.</li>
+                    <li>D1 tokens only: the status pairs, <code>--destructive</code> and <code>--destructive-subtle</code> for errors, <code>--warning</code> and <code>--warning-subtle</code> for the stale list, <code>--accent</code> for the selected row and the skeletons, <code>--border</code>, <code>--card</code> and <code>--muted-foreground</code>. Targets follow <code>--nm-target-min-station</code> (44 px); 48 px buttons and 96 px rows are proposals (question 21.9).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Job list</h3>
+                  <ul class="jo-ul">
+                    <li>The job orders on the station's equipment sorted by planned start, plus every job order with an open run on that equipment whatever its planned machine: 5006.10 shows "Planned on Press 3". Priority shows as "Priority 2" and is not a sort key (question 21.16). Jobs finished today follow under "Finished today" (question 21.2).</li>
+                    <li>The list is fetched at sign-in, read cache-first and kept live by the station subscription. Remaining is quantity minus good minus scrap, printed with <code>formatQuantity</code> in the stock unit ("548 of 1 200 pcs left"); times are plant time.</li>
+                    <li>The selected row has <code>aria-current="true"</code>, a 2 px foreground border, the accent fill and a ChevronRight. Choosing a row moves focus to the job heading, an h2 with <code>tabindex="-1"</code> (JO6, JO29).</li>
+                    <li>Portrait: Change job (<code>aria-haspopup="dialog"</code>, <code>aria-expanded</code>) opens the Sheet "Jobs on Press 4" from the right edge, 560 px wide, modal, with Close. Opening moves focus to the selected row (JO27, JO28); choosing a row closes the Sheet and moves focus to the job heading (JO29); Escape and Close return focus to Change job.</li>
+                    <li>Machine switch: one 48 px outline button per machine in the group "Machine", the shown machine with <code>aria-pressed="true"</code>. After a switch the list, the job and the last reports follow the machine and focus moves to the list heading "Jobs on Press 3" (JO30, JO31).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Start, Pause, Finish and Sending</h3>
+                  <ul class="jo-ul">
+                    <li>Start moves planned or paused to active, Pause moves active to paused, Finish moves active or paused to finished; each is idempotent by target state. Each command keeps its own slot, and a command the status does not allow leaves its slot empty, so the second tap of a gloved double press lands on nothing (JO6 to JO8).</li>
+                    <li>Every station mutation runs with <code>AbortSignal.timeout(15000)</code> and no optimistic response: the StatusBadge, the figures and the list row keep their values until the server answers (JO9 to JO13).</li>
+                    <li>While it waits, the pressed button reads "Sending" with LoaderCircle, has <code>aria-disabled="true"</code> and <code>aria-busy="true"</code> and keeps focus, and a visually hidden <code>role=status</code> says "Sending". Send does the same for a report. The client idle timer does not fire while a command is in flight.</li>
+                    <li>Send is <code>aria-disabled="true"</code> while Start, Pause, Finish or Send waits (ADR 0033, plan 09 section 7): it keeps its label and its place, stays focusable and shows the D1 disabled look (JO9 to JO11).</li>
+                    <li>When the answer removes the pressed button from its slot, focus moves to the job heading and the polite region says "5001.20 paused" ("started", "finished").</li>
+                    <li>After 15 s without an answer the error sits under the commands or under Send, the pressed button names it with <code>aria-describedby</code>, focus stays on that button and <code>announce()</code> says it once in the polite region (JO14 to JO17): "No answer from NorthMES within 15 seconds. Press Pause again; a job that already paused stays paused." and "No answer from NorthMES within 15 seconds. Your entries are kept. Press Send again; the report is counted once." The entries and the <code>client_report_id</code> stay, so the report counts once.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Page states</h3>
+                  <ul class="jo-ul">
+                    <li>Loading: four skeleton rows in the list and skeletons of the job header, the report card and the last reports. Each region carries <code>aria-busy="true"</code>, because the frame has no busy prop for main (question 21.32).</li>
+                    <li>Empty: "No jobs on Press 4" with "Jobs planned on Press 4 show here by planned start."; at a station with several machines also "Show jobs on Press 3". The operator cannot create a job, so the state has no create action.</li>
+                    <li>Error with nothing cached: "Jobs could not be loaded." with "Error id 7f3a91c2." and Try again. List not refreshed: "The job list could not be refreshed. It shows the jobs as of 13:40. Error id 7f3a91c2." over the cached rows with Try again; the selected job and the report form keep working (JO25).</li>
+                    <li>With no job to show, the job area holds the h2 "No job selected" and one line: "Choose a job in the list when one is planned on Press 4." (empty) or "Choose a job in the list once it has loaded." (error).</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Keyboard, focus and announcements</h3>
+                  <ul class="jo-ul">
+                    <li>Tab order: Skip to main content, Switch operator, Sign out, More, the machine buttons when shown, the job rows in list order (Change job in portrait), the commands, the report fields, the keypad toggle, the scrap reasons as one stop, Send, the Correct buttons. Keypad keys stay out of the tab order.</li>
+                    <li>Focus after choosing a job and after a command that removes the pressed button: the job heading. After Try again succeeds the button is gone, so focus moves to the list heading "Jobs on Press 4". After a machine switch: the list heading "Jobs on Press 3".</li>
+                    <li>When a message pushes the focused control out of the job column's view, the column scrolls it back into view (JO17).</li>
+                    <li>Polite region: "Sending", each inline error once, "5001.20 paused". A lost connection speaks only through the frame's Disconnected strip.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">WCAG 2.2 criteria</h3>
+                  <ul class="jo-ul">
+                    <li>1.3.1 headings, the list of row buttons and the table; 1.4.1 StatusBadge with icon and word; 1.4.3 and 1.4.11 D1 token pairs; 2.1.1 every control by keyboard.</li>
+                    <li>2.4.3 focus order and focus after each action; 2.4.6 headings name the list, the job and the report; 2.4.7 the D1 focus ring; 2.4.11 the docked keypad never covers the focused field and the column scrolls the focused control into view.</li>
+                    <li>2.5.8 targets of at least 44 px; 3.3.1 errors in text; 4.1.2 <code>aria-current</code>, <code>aria-disabled</code>, <code>aria-busy</code> and <code>aria-describedby</code>; 4.1.3 "Sending" and the errors as status messages.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Frames in detail</h3>
+                  <ul class="jo-ul">
+                    <li>JO1: Jobs on Press 4 by planned start with priority; 5006.10 is listed for its open run, though it is planned on Press 3; 5001.20 started 12:02 by Anna Berg, last report 13:58.</li>
+                    <li>JO3: the list takes 320 px, Send stays above the fold and the last reports are one scroll down. JO5: the Change job bar carries "Unsent entries on 5002.10" over the job column.</li>
+                    <li>JO7: 5002.10 started Mon 2 Nov 20:15 by Omar Haddad, last report 11:35; the Pause slot is empty.</li>
+                    <li>JO9 to JO11: the pressed command keeps focus; the job stays Active (5003.30 stays Planned) until the server answers, within 15 s. JO14: Pause names the error under the commands and keeps focus; the job stays Active and Send moves one scroll down.</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="jo-h">Proposed here, needs Krister's yes</h3>
+                  <ul class="jo-ul">
+                    <li>"No job selected" and its two lines, spanning the job and last reports columns at 1920 (JO20 to JO24).</li>
+                    <li>The job column's Scroll Area thumb at 1280 and in portrait, drawn outside the cards at the screen edge.</li>
+                    <li>Focus to the list heading after a successful Try again.</li>
+                    <li>The report card and last reports skeletons while the list loads, naming no job (JO18, JO19).</li>
+                  </ul>
+                  <h3 class="jo-h" style="margin-top:20px">Open questions for this row</h3>
+                  <ul class="jo-ul">
+                    <li>21.4: are the other commands also <code>aria-disabled</code> while one waits? The frames disable the pressed command and Send only.</li>
+                    <li>21.19: "Start" or "Resume" on a paused job? The frames say Start.</li>
+                    <li>21.20: does Finish ask for confirmation? None is drawn.</li>
+                    <li>21.22: reports on planned and finished jobs. The frames show the form on every job.</li>
+                    <li>21.32: does D2 owe a busy prop, so that main carries <code>aria-busy</code>?</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","JO1","JO2","JO3","JO4","JO5","JO6","JO7","JO8","JO9","JO10","JO11","JO12","JO13","JO14","JO15","JO16","JO17","JO18","JO19","JO20","JO21","JO22","JO23","JO24","JO25","JO26","JO27","JO28","JO29","JO30","JO31"],"default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler the frame and the parts install (one per document, guarded by the same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The job column scrolls at 1280 and in portrait (rule 19.23). Once the parts have drawn, each column that
+          // overflows gets its Scroll Area thumb, and a column marked data-jo-scroll="msg" scrolls the message under Send
+          // into view. Offsets come from offsetTop, so the canvas zoom does not change them.
+          this.__fit = () => {
+            const root = document.querySelector('[data-jou="' + this.__uid + '"]');
+            if (!root) return;
+            root.querySelectorAll("[data-jo-col]").forEach((col) => {
+              const sb = col.parentElement ? col.parentElement.querySelector(".jo-sb") : null;
+              if (!sb) return;
+              const ch = col.clientHeight, sh = col.scrollHeight;
+              if (!col.classList.contains("scroll") || sh <= ch + 1) { sb.style.display = "none"; return; }
+              if (col.getAttribute("data-jo-scroll") === "msg") {
+                const list = col.querySelectorAll(".ps-msg:not(.ps-cmdmsg)");
+                const m = list[list.length - 1];
+                if (m) {
+                  let y = 0, e = m;
+                  while (e && e !== col) { y += e.offsetTop; e = e.offsetParent; }
+                  if (e === col) {
+                    const want = Math.max(0, Math.min(sh - ch, Math.ceil(y + m.offsetHeight + 20 - ch)));
+                    if (Math.abs(col.scrollTop - want) > 1) col.scrollTop = want;
+                  }
+                }
+              }
+              const th = Math.max(48, Math.round((ch * ch) / sh));
+              const top = Math.round(((ch - th) * col.scrollTop) / (sh - ch));
+              sb.style.display = "block";
+              sb.style.top = top + "px";
+              sb.style.height = th + "px";
+            });
+          };
+          [300, 1000, 2000, 3500, 5000, 7000, 10000, 14000, 20000].forEach((t) => setTimeout(() => this.__fit && this.__fit(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__fit && this.__fit());
+        }
+        componentDidUpdate() {
+          if (this.__fit) setTimeout(() => this.__fit && this.__fit(), 600);
+        }
+        componentWillUnmount() {
+          this.__fit = null;
+        }
+        renderVals() {
+          const P = this.props || {};
+          this.__uid = this.__uid || "jo" + Math.random().toString(36).slice(2, 9);
+          // Screen sizes as the frame takes them; the grid class, the job column and where the last reports sit.
+          const SZ = {
+            "1920x1080": { w: 1920, h: 1080, words: "1920 by 1080", grid: "s1920", col: "", side: true, sk: "" },
+            "1280x800": { w: 1280, h: 800, words: "1280 by 800", grid: "s1280", col: "scroll", side: false, sk: "cmp" },
+            "800x1280": { w: 800, h: 1280, words: "800 by 1280", grid: "s800", col: "scroll", side: false, sk: "por" },
+          };
+          const EMPTY = "Choose a job in the list when one is planned on Press 4.";
+          const FAILED = "Choose a job in the list once it has loaded.";
+          const blank = { good: "", scrap: "", reason: "none", focus: "none" };
+          // kind: "job" (a selected job), "loading" (skeletons) or "none" (no job to show).
+          const ALL = [
+            { id: "JO1", title: "Station home", theme: "light", size: "1920x1080", doc: true, sel: "5001.20",
+              detail: "Light, 1920 by 1080, touch station. 5001.20 selected, Pause and Finish, the last reports beside the job" },
+            { id: "JO2", title: "Station home", theme: "dark", size: "1920x1080", sel: "5001.20",
+              detail: "Dark, 1920 by 1080, as JO1" },
+            { id: "JO3", title: "Station home", theme: "light", size: "1280x800", doc: true, sel: "5001.20",
+              detail: "Light, 1280 by 800. Compact job header, Send above the fold" },
+            { id: "JO4", title: "Station home", theme: "dark", size: "1280x800", sel: "5001.20",
+              detail: "Dark, 1280 by 800, as JO3" },
+            { id: "JO5", title: "Station home", theme: "light", size: "800x1280", doc: true, sel: "5001.20",
+              detail: "Light, 800 by 1280. The Change job bar" },
+            { id: "JO6", title: "Planned job, Start", theme: "light", size: "1280x800", sel: "5005.20", job: { focus: "heading" }, rep: blank,
+              detail: "Light, 1280 by 800. 5005.20 chosen, focus on its heading; Start only, the Pause and Finish slots stay empty; Start overdue; no reports yet" },
+            { id: "JO7", title: "Paused job, Start and Finish", theme: "dark", size: "1280x800", sel: "5002.10", rep: { good: "80", scrap: "", reason: "none", focus: "none" },
+              detail: "Dark, 1280 by 800. 5002.10 paused: Start and Finish, 80 good kept unsent" },
+            { id: "JO8", title: "Finished job, no commands", theme: "light", size: "1920x1080", sel: "5007.10", rep: blank,
+              detail: "Light, 1920 by 1080. 5007.10 finished 10:15, listed under Finished today; all three command slots empty; reports and corrections are still accepted" },
+            { id: "JO9", title: "Pause sending", theme: "light", size: "1280x800", sel: "5001.20", job: { cmd: "pause", cmdstate: "sending" }, rep: { focus: "none", send: "blocked" },
+              detail: "Light, 1280 by 800. Pause reads Sending, Send is aria-disabled" },
+            { id: "JO10", title: "Pause sending", theme: "dark", size: "1920x1080", sel: "5001.20", job: { cmd: "pause", cmdstate: "sending" }, rep: { focus: "none", send: "blocked" },
+              detail: "Dark, 1920 by 1080, as JO9" },
+            { id: "JO11", title: "Start sending", theme: "light", size: "800x1280", sel: "5003.30", job: { cmd: "start", cmdstate: "sending" }, rep: Object.assign({ send: "blocked" }, blank),
+              detail: "Light, 800 by 1280. Start waits, Send is aria-disabled" },
+            { id: "JO12", title: "Send sending", theme: "light", size: "1920x1080", sel: "5001.20", rep: { state: "sending" },
+              detail: "Light, 1920 by 1080. Send with 96 good, 2 scrap, Burr reads Sending, aria-disabled and aria-busy, focus kept; Good and Remaining unchanged until the answer" },
+            { id: "JO13", title: "Send sending", theme: "dark", size: "1280x800", sel: "5001.20", rep: { state: "sending" },
+              detail: "Dark, 1280 by 800, as JO12" },
+            { id: "JO14", title: "Pause timed out", theme: "light", size: "1280x800", sel: "5001.20", job: { cmd: "pause", cmdstate: "timeout" }, rep: { focus: "none" },
+              detail: "Light, 1280 by 800. No answer within 15 s, the error under the commands" },
+            { id: "JO15", title: "Pause timed out", theme: "dark", size: "1920x1080", sel: "5001.20", job: { cmd: "pause", cmdstate: "timeout" }, rep: { focus: "none" },
+              detail: "Dark, 1920 by 1080, as JO14" },
+            { id: "JO16", title: "Send timed out", theme: "light", size: "1920x1080", sel: "5001.20", rep: { state: "timeout" },
+              detail: "Light, 1920 by 1080. No answer within 15 s: the error under Send, named by Send, entries kept, focus on Send" },
+            { id: "JO17", title: "Send timed out", theme: "dark", size: "1280x800", sel: "5001.20", rep: { state: "timeout" }, scroll: "msg",
+              detail: "Dark, 1280 by 800, as JO16; the job column scrolls the message into view" },
+            { id: "JO18", title: "Loading", theme: "light", size: "1920x1080", kind: "loading",
+              detail: "Light, 1920 by 1080. Skeletons of the list, the job header, the report card and the last reports, each region aria-busy; no job is known yet" },
+            { id: "JO19", title: "Loading", theme: "dark", size: "1280x800", kind: "loading",
+              detail: "Dark, 1280 by 800, as JO18" },
+            { id: "JO20", title: "Empty job list", theme: "light", size: "1280x800", kind: "none", list: { state: "empty", unsent: "none" }, noneText: EMPTY,
+              detail: "Light, 1280 by 800. No jobs on Press 4, the station's only machine: no other machine to offer, nothing to create" },
+            { id: "JO21", title: "Empty job list", theme: "dark", size: "1920x1080", kind: "none", list: { state: "empty", unsent: "none" }, noneText: EMPTY,
+              detail: "Dark, 1920 by 1080, as JO20" },
+            { id: "JO23", title: "Job list error", theme: "light", size: "1920x1080", kind: "none", list: { state: "error", unsent: "none" }, noneText: FAILED,
+              detail: "Light, 1920 by 1080. Nothing cached: the error with its id and Try again; no job selected" },
+            { id: "JO24", title: "Job list error", theme: "dark", size: "1280x800", kind: "none", list: { state: "error", unsent: "none" }, noneText: FAILED,
+              detail: "Dark, 1280 by 800, as JO23" },
+            { id: "JO25", title: "Job list not refreshed", theme: "light", size: "1280x800", sel: "5001.20", list: { state: "stale" },
+              detail: "Light, 1280 by 800. The warning over the cached rows as of 13:40 with Try again; the selected job and the report form keep working" },
+            { id: "JO27", title: "Change job Sheet", theme: "light", size: "800x1280", sel: "5001.20", list: { sheet: "open", focus: "5001.20" }, rep: { focus: "none" },
+              detail: "Light, 800 by 1280. Focus on the selected row" },
+            { id: "JO28", title: "Change job Sheet", theme: "dark", size: "800x1280", sel: "5001.20", list: { sheet: "open", focus: "5001.20" }, rep: { focus: "none" },
+              detail: "Dark, 800 by 1280, as JO27" },
+            { id: "JO29", title: "Job chosen in the Sheet", theme: "light", size: "800x1280", sel: "5005.20", job: { focus: "heading" }, rep: blank,
+              detail: "Light, 800 by 1280. 5005.20, focus on its heading" },
+          ];
+          // JO22, JO30 and JO31 have the machine switch in the frame's header slot, so they are drawn by their own block.
+          const MFS = [
+            { id: "JO22", title: "Empty job list, two machines", theme: "light", size: "1280x800", shown: "Press 4", none: true,
+              detail: "Light, 1280 by 800. Press cell 1 shows Press 4 with no jobs and offers Show jobs on Press 3" },
+            { id: "JO30", title: "Machine switched to Press 3", theme: "light", size: "1280x800", shown: "Press 3", sel: "5008.10",
+              detail: "Light, 1280 by 800. Focus on the list heading Jobs on Press 3" },
+            { id: "JO31", title: "Machine switched to Press 3", theme: "dark", size: "1280x800", shown: "Press 3", sel: "5008.10",
+              detail: "Dark, 1280 by 800, as JO30" },
+          ];
+          const NOTES = { id: "JO26", w: 1440, h: 1960 };
+          // Canvas lines, each frame at its real size; the chip sits in the gap above its frame.
+          const LINES = [
+            ["JO1", "JO2"],
+            ["JO3", "JO4", "JO5"],
+            ["JO6", "JO7", "JO8"],
+            ["JO9", "JO10", "JO11"],
+            ["JO12", "JO13"],
+            ["JO14", "JO15"],
+            ["JO16", "JO17"],
+            ["JO18", "JO19"],
+            ["JO20", "JO21", "JO22"],
+            ["JO23", "JO24", "JO25"],
+            ["JO27", "JO28", "JO29"],
+            ["JO30", "JO31"],
+            ["JO26"],
+          ];
+          const CHIP = 64, GAPX = 80, GAPY = 128;
+          const byId = {};
+          ALL.forEach((x) => { byId[x.id] = x; });
+          const mfBy = {};
+          MFS.forEach((x) => { mfBy[x.id] = x; });
+          const dims = (id) => (id === "JO26" ? { w: NOTES.w, h: NOTES.h } : mfBy[id] ? SZ[mfBy[id].size] : SZ[byId[id].size]);
+          const pick = String(P.frame || "all").trim();
+          const one = LINES.some((l) => l.indexOf(pick) >= 0);
+          const lines = one ? [[pick]] : LINES;
+          const pos = {};
+          let top = CHIP, width = 0;
+          lines.forEach((line) => {
+            let left = 0, lineH = 0;
+            line.forEach((id) => {
+              const d = dims(id);
+              pos[id] = "left:" + left + "px;top:" + top + "px;width:" + d.w + "px;height:" + d.h + "px";
+              left += d.w + GAPX;
+              lineH = Math.max(lineH, d.h);
+            });
+            width = Math.max(width, left - GAPX);
+            top += lineH + GAPY;
+          });
+          const height = top - GAPY;
+          const frames = ALL.filter((x) => pos[x.id]).map((x) => {
+            const s = SZ[x.size];
+            const key = x.id.toLowerCase();
+            const kind = x.kind || "job";
+            const sel = x.sel || "5001.20";
+            const job = Object.assign({ size: x.size, idp: key + "j", job: sel }, x.job || {});
+            if (kind === "loading") job.state = "loading";
+            return {
+              key: key,
+              id: x.id,
+              title: x.title,
+              detail: x.detail,
+              hasDoc: !!x.doc,
+              label: x.id + " " + x.title + ", " + x.theme + ", " + s.words,
+              style: pos[x.id],
+              hint: s.w + "px," + s.h + "px",
+              frame: { size: x.size, theme: x.theme, connection: "connected" },
+              grid: s.grid,
+              colCls: s.col,
+              scroll: x.scroll || "none",
+              list: Object.assign({ size: x.size, idp: key + "l", selected: sel }, kind === "loading" ? { state: "loading" } : {}, x.list || {}),
+              job: job,
+              rep: Object.assign({ size: x.size, idp: key + "r", job: sel }, x.rep || {}),
+              reps: { size: x.size, idp: key + "t", job: sel },
+              hasCol: kind !== "none",
+              hasRep: kind === "job",
+              repSk: kind === "loading",
+              skCls: s.sk,
+              skId: key + "-rsk",
+              colReps: kind === "job" && !s.side,
+              sideReps: kind === "job" && s.side,
+              colRepsSk: kind === "loading" && !s.side,
+              sideRepsSk: kind === "loading" && s.side,
+              lrCls: s.side ? "fill" : "",
+              lrId: key + "-lrsk",
+              none: kind === "none",
+              noneId: key + "-none",
+              noneText: x.noneText || "",
+            };
+          });
+          const mfs = MFS.filter((x) => pos[x.id]).map((x) => {
+            const key = x.id.toLowerCase();
+            const sel = x.sel || "5001.20";
+            return {
+              id: x.id,
+              key: key,
+              title: x.title,
+              detail: x.detail,
+              label: x.id + " " + x.title + ", " + x.theme + ", " + SZ[x.size].words,
+              style: pos[x.id],
+              hint: "1280px,800px",
+              frame: { size: x.size, theme: x.theme, connection: "connected", station: "Press cell 1" },
+              mach: { shown: x.shown, idp: key + "h" },
+              list: x.none
+                ? { size: x.size, idp: key + "l", machine: x.shown, state: "empty", alt: "Press 3", unsent: "none" }
+                : { size: x.size, idp: key + "l", machine: x.shown, selected: sel, unsent: "none", focus: "heading" },
+              none: !!x.none,
+              hasCol: !x.none,
+              noneId: key + "-none",
+              noneText: EMPTY,
+              job: { size: x.size, idp: key + "j", job: sel },
+              rep: { size: x.size, idp: key + "r", job: sel, good: "", scrap: "", reason: "none", focus: "none" },
+              reps: { size: x.size, idp: key + "t", job: sel },
+            };
+          });
+          const notes = { show: !!pos.JO26, style: pos.JO26 || "", label: "JO26 Build notes for the station home, light, " + NOTES.w + " by " + NOTES.h };
+          return { uid: this.__uid, frames, mfs, notes, rootStyle: "width:" + width + "px;height:" + height + "px" };
+        }
+      }
+    </script>
+  </body>
+</html>

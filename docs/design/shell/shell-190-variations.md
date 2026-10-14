@@ -1,6 +1,6 @@
 # D2 variations: chosen direction
 
-This is the decision record of the variations round for design task D2, issue [northMES/northmes#190](https://github.com/northMES/northmes/issues/190), for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The variations page is [shell/shell-190-variations.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=shell%2Fshell-190-variations.dc.html) in the Claude Design project. It is not an approved page; the D2 spec page `shell/shell-190-navigation.dc.html` is built on the chosen direction and approved on its own.
+This is the decision record of the variations round for design task D2, issue [northMES/northmes#190](https://github.com/northMES/northmes/issues/190), for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The variations page is [shell/shell-190-variations.dc.html](../project/shell/shell-190-variations.dc.html) in the design project. It is not an approved page; the D2 spec page `shell/shell-190-navigation.dc.html` is built on the chosen direction and approved on its own.
 
 ## Decision
 

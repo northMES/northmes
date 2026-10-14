@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F1 token base</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.fixes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:24px}
+.fixc{display:grid;gap:8px;align-content:start;padding:16px 18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl)}
+.fixc .was{color:var(--muted-foreground)}
+.tokgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 20px}
+.tok{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;align-items:start;min-width:0}
+.sw{width:44px;height:44px;border-radius:var(--radius);box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+.tok-t{display:grid;gap:1px;min-width:0;font-size:12px;line-height:16px;overflow-wrap:anywhere}
+.tok-t .tag{margin-top:4px;padding:2px 7px;border-radius:var(--radius-sm);line-height:16px;white-space:normal}
+.scal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 20px}
+.sc{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:center;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl)}
+.sc-demo{display:flex;align-items:center;justify-content:center;height:56px;border-radius:var(--radius-sm);background:var(--muted)}
+.rad{width:56px;height:40px;border:2px solid var(--foreground);border-radius:var(--radius)}
+.hgt{width:72px;height:var(--nm-control-height);border-radius:var(--radius);background:var(--primary)}
+.tgt{width:var(--w);height:var(--w);border:1px dashed var(--foreground);border-radius:2px}
+.nt{display:grid;grid-template-columns:200px 150px 70px 150px 70px minmax(0,1fr);gap:10px;align-items:center;min-height:26px;padding:3px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:16px}
+.nt.h{font-weight:600;color:var(--muted-foreground)}
+.nsw{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(128,128,128,.5)}
+        </style>
+      </helmet>
+      <div class="{{ rootCls }}" data-screen-label="Token base">
+        <sc-if value="{{ isFrame }}">
+          <h2 class="t2">Token base: shadcn neutral names, Graphite values and the D1 fixes</h2>
+          <p class="lede">Every token in {{ themeName }}. Values are oklch; the hex is their sRGB rendering, and every value lies inside sRGB. Tokens with an equals sign hold the same value as the token named. The order palette and group colors are drawn as blocks in F3.</p>
+          <div class="fixes">
+            <sc-for list="{{ fixes }}" as="f">
+              <div class="fixc">
+                <span class="tag fix">{{ f.crit }}</span>
+                <span class="b6 mono">{{ f.tok }}</span>
+                <span class="sm was">Before: {{ f.was }}</span>
+                <span class="sm">After: {{ f.now }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <sc-for list="{{ groups }}" as="g">
+            <div class="sec">
+              <h3 class="t3">{{ g.label }} <span class="mut">({{ g.count }})</span></h3>
+              <div class="tokgrid">
+                <sc-for list="{{ g.items }}" as="t">
+                  <div class="tok">
+                    <span class="sw" style="{{ t.sw }}"></span>
+                    <div class="tok-t">
+                      <span class="mono b6">{{ t.n }}</span>
+                      <span class="mono">{{ t.v }}</span>
+                      <span class="mono mut">{{ t.hex }}{{ t.alias }}</span>
+                      <span class="mut">{{ t.role }}</span>
+                      <sc-if value="{{ t.fix }}"><span class="tag fix">{{ t.fix }}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <div class="sec">
+            <h3 class="t3">Shared values, the same in both themes <span class="mut">(6)</span></h3>
+            <div class="scal">
+              <div class="sc"><div class="sc-demo"><span class="rad"></span></div><div class="tok-t"><span class="mono b6">radius</span><span class="mono">0.375rem (6 px)</span><span class="mut">Corner radius. Derived steps: sm 3.6 px, md 4.8 px, lg 6 px, xl 8.4 px (Q21)</span></div></div>
+              <div class="sc"><div class="sc-demo"><span class="fs20 b6">Aa</span></div><div class="tok-t"><span class="mono b6">font-sans</span><span class="mono">"IBM Plex Sans", system-ui, sans-serif</span><span class="mut">Interface text, self-hosted</span></div></div>
+              <div class="sc"><div class="sc-demo"><span class="mono fs20">0123</span></div><div class="tok-t"><span class="mono b6">font-mono</span><span class="mono">"IBM Plex Mono", ui-monospace, monospace</span><span class="mut">Numbers, with tabular figures, self-hosted</span></div></div>
+              <div class="sc"><div class="sc-demo"><span class="hgt"></span></div><div class="tok-t"><span class="mono b6">nm-control-height</span><span class="mono">2.25rem (36 px)</span><span class="mut">Buttons, inputs, selects, IconButton</span></div></div>
+              <div class="sc"><div class="sc-demo"><span class="tgt" style="--w:24px"></span></div><div class="tok-t"><span class="mono b6">nm-target-min</span><span class="mono">24px</span><span class="mut">2.5.8 minimum target. In px, so a smaller root font size cannot shrink it</span></div></div>
+              <div class="sc"><div class="sc-demo"><span class="tgt" style="--w:44px"></span></div><div class="tok-t"><span class="mono b6">nm-target-min-station</span><span class="mono">44px</span><span class="mut">The station layout sets nm-target-min to this until a glove test sets the final value</span></div></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isNotes }}">
+          <div class="nt h"><span>Token</span><span>Light oklch</span><span>Light hex</span><span>Dark oklch</span><span>Dark hex</span><span>Role</span></div>
+          <sc-for list="{{ all }}" as="t">
+            <div class="nt"><span class="mono b6">{{ t.n }}</span><span class="mono"><span class="nsw" style="{{ t.swl }}"></span>{{ t.lv }}</span><span class="mono">{{ t.lh }}</span><span class="mono"><span class="nsw" style="{{ t.swd }}"></span>{{ t.dv }}</span><span class="mono">{{ t.dh }}</span><span class="mut">{{ t.role }}{{ t.alias }}</span></div>
+          </sc-for>
+          <sc-for list="{{ scalars }}" as="s">
+            <div class="nt"><span class="mono b6">{{ s.n }}</span><span class="mono" style="grid-column:span 4">{{ s.v }}</span><span class="mut">{{ s.role }}</span></div>
+          </sc-for>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"mode":{"editor":"enum","options":["frame","notes"],"default":"frame","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          const notes = this.props.mode === "notes";
+          const T = [
+["background", "shadcn", "Page background", "0.985 0.002 250", "#f9fafb", "0.205 0.005 250", "#151719", "", ""],
+["foreground", "shadcn", "Body text", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "", ""],
+["card", "shadcn", "Card and panel surface", "1 0 0", "#ffffff", "0.24 0.006 250", "#1d2022", "", ""],
+["card-foreground", "shadcn", "Text on cards", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["popover", "shadcn", "Popover, menu and dialog surface", "1 0 0", "#ffffff", "0.24 0.006 250", "#1d2022", "card", ""],
+["popover-foreground", "shadcn", "Text on popovers", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["primary", "shadcn", "Primary button, checked checkbox", "0.27 0.012 250", "#22272c", "0.94 0.004 250", "#e9ebee", "", ""],
+["primary-foreground", "shadcn", "Label on primary", "0.99 0 0", "#fcfcfc", "0.2 0.01 250", "#13161a", "", ""],
+["secondary", "shadcn", "Secondary button fill", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", ""],
+["secondary-foreground", "shadcn", "Label on secondary", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["muted", "shadcn", "Table header, group row, disabled field", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "", ""],
+["muted-foreground", "shadcn", "Secondary text, hints, placeholders", "0.47 0.01 250", "#575b60", "0.75 0.008 250", "#aaaeb3", "", "Fix 1.4.3: L 0.47 light (limit 0.547)"],
+["accent", "shadcn", "Hover surface (ghost, outline, menu item)", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", "Fix 1.4.3: accent text 15.16:1 light, 12.98:1 dark"],
+["accent-foreground", "shadcn", "Text on the hover surface", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", "Fix 1.4.3: 4.5:1 on accent"],
+["destructive", "shadcn", "Destructive action, field error", "0.5 0.17 27", "#b02b27", "0.74 0.14 25", "#f7857d", "", ""],
+["border", "shadcn", "Decorative divider and card border", "0.9 0.005 250", "#dbdee1", "0.36 0.008 250", "#3a3d41", "", ""],
+["input", "shadcn", "Form control border", "0.6 0.01 250", "#7c8186", "0.6 0.01 250", "#7c8186", "", "Fix 1.4.11: L 0.6 (limit 0.669 light, 0.478 dark)"],
+["ring", "shadcn", "Focus ring outline half, no /50", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "focus-outline", "Fix 1.4.11, 2.4.7: no /50, two-tone ring"],
+["sidebar", "shadcn-sidebar", "Sidebar surface", "1 0 0", "#ffffff", "0.24 0.006 250", "#1d2022", "card", ""],
+["sidebar-foreground", "shadcn-sidebar", "Sidebar text", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["sidebar-primary", "shadcn-sidebar", "Sidebar current item", "0.27 0.012 250", "#22272c", "0.94 0.004 250", "#e9ebee", "primary", ""],
+["sidebar-primary-foreground", "shadcn-sidebar", "Text on sidebar current item", "0.99 0 0", "#fcfcfc", "0.2 0.01 250", "#13161a", "primary-foreground", ""],
+["sidebar-accent", "shadcn-sidebar", "Sidebar hover", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "accent", ""],
+["sidebar-accent-foreground", "shadcn-sidebar", "Text on sidebar hover", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "accent-foreground", ""],
+["sidebar-border", "shadcn-sidebar", "Sidebar divider", "0.9 0.005 250", "#dbdee1", "0.36 0.008 250", "#3a3d41", "border", ""],
+["sidebar-ring", "shadcn-sidebar", "Sidebar focus outline half", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "ring", ""],
+["primary-hover", "northmes", "Primary button hover", "0.36 0.012 250", "#383e43", "0.86 0.004 250", "#cfd1d3", "", ""],
+["destructive-foreground", "northmes", "Text on a destructive fill", "0.985 0.002 250", "#f9fafb", "0.205 0.005 250", "#151719", "background", ""],
+["destructive-subtle", "northmes", "Destructive tint, outline hover", "0.955 0.022 27", "#ffebe8", "0.29 0.07 25", "#481b19", "", ""],
+["link", "northmes", "Link text", "0.46 0.13 255", "#1b589e", "0.78 0.1 250", "#85bcf5", "", "Fix 1.4.3: link text 4.5:1 or more"],
+["focus-outline", "northmes", "Two-tone ring, outer 2 px", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", "Fix 2.4.7: ring half in the foreground token"],
+["focus-ring", "northmes", "Two-tone ring, inner 2 px", "0.985 0.002 250", "#f9fafb", "0.205 0.005 250", "#151719", "background", "Fix 2.4.7: ring half in the background token"],
+["success", "northmes", "Success text, icon, progress", "0.48 0.11 150", "#246e3a", "0.78 0.13 150", "#76cf8a", "", ""],
+["success-subtle", "northmes", "Success tint", "0.95 0.03 150", "#e1f5e4", "0.28 0.05 150", "#15301b", "", ""],
+["warning", "northmes", "Warning text and icon", "0.5 0.11 65", "#8d5406", "0.83 0.12 80", "#f0be67", "", ""],
+["warning-subtle", "northmes", "Warning tint", "0.955 0.04 85", "#fdefd2", "0.29 0.05 80", "#38280a", "", ""],
+["info", "northmes", "Info text and icon", "0.48 0.12 250", "#1a609e", "0.78 0.1 250", "#85bcf5", "", ""],
+["info-subtle", "northmes", "Info tint, selected table row", "0.955 0.02 250", "#e6f2fe", "0.29 0.05 250", "#172d43", "", ""],
+["lane", "board", "Board lane", "1 0 0", "#ffffff", "0.225 0.005 250", "#1a1c1e", "", ""],
+["lane-alt", "board", "Alternate board lane", "0.978 0.003 250", "#f6f8fa", "0.245 0.006 250", "#1e2123", "", ""],
+["off-time", "board", "Non-working shading (hatch)", "0.94 0.004 250", "#e9ebee", "0.185 0.005 250", "#111315", "", ""],
+["block-border", "board", "1 px block edge on the board", "0.22 0.01 250", "#171b1f", "0.82 0.005 250", "#c2c4c7", "", ""],
+["now", "board", "Now line and label fill", "0.5 0.17 27", "#b02b27", "0.74 0.14 25", "#f7857d", "destructive", ""],
+["now-foreground", "board", "Now label text", "0.985 0.002 250", "#f9fafb", "0.205 0.005 250", "#151719", "background", ""],
+["status-registered", "status", "Status registered: badge surface", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", ""],
+["status-registered-foreground", "status", "Status registered: badge text and icon", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["status-planned", "status", "Status planned: badge surface", "0.955 0.02 250", "#e6f2fe", "0.29 0.05 250", "#172d43", "info-subtle", ""],
+["status-planned-foreground", "status", "Status planned: badge text and icon", "0.48 0.12 250", "#1a609e", "0.78 0.1 250", "#85bcf5", "info", ""],
+["status-active", "status", "Status active: badge surface", "0.95 0.03 150", "#e1f5e4", "0.28 0.05 150", "#15301b", "success-subtle", ""],
+["status-active-foreground", "status", "Status active: badge text and icon", "0.48 0.11 150", "#246e3a", "0.78 0.13 150", "#76cf8a", "success", ""],
+["status-paused", "status", "Status paused: badge surface", "0.955 0.04 85", "#fdefd2", "0.29 0.05 80", "#38280a", "warning-subtle", ""],
+["status-paused-foreground", "status", "Status paused: badge text and icon", "0.5 0.11 65", "#8d5406", "0.83 0.12 80", "#f0be67", "warning", ""],
+["status-finished", "status", "Status finished: badge surface", "0.95 0.03 150", "#e1f5e4", "0.28 0.05 150", "#15301b", "success-subtle", ""],
+["status-finished-foreground", "status", "Status finished: badge text and icon", "0.48 0.11 150", "#246e3a", "0.78 0.13 150", "#76cf8a", "success", ""],
+["status-delivered", "status", "Status delivered: badge surface", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", ""],
+["status-delivered-foreground", "status", "Status delivered: badge text and icon", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["status-cancelled", "status", "Status cancelled: badge surface", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", ""],
+["status-cancelled-foreground", "status", "Status cancelled: badge text and icon", "0.47 0.01 250", "#575b60", "0.75 0.008 250", "#aaaeb3", "muted-foreground", ""],
+["late", "status", "Late badge surface", "0.955 0.022 27", "#ffebe8", "0.29 0.07 25", "#481b19", "destructive-subtle", ""],
+["late-foreground", "status", "Late badge text and icon", "0.5 0.17 27", "#b02b27", "0.74 0.14 25", "#f7857d", "destructive", ""],
+["lock-owner", "status", "Lock owner badge surface", "0.955 0.004 250", "#eef0f3", "0.28 0.007 250", "#26292c", "muted", ""],
+["lock-owner-foreground", "status", "Lock owner badge text", "0.22 0.01 250", "#171b1f", "0.96 0.003 250", "#f0f2f4", "foreground", ""],
+["palette-1", "palette", "Order color, mid tier, hue 30", "0.78 0.09 30", "#eba295", "0.7 0.09 30", "#d0897d", "", ""],
+["palette-2", "palette", "Order color, mid tier, hue 75", "0.78 0.09 75", "#d9af75", "0.7 0.09 75", "#bf965d", "", ""],
+["palette-3", "palette", "Order color, mid tier, hue 120", "0.78 0.09 120", "#b0c07e", "0.7 0.09 120", "#97a766", "", ""],
+["palette-4", "palette", "Order color, mid tier, hue 165", "0.78 0.09 165", "#7ecaa9", "0.7 0.09 165", "#65b090", "", ""],
+["palette-5", "palette", "Order color, mid tier, hue 210", "0.78 0.09 210", "#6cc7d7", "0.7 0.09 210", "#51aebd", "", ""],
+["palette-6", "palette", "Order color, mid tier, hue 255", "0.78 0.09 255", "#90baf1", "0.7 0.09 255", "#78a1d6", "", ""],
+["palette-7", "palette", "Order color, mid tier, hue 300", "0.78 0.09 300", "#c0abe9", "0.7 0.09 300", "#a792ce", "", ""],
+["palette-8", "palette", "Order color, mid tier, hue 345", "0.78 0.09 345", "#e2a0c5", "0.7 0.09 345", "#c788ab", "", ""],
+["palette-9", "palette", "Order color, pale tier, hue 0", "0.86 0.07 0", "#f9becf", "0.78 0.07 0", "#dea5b5", "", ""],
+["palette-10", "palette", "Order color, pale tier, hue 60", "0.86 0.07 60", "#f4c7a3", "0.78 0.07 60", "#d9ad8a", "", ""],
+["palette-11", "palette", "Order color, pale tier, hue 120", "0.86 0.07 120", "#cbd8a5", "0.78 0.07 120", "#b1bf8c", "", ""],
+["palette-12", "palette", "Order color, pale tier, hue 180", "0.86 0.07 180", "#9ee1d3", "0.78 0.07 180", "#85c7b9", "", ""],
+["palette-13", "palette", "Order color, pale tier, hue 240", "0.86 0.07 240", "#a8d8fb", "0.78 0.07 240", "#8fbee0", "", ""],
+["palette-14", "palette", "Order color, pale tier, hue 300", "0.86 0.07 300", "#d8c7f9", "0.78 0.07 300", "#beaede", "", ""],
+["palette-15", "palette", "Order color, deep tier, hue 24", "0.7 0.1 24", "#d68580", "0.62 0.1 24", "#bb6d68", "", ""],
+["palette-16", "palette", "Order color, deep tier, hue 84", "0.7 0.1 84", "#bc9951", "0.62 0.1 84", "#a38137", "", ""],
+["palette-17", "palette", "Order color, deep tier, hue 144", "0.7 0.1 144", "#77af76", "0.62 0.1 144", "#5f965f", "", ""],
+["palette-18", "palette", "Order color, deep tier, hue 204", "0.7 0.1 204", "#41b0bb", "0.62 0.1 204", "#1d97a2", "", ""],
+["palette-19", "palette", "Order color, deep tier, hue 264", "0.7 0.1 264", "#7f9edd", "0.62 0.1 264", "#6785c3", "", ""],
+["palette-20", "palette", "Order color, deep tier, hue 324", "0.7 0.1 324", "#bd89c2", "0.62 0.1 324", "#a471a8", "", ""],
+["group-1", "group", "Equipment group color (sample Milling)", "0.62 0.1 195", "#1d9999", "0.68 0.1 195", "#39abab", "", ""],
+["group-2", "group", "Equipment group color (sample Turning)", "0.62 0.1 300", "#8f78ba", "0.68 0.1 300", "#a28acd", "", ""]
+];
+          const G = {"shadcn": "shadcn base", "shadcn-sidebar": "shadcn sidebar", "northmes": "NorthMES additions", "board": "Board", "status": "Order status, late and lock owner", "palette": "Order palette", "group": "Equipment group colors"};
+          const order = ["shadcn", "shadcn-sidebar", "northmes", "board", "status", "palette", "group"];
+          const groups = order.map((g) => {
+            const items = T.filter((r) => r[1] === g).map((r) => ({
+              n: r[0],
+              role: r[2],
+              v: "oklch(" + (dark ? r[5] : r[3]) + ")",
+              hex: dark ? r[6] : r[4],
+              alias: r[7] ? "  = " + r[7] : "",
+              fix: r[8],
+              sw: "background:var(--" + r[0] + ")"
+            }));
+            return { label: G[g], count: items.length, items: items };
+          });
+          const all = T.map((r) => ({
+            n: r[0], role: r[2], lv: r[3], lh: r[4], dv: r[5], dh: r[6],
+            alias: r[7] ? " (= " + r[7] + ")" : "",
+            swl: "background:" + r[4], swd: "background:" + r[6]
+          }));
+          return {
+            rootCls: notes ? "" : "sheet",
+            isFrame: !notes,
+            isNotes: notes,
+            themeName: dark ? "the dark theme (.dark)" : "the light theme (:root)",
+            groups: groups,
+            all: all,
+            scalars: [
+              { n: "radius", v: "0.375rem (6 px)", role: "Derived in theme.css: sm 3.6, md 4.8, lg 6, xl 8.4 px" },
+              { n: "font-sans", v: "\"IBM Plex Sans\", system-ui, sans-serif", role: "Interface text" },
+              { n: "font-mono", v: "\"IBM Plex Mono\", ui-monospace, monospace", role: "Numbers, tabular figures" },
+              { n: "nm-control-height", v: "2.25rem (36 px)", role: "Control height" },
+              { n: "nm-target-min", v: "24px", role: "2.5.8 minimum target" },
+              { n: "nm-target-min-station", v: "44px", role: "Station layout value of nm-target-min" }
+            ],
+            fixes: [
+              { crit: "1.4.11", tok: "--input", was: "shadcn neutral 1.26:1 in light", now: "L 0.6 in both themes (limit 0.669 light, 0.478 dark). 3.76:1 on background in light, 4.54:1 in dark; lowest 3.44:1 on muted" },
+              { crit: "1.4.11, 2.4.7", tok: "Focus ring", was: "ring/50 1.54:1 light, 1.87:1 dark", now: "Two-tone: --focus-outline (foreground) and --focus-ring (background), 16.56:1 apart in light, 15.94:1 in dark; at least 3.99:1 over any sRGB color" },
+              { crit: "1.4.3", tok: "--muted-foreground", was: "4.34:1 on muted in light", now: "L 0.47 in light (limit 0.547). 5.98:1 on muted in light, 6.55:1 in dark" },
+              { crit: "1.4.3", tok: "--accent, --link", was: "not measured in the docs", now: "Accent text 15.16:1 light, 12.98:1 dark. Link at least 6.26:1 light, 7.03:1 dark on every surface it sits on" }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

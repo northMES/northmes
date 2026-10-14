@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard widget catalog</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-form tight" data-screen-label="Widget catalog, {{ variant }}">
+        <sc-if value="{{ isPop }}"><p class="db-catpop-t">Add widget</p></sc-if>
+        <span class="inp lf-search full {{ searchFocus }}" role="searchbox" aria-label="Search widgets"><span class="ic" data-icon="Search"></span><span class="ph">Search widgets</span></span>
+        <p class="db-cat-h"><span>Core</span><span class="db-mut" style="font-weight:400">4 widgets, demo data</span></p>
+        <ul class="db-cat">
+          <sc-for list="{{ types }}" as="t">
+            <li class="db-ci {{ ciCls }} {{ t.kf }}">
+              <span class="db-ci-i"><span class="ic" data-icon="{{ t.icon }}"></span></span>
+              <span class="db-ci-n"><span>{{ t.name }}</span><sc-if value="{{ showProvider }}"><span class="badge db-demo">Core</span></sc-if></span>
+              <sc-if value="{{ showDesc }}"><span class="db-ci-d">{{ t.desc }}</span></sc-if>
+              <span class="db-ci-s"><span class="db-mut">Sizes</span> {{ t.sizes }}</span>
+              <sc-if value="{{ showAdd }}"><button class="btn v-outline db-btn-s {{ t.addCls }}" type="button" aria-label="Add {{ t.name }}">Add</button></sc-if>
+            </li>
+          </sc-for>
+        </ul>
+        <sc-if value="{{ showFoot }}"><p class="db-src" style="margin:0">Modules and plugins add their own widgets to this catalog in later releases, grouped by their label.</p></sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["sheet","side","pop"],"default":"sheet","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // The widget catalog: the four demo types of release 1, from core. sheet: option A's Sheet; side: option B's
+          // side column; pop: option C's popover from the Add widget tile. Focus starts in the search field.
+          const P = this.props || {};
+          const v = ["sheet", "side", "pop"].indexOf(P.variant) >= 0 ? P.variant : "sheet";
+          const T = [
+            { name: "List", icon: "List", desc: "Rows from one data source, such as production orders, with a status on each row.", sizes: "Medium, Large, Tall" },
+            { name: "Table", icon: "Table", desc: "Columns you choose from one data source, sorted and filtered.", sizes: "Large, Tall, Wide" },
+            { name: "Value", icon: "Hash", desc: "One number, such as good quantity today, with a comparison.", sizes: "Small" },
+            { name: "Chart", icon: "ChartColumn", desc: "Bars over time for one or two series, such as good quantity per hour.", sizes: "Large, Medium, Wide" }
+          ];
+          return {
+            variant: v,
+            isPop: v === "pop",
+            ciCls: v === "sheet" ? "" : "compact",
+            showProvider: v !== "pop",
+            showDesc: v !== "pop",
+            showAdd: true,
+            showFoot: v === "sheet",
+            searchFocus: "is-focus",
+            types: T.map((t) => Object.assign({}, t, { kf: "", addCls: "" }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

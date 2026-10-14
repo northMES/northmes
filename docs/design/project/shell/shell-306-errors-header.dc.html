@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error pages header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+        <style>
+          .er-cb.on{display:grid;place-items:center;border-color:var(--primary);background:var(--primary)}
+          .er-cb.on::after{content:"";width:4px;height:8px;margin-top:-2px;border:solid var(--primary-foreground);border-width:0 2px 2px 0;transform:rotate(45deg)}
+        </style>
+      </helmet>
+      <div class="sheet er-hd">
+        <p class="kick">NorthMES design page shell/shell-306-errors.dc.html · approved by Krister Johansson on 2026-10-08</p>
+        <h1 class="t1">Error and system pages (E04-S02-T02)</h1>
+        <p class="lede">What NorthMES shows when a link cannot be read, a page or a record is not found, the server fails or cannot be reached, NorthMES is down for an upgrade, the session ends, the shell boots or cannot start, and the browser is too old or not on HTTPS. The pages inside the shell mount <span class="er-m">shell/Shell.dc.html</span> read only; D2's module page not found (ST5), error panel (ST6) and unknown plant (ST29) are the reference and are not drawn again. The no-access states (403, close code 4403) belong to <span class="er-m">#304</span>.</p>
+
+        <div class="er-cols sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="er-facts">
+              <sc-for list="{{ facts }}" as="f">
+                <dt>{{ f.k }}</dt>
+                <dd><sc-for list="{{ f.v }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.w }}"><span class="er-nw">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></dd>
+              </sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Acceptance criteria</h2>
+            <p class="lede">From issue <span class="er-m">#306</span>.</p>
+            <ul class="er-ac">
+              <sc-for list="{{ acceptance }}" as="a"><li><span class="{{ a.box }}" aria-hidden="true"></span><span>{{ a.t }}</span></li></sc-for>
+            </ul>
+            <h2 class="t2 er-mt40">How to read this page</h2>
+            <ul class="ul er-mt12">
+              <sc-for list="{{ reading }}" as="r"><li><sc-for list="{{ r }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></li></sc-for>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Pages, triggers and routes</h2>
+          <p class="lede">In short; BN carries the copy, focus and announcements in full.</p>
+          <div class="gt er-tbl">
+            <div class="gr gh er-hp"><span>Page</span><span>Trigger</span><span>Renders at</span><span>h1</span></div>
+            <sc-for list="{{ pages }}" as="g">
+              <div class="gr er-hp"><span class="b6">{{ g.n }}</span><span><sc-for list="{{ g.t }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span><span><sc-for list="{{ g.r }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span><span>{{ g.h }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Frames by row</h2>
+          <p class="lede">Each row is drawn by a part file in <span class="er-m">shell/</span>. Every state is drawn in light and dark, most at 1440, with 1280, 1920, 320 and the station sizes spread across the rows.</p>
+          <div class="gt er-tbl">
+            <div class="gr gh er-hr"><span>Row</span><span>Content and part file</span><span>Frames</span><span>What it shows</span></div>
+            <sc-for list="{{ rows }}" as="r">
+              <div class="gr er-hr"><span class="er-m">{{ r.n }}</span><span><span class="b6">{{ r.name }}</span><span class="er-rec er-m">{{ r.file }}</span></span><span class="er-m">{{ r.ids }}</span><span>{{ r.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="er-cols sec">
+          <div>
+            <h2 class="t2">Where each frame of the issue is drawn</h2>
+            <p class="lede">The Frames list of issue <span class="er-m">#306</span>, line by line.</p>
+            <div class="gt er-tbl">
+              <div class="gr gh er-hc"><span>Issue frame</span><span>Frames</span></div>
+              <sc-for list="{{ coverage }}" as="c">
+                <div class="gr er-hc"><span>{{ c.t }}</span><span class="er-m">{{ c.f }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <h2 class="t2">Server error page and D2's error panel</h2>
+            <div class="er-st6 er-mt12">
+              <sc-for list="{{ st6 }}" as="s"><p class="er-p"><sc-for list="{{ s }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-for>
+            </div>
+            <h2 class="t2 er-mt40">Assumptions</h2>
+            <ol class="ul er-mt12">
+              <sc-for list="{{ assumptions }}" as="a"><li>{{ a }}</li></sc-for>
+            </ol>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">Each has a recommended answer, and the frames draw that answer. E1 is the main conflict.</p>
+          <div class="er-cols">
+            <sc-for list="{{ qcols }}" as="qc">
+              <div class="er-ql">
+                <sc-for list="{{ qc }}" as="q">
+                  <div class="er-q"><span class="tag q">{{ q.id }}</span><span>{{ q.q }}<span class="er-rec">Recommended: {{ q.r }}</span></span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Header frame F0 of shell-306-errors.dc.html. Text with `backticks` is set in Plex Mono.
+          const tp = (s) => String(s || "").split("`").map((t, i) => ({ t: t, m: i % 2 === 1, x: i % 2 === 0, w: false })).filter((p) => p.t !== "");
+          // In the facts, plan ids such as E04-S05 also stay on one line, so they never break at the hyphen.
+          const tpf = (s) => [].concat.apply([], tp(s).map((p) => (p.m ? [p] : p.t.split(/(E\d\d-S\d\d(?:-T\d\d)?)/).filter((t) => t !== "").map((t) => ({ t: t, m: false, w: /^E\d\d-S\d\d/.test(t), x: !/^E\d\d-S\d\d/.test(t) })))));
+          const facts = [
+            ["Issue", "`#306` web: Design the error and system pages (400, 404, 500, maintenance)"],
+            ["Story", "E04-S02 (`#40`)"],
+            ["Plan id", "`E04-S02-T02`"],
+            ["Area", "`shell`, which maps to `apps/web`; the maintenance page belongs to the release bundle of E17-S02 (`#150`)"],
+            ["Routes", "Any route under `/$plant` and `/admin` for the states in main; `/sign-in?redirect=` for the session; `index.html` at boot; Caddy's `handle_errors 502 503 504` for the maintenance page; `/assets/browser-check.js`"],
+            ["Personas", "Planner (primary); Plant admin, who gets the correlation id and upgrades NorthMES with the customer's IT; Operator at a station, for the maintenance and boot pages"],
+            ["Waiting UI tasks", "The shell's error, not-found and boot handling in E04-S02 to E04-S05, the page states of E04-S07 (`#45`), the maintenance page of E17-S02 (`#150`)"],
+            ["Files", "`shell-306-errors.dc.html` with the parts `-header`, `-inshell`, `-outside`, `-static`, `-keyboard` and `-notes`, and the styles `shell-306-errors.css`; it mounts `Shell.dc.html` and links the D1 and D2 sheets read only"],
+            ["Direction", "Graphite (D1): IBM Plex Sans for text, IBM Plex Mono for numbers, ids and paths, 6 px radius, 36 px controls, near-black primary, light by default, dark per user"],
+            ["Data", "Fictional: Acme AB, Plant A, the planner Alex Lund, the company admin Jonas Holm, invented ids, paths and the host `mes.acme.example`"]
+          ].map((f) => ({ k: f[0], v: tpf(f[1]) }));
+          // A ticked line is met: Krister Johansson approved the page on 2026-10-08.
+          const acceptance = [
+            ["Every frame in the list exists in light and dark", false],
+            ["No comment thread on the page is open", false],
+            ["Krister approved the page and the design project's README row holds the etag", true],
+            ["The design pull request with PNGs and build notes is merged", false],
+            ["The waiting UI tasks carry the Design section", false]
+          ].map((a) => ({ t: a[0], box: a[1] ? "er-cb on" : "er-cb" }));
+          const reading = [
+            "A chip names each frame: its id, the state, the theme and the size, then what it shows. Detail that does not fit on the chip sits in a note under the screen; a 320 chip holds only the theme and the size.",
+            "Above a screen, the `title` annotation is the document title and the `url` annotation the address bar, where the frame depends on it. Neither is UI.",
+            "The two-tone ring marks the focused element. In the KF row, blue numbered badges are the Tab order and white boxes explain what happens; both are annotations.",
+            "The maintenance and unsupported browser frames use only hex values and system fonts, as the real files do. The canvas cannot emulate `prefers-color-scheme`, so a class on the frame selects their dark values.",
+            "Copy marked doc is verbatim from the docs, D2 is approved D2 copy, and everything else is proposed (BN lists which is which)."
+          ].map(tp);
+          const pages = [
+            ["Link cannot be used (400)", "The route's primary request is refused as invalid: GraphQL `BAD_USER_INPUT` (such as `core.list.invalid_cursor`) or a REST 400 problem body, or `validateSearch` throws", "The route's error component in main", "{route title} could not open this link"],
+            ["One setting ignored", "One or more search keys fail their own schema: each falls back to its default and the route drops it with a replace navigation", "The page itself, with an info Alert", "The route's own"],
+            ["Unknown path in a plant", "No route matches under `/$plant` for a plant the user can open", "`defaultNotFoundComponent` in the plant layout", "Page not found (doc)"],
+            ["Unknown path under /admin", "No route matches under `/admin`", "`defaultNotFoundComponent` in the admin layout", "Page not found (doc)"],
+            ["Record not found", "The owner throws `NOT_FOUND` for an unknown or hidden id", "EmptyState in main", "Production order not found"],
+            ["Server error (500)", "`INTERNAL_SERVER_ERROR` with `core.internal`, HTTP 500, or any other error status except 400, 401, 403, 404, 409, 412 and 502 to 504", "The route's error component in main", "{route title} could not be loaded"],
+            ["No connection", "The route's primary request gets no HTTP response within the timeout (E5)", "The route's error component in main", "No connection to NorthMES"],
+            ["Load while restarting", "502, 503 or 504 from `/graphql` or `/api` at page load", "No error page: the restarting strip and the skeleton", "The route's own"],
+            ["Maintenance", "Caddy cannot reach `app`; it answers 503 with `Retry-After: 15` at the original URL", "One static HTML file from the release bundle", "NorthMES is not available right now"],
+            ["Session ended", "HTTP 401, `UNAUTHENTICATED` or close code 4401 in a tab that had a session", "`/sign-in?redirect={path and search}`, D2's sign-in page", "Sign in to NorthMES (D2)"],
+            ["Loading NorthMES", "Every full page load until the shell renders", "The static main of `index.html`", "Loading NorthMES (doc)"],
+            ["NorthMES could not start", "`GET /api/v1/web/modules` fails, or gets no answer", "Boot code writes into the static main", "NorthMES could not start"],
+            ["Newer browser needed", "`browser-check.js` finds no `color-mix()` or `@property`", "A plain page from that script", "NorthMES needs a newer browser"],
+            ["HTTPS required", "Boot finds no secure context (`crypto.subtle` missing)", "Boot code writes into the static main", "NorthMES needs HTTPS"]
+          ].map((g) => ({ n: g[0], t: tp(g[1]), r: tp(g[2]), h: g[3] }));
+          const rows = [
+            ["1", "A link the app cannot read (400)", "shell-306-errors-inshell", "BL1 to BL6", "The route's error component for a link the page cannot use, at 1440 and 320, with and without Go back; the page that ignores one setting with its inline status."],
+            ["2", "Not found outside a module (404)", "shell-306-errors-inshell", "NF1 to NF8", "An unknown path in a plant and under /admin, inside their layouts; a record that does not exist or is hidden, at 1440 and 320."],
+            ["3", "The server failed (500)", "shell-306-errors-inshell", "SE1 to SE8", "The server error page with the correlation id, Try again and a way out at 1440, 1280, 1920 and 320, and Try again in its loading state."],
+            ["4", "The server cannot be reached", "shell-306-errors-inshell", "NC1 to NC8", "No connection with the reconnecting chip, after a failed Try again, at 320, and the boundary with the restarting state."],
+            ["5", "Maintenance page", "shell-306-errors-static", "MA1 to MA9", "Caddy's static page at 1440, 320, 1920 and the station sizes, and the moment the check gets an answer."],
+            ["6", "Signed out (401, close code 4401)", "shell-306-errors-outside, -inshell", "SO1 to SO5", "Sign-in with the session ended box and the return URL, and the page it returns to with its search kept."],
+            ["7", "Boot", "shell-306-errors-outside", "BO1 to BO7", "Loading NorthMES, the modules request failing, and no answer at boot at the station landscape size."],
+            ["8", "Unsupported browser and HTTPS required", "shell-306-errors-static, -outside", "UB1 to UB3, HS1 to HS3", "The plain browser check page and the HTTPS page."],
+            ["9", "Long strings", "shell-306-errors-inshell, -static", "LS1 to LS4", "The server error page in German, a Finnish plugin page and the maintenance page in German at 320."],
+            ["10", "Keyboard and focus", "shell-306-errors-keyboard", "KF1 to KF15", "Tab order, where focus goes after each action, the polite messages, focus not obscured and the ring on every new control."],
+            ["11", "Build notes", "shell-306-errors-notes", "BN", "Components, tokens, icons, roles, focus, announcements, titles, the error classification, the static page rules, WCAG 2.2 and the final copy."]
+          ].map((r) => ({ n: r[0], name: r[1], file: r[2], ids: r[3], t: r[4] }));
+          const coverage = [
+            ["400: search parameters that fail the route's search definition, and a request the server refuses as invalid at page load; plain words, no raw parameters, a way out", "BL1 to BL6; KF5, KF6"],
+            ["404 outside a module: defaultNotFoundComponent for an unknown path, the same under /admin, and a record that does not exist or is hidden (EmptyState with Back to list); ST5 and ST29 as the reference", "NF1 to NF8; KF7"],
+            ["500: a data request with a server error, as a full page state in main with the correlation id, Try again and a way out; the difference from ST6 stated", "SE1 to SE8; LS1 to LS3; KF1 to KF4"],
+            ["The server cannot be reached at page load, with retry", "NC1 to NC8"],
+            ["Maintenance: Caddy's static page (502, 503), plain HTML and CSS, the mark, light and dark by prefers-color-scheme, reloads by itself", "MA1 to MA9; LS4; KF8, KF9"],
+            ["Signed out: 401 and 4401, back to sign-in, keeping the URL", "SO1 to SO5; KF10"],
+            ["Boot: Loading NorthMES, and the shell failing to start", "BO1 to BO7; KF11"],
+            ["Unsupported browser and HTTPS required", "UB1 to UB3; HS1 to HS3; KF12"],
+            ["Titles, the h1 with focus, the status code only where it helps support", "Every frame's title annotation; BN"],
+            ["Widths 1280, 1440, 1920 and 320; light and dark; long German or Finnish strings", "1280: SE3, BO6, BO7, MA5, LS3; 1920: SE4, MA7; 320: 17 frames; portrait: MA6; LS1 to LS4"],
+            ["Keyboard and focus frames", "KF1 to KF15"]
+          ].map((c) => ({ t: c[0], f: c[1] }));
+          const st6 = [
+            "D2's error panel (ST6) is for a route component that threw while it rendered: a fault in the remote's code, reported by the browser with stage `render` and code `web.render_error`.",
+            "The server error page (SE) is for a data request the server answered with an error: no data arrived, the correlation id comes from the failed response (`extensions.correlationId` or the problem body), and the rows are Correlation id and Code `core.internal`, with no Stage.",
+            "ST6's Try again renders the route again; SE's Try again sends the request again and keeps focus in the D1 loading state until the data arrives. Both keep the shell, remove the page actions, focus the h1 and offer the way out to the module's first entry."
+          ].map(tp);
+          const assumptions = [
+            "Every planner frame shows the planner Alex Lund at Plant A of Acme AB, except NF3 and NF4 (company admin Jonas Holm on /admin).",
+            "Release 1 has no bell, so every top bar ends with Help (D2 PL26).",
+            "TanStack Router's default notFoundMode fuzzy keeps the plant and admin layouts for an unknown path.",
+            "The no-access states (403, close code 4403) are #304's; station screens and their own failures are D4's. Only the maintenance and boot pages are drawn at station sizes.",
+            "The mark is D2's placeholder square with N.",
+            "D2's sign-in path /sign-in, the All pages index and the plant root /{slug} keep D2's open status (Q2, Q3).",
+            "The list on Production orders is a placeholder; the list and form page draws it."
+          ];
+          const qs = [
+            ["E1", "Issue #306 says search parameters that fail the route's search definition render the route's error component; ADR 0062 and plan 06 say each key falls back on its own and PageFrame shows a polite status. Which holds?", "The docs: BL5 and BL6 draw the fallback; BL1 to BL4 cover a validateSearch that throws anyway and the server refusing the request."],
+            ["E2", "Where does the status This link had 1 setting that no longer applies sit, how long does it stay, and does this page or the list and form page own it?", "An inline info Alert under the h1, gone at the next navigation, owned by PageFrame; drawn in BL5."],
+            ["E3", "Issue #306 names GraphQL INTERNAL; plan 05 sends INTERNAL_SERVER_ERROR with core.internal.", "Plan 05's names, drawn in SE."],
+            ["E4", "A DomainError of kind unavailable (GraphQL UNAVAILABLE, REST 503 from the app) at page load: server error page, or the restarting path?", "The restarting path with retry, as NC7; not drawn separately."],
+            ["E5", "The docs set no timeout for a page's data request. How long before No connection?", "30 seconds."],
+            ["E6", "E04-S06 says route error components show the stage and the code; a failed data request has no client stage.", "The server error page shows Correlation id and Code, no Stage."],
+            ["E7", "The return URL's search key name and rules after a 401 or 4401 (D2 Q17).", "redirect, a same-origin path with one leading slash, else /; after a plain sign-in, /."],
+            ["E8", "A 401 or 4401 while a form holds unsaved input loses it on navigation. Open a dialog first, as the reload dialog does?", "Navigate at once in release 1, as plan 06 says; sessions last 7 days, so the case is rare."],
+            ["E9", "Prefill the username after a session ended?", "No, as after Sign out (D2 SI19); planner PCs may be shared."],
+            ["E10", "The maintenance page follows prefers-color-scheme (#306), while every other screen follows the stored choice, light by default.", "prefers-color-scheme, as the issue says."],
+            ["E11", "Plan 09 says the page retries every 10 s. A meta refresh reloads every 10 s and moves a screen reader to the top each time (F41).", "A script that checks /health/ready and reloads only on an answer, with a noscript meta refresh as the fallback; Caddy sends a CSP with hashes."],
+            ["E12", "E17-S02 says Design: maintenance page (plain HTML, no design task).", "Its Design line names this page once approved."],
+            ["E13", "44 px controls on the boot failure, maintenance and HTTPS pages, which a station can show, against Graphite's 36 px.", "44 px, --nm-target-min-station."],
+            ["E14", "Go to {plant} opens /{slug}, whose content is not decided (D2 Q3).", "Keep the link; the plant root decides what opens."],
+            ["E15", "The stored theme is applied by the shell entry, after the static boot markup paints, so a dark user sees a light flash.", "A small external script in head applies the theme before first paint (the CSP allows 'self')."],
+            ["E16", "No client error stage fits a failed modules request at boot.", "No browser report; the server logged the error."],
+            ["E17", "Stage insecure-context is reported to /api/v1/web/client-errors, which needs the session cookie; the cookie is Secure, so it is not sent over HTTP.", "Drop the report for this stage; Caddy's 308 makes the page rare."],
+            ["E18", "Open with HTTPS goes to the same host with https; the certificate may name another host.", "Keep the link; the page shows the address so IT can compare."],
+            ["E19", "Does the All pages index list the admin pages on /admin (NF3)?", "Yes, the pages the user can open in the current mount."],
+            ["E20", "Four new icons: Link2Off, WifiOff, ShieldAlert, ArrowLeft.", "Use them; the D1 icon list gains them."],
+            ["E21", "The no connection page retries by itself and shows Still no connection at {time} after a failed Try again. Wanted?", "Yes, drawn in NC3 and NC4."],
+            ["E22", "D1's Button loading state swaps in a progress label, so Try again reads Trying again while the request runs (SE7, KF2), and the name changes with it.", "Keep D1's pattern; the polite region still reports only the outcome."],
+            ["E23", "Focus not obscured at 320 (KF13): the server error page fits a 320 by 640 screen, so it cannot scroll there.", "KF13 shows the measured sticky block and the rule; the scroll case is checked on the list page at 320."],
+            ["E24", "Plan 06 Page states says the Error state shows the correlation id. The link page (BL1 to BL4) shows none, also when the server refused the request with BAD_USER_INPUT and sent one; the no connection page (NC1 to NC6) has none to show.", "No correlation id on the link page: the person fixes the link with Open without these settings, and plan 05 logs domain errors below error level. Plan 06 Page states gains: the correlation id where a response carried one and support needs it."]
+          ].map((q) => ({ id: q[0], q: q[1], r: q[2] }));
+          return { facts: facts, acceptance: acceptance, reading: reading, pages: pages, rows: rows, coverage: coverage, st6: st6, assumptions: assumptions, qcols: [qs.slice(0, 12), qs.slice(12)] };
+        }
+      }
+    </script>
+  </body>
+</html>

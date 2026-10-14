@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Comparison and recommendation</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the layout axes and their constraints in the spec for this round, and from issue #222; three rows (the steps to a saved edit, reading several articles in turn and the build cost) are derived. Widths are computed from the D2 shell: main is 1134 px wide at 1440 and about 974 px at 1280 beside the 256 px sidebar. A check mark shows the strongest option on a row; rows without one are a tie.</p>
+        <div class="lf-cmp">
+          <div class="lf-cmp-r h"><span>Criterion</span><span>A. Pages</span><span>B. Side sheet</span><span>C. Split view</span></div>
+          <sc-for list="{{ rows }}" as="r">
+            <div class="lf-cmp-r">
+              <span class="k">{{ r.k }}<span class="src">{{ r.src }}</span></span>
+              <sc-for list="{{ r.cells }}" as="c">
+                <span><sc-if value="{{ c.best }}"><span class="lf-best"><span class="ic" data-icon="Check"></span><span>{{ c.t }}</span></span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div class="lf-rec">
+          <h3 class="t2">Recommendation: A, pages</h3>
+          <p>A is the shape plan 06 and ADR 0062 already describe. screenRoute, through masterDataRoutes for registers, gives the list, the detail and the create and edit forms their own routes, titles and h1, so focus after navigation, Back, copied links and the title pattern work with no new URL key and no ADR change, and EntityListPage, EntityDetailPage and EntityForm for registers, the command forms for articles, stay as documented. The table keeps the full width of main (about 974 px at 1280), long forms such as production orders and routings get a page, the reason field sits on the form, never behind a disclosure, ready for the day a contract makes it required, and at 320 px the only addition is the sticky article number. Its cost is context and steps: reading one article leaves the list, and a one-field fix takes the row menu, Edit, Save and Back to the list, which the URL state makes cheap but not free. Two parts of the other options are worth keeping: B's counts, which A shows in each filter menu and on the chips, and C's review step, but only for the commands plan 06 lists under 3.3.4 (saving a draft, breaking a lock, releasing an order), not for every save. C's split view could return later as an escape level 2 screen for a register that people read row by row.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const row = (k, src, best, a, b, c) => ({ k: k, src: src, cells: [a, b, c].map((t, i) => ({ t: t, best: best === i, plain: best !== i })) });
+          return {
+            rows: [
+              row("Detail, create and edit as routes with titles", "P06 Master-data kit UI, A0062", 0,
+                "Own screenRoute entries (masterDataRoutes for registers); no ADR change",
+                "Detail through a search key; create and edit lose their routes and titles (ADR 0062 changes)",
+                "Detail through a search key; the edit dialog has no route (ADR 0062 changes)"),
+              row("What a copied link opens", "F0, A0062", 0,
+                "The detail tab or the edit page",
+                "The list with the sheet open; an open form is lost",
+                "The list with the article in the pane; an open dialog is lost"),
+              row("Focus on open and close", "P06 Focus, WCAG 2.4.3", 0,
+                "A route change focuses the h1; nothing extra to build",
+                "The sheet takes focus and returns it to the row; the sheet host needs its own focus code",
+                "Focus stays in the list and the pane is announced; the dialogs trap focus"),
+              row("Table width at 1280", "D2 shell, main about 974 px", 0,
+                "About 974 px, seven columns and the row menu",
+                "About 750 px beside the facets; dates wrap",
+                "452 px list with three columns"),
+              row("Steps from the list to a saved one-field edit", "F0, derived", 1,
+                "Row menu, Edit, Save: two page loads, then Back to the list",
+                "Edit on the row, Save; the list stays in place",
+                "Select the row, Edit, Review changes, Save"),
+              row("Reading several articles in turn", "Derived, not in the spec", 2,
+                "List, article, Back; the URL keeps the rows",
+                "Open, close, open the next",
+                "Move down the list, the pane follows"),
+              row("Long forms (production order, routing)", "P06 Forms, P07", 0,
+                "A page with field groups and a sticky Save",
+                "One column in a 560 px sheet",
+                "A dialog for short forms, a page for long ones"),
+              row("Filter counts in view", "P06 Lists, A0016", 1,
+                "Counts in each filter menu and on the chips",
+                "Always in view beside the table",
+                "Presets one click away, the rest in a Filters menu"),
+              row("Reason optional now, required later", "A0012, A0051, P04 Commands", 0,
+                "Field always on the form, never behind a disclosure",
+                "Behind Add a reason beside Save",
+                "In a review step on every save"),
+              row("History", "P06 Detail pages, A0013", -1,
+                "Table with expandable rows: dense, scans by column",
+                "Timeline: reads as a story, takes height per entry",
+                "Timeline, as in B"),
+              row("Row and bulk actions", "I222 Frames, WCAG 2.1.1, 1.4.13", 0,
+                "Row menu and bulk bar, one Tab stop per row",
+                "Three buttons per row on hover and focus, an Actions menu",
+                "Actions in the pane only, bulk bar above the list"),
+              row("Reflow at 320 px", "P06 Reflow, WCAG 1.4.10", 0,
+                "Sticky article number, the whole table scrolls sideways",
+                "Selection and three columns, Columns adds the rest",
+                "Cards, a change to the table pattern. C5 draws cards to show axis option 11.7 C; spec 11.9 pairs C with A's sticky column, which C can use unchanged"),
+              row("Docked assistant beside the page", "P06 Shell layout", 0,
+                "Fits beside every view; at 1280 the table keeps about 614 px and scrolls in its own container",
+                "Not usable while the modal sheet is open",
+                "With the assistant docked the pane keeps about 320 px at 1440 and does not fit at 1280"),
+              row("Build cost in @northmes/ui", "Derived, not in the spec", 0,
+                "EntityListPage, EntityDetailPage and EntityForm for registers, the command forms for articles, as documented",
+                "Adds a sheet host, the selected key and forms in a sheet",
+                "Adds a split layout, a dialog form and a review step")
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

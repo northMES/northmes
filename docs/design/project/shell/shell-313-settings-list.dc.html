@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings list</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ toolWide }}">
+          <div class="lf-tool">
+            <span class="inp lf-search {{ f.search }}"><span class="ic" data-icon="Search"></span><span class="ph">{{ L.search }}</span></span>
+            <sc-for list="{{ filters }}" as="b"><button class="btn v-outline lf-fb {{ b.cls }}" type="button" aria-haspopup="menu" aria-expanded="false">{{ b.t }}<sc-if value="{{ b.hasN }}"><span class="lf-n" aria-hidden="true">{{ b.n }}</span><span class="lf-vh">{{ b.nText }}</span></sc-if><span class="ic" data-icon="ChevronDown"></span></button></sc-for>
+            <span class="lf-tool-end"><button class="btn v-outline lf-fb {{ f.columns }}" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>{{ t.columns }}<span class="ic" data-icon="ChevronDown"></span></button></span>
+          </div>
+          <sc-if value="{{ showChips }}">
+            <div class="lf-chips">
+              <sc-for list="{{ chips }}" as="c">
+                <span class="lf-chip"><span class="lf-chip-t"><span class="k">{{ c.field }}:</span><span class="lf-cv"><span>{{ c.v }}</span><span class="lf-mono lf-mut">{{ c.count }}</span></span></span><button class="lf-x {{ c.fcls }}" type="button" aria-label="{{ c.remove }}"><span class="ic" data-icon="X"></span></button></span>
+              </sc-for>
+              <button class="btn v-link {{ f.clear }}" type="button">{{ t.clear }}</button>
+            </div>
+          </sc-if>
+        </sc-if>
+        <sc-if value="{{ toolNarrow }}">
+          <span class="inp lf-search full {{ f.search }}"><span class="ic" data-icon="Search"></span><span class="ph">{{ L.search }}</span></span>
+          <div class="lf-tool">
+            <button class="btn v-outline lf-fb {{ f.filters }}" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>{{ t.filters }}</button>
+            <button class="btn v-outline lf-fb {{ f.columns }}" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>{{ t.columns }}</button>
+          </div>
+        </sc-if>
+        <div class="{{ boxCls }}" style="{{ colsStyle }}">
+          <sc-if value="{{ showGrid }}">
+            <div class="{{ scrollCls }}" tabindex="{{ scrollTab }}" role="{{ scrollRole }}" aria-label="{{ scrollLabel }}">
+              <div class="lf-grid" role="table" aria-label="{{ L.name }}" aria-busy="{{ busy }}">
+                <div class="lf-tr hd" role="row">
+                  <sc-for list="{{ heads }}" as="h">
+                    <span class="lf-td {{ h.cls }}" role="columnheader"><sc-if value="{{ h.vh }}"><span class="lf-vh">{{ h.t }}</span></sc-if><sc-if value="{{ h.plain }}"><span>{{ h.t }}</span></sc-if></span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ rows }}" as="r">
+                  <div class="lf-tr {{ r.cls }}" role="row">
+                    <sc-for list="{{ r.cells }}" as="c">
+                      <span class="lf-td {{ c.cls }}" role="cell" lang="{{ c.lang }}">
+                        <sc-if value="{{ c.isLink }}"><a class="lf-cl {{ c.fcls }}" href="#">{{ c.v }}</a></sc-if>
+                        <sc-if value="{{ c.isText }}"><span class="{{ c.tcls }}">{{ c.v }}</span></sc-if>
+                        <sc-if value="{{ c.isTwo }}"><span>{{ c.v }}</span><span class="lf-sub">{{ c.sub }}</span></sc-if>
+                        <sc-if value="{{ c.isSw }}"><span class="set-cellf"><span class="set-swatch {{ c.sw }}" aria-hidden="true"></span><sc-if value="{{ c.swLink }}"><a class="lf-cl {{ c.fcls }}" href="#">{{ c.v }}</a></sc-if><sc-if value="{{ c.swText }}"><span>{{ c.v }}</span></sc-if></span></sc-if>
+                        <sc-if value="{{ c.isBadge }}"><span class="set-cellw"><span class="badge {{ c.bcls }}">{{ c.v }}</span><sc-if value="{{ c.hasL }}"><a class="set-tl {{ c.lfcls }}" href="#">{{ c.l }}</a></sc-if></span></sc-if>
+                        <sc-if value="{{ c.isSk }}"><span class="sk lf-skl" style="{{ c.skStyle }}"></span></sc-if>
+                        <sc-if value="{{ c.isMenu }}">
+                          <span class="lf-wrap">
+                            <button class="btn icon v-ghost {{ c.bcls }}" type="button" aria-label="{{ c.v }}" aria-haspopup="menu" aria-expanded="{{ c.open }}" aria-controls="{{ c.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                            <sc-if value="{{ c.open }}">
+                              <div class="pop lf-pop {{ c.popCls }}" id="{{ c.ctl }}" style="width:220px" role="menu" aria-label="{{ c.v }}">
+                                <sc-for list="{{ c.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for>
+                              </div>
+                            </sc-if>
+                          </span>
+                        </sc-if>
+                      </span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="{{ pagerCls }}">
+              <sc-if value="{{ hasTotal }}"><span>{{ t.rows0 }}<span class="lf-mono">1</span>{{ t.rows1 }}<span class="lf-mono">{{ count }}</span>{{ t.rows2 }}<span class="lf-mono">{{ count }}</span></span></sc-if>
+              <sc-if value="{{ noTotal }}"><span>{{ t.newest }}</span></sc-if>
+              <sc-if value="{{ busyPager }}"><span class="sk lf-skl" style="width:140px"></span></sc-if>
+              <span class="lf-pg">
+                <sc-if value="{{ wideNav }}">
+                  <button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>{{ t.prev }}</button>
+                  <button class="btn v-outline {{ nextCls }}" type="button" aria-disabled="{{ nextDis }}">{{ t.next }}<span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+                <sc-if value="{{ narrowNav }}">
+                  <button class="btn icon v-outline is-dis" type="button" aria-disabled="true" aria-label="{{ t.prevPage }}"><span class="ic" data-icon="ChevronLeft"></span></button>
+                  <button class="btn icon v-outline {{ nextCls }}" type="button" aria-disabled="{{ nextDis }}" aria-label="{{ t.nextPage }}"><span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+              </span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showState }}">
+            <div class="lf-state" role="{{ st.role }}">
+              <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+              <h2 class="lf-state-h">{{ st.title }}</h2>
+              <p>{{ st.text }}</p>
+              <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ t.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ t.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+              <sc-if value="{{ st.hasActs }}">
+                <div class="acts"><sc-for list="{{ st.acts }}" as="a"><button class="btn {{ a.cls }}" type="button"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.t }}</button></sc-for></div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"list":{"editor":"enum","options":["plants","users","machines","equipment-groups","calendars","stations","audit"],"default":"machines","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","empty","filtered-empty","error","forbidden"],"default":"populated","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"company":{"editor":"text","default":"Acme AB","tsType":"string"},"plant":{"editor":"text","default":"Plant A","tsType":"string"},"readonly":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"menu":{"editor":"text","default":"none","tsType":"string"},"hover":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) { window.__nmSetListSeq = (window.__nmSetListSeq || 0) + 1; this.uid = "set-d" + window.__nmSetListSeq; }
+          const uid = this.uid;
+          const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+          const pick = (v, opts, d) => { const s = has(v) ? String(v).trim() : ""; return opts.indexOf(s) >= 0 ? s : d; };
+          const list = pick(P.list, ["plants", "users", "machines", "equipment-groups", "calendars", "stations", "audit"], "machines");
+          const state = pick(P.state, ["populated", "loading", "empty", "filtered-empty", "error", "forbidden"], "populated");
+          const narrow = pick(P.size, ["wide", "narrow"], "wide") === "narrow";
+          const long = pick(P.strings, ["default", "long"], "default") === "long" && (list === "plants" || list === "machines" || list === "users");
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const readonly = P.readonly === "on" || list === "audit";
+          const company = has(P.company) ? String(P.company).trim() : (long ? "Oberschwäbische Präzisionswerkzeuge GmbH" : "Acme AB");
+          const plant = has(P.plant) ? String(P.plant).trim() : (long ? "Präzisionsfertigung Oberschwaben Werk Süd" : "Plant A");
+          const focus = has(P.focus) ? String(P.focus).trim() : "none";
+          const fp = focus.split(":");
+          const fkind = fp[0], fcode = fp.slice(1).join(":");
+          const menuCode = has(P.menu) ? String(P.menu).trim() : "none";
+          const hoverCode = has(P.hover) ? String(P.hover).trim() : "";
+          const fc = (k) => (focus === k ? "is-focus" : "");
+
+          const t = long ? {
+            columns: "Spalten", filters: "Filter", rows0: "Zeilen ", rows1: " bis ", rows2: " von ", prev: "Zurück", next: "Weiter", prevPage: "Vorherige Seite", nextPage: "Nächste Seite",
+            newest: "Neueste zuerst", cid: "Korrelations-ID", copyCid: "Korrelations-ID kopieren", actions: (n) => "Aktionen für " + n, region: (n) => "Tabelle " + n + ", seitlich scrollbar",
+            edit: "Bearbeiten", archive: "Archivieren", actionsHead: "Aktionen", clear: "Filter zurücksetzen", picked: (n) => ", " + n + " ausgewählt"
+          } : {
+            columns: "Columns", filters: "Filters", rows0: "Rows ", rows1: " to ", rows2: " of ", prev: "Previous", next: "Next", prevPage: "Previous page", nextPage: "Next page",
+            newest: "Newest first", cid: "Correlation id", copyCid: "Copy correlation id", actions: (n) => "Actions for " + n, region: (n) => n + " table, scrolls sideways",
+            edit: "Edit", archive: "Archive", actionsHead: "Actions", clear: "Clear filters", picked: (n) => ", " + n + " selected"
+          };
+
+          // Columns: id, label, wide track, narrow width, kind; stick marks the identifier column that stays at 320.
+          const C = (id, label, w, n, kind, o) => Object.assign({ id: id, label: label, w: w, n: n, kind: kind, stick: false }, o || {});
+          // The visually hidden header of the row menu column follows the page language (#222).
+          const MENU = C("menu", t.actionsHead, "52px", "52px", "menu");
+          const DEF = {
+            plants: {
+              name: long ? "Werke" : "Plants", search: long ? "Werke suchen" : "Search plants", filters: long ? ["Status"] : ["State"],
+              cols: [C("name", long ? "Werk" : "Plant", "minmax(150px,1.2fr)", "180px", "link", { stick: true }), C("slug", long ? "Kürzel" : "Slug", "minmax(110px,0.8fr)", "130px", "mono"),
+                C("zone", long ? "Zeitzone" : "Time zone", "minmax(150px,1fr)", "160px", "text"), C("start", long ? "Beginn des Produktionstags" : "Production day start", "minmax(150px,0.9fr)", "180px", "mono"),
+                C("state", long ? "Status" : "State", "minmax(240px,1.4fr)", "260px", "badge")],
+              rows: long
+                ? [["Präzisionsfertigung Oberschwaben Werk Süd", "werk-sued", "Europe/Berlin", "06:00", "open"], ["Werk Biberach an der Riß", "werk-biberach", "Europe/Berlin", "05:30", "open"]]
+                : [["Plant A", "plant-a", "Europe/Stockholm", "06:00", "open"], ["Plant B", "plant-b", "Europe/Stockholm", "06:00", "open"], ["Plant D", "plant-d", "Europe/Stockholm", "06:00", "onboarding"]],
+              nouns: ["plants", "plant", "New plant"]
+            },
+            users: long ? {
+              // German labels and the D2 long preset for the long-strings frames (rules 11.6); names and roles are fictional.
+              name: "Benutzer", search: "Benutzer suchen", filters: ["Rolle", "Ort"],
+              cols: [C("name", "Name", "minmax(160px,1.1fr)", "150px", "link", { stick: true }), C("username", "Benutzername", "minmax(120px,1fr)", "130px", "mono"),
+                C("roles", "Rollen", "minmax(200px,1.6fr)", "230px", "text"), C("status", "Status", "120px", "110px", "badge"), MENU],
+              rows: [["Friederike Schönberger", "friederike.schoenberger", "Planer in Werk Biberach an der Riß"], ["Hannelore Wiesenthal-Brückner", "hannelore.wiesenthal.brueckner", "Unternehmensadministrator bei Oberschwäbische Präzisionswerkzeuge GmbH"],
+                ["Konstantin Riedlinger-Hausmann", "konstantin.riedlinger.hausmann", "Bediener in Präzisionsfertigung Oberschwaben Werk Süd"], ["Maximilian Oberhuber-Schwarzenbach", "maximilian.oberhuber.schwarzenbach", "Werksadministrator in Präzisionsfertigung Oberschwaben Werk Süd"]],
+              nouns: ["Benutzer", "Benutzer", "Neuer Benutzer"], menuItems: [["Pencil", "Bearbeiten"], ["KeyRound", "Passwort zurücksetzen"], ["Ban", "Benutzer sperren"]]
+            } : {
+              name: "Users", search: "Search users", filters: ["Role", "Place"],
+              cols: [C("name", "Name", "minmax(160px,1.1fr)", "150px", "link", { stick: true }), C("username", "Username", "minmax(120px,1fr)", "130px", "mono"),
+                C("roles", "Roles", "minmax(200px,1.6fr)", "230px", "text"), C("status", "Status", "120px", "110px", "badge"), MENU],
+              rows: [["Alex Lund", "alex.lund", "Planner at Plant A"], ["Anna Berg", "anna.berg", "Operator at Plant A"], ["Erik Lind", "erik.lind", "Plant admin at Plant A"], ["Jonas Holm", "jonas.holm", "Company admin at Acme AB"]],
+              nouns: ["users", "user", "New user"], menuItems: [["Pencil", "Edit"], ["KeyRound", "Reset password"], ["Ban", "Block user"]]
+            },
+            machines: {
+              name: long ? "Maschinen" : "Machines", search: long ? "Maschinen suchen" : "Search machines", filters: long ? ["Betriebsmittelgruppe", "Planbar"] : ["Equipment group", "Plannable"],
+              cols: [C("name", long ? "Maschine" : "Machine", "minmax(150px,1.1fr)", "190px", "link", { stick: true }), C("group", long ? "Betriebsmittelgruppe" : "Equipment group", "minmax(170px,1.2fr)", "210px", "sw"),
+                C("plannable", long ? "Planbar" : "Plannable", "120px", "100px", "text"), C("changed", long ? "Zuletzt geändert" : "Last changed", "150px", "130px", "mono"), MENU],
+              rows: long
+                ? [["Hydraulische Tiefziehpresse 4", "Umformpressen mit Hydraulikantrieb", "set-g6", "Ja", "2026-09-14"], ["Fünfachsiges Bearbeitungszentrum 1", "Zerspanungszentren", "set-g3", "Ja", "2026-09-21"], ["Rundtaktschweißanlage 2", "Schweißanlagen", "set-g2", "Nein", "2026-09-28"]]
+                : [["Press 2", "Presses", "set-g6", "Yes", "2026-09-14"], ["Press 4", "Presses", "set-g6", "Yes", "2026-09-14"], ["Mill 1", "Mills", "set-g3", "Yes", "2026-09-21"], ["Mill 2", "Mills", "set-g3", "No", "2026-09-21"], ["Lathe 3", "Lathes", "set-g12", "Yes", "2026-09-28"]],
+              nouns: long ? ["Maschinen", "Maschine", "Neue Maschine"] : ["machines", "machine", "New machine"],
+              // The filtered-empty state picks Acme AB's Assembly group, which holds no machine at Plant A (#222 ST17).
+              pickEmpty: { i: 0, v: "Assembly", remove: "Remove the equipment group filter" }
+            },
+            "equipment-groups": {
+              name: "Equipment groups", search: "Search equipment groups", filters: ["Level"],
+              cols: [C("name", "Group", "minmax(170px,1.2fr)", "170px", "sw", { stick: true }), C("level", "Level", "minmax(150px,1fr)", "140px", "two"),
+                C("count", "Machines", "110px", "100px", "num"), C("changed", "Last changed", "150px", "130px", "mono"), MENU],
+              rows: [["Presses", "set-g6", "Plant A", "Plant", "2", "2026-09-14"], ["Mills", "set-g3", "Plant A", "Plant", "2", "2026-09-21"], ["Lathes", "set-g12", "Plant A", "Plant", "1", "2026-09-28"], ["Assembly", "set-g9", "Acme AB", "Company, read only", "0", "2026-08-30"]],
+              nouns: ["equipment groups", "equipment group", "New equipment group"]
+            },
+            calendars: {
+              name: "Calendars", search: "Search calendars", filters: ["Machine"],
+              cols: [C("name", "Calendar", "minmax(220px,1.6fr)", "220px", "link", { stick: true }), C("from", "Current version from", "170px", "170px", "mono"),
+                C("hours", "Working hours", "150px", "150px", "mono"), C("machines", "Machines", "100px", "100px", "num"), C("dev", "Deviations", "110px", "110px", "num"), MENU],
+              rows: [["Two shifts, Monday to Friday", "2026-09-28", "06:00 to 22:00", "4", "1"], ["Day shift, Monday to Friday", "2026-09-28", "06:00 to 14:00", "1", "1"]],
+              nouns: ["calendars", "calendar", "New calendar"]
+            },
+            stations: {
+              name: "Stations", search: "Search stations", filters: ["Pairing"],
+              cols: [C("name", "Station", "minmax(150px,1fr)", "150px", "link", { stick: true }), C("machine", "Machine", "minmax(140px,1fr)", "140px", "text"),
+                C("pairing", "Pairing", "minmax(200px,1.2fr)", "210px", "badge"), C("seen", "Last seen", "170px", "170px", "mono"), MENU],
+              rows: [["Press 4", "Press 4", "paired", "2026-10-08 06:12"], ["Mill 1", "Mill 1", "waiting", "2026-10-08 07:40"]],
+              nouns: ["stations", "station", ""]
+            },
+            audit: {
+              name: "Audit log", search: "Search the audit log", filters: ["Changed by", "Place"],
+              cols: [C("when", "When", "170px", "160px", "mono", { stick: true }), C("who", "Changed by", "minmax(140px,0.9fr)", "140px", "text"),
+                C("change", "Change", "minmax(260px,1.8fr)", "280px", "text"), C("reason", "Reason", "minmax(200px,1.3fr)", "240px", "text")],
+              rows: [["2026-10-07 14:05", "Jonas Holm", "Changed Clock at Acme AB to 24-hour", "Same clock as the shift plans"], ["2026-10-06 09:30", "Jonas Holm", "Created Plant D", "New site, onboarding until November"], ["2026-10-05 16:20", "Erik Lind", "Changed Number format at Plant A to space and comma", "Plant A reads numbers as 1 234,5"]],
+              nouns: ["audit entries", "audit entry", ""]
+            }
+          };
+          const L = DEF[list];
+          const cols = L.cols.filter((c) => !(c.kind === "menu" && readonly));
+          const firstName = L.rows.length ? L.rows[0][0] : "";
+          const isF = (kind, code) => fkind === kind && (fcode ? fcode === code : code === firstName);
+
+          // Cells. Values are fictional; plant A's presentation is the default (ISO dates, 24-hour clock).
+          const cellFor = (c, r, idx) => {
+            const code = r[0];
+            const base = { cls: c.stick && narrow ? "lf-stk " : "", lang: null, v: "", kind: c.kind, tcls: "" };
+            if (c.kind === "menu") {
+              const open = menuCode === code;
+              let items = L.menuItems || [["Pencil", t.edit], ["Archive", t.archive]];
+              if (list === "stations") items = r[2] === "waiting" ? [["Check", "Approve pairing"], ["X", "Reject pairing"]] : [["Pencil", t.edit], ["Unlink", "Unpair station"]];
+              if (list === "equipment-groups" && r[2] !== plant && !long) return Object.assign(base, { kind: "none", cls: "end" });
+              const up = idx >= Math.max(3, L.rows.length - 2) && !narrow;
+              return Object.assign(base, { cls: "end", v: t.actions(code), open: open, ctl: open ? uid + "-rm" : null, popCls: up ? "above-r" : "below-r",
+                bcls: (open ? "is-active " : "") + (isF("menu", code) ? "is-focus" : ""), items: items.map((m, j) => ({ icon: m[0], t: m[1], cls: open && j === 0 ? "kfocus" : "" })) });
+            }
+            if (list === "plants") {
+              if (c.id === "name") return Object.assign(base, { kind: "link", v: r[0], fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "slug") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-mut", v: r[1] });
+              if (c.id === "zone") return Object.assign(base, { kind: "text", v: r[2] });
+              if (c.id === "start") return Object.assign(base, { kind: "text", tcls: "lf-mono", v: r[3] });
+              if (c.id === "state") return r[4] === "onboarding"
+                ? Object.assign(base, { kind: "badge", bcls: "sh-onboarding", v: "Onboarding", hasL: true, l: long ? "Onboarding fortsetzen" : "Continue onboarding", lfcls: isF("continue", code) || focus === "continue" ? "is-focus" : "" })
+                : Object.assign(base, { kind: "badge", bcls: "set-st-ok", v: long ? "Offen" : "Open", hasL: false });
+            }
+            if (list === "users") {
+              if (c.id === "name") return Object.assign(base, { kind: "link", v: r[0], fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "username") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-mut", v: r[1] });
+              if (c.id === "roles") return Object.assign(base, { kind: "text", v: r[2] });
+              if (c.id === "status") return Object.assign(base, { kind: "badge", bcls: "lf-st-active", v: long ? "Aktiv" : "Active", hasL: false });
+            }
+            if (list === "machines") {
+              if (c.id === "name") return Object.assign(base, { kind: "link", v: r[0], fcls: isF("link", code) ? "is-focus" : "", lang: long ? "de" : null });
+              if (c.id === "group") return r[1] ? Object.assign(base, { kind: "sw", sw: r[2], v: r[1], swText: true, swLink: false, lang: long ? "de" : null }) : Object.assign(base, { kind: "text", tcls: "lf-mut", v: long ? "Keine Gruppe" : "No group" });
+              if (c.id === "plannable") return Object.assign(base, { kind: "text", v: r[3] });
+              if (c.id === "changed") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[4] });
+            }
+            if (list === "equipment-groups") {
+              if (c.id === "name") return Object.assign(base, { kind: "sw", sw: r[1], v: r[0], swLink: true, swText: false, fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "level") return Object.assign(base, { kind: "two", cls: base.cls + "two", v: r[2], sub: r[3] });
+              if (c.id === "count") return Object.assign(base, { kind: "text", cls: base.cls + "num", tcls: "lf-mono", v: r[4] });
+              if (c.id === "changed") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[5] });
+            }
+            if (list === "calendars") {
+              if (c.id === "name") return Object.assign(base, { kind: "link", v: r[0], fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "from") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[1] });
+              if (c.id === "hours") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[2] });
+              if (c.id === "machines") return Object.assign(base, { kind: "text", cls: base.cls + "num", tcls: "lf-mono", v: r[3] });
+              if (c.id === "dev") return Object.assign(base, { kind: "text", cls: base.cls + "num", tcls: "lf-mono", v: r[4] });
+            }
+            if (list === "stations") {
+              if (c.id === "name") return Object.assign(base, { kind: "link", v: r[0], fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "machine") return Object.assign(base, { kind: "text", v: r[1] });
+              if (c.id === "pairing") return r[2] === "waiting" ? Object.assign(base, { kind: "badge", bcls: "set-st-wait", v: "Waiting for approval", hasL: false }) : Object.assign(base, { kind: "badge", bcls: "set-st-ok", v: "Paired", hasL: false });
+              if (c.id === "seen") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[3] });
+            }
+            if (list === "audit") {
+              if (c.id === "when") return Object.assign(base, { kind: "text", tcls: "lf-mono lf-nowrap", v: r[0] });
+              if (c.id === "who") return Object.assign(base, { kind: "text", v: r[1] });
+              if (c.id === "change") return Object.assign(base, { kind: "text", v: r[2] });
+              if (c.id === "reason") return Object.assign(base, { kind: "text", v: r[3] });
+            }
+            return base;
+          };
+          const finish = (cell) => Object.assign(cell, { isLink: cell.kind === "link", isText: cell.kind === "text", isTwo: cell.kind === "two", isSw: cell.kind === "sw",
+            isBadge: cell.kind === "badge", isMenu: cell.kind === "menu", isSk: cell.kind === "sk", hasL: !!cell.hasL, swLink: !!cell.swLink, swText: !!cell.swText });
+          let rows;
+          if (state === "loading") {
+            const SK = [[120, 96, 140, 64, 88], [96, 72, 120, 72, 72], [128, 88, 160, 56, 96], [104, 80, 112, 64, 80]];
+            rows = SK.slice(0, Math.min(4, L.rows.length + 1)).map((w) => ({ cls: "", cells: cols.map((c, j) => finish({ kind: c.kind === "menu" ? "none" : "sk", cls: (c.stick && narrow ? "lf-stk " : "") + (c.kind === "menu" ? "end" : ""), lang: null, skStyle: "width:" + w[j % 5] + "px" })) }));
+          } else {
+            rows = L.rows.map((r, i) => ({ cls: hoverCode === r[0] ? "hov" : "", cells: cols.map((c) => finish(cellFor(c, r, i))) }));
+          }
+          const heads = cols.map((c) => ({ t: c.label, vh: c.kind === "menu", plain: c.kind !== "menu", cls: (c.kind === "menu" ? "end " : "") + (c.kind === "num" ? "num " : "") + (c.stick && narrow ? "lf-stk" : "") }));
+          const tracks = cols.map((c) => (narrow ? c.n : c.w)).join(" ");
+          const minw = narrow ? cols.reduce((a, c) => a + parseInt(c.n, 10), 0) : 0;
+          const stkw = narrow ? parseInt((cols.filter((c) => c.stick)[0] || { n: "0" }).n, 10) : 0;
+
+          // Page states inside the Card (#222, P06 Page states). Copy follows #222; settings nouns and scopes proposed.
+          const N = L.nouns;
+          const scopeName = list === "plants" || list === "users" || list === "audit" ? company : plant;
+          const admin = list === "plants" || list === "users" ? "company admin" : "plant admin";
+          const EMPTY = {
+            plants: { icon: "Factory", title: "No plants yet", text: "Create the first plant of " + company + ". Its people can work in NorthMES once it exists.", acts: [{ t: "New plant", icon: "Plus", cls: "v-default" }] },
+            stations: { icon: "Monitor", title: "No stations yet", text: "A station shows here when it asks to pair with " + plant + ". Approve it here before an operator can sign in.", acts: [] },
+            audit: { icon: "ScrollText", title: "No changes yet", text: "Changes to settings and records show here with who made them and why.", acts: [] }
+          };
+          const STATES = {
+            empty: EMPTY[list] || { icon: "PackageOpen", title: "No " + N[0] + " yet", text: "Create the first " + N[1] + ".", acts: N[2] ? [{ t: N[2], icon: "Plus", cls: "v-default" }] : [] },
+            "filtered-empty": { icon: "SearchX", title: "No " + N[0] + " match these filters", text: "Change or clear the filters to see " + N[0] + " again.", acts: [{ t: "Clear filters", cls: "v-outline" }] },
+            error: { icon: "CircleAlert", err: true, role: "alert", title: "Could not load " + N[0], text: "Check the connection, then try again. If it fails again, give your " + admin + " the correlation id.", cid: "01J9Z7B4KD2M6P8R1T3V5W7X9Y", acts: [{ t: "Try again", icon: "RotateCw", cls: "v-default" }] },
+            // Roles are assigned in company settings, so the way to a missing permission is a company admin (rules 10.6, #304).
+            forbidden: { icon: "Lock", title: "You need the permission to read " + N[0] + " in " + scopeName, text: "Ask a company admin of " + company + " for a role that can read " + N[0] + ".", acts: [] }
+          };
+          const sr = STATES[state];
+          const pk = state === "filtered-empty" && L.pickEmpty ? L.pickEmpty : null;
+          const st = sr ? { icon: sr.icon, bigCls: sr.err ? "err" : "", role: sr.role || null, title: sr.title, text: sr.text, hasCid: !!sr.cid, cid: sr.cid || "",
+            hasActs: sr.acts.length > 0, acts: sr.acts.map((a, i) => ({ t: a.t, icon: a.icon || "", hasIcon: !!a.icon, cls: a.cls + (fkind === "action" && i === 0 ? " is-focus" : "") })) } : null;
+          const busy = state === "loading";
+          const noTotal = list === "audit";
+          return {
+            label: "Settings list, " + list + ", " + state + (narrow ? ", 320" : "") + (long ? ", long strings" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t, L: L, wide: !narrow, narrow: narrow,
+            // Forbidden holds no data, so the toolbar is not drawn (#222 ST19); a first run and a filtered-empty list keep
+            // it, and their EmptyState card takes the list's height (#222 ST3, ST17).
+            toolWide: !narrow && state !== "forbidden", toolNarrow: narrow && state !== "forbidden",
+            f: { search: fc("search"), columns: fc("columns"), filters: fc("filters"), clear: fc("clear") },
+            filters: L.filters.map((b, i) => ({ t: b, cls: (focus === "filter" && i === 0) || focus === "filter:" + i ? "is-focus" : "", hasN: !!pk && pk.i === i, n: "1", nText: t.picked(1) })),
+            showChips: !narrow && !!pk, chips: pk ? [{ field: L.filters[pk.i], v: pk.v, count: "0", remove: pk.remove, fcls: fc("chip") }] : [],
+            boxCls: narrow ? "lf-nbox" : state === "empty" || state === "filtered-empty" ? "lf-card" : "lf-card auto",
+            colsStyle: "--cols:" + tracks + (minw ? ";--minw:" + minw + "px;--stkw:" + stkw + "px" : ""),
+            scrollCls: narrow ? "lf-xs lf-xstk" + (fkind === "region" ? " is-focus" : "") : "lf-scroll",
+            scrollTab: narrow ? "0" : null, scrollRole: narrow ? "region" : null, scrollLabel: narrow ? t.region(L.name) : null,
+            busy: busy ? "true" : null,
+            showGrid: !st, showState: !!st, st: st,
+            heads: heads, rows: rows,
+            pagerCls: narrow ? "lf-pager out" : "lf-pager",
+            count: String(L.rows.length),
+            hasTotal: !busy && !noTotal, noTotal: !busy && noTotal, busyPager: busy,
+            wideNav: !narrow && !busy, narrowNav: narrow && !busy,
+            nextCls: (noTotal ? "" : "is-dis ") + (fkind === "next" ? "is-focus" : ""), nextDis: noTotal ? null : "true"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

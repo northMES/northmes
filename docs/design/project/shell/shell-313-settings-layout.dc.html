@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings layout</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+      </helmet>
+      <div class="set-lay {{ layCls }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ wide }}">
+          <div class="set-navcol">
+            <dc-import name="shell-313-settings-nav" area="{{ area }}" company="{{ navCompany }}" plant="{{ navPlant }}" current="{{ current }}" entries="{{ entries }}" others="{{ others }}" onboarding="{{ onboarding }}" back="{{ back }}" from="{{ from }}" unavailable="{{ unavailable }}" focus="{{ navFocus }}" hover="{{ hover }}" strings="{{ strings }}" hint-size="220px,480px"></dc-import>
+          </div>
+        </sc-if>
+        <div class="set-page {{ pageCls }}" id="{{ contentId }}" tabIndex="-1" lang="{{ lang }}">
+          <sc-if value="{{ hasBack }}"><a class="set-backl {{ f.back }}" href="#"><span class="ic" data-icon="ArrowLeft"></span><span>{{ backText }}</span></a></sc-if>
+          <div class="sh-ph" lang="{{ pageLang }}">
+            <h1 class="sh-h1 {{ f.h1 }}" tabIndex="-1">{{ title }}</h1>
+            <sc-if value="{{ hasMeta }}"><div class="sh-ph-slot">{{ meta }}</div></sc-if>
+          </div>
+          <sc-if value="{{ hasKids }}">{{ kids }}</sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"area":{"editor":"enum","options":["plant","company"],"default":"plant","tsType":"string"},"width":{"editor":"enum","options":["1280","1440","1920","320"],"default":"1440","tsType":"string"},"page":{"editor":"text","default":"landing","tsType":"string"},"title":{"editor":"text","default":"","tsType":"string"},"meta":{"editor":"text","default":"","tsType":"string"},"contentId":{"editor":"text","default":"","tsType":"string"},"company":{"editor":"text","default":"","tsType":"string"},"plant":{"editor":"text","default":"","tsType":"string"},"from":{"editor":"text","default":"","tsType":"string"},"back":{"editor":"enum","options":["auto","home","none"],"default":"auto","tsType":"string"},"entries":{"editor":"text","default":"all","tsType":"string"},"others":{"editor":"text","default":"auto","tsType":"string"},"onboarding":{"editor":"text","default":"","tsType":"string"},"unavailable":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"hover":{"editor":"text","default":"","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"pageLang":{"editor":"text","default":"","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // The shared data file loads with the helmet; draw again once it is there.
+          const ready = () => (window.NM313 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.NM313) ready();
+        }
+        renderVals() {
+          // The settings layout inside main (rules 3.1, 3.2, 7.2): the settings navigation column, then the page column
+          // with the h1 first and the page's content (the children). The page column carries content-id, which the
+          // settings frame's skip-to names, so "Skip to main content" passes the main navigation, the top bar and the
+          // settings navigation. At 320 the navigation column is not drawn; the page column starts with the link back
+          // to the landing (C6), or on the company landing with the link back to work (C5).
+          const P = this.props || {};
+          const D = window.NM313;
+          if (!this.uid) { window.__nmSetLaySeq = (window.__nmSetLaySeq || 0) + 1; this.uid = "set-y" + window.__nmSetLaySeq; }
+          const u = this.uid;
+          const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+          const pick = (v, opts, d) => { const s = has(v) ? String(v).trim() : ""; return opts.indexOf(s) >= 0 ? s : d; };
+          const str = (v) => (has(v) ? String(v).trim() : null);
+          const area = pick(P.area, ["plant", "company"], "plant");
+          const width = pick(P.width, ["1280", "1440", "1920", "320"], "1440");
+          const narrow = width === "320";
+          const long = pick(P.strings, ["default", "long"], "default") === "long";
+          const L = long ? "de" : "en";
+          const t = D ? D.t[L] : { companyTitle: "", plantTitle: "", back: "", backHome: "" };
+          const page = str(P.page) || "landing";
+          const landing = page === "landing";
+
+          // The scope: the company prop, else the company that holds the plant prop, else the first company.
+          const data = D ? D.data[L] : { companies: [{ name: "", plants: [""] }] };
+          const plantIn = str(P.plant) || "";
+          const coIn = str(P.company) || "";
+          const co = data.companies.filter((c) => (coIn ? c.name === coIn : plantIn && c.plants.indexOf(plantIn) >= 0))[0] || data.companies[0];
+          const company = coIn || co.name;
+          const plant = plantIn || co.plants[0];
+          const from = str(P.from) || co.plants[0];
+
+          // The h1: the title prop, else the landing's title, else the current entry's label.
+          let entry = null;
+          if (D && !landing) D.areas[area].concat([{ entries: [D.onboarding] }]).forEach((g) => g.entries.forEach((e) => { if (e.id === page) entry = e; }));
+          const areaTitle = area === "company" ? t.companyTitle : t.plantTitle.replace("{plant}", plant);
+          const title = str(P.title) || (landing ? areaTitle : entry ? entry[L] : "");
+
+          // The link above the h1 at 320 (rules 1.4, 6.7): an entry links back to its landing, named by the landing's
+          // title; the company landing links back to work. back="none" hides it.
+          const back = pick(P.back, ["auto", "home", "none"], "auto");
+          let backText = "";
+          if (narrow && back !== "none") {
+            if (!landing) backText = areaTitle;
+            else if (area === "company") backText = back === "home" ? t.backHome : t.back.replace("{plant}", from);
+          }
+
+          // Focus: page (the page column, where the skip link lands), h1, back (the link above the h1 at 320), or
+          // nav:<focus of the navigation part>, for example nav:entry:roles, nav:back or nav:other.
+          const focus = str(P.focus) || "none";
+          const navFocus = focus.indexOf("nav:") === 0 ? focus.slice(4) : null;
+          const kidsAll = [].concat(P.children === undefined || P.children === null ? [] : P.children).filter((c) => c !== null && c !== undefined && c !== false);
+          const hasKids = kidsAll.some((c) => (!!c && typeof c === "object") || (typeof c === "string" && c.trim() !== "") || typeof c === "number");
+          return {
+            label: "Settings layout, " + area + ", " + (landing ? "landing" : page) + (narrow ? ", 320" : "") + (long ? ", long strings" : ""),
+            // theme light or dark paints the part's own surface when it is rendered on its own (as the other parts do).
+            layCls: [narrow ? "nar" : "", pick(P.theme, ["inherit", "light", "dark"], "inherit") !== "inherit" ? "set-solo" : "", P.theme === "dark" ? "dark" : ""].filter(Boolean).join(" "),
+            wide: !narrow,
+            area: area,
+            navCompany: company,
+            navPlant: area === "plant" ? plant : null,
+            current: landing ? "none" : page,
+            entries: str(P.entries),
+            others: str(P.others),
+            onboarding: str(P.onboarding),
+            back: area === "company" ? back : "none",
+            from: from,
+            unavailable: str(P.unavailable),
+            navFocus: navFocus,
+            hover: str(P.hover),
+            strings: long ? "long" : null,
+            contentId: str(P.contentId) || u + "-page",
+            pageCls: (narrow ? "nar " : "") + (focus === "page" ? "is-focus" : ""),
+            lang: long ? "de" : null,
+            pageLang: str(P.pageLang),
+            hasBack: backText !== "",
+            backText: backText,
+            f: { back: focus === "back" ? "is-focus" : "", h1: focus === "h1" ? "is-focus" : "" },
+            title: title,
+            meta: str(P.meta) || "",
+            hasMeta: has(P.meta),
+            kids: kidsAll,
+            hasKids: hasKids
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

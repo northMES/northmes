@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board inspector</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+      </helmet>
+      <div class="{{ rootCls }}" lang="{{ lang }}" style="{{ rootStyle }}">
+        <sc-if value="{{ isStrip }}">
+          <section class="pb-ins col" aria-label="{{ t.panel }}">
+            <button class="btn icon v-ghost {{ fc.expand }}" type="button" aria-expanded="false" aria-label="{{ t.expand }}"><span class="ic" data-icon="PanelRightOpen"></span></button>
+            <span class="pb-strip-sep"></span>
+            <sc-for list="{{ strip }}" as="s"><span class="pb-sbtn"><button class="btn icon v-ghost {{ s.cls }}" type="button" aria-label="{{ s.label }}"><span class="ic" data-icon="{{ s.icon }}"></span></button><sc-if value="{{ s.hasCnt }}"><span class="pb-cnt" aria-hidden="true">{{ s.cnt }}</span></sc-if><sc-if value="{{ s.tip }}"><span class="pb-tipl" aria-hidden="true">{{ s.label }}</span></sc-if></span></sc-for>
+          </section>
+        </sc-if>
+        <sc-if value="{{ isPanel }}">
+          <section class="{{ panelCls }}" role="{{ panelRole }}" aria-modal="{{ panelModal }}" aria-label="{{ panelLabel }}" aria-labelledby="{{ panelLby }}">
+            <sc-if value="{{ isSheet }}">
+              <div class="pb-ph"><h2 class="pb-pt" id="{{ ids.sheetTitle }}"><span class="pb-j">{{ d.j }}</span> <span lang="{{ d.lang }}">{{ d.a }}</span></h2><span class="pb-sp"></span><button class="btn icon v-ghost {{ fc.close }}" type="button" aria-label="{{ t.close }}"><span class="ic" data-icon="X"></span></button></div>
+            </sc-if>
+            <sc-if value="{{ expiry }}">
+              <div class="pb-alert warn top"><span class="ic" data-icon="Clock"></span><span class="pb-at"><sc-for list="{{ expirySegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span><button class="btn v-outline {{ fc.extend }}" type="button">{{ t.extend }}</button></div>
+            </sc-if>
+            <div class="pb-tabsrow">
+              <div class="pb-tabs" role="tablist" aria-label="{{ t.panel }}">
+                <sc-for list="{{ tabs }}" as="x"><button class="pb-tab {{ x.cls }}" type="button" role="tab" id="{{ x.id }}" aria-label="{{ x.label }}" aria-selected="{{ x.sel }}" aria-controls="{{ x.pid }}" tabIndex="{{ x.ti }}"><span>{{ x.t }}</span><sc-if value="{{ x.hasCnt }}"><span class="pb-cnt">{{ x.cnt }}</span></sc-if></button></sc-for>
+              </div>
+              <sc-if value="{{ hasCollapse }}"><button class="btn icon v-ghost {{ fc.collapse }}" type="button" aria-expanded="true" aria-label="{{ t.collapse }}"><span class="ic" data-icon="PanelRightClose"></span></button></sc-if>
+            </div>
+            <div class="pb-pb {{ pbCls }}" role="tabpanel" id="{{ ids.panel }}" aria-labelledby="{{ tabId }}" aria-busy="{{ busy }}">
+              <sc-if value="{{ vDetails }}">
+                <sc-if value="{{ dLoading }}">
+                  <span class="pb-skr" style="width:60%;height:20px"></span><span class="pb-skr" style="width:85%"></span><span class="pb-skr" style="width:50%;height:22px"></span>
+                  <span class="pb-skr" style="width:30%"></span><span class="pb-skr" style="width:100%;height:36px"></span><span class="pb-skr" style="width:40%"></span><span class="pb-skr" style="width:100%;height:36px"></span>
+                </sc-if>
+                <sc-if value="{{ dEmpty }}">
+                  <div class="pb-empty"><span class="ic" data-icon="MousePointerClick"></span><h2 class="pb-tt">{{ t.emptyH }}</h2><p class="pb-p">{{ t.emptyP }}</p></div>
+                </sc-if>
+                <sc-if value="{{ dNotFound }}">
+                  <div class="pb-empty"><span class="ic" data-icon="SearchX"></span><h2 class="pb-tt">{{ t.nfH }}</h2><p class="pb-p">{{ t.nfP }}</p><a class="pb-link" href="#">{{ t.nfLink }}</a></div>
+                </sc-if>
+                <sc-if value="{{ dJob }}">
+                  <sc-if value="{{ notSheet }}">
+                    <div class="pb-tth"><h2 class="pb-tt" id="{{ ids.title }}"><span class="pb-j">{{ d.j }}</span><span class="pb-an" lang="{{ d.lang }}">{{ d.a }}</span></h2><button class="btn icon v-ghost {{ fc.actions }}" type="button" aria-haspopup="menu" aria-label="{{ d.actionsLabel }}"><span class="ic" data-icon="Ellipsis"></span></button></div>
+                    <div class="pb-muted"><sc-for list="{{ d.factSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                  </sc-if>
+                  <div class="pb-badges"><sc-for list="{{ d.badges }}" as="x"><span class="badge {{ x.c }}"><sc-if value="{{ x.hasIcon }}"><span class="ic" data-icon="{{ x.icon }}"></span></sc-if><span><sc-for list="{{ x.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></span></sc-for></div>
+                  <sc-if value="{{ d.hasEsum }}">
+                    <div class="pb-esum {{ fc.esum }}" id="{{ ids.esum }}" tabindex="-1"><b><span class="ic" data-icon="CircleAlert"></span>{{ t.esum1 }}</b><a href="#">{{ t.startLbl }}</a></div>
+                  </sc-if>
+                  <sc-if value="{{ d.hasSrvErr }}">
+                    <div class="pb-alert err"><span class="ic" data-icon="CircleAlert"></span><span class="pb-at"><sc-for list="{{ srvSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                  </sc-if>
+                  <sc-if value="{{ d.held }}">
+                    <div class="pb-alert info"><span class="ic" data-icon="UserPen"></span><span class="pb-at"><sc-for list="{{ d.heldSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                  </sc-if>
+                  <div class="pb-mv">
+                    <div class="fld"><span class="lbl">{{ t.machine }}</span><span class="inp {{ d.mCls }}" aria-disabled="{{ d.dis }}"><span lang="{{ lang }}">{{ d.machine }}</span><span class="end ic" data-icon="ChevronDown"></span></span></div>
+                    <div class="fld"><span class="lbl">{{ t.startLbl }}</span><span class="inp num {{ d.sCls }}" aria-disabled="{{ d.dis }}" aria-invalid="{{ d.invalid }}" aria-describedby="{{ d.sDesc }}">{{ d.start }}</span><sc-if value="{{ d.hasErr }}"><span class="err" id="{{ ids.startErr }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ t.startErr }}</span></span></sc-if><span class="desc"><sc-for list="{{ d.descSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                    <div class="pb-steps"><button class="btn v-outline {{ d.stepCls }} {{ fc.earlier }}" type="button" aria-disabled="{{ d.dis }}" aria-label="{{ d.earlierLabel }}"><span class="ic" data-icon="ChevronLeft"></span>{{ d.earlier }}</button><button class="btn v-outline {{ d.stepCls }} {{ fc.later }}" type="button" aria-disabled="{{ d.dis }}" aria-label="{{ d.laterLabel }}">{{ d.later }}<span class="ic" data-icon="ChevronRight"></span></button></div>
+                    <sc-if value="{{ d.applyIn }}"><button class="btn v-default {{ fc.apply }}" type="button">{{ t.apply }}</button></sc-if>
+                    <sc-if value="{{ d.held }}"><button class="btn v-destructive {{ fc.breaklock }}" type="button" aria-haspopup="dialog">{{ t.breakLock }}</button></sc-if>
+                  </div>
+                  <sc-if value="{{ notSheet }}">
+                    <h3 class="pb-h3">{{ t.linked }}</h3>
+                    <dl class="pb-dl"><sc-for list="{{ d.links }}" as="l"><dt>{{ l.k }}</dt><dd><sc-for list="{{ l.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></dd></sc-for></dl>
+                    <h3 class="pb-h3">{{ t.jobOrder }}</h3>
+                    <dl class="pb-dl"><sc-for list="{{ d.facts }}" as="r"><dt>{{ r.k }}</dt><dd lang="{{ r.lang }}"><sc-for list="{{ r.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></dd></sc-for></dl>
+                    <sc-if value="{{ d.hasBf }}">
+                      <h3 class="pb-h3">{{ t.bfH }}</h3>
+                      <dl class="pb-dl"><sc-for list="{{ d.bf }}" as="r"><dt>{{ r.k }}</dt><dd><sc-for list="{{ r.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></dd></sc-for></dl>
+                    </sc-if>
+                  </sc-if>
+                  <span class="pb-scroll" aria-hidden="true"></span>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ vDraft }}">
+                <sc-if value="{{ dr.list }}">
+                  <h2 class="pb-tt"><span class="pb-an"><sc-for list="{{ dr.titleSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></h2>
+                  <div class="pb-muted" style="margin-top:-8px"><sc-for list="{{ dr.leadSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                  <ul class="pb-dlist">
+                    <sc-for list="{{ dr.rows }}" as="x" hint-placeholder-count="6">
+                      <li class="pb-dr">
+                        <div class="pb-drh"><span class="pb-j">{{ x.j }}</span><span class="pb-a" lang="{{ x.lang }}">{{ x.a }}</span><span class="badge {{ x.bc }}">{{ x.status }}</span></div>
+                        <div class="pb-drt"><sc-for list="{{ x.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                        <sc-if value="{{ x.hasActions }}"><div class="pb-dra"><sc-if value="{{ x.rebase }}"><button class="btn v-outline {{ x.rbCls }}" type="button" aria-label="{{ x.rbLabel }}">{{ t.rebase }}</button></sc-if><button class="btn v-ghost {{ x.dsCls }}" type="button" aria-label="{{ x.dsLabel }}">{{ t.discard }}</button></div></sc-if>
+                        <sc-if value="{{ x.undo }}"><div class="pb-dra"><button class="btn v-outline {{ x.undoCls }}" type="button" aria-label="{{ x.undoLabel }}"><span class="ic" data-icon="Undo2"></span>{{ t.undo }}</button></div></sc-if>
+                      </li>
+                    </sc-for>
+                  </ul>
+                </sc-if>
+                <sc-if value="{{ dr.conflicts }}">
+                  <h2 class="pb-tt">{{ t.cfH }}</h2>
+                  <p class="pb-p pb-muted" style="margin-top:-8px">{{ t.cfP }}</p>
+                  <div class="pb-esum" id="{{ ids.esum }}" tabindex="-1"><b><span class="ic" data-icon="CircleAlert"></span>{{ t.esum1 }}</b><a href="#">{{ t.reasonFor }}</a></div>
+                  <div class="pb-cf">
+                    <div class="pb-drh"><span class="pb-j">1003.20</span><span class="pb-a" lang="{{ d.lang }}">{{ d.a }}</span></div>
+                    <ul><sc-for list="{{ dr.cfItems }}" as="c"><li><sc-for list="{{ c }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></li></sc-for></ul>
+                    <div class="fld"><span class="lbl">{{ t.reasonFor }}</span><span class="inp ta is-err {{ fc.reason }}" aria-invalid="true" aria-describedby="{{ ids.reasonErr }}"><span class="ph">{{ t.reasonPh }}</span></span><span class="err" id="{{ ids.reasonErr }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ t.reasonErr }}</span></span><span class="desc">{{ t.reasonDesc }}</span></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ dr.refused }}">
+                  <h2 class="pb-tt">{{ t.refH }}</h2>
+                  <p class="pb-p pb-muted" style="margin-top:-8px"><sc-for list="{{ dr.refLead }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></p>
+                  <div class="pb-esum {{ fc.esum }}" id="{{ ids.esum }}" tabindex="-1"><b><span class="ic" data-icon="CircleAlert"></span>{{ t.refSum }}</b><a href="#">{{ t.refLink }}</a><a href="#">{{ t.reasonFor }}</a></div>
+                  <ul class="pb-dlist pb-res">
+                    <sc-for list="{{ dr.refRows }}" as="x">
+                      <li class="pb-dr">
+                        <div class="pb-drh"><span class="pb-j">{{ x.j }}</span><span class="pb-a" lang="{{ x.lang }}">{{ x.a }}</span><span class="badge {{ x.bc }}">{{ x.status }}</span></div>
+                        <div class="pb-drt"><sc-for list="{{ x.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                        <sc-if value="{{ x.hasActions }}"><div class="pb-dra"><button class="btn v-outline {{ fc.rebase }}" type="button" aria-label="{{ x.rbLabel }}">{{ t.rebase }}</button><button class="btn v-ghost" type="button" aria-label="{{ x.dsLabel }}">{{ t.discard }}</button></div></sc-if>
+                        <sc-if value="{{ x.hasCf }}">
+                          <ul class="pb-cfl pb-p"><sc-for list="{{ dr.cfItems }}" as="c"><li><sc-for list="{{ c }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></li></sc-for></ul>
+                          <div class="fld"><span class="lbl" id="{{ ids.reasonLbl }}">{{ t.reasonFor }}</span><span class="inp ta {{ fc.reason }}" role="textbox" aria-multiline="true" aria-labelledby="{{ ids.reasonLbl }}" aria-describedby="{{ ids.reasonDesc }}"><span class="ph">{{ t.reasonPh }}</span></span><span class="desc" id="{{ ids.reasonDesc }}">{{ t.reasonDesc }}</span></div>
+                        </sc-if>
+                      </li>
+                    </sc-for>
+                  </ul>
+                </sc-if>
+                <sc-if value="{{ dr.saved }}">
+                  <div class="pb-alert ok"><span class="ic" data-icon="CircleCheck"></span><span class="pb-at"><sc-for list="{{ dr.savedSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                </sc-if>
+                <sc-if value="{{ dr.empty }}">
+                  <div class="pb-empty"><span class="ic" data-icon="Pencil"></span><h2 class="pb-tt">{{ t.drEmptyH }}</h2><p class="pb-p">{{ t.drEmptyP }}</p></div>
+                </sc-if>
+                <sc-if value="{{ dr.scroll }}"><span class="pb-scroll" aria-hidden="true"></span></sc-if>
+              </sc-if>
+              <sc-if value="{{ vSlot }}">
+                <h2 class="pb-vh">{{ t.tSlot }}</h2>
+                <div class="pb-wf" role="region" aria-labelledby="{{ ids.slotH }}">
+                  <div class="pb-wfh"><h3 class="pb-h3" id="{{ ids.slotH }}">{{ t.slot }}</h3><span class="pb-muted">{{ t.slotSub }}</span></div>
+                  <sc-if value="{{ sl.list }}">
+                    <ul class="pb-wfl"><sc-for list="{{ sl.items }}" as="o"><li><span class="num b6">{{ o.o }}</span><span lang="{{ o.lang }}">{{ o.a }}</span><span class="num">{{ o.q }}</span></li></sc-for></ul>
+                    <sc-if value="{{ sl.paused }}"><div class="pb-wfb" style="padding-top:0"><span class="pb-muted"><sc-for list="{{ sl.pausedSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div></sc-if>
+                  </sc-if>
+                  <sc-if value="{{ sl.loading }}"><div class="pb-wfb"><span class="pb-skr" style="width:90%"></span><span class="pb-skr" style="width:80%"></span><span class="pb-skr" style="width:85%"></span><span class="pb-skr" style="width:70%"></span></div></sc-if>
+                  <sc-if value="{{ sl.failed }}"><div class="pb-wfb"><span class="b6">{{ t.slotFail1 }}</span><span class="pb-muted" style="font-size:13px;line-height:18px">{{ t.slotFail2 }}</span><button class="btn v-outline {{ fc.retry }}" type="button">{{ t.retry }}</button></div></sc-if>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ hasApplyFoot }}"><div class="pb-pf"><button class="btn v-default {{ fc.apply }}" type="button" style="flex:1">{{ t.apply }}</button></div></sc-if>
+            <sc-if value="{{ hasDraftFoot }}">
+              <div class="pb-pf"><sc-if value="{{ dr.hint }}"><span class="pb-muted" id="{{ ids.saveHint }}"><sc-for list="{{ dr.hintSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></sc-if><button class="btn v-outline {{ dr.secCls }}" type="button">{{ dr.secondary }}</button><button class="btn v-default {{ dr.saveCls }} {{ fc.save }}" type="button" aria-disabled="{{ dr.saveDis }}" aria-describedby="{{ dr.saveDesc }}">{{ dr.saveLabel }}</button></div>
+            </sc-if>
+          </section>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"view":{"editor":"enum","options":["details","draft","slot"],"default":"details","tsType":"string"},"chrome":{"editor":"enum","options":["column","sheet","collapsed"],"default":"column","tsType":"string"},"details":{"editor":"enum","options":["selected","empty","notfound","loading","held","taken","invalid","error"],"default":"selected","tsType":"string"},"draft":{"editor":"enum","options":["review","discarded","ready","refused","conflicts","saved","empty"],"default":"review","tsType":"string"},"fields":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"scroll":{"editor":"enum","options":["top","end"],"default":"top","tsType":"string"},"slot":{"editor":"enum","options":["populated","loading","failed"],"default":"populated","tsType":"string"},"paused":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"expiry":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"job":{"editor":"text","default":"1003.20","tsType":"string"},"snap":{"editor":"enum","options":["hours","day","week","weeks"],"default":"hours","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"height":{"editor":"int","default":0,"tsType":"number"},"idp":{"editor":"text","default":"ins","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the Shell's lucide filler, same flag, for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.PB ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PB) ready();
+        }
+        renderVals() {
+          const p = this.props;
+          const PB = window.PB;
+          const chrome = ["sheet", "collapsed"].indexOf(p.chrome) >= 0 ? p.chrome : "column";
+          const H = Number(p.height || 0);
+          const theme = p.theme === "dark" ? " dark" : "";
+          const base = {
+            rootCls: "ps-box" + theme, rootStyle: chrome === "sheet" ? (H ? "height:" + H + "px" : "") : "flex:1;min-height:0" + (H ? ";height:" + H + "px" : ""),
+            t: {}, fc: {}, ids: {}, d: {}, dr: {}, sl: {}, tabs: [], strip: [],
+          };
+          if (!PB) return base;
+          const L = p.strings === "long";
+          const strings = L ? "long" : "default";
+          const T0 = PB.tr(strings);
+          const { segs, hm, at, num, dayOf } = PB;
+          const idp = String(p.idp || "ins");
+          const view = ["draft", "slot"].indexOf(p.view) >= 0 ? p.view : "details";
+          const details = p.details || "selected";
+          const draft = p.draft || "review";
+          const slot = p.slot || "populated";
+          const focus = String(p.focus || "none");
+          const sheet = chrome === "sheet";
+          const snapTxt = { hours: "15 min", day: "1 h", week: "4 h", weeks: "1 day" }[p.snap || "hours"] || "15 min";
+          const snapName = (L ? { hours: "Stunden", day: "Tag", week: "Woche", weeks: "4 Wochen" } : { hours: "Hours", day: "Day", week: "Week", weeks: "4 weeks" })[p.snap || "hours"] || (L ? "Stunden" : "Hours");
+          const t = L ? {
+            panel: "Planungsbereich", collapse: "Bereich einklappen", expand: "Bereich ausklappen", close: "Details schließen", extend: "Verlängern",
+            tDetails: "Details", tDraft: "Mein Entwurf", tSlot: "Große Aufträge", slot: "Große Aufträge", slotSub: "Beispiel-Widget",
+            machine: "Maschine", startLbl: "Beginn, Werkszeit (CET)", apply: "Übernehmen", breakLock: "Bearbeitungssperre aufheben",
+            linked: "Verknüpfte Arbeitsaufträge", jobOrder: "Arbeitsauftrag", before: "Vorher", after: "Nachher", none: "Keiner",
+            emptyH: "Kein Arbeitsauftrag ausgewählt", emptyP: "Wählen Sie einen Arbeitsauftrag auf der Plantafel, um ihn zu sehen und zu verschieben. Auf einem fokussierten Arbeitsauftrag drücken Sie Enter.",
+            nfH: "Auftrag 1099 ist nicht in diesem Zeitraum", nfP: "Die Plantafel zeigt Tue 3 Nov, 06:00 bis 18:00. Der Auftrag hat keine Arbeitsaufträge in diesem Zeitraum, oder es gibt ihn nicht.", nfLink: "In der Auftragstabelle suchen",
+            esum1: "1 Feld braucht Ihre Aufmerksamkeit", startErr: "Geben Sie Datum und Uhrzeit wie 2026-11-03 11:30 ein.",
+            rebase: "Neu aufsetzen", discard: "Verwerfen", discardDraft: "Entwurf verwerfen", saveChanges: "Änderungen speichern", backDraft: "Zurück zu meinem Entwurf",
+            cfH: "Speichern braucht einen Grund", cfP: "Beim Speichern wurden 2 neue Konflikte gefunden. Geben Sie einen Grund an, um mit ihnen zu speichern, oder ändern Sie die Verschiebungen auf der Plantafel.",
+            reasonFor: "Grund für 1003.20", reasonPh: "Zum Beispiel: 1021.10 endet früher, mit der Schichtleitung abgestimmt", reasonErr: "Geben Sie einen Grund mit 3 bis 500 Zeichen ein.", reasonDesc: "3 bis 500 Zeichen.",
+            drEmptyH: "Keine Änderungen in Ihrem Entwurf", drEmptyP: "Verschiebungen auf der Plantafel bleiben hier, bis Sie sie speichern.",
+            slotFail1: "Große Aufträge konnten nicht angezeigt werden.", slotFail2: "Der Rest der Plantafel funktioniert wie gewohnt.", retry: "Erneut versuchen",
+            undo: "Rückgängig", bfH: "Aus Pyramid", refH: "Nichts wurde gespeichert", refSum: "2 Zeilen brauchen Ihre Aktion", refLink: "1015.10 neu aufsetzen oder verwerfen",
+          } : {
+            panel: "Board panel", collapse: "Collapse panel", expand: "Expand panel", close: "Close details", extend: "Extend",
+            tDetails: "Details", tDraft: "My draft", tSlot: "Large orders", slot: "Large orders", slotSub: "Example widget",
+            machine: "Machine", startLbl: "Start, plant time (CET)", apply: "Apply", breakLock: "Break soft lock",
+            linked: "Linked job orders", jobOrder: "Job order", before: "Before", after: "After", none: "None",
+            emptyH: "No job order selected", emptyP: "Select a job order on the board to see its details and move it. On a focused job order, press Enter.",
+            nfH: "Order 1099 is not in this range", nfP: "The board shows Tue 3 Nov, 06:00 to 18:00. The order has no job orders in this range, or it does not exist.", nfLink: "Find it in the job table",
+            esum1: "1 field needs attention", startErr: "Enter a date and time like 2026-11-03 11:30.",
+            rebase: "Rebase", discard: "Discard", discardDraft: "Discard draft", saveChanges: "Save changes", backDraft: "Back to my draft",
+            cfH: "Save needs a reason", cfP: "Save found 2 new conflicts. Give a reason to save with them, or change the moves on the board.",
+            reasonFor: "Reason for 1003.20", reasonPh: "For example: 1021.10 finishes early, agreed with the shift lead", reasonErr: "Enter a reason of 3 to 500 characters.", reasonDesc: "3 to 500 characters.",
+            drEmptyH: "No changes in your draft", drEmptyP: "Moves you make on the board stay here until you save them.",
+            slotFail1: "Large orders could not be shown.", slotFail2: "The rest of the board works as usual.", retry: "Try again",
+            undo: "Undo", bfH: "From Pyramid", refH: "Nothing was saved", refSum: "2 rows need your action", refLink: "Rebase or discard 1015.10",
+          };
+          const ids = { panel: idp + "-panel", title: idp + "-title", sheetTitle: idp + "-sheet-title", startErr: idp + "-start-err", esum: idp + "-esum", reasonErr: idp + "-reason-err", reasonLbl: idp + "-reason-lbl", reasonDesc: idp + "-reason-desc", saveHint: idp + "-save-hint", slotH: idp + "-slot-h" };
+          const fc = {};
+          ["expand", "close", "extend", "collapse", "actions", "earlier", "later", "apply", "breaklock", "save", "reason", "retry", "esum", "rebase"].forEach((k) => { fc[k] = focus === k ? "is-focus" : ""; });
+
+          // Details of the job order: the hover fields, the move fields and the links (19.13).
+          // held: another planner holds the soft lock; taken: the planner broke it, so it is theirs since 09:40.
+          const key = details === "held" || details === "taken" ? "1007.10" : String(p.job || "1003.20");
+          const job0 = PB.job(key) || PB.job("1003.20");
+          const job = details === "taken" ? Object.assign({}, job0, { st: job0.st.filter((k) => k !== "held"), lockMine: "09:40" }) : job0;
+          const an = PB.aName(job.a, strings);
+          const oi = PB.orderInfo(job.order);
+          const badges = PB.badges(job, strings);
+          const ops = PB.JOBS.filter((x) => x.order === job.order && x.key !== job.key);
+          const myOp = Number(job.j.split(".")[1]);
+          const prevOps = ops.filter((x) => Number(x.j.split(".")[1]) < myOp);
+          const nextOps = ops.filter((x) => Number(x.j.split(".")[1]) > myOp);
+          const linkTxt = (x, before) => x.j + (L ? " auf " : " on ") + PB.mName(x.m, strings) + ", " + (before ? (L ? "Ende " : "ends ") + (dayOf(x.e) === dayOf(job.s) ? hm(x.e) : at(x.e)) + (job.lead ? (L ? ", Übergangszeit " : ", lead time ") + job.lead + " min" : "") : (dayOf(x.s) === dayOf(job.s) ? hm(x.s) : at(x.s)));
+          const nextTxt = nextOps.length ? nextOps.map((x) => linkTxt(x, false)).join("; ") : job.order === "1003" ? "1003.30" + (L ? " auf " : " on ") + PB.mName("Wash 1", strings) + ", Wed 4 Nov 07:00" : t.none;
+          const links = [
+            { k: t.before, segs: segs(prevOps.length ? prevOps.map((x) => linkTxt(x, true)).join("; ") : t.none) },
+            { k: t.after, segs: segs(nextTxt) },
+          ];
+          const held = details === "held";
+          const dis = held ? "true" : undefined;
+          const invalid = details === "invalid";
+          const startTxt = invalid ? "2026-11-03 1130" : "2026-11-03 " + hm(job.s);
+          const holder = held ? PB.person(job.holder, strings).name : "";
+          const d = {
+            j: job.j, a: an.t, lang: an.lang,
+            actionsLabel: (L ? "Aktionen für " : "Actions for ") + job.j,
+            factSegs: segs((L ? "Auftrag " : "Order ") + job.order + ", " + oi.cust + (L ? ", Liefertermin " : ", deadline ") + oi.deadline),
+            badges, links, facts: PB.facts(job, strings),
+            machine: PB.mName(job.m, strings), start: startTxt,
+            mCls: held ? "is-dis" : focus === "machine" ? "is-focus" : "", sCls: (held ? "is-dis " : "") + (invalid ? "is-err " : "") + (focus === "start" ? "is-focus" : ""),
+            dis, invalid: invalid ? "true" : undefined, hasErr: invalid, sDesc: invalid ? ids.startErr : undefined,
+            descSegs: segs((L ? "Ende " : "Ends ") + hm(job.e) + (L ? ". Schritte von " + snapTxt + ", die Stufe " + snapName + "." : ". Steps of " + snapTxt + ", the " + snapName + " snap.")),
+            earlier: snapTxt + (L ? " früher" : " earlier"), later: snapTxt + (L ? " später" : " later"),
+            earlierLabel: (L ? "Beginn " + snapTxt + " früher" : "Start " + snapTxt + " earlier"), laterLabel: (L ? "Beginn " + snapTxt + " später" : "Start " + snapTxt + " later"),
+            stepCls: held ? "is-dis" : "", applyIn: !sheet && !held, held,
+            heldSegs: segs(L ? holder + " hält die Bearbeitungssperre für Auftrag " + job.order + ". Verschieben ist aus, bis sie endet." : holder + " holds the soft lock on order " + job.order + ". Moves are off until it ends."),
+            hasEsum: invalid, hasSrvErr: details === "error",
+          };
+          // A block-fields contribution's hover renderer: its fields show in Details too (4.14, 10.2).
+          const bfx = p.fields === "on" && PB.FIELDS ? PB.FIELDS[job.key] : null;
+          d.hasBf = !!bfx;
+          d.bf = bfx ? bfx.hover.map((x) => ({ k: x[0], segs: segs(x[1]) })) : [];
+          const srvSegs = segs(L ? "Die Verschiebung wurde nicht in Ihren Entwurf übernommen. Versuchen Sie es erneut. Fehler-ID 7f3a91c2." : "The move was not added to your draft. Try again. Error id 7f3a91c2.");
+
+          // My draft (19.14): the six rows of the variations, the ready list, the conflicts after Save, saved and empty.
+          const R = L ? { ok: "Bereit zum Speichern", stale: "Von jemand anderem geändert", lost: "Bearbeitungssperre verloren", started: "Gestartet", erp: "ERP-Änderung wartet", gone: "Nicht mehr im Plan" }
+                      : { ok: "Ready to save", stale: "Changed by someone else", lost: "Soft lock lost", started: "Started", erp: "ERP change waiting", gone: "No longer in the plan" };
+          const m = (id) => PB.mName(id, strings);
+          const all6 = [
+            { j: "1003.20", a: "Shaft 40", bc: "b-ok", status: R.ok, change: m("Lathe 1") + (L ? " zu " : " to ") + m("Lathe 2") + ", Tue 3 Nov 11:30", why: L ? "Überschneidet sich mit 1021.10, Speichern fragt nach einem Grund" : "Overlaps 1021.10, so Save asks for a reason", rebase: false },
+            { j: "1015.10", a: "Cover plate", bc: "b-warn", status: R.stale, change: m("Mill 2") + ", Wed 4 Nov 07:00", why: L ? PB.person("es", strings).name + " hat ihn um 09:05 geändert" : "Erik Sand changed it at 09:05", rebase: true },
+            { j: "1016.10", a: "Hub 12", bc: "b-warn", status: R.lost, change: m("CNC1") + ", Wed 4 Nov 09:30", why: L ? "Lena Ek hält sie seit 09:30" : "Lena Ek holds it since 09:30", rebase: true },
+            { j: "1017.10", a: "Spacer 8", bc: "b-info", status: R.started, change: m("Press 4") + ", Tue 3 Nov 06:00", why: L ? "In der Fertigung um 06:02 gestartet" : "Started on the shop floor at 06:02", rebase: false },
+            { j: "1018.10", a: "Flange DN50", bc: "b-info", status: R.erp, change: m("Lathe 3") + ", Thu 5 Nov 06:00", why: L ? "ERP-Änderung annehmen oder ablehnen, dann neu aufsetzen" : "Accept or reject the ERP change, then rebase", rebase: false },
+            { j: "1019.20", a: "Gear blank 32", bc: "b-mut", status: R.gone, change: m("CNC2") + ", Thu 5 Nov 10:00", why: L ? "Der Arbeitsauftrag wurde storniert" : "The job order was cancelled", rebase: false },
+          ];
+          const ready4 = [all6[0], Object.assign({}, all6[1], { bc: "b-ok", status: R.ok, why: L ? "Neu aufgesetzt auf die Änderung von 09:05" : "Rebased on the change of 09:05", rebase: false }), Object.assign({}, all6[2], { bc: "b-ok", status: R.ok, why: L ? "Bearbeitungssperre wieder bei Ihnen seit 09:37" : "Your soft lock again since 09:37", rebase: false }), Object.assign({}, all6[4], { bc: "b-ok", status: R.ok, why: L ? "ERP-Änderung angenommen, neu aufgesetzt" : "ERP change accepted, then rebased", rebase: false })];
+          // discarded: Discard on a row keeps the row with Undo until the next Save (proposed, 3.3.4).
+          const gone6 = all6.map((x) => (x.j === "1019.20" ? Object.assign({}, x, { bc: "b-mut", status: L ? "Verworfen" : "Discarded", why: L ? "Aus Ihrem Entwurf verworfen. Rückgängig holt die Änderung zurück, bis Sie speichern." : "Discarded from your draft. Undo puts it back until you save.", rebase: false, undo: true }) : x));
+          const rowsSrc = draft === "review" ? all6 : draft === "discarded" ? gone6 : draft === "ready" ? ready4 : [];
+          const count = { review: 6, discarded: 5, ready: 4, refused: 4, conflicts: 4, saved: 0, empty: 0 }[draft];
+          const needN = draft === "discarded" ? 4 : 5;
+          const refRows = [
+            { j: "1015.10", a: "Cover plate", bc: "b-warn", status: R.stale, text: m("Mill 2") + ", Wed 4 Nov 07:00. " + (L ? PB.person("es", strings).name + " hat ihn um 09:38 erneut geändert, nach Ihrem Neuaufsetzen." : "Erik Sand changed it again at 09:38, after your rebase."), hasActions: true },
+            { j: "1003.20", a: "Shaft 40", bc: "b-warn", status: L ? "Braucht einen Grund" : "Needs a reason", text: m("Lathe 1") + (L ? " zu " : " to ") + m("Lathe 2") + ", Tue 3 Nov 11:30. " + (L ? "2 neue Konflikte:" : "2 new conflicts:"), hasCf: true },
+            { j: "1016.10", a: "Hub 12", bc: "b-ok", status: R.ok, text: m("CNC1") + ", Wed 4 Nov 09:30." },
+            { j: "1018.10", a: "Flange DN50", bc: "b-ok", status: R.ok, text: m("Lathe 3") + ", Thu 5 Nov 06:00." },
+          ].map((x) => { const nm = PB.aName(x.a, strings); return Object.assign({ hasActions: false, hasCf: false }, x, { a: nm.t, lang: nm.lang, segs: segs(x.text), rbLabel: (L ? "Neu aufsetzen " : "Rebase ") + x.j, dsLabel: (L ? "Verwerfen " : "Discard ") + x.j }); });
+          const dr = {
+            list: rowsSrc.length > 0, scroll: rowsSrc.length > 0 || draft === "refused", refused: draft === "refused", refRows, refLead: segs(L ? "Speichern um 09:39 hat keine der 4 Änderungen geschrieben." : "Save at 09:39 wrote none of the 4 changes."),
+            conflicts: draft === "conflicts", saved: draft === "saved", empty: draft === "saved" || draft === "empty",
+            titleSegs: segs(L ? count + " Änderungen, nicht gespeichert" : count + " changes, not saved"),
+            leadSegs: segs(draft === "review" || draft === "discarded" ? (L ? "Speichern schreibt alle oder keine. " + needN + " brauchen zuerst Ihre Aktion." : "Save writes all of them or none. " + needN + " need your action first.") : (L ? "Speichern schreibt alle oder keine." : "Save writes all of them or none.")),
+            rows: rowsSrc.map((x) => { const nm = PB.aName(x.a, strings); return Object.assign({}, x, { a: nm.t, lang: nm.lang, segs: segs(x.change + ". " + x.why), hasActions: (draft === "review" || draft === "discarded") && !x.undo, undo: !!x.undo, undoCls: focus === "undo" ? "is-focus" : "", undoLabel: (L ? "Verwerfen rückgängig machen, " : "Undo discard of ") + x.j, rbLabel: (L ? "Neu aufsetzen " : "Rebase ") + x.j, dsLabel: (L ? "Verwerfen " : "Discard ") + x.j, rbCls: focus === "rebase" && x.j === "1015.10" ? "is-focus" : "", dsCls: focus === "discard" && x.j === "1019.20" ? "is-focus" : "" }); }),
+            cfItems: [segs(L ? "Überschneidet sich mit 1021.10 auf " + m("Lathe 2") + " von 11:30 bis 11:45." : "Overlaps 1021.10 on Lathe 2 from 11:30 to 11:45."), segs(L ? "Beginnt im eingefrorenen Zeitfenster, das um 13:40 endet." : "Starts in the frozen window, which ends at 13:40.")],
+            savedSegs: segs(L ? "4 Änderungen um 09:40 gespeichert. Die Plantafel zeigt sie als festgeschrieben." : "4 changes saved at 09:40. The board shows them as committed."),
+            hint: draft === "review" || draft === "discarded" || draft === "refused", hintSegs: segs(draft === "refused" ? (L ? "Lösen Sie die 2 Zeilen oben, um zu speichern." : "Resolve the 2 rows above to save.") : L ? "Lösen Sie die " + needN + " Zeilen oben, um zu speichern." : "Resolve the " + needN + " rows above to save."),
+            secondary: draft === "conflicts" || draft === "refused" ? t.backDraft : t.discardDraft, secCls: focus === "discardDraft" ? "is-focus" : "",
+            saveLabel: draft === "review" || draft === "discarded" || draft === "refused" ? t.saveChanges : draft === "conflicts" ? (L ? "4 Änderungen mit Gründen speichern" : "Save 4 changes with reasons") : (L ? "4 Änderungen speichern" : "Save 4 changes"),
+            saveDis: draft === "review" || draft === "discarded" || draft === "refused" ? "true" : undefined, saveCls: draft === "review" || draft === "discarded" || draft === "refused" ? "is-dis" : "", saveDesc: draft === "review" || draft === "discarded" || draft === "refused" ? ids.saveHint : undefined,
+          };
+
+          // Large orders, the example contribution to planning/board/side/v1 (19.15).
+          const large = [["1013", "Spacer 8", 7200], ["1011", "Cover plate", 7200], ["1014", "Lagerhus 62", 7200], ["1008", "Housing P", 3600], ["1009", "Bracket L", 3600]].map((x) => { const nm = PB.aName(x[1], strings); return { o: x[0], a: nm.t, lang: nm.lang, q: num(x[2]) + " " + T0.pcs }; });
+          const sl = { list: slot === "populated", loading: slot === "loading", failed: slot === "failed", items: large, paused: p.paused === "on", pausedSegs: segs(L ? "Mit der Plantafel um 09:31 angehalten." : "Paused with the board at 09:31.") };
+
+          // Tabs: the selected tab is the one Tab stop of the list; arrow keys move between tabs.
+          const tabs = [["details", t.tDetails], ["draft", t.tDraft], ["slot", t.tSlot]].map((x) => {
+            const on = view === x[0];
+            const named = x[0] === "draft" && count > 0;
+            return { id: idp + "-tab-" + x[0], pid: on ? ids.panel : undefined, t: x[1], label: named ? x[1] + (L ? ", " + count + " Änderungen" : ", " + count + " changes") : undefined, sel: String(on), ti: on ? "0" : "-1", cls: (on ? "on " : "") + (on && focus === "tab" ? "is-focus" : ""), hasCnt: named, cnt: String(count) };
+          });
+          const strip = [
+            { icon: "PanelRight", label: t.tDetails, k: "strip-details" },
+            { icon: "Pencil", label: t.tDraft + (count ? (L ? ", " + count + " Änderungen" : ", " + count + " changes") : ""), k: "strip-draft", hasCnt: count > 0, cnt: String(count) },
+            { icon: "LayoutList", label: t.tSlot, k: "strip-slot" },
+          ].map((s) => Object.assign(s, { cls: focus === s.k ? "is-focus" : "", tip: focus === s.k }));
+          const isDraftFoot = view === "draft" && ["review", "discarded", "ready", "refused", "conflicts"].indexOf(draft) >= 0;
+          const expiryOn = p.expiry === "on";
+          return Object.assign(base, {
+            t, fc, ids, d, dr, sl, tabs, strip, srvSegs, lang: L ? "de" : "en",
+            isStrip: chrome === "collapsed", isPanel: chrome !== "collapsed", isSheet: sheet, notSheet: !sheet,
+            panelCls: sheet ? "pb-sheet" + (H ? " solo" : "") : "pb-ins",
+            panelRole: sheet ? "dialog" : undefined, panelModal: sheet ? "true" : undefined,
+            panelLabel: sheet ? undefined : t.panel, panelLby: sheet ? ids.sheetTitle : undefined,
+            expiry: expiryOn, expirySegs: segs(L ? "Ihre Bearbeitungssperre für Auftrag 1003 endet in 20 s." : "Your soft lock on order 1003 ends in 20 s."),
+            hasCollapse: !sheet, tabId: idp + "-tab-" + view, busy: view === "details" && details === "loading" ? "true" : "false", pbCls: p.scroll === "end" ? "end" : "",
+            vDetails: view === "details", vDraft: view === "draft", vSlot: view === "slot",
+            dLoading: details === "loading", dEmpty: details === "empty", dNotFound: details === "notfound", dJob: ["selected", "held", "taken", "invalid", "error"].indexOf(details) >= 0,
+            hasApplyFoot: sheet && view === "details" && ["selected", "invalid", "error"].indexOf(details) >= 0,
+            hasDraftFoot: isDraftFoot,
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

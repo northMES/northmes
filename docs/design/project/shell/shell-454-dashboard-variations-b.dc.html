@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard option B, side column</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-454-dashboard-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-o" data-screen-label="{{ label }}">
+        <dc-import name="Shell" width="{{ sh.width }}" theme="{{ sh.theme }}" role="planner" user="{{ sh.user }}" username="{{ sh.username }}" plant="{{ sh.plant }}" nav="core.dashboard" title="Dashboard" crumbs="Dashboard" actions="none" bell="off" show-title="on" hint-size="{{ sh.hint }}">
+          <div class="db-page">
+            <sc-if value="{{ wide }}">
+              <div class="db-split">
+                <sc-if value="{{ sideTabs }}">
+                  <nav class="db-side" aria-label="Dashboard tabs">
+                    <div class="db-side-h"><h2 class="db-side-t db-grow">Tabs</h2></div>
+                    <div class="db-side-b">
+                      <sc-for list="{{ groups }}" as="g">
+                        <div class="db-tg">
+                          <p class="db-tg-h" id="{{ g.hid }}" style="margin:0"><span class="ic" data-icon="{{ g.icon }}"></span>{{ g.label }}</p>
+                          <ul class="db-tl" aria-labelledby="{{ g.hid }}">
+                            <sc-for list="{{ g.tabs }}" as="t">
+                              <li>
+                                <a class="db-ti {{ t.cls }}" href="#" aria-current="{{ t.cur }}">{{ t.name }}</a>
+                                <span class="db-wrap">
+                                  <button class="db-ib {{ t.menuCls }}" type="button" aria-label="Actions for {{ t.name }}" aria-haspopup="menu" aria-expanded="{{ t.open }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                                  <sc-if value="{{ t.open }}">
+                                    <div class="pop db-pop below-r" role="menu" aria-label="Actions for {{ t.name }}" style="width:210px">
+                                      <div class="mi kfocus" role="menuitem"><span class="ic" data-icon="EyeOff"></span>Hide for me</div>
+                                      <div class="mi" role="menuitem"><span class="ic" data-icon="Copy"></span>Copy to my tabs</div>
+                                    </div>
+                                  </sc-if>
+                                </span>
+                              </li>
+                            </sc-for>
+                          </ul>
+                          <sc-if value="{{ g.note }}"><p class="db-tdesc" style="margin:2px 0 0">{{ g.note }}</p></sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div class="db-side-f"><button class="btn v-outline db-btn-s" type="button"><span class="ic" data-icon="Plus"></span>New tab</button></div>
+                  </nav>
+                </sc-if>
+                <sc-if value="{{ sideCatalog }}">
+                  <aside class="db-side" aria-labelledby="{{ sideHid }}">
+                    <div class="db-side-h" style="display:grid;gap:2px;justify-items:start;padding:8px 14px 10px"><button class="btn v-ghost db-back" type="button"><span class="ic" data-icon="ArrowLeft"></span>Back to tabs</button><h2 class="db-side-t" id="{{ sideHid }}">Add widget to {{ tabName }}</h2></div>
+                    <div class="db-side-b"><dc-import name="shell-454-dashboard-variations-catalog" variant="side" hint-size="100%,520px"></dc-import></div>
+                  </aside>
+                </sc-if>
+                <sc-if value="{{ sideSettings }}">
+                  <aside class="db-side" aria-labelledby="{{ sideHid }}">
+                    <div class="db-side-h" style="display:grid;gap:2px;justify-items:start;padding:8px 14px 10px"><button class="btn v-ghost db-back" type="button"><span class="ic" data-icon="ArrowLeft"></span>Back to tabs</button><h2 class="db-side-t" id="{{ sideHid }}">Production orders, Milling</h2><span class="db-src">List settings, shown live in the widget</span></div>
+                    <div class="db-side-b"><dc-import name="shell-454-dashboard-variations-settings" variant="side" focus="{{ setFocus }}" hint-size="100%,600px"></dc-import></div>
+                    <div class="db-side-f"><button class="btn v-default db-btn-s" type="button">Save</button><button class="btn v-outline db-btn-s" type="button">Cancel</button><span class="db-grow"></span><button class="btn v-ghost db-btn-s" type="button" style="color:var(--destructive)"><span class="ic" data-icon="Trash2"></span>Remove</button></div>
+                  </aside>
+                </sc-if>
+                <div class="db-fill" style="gap:12px">
+                  <div class="db-row">
+                    <h2 class="db-h2">{{ tabName }}</h2>
+                    <span class="db-scope"><span class="ic" data-icon="{{ scopeIcon }}"></span><span>{{ scopeText }}</span></span>
+                    <span class="db-grow"></span>
+                    <sc-if value="{{ canAdd }}"><button class="btn v-outline {{ addCls }}" type="button" aria-expanded="{{ catOpen }}"><span class="ic" data-icon="Plus"></span>Add widget</button></sc-if>
+                  </div>
+                  <div class="db-fill"><dc-import name="shell-454-dashboard-variations-grid" scene="{{ scene }}" hint-size="100%,600px"></dc-import></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ narrow }}">
+              <div class="db-row" style="flex-wrap:nowrap">
+                <button class="btn v-outline db-grow" type="button" aria-haspopup="dialog" aria-expanded="false" style="justify-content:flex-start"><span class="ic" data-icon="PanelLeft"></span><span class="lf-iv">Tabs: {{ tabName }}</span></button>
+                <button class="btn icon v-outline" type="button" aria-label="Add widget"><span class="ic" data-icon="Plus"></span></button>
+              </div>
+              <span class="db-scope"><span class="ic" data-icon="{{ scopeIcon }}"></span><span>{{ scopeText }}</span></span>
+              <div class="db-fill"><dc-import name="shell-454-dashboard-variations-grid" scene="{{ scene }}" hint-size="100%,500px"></dc-import></div>
+              <sc-if value="{{ narrowSheet }}">
+                <div class="db-sheet full" role="dialog" aria-modal="true" aria-labelledby="{{ sideHid }}">
+                  <div class="db-sh-h"><div class="db-grow"><h2 class="db-sh-t" id="{{ sideHid }}">Production orders, Milling</h2><p class="db-sh-d">List settings</p></div><button class="btn icon v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+                  <div class="db-sh-b"><dc-import name="shell-454-dashboard-variations-settings" variant="narrow" focus="title" hint-size="100%,520px"></dc-import></div>
+                  <div class="db-sh-f"><button class="btn v-default" type="button">Save</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ delOpen }}">
+              <div class="db-ov"></div>
+              <div class="db-dlg" role="alertdialog" aria-modal="true" aria-labelledby="{{ dlgHid }}" aria-describedby="{{ dlgDid }}">
+                <div class="db-dlg-h"><h2 class="db-dlg-t" id="{{ dlgHid }}">Delete Quality for everyone at Plant A?</h2></div>
+                <div class="db-dlg-b" id="{{ dlgDid }}"><p>Quality and its 6 widgets are deleted for everyone at Plant A. Copies that people made in their own tabs stay. This cannot be undone.</p></div>
+                <div class="db-dlg-f"><button class="btn v-outline is-focus" type="button">Cancel</button><button class="btn v-destructive" type="button">Delete tab</button></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasAnn }}">
+              <div class="db-ann" aria-hidden="true"><span class="k">Polite region</span><ol><sc-for list="{{ ann }}" as="a"><li>{{ a }}</li></sc-for></ol></div>
+            </sc-if>
+          </div>
+        </dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["1","2","3","4","5","6","7","8","9"],"default":"1","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.DB454 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.DB454) ready();
+        }
+        renderVals() {
+          // Option B: a side column inside the page lists the tabs by scope. The same column turns into the catalog or
+          // into the settings of the selected widget, which preview live in the grid. No edit mode: each Save is one
+          // command. Moves and sizes have buttons in the settings, so they need no keyboard mode.
+          const P = this.props || {};
+          const D = window.DB454;
+          const id = "B" + String(P.state || "1");
+          const base = { label: "Option B, frame " + id, scene: id, sh: { width: "1440", theme: "light", hint: "1440px,936px", user: "Alex Lund", username: "alex.lund", plant: "Plant A" }, groups: [], ann: [] };
+          if (!D || !D.SCENES[id]) return base;
+          const S = D.SCENES[id];
+          const tab = D.TABS[S.tab];
+          const who = D.PEOPLE[S.who];
+          const L = D.TABLISTS[S.tabs];
+          const ICON = { company: "Building2", plant: "Factory", mine: "User" };
+          const LABEL = { company: "Acme AB", plant: S.plant, mine: "My tabs" };
+          const uid = "db-" + id;
+          const groups = ["company", "plant", "mine"].map((g) => ({
+            hid: uid + "-g-" + g, icon: ICON[g], label: LABEL[g],
+            note: g === "plant" && S.who === "jonas" ? "Everyone at " + S.plant + " sees these. You can change them." : "",
+            tabs: L[g].map((t) => {
+              const open = S.menu === "rowMenu" && t === "quality";
+              return { name: D.TABS[t].name, cls: t === S.tab ? "cur" : "", cur: t === S.tab ? "page" : null, open: open, menuCls: open ? "open" : "" };
+            })
+          }));
+          const narrow = S.w === "320";
+          const mine = tab.scope === "mine";
+          const scopeText = mine ? "Only you see this tab, at every plant you open." : S.edit ? "Everyone at " + S.plant + " sees this tab. You can change it." : "Everyone at " + S.plant + " sees this tab.";
+          const ann = D.ANN[id] || [];
+          return {
+            label: "Option B, frame " + id + ", " + tab.name + ", " + S.theme + ", " + S.w,
+            scene: id,
+            sh: {
+              width: S.w, theme: S.theme, hint: S.w === "320" ? "320px,676px" : S.w === "1280" ? "1280px,836px" : "1440px,936px",
+              user: who.user, username: who.username, plant: S.plant
+            },
+            wide: !narrow,
+            narrow: narrow,
+            groups: groups,
+            sideTabs: !narrow && S.panel !== "catalog" && S.panel !== "settings",
+            sideCatalog: !narrow && S.panel === "catalog",
+            sideSettings: !narrow && S.panel === "settings",
+            sideHid: uid + "-side",
+            setFocus: S.id === "B7" ? "down" : "title",
+            narrowSheet: narrow && S.panel === "settings",
+            tabName: tab.name,
+            scopeIcon: ICON[tab.scope],
+            scopeText: scopeText,
+            canAdd: S.edit,
+            catOpen: S.panel === "catalog" ? "true" : "false",
+            addCls: S.panel === "catalog" ? "open" : "",
+            delOpen: S.dialog === "delete",
+            dlgHid: uid + "-dlg-t",
+            dlgDid: uid + "-dlg-d",
+            hasAnn: ann.length > 0,
+            ann: ann
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F2 contrast table</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.csum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:24px}
+.csum .panel{display:grid;gap:2px;padding:14px 16px}
+.ct{display:grid;grid-template-columns:40px minmax(0,1fr) 60px 280px 210px 56px 44px 64px;gap:12px;align-items:center;min-height:32px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.ct.h{min-height:28px;font-size:12px;font-weight:600;color:var(--muted-foreground)}
+.ct .r{text-align:right}
+.smp{display:grid;place-items:center;width:56px;height:26px;border-radius:var(--radius-sm);background:var(--sb);box-shadow:inset 0 0 0 1px rgba(128,128,128,.35)}
+.smp .tx{color:var(--sf);font-size:14px;font-weight:600}
+.smp .ln{width:30px;height:14px;border:2px solid var(--sf);border-radius:3px}
+.smp .si{color:var(--sf)}
+.smp .stp{position:relative;width:24px;height:20px;color:var(--sf)}
+.cell{display:flex;align-items:center;gap:6px;min-width:0;font-size:12px}
+.chip{display:inline-block;width:12px;height:12px;flex:none;border-radius:2px;background:var(--c);box-shadow:inset 0 0 0 1px rgba(128,128,128,.5)}
+.res{display:inline-flex;align-items:center;gap:4px;color:var(--success);font-weight:600}
+.cn{display:grid;grid-template-columns:40px minmax(0,1fr) 64px 64px 44px;gap:10px;align-items:center;min-height:24px;padding:2px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:16px}
+.cn.h{font-weight:600;color:var(--muted-foreground)}
+.cn .r{text-align:right}
+.rc{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.2fr) 64px;gap:12px;align-items:center;min-height:30px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rc.h{font-size:12px;font-weight:600;color:var(--muted-foreground)}
+        </style>
+      </helmet>
+      <div class="{{ rootCls }}" data-screen-label="Contrast table">
+        <sc-if value="{{ isFrame }}">
+          <h2 class="t2">Contrast table, {{ themeName }}</h2>
+          <p class="lede">{{ count }} required pairs in this theme, 0 failures. Ratios use WCAG 2 relative luminance. Each is the lower of the hex result and the unrounded oklch result (the culori method of the repository test), rounded down to two decimals. They are pre-test values until packages/ui/test/tokens.contrast.test.ts exists (Q4). The docs never use the 3:1 large-text allowance.</p>
+          <div class="csum">
+            <sc-for list="{{ summary }}" as="s">
+              <div class="panel"><span class="b6">{{ s.title }}</span><span class="sm mut">{{ s.n }} pairs, minimum {{ s.min }}:1</span><span class="sm">Lowest <span class="mono b6">{{ s.low }}</span></span></div>
+            </sc-for>
+          </div>
+          <div class="panel sec">
+            <h3 class="t3">Before the fixes, as measured in the docs (06 Design tokens)</h3>
+            <p class="sm" style="margin:0">shadcn neutral --input 1.26:1 in light. ring/50 1.54:1 in light and 1.87:1 in dark. muted-foreground on muted 4.34:1 in light. Broadsheet muted text 3.65:1. The background token on the dark lane 1.02 to 1.05:1, which is why dark block borders use block-border.</p>
+          </div>
+          <sc-for list="{{ sections }}" as="s">
+            <div class="sec">
+              <h3 class="t3">{{ s.title }} <span class="mut">({{ s.rows.length }} pairs, minimum {{ s.min }}:1)</span></h3>
+              <p class="sm mut" style="margin:-4px 0 10px">{{ s.note }}</p>
+              <div class="ct h"><span>Spec</span><span>Pair</span><span>Sample</span><span>Foreground</span><span>Background</span><span class="r">Ratio</span><span class="r">Min</span><span>Result</span></div>
+              <sc-for list="{{ s.rows }}" as="r">
+                <div class="ct">
+                  <span class="mono sm mut">{{ r.spec }}</span>
+                  <span>{{ r.pair }}</span>
+                  <span class="smp" style="{{ r.st }}"><sc-if value="{{ r.isTx }}"><span class="tx">Aa</span></sc-if><sc-if value="{{ r.isLn }}"><span class="ln"></span></sc-if><sc-if value="{{ r.icon }}"><span class="ic si" data-icon="{{ r.icon }}"></span></sc-if><sc-if value="{{ r.isIni }}"><span class="ini si">PB</span></sc-if><sc-if value="{{ r.isStp }}"><span class="stp m-conf"></span></sc-if></span>
+                  <span class="cell"><span class="chip" style="{{ r.fc }}"></span><span class="mono">{{ r.fg }}</span></span>
+                  <span class="cell"><span class="chip" style="{{ r.bc }}"></span><span class="mono">{{ r.bg }}</span></span>
+                  <span class="mono b6 r">{{ r.ratio }}</span>
+                  <span class="mono r mut">{{ r.min }}</span>
+                  <span class="res"><span class="ic ic14" data-icon="Check"></span>pass</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <div class="sec">
+            <h3 class="t3">Rule checks <span class="mut">({{ rules.length }})</span></h3>
+            <div class="rc h"><span>Check</span><span>Value</span><span>Rule</span><span>Result</span></div>
+            <sc-for list="{{ rules }}" as="c">
+              <div class="rc"><span>{{ c.check }}</span><span class="mono sm">{{ c.value }}</span><span class="sm mut">{{ c.rule }}</span><span class="res"><span class="ic ic14" data-icon="Check"></span>pass</span></div>
+            </sc-for>
+          </div>
+          <div class="sec">
+            <h3 class="t3">Not required, for reference <span class="mut">({{ refs.length }})</span></h3>
+            <div class="ct h"><span></span><span>Pair</span><span>Sample</span><span>Foreground</span><span>Background</span><span class="r">Ratio</span><span class="r">Min</span><span></span></div>
+            <sc-for list="{{ refs }}" as="r">
+              <div class="ct">
+                <span></span><span>{{ r.pair }}</span>
+                <span class="smp" style="{{ r.st }}"><span class="ln"></span></span>
+                <span class="cell"><span class="chip" style="{{ r.fc }}"></span><span class="mono">{{ r.fg }}</span></span>
+                <span class="cell"><span class="chip" style="{{ r.bc }}"></span><span class="mono">{{ r.bg }}</span></span>
+                <span class="mono b6 r">{{ r.ratio }}</span><span class="mono r mut">none</span><span class="sm mut">exempt</span>
+              </div>
+            </sc-for>
+            <p class="sm mut" style="margin:12px 0 0">Palette spacing: the closest two of the 20 order colors are palette-1 and palette-8, 0.0689 apart in OKLab in both themes, the same spacing as Graphite's own 8 colors. The docs set no distinctness measure (Q9).</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isNotes }}">
+          <div class="cn h"><span>Spec</span><span>Pair</span><span class="r">Light</span><span class="r">Dark</span><span class="r">Min</span></div>
+          <sc-for list="{{ merged }}" as="m">
+            <sc-if value="{{ m.head }}"><div class="cn h" style="padding-top:12px"><span></span><span>{{ m.head }}</span><span></span><span></span><span></span></div></sc-if>
+            <div class="cn"><span class="mono mut">{{ m.spec }}</span><span>{{ m.pair }}</span><span class="mono r">{{ m.l }}</span><span class="mono r">{{ m.d }}</span><span class="mono r mut">{{ m.min }}</span></div>
+          </sc-for>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"mode":{"editor":"enum","options":["frame","notes"],"default":"frame","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          const notes = this.props.mode === "notes";
+          const th = dark ? "d" : "l";
+          const C = {
+"pairs":[
+["t","P1","Body text","foreground","background","16.56","15.94","4.5"],
+["t","P2","Card text","card-foreground","card","17.30","14.59","4.5"],
+["t","P2","Popover text","popover-foreground","popover","17.30","14.59","4.5"],
+["t","P1","Text on group rows and table headers","foreground","muted","15.16","12.98","4.5"],
+["t","P1","Text in a selected table row","foreground","info-subtle","15.20","12.53","4.5"],
+["t","P3","Muted text on muted","muted-foreground","muted","5.98","6.55","4.5"],
+["t","P4","Muted text on background","muted-foreground","background","6.53","8.05","4.5"],
+["t","P4","Muted text on card","muted-foreground","card","6.81","7.34","4.5"],
+["t","P4","Muted text on popover","muted-foreground","popover","6.81","7.34","4.5"],
+["t","P4","Muted text on a hovered item","muted-foreground","accent","5.98","6.55","4.5"],
+["t","P4","Muted text in a selected row","muted-foreground","info-subtle","5.99","6.30","4.5"],
+["t","P4","Muted text in the sidebar","muted-foreground","sidebar","6.81","7.34","4.5"],
+["t","P5","Primary button label","primary-foreground","primary","14.62","15.17","4.5"],
+["t","P5","Primary button label on hover","primary-foreground","primary-hover","10.54","11.82","4.5"],
+["t","P5","Primary as text (shadcn link button variant)","primary","background","14.40","15.02","4.5"],
+["t","P5","Primary as text on card","primary","card","15.05","13.71","4.5"],
+["t","P6","Secondary button label","secondary-foreground","secondary","15.16","12.98","4.5"],
+["t","P7","Accent text on accent (hover surface)","accent-foreground","accent","15.16","12.98","4.5"],
+["t","P8","Link on background","link","background","6.84","8.99","4.5"],
+["t","P8","Link on card","link","card","7.15","8.19","4.5"],
+["t","P8","Link on popover","link","popover","7.15","8.19","4.5"],
+["t","P8","Link on muted","link","muted","6.26","7.31","4.5"],
+["t","P8","Link in a selected row","link","info-subtle","6.29","7.03","4.5"],
+["t","P9","Field error text on background","destructive","background","6.23","7.31","4.5"],
+["t","P9","Field error text on card","destructive","card","6.51","6.71","4.5"],
+["t","P9","Field error text on popover","destructive","popover","6.51","6.71","4.5"],
+["t","P9","Destructive text on destructive tint (outline button hover)","destructive","destructive-subtle","5.68","5.92","4.5"],
+["t","P9","Text on a destructive fill","destructive-foreground","destructive","6.23","7.31","4.5"],
+["t","P10","Sidebar text","sidebar-foreground","sidebar","17.30","14.59","4.5"],
+["t","P10","Sidebar hovered item","sidebar-accent-foreground","sidebar-accent","15.16","12.98","4.5"],
+["t","P10","Sidebar primary item","sidebar-primary-foreground","sidebar-primary","14.62","15.17","4.5"],
+["t","P11","Status badge registered","status-registered-foreground","status-registered","15.16","12.98","4.5"],
+["t","P11","Status badge planned","status-planned-foreground","status-planned","5.73","7.03","4.5"],
+["t","P11","Status badge active","status-active-foreground","status-active","5.42","7.52","4.5"],
+["t","P11","Status badge paused","status-paused-foreground","status-paused","5.41","8.31","4.5"],
+["t","P11","Status badge finished","status-finished-foreground","status-finished","5.42","7.52","4.5"],
+["t","P11","Status badge delivered","status-delivered-foreground","status-delivered","15.16","12.98","4.5"],
+["t","P11","Status badge cancelled","status-cancelled-foreground","status-cancelled","5.98","6.55","4.5"],
+["t","P11","Late badge","late-foreground","late","5.68","5.92","4.5"],
+["t","P11","Lock owner badge","lock-owner-foreground","lock-owner","15.16","12.98","4.5"],
+["t","P11","Success text on background","success","background","5.94","9.40","4.5"],
+["t","P11","Success text on card","success","card","6.20","8.62","4.5"],
+["t","P11","Success text on success-subtle","success","success-subtle","5.42","7.52","4.5"],
+["t","P11","Warning text on background","warning","background","5.90","10.49","4.5"],
+["t","P11","Warning text on card","warning","card","6.17","9.56","4.5"],
+["t","P11","Warning text on warning-subtle","warning","warning-subtle","5.41","8.31","4.5"],
+["t","P11","Info text on background","info","background","6.25","8.99","4.5"],
+["t","P11","Info text on card","info","card","6.53","8.19","4.5"],
+["t","P11","Info text on info-subtle","info","info-subtle","5.73","7.03","4.5"],
+["t","P1","Now label on the now fill","now-foreground","now","6.23","7.31","4.5"],
+["n","P13","Input border on background","input","background","3.76","4.54","3"],
+["n","P13","Input border on card","input","card","3.93","4.16","3"],
+["n","P13","Input border on popover","input","popover","3.93","4.16","3"],
+["n","P13","Input border on muted","input","muted","3.44","3.69","3"],
+["n","P13","Input border in the sidebar","input","sidebar","3.93","4.16","3"],
+["n","P16","Checked checkbox or radio (primary fill) on background","primary","background","14.40","15.02","3"],
+["n","P16","Checked checkbox or radio (primary fill) on card","primary","card","15.05","13.71","3"],
+["n","P13","Invalid field border on background","destructive","background","6.23","7.31","3"],
+["n","P13","Invalid field border on card","destructive","card","6.51","6.71","3"],
+["n","P15","Block border on lane","block-border","lane","17.30","9.77","3"],
+["n","P15","Block border on alternate lane","block-border","lane-alt","16.24","9.26","3"],
+["n","P15","Block border on non-working shading","block-border","off-time","14.49","10.65","3"],
+["n","P15","Now line on lane","now","lane","6.51","6.98","3"],
+["n","P15","Now line on alternate lane","now","lane-alt","6.12","6.62","3"],
+["n","P15","Now line on non-working shading","now","off-time","5.45","7.61","3"],
+["f","P14","Ring halves against each other","focus-outline","focus-ring","16.56","15.94","3"],
+["f","P14","Ring halves 9:1 apart, so one half reaches 3:1 on any fill (WCAG technique C40)","focus-outline","focus-ring","16.56","15.94","9"],
+["f","P14","Outer half on background","focus-outline","background","16.56","15.94","3"],
+["f","P14","Outer half on card","focus-outline","card","17.30","14.59","3"],
+["f","P14","Outer half on popover","focus-outline","popover","17.30","14.59","3"],
+["f","P14","Outer half on muted","focus-outline","muted","15.16","12.98","3"],
+["f","P14","Outer half on secondary","focus-outline","secondary","15.16","12.98","3"],
+["f","P14","Outer half on accent","focus-outline","accent","15.16","12.98","3"],
+["f","P14","Outer half on sidebar","focus-outline","sidebar","17.30","14.59","3"],
+["f","P14","Outer half on sidebar-accent","focus-outline","sidebar-accent","15.16","12.98","3"],
+["f","P14","Outer half on info-subtle","focus-outline","info-subtle","15.20","12.53","3"],
+["f","P14","Outer half on lane","focus-outline","lane","17.30","15.22","3"],
+["f","P14","Outer half on lane-alt","focus-outline","lane-alt","16.24","14.42","3"],
+["f","P14","Outer half on off-time","focus-outline","off-time","14.49","16.59","3"],
+["f","P14","Inner half against primary button and checked checkbox","focus-ring","primary","14.40","15.02","3"],
+["f","P14","Inner half against primary button on hover","focus-ring","primary-hover","10.36","11.70","3"],
+["f","P14","Inner half against destructive button and invalid field border","focus-ring","destructive","6.23","7.31","3"],
+["f","P14","Inner half against the input border (outline button, unchecked checkbox)","focus-ring","input","3.76","4.54","3"],
+["f","P14","Inner half against focused board block","focus-ring","block-border","16.56","10.26","3"]
+],
+"hex":{"foreground":["#171b1f","#f0f2f4"],"background":["#f9fafb","#151719"],"card-foreground":["#171b1f","#f0f2f4"],"card":["#ffffff","#1d2022"],"popover-foreground":["#171b1f","#f0f2f4"],"popover":["#ffffff","#1d2022"],"muted":["#eef0f3","#26292c"],"info-subtle":["#e6f2fe","#172d43"],"muted-foreground":["#575b60","#aaaeb3"],"accent":["#eef0f3","#26292c"],"sidebar":["#ffffff","#1d2022"],"primary-foreground":["#fcfcfc","#13161a"],"primary":["#22272c","#e9ebee"],"primary-hover":["#383e43","#cfd1d3"],"secondary-foreground":["#171b1f","#f0f2f4"],"secondary":["#eef0f3","#26292c"],"accent-foreground":["#171b1f","#f0f2f4"],"link":["#1b589e","#85bcf5"],"destructive":["#b02b27","#f7857d"],"destructive-subtle":["#ffebe8","#481b19"],"destructive-foreground":["#f9fafb","#151719"],"sidebar-foreground":["#171b1f","#f0f2f4"],"sidebar-accent-foreground":["#171b1f","#f0f2f4"],"sidebar-accent":["#eef0f3","#26292c"],"sidebar-primary-foreground":["#fcfcfc","#13161a"],"sidebar-primary":["#22272c","#e9ebee"],"status-registered-foreground":["#171b1f","#f0f2f4"],"status-registered":["#eef0f3","#26292c"],"status-planned-foreground":["#1a609e","#85bcf5"],"status-planned":["#e6f2fe","#172d43"],"status-active-foreground":["#246e3a","#76cf8a"],"status-active":["#e1f5e4","#15301b"],"status-paused-foreground":["#8d5406","#f0be67"],"status-paused":["#fdefd2","#38280a"],"status-finished-foreground":["#246e3a","#76cf8a"],"status-finished":["#e1f5e4","#15301b"],"status-delivered-foreground":["#171b1f","#f0f2f4"],"status-delivered":["#eef0f3","#26292c"],"status-cancelled-foreground":["#575b60","#aaaeb3"],"status-cancelled":["#eef0f3","#26292c"],"late-foreground":["#b02b27","#f7857d"],"late":["#ffebe8","#481b19"],"lock-owner-foreground":["#171b1f","#f0f2f4"],"lock-owner":["#eef0f3","#26292c"],"success":["#246e3a","#76cf8a"],"success-subtle":["#e1f5e4","#15301b"],"warning":["#8d5406","#f0be67"],"warning-subtle":["#fdefd2","#38280a"],"info":["#1a609e","#85bcf5"],"now-foreground":["#f9fafb","#151719"],"now":["#b02b27","#f7857d"],"input":["#7c8186","#7c8186"],"block-border":["#171b1f","#c2c4c7"],"lane":["#ffffff","#1a1c1e"],"lane-alt":["#f6f8fa","#1e2123"],"off-time":["#e9ebee","#111315"],"focus-outline":["#171b1f","#f0f2f4"],"focus-ring":["#f9fafb","#151719"],"palette-1":["#eba295","#d0897d"],"palette-2":["#d9af75","#bf965d"],"palette-3":["#b0c07e","#97a766"],"palette-4":["#7ecaa9","#65b090"],"palette-5":["#6cc7d7","#51aebd"],"palette-6":["#90baf1","#78a1d6"],"palette-7":["#c0abe9","#a792ce"],"palette-8":["#e2a0c5","#c788ab"],"palette-9":["#f9becf","#dea5b5"],"palette-10":["#f4c7a3","#d9ad8a"],"palette-11":["#cbd8a5","#b1bf8c"],"palette-12":["#9ee1d3","#85c7b9"],"palette-13":["#a8d8fb","#8fbee0"],"palette-14":["#d8c7f9","#beaede"],"palette-15":["#d68580","#bb6d68"],"palette-16":["#bc9951","#a38137"],"palette-17":["#77af76","#5f965f"],"palette-18":["#41b0bb","#1d97a2"],"palette-19":["#7f9edd","#6785c3"],"palette-20":["#bd89c2","#a471a8"],"group-1":["#1d9999","#39abab"],"group-2":["#8f78ba","#a28acd"]},
+"fills":["palette-1","palette-2","palette-3","palette-4","palette-5","palette-6","palette-7","palette-8","palette-9","palette-10","palette-11","palette-12","palette-13","palette-14","palette-15","palette-16","palette-17","palette-18","palette-19","palette-20","group-1","group-2"],
+"ff":{"l":["8.35","8.52","8.81","8.98","8.89","8.63","8.41","8.30","10.95","11.15","11.46","11.63","11.41","11.09","6.20","6.43","6.73","6.72","6.43","6.19","4.97","4.58"],"d":["6.46","6.62","6.84","6.98","6.92","6.71","6.50","6.41","8.67","8.81","9.09","9.22","9.04","8.76","4.69","4.88","5.12","5.12","4.87","4.68","6.49","6.00"]},
+"bt":{"l":["10.13","10.33","10.68","10.90","10.78","10.47","10.21","10.06","13.29","13.53","13.90","14.11","13.86","13.45","7.52","7.81","8.17","8.15","7.80","7.52","6.04","5.56"],"d":["7.55","7.73","8.03","8.16","8.12","7.86","7.63","7.52","10.15","10.29","10.66","10.81","10.60","10.28","5.50","5.72","6.00","6.00","5.71","5.49","7.58","7.04"]},
+"sm":["Mine in draft: pencil icon, double border, in the block text color on the lowest palette fill","Held by another planner: initials badge, dashed border, in the block text color on the lowest palette fill","Hard-locked: padlock icon, solid 2 px inner border, in the block text color on the lowest palette fill","Started: play icon, progress bar along the bottom, in the block text color on the lowest palette fill","Proposed by the assistant: spark icon, dotted border, in the block text color on the lowest palette fill","Conflict: striped edge, in the block text color on the lowest palette fill","Late: clock icon, in the block text color on the lowest palette fill","Material warning: warning triangle, in the block text color on the lowest palette fill"],
+"smr":{"l":"7.52","d":"5.49"},
+"any":[
+["l","any","P14","Two-tone ring over the worst of all 16,777,216 sRGB colors (better half)","ring","#171b1f/#f9fafb","","#b86350","4.06","3"],
+["d","any","P14","Two-tone ring over the worst of all 16,777,216 sRGB colors (better half)","ring","#f0f2f4/#151719","","#7b6ac2","3.99","3"],
+["b","any","P12","Block text (textColorFor) on the worst of all 16,777,216 sRGB colors, so any ERP or user color","bw","#000000/#ffffff","","#cf0dcc","4.58","4.58"]
+]
+};
+          const H = (t, i) => (C.hex[t] ? C.hex[t][i] : "");
+          const R = [];
+          ["t", "n", "f"].forEach((sec) => ["l", "d"].forEach((th, i) => C.pairs.filter((p) => p[0] === sec).forEach((p) => {
+            R.push([th, sec, p[1], p[2], p[3], H(p[3], i), p[4], H(p[4], i), i ? p[6] : p[5], p[7]]);
+          })));
+          ["l", "d"].forEach((th, i) => C.fills.forEach((f, j) => {
+            const fg = i ? "focus-ring" : "focus-outline";
+            R.push([th, "ff", "P14", "Two-tone ring over " + f + " (better half)", fg, H(fg, i), f, H(f, i), C.ff[th][j], "3"]);
+          }));
+          ["l", "d"].forEach((th, i) => C.fills.forEach((f, j) => R.push([th, "bt", "P12", "Block text on " + f, "black", "#000000", f, H(f, i), C.bt[th][j], "4.58"])));
+          ["l", "d"].forEach((th, i) => C.sm.forEach((s) => R.push([th, "sm", "P17", s, "black", "#000000", "palette-20", H("palette-20", i), C.smr[th], "4.58"])));
+          C.any.forEach((r) => R.push(r));
+          const RULES = [
+["input lightness, light", "0.6", "0.669 or lower (06 Design tokens)", "pass"],
+["muted-foreground lightness, light", "0.47", "0.547 or lower (06 Design tokens)", "pass"],
+["Order palette size and distinct values, light", "20 colors, 20 distinct", "20 distinct colors (06 Design tokens; A20)", "pass"],
+["Every token inside sRGB, light", "84 of 84", "no gamut mapping needed", "pass"],
+["Hex equals the sRGB rendering of oklch, light", "84 of 84", "hex is derived, oklch is the source", "pass"],
+["same_as tokens hold the same value, light", "0 mismatches", "aliases agree", "pass"],
+["input lightness, dark", "0.6", "0.478 or higher (06 Design tokens)", "pass"],
+["Order palette size and distinct values, dark", "20 colors, 20 distinct", "20 distinct colors (06 Design tokens; A20)", "pass"],
+["Every token inside sRGB, dark", "84 of 84", "no gamut mapping needed", "pass"],
+["Hex equals the sRGB rendering of oklch, dark", "84 of 84", "hex is derived, oklch is the source", "pass"],
+["same_as tokens hold the same value, dark", "0 mismatches", "aliases agree", "pass"],
+["block-border in light equals foreground", "oklch(0.22 0.01 250)", "06 Color and contrast; 07 Block states", "pass"],
+["block-border in dark is its own light token, not background", "oklch(0.82 0.005 250)", "06 Color and contrast; 07 Block states", "pass"],
+["Focus ring halves are the foreground and background values, both themes", "focus-outline = foreground, focus-ring = background", "06 Color and contrast", "pass"]
+];
+          const REFS = [
+["l", "Decorative divider (exempt)", "border", "#dbdee1", "background", "#f9fafb", "1.29"],
+["l", "Decorative card border (exempt)", "border", "#dbdee1", "card", "#ffffff", "1.34"],
+["l", "Machine row stripe in group-1 on card (groups also have text rows)", "group-1", "#1d9999", "card", "#ffffff", "3.46"],
+["l", "Machine row stripe in group-2 on card (groups also have text rows)", "group-2", "#8f78ba", "card", "#ffffff", "3.77"],
+["l", "Background token on lane (the old dark block border rule)", "background", "#f9fafb", "lane", "#ffffff", "1.04"],
+["l", "Primary against body text (Graphite open question)", "primary", "#22272c", "foreground", "#171b1f", "1.14"],
+["l", "Inner half against a secondary button or tab edge (the outer half carries 3:1, C40)", "focus-ring", "#f9fafb", "secondary", "#eef0f3", "1.09"],
+["l", "Inner half against a ghost or link button on background (the outer half carries 3:1, C40)", "focus-ring", "#f9fafb", "background", "#f9fafb", "1.00"],
+["d", "Decorative divider (exempt)", "border", "#3a3d41", "background", "#151719", "1.64"],
+["d", "Decorative card border (exempt)", "border", "#3a3d41", "card", "#1d2022", "1.50"],
+["d", "Machine row stripe in group-1 on card (groups also have text rows)", "group-1", "#39abab", "card", "#1d2022", "5.91"],
+["d", "Machine row stripe in group-2 on card (groups also have text rows)", "group-2", "#a28acd", "card", "#1d2022", "5.50"],
+["d", "Background token on lane (the old dark block border rule)", "background", "#151719", "lane", "#1a1c1e", "1.04"],
+["d", "Primary against body text (Graphite open question)", "primary", "#e9ebee", "foreground", "#f0f2f4", "1.06"],
+["d", "Inner half against a secondary button or tab edge (the outer half carries 3:1, C40)", "focus-ring", "#151719", "secondary", "#26292c", "1.22"],
+["d", "Inner half against a ghost or link button on background (the outer half carries 3:1, C40)", "focus-ring", "#151719", "background", "#151719", "1.00"]
+];
+          const SECTIONS = [
+            { id: "t", title: "Text pairs", min: "4.5", text: true, note: "Spec pairs P1 to P11. Status badge icons use the badge text color, so the badge rows also cover P18." },
+            { id: "n", title: "Non-text pairs", min: "3", text: false, note: "Spec pairs P13, P15 and P16, plus the invalid field border and the now line." },
+            { id: "f", title: "Focus ring halves", min: "3", text: false, note: "Spec pair P14. The inner 2 px band in focus-ring (background value) touches the control edge; the outer 2 px band in focus-outline (foreground value) touches the surface around it. The halves are at least 9:1 apart (WCAG technique C40)." },
+            { id: "ff", title: "Focus ring over order and group fills", min: "3", text: false, note: "A focused block's ring overlaps its neighbors. The row shows the half with the higher ratio, since one of the two must stand out against the fill." },
+            { id: "bt", title: "Block text on the palette and group fills", min: "4.58", text: true, note: "Spec pair P12. textColorFor picks pure black or pure white, whichever ratio is higher." },
+            { id: "sm", title: "State markers", min: "4.58", text: false, note: "Spec pair P17. Every marker is drawn in the block text color, so each is checked on the palette fill where block text contrasts least. Overdue and finish pending get their cues in D3." },
+            { id: "any", title: "Any sRGB fill", min: "3 or 4.58", text: false, note: "Order colors can be any sRGB color (the ERP ColorCode or a user edit). These rows scan all 16,777,216 sRGB colors and report the worst one." }
+          ];
+          const first = (h) => h.split("/")[0];
+          const name = (t, h) => (t === "ring" ? "focus-outline or focus-ring" : t === "bw" ? "black or white" : t ? t + " " + first(h) : h);
+          const row = (r) => ({
+            spec: r[2], pair: r[3], fg: name(r[4], r[5]), bg: name(r[6], r[7]), ratio: r[8], min: r[9],
+            st: "--sf:" + first(r[5]) + ";--sb:" + first(r[7]),
+            fc: "--c:" + first(r[5]), bc: "--c:" + first(r[7])
+          });
+          // State marker samples, in the order of the P17 rows: the cue each row measures.
+          const SMK = [{ icon: "Pencil" }, { isIni: true }, { icon: "Lock" }, { icon: "Play" }, { icon: "Sparkles" }, { isStp: true }, { icon: "Clock" }, { icon: "TriangleAlert" }];
+          const sample = (s, i) => (s.id === "sm" ? Object.assign({ isTx: false, isLn: false, icon: "", isIni: false, isStp: false }, SMK[i]) : { isTx: s.text, isLn: !s.text, icon: "", isIni: false, isStp: false });
+          const sections = SECTIONS.map((s) => {
+            const rows = R.filter((r) => r[1] === s.id && (r[0] === th || r[0] === "b")).map((r, i) => Object.assign(row(r), { text: s.text }, sample(s, i)));
+            return Object.assign({}, s, { rows: rows });
+          });
+          const low = (rows) => rows.reduce((m, r) => Math.min(m, parseFloat(r.ratio)), 99).toFixed(2);
+          const pick = (ids) => sections.filter((s) => ids.indexOf(s.id) >= 0).reduce((a, s) => a.concat(s.rows), []);
+          const summary = [
+            { title: "Text", min: "4.5", rows: pick(["t"]) },
+            { title: "Non-text", min: "3", rows: pick(["n"]) },
+            { title: "Focus ring", min: "3", rows: pick(["f", "ff"]) },
+            { title: "Block text and markers", min: "4.58", rows: pick(["bt", "sm"]) }
+          ].map((s) => ({ title: s.title, min: s.min, n: s.rows.length, low: low(s.rows) }));
+          const themeOf = (c) => (/\bdark\b/.test(c) ? "d" : /\blight\b/.test(c) ? "l" : "b");
+          const rules = RULES.filter((c) => themeOf(c[0]) === th || themeOf(c[0]) === "b").map((c) => ({ check: c[0], value: c[1], rule: c[2] }));
+          const refs = REFS.filter((r) => r[0] === th).map((r) => ({
+            pair: r[1], fg: name(r[2], r[3]), bg: name(r[4], r[5]), ratio: r[6],
+            st: "--sf:" + r[3] + ";--sb:" + r[5], fc: "--c:" + r[3], bc: "--c:" + r[5]
+          }));
+          const merged = [];
+          SECTIONS.forEach((s) => {
+            const L = R.filter((r) => r[1] === s.id && r[0] !== "d");
+            const D = R.filter((r) => r[1] === s.id && r[0] === "d");
+            L.forEach((r, i) => {
+              const both = r[0] === "b";
+              merged.push({ head: i === 0 ? s.title + ", minimum " + s.min + ":1" : "", spec: r[2], pair: r[3], l: r[8], d: both ? r[8] : D[i] ? D[i][8] : "", min: r[9] });
+            });
+          });
+          return {
+            rootCls: notes ? "" : "sheet",
+            isFrame: !notes,
+            isNotes: notes,
+            themeName: dark ? "dark" : "light",
+            count: sections.reduce((n, s) => n + s.rows.length, 0),
+            summary: summary,
+            sections: sections,
+            rules: rules,
+            refs: refs,
+            merged: merged
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

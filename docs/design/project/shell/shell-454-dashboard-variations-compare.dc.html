@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard variations comparison</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the rules in F0, from issue #454 and from Krister's request of 2026-10-10; the build cost row is derived from frame G. A check mark shows the strongest option on a row; a row may have two, or none when no option is clearly stronger.</p>
+        <div class="db-tbl">
+          <div class="db-tbl-r db-cmp-r h"><span>Criterion</span><span>A. Tabs and edit mode</span><span>B. Side column</span><span>C. Tab picker and tiles</span></div>
+          <sc-for list="{{ rows }}" as="r">
+            <div class="db-tbl-r db-cmp-r">
+              <span class="k">{{ r.k }}<span class="db-src">{{ r.src }}</span></span>
+              <sc-for list="{{ r.cells }}" as="c"><span><sc-if value="{{ c.best }}"><span class="db-best"><span class="ic" data-icon="Check"></span><span>{{ c.t }}</span></span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span></sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div class="db-rec">
+          <h3 class="t2">Recommendation: A, tabs and edit mode, with B's move buttons as Widget actions items and C's Add widget tile in edit mode</h3>
+          <p>A keeps what the request asks for in view: tabs that are visible and one activation apart, the full 12-column grid at 1280 and 1440, and an edit mode that keeps everyday use free of controls and saves a session as one command, which also limits audit rows and lets Cancel undo a session. Two parts of the other options are stronger and fit into A without changing its model. B's Move up, down, left and right buttons move a widget with no keyboard mode to learn; in A they become four items in Widget actions, a second path without dragging beside the move button. They stay out of A's settings Sheet: its overlay covers the grid and the widget changes only on Apply, so a move there would show nothing and could put the widget under the Sheet. Chosen from the menu, a move happens in plain view: the grid scrolls the widget into view and the polite region names the new column and row. C's tile shows where a new widget lands; inside A's edit mode it takes the place of Add widget in the edit bar, so adding takes two steps once the tab is in edit mode. B's side column halves the grid to 6 columns at 1280 and 1440, and C hides the tabs behind a menu, against the request for a tabs system, and its settings do not fit a Small widget. The cost of A is the keyboard move layer on react-grid-layout (frame G) and a version check for two people editing one shared tab (question 16).</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Each row: criterion, source, the three cells, and the options marked strongest ("" for none).
+          const Rw = (k, src, a, b, c, best) => ({ k: k, src: src, cells: [a, b, c].map((t, i) => { const on = best.indexOf("ABC"[i]) >= 0; return { t: t, best: on, plain: !on }; }) });
+          return {
+            rows: [
+              Rw("Tabs at a glance", "Krister, 2026-10-10", "Every tab in one row, one activation apart; More tabs past about eight", "Every tab listed under its scope, one activation apart", "One tab in the h1; the others two activations away", "AB"),
+              Rw("Which tabs are shared, and with whom", "I454 answer 1", "A scope icon on each tab and the scope line above the grid", "Headings Acme AB, Plant A and My tabs over the list", "Groups in the Switch tab menu and the scope line beside the h1", "B"),
+              Rw("Many tabs", "Derived", "More tabs menu past the row; a Select at 320", "The list scrolls in its column", "The menu scrolls", "BC"),
+              Rw("Grid width at 1280 and 1440", "Frame G; #222 kept tables at the width of main", "12 columns, 974 and 1134 px", "6 columns, 670 and 830 px", "12 columns, 974 and 1134 px, with no tab row above", "AC"),
+              Rw("Adding a widget", "I454 frames", "Three steps: Edit layout, Add widget, Add", "Two steps: Add widget, Add", "Two steps from a tile where the widget lands", "C"),
+              Rw("Widget settings", "I454 answer 3", "A modal Sheet with room for every setting; the widget changes on Apply", "Live preview beside the widget in a 280 px column", "Inside the widget; Small widgets need a popover", "B"),
+              Rw("Two copies with different settings", "I454 answer 3", "Side by side, the Sheet over the right", "Side by side, one selected and previewed live", "Side by side, one turned over into its form", "B"),
+              Rw("Accidental changes", "Derived", "None outside edit mode; Cancel undoes a session", "Changes only on Save in the side column", "Each change saved at once, controls on every widget", "A"),
+              Rw("Move and resize without dragging", "WCAG 2.5.7, 2.1.1", "Move button with arrow keys; Size in the menu", "Move and Size buttons in the settings, no mode to learn", "Move in the menu, then arrow keys; Size in the menu", "B"),
+              Rw("Own tab at another plant", "I454 answer 2", "Each widget says what is missing (A5)", "The same, with lower widgets below the fold at 6 columns (B5)", "The same (C5)", "AC"),
+              Rw("Commands and audit", "ADR 0012, ADR 0051; question 9", "One command per edit session", "One command per Save", "One command per change", "A"),
+              Rw("Shared tab, viewer and editor", "I454 answer 1", "Edit layout and the shared choice in New tab appear with the permission", "Edit buttons and row menu items appear with the permission", "Widget actions, the tile and Manage tabs items appear with the permission", ""),
+              Rw("Reflow at 320", "WCAG 1.4.10; plan 06", "Tabs as a Select, one column", "A Tabs sheet and a full-screen settings sheet", "The same Switch tab menu, one column", "C"),
+              Rw("Build cost", "Derived from frame G", "Edit mode state, two Sheets, the keyboard move layer", "A side column with three views; moves by buttons, no keyboard mode", "Forms that fit every widget size, a popover for Small, tile placement", "B")
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

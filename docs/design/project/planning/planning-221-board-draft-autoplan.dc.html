@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 draft, autoplan and board states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+        <style>
+          /* Draft, autoplan and board state frames of the D3 spec page (issue northMES/northmes#221, stories #95, #96,
+             #98 and #88): My draft and its review, the result of a Save with per-row statuses, discarding, autoplan
+             from the board with its status line, pausing live updates, the loading, empty, error and degraded states,
+             and the build notes DR25. Every board frame mounts Shell.dc.html with the shared parts
+             planning-221-board-grid and planning-221-board-inspector; the toolbar, the status line, the state panels
+             and the Discard draft dialog are page markup on the shared pb- classes. Classes here start with da-; every
+             UI color is a D1 token; the chips use the D1 canvas label styles. */
+          .da-part{position:relative}
+          .da-fr{position:absolute}
+          .da-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+          .da-hs{display:inline-flex;align-items:center;gap:6px;color:var(--warning)}
+          .da-hs .ic{width:16px;height:16px}
+          .pb-pw > .ps-box{flex:1 1 auto;min-height:0}
+          .da-page{position:relative;z-index:0;width:100%;height:100%}
+          .da-ovr{border-radius:var(--radius-xl)}
+          .da-dld{margin:0;color:var(--muted-foreground);font-size:13px;line-height:18px}
+          .pb-dlg.da-dlg{width:480px;box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);font:400 14px/20px var(--font-sans)}
+
+          /* EmptyState and ErrorState panels in place of the board */
+          .da-state{display:grid;gap:16px;max-width:640px;align-self:flex-start}
+          .da-head{display:flex;align-items:flex-start;gap:12px}
+          .da-lead{margin:0;font-size:16px;line-height:24px;font-weight:500}
+          /* Build notes DR25, not part of the UI */
+          .sheet.da-bn{width:1440px;min-height:100%}
+          .da-bn .lede{max-width:120ch}
+          .da-bt{display:grid;border-top:1px solid var(--border);font-size:13px;line-height:18px}
+          .da-btr{display:grid;grid-template-columns:var(--bc);gap:16px;padding:9px 12px;border-bottom:1px solid var(--border);text-wrap:pretty}
+          .da-btr.h{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+          .da-btr > span:first-child{font-weight:600}
+          .da-bn .code{font:500 12px/16px var(--font-mono);white-space:nowrap}
+          .da-p{margin:0;max-width:72ch}
+          .da-err{color:var(--destructive)}
+          .da-warn{color:var(--warning)}
+          .da-mut{color:var(--muted-foreground)}
+          .da-dl{display:grid;margin:0;border-top:1px solid var(--border)}
+          .da-dr{display:grid;grid-template-columns:140px minmax(0,1fr);align-items:center;gap:12px;min-height:40px;padding:4px 0;border-bottom:1px solid var(--border)}
+          .da-dt{font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .da-dd{min-width:0;margin:0;font:500 13px/18px var(--font-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+          .da-acts{display:flex;flex-wrap:wrap;gap:8px}
+
+          /* Status line messages, a sheet at the content width of 1440 */
+          .da-sheet{display:grid;gap:10px;align-content:start;height:100%;padding:20px 0;background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);-webkit-font-smoothing:antialiased}
+          .da-kick{margin:0 0 4px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .da-srow{display:grid;gap:2px;padding:0 0 10px;border-bottom:1px solid var(--border)}
+          .da-sk{font:500 12px/16px var(--font-mono);color:var(--muted-foreground)}
+        </style>
+      </helmet>
+      <div class="da-part" style="{{ rootStyle }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="da-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel da-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><sc-if value="{{ f.hasDoc }}"><span class="ftitle">Planning board · Plant A · NorthMES</span></sc-if></div>
+            <sc-if value="{{ f.isShell }}">
+              <div class="da-page {{ f.pageCls }}" inert="{{ f.inert }}">
+              <dc-import name="Shell" dc-props="{{ f.shell }}" hint-size="{{ f.hint }}">
+                <div data-slot="header">
+                  <sc-if value="{{ f.hdrNormal }}"><span>Pyramid data as of <span class="num">06:40</span></span></sc-if>
+                  <sc-if value="{{ f.hdrStale }}"><span class="da-hs"><span class="ic" data-icon="TriangleAlert"></span><span>Pyramid data as of Mon 2 Nov <span class="num">22:10</span>, the last import failed</span></span></sc-if>
+                </div>
+                <div class="pb-page">
+                  <sc-if value="{{ f.hasTb }}">
+                    <div class="pb-tb" role="toolbar" aria-label="Board">
+                      <div class="pb-grp">
+                        <button class="btn v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span>Earlier</button>
+                        <button class="btn v-outline" type="button">Now</button>
+                        <button class="btn v-outline" type="button" aria-label="Show later range">Later<span class="ic" data-icon="ChevronRight"></span></button>
+                        <button class="btn v-ghost" type="button" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>Go to date</button>
+                      </div>
+                      <span class="pb-range"><sc-for list="{{ f.range }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span>
+                      <span class="pb-sp"></span>
+                      <span class="pb-lbl" id="{{ f.zoomId }}">Zoom</span>
+                      <div class="pb-tg" role="group" aria-labelledby="{{ f.zoomId }}">
+                        <sc-for list="{{ f.zooms }}" as="z"><button class="pb-tgi {{ z.cls }}" type="button" aria-pressed="{{ z.pressed }}">{{ z.label }}</button></sc-for>
+                      </div>
+                      <sc-if value="{{ f.hasLive }}">
+                        <button class="btn v-outline {{ f.liveCls }}" type="button" aria-disabled="{{ f.liveDis }}" aria-describedby="{{ f.liveDesc }}"><span class="ic" data-icon="{{ f.liveIcon }}"></span>{{ f.liveLabel }}</button>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.hasStl }}">
+                    <div class="pb-stl">
+                      <sc-for list="{{ f.stl }}" as="m">
+                        <span class="pb-st {{ m.kind }}" id="{{ m.id }}"><span class="ic" data-icon="{{ m.icon }}"></span><span><sc-for list="{{ m.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></span>
+                        <sc-if value="{{ m.hasLink }}"><a class="pb-link" href="#">{{ m.link }}</a></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isBoard }}">
+                    <div class="pb-body2">
+                      <div class="pb-gw"><dc-import name="planning-221-board-grid" dc-props="{{ f.grid }}" hint-size="{{ f.ghint }}"></dc-import></div>
+                      <div class="pb-pw">
+                        <sc-if value="{{ f.hasIns }}"><dc-import name="planning-221-board-inspector" dc-props="{{ f.ins }}" hint-size="{{ f.ihint }}"></dc-import></sc-if>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ f.isState }}">
+                    <div class="panel da-state">
+                      <div class="da-head"><span class="{{ f.st.iconCls }}" data-icon="{{ f.st.icon }}"></span><h2 class="da-lead"><sc-for list="{{ f.st.lead }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></h2></div>
+                      <p class="da-p"><sc-for list="{{ f.st.body }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></p>
+                      <sc-if value="{{ f.st.hasDl }}">
+                        <dl class="da-dl"><sc-for list="{{ f.st.dl }}" as="d"><div class="da-dr"><dt class="da-dt">{{ d.k }}</dt><dd class="da-dd">{{ d.v }}</dd></div></sc-for></dl>
+                      </sc-if>
+                      <sc-if value="{{ f.st.hasActs }}">
+                        <div class="da-acts">
+                          <sc-for list="{{ f.st.acts }}" as="a">
+                            <sc-if value="{{ a.isBtn }}"><button class="btn {{ a.cls }}" type="button"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.label }}</button></sc-if>
+                            <sc-if value="{{ a.isLink }}"><a class="btn {{ a.cls }}" href="#">{{ a.label }}</a></sc-if>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+              </dc-import>
+              </div>
+              <sc-if value="{{ f.dlg }}">
+                <div class="sh-ov da-ovr"></div>
+                <div class="pb-dlg da-dlg" role="alertdialog" aria-modal="true" aria-labelledby="{{ f.dlgT }}" aria-describedby="{{ f.dlgD }}">
+                  <div class="pb-dlh"><h2 class="pb-dlt" id="{{ f.dlgT }}">Discard all <span class="num">6</span> changes?</h2></div>
+                  <div class="pb-dlb"><p class="da-dld" id="{{ f.dlgD }}">Your moves in this draft cannot be restored. The saved plan stays as it is, and the soft locks your draft holds end.</p></div>
+                  <div class="pb-dlf"><button class="btn v-outline is-focus" type="button">Cancel</button><button class="btn v-destructive" type="button">Discard <span class="num">6</span> changes</button></div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ f.isNotes }}">
+              <article class="sheet da-bn">
+                <p class="kick">Build notes, not part of the UI</p>
+                <h2 class="t2">My draft and Save, autoplan, pause and the board's page states</h2>
+                <p class="lede">For DR1 to DR24 and DR26 to DR32. The implementer takes the components, roles, focus moves, announcements and copy from here, never markup, class names or demo numbers. Items marked proposed need Krister Johansson's yes before the page is approved. Grid and keyboard notes are in TA19, interaction notes in IN20.</p>
+                <sc-for list="{{ bn }}" as="sec">
+                  <section class="sec">
+                    <h3 class="t3">{{ sec.h }}</h3>
+                    <sc-if value="{{ sec.hasRows }}">
+                      <div class="da-bt" role="table" aria-label="{{ sec.h }}" style="{{ sec.cols }}">
+                        <div class="da-btr h" role="row"><sc-for list="{{ sec.head }}" as="h"><span role="columnheader">{{ h.t }}</span></sc-for></div>
+                        <sc-for list="{{ sec.rows }}" as="r"><div class="da-btr" role="row"><sc-for list="{{ r.c }}" as="c"><span role="cell"><sc-for list="{{ c.segs }}" as="g"><span class="{{ g.c }}">{{ g.t }}</span></sc-for></span></sc-for></div></sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ sec.hasList }}"><ul class="ps-ul"><sc-for list="{{ sec.list }}" as="li"><li><sc-for list="{{ li.segs }}" as="g"><span class="{{ g.c }}">{{ g.t }}</span></sc-for></li></sc-for></ul></sc-if>
+                  </section>
+                </sc-for>
+              </article>
+            </sc-if>
+            <sc-if value="{{ f.isSheet }}">
+              <div class="da-sheet">
+                <p class="da-kick">Annotation, not part of the UI: each row is one message of the status line under the board toolbar, at the content width of 1440 with the sidebar expanded. The mono line above it names the run status or the board state.</p>
+                <sc-for list="{{ f.sheet }}" as="r">
+                  <div class="da-srow">
+                    <span class="da-sk">{{ r.key }}</span>
+                    <div class="pb-stl">
+                      <span class="pb-st {{ r.m.kind }}"><span class="ic" data-icon="{{ r.m.icon }}"></span><span><sc-for list="{{ r.m.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></span>
+                      <sc-if value="{{ r.m.hasLink }}"><a class="pb-link" href="#">{{ r.m.link }}</a></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"text","default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler the Shell and the parts install (one per document, guarded by the same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          // Numbers, times and job numbers in Plex Mono; spaces around them stay in the sans text.
+          const segs = (t) => String(t).split(/(\d+(?:[  ]\d{3})*(?:[.:]\d+)*)/).filter((x) => x !== "").map((x) => ({ t: x, c: /^\d/.test(x) ? "num" : "" }));
+          const R = {
+            hours: [{ t: "Tue 3 Nov, " }, { t: "06:00", c: "num" }, { t: " to " }, { t: "18:00", c: "num" }],
+            wed: [{ t: "Wed 4 Nov, " }, { t: "06:00", c: "num" }, { t: " to " }, { t: "18:00", c: "num" }],
+            day: [{ t: "Tue 3 Nov to Thu 5 Nov" }],
+            sunday: [{ t: "Sun 8 Nov, " }, { t: "06:00", c: "num" }, { t: " to " }, { t: "18:00", c: "num" }],
+            weeks: [{ t: "W45 to W48, Mon 2 Nov to Sun 29 Nov" }],
+          };
+          const zooms = (on) => [["hours", "Hours"], ["day", "Day"], ["week", "Week"], ["weeks", "4 weeks"]].map((z) => ({ label: z[1], pressed: String(z[0] === on), cls: z[0] === on ? "on" : "" }));
+
+          // Status line messages (rules 7.1 to 7.6, 8.2, 8.5; copy proposed where the docs give none).
+          const M = {
+            applied0612: { kind: "ok", icon: "CircleCheck", t: "Autoplan applied at 06:12: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced." },
+            queued: { kind: "run", icon: "Clock", t: "Autoplan queued at 09:38 by you." },
+            already: { kind: "run", icon: "Clock", t: "Autoplan already queued by Erik Sand at 09:36. It plans all of Plant A, so your request was not added." },
+            running: { kind: "run", icon: "LoaderCircle", t: "Autoplan running. Started at 09:38 by you." },
+            runningOther: { kind: "run", icon: "LoaderCircle", t: "Autoplan running. Started at 09:36 by Erik Sand." },
+            applied: { kind: "ok", icon: "CircleCheck", t: "Autoplan applied at 09:39: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced." },
+            proposal: { kind: "ok", icon: "CircleCheck", t: "Autoplan put 37 moves in your draft at 09:39: 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced.", link: "Review them in My draft" },
+            superseded: { kind: "run", icon: "Info", t: "Autoplan from 09:38 was superseded by a newer run." },
+            failChanged: { kind: "err", icon: "CircleAlert", t: "Autoplan failed at 09:40: the plan changed during autoplan 3 times. Nothing moved. Run autoplan to try again." },
+            failPerm: { kind: "err", icon: "CircleAlert", t: "Autoplan failed at 09:40: your role at Plant A no longer allows running autoplan. Nothing moved. Ask your plant admin." },
+            failBudget: { kind: "err", icon: "CircleAlert", t: "Autoplan failed at 09:40: the plan did not finish within its step budget. Nothing moved. Tell your plant admin." },
+            paused: { kind: "wait", icon: "Pause", t: "Live updates paused. 12 changes waiting." },
+            paused1: { kind: "wait", icon: "Pause", t: "Live updates paused. 1 change waiting." },
+            movesOff: { kind: "wait", icon: "Unplug", t: "Moves are off until live updates are back." },
+            readonly: { kind: "run", icon: "Info", t: "This timeline is read only. Move job orders in Details or in the job table.", link: "Open the job table" },
+          };
+          const msg = (k, id) => { const m = M[k]; return { kind: m.kind, icon: m.icon, segs: segs(m.t), hasLink: !!m.link, link: m.link || "", id: id }; };
+
+          // EmptyState and ErrorState panels (plan 06 Page states; copy proposed).
+          const S = {
+            nomachines: { icon: "Drill", iconCls: "ic ic24 da-mut", lead: "Plant A has no machines to plan yet.", body: "The board shows equipment that is marked as plannable or tracked for OEE. A plant admin adds machines in Machines and marks them there.", acts: [{ label: "Open Machines", cls: "v-outline", link: true }] },
+            error: { icon: "CircleAlert", iconCls: "ic ic24 da-err", lead: "The board could not be loaded. Your draft and the saved plan are not affected.", body: "Try again. If the error comes back, give your plant admin the error id.", dl: [["Error id", "4c1e88a0"], ["Range", "Tue 3 Nov, 06:00 to 18:00"]], acts: [{ label: "Try again", cls: "v-default", icon: "RotateCw" }, { label: "Open the job table", cls: "v-outline", link: true }] },
+            toolarge: { icon: "CalendarRange", iconCls: "ic ic24 da-warn", lead: "These 4 weeks hold more job orders than the board can show at once.", body: "Choose a shorter range. The job table lists every job order of these weeks.", dl: [["Code", "planning.board.range_too_large"], ["Range", "W45 to W48, Mon 2 Nov to Sun 29 Nov"]], acts: [{ label: "Show Week", cls: "v-default" }, { label: "Open the job table", cls: "v-outline", link: true }] },
+            forbidden: { icon: "ShieldOff", iconCls: "ic ic24 da-mut", lead: "You cannot see the planning board at Plant A.", body: "The board needs the permission planning.jobOrder:read, and your role at Plant A does not include it. Ask your plant admin for the Planner or Viewer role." },
+          };
+          const stateOf = (k) => { const s = S[k]; return { icon: s.icon, iconCls: s.iconCls, lead: segs(s.lead), body: segs(s.body), hasDl: !!s.dl, dl: (s.dl || []).map((d) => ({ k: d[0], v: d[1] })), hasActs: !!s.acts, acts: (s.acts || []).map((a) => ({ label: a.label, cls: a.cls, icon: a.icon || "", hasIcon: !!a.icon, isBtn: !a.link, isLink: !!a.link })) }; };
+
+          const L1440 = { width: "1440" };
+          const BN_H = 2880;
+          const ALL = [
+            // My draft, review and Save (#95; rules 6.2 to 6.7, 17.21, 19.14, 20.8, 20.11)
+            { id: "DR1", title: "My draft review", theme: "light", row: 0, col: 0, doc: true, range: "wed", stl: ["applied0612"],
+              detail: "Light, 1440 by 900. Save opened My draft: six rows with their statuses, Rebase 1015.10 focused; Wed 4 Nov shows two statuses on blocks",
+              grid: { r0: "30", r1: "42", reconnect: "on", selected: "none" }, ins: { view: "draft", draft: "review", focus: "rebase" } },
+            { id: "DR2", title: "Ready to save", theme: "light", row: 0, col: 1, stl: ["applied0612"],
+              detail: "Light, 1440 by 900. Four rows ready after the rebases and discards; Save 4 changes names what it writes and has focus",
+              grid: {}, ins: { view: "draft", draft: "ready", focus: "save" } },
+            { id: "DR3", title: "Save stopped", theme: "light", row: 0, col: 2, stl: ["applied0612"],
+              detail: "Light, 1440 by 900. Save at 09:39 wrote nothing: 1015.10 changed again, 1003.20 needs a reason; focus on the summary",
+              grid: {}, ins: { view: "draft", draft: "refused", focus: "esum" } },
+            { id: "DR4", title: "Save stopped", theme: "dark", row: 1, col: 0, stl: ["applied0612"],
+              detail: "Dark, 1440 by 900. As DR3, after the summary link Reason for 1003.20: the panel scrolled, the reason field has focus",
+              grid: {}, ins: { view: "draft", draft: "refused", focus: "reason", scroll: "end" } },
+            { id: "DR5", title: "Save needs a reason", theme: "light", row: 1, col: 1, stl: ["applied0612"],
+              detail: "Light, 1440 by 900. 1015.10 rebased; Save with an empty reason shows the field error; focus on the reason",
+              grid: {}, ins: { view: "draft", draft: "conflicts", focus: "reason" } },
+            { id: "DR6", title: "Saved", theme: "light", row: 1, col: 2, stl: ["applied0612"],
+              detail: "Light, 1440 by 900. 4 changes saved at 09:40, their soft locks released; My draft is empty; 1003.20 shows as committed",
+              grid: { selected: "none", saved: "on" }, ins: { view: "draft", draft: "saved" } },
+            // Autoplan from the board (#96; rules 7.1 to 7.7, 17.17)
+            { id: "DR7", title: "Autoplan queued", theme: "light", row: 2, col: 0, doc: true, stl: ["queued"], shell: { focus: "actions" },
+              detail: "Light, 1440 by 900. Run autoplan pressed, focus stays on it; the status line reads queued",
+              grid: {}, ins: {} },
+            { id: "DR8", title: "Autoplan running", theme: "light", row: 2, col: 1, stl: ["running"],
+              detail: "Light, 1440 by 900. The status line follows the run; the board and my draft stay usable",
+              grid: {}, ins: {} },
+            { id: "DR9", title: "Autoplan applied", theme: "light", row: 2, col: 2, stl: ["applied"],
+              detail: "Light, 1440 by 900. The result with its five counts; the board shows the new plan",
+              grid: {}, ins: {} },
+            { id: "DR10", title: "Autoplan applied", theme: "dark", row: 3, col: 0, stl: ["applied"],
+              detail: "Dark, 1440 by 900. As DR9",
+              grid: {}, ins: {} },
+            { id: "DR11", title: "Autoplan failed", theme: "light", row: 3, col: 1, stl: ["failChanged"],
+              detail: "Light, 1440 by 900. The plan changed during autoplan 3 times, so nothing moved",
+              grid: {}, ins: {} },
+            { id: "DR12", title: "Status line messages", theme: "light", row: 3, col: 2, sheet: true, w: 1136, h: 958,
+              detail: "Light, 1136 by 958. Every autoplan, pause and reconnect message at the content width of 1440" },
+            // Pause live updates and reconnecting (#98; rules 8.1 to 8.6)
+            { id: "DR13", title: "Live updates paused", theme: "light", row: 4, col: 0, live: "resume", liveFocus: true, stl: ["applied0612", "paused"],
+              detail: "Light, 1440 by 900. Resume live updates has focus; 12 changes waiting; Large orders gets paused",
+              grid: {}, ins: { view: "slot", paused: "on" } },
+            { id: "DR14", title: "Live updates paused", theme: "dark", row: 4, col: 1, live: "resume", stl: ["applied", "paused"],
+              detail: "Dark, 1440 by 900. My own autoplan result applied by id while paused; the soft lock warning still shows",
+              grid: {}, ins: { expiry: "on" } },
+            { id: "DR15", title: "Reconnecting", theme: "light", row: 4, col: 2, live: "resumeDis", stl: ["applied0612", "movesOff"], shell: { status: "reconnecting" },
+              detail: "Light, 1440 by 900. The shell's chip; Resume live updates disabled and moves off; the grid is read only",
+              grid: { state: "readonly", selected: "none" }, ins: { details: "empty" } },
+            { id: "DR16", title: "Reconnecting", theme: "dark", row: 5, col: 0, live: "resumeDis", liveFocus: true, stl: ["applied0612", "movesOff"], shell: { status: "reconnecting" },
+              detail: "Dark, 1440 by 900. As DR15; the disabled Resume live updates stays focusable and names why",
+              grid: { state: "readonly", selected: "none" }, ins: { details: "empty" } },
+            // Loading, empty, error and degraded states (#88; rules 11.1 to 11.7)
+            { id: "DR17", title: "Loading", theme: "light", row: 5, col: 1, stl: [], shell: { busy: "true" },
+              detail: "Light, 1440 by 900. Skeletons of the grid and of Details in the same layout; main and the grid carry aria-busy",
+              grid: { state: "loading" }, ins: { details: "loading", draft: "empty" } },
+            { id: "DR18", title: "No jobs in this range", theme: "light", row: 5, col: 2, range: "sunday", stl: ["applied0612"],
+              detail: "Light, 1440 by 900. Sun 8 Nov: every machine keeps its row with the empty cell; Not placed still lists 3",
+              grid: { state: "empty-range", r0: "126", r1: "138", selected: "none" }, ins: { details: "empty" } },
+            { id: "DR19", title: "No machines to plan", theme: "light", row: 6, col: 0, tb: false, stl: [], hdr: "none", state: "nomachines", shell: { actions: "none" },
+              detail: "Light, 1440 by 900. First run at a plant without plannable equipment, as a planner sees it" },
+            { id: "DR20", title: "Board could not be loaded", theme: "light", row: 6, col: 1, live: "none", stl: [], state: "error",
+              detail: "Light, 1440 by 900. ErrorState with the error id, Try again and the job table as a way out" },
+            { id: "DR21", title: "Range too large", theme: "dark", row: 6, col: 2, live: "none", zoom: "weeks", range: "weeks", stl: [], state: "toolarge",
+              detail: "Dark, 1440 by 900. 4 weeks holds too many job orders: planning.board.range_too_large with a shorter range" },
+            { id: "DR22", title: "No access", theme: "light", row: 7, col: 0, tb: false, stl: [], hdr: "none", state: "forbidden", shell: { actions: "none" },
+              detail: "Light, 1440 by 900. Forbidden: names the missing permission and shows no data" },
+            { id: "DR23", title: "Connector data stale, Large orders failed", theme: "light", row: 7, col: 1, hdr: "stale", stl: ["applied0612"],
+              detail: "Light, 1440 by 900. The header slot names the old import; the Large orders fallback with Try again focused",
+              grid: {}, ins: { view: "slot", slot: "failed", focus: "retry" } },
+            { id: "DR24", title: "Read-only timeline", theme: "light", row: 7, col: 2, stl: ["readonly"],
+              detail: "Light, 1440 by 900. The SP3 fallback: the grid is read only; moves go through Details and the job table",
+              grid: { state: "readonly" }, ins: {} },
+            // Dark twins of the loading, empty and error states (#88; acceptance criterion 1 of #221)
+            { id: "DR26", title: "Loading", theme: "dark", row: 8, col: 0, stl: [], shell: { busy: "true" },
+              detail: "Dark, 1440 by 900, as DR17",
+              grid: { state: "loading" }, ins: { details: "loading", draft: "empty" } },
+            { id: "DR27", title: "No jobs in this range", theme: "dark", row: 8, col: 1, range: "sunday", stl: ["applied0612"],
+              detail: "Dark, 1440 by 900, as DR18",
+              grid: { state: "empty-range", r0: "126", r1: "138", selected: "none" }, ins: { details: "empty" } },
+            { id: "DR28", title: "No machines to plan", theme: "dark", row: 8, col: 2, tb: false, stl: [], hdr: "none", state: "nomachines", shell: { actions: "none" },
+              detail: "Dark, 1440 by 900, as DR19" },
+            { id: "DR29", title: "Board could not be loaded", theme: "dark", row: 9, col: 0, live: "none", stl: [], state: "error",
+              detail: "Dark, 1440 by 900, as DR20" },
+            // Discarding (rule 21.5: Discard draft is the only undo; proposed review step and row Undo)
+            { id: "DR30", title: "Discard draft, review step", theme: "light", row: 9, col: 1, stl: ["applied0612"], dlg: true,
+              detail: "Light, 1440 by 900. Discard draft asks first; focus on Cancel (proposed)",
+              grid: {}, ins: { view: "draft", draft: "review" } },
+            { id: "DR31", title: "Row discarded, Undo", theme: "light", row: 9, col: 2, stl: ["applied0612"],
+              detail: "Light, 1440 by 900. Discard on 1019.20 keeps the row with Undo until the next Save; the tab scrolled to it, focus on Undo (proposed)",
+              grid: {}, ins: { view: "draft", draft: "discarded", focus: "undo", scroll: "end" } },
+            { id: "DR32", title: "No jobs in this range, nothing unplaced", theme: "light", row: 10, col: 0, range: "sunday", stl: ["applied0612"],
+              detail: "Light, 1440 by 900. The Not placed row keeps one cell, No job orders without a place, which holds the grid's Tab stop",
+              grid: { state: "empty-range", r0: "126", r1: "138", selected: "none", np: "empty" }, ins: { details: "empty" } },
+            { id: "DR25", title: "Draft, autoplan and page state build notes, not part of the UI", theme: "light", row: 10, col: 1, notes: true, h: BN_H,
+              detail: "Light, 1440 wide. Components, roles, focus, messages, copy and WCAG for DR1 to DR32" },
+          ];
+
+          // Layout: each frame element is exactly its screen size; its chip sits 48 px above it.
+          const CHIP = 48, GAPX = 80, GAPY = 112, COLW = 1440;
+          const pick = String(P.frame || "all").split(",").map((x) => x.trim()).filter(Boolean);
+          const one = pick.length && pick[0] !== "all";
+          const list = one ? ALL.filter((x) => pick.indexOf(x.id) >= 0) : ALL;
+          const rows = [];
+          list.forEach((x, i) => { const r = one ? i : x.row; rows[r] = rows[r] || []; rows[r].push(x); });
+          let top = CHIP, width = 0;
+          const frames = [];
+          rows.forEach((row) => {
+            if (!row) return;
+            let rowH = 0;
+            row.sort((a, b) => a.col - b.col).forEach((x) => {
+              const w = x.w || 1440, h = x.h || 900;
+              const left = one ? 0 : x.col * (COLW + GAPX);
+              const k = x.id.toLowerCase();
+              const style = "left:" + left + "px;top:" + top + "px;width:" + w + "px;height:" + h + "px";
+              const base = { id: x.id, title: x.title, detail: x.detail, hasDoc: !!x.doc, label: x.id + " " + (x.notes ? "Draft, autoplan and page state build notes" : x.title) + ", " + x.theme + ", " + w + (x.notes ? " wide" : " by " + h), style };
+              width = Math.max(width, left + w);
+              rowH = Math.max(rowH, h);
+              if (x.notes) {
+                frames.push(Object.assign(base, { isNotes: true }));
+                return;
+              }
+              if (x.sheet) {
+                const keys = [
+                  ["queued, by you", "queued"], ["queued, already queued by someone else", "already"], ["running, by you", "running"], ["running, by someone else", "runningOther"],
+                  ["applied", "applied"], ["applied as a proposal in my draft (PO-16 alternative)", "proposal"], ["superseded", "superseded"],
+                  ["failed, plan changed during autoplan", "failChanged"], ["failed, permission.denied", "failPerm"], ["failed, budget_exceeded", "failBudget"],
+                  ["paused", "paused"], ["paused, one change", "paused1"], ["reconnecting", "movesOff"], ["SP3 fallback, read-only timeline", "readonly"],
+                ];
+                frames.push(Object.assign(base, { isSheet: true, sheet: keys.map((q) => ({ key: q[0], m: msg(q[1]) })) }));
+                return;
+              }
+              const live = x.live || "pause";
+              const tb = x.tb !== false;
+              const stlIds = { movesOff: k + "-moves-off" };
+              const stl = (x.stl || []).map((m) => msg(m, stlIds[m]));
+              const isState = !!x.state;
+              const hasStl = stl.length > 0;
+              const bodyH = 900 - 156 - (tb ? 48 : 0) - (hasStl ? 36 : 0);
+              frames.push(Object.assign(base, {
+                isShell: true, dlg: !!x.dlg, inert: x.dlg ? "" : undefined, dlgT: k + "-dlg-t", dlgD: k + "-dlg-d", pageCls: x.theme === "dark" ? "dark" : "",
+                shell: Object.assign({}, L1440, { theme: x.theme }, x.shell || {}), hint: w + "px," + h + "px",
+                hdrNormal: (x.hdr || "normal") === "normal", hdrStale: x.hdr === "stale",
+                hasTb: tb, range: R[x.range || "hours"], zoomId: k + "-zoom", zooms: zooms(x.zoom || "hours"),
+                hasLive: live !== "none",
+                liveLabel: live === "pause" ? "Pause live updates" : "Resume live updates", liveIcon: live === "pause" ? "Pause" : "Play",
+                liveCls: (live === "resumeDis" ? "is-dis " : "") + (x.liveFocus ? "is-focus" : ""),
+                liveDis: live === "resumeDis" ? "true" : undefined, liveDesc: live === "resumeDis" ? stlIds.movesOff : undefined,
+                hasStl, stl,
+                isBoard: !isState, isState,
+                grid: Object.assign({ idp: k }, x.grid || {}), ghint: "100%," + bodyH + "px",
+                hasIns: !isState, ins: Object.assign({ idp: k + "i" }, x.ins || {}), ihint: "320px," + bodyH + "px",
+                st: isState ? stateOf(x.state) : {},
+              }));
+            });
+            top += rowH + GAPY;
+          });
+          const height = top - GAPY;
+          // Build notes DR25. Text in backticks is code: Plex Mono, never broken at a hyphen.
+          const C = (t) => String(t).split("`").map((x, i) => ({ t: x, c: i % 2 ? "code" : "" })).filter((x) => x.t !== "");
+          const COLS = { 2: "--bc:260px minmax(0,1fr)", 3: "--bc:minmax(0,1fr) 110px 380px" };
+          const SEC = (h, head, rows, cols) => ({ h, hasRows: true, hasList: false, cols: cols || COLS[head.length], head: head.map((t) => ({ t })), rows: rows.map((r) => ({ c: r.map((t) => ({ segs: C(t) })) })), list: [] });
+          const LST = (h, items) => ({ h, hasRows: false, hasList: true, cols: "", head: [], rows: [], list: items.map((t) => ({ segs: C(t) })) });
+          const bn = [
+            SEC("Components (shadcn names)", ["Component", "Where", "What these frames fix"], [
+              ["Tabs", "My draft tab of the inspector", "The tab names its count in words, My draft, 6 changes; the panel opens with a heading at level 2."],
+              ["Badge", "Draft row statuses", "Ready to save, Changed by someone else, Soft lock lost, Started, ERP change waiting, No longer in the plan, Needs a reason, Discarded; text, never color alone."],
+              ["Button", "Rebase, Discard, Undo, Back to my draft, Discard draft, Save changes, Save 4 changes", "Save changes stays focusable with aria-disabled and names why through aria-describedby."],
+              ["Alert", "Saved (success), Save result (error summary), status line messages", "The status line is text with an icon, no Alert role; its messages go through announce()."],
+              ["Alert Dialog", "Discard draft (DR30)", "Named by its title, described by its text; focus on Cancel (proposed, see the open question on the header)."],
+              ["Textarea, Label", "Reason for 1003.20 (DR3 to DR5)", "Required with 3 to 500 characters; the field error and the error summary follow D1."],
+              ["Skeleton", "Loading (DR17, DR26)", "Grid rows, Not placed chips and the Details tab keep the populated layout; skeletons are aria-hidden."],
+              ["EmptyState", "No jobs in this range (DR18, DR27, DR32), no machines to plan (DR19, DR28)", "No jobs keeps every machine row with one cell; no machines replaces the board with a heading, a sentence and Open Machines."],
+              ["ErrorState", "Board could not be loaded (DR20, DR29), range too large (DR21), no access (DR22)", "A heading at level 2, the error id or code, Try again and a way out to the job table."],
+              ["Toggle Group, Toolbar", "Zoom presets and Pause live updates", "Pause live updates turns into Resume live updates and keeps focus (DR13)."],
+            ], "--bc:180px 340px minmax(0,1fr)"),
+            SEC("Roles, names and focus", ["Element", "Role and properties"], [
+              ["Board while loading", "`main` and the grid carry `aria-busy=\"true\"`; the grid itself holds the Tab stop until its rows arrive (DR17, DR26)."],
+              ["Board without moves", "The grid carries `aria-readonly=\"true\"` while reconnecting and in the read-only timeline (DR15, DR16, DR24)."],
+              ["Empty range", "The first \"No jobs in this range\" cell holds the Tab stop (DR18); with nothing unplaced, the Not placed row's \"No job orders without a place\" does (DR32)."],
+              ["Resume live updates while reconnecting", "`aria-disabled=\"true\"`, focusable, described by the status line message \"Moves are off until live updates are back.\" (DR15, DR16)."],
+              ["Save result", "The heading \"Nothing was saved\" and an error summary with `tabindex=\"-1\"`, which takes focus and links to each row that needs action (DR3); a link moves focus to its control (DR4)."],
+              ["Save changes, disabled", "`aria-disabled=\"true\"`, described by \"Resolve the 5 rows above to save.\""],
+              ["Discard draft dialog", "role alertdialog, `aria-modal=\"true\"`, named by \"Discard all 6 changes?\" and described by its text; the page behind is inert (DR30)."],
+              ["Page state panels", "The EmptyState and ErrorState lead is a heading at level 2 under the h1 Planning board; the error id and code are text that can be copied."],
+            ]),
+            SEC("Focus after an action", ["Action", "Focus goes to"], [
+              ["Save in the top bar", "The My draft tab's heading, the column expanded if it was collapsed (DR1)."],
+              ["Save that wrote nothing", "The error summary (DR3); the summary link Reason for 1003.20 moves it to the field (DR4)."],
+              ["Save with an empty reason", "The reason field, with its error (DR5)."],
+              ["Save that wrote every change", "The heading No changes in your draft (DR6, TA13)."],
+              ["Back to my draft", "The My draft tab's heading."],
+              ["Discard draft", "Cancel in the dialog (DR30). Discard 6 changes empties the draft and moves focus to No changes in your draft; Cancel and Escape return it to Discard draft (proposed)."],
+              ["Discard on a row", "Undo on the same row (DR31); Undo puts the row back and moves focus to its Discard (proposed)."],
+              ["Run autoplan", "Stays on Run autoplan (DR7)."],
+              ["Pause and Resume live updates", "Stays on the button, which changes its label (DR13)."],
+              ["Try again on an ErrorState", "Stays on Try again while the board loads again, then on the board's Tab stop."],
+            ]),
+            SEC("Announcements through announce()", ["Message, final English copy", "Politeness", "When"], [
+              ["Autoplan queued at 09:38 by you.", "polite", "Run autoplan is accepted (DR7)."],
+              ["Autoplan already queued by Erik Sand at 09:36. It plans all of Plant A, so your request was not added.", "polite", "Run autoplan while another run waits."],
+              ["Autoplan running.", "polite", "The run starts (DR8)."],
+              ["Autoplan applied at 09:39: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced.", "polite", "The run applies, also while live updates are paused (DR9, DR14)."],
+              ["Autoplan failed at 09:40: the plan changed during autoplan 3 times. Nothing moved. Run autoplan to try again.", "polite", "The run fails (DR11); the permission and budget failures in DR12 the same way."],
+              ["Autoplan from 09:38 was superseded by a newer run.", "polite", "A newer run replaces it (DR12)."],
+              ["Live updates paused. 12 changes waiting.", "polite", "Pause live updates (DR13); the waiting count then updates without a message."],
+              ["Live updates resumed.", "polite", "Resume live updates."],
+              ["Moves are off until live updates are back.", "polite", "The socket drops (DR15); the shell announces its own chip."],
+              ["4 changes saved at 09:40.", "polite", "Save writes every change (DR6)."],
+              ["6 changes discarded.", "polite", "Discard 6 changes in the dialog (proposed)."],
+              ["1019.20 discarded from your draft. Undo is on its row.", "polite", "Discard on a row (DR31, proposed)."],
+              ["1019.20 is back in your draft.", "polite", "Undo on a row (proposed)."],
+              ["{name} broke your soft lock on order {order} at {time}. Reason: \"{reason}\"", "assertive", "Also while paused (IN16)."],
+              ["{job} in your draft was changed by {name}. Rebase or discard it in My draft.", "assertive", "A draft row that now conflicts, also while paused (8.2, proposed)."],
+              ["None", "", "A Save that wrote nothing moves focus to the error summary, which is read; loading, empty and error states change no live region."],
+            ]),
+            LST("WCAG 2.2 criteria", [
+              "1.3.1 Info and Relationships: headings for the Save result and the page states, the error summary's links, `aria-busy` and `aria-readonly`.",
+              "2.2.2 Pause, Stop, Hide: Pause live updates stops the board's moving content; my own commands still apply by id.",
+              "2.4.3 Focus Order: focus after Save, Back to my draft, Discard and Undo as listed above.",
+              "3.3.1 Error Identification and 3.3.3 Error Suggestion: the Save result names each row and what to do; the reason field says 3 to 500 characters.",
+              "3.3.4 Error Prevention: My draft reviews before Save; Discard draft asks first and a row Discard can be undone until the next Save (proposed).",
+              "4.1.2 Name, Role, Value: the tab's name with its count, `aria-disabled` with a reason, the dialog's name and description.",
+              "4.1.3 Status Messages: every message above goes through announce(); the status line itself has no live role.",
+            ]),
+            LST("Proposed here, needs Krister's yes", [
+              "The review step before Discard draft and the Undo on a discarded row (DR30, DR31). Plan 06 lists only saving a draft, breaking a lock and releasing an order under 3.3.4, and decision D.7 follows it; rule 21.5 makes Discard draft the only undo, so these frames ask first.",
+              "The announcement copy marked proposed and the politeness of the autoplan, pause and Save messages.",
+              "The Save result in the My draft tab (DR3, DR4): the heading Nothing was saved, the badge Needs a reason and the summary 2 rows need your action.",
+            ]),
+          ];
+          return { frames, bn, rootStyle: "width:" + width + "px;height:" + height + "px" };
+        }
+      }
+    </script>
+  </body>
+</html>

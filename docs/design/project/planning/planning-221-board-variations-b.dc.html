@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 option B, board over table</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <div class="pb-opt">
+        <sc-if value="{{ wide }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" hint-size="1440px,900px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page">
+              <div class="pb-tb" role="toolbar" aria-label="Board">
+                <div class="pb-grp">
+                  <button class="btn v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span>Earlier</button>
+                  <button class="btn v-outline" type="button">Now</button>
+                  <button class="btn v-outline" type="button" aria-label="Show later range">Later<span class="ic" data-icon="ChevronRight"></span></button>
+                  <button class="btn v-ghost" type="button" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>Go to date</button>
+                </div>
+                <span class="pb-range">Tue 3 Nov, <span class="num">06:00</span> to <span class="num">18:00</span></span>
+                <span class="pb-sp"></span>
+                <div class="pb-grp" role="group" aria-label="Zoom">
+                  <button class="btn icon v-outline" type="button" aria-label="Zoom out to Day"><span class="ic" data-icon="ZoomOut"></span></button>
+                  <span class="inp pb-sel" role="combobox" aria-label="Zoom" aria-expanded="false">Zoom: Hours<span class="end ic" data-icon="ChevronDown"></span></span>
+                  <button class="btn icon v-outline is-dis" type="button" aria-label="Zoom in" aria-disabled="true"><span class="ic" data-icon="ZoomIn"></span></button>
+                </div>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="pb-body2">
+                <div class="pb-col" style="gap:0">
+                  <div class="pb-gw" style="{{ boardStyle }}"><dc-import name="planning-221-board-variations-grid" layout="column" skip="5" focus="{{ gfocus }}" idp="{{ idp }}" hint-size="100%,380px"></dc-import></div>
+                  <div class="pb-hdl" role="separator" aria-orientation="horizontal" aria-label="Resize the board and the table" aria-valuenow="{{ splitNow }}" aria-valuemin="20" aria-valuemax="80" tabIndex="0"><span><span class="ic" data-icon="GripHorizontal"></span></span></div>
+                  <div class="pb-split" style="flex:1">
+                    <div class="pb-sph">
+                      <div class="pb-tabs" role="tablist" aria-label="Board table">
+                        <button class="pb-tab {{ tOrder }}" type="button" role="tab" aria-selected="{{ sOrder }}">Order <span class="num">1003</span><span class="pb-cnt">3</span></button>
+                        <button class="pb-tab {{ tDraft }}" type="button" role="tab" aria-selected="{{ sDraft }}">My draft<span class="pb-cnt">6</span></button>
+                        <button class="pb-tab" type="button" role="tab" aria-selected="false">Not placed<span class="pb-cnt">3</span></button>
+                      </div>
+                      <span class="pb-sp"></span>
+                      <sc-if value="{{ order }}">
+                        <span class="pb-st ok" style="font-size:13px;line-height:18px;max-width:440px"><span class="ic" data-icon="CircleCheck"></span><span>Autoplan applied at <span class="num">06:12</span>: <span class="num">37</span> moved, <span class="num">2</span> skipped because being edited, <span class="num">3</span> late, <span class="num">1</span> conflict, <span class="num">0</span> unplaced.</span></span>
+                      </sc-if>
+                      <sc-if value="{{ draft }}">
+                        <span class="pb-st err" style="font-size:13px;line-height:18px"><span class="ic" data-icon="CircleAlert"></span><span>Autoplan failed at <span class="num">09:40</span>: the plan changed during autoplan.</span></span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ order }}">
+                      <div class="pb-spb" style="flex-direction:column;gap:10px">
+                        <div class="pb-alert warn"><span class="ic" data-icon="Clock"></span><span class="pb-at">Your soft lock on order <span class="num">1003</span> ends in <span class="num">20</span> s.</span><button class="btn v-outline" type="button">Extend</button></div>
+                        <div style="display:flex;gap:16px;min-height:0">
+                          <div class="pb-mvc" style="width:360px">
+                            <div class="pb-tt"><span class="pb-j">1003.20</span><span class="pb-an">Shaft 40</span><span class="badge b-draft"><span class="ic" data-icon="Pencil"></span>In my draft</span></div>
+                            <div class="pb-steps" style="grid-template-columns:132px 1fr">
+                              <label class="fld"><span class="lbl">Machine</span><span class="inp">Lathe 2<span class="end ic" data-icon="ChevronDown"></span></span></label>
+                              <label class="fld"><span class="lbl">Start, plant time (CET)</span><span class="inp num">2026-11-03 11:30</span></label>
+                            </div>
+                            <div class="pb-steps" style="grid-template-columns:1fr 1fr 80px"><button class="btn v-outline" type="button" aria-label="Start 15 min earlier"><span class="ic" data-icon="ChevronLeft"></span>15 min earlier</button><button class="btn v-outline" type="button" aria-label="Start 15 min later">15 min later<span class="ic" data-icon="ChevronRight"></span></button><button class="btn v-default" type="button">Apply</button></div>
+                          </div>
+                          <div class="pb-tw">
+                            <table class="pb-t">
+                              <thead><tr><th scope="col">Job</th><th scope="col">Machine</th><th scope="col" aria-sort="ascending"><span class="pb-sh">Start<span class="ic" data-icon="ArrowUp"></span></span></th><th scope="col">Status</th><th scope="col"><span class="sh-vh">Actions</span></th></tr></thead>
+                              <tbody>
+                                <sc-for list="{{ ops }}" as="o"><tr class="{{ o.cls }}" aria-current="{{ o.cur }}"><td class="num b6">{{ o.j }}</td><td>{{ o.m }}</td><td class="num">{{ o.s }}</td><td>{{ o.st }}</td><td class="r"><sc-if value="{{ o.mv }}"><button class="btn v-outline" type="button" aria-label="{{ o.mvLabel }}">Move</button></sc-if></td></tr></sc-for>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ draft }}">
+                      <div class="pb-spb" style="flex-direction:column;gap:12px">
+                        <div class="pb-tw" style="flex:1">
+                          <table class="pb-t">
+                            <thead><tr><th scope="col">Job</th><th scope="col">Change</th><th scope="col">Status</th><th scope="col">Why</th><th scope="col"><span class="sh-vh">Actions</span></th></tr></thead>
+                            <tbody>
+                              <sc-for list="{{ drows }}" as="d"><tr><td class="num b6">{{ d.j }}</td><td class="w"><sc-for list="{{ d.cs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></td><td><span class="badge {{ d.bc }}">{{ d.st }}</span></td><td class="w"><sc-for list="{{ d.ws }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></td><td class="r"><span style="display:flex;gap:6px;justify-content:flex-end"><sc-if value="{{ d.rb }}"><button class="btn v-outline {{ d.foc }}" type="button" aria-label="{{ d.rbLabel }}">Rebase</button></sc-if><button class="btn v-ghost" type="button" aria-label="{{ d.dsLabel }}">Discard</button></span></td></tr></sc-for>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px"><span class="pb-muted" style="font-size:13px;line-height:18px"><span class="num">6</span> changes, not saved. Save writes all of them or none.</span><span class="pb-sp"></span><span class="pb-muted" id="pb-save-hint-b" style="font-size:13px;line-height:18px">Resolve the <span class="num">5</span> rows above to save.</span><button class="btn v-outline" type="button">Discard draft</button><button class="btn v-default is-dis" type="button" aria-disabled="true" aria-describedby="pb-save-hint-b">Save changes</button></div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+                <section class="pb-wf" aria-label="Large orders" style="width:280px;align-self:flex-start">
+                  <div class="pb-wfh"><h2 class="pb-h3">Large orders</h2><span class="pb-muted">Example widget</span></div>
+                  <ul class="pb-wfl"><sc-for list="{{ large }}" as="o"><li><span class="num b6">{{ o.o }}</span><span lang="{{ o.lang }}">{{ o.a }}</span><span class="num">{{ o.q }}</span></li></sc-for></ul>
+                </section>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ narrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" hint-size="320px,640px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page nar">
+              <div class="pb-tb">
+                <div class="pb-tg" role="group" aria-label="View"><button class="pb-tgi" type="button" aria-pressed="false">Board</button><button class="pb-tgi on" type="button" aria-pressed="true">Table</button></div>
+                <span class="pb-sp"></span>
+                <button class="btn icon v-outline" type="button" aria-label="Table options" aria-haspopup="menu"><span class="ic" data-icon="SlidersHorizontal"></span></button>
+              </div>
+              <div class="pb-tb" style="font-size:14px;line-height:20px"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>Late only</span><span class="pb-sp"></span><span class="pb-muted">Tue 3 Nov</span></div>
+              <div class="pb-tw2" role="region" aria-label="Job orders, scrolls in both directions" tabIndex="0">
+                <table class="pb-t">
+                  <thead><tr><th scope="col">Job</th><th scope="col">Machine</th><th scope="col" aria-sort="ascending"><span class="pb-sh">Start<span class="ic" data-icon="ArrowUp"></span></span></th><th scope="col">End</th><th scope="col">Status</th><th scope="col">Late by</th><th scope="col"><span class="sh-vh">Actions</span></th></tr></thead>
+                  <tbody>
+                    <sc-for list="{{ trows }}" as="t"><tr><td class="num b6">{{ t.j }}</td><td>{{ t.m }}</td><td class="num">{{ t.s }}</td><td class="num">{{ t.e }}</td><td>{{ t.st }}</td><td class="num">{{ t.l }}</td><td class="r"><button class="btn icon v-ghost" type="button" aria-haspopup="menu" aria-label="{{ t.act }}"><span class="ic" data-icon="Ellipsis"></span></button></td></tr></sc-for>
+                  </tbody>
+                </table>
+                <span class="pb-vs2" aria-hidden="true"></span><span class="pb-hs2" aria-hidden="true"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px"><span class="pb-muted">Rows <span class="num">1</span> to <span class="num">50</span> of <span class="num">214</span></span><span class="pb-sp"></span><button class="btn icon v-outline is-dis" type="button" aria-label="Previous rows" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span></button><button class="btn icon v-outline" type="button" aria-label="Next rows"><span class="ic" data-icon="ChevronRight"></span></button></div>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"state":{"editor":"enum","options":["order","draft"],"default":"order","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const p = this.props;
+          const narrow = p.size === "narrow";
+          const draft = p.state === "draft";
+          const NB = " ";
+          // Splits a text into segments, so times and job numbers render in Mono.
+          const segs = (x) => x.split(/(\d{4}\.\d{2}|\d{1,2}:\d{2})/).filter((y) => y !== "").map((y) => ({ t: y, c: /^\d/.test(y) ? "num" : "" }));
+          const drows = [
+            { j: "1003.20", a: "Shaft 40", c: "Lathe 1 to Lathe 2, Tue 11:30", bc: "b-ok", st: "Ready to save", why: "Overlaps 1021.10, needs a reason", rb: false },
+            { j: "1015.10", a: "Cover plate", c: "Mill 2, Wed 07:00", bc: "b-warn", st: "Changed by someone else", why: "Erik Sand at 09:05", rb: true },
+            { j: "1016.10", a: "Hub 12", c: "CNC1, Wed 09:30", bc: "b-warn", st: "Soft lock lost", why: "Lena Ek since 09:30", rb: true },
+            { j: "1017.10", a: "Spacer 8", c: "Press 4, Tue 06:00", bc: "b-info", st: "Started", why: "Started at 06:02", rb: false },
+            { j: "1018.10", a: "Flange DN50", c: "Lathe 3, Thu 06:00", bc: "b-info", st: "ERP change waiting", why: "Accept or reject it first", rb: false },
+            { j: "1019.20", a: "Gear blank 32", c: "CNC2, Thu 10:00", bc: "b-mut", st: "No longer in the plan", why: "Cancelled", rb: false },
+          ];
+          const trows = [
+            { j: "1001.20", m: "CNC1", s: "06:00", e: "10:45", st: "Started", l: "" },
+            { j: "1004.10", m: "CNC2", s: "06:00", e: "09:30", st: "Finish pending", l: "" },
+            { j: "1010.10", m: "Mill 1", s: "06:00", e: "10:00", st: "Started", l: "" },
+            { j: "1003.10", m: "Lathe 1", s: "06:00", e: "10:30", st: "Started", l: "" },
+            { j: "1023.10", m: "Lathe 3", s: "06:00", e: "09:45", st: "Started", l: "" },
+            { j: "1017.10", m: "Press 4", s: "06:00", e: "09:45", st: "Started", l: "" },
+            { j: "1021.10", m: "Lathe 2", s: "06:30", e: "11:45", st: "Started", l: "" },
+            { j: "1006.10", m: "Mill 2", s: "07:00", e: "10:30", st: "Overdue", l: "" },
+            { j: "1002.10", m: "CNC2", s: "09:45", e: "13:00", st: "Planned", l: "" },
+            { j: "1007.10", m: "Lathe 3", s: "10:00", e: "13:30", st: "Being edited by Erik Sand", l: "" },
+            { j: "1012.30", m: "Lathe 1", s: "11:30", e: "14:45", st: "Planned", l: "2 days" },
+          ];
+          return {
+            wide: !narrow,
+            narrow,
+            theme: p.theme === "dark" ? "dark" : "light",
+            order: !draft,
+            draft,
+            boardStyle: "flex:none;height:" + (draft ? 286 : 380) + "px",
+            splitNow: draft ? "40" : "55",
+            gfocus: draft ? "off" : "on",
+            idp: draft ? "b2" : "b1",
+            tOrder: draft ? "" : "on", sOrder: String(!draft),
+            tDraft: draft ? "on" : "", sDraft: String(draft),
+            ops: [
+              { j: "1003.10", m: "Lathe 1", s: "Tue 06:00", e: "Tue 10:30", st: "Started", bc: "b-ok", mv: false, cls: "", cur: undefined },
+              { j: "1003.20", m: "Lathe 2", s: "Tue 11:30", e: "Tue 14:45", st: "In my draft", bc: "b-draft", mv: true, mvLabel: "Move 1003.20", cls: "on", cur: "true" },
+              { j: "1003.30", m: "Wash 1", s: "Wed 07:00", e: "Wed 09:00", st: "Planned", bc: "b-info", mv: true, mvLabel: "Move 1003.30", cls: "", cur: undefined },
+            ],
+            drows: drows.map((d) => Object.assign({}, d, { cs: segs(d.c), ws: segs(d.why), rbLabel: "Rebase " + d.j, dsLabel: "Discard " + d.j, foc: d.j === "1015.10" ? "is-focus" : "" })),
+            large: [
+              { o: "1013", a: "Spacer 8", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1011", a: "Cover plate", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1014", a: "Lagerhus 62", lang: "sv", q: "3" + NB + "600 pcs" },
+              { o: "1008", a: "Housing P", lang: "en", q: "3" + NB + "600 pcs" },
+              { o: "1009", a: "Bracket L", lang: "en", q: "3" + NB + "600 pcs" },
+            ],
+            trows: trows.map((t) => Object.assign({}, t, { act: "Actions for " + t.j })),
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

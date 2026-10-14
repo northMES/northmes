@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <article class="sheet pv-sheet">
+        <p class="kick">Design task D3, variations round. Every name, number and time on this page is fictional.</p>
+        <h1 class="t1">Planning board: three page layouts</h1>
+        <p class="lede">The board is a new kind of screen, so three whole-page options come before the spec page. Each option draws the same plan inside the D2 shell, so the page layout is the only thing that differs.</p>
+        <dl class="pv-facts">
+          <sc-for list="{{ facts }}" as="f"><dt>{{ f.k }}</dt><dd>{{ f.v }}</dd></sc-for>
+        </dl>
+        <div class="sec pv-cols">
+          <section>
+            <h2 class="pv-h">What this round decides</h2>
+            <ul class="pv-ul"><sc-for list="{{ decides }}" as="d"><li>{{ d }}</li></sc-for></ul>
+            <p class="mut sm" style="margin:12px 0 0">The state cues, the grid model, the keyboard model and the copy the docs fix are the same in every option and are not up for choice here.</p>
+          </section>
+          <section>
+            <h2 class="pv-h">How to compare</h2>
+            <ol class="pv-ol"><sc-for list="{{ compare }}" as="c"><li>{{ c }}</li></sc-for></ol>
+          </section>
+          <section>
+            <h2 class="pv-h">The options</h2>
+            <div class="pv-opt"><sc-for list="{{ options }}" as="o"><span class="pv-oid">{{ o.id }}</span><span><b>{{ o.name }}.</b> {{ o.text }}</span></sc-for></div>
+          </section>
+        </div>
+        <section class="sec">
+          <h2 class="pv-h">Rules every option keeps</h2>
+          <ol class="pv-ol pv-two"><sc-for list="{{ rules }}" as="r"><li>{{ r.t }} <span class="pv-src">{{ r.s }}</span></li></sc-for></ol>
+        </section>
+        <section class="sec">
+          <h2 class="pv-h">Proposals drawn the same in every option</h2>
+          <p class="mut" style="margin:-4px 0 12px">These are not in the docs yet and need a yes. The spec page carries them forward.</p>
+          <ul class="pv-ul pv-two"><sc-for list="{{ proposals }}" as="p"><li>{{ p.t }} <span class="pv-src">{{ p.s }}</span></li></sc-for></ul>
+        </section>
+        <section class="sec">
+          <h2 class="pv-h">Open questions</h2>
+          <ol class="pv-ol pv-two"><sc-for list="{{ questions }}" as="q"><li>{{ q.t }} <span class="pv-src">{{ q.s }}</span></li></sc-for></ol>
+        </section>
+      </article>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            facts: [
+              { k: "Issue", v: "#221, planning: Design the planning board (D3), plan id E08-S01-T01" },
+              { k: "Story", v: "E08-S01 (#88). The UI tasks of E08-S01 to E08-S11 (#88 to #98) wait on D3." },
+              { k: "Area", v: "planning, built in modules/planning/web" },
+              { k: "Route", v: "/$plant/planning/board, with the job order table at ?view=table" },
+              { k: "Persona", v: "Planner. Alex Lund is signed in; Erik Sand and Lena Ek are the other planners." },
+              { k: "This page", v: "planning/planning-221-board-variations.dc.html. The spec page planning/planning-221-board.dc.html follows the chosen option." },
+              { k: "Shell", v: "shell/Shell.dc.html from D2, mounted read-only through planning/Shell.dc.html, a byte-equal copy." },
+              { k: "Plan drawn", v: "Acme AB, Plant A, Tue 3 Nov 2026 at 09:40 CET in week 45. The Hours preset shows 06:00 to 18:00. Job order 1003.20 is moved in my draft and selected." },
+            ],
+            decides: [
+              "Where the selected job order's fields, my draft and the side slot live: a docked column with tabs (A), a split under the board (B), or a drawer and a dialog (C).",
+              "Where the review before Save sits, given that Save stays in the top bar.",
+              "Where autoplan status, the soft lock warning and job orders without a place show.",
+              "How the zoom and range controls look, and whether group rows are full-width bands or headers in the machine column.",
+              "How the page reflows at 320 px.",
+            ],
+            compare: [
+              "Read the three light frames side by side: same plan, same selection, same time.",
+              "Look at the grid width and the machine rows in view. The comparison frame lists both at 1280 and 1440.",
+              "Follow one task in each option: move 1003.20 without dragging, then review and save my draft in the dark frame.",
+              "Check the 320 sketch: what a planner sees first on a phone.",
+              "Read the notes under each option, then the comparison and the recommendation.",
+            ],
+            options: [
+              { id: "A", name: "Docked inspector", text: "One 320 px column beside the grid with tabs for Details, My draft and Large orders." },
+              { id: "B", name: "Board over table", text: "The timeline on top and a resizable table under it for the selected order, my draft and job orders without a place." },
+              { id: "C", name: "Drawer and review dialog", text: "A full-width board, a details drawer that pushes it while a job order is selected, and Save that opens a review dialog." },
+            ],
+            rules: [
+              { t: "Blocks keep the D1 cues: Pencil and a double border for my draft, initials and a dashed border for held, Lock and a solid inner border for hard-locked, Play and a progress bar for started, Sparkles and a dotted border for proposed, a striped edge for conflict, Clock for late, TriangleAlert for material. The fill is the order color in every state.", s: "plan 07 Block states; D1 markers" },
+              { t: "The board is one grid: a row per machine with a row header, a gridcell per block, roving tabindex, Enter for details, M for keyboard move. The group and row header buttons take tabindex -1, so the arrow keys reach them and the grid stays one Tab stop.", s: "plan 07 Grid semantics; #91" },
+              { t: "Details dock beside the grid at 1280 and up and narrow it; they never cover it. At 320 they become a full-width sheet.", s: "WCAG 2.4.11; plan 06 Focus" },
+              { t: "Every move works without dragging: the machine and start fields with one-slot steps and Apply, the Move dialog from the block menu, and keyboard move mode.", s: "WCAG 2.5.7; plan 06; #91" },
+              { t: "Save stays in the top bar where D2 put it, and a review comes before it. Discard draft is the only undo.", s: "WCAG 3.3.4; D2; #95" },
+              { t: "Autoplan has a visible status for queued, running, applied and failed, with the five result counts.", s: "#96; plan 07 The autoplan job" },
+              { t: "Pause live updates stays inside planning. The reconnecting chip stays the shell's.", s: "#98; D2 ST8" },
+              { t: "The side slot planning/board/side/v1 renders in a WidgetFrame. The header slot reads Pyramid data as of 06:40.", s: "D2 Slots; ADR 0037" },
+              { t: "One linear axis with four zoom presets; Earlier, Now, Later and Go to date; visible scrollbars as the alternative to drag to pan.", s: "plan 07 In release 1; ADR 0030" },
+              { t: "At 320 only the grid and data tables scroll in two directions, and toolbars fold into a menu.", s: "WCAG 1.4.10; plan 06 Reflow" },
+              { t: "The soft lock warning shows 20 s ahead with a one-action Extend, never as a toast alone.", s: "WCAG 2.2.1; #93" },
+              { t: "If SP3 fails twice, the option falls back to the table view plus a read-only timeline without a new layout.", s: "plan 07 The board spike" },
+              { t: "Status lines, strips and dialogs carry no live role of their own. Autoplan and pause messages go through announce() as polite messages. The soft lock warning goes through announce() once when it appears, with the politeness set on the spec page. The Save conflict error is an inline field error that the error summary reaches.", s: "D2 Announcements; plan 06 Live regions and status messages" },
+            ],
+            proposals: [
+              { t: "The Hours preset spans 12 h from the production day start at 06:00, with a tick every hour. Snap steps per preset: Hours 15 min, Day 1 h, Week 4 h, 4 weeks 1 day. Preset ids hours, day, week and weeks, labelled Hours, Day, Week and 4 weeks.", s: "plan 07 In release 1 and Moving without dragging; ADR 0062" },
+              { t: "Overdue uses ClockAlert and finish pending uses CircleCheckBig, both from lucide 1.45.0.", s: "D1 Q14" },
+              { t: "Selection is a 3 px foreground bar above each job order of the selected order. It replaces plan 07's outline of the other blocks, because D1 keeps outline and box-shadow for the focus ring. It sits on the top edge, apart from a started block's progress bar at the bottom, and paints over a focused block's ring. It is a border, so forced colors keeps it, as it keeps the now line and the link lines.", s: "D1 P5 and Q15; plan 07 Grid semantics" },
+              { t: "Overlapping job orders stack in a 68 px row, so both stay readable; the striped edge marks both.", s: "plan 07 Conflicts" },
+              { t: "The third, fourth and fifth equipment groups take palette colors 16, 19 and 17, and a sixth takes 15, the hue farthest from the five drawn. On card the stripes reach 2.69:1, 2.69:1, 2.57:1 and 2.79:1 in light and 4.48:1, 4.48:1, 4.71:1 and 4.31:1 in dark, against 3.46:1 and 3.77:1 for the D1 tokens group-1 and group-2 in light.", s: "D1 Q10" },
+              { t: "The row header button reads Jobs on this machine.", s: "plan 07 Targets and density" },
+              { t: "The panel steps name the active preset's snap step, 15 min earlier and 15 min later at Hours, and are named Start 15 min earlier and Start 15 min later, so they differ from the range's Earlier and Later.", s: "plans 06 and 07 use Earlier and Later for both" },
+              { t: "Draft row statuses read Ready to save, Changed by someone else, Soft lock lost, Started, ERP change waiting and No longer in the plan.", s: "plan 07 Drafts; ADR 0029" },
+              { t: "The now label replaces the hour labels it would touch, so they never overlap.", s: "D1 Board tokens" },
+              { t: "Group rows show the machine count; a collapsed group in option C also shows a one-line summary.", s: "" },
+              { t: "The commit button names what it writes, such as Save 4 changes, once every row is ready. Until then it reads Save changes, is disabled and says how many rows need action.", s: "plan 07 Drafts; #95" },
+            ],
+            questions: [
+              { t: "Which option, or which mix of parts?", s: "" },
+              { t: "May the side slot leave D2's place beside the grid, as a tab (A) or behind a toggle (C)?", s: "D2 Slots" },
+              { t: "Where do job orders without a place show: the table view (A), a split tab (B) or a pinned grid row (C)?", s: "plan 07 Statuses" },
+              { t: "What are the preset spans and the default preset, and where does Hours start when from is a date?", s: "plan 07 In release 1" },
+              { t: "Now or Today on the range control?", s: "#221 says Today; plans 06 and 07 say Now" },
+              { t: "Jobs on this machine or Blocks on this machine?", s: "plan 07 and plan 06 differ" },
+              { t: "Which click opens the block menu, given that a click opens the details?", s: "plan 06 Moving board blocks without dragging" },
+              { t: "Does autoplan hold my own draft rows, or only another planner's?", s: "plan 07 and ADR 0028 differ" },
+              { t: "Is pause wanted at all?", s: "PO-45 in plan 16" },
+              { t: "Where do toasts sit, away from the board?", s: "D2 Q25" },
+              { t: "Is 06:00 the production day start? The page draws it.", s: "plan 07 The production day" },
+              { t: "How does the frozen window show? The spec page draws it with the move frames.", s: "PO-15 in plan 16" },
+              { t: "D1's conflict stripe, Started progress bar and off-time hatch are backgrounds, so they vanish in forced colors and a conflict block keeps no state cue. They need a forced-colors form before the spec page, for example a 4 px double CanvasText border for the conflict edge and a 3 px CanvasText border in place of the progress fill.", s: "D1 Q20; EN 301 549 clause 9.7" },
+            ],
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

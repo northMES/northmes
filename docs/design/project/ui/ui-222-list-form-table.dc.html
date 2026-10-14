@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DataTable</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <div class="{{ boxCls }}" style="{{ colsStyle }}">
+          <sc-if value="{{ showGrid }}">
+            <div class="{{ scrollCls }}" tabindex="{{ scrollTab }}" role="{{ scrollRole }}" aria-label="{{ scrollLabel }}" data-lf-scrollx="{{ scrollx }}">
+              <div class="lf-grid" role="table" aria-label="{{ t.tableName }}" aria-busy="{{ busy }}">
+                <div class="lf-tr hd" role="row">
+                  <sc-for list="{{ heads }}" as="h">
+                    <span class="lf-td {{ h.cls }}" role="columnheader" aria-sort="{{ h.sort }}">
+                      <sc-if value="{{ h.isCb }}"><span class="cb {{ allCb }}"><span class="cb-hit"><span class="cb-box {{ f.selectAll }}"><span class="ic" data-icon="{{ allIcon }}"></span></span></span><span class="lf-vh">{{ t.selectAll }}</span></span></sc-if>
+                      <sc-if value="{{ h.isSort }}"><button class="lf-sortb {{ h.bcls }}" type="button">{{ h.label }}<span class="ic" data-icon="{{ h.icon }}"></span></button></sc-if>
+                      <sc-if value="{{ h.isPlain }}"><span>{{ h.label }}</span></sc-if>
+                      <sc-if value="{{ h.isVh }}"><span class="lf-vh">{{ h.label }}</span></sc-if>
+                    </span>
+                  </sc-for>
+                </div>
+                <sc-for list="{{ items }}" as="r">
+                  <sc-if value="{{ r.isGroup }}">
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><button class="lf-exp {{ r.fcls }}" type="button" aria-expanded="{{ r.open }}" aria-label="{{ r.name }}"><span class="ic" data-icon="{{ r.icon }}"></span></button><span lang="{{ r.lang }}">{{ r.key }}</span><span class="c">{{ r.countText }}</span></span></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isRow }}">
+                    <div class="lf-tr {{ r.cls }}" role="row">
+                      <sc-for list="{{ r.cells }}" as="c">
+                        <span class="lf-td {{ c.cls }}" role="cell" lang="{{ c.lang }}">
+                          <sc-if value="{{ c.isCb }}"><span class="cb {{ c.cb }}"><span class="cb-hit"><span class="cb-box {{ c.fcls }}"><span class="ic" data-icon="Check"></span></span></span><span class="lf-vh">{{ c.v }}</span></span></sc-if>
+                          <sc-if value="{{ c.isId }}"><a class="lf-id {{ c.fcls }}" href="#">{{ c.v }}</a></sc-if>
+                          <sc-if value="{{ c.isLink }}"><a class="lf-cl {{ c.fcls }}" href="#">{{ c.v }}</a></sc-if>
+                          <sc-if value="{{ c.isText }}"><span>{{ c.v }}</span><sc-if value="{{ c.hasZone }}"><span class="lf-mut">{{ c.zone }}</span></sc-if></sc-if>
+                          <sc-if value="{{ c.isPair }}"><span class="lf-mono lf-mut">{{ c.v }}</span><span lang="{{ c.subLang }}">{{ c.sub }}</span></sc-if>
+                          <sc-if value="{{ c.isStack }}"><span>{{ c.v }}</span><sc-if value="{{ c.hasSub }}"><span class="lf-sub">{{ c.sub }}</span></sc-if></sc-if>
+                          <sc-if value="{{ c.isBadges }}"><sc-for list="{{ c.badges }}" as="b"><span class="badge {{ b.cls }}"><span class="ic" data-icon="{{ b.icon }}"></span>{{ b.t }}</span></sc-for></sc-if>
+                          <sc-if value="{{ c.isState }}"><span class="lf-cellst"><span class="ic" data-icon="EyeOff"></span>{{ c.v }}</span></sc-if>
+                          <sc-if value="{{ c.isSk }}"><span class="sk lf-skl" style="{{ c.skStyle }}"></span></sc-if>
+                          <sc-if value="{{ c.isMenu }}">
+                            <span class="lf-wrap">
+                              <button class="btn icon v-ghost {{ c.bcls }}" type="button" aria-label="{{ c.v }}" aria-haspopup="menu" aria-expanded="{{ c.open }}" aria-controls="{{ c.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                              <sc-if value="{{ c.tipOn }}"><span class="lf-tip" role="tooltip">{{ c.v }}</span></sc-if>
+                              <sc-if value="{{ c.open }}">
+                                <div class="pop lf-pop {{ c.popCls }}" id="{{ c.ctl }}" style="width:220px" role="menu" aria-label="{{ c.v }}">
+                                  <sc-for list="{{ c.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for>
+                                </div>
+                              </sc-if>
+                            </span>
+                          </sc-if>
+                        </span>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <div class="{{ pagerCls }}">
+              <sc-if value="{{ isGroupedPager }}"><span>{{ groupsText }}</span></sc-if>
+              <sc-if value="{{ hasTotal }}"><span>{{ rowsText.a }}<span class="lf-mono">{{ rowsText.from }}</span>{{ rowsText.b }}<span class="lf-mono">{{ rowsText.to }}</span>{{ rowsText.c }}<span class="lf-mono">{{ rowsText.total }}</span></span></sc-if>
+              <sc-if value="{{ noTotal }}"><span>{{ t.order }}</span></sc-if>
+              <sc-if value="{{ isBusy }}"><span class="sk lf-skl" style="width:140px"></span></sc-if>
+              <span class="lf-pg">
+                <sc-if value="{{ showWideNav }}">
+                  <button class="btn v-outline {{ prev.cls }}" type="button" aria-disabled="{{ prev.dis }}"><span class="ic" data-icon="ChevronLeft"></span>{{ t.prev }}</button>
+                  <button class="btn v-outline {{ next.cls }}" type="button" aria-disabled="{{ next.dis }}">{{ t.next }}<span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+                <sc-if value="{{ showNarrowNav }}">
+                  <button class="btn icon v-outline {{ prev.cls }}" type="button" aria-disabled="{{ prev.dis }}" aria-label="{{ t.prevPage }}"><span class="ic" data-icon="ChevronLeft"></span></button>
+                  <button class="btn icon v-outline {{ next.cls }}" type="button" aria-disabled="{{ next.dis }}" aria-label="{{ t.nextPage }}"><span class="ic" data-icon="ChevronRight"></span></button>
+                </sc-if>
+              </span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showState }}">
+            <div class="lf-state" role="{{ st.role }}">
+              <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+              <h2 class="lf-state-h">{{ st.title }}</h2>
+              <p>{{ st.text }}</p>
+              <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ t.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ t.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+              <sc-if value="{{ st.hasActs }}">
+                <div class="acts"><sc-for list="{{ st.acts }}" as="a"><button class="btn {{ a.cls }}" type="button"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.t }}</button></sc-for></div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"list":{"editor":"enum","options":["articles","orders","tools","audit"],"default":"articles","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","empty","filtered-empty","error","cursor","forbidden"],"default":"populated","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"filtered":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"sort":{"editor":"text","default":"","tsType":"string"},"group":{"editor":"enum","options":["none","on"],"default":"none","tsType":"string"},"expand":{"editor":"text","default":"","tsType":"string"},"select":{"editor":"text","default":"none","tsType":"string"},"menu":{"editor":"text","default":"none","tsType":"string"},"hover":{"editor":"text","default":"","tsType":"string"},"tip":{"editor":"text","default":"","tsType":"string"},"archived":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"readonly":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"hide":{"editor":"text","default":"","tsType":"string"},"cellstate":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"rows":{"editor":"int","default":25,"tsType":"number"},"scrollx":{"editor":"int","default":0,"tsType":"number"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"presentation":{"editor":"enum","options":["default","plant-b"],"default":"default","tsType":"string"},"zone":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // A narrow table can be drawn scrolled sideways (prop scrollx), so its sticky first column shows.
+          let tries = 0;
+          const scroll = () => {
+            document.querySelectorAll("[data-lf-scrollx]").forEach((el) => {
+              const x = parseInt(el.getAttribute("data-lf-scrollx"), 10) || 0;
+              if (x > 0 && el.scrollLeft !== x) el.scrollLeft = x;
+            });
+            if (tries++ < 40) setTimeout(scroll, 250);
+          };
+          scroll();
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons when it is
+          // rendered on its own, without a shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-d" + window.__lfSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const list = pick(P.list, ["articles", "orders", "tools", "audit"], "articles");
+          const state = pick(P.state, ["populated", "loading", "empty", "filtered-empty", "error", "cursor", "forbidden"], "populated");
+          const narrow = P.size === "narrow";
+          const long = P.strings === "long" && list === "articles";
+          const filtered = P.filtered === "on";
+          const grouped = P.group === "on" && list !== "audit";
+          const archived = P.archived === "on" && (list === "articles" || list === "tools");
+          const readonly = P.readonly === "on" || list === "audit";
+          const plantB = P.presentation === "plant-b";
+          const zoneOn = P.zone === "on";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const focus = String(P.focus || "none");
+          const maxRows = Math.max(1, Math.min(25, parseInt(P.rows, 10) || (narrow ? 7 : 25)));
+          const hidden = String(P.hide || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+          // Presentation settings (A0061): defaults iso, h23, spaceComma; Plant B uses dmyDot, h12, commaPoint.
+          const NB = " ";
+          const fmtNum = (n) => {
+            const neg = n < 0; const s = Math.abs(n).toString().split(".");
+            let i = s[0]; const d = s[1] || "";
+            if (i.length >= 4) i = i.replace(/\B(?=(\d{3})+(?!\d))/g, plantB ? "," : NB);
+            return (neg ? "-" : "") + i + (d ? (plantB ? "." : ",") + d : "");
+          };
+          const fmtTime = (hm) => {
+            if (!plantB) return hm;
+            let [h, m] = hm.split(":").map(Number);
+            const pm = h >= 12; h = h % 12; if (h === 0) h = 12;
+            return h + ":" + String(m).padStart(2, "0") + (pm ? " pm" : " am");
+          };
+          const fmtDate = (ymd) => (plantB ? ymd.slice(8, 10) + "." + ymd.slice(5, 7) + "." + ymd.slice(0, 4) : ymd);
+          const fmtDT = (s) => fmtDate(s.slice(0, 10)) + (s.length > 10 ? " " + fmtTime(s.slice(11, 16)) : "");
+
+          // Columns per list. w is the wide track, n the narrow track (320 frame), sort marks a <T>SortField column.
+          const C = (id, label, kind, w, n, o) => Object.assign({ id: id, label: label, kind: kind, w: w, n: n, sort: false }, o || {});
+          const dtW = plantB ? 184 : 160;
+          const COLS = {
+            articles: [
+              C("sel", "", "cb", "48px", "48px"),
+              C("code", long ? "Artikelnummer" : "Article number", "id", "128px", "112px", { sort: true, stick: true }),
+              C("name", long ? "Bezeichnung" : "Name", "text", "minmax(140px,1fr)", long ? "240px" : "200px", { sort: true }),
+              C("group", long ? "Artikelgruppe" : "Article group", "text", long ? "minmax(150px,0.7fr)" : "136px", "140px"),
+              C("unit", long ? "Lagereinheit" : "Stock unit", "text", long ? "112px" : "88px", "96px"),
+              C("source", long ? "Quelle" : "Source", "text", "96px", "104px"),
+              C("changed", long ? "Zuletzt geändert" : "Last changed", "mono", (dtW + (zoneOn ? 48 : 0)) + "px", (dtW + (zoneOn ? 48 : 0)) + "px", { sort: true }),
+              C("status", "Status", "badges", "112px", "112px", { onlyArchived: true }),
+              C("menu", long ? "Aktionen" : "Actions", "menu", "52px", "52px")
+            ],
+            orders: [
+              C("sel", "", "cb", "48px", "48px"),
+              C("order", "Order", "id", "96px", "80px", { sort: true, stick: true }),
+              C("article", "Article", "pair", "minmax(220px,1fr)", "240px"),
+              C("qty", "Quantity", "num", "128px", "120px", { sort: true }),
+              C("deadline", "Deadline", "mono", (plantB ? 176 : 160) + "px", "160px", { sort: true }),
+              C("priority", "Priority", "num", "96px", "88px", { sort: true }),
+              C("status", "Status", "badges", "168px", "176px"),
+              C("menu", "Actions", "menu", "52px", "52px")
+            ],
+            tools: [
+              C("sel", "", "cb", "48px", "48px"),
+              C("code", "Code", "id", "104px", "88px", { sort: true, stick: true }),
+              C("name", "Name", "text", "minmax(200px,1fr)", "200px", { sort: true }),
+              C("scope", "Scope", "stack", "180px", "160px"),
+              C("changed", "Last changed", "mono", dtW + "px", dtW + "px", { sort: true }),
+              C("status", "Status", "badges", "112px", "112px", { onlyArchived: true }),
+              C("menu", "Actions", "menu", "52px", "52px")
+            ],
+            audit: [
+              C("when", "When", "mono", dtW + "px", dtW + "px", { sort: true }),
+              C("who", "Changed by", "stack", "minmax(180px,1fr)", "200px"),
+              C("surface", "Surface", "badges", "136px", "136px"),
+              C("entity", "Entity", "link", "184px", "184px"),
+              C("changes", "Changes", "text", "minmax(150px,0.8fr)", "180px"),
+              C("reason", "Reason", "text", "minmax(180px,1.2fr)", "220px")
+            ]
+          };
+          const cols = COLS[list].filter((c) => {
+            if (readonly && (c.id === "sel" || c.id === "menu")) return false;
+            if (c.onlyArchived && !archived) return false;
+            if (hidden.indexOf(c.id) >= 0 && !c.stick) return false;
+            return true;
+          });
+
+          // Fictional data (VS 12): Acme AB, Plant A; names in Swedish, the company data language.
+          const A = (code, name, group, unit, source, changed, o) => Object.assign({ code: code, name: name, group: group, unit: unit, source: source, changed: changed, lang: "sv" }, o || {});
+          let ART = [
+            A("AX-20411", "Fläns DN80 rostfri", "Flanges", "pcs", "NorthMES", "2026-10-05 14:07"),
+            A("AX-20410", "Fläns DN50 rostfri", "Flanges", "pcs", "NorthMES", "2026-10-05 14:05"),
+            A("AX-52031", "Skärolja 20 l", "Consumables", "l", "NorthMES", "2026-10-05 09:48"),
+            A("AX-31007", "Hydraulslang 12 mm", "Hoses", "m", "Pyramid", "2026-10-04 07:12"),
+            A("AX-31008", "Hydraulslang 16 mm", "Hoses", "m", "Pyramid", "2026-10-04 07:12"),
+            A("AX-31012", "Hydraulslang 20 mm", "Hoses", "m", "Pyramid", "2026-10-04 07:12"),
+            A("AX-45020", "Lagerhus 62 mm", "Housings", "pcs", "Pyramid", "2026-10-02 09:12"),
+            A("AX-45031", "Lagerhus 72 mm", "Housings", "pcs", "Pyramid", "2026-10-02 09:12"),
+            A("AX-60410", "Axeltapp 70 h6", "Shafts", "pcs", "Pyramid", "2026-10-01 13:26"),
+            A("AX-73015", "Distansbricka 10 mm", "", "pcs", "Pyramid", "2026-10-01 07:55"),
+            A("AX-52001", "Smörjfett EP2", "Consumables", "kg", "NorthMES", "2026-09-30 11:30"),
+            A("AX-31020", "Tryckslang 25 mm", "Hoses", "m", "Pyramid", "2026-09-29 06:40"),
+            A("AX-31021", "Tryckslang 32 mm", "Hoses", "m", "Pyramid", "2026-09-29 06:40"),
+            A("AX-52014", "Kylvätska koncentrat", "Consumables", "l", "NorthMES", "2026-09-28 15:45"),
+            A("AX-60300", "Axeltapp 40 h6", "Shafts", "pcs", "Pyramid", "2026-09-27 08:02"),
+            A("AX-60310", "Axeltapp 50 h6", "Shafts", "pcs", "Pyramid", "2026-09-27 08:02"),
+            A("AX-60320", "Axeltapp 60 h6", "Shafts", "pcs", "Pyramid", "2026-09-27 08:02"),
+            A("AX-20415", "Fläns DN100 rostfri", "Flanges", "pcs", "NorthMES", "2026-09-26 10:20"),
+            A("AX-61002", "Drivaxel 25 x 480", "Shafts", "pcs", "Pyramid", "2026-09-25 13:20"),
+            A("AX-61005", "Drivaxel 30 x 620", "Shafts", "pcs", "Pyramid", "2026-09-25 13:20"),
+            A("AX-31040", "Sugslang 50 mm", "Hoses", "m", "Pyramid", "2026-09-25 06:40"),
+            A("AX-61110", "Mellanaxel 45 x 300", "Shafts", "pcs", "Pyramid", "2026-09-24 07:55"),
+            A("AX-61120", "Mellanaxel 55 x 360", "Shafts", "pcs", "Pyramid", "2026-09-24 07:55"),
+            A("AX-74002", "Låsmutter M16", "", "pcs", "Pyramid", "2026-09-23 14:12"),
+            A("AX-20405", "Fläns DN25 rostfri", "Flanges", "pcs", "NorthMES", "2026-09-22 10:14"),
+            A("AX-62001", "Kardanaxel 600", "Shafts", "pcs", "Pyramid", "2026-09-21 16:10"),
+            A("AX-31050", "Sugslang 63 mm", "Hoses", "m", "Pyramid", "2026-09-20 06:40"),
+            A("AX-62010", "Kardanaxel 800", "Shafts", "pcs", "Pyramid", "2026-09-19 10:05"),
+            A("AX-31060", "Luftslang 8 mm", "Hoses", "m", "Pyramid", "2026-09-18 06:40"),
+            A("AX-31061", "Luftslang 10 mm", "Hoses", "m", "Pyramid", "2026-09-18 06:40"),
+            A("AX-63001", "Splinesaxel 35", "Shafts", "pcs", "Pyramid", "2026-09-17 09:30"),
+            A("AX-63002", "Splinesaxel 45", "Shafts", "pcs", "Pyramid", "2026-09-17 09:30"),
+            A("AX-31070", "Kylvätskeslang 16 mm", "Hoses", "m", "Pyramid", "2026-09-16 06:40"),
+            A("AX-31071", "Kylvätskeslang 19 mm", "Hoses", "m", "Pyramid", "2026-09-16 06:40"),
+            A("AX-64010", "Excenteraxel 30", "Shafts", "pcs", "Pyramid", "2026-09-15 11:45"),
+            A("AX-64020", "Excenteraxel 40", "Shafts", "pcs", "Pyramid", "2026-09-15 11:45"),
+            A("AX-52002", "Smörjfett EP0", "Consumables", "kg", "NorthMES", "2026-09-14 10:00"),
+            A("AX-52003", "Smörjolja ISO 68", "Consumables", "l", "NorthMES", "2026-09-14 10:00"),
+            A("AX-52010", "Hydraulolja ISO 46", "Consumables", "l", "NorthMES", "2026-09-11 08:15"),
+            A("AX-52015", "Kylvätska färdigblandad", "Consumables", "l", "NorthMES", "2026-09-11 08:15"),
+            A("AX-52020", "Rengöringsmedel alkaliskt", "Consumables", "l", "NorthMES", "2026-09-09 13:40"),
+            A("AX-52025", "Gängpasta", "Consumables", "kg", "NorthMES", "2026-09-09 13:40"),
+            A("AX-52030", "Skärolja 5 l", "Consumables", "l", "NorthMES", "2026-09-04 09:05"),
+            A("AX-52040", "Svetstråd 1,0 mm", "Consumables", "kg", "NorthMES", "2026-09-02 07:20"),
+            A("AX-52041", "Svetstråd 1,2 mm", "Consumables", "kg", "NorthMES", "2026-09-02 07:20")
+          ];
+          if (archived) ART.push(A("AX-20417", "Fläns DN25 (utgått)", "Flanges", "pcs", "NorthMES", "2026-10-03 15:30", { archived: true }));
+          // Long strings (VS 12.9): German labels and data at full length, a Finnish name, the long article group.
+          if (long) {
+            const G = "Sonderanfertigungen nach Kundenzeichnung";
+            ART = [
+              A("AX-80112", "Hydraulikzylinder-Befestigungsflansch, feuerverzinkt, für Schwerlastanwendungen", G, "Stk", "NorthMES", "2026-10-05 14:05", { lang: "de" }),
+              A("AX-80113", "Kiinnityslaipan tiivisterengas, ruostumaton teräs, korkeapaineinen", G, "Stk", "Pyramid", "2026-10-04 06:40", { lang: "fi" }),
+              A("AX-80120", "Lagergehäuse mit Schmiernippel und Dichtungssatz, zweiteilig ausgeführt", G, "Stk", "Pyramid", "2026-10-02 09:12", { lang: "de" }),
+              A("AX-80121", "Hochdruck-Hydraulikschlauchleitung mit Pressarmaturen beidseitig", G, "m", "Pyramid", "2026-09-30 11:30", { lang: "de" }),
+              A("AX-80130", "Antriebswelle für Rollenbahnförderer, induktionsgehärtet und geschliffen", G, "Stk", "NorthMES", "2026-09-28 15:45", { lang: "de" }),
+              A("AX-80131", "Kuulalaakeripesän suojakansi, valurautaa, maalattu", G, "Stk", "Pyramid", "2026-09-27 08:02", { lang: "fi" }),
+              A("AX-80140", "Kühlschmierstoff-Konzentrat, mineralölfrei, für Aluminiumbearbeitung", G, "l", "NorthMES", "2026-09-25 13:20", { lang: "de" })
+            ];
+          }
+          const unitName = { pcs: "pcs", m: "m", kg: "kg", l: "l", Stk: "Stk" };
+
+          // Production orders (VS 12.4): quantities per cell in the article's stock unit; statuses from the glossary.
+          const OA = { "AX-20410": ["Fläns DN50 rostfri", "pcs"], "AX-20411": ["Fläns DN80 rostfri", "pcs"], "AX-31007": ["Hydraulslang 12 mm", "m"], "AX-31008": ["Hydraulslang 16 mm", "m"], "AX-45020": ["Lagerhus 62 mm", "pcs"], "AX-45031": ["Lagerhus 72 mm", "pcs"], "AX-45040": ["Lagerhus 80 mm", "pcs"], "AX-52001": ["Smörjfett EP2", "kg"], "AX-52014": ["Kylvätska koncentrat", "l"], "AX-60300": ["Axeltapp 40 h6", "pcs"], "AX-61002": ["Drivaxel 25 x 480", "pcs"] };
+          const O = (num, art, qty, deadline, prio, status, o) => Object.assign({ code: String(num), art: art, qty: qty, deadline: deadline, prio: prio, status: status }, o || {});
+          const ORD = [
+            O(1001, "AX-20410", 1200, "2026-10-12", 2, "planned"),
+            O(1002, "AX-31007", 350, "2026-10-12 14:00", 1, "active"),
+            O(1003, "AX-52001", 12.5, "2026-10-14", 3, "registered"),
+            O(1004, "AX-45020", 480, "2026-10-15", 2, "paused"),
+            O(1005, "AX-60300", 2400, "2026-10-20", null, "finished"),
+            O(1006, "AX-20411", 600, "2026-10-13", 1, "planned", { late: "Late by 2 days" }),
+            O(1007, "AX-31008", 220, "2026-10-16", 3, "registered"),
+            O(1008, "AX-61002", 150, "2026-10-16 10:00", 2, "planned"),
+            O(1009, "AX-52014", 40, "2026-10-19", null, "registered"),
+            O(1010, "AX-45031", 320, "2026-10-19", 2, "planned"),
+            O(1011, "AX-45040", 800, "2026-10-15 06:00", 3, "active", { hiddenArt: true }),
+            O(1012, "AX-60300", 1800, "2026-10-21", 1, "planned"),
+            O(1013, "AX-31007", 500, "2026-10-22", 2, "planned"),
+            O(1014, "AX-45020", 240, "2026-10-22", 2, "active"),
+            O(1015, "AX-20411", 900, "2026-10-23", 3, "planned"),
+            O(1016, "AX-52001", 25, "2026-10-23", null, "registered"),
+            O(1017, "AX-61002", 300, "2026-10-26", 2, "planned"),
+            O(1018, "AX-31008", 180, "2026-10-26 06:00", 1, "active"),
+            O(1019, "AX-20410", 1500, "2026-10-27", 2, "planned"),
+            O(1020, "AX-45031", 160, "2026-10-27", 3, "paused"),
+            O(1021, "AX-60300", 600, "2026-10-28", 2, "planned"),
+            O(1022, "AX-52014", 60, "2026-10-28", null, "registered"),
+            O(1023, "AX-20411", 450, "2026-10-29", 2, "planned"),
+            O(1024, "AX-31007", 275, "2026-10-29", 1, "active"),
+            O(1025, "AX-61002", 220, "2026-10-30", 3, "planned"),
+            O(1026, "AX-45020", 360, "2026-10-30", 2, "planned"),
+            O(1027, "AX-20410", 700, "2026-11-02", 2, "planned"),
+            O(1028, "AX-60300", 1200, "2026-11-02", 3, "planned"),
+            O(1029, "AX-31008", 400, "2026-11-03", 2, "active"),
+            O(1030, "AX-45031", 240, "2026-11-04", 2, "planned"),
+            O(1031, "AX-20411", 500, "2026-11-05", 3, "planned"),
+            O(1032, "AX-52001", 30, "2026-11-05", null, "planned"),
+            O(1033, "AX-61002", 180, "2026-11-06", 2, "planned"),
+            O(1034, "AX-20410", 400, "2026-10-13", 2, "finished"),
+            O(1035, "AX-31007", 120, "2026-10-18", 2, "finished"),
+            O(1036, "AX-45020", 300, "2026-10-14", 2, "delivered"),
+            O(1037, "AX-60300", 900, "2026-10-24", 3, "cancelled")
+          ];
+          const TL = (code, name, scope, changed, o) => Object.assign({ code: code, name: name, scope: scope, changed: changed, lang: "sv" }, o || {});
+          let TOOLS = [
+            TL("T-100", "Pressverktyg 4-fack", "Plant A", "2026-10-05 11:20"),
+            TL("T-101", "Bockverktyg 90°", "Plant A", "2026-10-02 08:45"),
+            TL("T-102", "Stansverktyg rund 20", "Plant A", "2026-09-29 13:10"),
+            TL("T-103", "Stansverktyg rund 32", "Plant A", "2026-09-29 13:10"),
+            TL("T-104", "Bockverktyg 135°", "Plant A", "2026-09-24 10:05"),
+            TL("T-110", "Gängtapp M12", "Plant A", "2026-09-22 07:30"),
+            TL("T-111", "Gängtapp M16", "Plant A", "2026-09-22 07:30"),
+            TL("T-120", "Fräshuvud 63", "Plant A", "2026-09-18 14:50"),
+            TL("T-121", "Fräshuvud 80", "Plant A", "2026-09-18 14:50"),
+            TL("T-200", "Svetsfixtur ram", "Acme AB", "2026-10-01 09:15"),
+            TL("T-201", "Svetsfixtur balk", "Acme AB", "2026-09-26 15:00"),
+            TL("T-202", "Mätfixtur fläns", "Acme AB", "2026-09-21 10:40"),
+            TL("T-210", "Lyftok 2 t", "Acme AB", "2026-09-15 08:00"),
+            TL("T-211", "Lyftok 5 t", "Acme AB", "2026-09-15 08:00")
+          ];
+          if (archived) TOOLS.push(TL("T-099", "Pressverktyg 2-fack", "Plant A", "2026-10-03 10:12", { archived: true }));
+          // Audit list (VS 12.8): other principals and surfaces; no totalCount, so Previous and Next only.
+          const AU = [
+            { when: "2026-10-06 09:41", who: "Planning assistant", whoSub: "For Alex Lund", surface: "assistant", entity: "Order 1002", changes: "Proposal committed, 1 field", reason: "Raise the priority to meet the deadline" },
+            { when: "2026-10-06 06:12", who: "Anna Berg", whoSub: "At Press 4", surface: "station", entity: "Job order 1001.20", changes: "Correction, 1 field", reason: "Counted twice at shift change" },
+            { when: "2026-10-05 16:30", who: "Former user 7F3A", whoSub: "", surface: "web", entity: "Article AX-20411", changes: "1 field", reason: "" },
+            { when: "2026-10-05 14:20", who: "Jonas Holm", whoSub: "", surface: "web", entity: "AI provider settings", changes: "AI provider key: redacted", reason: "Key rotated" },
+            { when: "2026-10-05 14:05", who: "Jonas Holm", whoSub: "", surface: "web", entity: "Article AX-20410", changes: "1 field", reason: "New drawing from engineering, change note 118" },
+            { when: "2026-10-04 07:12", who: "Jonas Holm", whoSub: "", surface: "web", entity: "Article AX-31007", changes: "1 field", reason: "Hoses are stocked by length" },
+            { when: "2026-10-04 06:40", who: "Pyramid connector", whoSub: "System", surface: "connector", entity: "Article AX-31007", changes: "Created, 3 fields", reason: "" }
+          ];
+          const SURF = { web: "Monitor", assistant: "Sparkles", station: "Tablet", connector: "ArrowLeftRight", mcp: "Bot", job: "Clock", cli: "SquareTerminal", sql: "Database" };
+          const STAT = { registered: ["Registered", "CircleDashed"], planned: ["Planned", "Info"], active: ["Active", "Play"], paused: ["Paused", "Pause"], finished: ["Finished", "CircleCheck"], delivered: ["Delivered", "Truck"], cancelled: ["Cancelled", "Ban"] };
+
+          // Rows: the filter, the sort, then the page.
+          const defaultSort = { articles: "-changed", orders: "deadline", tools: "code", audit: "-when" }[list];
+          const sortKey = String(P.sort || defaultSort);
+          const desc = sortKey.charAt(0) === "-";
+          const sortId = desc ? sortKey.slice(1) : sortKey;
+          const sortable = cols.filter((c) => c.sort).map((c) => c.id);
+          const sid = sortable.indexOf(sortId) >= 0 ? sortId : defaultSort.replace(/^-/, "");
+          const sdesc = sortable.indexOf(sortId) >= 0 ? desc : defaultSort.charAt(0) === "-";
+          let rows;
+          let total;
+          let groupDefs = [];
+          if (list === "articles") {
+            rows = ART.slice();
+            if (filtered && !long) rows = rows.filter((r) => r.group === "Hoses" || r.group === "Shafts");
+            total = long ? 7 : filtered ? 61 : archived ? 249 : 248;
+            groupDefs = [["Consumables", 12], ["Flanges", archived ? 35 : 34], ["Hoses", 21], ["Housings", 18], ["Shafts", 40], ["No article group", 123]];
+          } else if (list === "orders") {
+            rows = ORD.slice();
+            if (filtered) rows = rows.filter((r) => r.status === "planned" || r.status === "active");
+            total = filtered ? 24 : 37;
+            groupDefs = [["Registered", 5], ["Planned", 18], ["Active", 6], ["Paused", 2], ["Finished", 4], ["Delivered", 1], ["Cancelled", 1]];
+          } else if (list === "tools") {
+            rows = TOOLS.slice();
+            if (filtered) rows = rows.filter((r) => r.scope === "Plant A");
+            total = filtered ? 9 : archived ? 15 : 14;
+            groupDefs = [["Acme AB", 5], ["Plant A", archived ? 10 : 9]];
+          } else {
+            rows = AU.slice();
+            total = null;
+          }
+          const keyOf = (r) => {
+            if (sid === "order") return String(r.code).padStart(5, "0");
+            if (sid === "qty") return String(r.qty).padStart(8, "0");
+            if (sid === "priority") return r.prio == null ? "9" : String(r.prio);
+            return String(r[{ code: "code", name: "name", changed: "changed", deadline: "deadline", when: "when" }[sid]] || "");
+          };
+          rows.sort((a, b) => {
+            const x = keyOf(a), y = keyOf(b);
+            if (x !== y) return (x < y ? -1 : 1) * (sdesc ? -1 : 1);
+            return (a.code || a.when) < (b.code || b.when) ? -1 : 1;
+          });
+          rows = rows.slice(0, maxRows);
+
+          // Group by (VS 2.3.1): group rows from groupedAggregates with key and count; one group open.
+          const groupField = { articles: "group", orders: "status", tools: "scope" }[list];
+          const openKey = String(P.expand || { articles: "Consumables", orders: "Active", tools: "Acme AB" }[list] || "");
+          const t = long ? {
+            tableName: "Artikel", selectAll: "Alle Zeilen dieser Seite auswählen", select: (c) => c + " auswählen", actions: (c) => "Aktionen für " + c,
+            prev: "Zurück", next: "Weiter", prevPage: "Vorherige Seite", nextPage: "Nächste Seite", rows: ["Zeilen ", " bis ", " von "], order: "Neueste zuerst",
+            region: "Tabelle Artikel, seitlich scrollbar", edit: "Bearbeiten", archive: "Archivieren", restore: "Wiederherstellen", archivedBadge: "Archiviert",
+            cid: "Korrelations-ID", copyCid: "Korrelations-ID kopieren"
+          } : {
+            tableName: { articles: "Articles", orders: "Production orders", tools: "Tools", audit: "Audit log" }[list],
+            selectAll: "Select all rows on this page", select: (c) => "Select " + (list === "orders" ? "order " : "") + c, actions: (c) => "Actions for " + (list === "orders" ? "order " : "") + c,
+            prev: "Previous", next: "Next", prevPage: "Previous page", nextPage: "Next page", rows: ["Rows ", " to ", " of "], order: "Newest first",
+            region: { articles: "Articles", orders: "Production orders", tools: "Tools", audit: "Audit log" }[list] + " table, scrolls sideways",
+            edit: "Edit", archive: "Archive", restore: "Restore", archivedBadge: "Archived", cid: "Correlation id", copyCid: "Copy correlation id"
+          };
+          const selSet = (() => {
+            const s = String(P.select || "none");
+            if (s === "none" || readonly) return [];
+            if (s === "all") return rows.map((r) => r.code);
+            if (s === "some") return { articles: ["AX-31007", "AX-31008", "AX-31012"], orders: ["1003", "1007"], tools: ["T-101", "T-102"] }[list] || [];
+            return s.split(",").map((x) => x.trim());
+          })();
+          const menuCode = String(P.menu || "none");
+          const hoverCode = String(P.hover || "");
+          const fparts = focus.split(":");
+          const fkind = fparts[0], fcode = fparts.slice(1).join(":");
+          const firstCode = rows.length ? (rows[0].code || rows[0].when) : "";
+          const isF = (kind, code) => fkind === kind && (fcode ? fcode === code : code === firstCode);
+
+          const cellFor = (c, r, idx) => {
+            const code = r.code || r.when;
+            const base = { cls: "", lang: null, v: "", kind: c.kind };
+            if (c.stick && narrow) base.cls += "lf-stk ";
+            if (c.id === "sel") return Object.assign(base, { cls: base.cls + "cbx", v: t.select(code), cb: selSet.indexOf(code) >= 0 ? "on" : "", fcls: isF("select", code) ? "is-focus" : "" });
+            if (c.id === "menu") {
+              const open = menuCode === code;
+              let items;
+              if (list === "orders") items = [["Pencil", t.edit]].concat(r.status === "planned" ? [["Send", "Release order"]] : []);
+              else if (r.archived) items = [["ArchiveRestore", t.restore]];
+              else if (list === "tools" && r.scope === "Plant A") items = [["Pencil", t.edit], ["Building2", "Move to company"], ["Archive", t.archive]];
+              else items = [["Pencil", t.edit], ["Archive", t.archive]];
+              const up = idx >= Math.max(6, rows.length - 3) && !narrow;
+              // tip: the Tooltip of the IconButton, open on keyboard focus or hover, with the same text as its name.
+              return Object.assign(base, { cls: "end", v: t.actions(code), open: open, ctl: open ? uid + "-rm" : null, popCls: up ? "above-r" : "below-r", tipOn: !open && String(P.tip || "") === code,
+                bcls: (open ? "is-active " : "") + (isF("menu", code) ? "is-focus" : ""),
+                items: items.map((m, j) => ({ icon: m[0], t: m[1], cls: open && j === 0 ? "kfocus" : "" })) });
+            }
+            if (list === "articles") {
+              if (c.id === "code") return Object.assign(base, { v: r.code, fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "name") return Object.assign(base, { v: r.name, lang: r.lang });
+              if (c.id === "group") return Object.assign(base, { v: r.group, lang: long ? "de" : null });
+              if (c.id === "unit") return Object.assign(base, { v: unitName[r.unit] });
+              if (c.id === "source") return Object.assign(base, { v: r.source });
+              if (c.id === "changed") return Object.assign(base, { cls: base.cls + "lf-mono lf-nowrap", v: fmtDT(r.changed), zone: zoneOn ? "CEST" : "" });
+              if (c.id === "status") return Object.assign(base, { badges: r.archived ? [{ cls: "lf-st-archived", icon: "Archive", t: t.archivedBadge }] : [] });
+            }
+            if (list === "orders") {
+              const a = OA[r.art];
+              if (c.id === "order") return Object.assign(base, { v: r.code, fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "article") {
+                if (r.hiddenArt && P.cellstate === "on") return Object.assign(base, { kind: "state", v: "Article not available to you" });
+                return Object.assign(base, { v: r.art, sub: a[0], subLang: "sv" });
+              }
+              if (c.id === "qty") return Object.assign(base, { kind: "text", cls: base.cls + "num lf-mono lf-nowrap", v: fmtNum(r.qty) + " " + a[1] });
+              if (c.id === "deadline") return Object.assign(base, { cls: base.cls + "lf-mono lf-nowrap", v: fmtDT(r.deadline), zone: zoneOn && r.deadline.length > 10 ? "CEST" : "" });
+              if (c.id === "priority") return Object.assign(base, { kind: "text", cls: base.cls + "num lf-mono", v: r.prio == null ? "" : String(r.prio) });
+              if (c.id === "status") {
+                const s = STAT[r.status];
+                const b = [{ cls: "lf-st-" + r.status, icon: s[1], t: s[0] }];
+                if (r.late) b.push({ cls: "lf-st-late", icon: "Clock", t: r.late });
+                return Object.assign(base, { cls: base.cls + "lf-wrapc", badges: b });
+              }
+            }
+            if (list === "tools") {
+              if (c.id === "code") return Object.assign(base, { v: r.code, fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "name") return Object.assign(base, { v: r.name, lang: r.lang });
+              if (c.id === "scope") return Object.assign(base, { cls: "two", v: r.scope, sub: r.scope === "Acme AB" ? "Company" : "Plant" });
+              if (c.id === "changed") return Object.assign(base, { cls: base.cls + "lf-mono lf-nowrap", v: fmtDT(r.changed), zone: zoneOn ? "CEST" : "" });
+              if (c.id === "status") return Object.assign(base, { badges: r.archived ? [{ cls: "lf-st-archived", icon: "Archive", t: t.archivedBadge }] : [] });
+            }
+            if (list === "audit") {
+              if (c.id === "when") return Object.assign(base, { cls: "lf-mono lf-nowrap", v: fmtDT(r.when), zone: zoneOn ? "CEST" : "" });
+              if (c.id === "who") return Object.assign(base, { cls: "two", v: r.who, sub: r.whoSub });
+              if (c.id === "surface") return Object.assign(base, { badges: [{ cls: "lf-surf", icon: SURF[r.surface], t: r.surface }] });
+              if (c.id === "entity") return Object.assign(base, { v: r.entity, fcls: isF("link", code) ? "is-focus" : "" });
+              if (c.id === "changes") return Object.assign(base, { v: r.changes });
+              if (c.id === "reason") return Object.assign(base, r.reason ? { v: r.reason } : { cls: "lf-mut", v: "No reason given" });
+            }
+            return base;
+          };
+          const finish = (cell) => {
+            const k = cell.kind;
+            return Object.assign(cell, {
+              isCb: k === "cb", isId: k === "id", isLink: k === "link", isText: k === "text" || k === "mono" || k === "num",
+              isPair: k === "pair", isStack: k === "stack", isBadges: k === "badges", isState: k === "state", isMenu: k === "menu", isSk: k === "sk",
+              hasZone: !!cell.zone, hasSub: !!cell.sub
+            });
+          };
+          const rowItem = (r, idx) => {
+            const code = r.code || r.when;
+            const sel = selSet.indexOf(code) >= 0;
+            return { isRow: true, isGroup: false, cls: (sel ? "sel " : "") + (hoverCode === code ? "hov " : "") + (r.archived ? "arch" : ""), cells: cols.map((c) => finish(cellFor(c, r, idx))) };
+          };
+          let items;
+          if (state === "loading") {
+            const SK = [[56, 200, 64, 88, 80], [64, 120, 72, 72, 72], [56, 160, 56, 96, 96], [72, 144, 64, 88, 80], [56, 112, 48, 80, 72], [64, 176, 64, 88, 88], [56, 136, 72, 72, 80], [72, 152, 56, 96, 72]];
+            items = SK.slice(0, narrow ? 5 : 8).map((w, i) => ({ isRow: true, isGroup: false, cls: "", cells: cols.map((c, j) => finish({ kind: c.kind === "cb" || c.kind === "menu" ? "none" : "sk", cls: c.kind === "cb" ? "cbx" : "", lang: null, skStyle: "width:" + w[j % 5] + "px" })) }));
+          } else if (grouped) {
+            items = [];
+            groupDefs.forEach((g) => {
+              const open = g[0] === openKey;
+              const noun = { articles: g[1] === 1 ? "article" : "articles", orders: g[1] === 1 ? "order" : "orders", tools: g[1] === 1 ? "tool" : "tools" }[list];
+              items.push({ isGroup: true, isRow: false, key: g[0], lang: null, open: open, icon: open ? "ChevronDown" : "ChevronRight", countText: g[1] + " " + noun,
+                name: g[0] + ", " + g[1] + " " + noun, fcls: fkind === "expand" && (fcode ? fcode === g[0] : open) ? "is-focus" : "" });
+              if (open) {
+                const pool = (list === "articles" ? ART : list === "orders" ? ORD : TOOLS).filter((r) => (r[groupField] === g[0]) || (list === "orders" && STAT[r.status][0] === g[0]));
+                pool.sort((a, b) => { const x = keyOf(a), y = keyOf(b); return x === y ? 0 : (x < y ? -1 : 1) * (sdesc ? -1 : 1); });
+                pool.slice(0, maxRows).forEach((r, i) => items.push(rowItem(r, i)));
+              }
+            });
+          } else {
+            items = rows.map(rowItem);
+          }
+
+          // Header cells
+          const heads = cols.map((c) => {
+            const on = c.id === sid;
+            const h = { cls: (c.kind === "cb" ? "cbx " : "") + (c.kind === "num" ? "num " : "") + (c.stick && narrow ? "lf-stk " : ""), label: c.label, sort: null,
+              isCb: false, isSort: false, isPlain: false, isVh: false };
+            if (c.kind === "cb") return Object.assign(h, { isCb: true });
+            if (c.kind === "menu") return Object.assign(h, { isVh: true });
+            if (c.sort) return Object.assign(h, { isSort: true, sort: on ? (sdesc ? "descending" : "ascending") : "none", icon: on ? (sdesc ? "ArrowDown" : "ArrowUp") : "ArrowUpDown",
+              bcls: (on ? "on " : "") + ((fkind === "sort" && (fcode ? fcode === c.id : on)) ? "is-focus" : "") });
+            return Object.assign(h, { isPlain: true });
+          });
+          const nSel = selSet.length;
+          const allCb = nSel === 0 ? "" : nSel >= rows.length ? "on" : "mixed";
+
+          // Grid tracks: wide tracks fill the card; narrow tracks are fixed, so the region scrolls sideways.
+          const tracks = cols.map((c) => (narrow ? c.n : c.w)).join(" ");
+          const minw = narrow ? cols.reduce((a, c) => a + parseInt(c.n, 10), 0) : 0;
+          const stkw = narrow ? parseInt((cols.find((c) => c.stick) || { n: "0" }).n, 10) : 0;
+
+          // States (VS 3): EmptyState and ErrorState inside the table's Card.
+          const nouns = { articles: ["articles", "article", "New article", "Articles"], orders: ["production orders", "production order", "New order", "Production orders"], tools: ["tools", "tool", "New tool", "Tools"], audit: ["audit entries", "audit entry", "", "Audit log"] }[list];
+          const STATES = {
+            empty: { icon: "PackageOpen", title: "No " + nouns[0] + " yet", text: list === "articles" ? "Articles come from Pyramid or are created here. Create the first one, or wait for the next import." : "Create the first " + nouns[1] + ".", acts: nouns[2] ? [{ t: nouns[2], icon: "Plus", cls: "v-default" }] : [] },
+            "filtered-empty": { icon: "SearchX", title: "No " + nouns[0] + " match these filters", text: "Change or clear the filters to see " + nouns[0] + " again.", acts: [{ t: "Clear filters", cls: "v-outline" }] },
+            error: { icon: "CircleAlert", err: true, role: "alert", title: "Could not load " + nouns[0], text: "Check the connection, then try again. If it fails again, give your plant admin the correlation id.", cid: "01J9Z6M2PQ7R4T8V1W3X5Y6Z8A", acts: [{ t: "Try again", icon: "RotateCw", cls: "v-default" }] },
+            cursor: { icon: "History", title: "This page of results is out of date", text: "The rows changed since this link was made, so this page can no longer be found.", acts: [{ t: "Go to the first page", cls: "v-default" }] },
+            forbidden: { icon: "Lock", title: "You need the permission to read " + nouns[0] + " in " + (list === "articles" ? "Acme AB" : "Plant A"), text: "Ask your plant admin for a role that can read " + nouns[0] + ".", acts: [] }
+          };
+          const stRaw = STATES[state];
+          const st = stRaw ? {
+            icon: stRaw.icon, bigCls: stRaw.err ? "err" : "", role: stRaw.role || null, title: stRaw.title, text: stRaw.text, hasCid: !!stRaw.cid, cid: stRaw.cid || "",
+            hasActs: stRaw.acts.length > 0, acts: stRaw.acts.map((a, i) => ({ t: a.t, icon: a.icon || "", hasIcon: !!a.icon, cls: a.cls + (fkind === "action" && i === 0 ? " is-focus" : "") }))
+          } : null;
+
+          const shown = grouped ? items.filter((x) => x.isRow).length : rows.length;
+          const pageTo = Math.min(total || 0, 25);
+          const isBusy = state === "loading";
+          const hasNext = total != null && total > 25;
+          const NAMES = { articles: "articles", orders: "production orders", tools: "tools", audit: "audit log" };
+          return {
+            label: "DataTable, " + NAMES[list] + ", " + state + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t,
+            f: { selectAll: fkind === "selectall" ? "is-focus" : "" },
+            boxCls: narrow ? "lf-nbox" : "lf-card",
+            colsStyle: "--cols:" + tracks + (minw ? ";--minw:" + minw + "px;--stkw:" + stkw + "px" : ""),
+            scrollCls: narrow ? "lf-xs lf-xstk" + (fkind === "region" ? " is-focus" : "") : "lf-scroll",
+            scrollTab: narrow ? "0" : null,
+            scrollRole: narrow ? "region" : null,
+            scrollLabel: narrow ? t.region : null,
+            scrollx: narrow ? String(Math.max(0, parseInt(P.scrollx, 10) || 0)) : null,
+            busy: isBusy ? "true" : null,
+            showGrid: !st,
+            showState: !!st,
+            st: st,
+            heads: heads,
+            items: items,
+            allCb: allCb,
+            allIcon: allCb === "mixed" ? "Minus" : "Check",
+            pagerCls: narrow ? "lf-pager out" : "lf-pager",
+            isGroupedPager: !isBusy && grouped,
+            groupsText: groupDefs.length + " groups, " + total + " " + { articles: "articles", orders: "production orders", tools: "tools" }[list],
+            hasTotal: !isBusy && !grouped && total != null,
+            noTotal: !isBusy && !grouped && total == null,
+            isBusy: isBusy,
+            rowsText: { a: t.rows[0], from: total ? "1" : "0", b: t.rows[1], to: String(grouped ? pageTo : Math.min(total || 0, Math.max(shown, pageTo))), c: t.rows[2], total: String(total) },
+            showWideNav: !narrow && !isBusy && !grouped, showNarrowNav: narrow && !isBusy && !grouped,
+            prev: { cls: "is-dis" + (fkind === "prev" ? " is-focus" : ""), dis: "true" },
+            next: { cls: (hasNext || total == null ? "" : "is-dis ") + (fkind === "next" ? "is-focus" : ""), dis: hasNext || total == null ? null : "true" }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

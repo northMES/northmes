@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board panel</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <section class="{{ rootCls }}" role="{{ rootRole }}" aria-modal="{{ rootModal }}" aria-label="{{ rootLabel }}" aria-labelledby="{{ rootLby }}">
+        <sc-if value="{{ expiryTop }}">
+          <div class="pb-alert warn" style="margin:8px 8px 0"><span class="ic" data-icon="Clock"></span><span class="pb-at">Your soft lock on order <span class="num">1003</span> ends in <span class="num">20</span> s.</span><button class="btn v-outline" type="button">Extend</button></div>
+        </sc-if>
+        <sc-if value="{{ hasHead }}">
+          <div class="pb-ph"><h2 class="pb-pt" id="{{ titleId }}"><span class="pb-j">1003.20</span> Shaft 40</h2><span class="pb-sp"></span><button class="btn icon v-ghost" type="button" aria-label="Close details"><span class="ic" data-icon="X"></span></button></div>
+        </sc-if>
+        <sc-if value="{{ hasTabs }}">
+          <div class="pb-tabs" role="tablist" aria-label="Board panel">
+            <button class="pb-tab {{ tDetails }}" type="button" role="tab" aria-selected="{{ sDetails }}">Details</button>
+            <button class="pb-tab {{ tDraft }}" type="button" role="tab" aria-selected="{{ sDraft }}">My draft<span class="pb-cnt">6</span></button>
+            <sc-if value="{{ slotTab }}"><button class="pb-tab {{ tSlot }}" type="button" role="tab" aria-selected="{{ sSlot }}">Large orders</button></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ vDetails }}">
+          <div class="pb-pb" role="tabpanel" aria-label="Details">
+            <sc-if value="{{ expiryIn }}">
+              <div class="pb-alert warn"><span class="ic" data-icon="Clock"></span><span class="pb-at">Your soft lock on order <span class="num">1003</span> ends in <span class="num">20</span> s.</span><button class="btn v-outline" type="button">Extend</button></div>
+            </sc-if>
+            <sc-if value="{{ titleIn }}"><h2 class="pb-tt"><span class="pb-j">1003.20</span><span class="pb-an">Shaft 40</span></h2></sc-if>
+            <sc-if value="{{ facts }}"><div class="pb-muted">Order <span class="num">1003</span>, Beta Verkstad AB, deadline Thu 5 Nov</div></sc-if>
+            <div class="pb-badges"><span class="badge b-draft"><span class="ic" data-icon="Pencil"></span>In my draft, not saved</span><span class="badge b-late">Overlaps <span class="num">1021.10</span></span></div>
+            <div class="pb-mv">
+              <label class="fld"><span class="lbl">Machine</span><span class="inp">Lathe 2<span class="end ic" data-icon="ChevronDown"></span></span></label>
+              <label class="fld"><span class="lbl">Start, plant time (CET)</span><span class="inp num">2026-11-03 11:30</span><span class="desc">Ends <span class="num">14:45</span>. Steps of <span class="num">15</span> min, the Hours snap.</span></label>
+              <div class="pb-steps"><button class="btn v-outline" type="button" aria-label="Start 15 min earlier"><span class="ic" data-icon="ChevronLeft"></span>15 min earlier</button><button class="btn v-outline" type="button" aria-label="Start 15 min later">15 min later<span class="ic" data-icon="ChevronRight"></span></button></div>
+              <sc-if value="{{ applyIn }}"><button class="btn v-default" type="button" style="justify-self:stretch">Apply</button></sc-if>
+            </div>
+            <sc-if value="{{ facts }}">
+              <h3 class="pb-h3">Linked job orders</h3>
+              <dl class="pb-dl">
+                <dt>Before</dt><dd><span class="num">1003.10</span> on Lathe 1, ends <span class="num">10:30</span>, lead time <span class="num">30</span> min</dd>
+                <dt>After</dt><dd><span class="num">1003.30</span> on Wash 1, Wed 4 Nov <span class="num">07:00</span></dd>
+              </dl>
+              <h3 class="pb-h3">Job order</h3>
+              <dl class="pb-dl">
+                <dt>Article</dt><dd><span class="num">A-3302</span> Shaft 40</dd>
+                <dt>Quantity</dt><dd class="num">480 pcs</dd>
+                <dt>Times</dt><dd>Setup <span class="num">11:30</span>, run <span class="num">11:50</span>, end <span class="num">14:45</span></dd>
+                <dt>Planned</dt><dd>Setup <span class="num">20</span> min, run <span class="num">2</span> h <span class="num">55</span> min</dd>
+                <dt>Soft lock</dt><dd>You, since <span class="num">09:36</span></dd>
+                <dt>Drawing rev</dt><dd>C</dd>
+                <dt>Surface</dt><dd>Zinc plated</dd>
+              </dl>
+            </sc-if>
+            <span class="pb-scroll" aria-hidden="true"></span>
+          </div>
+          <sc-if value="{{ applyFoot }}"><div class="pb-pf"><button class="btn v-default" type="button" style="flex:1">Apply</button></div></sc-if>
+        </sc-if>
+        <sc-if value="{{ vDraft }}">
+          <div class="pb-pb" role="tabpanel" aria-label="My draft" style="padding-bottom:0">
+            <h2 class="pb-tt"><span class="pb-an"><span class="num">6</span> changes, not saved</span></h2>
+            <div class="pb-muted" style="margin-top:-8px">Save writes all of them or none. <span class="num">5</span> need your action first.</div>
+            <ul class="pb-dlist">
+              <sc-for list="{{ draft }}" as="d" hint-placeholder-count="6">
+                <li class="pb-dr">
+                  <div class="pb-drh"><span class="pb-j">{{ d.j }}</span><span class="pb-a">{{ d.a }}</span><span class="badge {{ d.bc }}">{{ d.status }}</span></div>
+                  <div class="pb-drt"><sc-for list="{{ d.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                  <div class="pb-dra"><sc-if value="{{ d.rebase }}"><button class="btn v-outline {{ d.foc }}" type="button" aria-label="{{ d.rbLabel }}">Rebase</button></sc-if><button class="btn v-ghost" type="button" aria-label="{{ d.dsLabel }}">Discard</button></div>
+                </li>
+              </sc-for>
+            </ul>
+            <span class="pb-scroll" aria-hidden="true"></span>
+          </div>
+          <div class="pb-pf"><span class="pb-muted" id="pb-save-hint-a">Resolve the <span class="num">5</span> rows above to save.</span><button class="btn v-outline" type="button">Discard draft</button><button class="btn v-default is-dis" type="button" aria-disabled="true" aria-describedby="pb-save-hint-a">Save changes</button></div>
+        </sc-if>
+        <sc-if value="{{ vSlot }}">
+          <div class="pb-pb" role="tabpanel" aria-label="Large orders">
+            <div class="pb-wf" role="region" aria-label="Large orders">
+              <div class="pb-wfh"><h3 class="pb-h3">Large orders</h3><span class="pb-muted">Example widget</span></div>
+              <ul class="pb-wfl"><sc-for list="{{ large }}" as="o"><li><span class="num b6">{{ o.o }}</span><span lang="{{ o.lang }}">{{ o.a }}</span><span class="num">{{ o.q }}</span></li></sc-for></ul>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"chrome":{"editor":"enum","options":["tabs","drawer","sheet","sheet-tabs"],"default":"tabs","tsType":"string"},"view":{"editor":"enum","options":["details","draft","slot"],"default":"details","tsType":"string"},"expiry":{"editor":"enum","options":["off","top","in"],"default":"off","tsType":"string"},"focus":{"editor":"enum","options":["none","rebase"],"default":"none","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const p = this.props;
+          const chrome = p.chrome || "tabs";
+          const view = p.view || "details";
+          const sheet = chrome === "sheet" || chrome === "sheet-tabs";
+          const NB = " ";
+          const on = (v) => (view === v ? "on" : "");
+          // Splits a text into segments, so times and job numbers render in Mono.
+          const segs = (t) => t.split(/(\d{4}\.\d{2}|\d{1,2}:\d{2})/).filter((x) => x !== "").map((x) => ({ t: x, c: /^\d/.test(x) ? "num" : "" }));
+          const rows = [
+            { j: "1003.20", a: "Shaft 40", bc: "b-ok", status: "Ready to save", change: "Lathe 1 to Lathe 2, Tue 3 Nov 11:30", why: "Overlaps 1021.10, so Save asks for a reason", rebase: false },
+            { j: "1015.10", a: "Cover plate", bc: "b-warn", status: "Changed by someone else", change: "Mill 2, Wed 4 Nov 07:00", why: "Erik Sand changed it at 09:05", rebase: true },
+            { j: "1016.10", a: "Hub 12", bc: "b-warn", status: "Soft lock lost", change: "CNC1, Wed 4 Nov 09:30", why: "Lena Ek holds it since 09:30", rebase: true },
+            { j: "1017.10", a: "Spacer 8", bc: "b-info", status: "Started", change: "Press 4, Tue 3 Nov 06:00", why: "Started on the shop floor at 06:02", rebase: false },
+            { j: "1018.10", a: "Flange DN50", bc: "b-info", status: "ERP change waiting", change: "Lathe 3, Thu 5 Nov 06:00", why: "Accept or reject the ERP change, then rebase", rebase: false },
+            { j: "1019.20", a: "Gear blank 32", bc: "b-mut", status: "No longer in the plan", change: "CNC2, Thu 5 Nov 10:00", why: "The job order was cancelled", rebase: false },
+          ];
+          return {
+            rootCls: sheet ? "pb-sheet" : chrome === "drawer" ? "pb-pn drw" : "pb-pn",
+            // At 320 the sheet is modal over the dimmed page: a dialog named by its heading.
+            rootRole: sheet ? "dialog" : undefined,
+            rootModal: sheet ? "true" : undefined,
+            rootLby: sheet ? "pb-sheet-title" : undefined,
+            titleId: sheet ? "pb-sheet-title" : undefined,
+            rootLabel: sheet ? undefined : chrome === "tabs" ? "Board panel" : "Details of 1003.20",
+            applyIn: !sheet,
+            applyFoot: sheet,
+            expiryTop: p.expiry === "top",
+            expiryIn: p.expiry === "in",
+            hasHead: chrome === "drawer" || sheet,
+            hasTabs: chrome === "tabs" || chrome === "sheet-tabs",
+            slotTab: chrome === "tabs" || chrome === "sheet-tabs",
+            tDetails: on("details"), tDraft: on("draft"), tSlot: on("slot"),
+            sDetails: String(view === "details"), sDraft: String(view === "draft"), sSlot: String(view === "slot"),
+            vDetails: view === "details", vDraft: view === "draft", vSlot: view === "slot",
+            titleIn: chrome === "tabs",
+            facts: !sheet,
+            draft: rows.map((d) => Object.assign({}, d, { segs: segs(d.change + ". " + d.why), rbLabel: "Rebase " + d.j, dsLabel: "Discard " + d.j, foc: p.focus === "rebase" && d.j === "1015.10" ? "is-focus" : "" })),
+            large: [
+              { o: "1013", a: "Spacer 8", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1011", a: "Cover plate", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1014", a: "Lagerhus 62", lang: "sv", q: "3" + NB + "600 pcs" },
+              { o: "1008", a: "Housing P", lang: "en", q: "3" + NB + "600 pcs" },
+              { o: "1009", a: "Bracket L", lang: "en", q: "3" + NB + "600 pcs" },
+            ],
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

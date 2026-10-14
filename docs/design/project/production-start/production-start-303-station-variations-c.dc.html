@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Option C, job tiles</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <dc-import name="StationFrame" size="{{ size }}" theme="{{ theme }}" connection="{{ connection }}" title="{{ title }}" doc-title="{{ docTitle }}" hint-size="{{ hint }}">
+        <sc-if value="{{ home }}">
+          <div class="ps-c">
+            <div class="ps-cardh">
+              <h2 class="ps-h2">Jobs on Press 4</h2>
+              <div class="ps-legend" aria-hidden="true">
+                <span><span class="ps-lg e-active"></span>Active</span>
+                <span><span class="ps-lg e-paused"></span>Paused</span>
+                <span><span class="ps-lg e-finished"></span>Finished</span>
+                <span>Planned, no line</span>
+              </div>
+            </div>
+            <ul class="ps-tiles c3">
+              <sc-for list="{{ tiles }}" as="j">
+                <li>
+                  <button class="ps-tile {{ j.edge }}" type="button">
+                    <span class="ps-tile-t"><span class="badge ps-badge {{ j.stCls }}"><span class="ic" data-icon="{{ j.stI }}"></span>{{ j.stT }}</span><sc-if value="{{ j.hasFlag }}"><span class="badge ps-badge ps-flag">{{ j.flag }}</span></sc-if><sc-if value="{{ j.unsent }}"><span class="badge ps-badge ps-unsent"><span class="ic" data-icon="Upload"></span>Unsent entries</span></sc-if></span>
+                    <span class="ps-jobno">{{ j.num }}</span>
+                    <span class="ps-jr-a">{{ j.art }}</span>
+                    <span class="ps-tile-l">{{ j.left }}<span class="u">{{ j.leftU }}</span></span>
+                    <span class="ps-jr-m"><sc-for list="{{ j.meta }}" as="m"><span>{{ m }}</span></sc-for></span>
+                  </button>
+                </li>
+              </sc-for>
+            </ul>
+            <h3 class="ps-grp">Finished today</h3>
+            <ul class="ps-tiles c3">
+              <li>
+                <button class="ps-tile short e-finished" type="button">
+                  <span class="ps-tile-t"><span class="badge ps-badge ps-finished"><span class="ic" data-icon="CircleCheck"></span>Finished</span></span>
+                  <span class="ps-jobno">5007.10</span>
+                  <span class="ps-jr-a">A-1004 Spacer 8</span>
+                  <span class="ps-jr-m"><span>948 good, 12 scrap of 960 pcs</span><span>Finished 10:15</span></span>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </sc-if>
+        <sc-if value="{{ job }}">
+          <div class="ps-c">
+            <div class="ps-c-top">
+              <button class="btn lg v-outline" type="button" aria-describedby="{{ ids.unsent }}"><span class="ic" data-icon="ChevronLeft"></span>All jobs</button>
+              <span class="badge ps-badge ps-unsent" id="{{ ids.unsent }}"><span class="ic" data-icon="Upload"></span>Unsent entries on 5002.10</span>
+              <div class="ps-jh-l ps-grow">
+                <div class="ps-jh-t"><h2 class="ps-jobno">5001.20</h2><span class="badge ps-badge ps-active"><span class="ic" data-icon="Play"></span>Active</span><span class="ps-art">A-2040 Housing P</span></div>
+                <p class="ps-meta">5001.20 started 12:02 by Anna Berg, last report 13:58</p>
+              </div>
+              <div class="ps-cmds">
+                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause</button>
+                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="CircleCheck"></span>Finish</button>
+              </div>
+            </div>
+            <sc-if value="{{ sending }}"><p class="ps-msg busy ps-hmsg" role="status"><span class="ic" data-icon="LoaderCircle"></span><span>Sending 96 good, 2 scrap on 5001.20</span></p></sc-if>
+            <sc-if value="{{ offline }}"><p class="ps-msg err ps-hmsg" id="{{ ids.err }}"><span class="ic" data-icon="CircleAlert"></span><span>Not sent. There is no connection to NorthMES. Your entries are kept. Press Send again when the connection is back.</span></p></sc-if>
+            <div class="ps-c-body {{ sz }}">
+              <section class="ps-card" aria-label="Report">
+                <dl class="ps-stats nb">
+                  <sc-for list="{{ stats }}" as="s"><div class="ps-stat"><dt>{{ s.k }}</dt><dd>{{ s.v }}<sc-if value="{{ s.u }}"><span class="u">{{ s.u }}</span></sc-if></dd></div></sc-for>
+                </dl>
+                <div class="ps-fld">
+                  <span class="ps-lbl">Good quantity (pcs)</span>
+                  <div class="ps-stp {{ stpCls }}">
+                    <button class="btn v-outline" type="button" aria-label="Minus 10">-10</button>
+                    <button class="btn v-outline" type="button" aria-label="Minus 1"><span class="ic" data-icon="Minus"></span></button>
+                    <span class="ps-nf">96</span>
+                    <button class="btn v-outline" type="button" aria-label="Plus 1"><span class="ic" data-icon="Plus"></span></button>
+                    <button class="btn v-outline" type="button" aria-label="Plus 10">+10</button>
+                  </div>
+                  <p class="ps-desc">Tap the number to type it.</p>
+                </div>
+                <div class="ps-scrap">
+                  <span class="ps-lbl">Scrap</span>
+                  <span class="v">2</span>
+                  <span class="ps-grow">pcs, Burr</span>
+                  <button class="btn lg v-outline" type="button" aria-haspopup="dialog">Change scrap</button>
+                </div>
+                <div class="ps-sendrow">
+                  <button class="btn lg v-default ps-send {{ sendCls }}" type="button" aria-disabled="{{ sendDis }}" aria-describedby="{{ sendDesc }}"><span class="ic" data-icon="Send"></span>Send</button>
+                </div>
+              </section>
+              <section class="ps-card" aria-labelledby="{{ ids.last }}">
+                <sc-if value="{{ lastSb }}"><span class="ps-sb {{ lastSb }}" aria-hidden="true"></span></sc-if>
+                <div class="ps-cardh"><h3 class="ps-h3" id="{{ ids.last }}">Last reports</h3><span class="ps-sm ps-mut">Record time</span></div>
+                <ul class="ps-rl">
+                  <sc-for list="{{ reports }}" as="r">
+                    <li class="ps-ri {{ r.cls }}">
+                      <div class="ps-jr-b">
+                        <span class="ps-ri-t"><span class="num">{{ r.t }}</span><span>{{ r.who }}</span></span>
+                        <span class="ps-ri-v">{{ r.v }}</span>
+                      </div>
+                      <sc-if value="{{ r.can }}"><button class="btn lg v-outline" type="button" aria-label="{{ r.aria }}">Correct</button></sc-if>
+                    </li>
+                  </sc-for>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ scrapSheet }}">
+          <div class="sh-ov"></div>
+          <div class="ps-sheet" role="dialog" aria-modal="true" aria-labelledby="{{ ids.sheet }}">
+            <div class="ps-sheet-h"><h2 class="ps-h2" id="{{ ids.sheet }}">Scrap on 5001.20</h2><button class="btn lg ib v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+            <div class="ps-fld">
+              <span class="ps-lbl">Scrap quantity (pcs)</span>
+              <div class="ps-stp s64">
+                <button class="btn v-outline" type="button" aria-label="Minus 10">-10</button>
+                <button class="btn v-outline" type="button" aria-label="Minus 1"><span class="ic" data-icon="Minus"></span></button>
+                <span class="ps-nf">2</span>
+                <button class="btn v-outline" type="button" aria-label="Plus 1"><span class="ic" data-icon="Plus"></span></button>
+                <button class="btn v-outline" type="button" aria-label="Plus 10">+10</button>
+              </div>
+            </div>
+            <fieldset class="ps-fs">
+              <legend>Scrap reason</legend>
+              <div class="ps-rads c1">
+                <sc-for list="{{ reasons }}" as="r">
+                  <span class="ps-rad {{ r.cls }}" role="radio" aria-checked="{{ r.on }}"><span class="ps-rdot"></span>{{ r.t }}</span>
+                </sc-for>
+              </div>
+            </fieldset>
+            <div class="ps-sheet-f">
+              <button class="btn lg v-default" type="button">Done</button>
+              <button class="btn lg v-ghost" type="button">Cancel</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ correct }}">
+          <div class="ps-c">
+            <div class="ps-c-top"><button class="btn lg v-outline" type="button"><span class="ic" data-icon="ChevronLeft"></span>Back to 5001.20</button></div>
+            <section class="ps-card" aria-label="Report to correct">
+              <dl class="ps-stats sm nb">
+                <div class="ps-stat"><dt>Reported 13:58 by</dt><dd class="t">Anna Berg</dd></div>
+                <div class="ps-stat"><dt>Good</dt><dd>120</dd></div>
+                <div class="ps-stat"><dt>Scrap</dt><dd>3</dd></div>
+                <div class="ps-stat"><dt>Scrap reason</dt><dd class="t">Burr</dd></div>
+              </dl>
+              <p class="ps-desc">The report stays as it is. Saving adds a correction row that refers to it.</p>
+            </section>
+            <section class="ps-card" aria-label="Corrected totals">
+              <div class="ps-fld">
+                <span class="ps-lbl">Good quantity (pcs)</span>
+                <div class="ps-stp">
+                  <button class="btn v-outline" type="button" aria-label="Minus 10">-10</button>
+                  <button class="btn v-outline" type="button" aria-label="Minus 1"><span class="ic" data-icon="Minus"></span></button>
+                  <span class="ps-nf is-focus">118<span class="ps-caret"></span></span>
+                  <button class="btn v-outline" type="button" aria-label="Plus 1"><span class="ic" data-icon="Plus"></span></button>
+                  <button class="btn v-outline" type="button" aria-label="Plus 10">+10</button>
+                </div>
+              </div>
+              <div class="ps-fld">
+                <span class="ps-lbl">Scrap quantity (pcs)</span>
+                <div class="ps-stp">
+                  <button class="btn v-outline" type="button" aria-label="Minus 10">-10</button>
+                  <button class="btn v-outline" type="button" aria-label="Minus 1"><span class="ic" data-icon="Minus"></span></button>
+                  <span class="ps-nf">3</span>
+                  <button class="btn v-outline" type="button" aria-label="Plus 1"><span class="ic" data-icon="Plus"></span></button>
+                  <button class="btn v-outline" type="button" aria-label="Plus 10">+10</button>
+                </div>
+              </div>
+              <p class="ps-msg busy"><span>Change: <span class="num">-2</span> good, scrap unchanged</span></p>
+              <div class="ps-fld"><span class="ps-lbl">Reason (required)</span><span class="ps-nf txt">Two pieces counted twice</span></div>
+              <div class="ps-foot">
+                <button class="btn lg v-default" type="button">Save correction</button>
+                <button class="btn lg v-ghost" type="button">Cancel</button>
+              </div>
+            </section>
+          </div>
+        </sc-if>
+      </dc-import>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1920x1080","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"state":{"editor":"enum","options":["home","default","scrap","offline","sending","correct"],"default":"home","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, d, opts) => {
+            const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim();
+            return opts.indexOf(s) < 0 ? d : s;
+          };
+          const size = pick(P.size, "1920x1080", ["1920x1080", "1280x800", "800x1280"]);
+          const theme = pick(P.theme, "light", ["light", "dark"]);
+          const state = pick(P.state, "home", ["home", "default", "scrap", "offline", "sending", "correct"]);
+          const sz = size === "1920x1080" ? "s1920" : size === "1280x800" ? "s1280" : "s800";
+          if (!this.uid) {
+            window.__psSeq = (window.__psSeq || 0) + 1;
+            this.uid = "ps-c" + window.__psSeq;
+          }
+          const u = this.uid;
+          const N = (s) => s.replace(/ /g, " ");
+          const ST = {
+            planned: { t: "Planned", i: "Info" },
+            active: { t: "Active", i: "Play" },
+            paused: { t: "Paused", i: "Pause" },
+            finished: { t: "Finished", i: "CircleCheck" }
+          };
+          // Tiles: the leading edge line is drawn in the text color (none, solid, dashed, double) next to the StatusBadge.
+          // A flag is words only (Q1); unsent marks the job that holds entries not sent yet (80 good kept on 5002.10).
+          const tile = (num, art, st, left, leftU, meta, flag, unsent) => ({
+            num: num, art: art, edge: "e-" + st, stCls: "ps-" + st, stT: ST[st].t, stI: ST[st].i,
+            left: N(left), leftU: leftU, meta: meta, hasFlag: !!flag, flag: flag || "", unsent: !!unsent
+          });
+          const correct = state === "correct";
+          const home = state === "home";
+          return {
+            size: size,
+            theme: theme,
+            sz: sz,
+            hint: size.replace("x", "px,") + "px",
+            connection: state === "offline" ? "offline" : "connected",
+            title: correct ? "Correct the report of 13:58" : undefined,
+            docTitle: correct ? "Correct report · Press 4 · Plant A · NorthMES" : undefined,
+            ids: { last: u + "-last", sheet: u + "-sheet", unsent: u + "-unsent", err: u + "-err" },
+            sendDesc: state === "offline" ? u + "-err" : undefined,
+            // The last reports card scrolls in C3; the thumb length is the visible share of the card.
+            lastSb: sz === "s1280" && state === "sending" ? "ps-sb-c3" : "",
+            home: home,
+            job: !home && !correct,
+            correct: correct,
+            scrapSheet: state === "scrap",
+            tiles: [
+              tile("5002.10", "A-1187 Bracket L", "paused", "280", " of 480 pcs left", ["Planned 08:00", "Paused since 11:40"], null, true),
+              tile("5001.20", "A-2040 Housing P", "active", "548", N(" of 1 200 pcs left"), ["12:00 to 16:30", "Priority 2", "Last report 13:58"]),
+              tile("5005.20", "A-2275 Hub 12", "planned", "360", " pcs left", ["Planned 13:00"], "Start overdue"),
+              tile("5006.10", "A-1520 Cover plate", "active", "4 770", N(" of 7 200 pcs left"), ["Started 13:35"], "Planned on Press 3"),
+              tile("5003.30", "A-4410 Flange DN50", "planned", "3 600", " pcs left", ["Planned 16:30", "Priority 1"])
+            ],
+            stats: [
+              { k: "Quantity", v: N("1 200"), u: "pcs" },
+              { k: "Good", v: "640" },
+              { k: "Scrap", v: "12" },
+              { k: "Remaining", v: "548", u: "pcs" }
+            ],
+            stpCls: sz === "s1920" ? "" : "s64",
+            reasons: ["Dimension out of tolerance", "Surface damage", "Burr", "Crack", "Wrong material", "Setup piece", "Tool wear", "Other"].map((t) => ({ t: t, cls: t === "Burr" ? "on" : "", on: t === "Burr" ? "true" : "false" })),
+            reports: [
+              { t: "13:58", who: "Anna Berg", v: "120 good, 3 scrap, Burr" },
+              { t: "13:20", who: "Anna Berg", v: "160 good, 4 scrap, Surface damage" },
+              { t: "12:47", who: "Omar Haddad", v: "200 good" },
+              { t: "12:30", who: "Omar Haddad", v: "160 good, 5 scrap, Setup piece" },
+              { t: "12:02", who: "Anna Berg", v: "Started the job", ev: true }
+            ].map((r) => ({ t: r.t, who: r.who, v: r.v, can: !r.ev, cls: r.ev ? "ev" : "", aria: "Correct the report of " + r.t })),
+            sending: state === "sending",
+            offline: state === "offline",
+            sendCls: state === "sending" ? "is-dis is-focus" : "",
+            sendDis: state === "sending" ? "true" : undefined
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

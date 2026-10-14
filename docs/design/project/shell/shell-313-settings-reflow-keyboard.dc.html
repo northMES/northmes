@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings reflow and keyboard</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+/* Part of the #313 settings spec page: reflow at 320, long strings, keyboard and focus frames and the build notes
+   (RE1 to RE30). Frames mount the settings frame, the settings layout and the content parts of shell/; what this part
+   draws on top of them (badges, outlines, tags, captions, the ring sheets) is annotation, not UI, in the D2 annotation
+   colors. Classes start with set-rk-. */
+.set-rk{display:flex;flex-direction:column;align-items:flex-start;gap:120px}
+.set-rk.one{display:block;width:max-content}
+.set-rk-row{display:flex;align-items:flex-start;gap:80px}
+.set-rk.one .set-rk-row{display:block}
+.set-rk-f{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;flex:none}
+.set-rk-f.w320{width:320px}
+.set-rk-f.w1280{width:1280px}
+.set-rk-f.w1440{width:1440px}
+.set-rk-f.w2960{width:2960px}
+.set-rk-f .flabel{max-width:100%;flex-wrap:wrap;margin:0 0 6px;cursor:default}
+.set-rk-stage{position:relative;width:100%}
+.set-rk-ovl{position:absolute;inset:0;z-index:30;pointer-events:none}
+.set-rk-b{position:absolute;display:grid;place-items:center;min-width:20px;height:20px;padding:0 3px;box-sizing:border-box;border-radius:999px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/1 var(--font-mono)}
+.set-rk-t{position:absolute;padding:2px 7px;border-radius:4px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/16px var(--font-mono);white-space:nowrap}
+.set-rk-box{position:absolute;box-sizing:border-box;border:2px dashed var(--info);border-radius:var(--radius-md)}
+.set-rk-box.solid{border-style:solid;border-width:3px}
+.set-rk-cap{display:grid;gap:6px;width:100%;max-width:960px;box-sizing:border-box;padding:10px 12px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 12px/16px "IBM Plex Sans",system-ui,sans-serif;text-wrap:pretty}
+.set-rk-cap p{margin:0}
+.set-rk-cap .set-url{overflow-wrap:anywhere}
+.set-rk-legs{display:grid;gap:6px;margin-top:2px;padding-top:8px;border-top:1px solid rgba(0,0,0,.12)}
+.set-rk-lg{display:grid;grid-template-columns:140px minmax(0,1fr);gap:12px}
+.w320 .set-rk-lg{grid-template-columns:minmax(0,1fr);gap:2px}
+.set-rk-lgh{font-weight:600}
+
+/* Focus ring sheets (RE25, RE26): each card crops one mounted part around its focused control */
+.set-rk-sheet{box-sizing:border-box;width:1440px;min-height:900px;padding:40px 48px 48px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.set-rk-rings{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-top:24px}
+.set-rk-ring{display:grid;gap:6px;align-content:start;min-width:0;padding:12px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+.set-rk-crop{position:relative;height:150px;overflow:hidden;border-radius:var(--radius-md);background:var(--background);box-shadow:inset 0 0 0 1px var(--border)}
+.set-rk-shift{position:absolute;left:0;top:0}
+.set-rk-rn{margin-top:4px;font-weight:600}
+.set-rk-rm{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+
+/* Build notes (RE27) */
+.set-rk-notes{box-sizing:border-box;width:2960px;padding:40px 48px 48px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.set-rk-ncols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:56px;align-items:start;margin-top:32px}
+.set-rk-ncol{display:grid;gap:36px;align-content:start;min-width:0}
+.set-rk-nsec{display:grid;gap:10px;align-content:start;min-width:0}
+.set-rk-np{margin:0;max-width:120ch;color:var(--muted-foreground)}
+.set-rk-nt{display:grid;border-top:1px solid var(--border)}
+.set-rk-nr{display:grid;gap:16px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.set-rk-nr > span{min-width:0;overflow-wrap:anywhere}
+.set-rk-nr.h{padding:6px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.set-rk-m{font-family:var(--font-mono);font-size:.92em;font-variant-numeric:tabular-nums}
+.set-rk-g3a{grid-template-columns:240px minmax(0,1fr) 200px}
+.set-rk-g3b{grid-template-columns:220px minmax(0,1fr) 170px}
+.set-rk-g3c{grid-template-columns:240px minmax(0,1fr) minmax(0,1fr)}
+.set-rk-g4{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr) 140px}
+.set-rk-g4b{grid-template-columns:220px 140px minmax(0,1fr) 150px}
+.set-rk-g2{grid-template-columns:110px minmax(0,1fr)}
+.set-rk-notes .ul li{min-width:0;overflow-wrap:anywhere}
+        </style>
+      </helmet>
+  <div class="set-rk {{ rootCls }}" id="{{ rid }}">
+    <sc-if value="{{ row.r1 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE1 }}">
+        <section class="set-rk-f w320" data-rk="RE1" data-screen-label="RE1 Company landing, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE1</span>Company landing<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Company settings" settings-current="page" skip-to="rk1-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" company="Acme AB" content-id="rk1-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" size="narrow" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId</span><p>Jonas Holm, company admin of Acme AB, came from Plant A. Company settings have no main sidebar, so the top bar holds the trail Settings &gt; Acme AB, Help and the account button, and there is no navigation sheet.</p><p>Back to Plant A sits above the h1 Company settings. The entries follow in one column of 44 px rows, in the order of the settings navigation, without their lines.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE2 }}">
+        <section class="set-rk-f w320" data-rk="RE2" data-screen-label="RE2 Company landing, end of the list, dark, 320 by 640" data-rk-scroll="end">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE2</span>Company landing, end of the list<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Company settings" settings-current="page" theme="dark" skip-to="rk2-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" company="Acme AB" content-id="rk2-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" size="narrow" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId</span><p>RE1 scrolled to its end: Modules with Planning rules, AI assistant and Pyramid connector, then Other settings with Plant A settings, Plant B settings and Plant D settings. Onboarding is part of the Plant D link text after a visually hidden comma.</p><p>Other settings is the way from company settings to plant settings at 320, as it is at the foot of the settings navigation from 1280 up.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE3 }}">
+        <section class="set-rk-f w320" data-rk="RE3" data-screen-label="RE3 Users, drilled in, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE3</span>Users, drilled in<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Users" actions="*New user" skip-to="rk3-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" company="Acme AB" page="users" content-id="rk3-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" size="narrow" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/users</span><p>An entry chosen on the landing. The link Company settings above the h1 returns to the landing, New user folds into Page actions, and the table scrolls sideways in its own region with the first column sticky (#222).</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE4 }}">
+        <section class="set-rk-f w320" data-rk="RE4" data-screen-label="RE4 Formats, drilled in, dark, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE4</span>Formats, drilled in<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Formats" actions="none" theme="dark" skip-to="rk4-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" company="Acme AB" page="formats" content-id="rk4-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-form" form="formats" size="narrow" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/formats</span><p>A settings form at 320: one column under the link Company settings and the h1 Formats. The form scrolls on its own and keeps Save settings and Cancel in its footer bar (#222).</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE5 }}">
+        <section class="set-rk-f w1440" data-rk="RE5" data-screen-label="RE5 Long strings, plant settings, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE5</span>Long strings, plant settings<span class="fth">Light, 1440 by 900. German labels and the D2 long preset at full length; the Acme tooling plugin entry in Finnish</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" strings="long" access="companies" role="company-admin" bell="off" area="plant" title="Maschinen" actions="*Neue Maschine" skip-to="rk5-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" page="machines" strings="long" content-id="rk5-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" strings="long" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/werk-sued/core/machines</span><p>Maschinen at Präzisionsfertigung Oberschwaben Werk Süd, with the main sidebar collapsed to the rail. The settings navigation is named Einstellungen, its head reads Oberschwäbische Präzisionswerkzeuge GmbH over Einstellungen für Präzisionsfertigung Oberschwaben Werk Süd, and its rows wrap inside the 220 px column: Betriebsmittelgruppen, Betriebskalender und Schichtmodelle, the Finnish plugin entry Acme-työkalujen hallinta with lang fi, and Einstellungen für Oberschwäbische Präzisionswerkzeuge GmbH under Weitere Einstellungen. The rows Hydraulische Tiefziehpresse 4, Fünfachsiges Bearbeitungszentrum 1 and Rundtaktschweißanlage 2 show at full length, and nothing in the settings navigation is cut off. The trail shortens the company and plant crumbs with an ellipsis, as the D2 top bar does with long names.</p><p>The slug werk-sued is fictional.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r2 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE6 }}">
+        <section class="set-rk-f w320" data-rk="RE6" data-screen-label="RE6 Plant landing, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE6</span>Plant landing<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Settings" settings-current="page" skip-to="rk6-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" content-id="rk6-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" size="narrow" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/settings</span><p>The Settings button in the navigation sheet's footer opens this landing. At 320 the main sidebar is the navigation sheet behind Open navigation on every page, so the automatic collapse changes nothing here.</p><p>The h1 Plant A settings, then Plant, Machines, Equipment groups, Calendars, Stations and System health in 44 px rows.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE7 }}">
+        <section class="set-rk-f w320" data-rk="RE7" data-screen-label="RE7 Plant landing, end of the list, dark, 320 by 640" data-rk-scroll="end">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE7</span>Plant landing, end of the list<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Settings" settings-current="page" theme="dark" skip-to="rk7-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" content-id="rk7-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" size="narrow" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/settings</span><p>RE6 scrolled to its end: Modules with Planning rules, Plugins with Acme tooling, then Other settings with Acme AB settings, the way to company settings for a user who holds a permission at the company.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE8 }}">
+        <section class="set-rk-f w320" data-rk="RE8" data-screen-label="RE8 Machines, drilled in, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE8</span>Machines, drilled in<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" skip-to="rk8-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" page="machines" content-id="rk8-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" size="narrow" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>The link Plant A settings above the h1 returns to the landing. The trail folds to Plant A, the ellipsis and Settings, and New machine moves into Page actions (D2 at 320).</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE9 }}">
+        <section class="set-rk-f w320" data-rk="RE9" data-screen-label="RE9 Calendars, drilled in, dark, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE9</span>Calendars, drilled in<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Calendars" actions="*New calendar" theme="dark" skip-to="rk9-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" page="calendars" content-id="rk9-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="calendars" size="narrow" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/calendars</span><p>A second plant entry in dark. Search, Filters and Columns replace the toolbar; the calendar names sit in the sticky first column, and the table scrolls sideways in its own region.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE10 }}">
+        <section class="set-rk-f w320" data-rk="RE10" data-screen-label="RE10 Navigation sheet on a settings page, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE10</span>Navigation sheet on a settings page<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" sidebar="sheet" focus="settings" skip-to="rk10-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" page="machines" content-id="rk10-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" size="narrow" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>Open navigation on Machines: the sheet holds the main navigation as on any plant page, and its footer row holds the user button, Assistant, Settings and Help. Settings has focus and marks the area with aria-current true. The settings entries are not in the sheet; the landing lists them.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE11 }}">
+        <section class="set-rk-f w320" data-rk="RE11" data-screen-label="RE11 Long strings at 320, dark, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE11</span>Long strings at 320<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" strings="long" access="companies" role="company-admin" bell="off" area="plant" title="Einstellungen" settings-current="page" theme="dark" skip-to="rk11-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" strings="long" content-id="rk11-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" size="narrow" strings="long" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/werk-sued/settings</span><p>The plant landing in German at 320: the h1 Einstellungen für Präzisionsfertigung Oberschwaben Werk Süd wraps over three lines and Betriebskalender und Schichtmodelle over two. Under Erweiterungen the plugin entry is Finnish, Acme-työkalujen hallinta, with lang fi. Nothing scrolls sideways.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r11 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE28 }}">
+        <section class="set-rk-f w1440" data-rk="RE28" data-screen-label="RE28 Long strings, company settings, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE28</span>Long strings, company settings<span class="fth">Dark, 1440 by 900. German labels and the D2 long preset at full length in the company area's own chrome</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1440" strings="long" access="companies" role="company-admin" bell="off" area="company" title="Benutzer" actions="*Neuer Benutzer" theme="dark" skip-to="rk28-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="company" page="users" strings="long" onboarding="Werk Biberach an der Riß" content-id="rk28-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" strings="long" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/users</span><p>Benutzer at Oberschwäbische Präzisionswerkzeuge GmbH, drawn for Hannelore Wiesenthal-Brückner of the D2 long preset. The trail reads Einstellungen &gt; Oberschwäbische Präzisionswerkzeuge GmbH &gt; Benutzer; the company crumb shortens with an ellipsis, as the D2 top bar does with long names, and the title above the frame gives the full name. The account button ends the top bar.</p><p>nav Einstellungen starts with Zurück zu Präzisionsfertigung Oberschwaben Werk Süd over two lines; its head reads the company over Unternehmenseinstellungen, and under Weitere Einstellungen the links Einstellungen für Präzisionsfertigung Oberschwaben Werk Süd and Einstellungen für Werk Biberach an der Riß wrap inside the 220 px column, the second with Onboarding. The table keeps names and roles at full length; a long username breaks where its column ends. Werk Biberach an der Riß is drawn in onboarding here to check the badge at full length; the D2 preset has no plant in onboarding.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE29 }}">
+        <section class="set-rk-f w320" data-rk="RE29" data-screen-label="RE29 Long strings, company landing at 320, light, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE29</span>Long strings, company landing at 320<span class="fth">Light, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="320" strings="long" access="companies" role="company-admin" bell="off" area="company" title="Unternehmenseinstellungen" settings-current="page" skip-to="rk29-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" strings="long" onboarding="Werk Biberach an der Riß" content-id="rk29-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" size="narrow" strings="long" onboarding="Werk Biberach an der Riß" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId</span><p>The company landing in German at 320. The top bar holds Einstellungen, the company crumb shortened with an ellipsis, Hilfe and the account button; the icon buttons keep 36 px. Zurück zu Präzisionsfertigung Oberschwaben Werk Süd wraps over two lines above the h1 Unternehmenseinstellungen, which hyphenates at the column's end. Allgemein to Änderungsprotokoll and the group Module follow in 44 px rows, and nothing scrolls sideways.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE30 }}">
+        <section class="set-rk-f w320" data-rk="RE30" data-screen-label="RE30 Long strings, company landing at 320, end of the list, dark, 320 by 640" data-rk-scroll="end">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE30</span>Long strings, company landing at 320, end of the list<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" strings="long" access="companies" role="company-admin" bell="off" area="company" title="Unternehmenseinstellungen" settings-current="page" theme="dark" skip-to="rk30-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="company" strings="long" onboarding="Werk Biberach an der Riß" content-id="rk30-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" size="narrow" strings="long" onboarding="Werk Biberach an der Riß" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId</span><p>RE29 scrolled to its end: Module with Planungsregeln, KI-Assistent and Pyramid-Anbindung, then Weitere Einstellungen with Einstellungen für Präzisionsfertigung Oberschwaben Werk Süd over two lines and Einstellungen für Werk Biberach an der Riß with Onboarding under the name.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r3 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE12 }}">
+        <section class="set-rk-f w1440" data-rk="RE12" data-screen-label="RE12 Tab order, plant settings, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE12</span>Tab order, plant settings<span class="fth">Light, 1440 by 900. Numbers are the Tab sequence through the rail, the top bar, the settings navigation and the page</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" skip-to="rk12-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" plant="Plant A" page="machines" content-id="rk12-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE12.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE12.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE12.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>Machines at Plant A after the page loaded by navigation, so the h1 has focus and is no stop. The DOM order is the reading order: the skip link, nav Main (the rail), the header, then main with nav Settings before the page column (WCAG 1.3.2, 2.4.3). Previous and Next are disabled, because all five rows fit on one page, and are skipped as D2 skips a disabled pager button.</p><sc-if value="{{ ov.RE12.hasLeg }}"><div class="set-rk-legs"><sc-for list="{{ ov.RE12.leg }}" as="g"><div class="set-rk-lg"><span class="set-rk-lgh">{{ g.h }}</span><span>{{ g.t }}</span></div></sc-for></div></sc-if></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE13 }}">
+        <section class="set-rk-f w1280" data-rk="RE13" data-screen-label="RE13 Tab order, company settings, dark, 1280 by 800">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE13</span>Tab order, company settings<span class="fth">Dark, 1280 by 800. No main sidebar: the top bar, then the settings navigation, then the page</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1280" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Users" actions="*New user" theme="dark" skip-to="rk13-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" width="1280" area="company" company="Acme AB" page="users" content-id="rk13-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE13.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE13.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE13.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/users</span><p>Users at Acme AB. Settings in the trail is text, so the first top bar stop is the Acme AB crumb, a link to the company landing. The account button ends the top bar. Back to Plant A is the first stop of nav Settings.</p><sc-if value="{{ ov.RE13.hasLeg }}"><div class="set-rk-legs"><sc-for list="{{ ov.RE13.leg }}" as="g"><div class="set-rk-lg"><span class="set-rk-lgh">{{ g.h }}</span><span>{{ g.t }}</span></div></sc-for></div></sc-if></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE14 }}">
+        <section class="set-rk-f w320" data-rk="RE14" data-screen-label="RE14 Tab order at 320, dark, 320 by 640">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE14</span>Tab order at 320<span class="fth">Dark, 320 by 640</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="320" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" theme="dark" skip-to="rk14-page" show-title="on" hint-size="320px,676px">
+            <dc-import name="shell-313-settings-layout" width="320" area="plant" plant="Plant A" page="machines" content-id="rk14-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" size="narrow" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE14.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE14.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE14.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>At 320 the stops are the skip link, Open navigation, the trail, Page actions, the link Plant A settings, the toolbar, the table region (it scrolls sideways, so it is a stop), and the links and row menus in it. Previous page and Next page are disabled and skipped. Stops scrolled out of view are listed but carry no badge.</p><sc-if value="{{ ov.RE14.hasLeg }}"><div class="set-rk-legs"><sc-for list="{{ ov.RE14.leg }}" as="g"><div class="set-rk-lg"><span class="set-rk-lgh">{{ g.h }}</span><span>{{ g.t }}</span></div></sc-for></div></sc-if></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r4 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE15 }}">
+        <section class="set-rk-f w1280" data-rk="RE15" data-screen-label="RE15 Skip link focused, light, 1280 by 800">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE15</span>Skip link focused<span class="fth">Light, 1280 by 800. The first Tab shows the skip link; outlines mark what one activation passes and where it lands</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1280" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" focus="skip" skip-to="rk15-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" width="1280" area="plant" plant="Plant A" page="machines" content-id="rk15-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE15.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE15.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE15.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>Skip to main content (doc) is the first stop. Its href names the page column, the target of the layout's content-id. A, B and C (dashed) are passed by one Enter: nav Main (the rail), the header and nav Settings. D (solid) is the page column inside main, where focus lands (WCAG 2.4.1). A company page has no A; the skip link passes the header and nav Settings.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE16 }}">
+        <section class="set-rk-f w1280" data-rk="RE16" data-screen-label="RE16 Skip link followed, dark, 1280 by 800">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE16</span>Skip link followed<span class="fth">Dark, 1280 by 800. After Enter on the skip link: focus on the page column</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1280" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" theme="dark" skip-to="rk16-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" width="1280" area="plant" plant="Plant A" page="machines" focus="page" content-id="rk16-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>Focus is on the page column (tabindex -1), which holds the h1 Machines first, so reading continues from the page's heading. The ring sits inside the column's edge. The next Tab reaches Search machines, the first control of the page; Shift+Tab goes back to Acme AB settings, the last stop of nav Settings.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r5 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE17 }}">
+        <section class="set-rk-f w1440" data-rk="RE17" data-screen-label="RE17 Settings button focused, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE17</span>Settings button focused<span class="fth">Dark, 1440 by 900. The planning board with the sidebar expanded, the user's own choice; Tab reached Settings</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1440" area="work" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" theme="dark" show-title="on" hint-size="1440px,936px"></dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/planning/board</span><p>The Settings button sits after Assistant and before Help. Its tooltip Settings opens at once on focus, stays while hovered and closes on Escape with focus kept (WCAG 1.4.13). Enter follows the link to the plant landing (RE18).</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE18 }}">
+        <section class="set-rk-f w1440" data-rk="RE18" data-screen-label="RE18 Settings opened, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE18</span>Settings opened<span class="fth">Light, 1440 by 900. After Enter in RE17: the main sidebar collapsed on its own, focus on the h1</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Settings" settings-current="page" skip-to="rk18-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" plant="Plant A" focus="h1" content-id="rk18-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/settings</span><p>The route has a settings navigation, so the main sidebar opens as the rail and the sidebar trigger reads Expand sidebar with aria-expanded false. The collapse is announced to no one and moves no focus of its own: the route change rule focuses the h1 Plant A settings, which is read with the new title Settings · Plant A · NorthMES (proposed).</p><p>The user's stored sidebar choice is not changed, so leaving settings brings the expanded sidebar back (proposed). The Settings button marks the area with aria-current page on the landing.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r6 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE19 }}">
+        <section class="set-rk-f w1440" data-rk="RE19" data-screen-label="RE19 Entry focused in the settings navigation, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE19</span>Entry focused in the settings navigation<span class="fth">Light, 1440 by 900. Tab moved through nav Settings to Calendars</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" skip-to="rk19-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" plant="Plant A" page="machines" focus="nav:entry:calendars" content-id="rk19-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>On Machines, Calendars has focus in nav Settings. Entries are links named by their labels; Machines carries aria-current page. Enter opens Calendars (RE20).</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE20 }}">
+        <section class="set-rk-f w1440" data-rk="RE20" data-screen-label="RE20 Entry opened, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE20</span>Entry opened<span class="fth">Dark, 1440 by 900. After Enter in RE19: focus on the h1 Calendars</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1440" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Calendars" actions="*New calendar" theme="dark" skip-to="rk20-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" plant="Plant A" page="calendars" focus="h1" content-id="rk20-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="calendars" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/calendars</span><p>The path changed, so focus moves to the h1 and the title reads Calendars · Plant A · NorthMES. nav Settings keeps its order and moves the current mark to Calendars (WCAG 3.2.3). The rail stays: a move between settings pages does not change the main sidebar, and a user who expanded it earlier in this visit keeps it expanded (proposed).</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r7 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE21 }}">
+        <section class="set-rk-f w1440" data-rk="RE21" data-screen-label="RE21 Save settings focused, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE21</span>Save settings focused<span class="fth">Light, 1440 by 900. Tab reached Save settings in the footer bar</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Formats" actions="none" skip-to="rk21-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="company" company="Acme AB" page="formats" content-id="rk21-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-form" form="formats" focus="save" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/formats</span><p>Formats at Acme AB. Save settings is the default button in the footer bar, which stays in view while the form scrolls (#222). Enter runs the save command; the route does not change.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE22 }}">
+        <section class="set-rk-f w1440" data-rk="RE22" data-screen-label="RE22 Settings saved, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE22</span>Settings saved<span class="fth">Dark, 1440 by 900. After Enter in RE21: focus stays on Save settings</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1440" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Formats" actions="none" theme="dark" skip-to="rk22-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="company" company="Acme AB" page="formats" content-id="rk22-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-form" form="formats" state="saved" focus="save" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/formats</span><p>Focus stays on Save settings (#222 ST25). The note Settings saved. Dates, clock times and numbers change after the next page load or plant switch. (#222) is a status message, read once (WCAG 4.1.3). The form keeps its values. A save with errors moves focus to the error summary instead (#222).</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r8 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE23 }}">
+        <section class="set-rk-f w1440" data-rk="RE23" data-screen-label="RE23 Landmarks and names, plant settings, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE23</span>Landmarks and names, plant settings<span class="fth">Light, 1440 by 900. The landmarks in DOM order and the names of the two navigation regions</span></div></sc-if>
+          <div class="set-rk-stage">
+          <dc-import name="shell-313-settings-frame" width="1440" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" marks="landmarks" skip-to="rk23-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="plant" plant="Plant A" page="machines" content-id="rk23-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE23.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE23.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE23.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/plant-a/core/machines</span><p>In DOM order: nav Main (the rail with the switcher Acme AB, Plant A, switch plant, one icon per top-level entry and the account button), header with nav Breadcrumb, then main. Inside main: nav Settings first, then the page column (a div, id of the skip target, tabindex -1) with the h1.</p><p>nav Settings holds one list per group, labelled by its visible label: Plant A settings (the head's title), Modules, Plugins and Other settings. The current entry has aria-current page.</p></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE24 }}">
+        <section class="set-rk-f w1440" data-rk="RE24" data-screen-label="RE24 Landmarks and names, company settings, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE24</span>Landmarks and names, company settings<span class="fth">Dark, 1440 by 900. No nav Main: the header, then main with nav Settings</span></div></sc-if>
+          <div class="set-rk-stage dark">
+          <dc-import name="shell-313-settings-frame" width="1440" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Users" actions="*New user" marks="landmarks" theme="dark" skip-to="rk24-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" width="1440" area="company" company="Acme AB" page="users" content-id="rk24-page" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+          <div class="set-rk-ovl"><sc-for list="{{ ov.RE24.box }}" as="o"><span class="set-rk-box {{ o.cls }}" style="{{ o.st }}"></span></sc-for><sc-for list="{{ ov.RE24.b }}" as="o"><span class="set-rk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for><sc-for list="{{ ov.RE24.t }}" as="o"><span class="set-rk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+          </div>
+          <sc-if value="{{ labels }}"><div class="set-rk-cap"><span class="set-url">/settings/$companyId/core/users</span><p>In DOM order: header with nav Breadcrumb and the account button Jonas Holm, jonas.holm, account at its end, then main with nav Settings and the page column. nav Settings starts with the link Back to Plant A, then the lists Company settings, Modules and Other settings. There is no aside: company pages draw no Assistant.</p></div></sc-if>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r9 }}">
+    <div class="set-rk-row">
+      <sc-if value="{{ show.RE25 }}">
+        <section class="set-rk-f w1440" data-rk="RE25" data-screen-label="RE25 Focus ring on every new control, light, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE25</span>Focus ring on every new control<span class="fth">Light, 1440 by 900. Each control this page adds, mounted from its part in its focus-visible state</span></div></sc-if>
+          <div class="set-rk-stage">
+            <div class="set-rk-sheet">
+              <p class="kick">Annotation, not part of the UI</p>
+              <h2 class="t2">Focus ring on every new control</h2>
+              <p class="lede">The D1 ring: a 2 px outline in --focus-outline at a 2 px offset with a 2 px band in --focus-ring. Landing rows and the page column draw it inside their edge, so a scroller never cuts it. D2 shell controls keep the rings of D2 KE17 and KE18.</p>
+              <div class="set-rk-rings">
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L1" data-rk-dy="40"><div class="set-rk-shift" style="{{ crop.L1 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="work" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings button</span><span class="set-rk-rm">On a work page: lucide Settings, named Settings; its tooltip opens at once on focus</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L2" data-rk-dy="40"><div class="set-rk-shift" style="{{ crop.L2 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" focus="settings" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings button marking the area</span><span class="set-rk-rm">On a settings page: --accent fill and a 2 px line at its foot, aria-current true</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L3"><div class="set-rk-shift" style="{{ crop.L3 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Users" actions="*New user" focus="user" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Account button</span><span class="set-rk-rm">End of the company top bar: Jonas Holm, jonas.holm, account</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L4"><div class="set-rk-shift" style="{{ crop.L4 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="entry:calendars" theme="light" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings navigation entry</span><span class="set-rk-rm">A link in nav Settings, 32 px high</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L5" data-rk-dy="44"><div class="set-rk-shift" style="{{ crop.L5 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="entry:machines" theme="light" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Current entry</span><span class="set-rk-rm">aria-current page: --secondary fill, semibold, a 3 px bar</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L6"><div class="set-rk-shift" style="{{ crop.L6 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="company" company="Acme AB" current="users" focus="back" theme="light" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Back to Plant A</span><span class="set-rk-rm">First stop of the company settings navigation, 24 px high</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L7"><div class="set-rk-shift" style="{{ crop.L7 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="other" theme="light" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Acme AB settings</span><span class="set-rk-rm">Other settings at the foot of the plant settings navigation</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L8"><div class="set-rk-shift" style="{{ crop.L8 }}"><div style="width:600px"><dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" focus="first" theme="light" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Landing row, 1280 and up</span><span class="set-rk-rm">Two columns of rows with their lines; the ring inside the row</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L9"><div class="set-rk-shift" style="{{ crop.L9 }}"><div style="width:320px"><dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" size="narrow" focus="first" theme="light" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Landing row at 320</span><span class="set-rk-rm">A 44 px row without its line</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L10"><div class="set-rk-shift" style="{{ crop.L10 }}"><div style="width:320px"><dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" width="320" focus="back" content-id="rk-l10-page" theme="light" hint-size="100%,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Link back to the landing at 320</span><span class="set-rk-rm">Plant A settings, above the h1 of an entry</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L11" data-rk-align="corner"><div class="set-rk-shift" style="{{ crop.L11 }}"><div style="width:1280px"><dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" width="1280" focus="page" content-id="rk-l11-page" theme="light" hint-size="100%,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Page column</span><span class="set-rk-rm">Where the skip link lands: the ring inside its edge</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="L12"><div class="set-rk-shift" style="{{ crop.L12 }}"><div style="width:296px"><dc-import name="shell-313-settings-landing" area="company" company="Acme AB" state="empty" focus="action" theme="light" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Empty landing, its way out</span><span class="set-rk-rm">Back to Plant A on an empty company landing</span>
+              </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+      <sc-if value="{{ show.RE26 }}">
+        <section class="set-rk-f w1440" data-rk="RE26" data-screen-label="RE26 Focus ring on every new control, dark, 1440 by 900">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE26</span>Focus ring on every new control<span class="fth">Dark, 1440 by 900. Each control this page adds, mounted from its part in its focus-visible state</span></div></sc-if>
+          <div class="set-rk-stage dark">
+            <div class="set-rk-sheet dark">
+              <p class="kick">Annotation, not part of the UI</p>
+              <h2 class="t2">Focus ring on every new control</h2>
+              <p class="lede">The D1 ring: a 2 px outline in --focus-outline at a 2 px offset with a 2 px band in --focus-ring. Landing rows and the page column draw it inside their edge, so a scroller never cuts it. D2 shell controls keep the rings of D2 KE17 and KE18.</p>
+              <div class="set-rk-rings">
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D1" data-rk-dy="40"><div class="set-rk-shift" style="{{ crop.D1 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="work" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" theme="dark" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings button</span><span class="set-rk-rm">On a work page: lucide Settings, named Settings; its tooltip opens at once on focus</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D2" data-rk-dy="40"><div class="set-rk-shift" style="{{ crop.D2 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="plant" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" title="Machines" actions="*New machine" focus="settings" theme="dark" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings button marking the area</span><span class="set-rk-rm">On a settings page: --accent fill and a 2 px line at its foot, aria-current true</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D3"><div class="set-rk-shift" style="{{ crop.D3 }}"><div style="width:1440px"><dc-import name="shell-313-settings-frame" width="1440" height="160" area="company" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" company="Acme AB" title="Users" actions="*New user" focus="user" theme="dark" hint-size="1440px,160px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Account button</span><span class="set-rk-rm">End of the company top bar: Jonas Holm, jonas.holm, account</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D4"><div class="set-rk-shift" style="{{ crop.D4 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="entry:calendars" theme="dark" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Settings navigation entry</span><span class="set-rk-rm">A link in nav Settings, 32 px high</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D5" data-rk-dy="44"><div class="set-rk-shift" style="{{ crop.D5 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="entry:machines" theme="dark" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Current entry</span><span class="set-rk-rm">aria-current page: --secondary fill, semibold, a 3 px bar</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D6"><div class="set-rk-shift" style="{{ crop.D6 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="company" company="Acme AB" current="users" focus="back" theme="dark" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Back to Plant A</span><span class="set-rk-rm">First stop of the company settings navigation, 24 px high</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D7"><div class="set-rk-shift" style="{{ crop.D7 }}"><div style="width:248px"><dc-import name="shell-313-settings-nav" area="plant" plant="Plant A" current="machines" focus="other" theme="dark" hint-size="248px,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Acme AB settings</span><span class="set-rk-rm">Other settings at the foot of the plant settings navigation</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D8"><div class="set-rk-shift" style="{{ crop.D8 }}"><div style="width:600px"><dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" focus="first" theme="dark" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Landing row, 1280 and up</span><span class="set-rk-rm">Two columns of rows with their lines; the ring inside the row</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D9"><div class="set-rk-shift" style="{{ crop.D9 }}"><div style="width:320px"><dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" size="narrow" focus="first" theme="dark" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Landing row at 320</span><span class="set-rk-rm">A 44 px row without its line</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D10"><div class="set-rk-shift" style="{{ crop.D10 }}"><div style="width:320px"><dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" width="320" focus="back" content-id="rk-d10-page" theme="dark" hint-size="100%,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Link back to the landing at 320</span><span class="set-rk-rm">Plant A settings, above the h1 of an entry</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D11" data-rk-align="corner"><div class="set-rk-shift" style="{{ crop.D11 }}"><div style="width:1280px"><dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" width="1280" focus="page" content-id="rk-d11-page" theme="dark" hint-size="100%,640px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Page column</span><span class="set-rk-rm">Where the skip link lands: the ring inside its edge</span>
+              </div>
+              <div class="set-rk-ring">
+                <div class="set-rk-crop" data-rk-crop="D12"><div class="set-rk-shift" style="{{ crop.D12 }}"><div style="width:296px"><dc-import name="shell-313-settings-landing" area="company" company="Acme AB" state="empty" focus="action" theme="dark" hint-size="100%,600px"></dc-import></div></div></div>
+                <span class="set-rk-rn">Empty landing, its way out</span><span class="set-rk-rm">Back to Plant A on an empty company landing</span>
+              </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+    <sc-if value="{{ row.r10 }}">
+    <div class="set-rk-row">
+
+      <sc-if value="{{ show.RE27 }}">
+        <section class="set-rk-f w2960" data-rk="RE27" data-screen-label="RE27 Build notes, not part of the UI, light, 2960 wide">
+          <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">RE27</span>Build notes, not part of the UI<span class="fth">Light, 2960 wide. Components by shadcn name, tokens, the parts and props used, landmarks and names, the settings contribution point, routes, keys and focus, announcements, copy and WCAG 2.2 criteria</span></div></sc-if>
+          <div class="set-rk-notes">
+            <p class="kick">Build notes, not part of the UI</p>
+            <h2 class="t2">Settings area: reflow, long strings, keyboard and focus</h2>
+            <p class="lede">For the shell's settings area in E04-S02 (#40) and the settings pages of E05-S15, E06-S08 and E06-S13. Doc marks text verbatim from ADR 0066, ADR 0068 or plan 06, D2 approved copy of the D2 record and #222 approved copy of the canonical list and form page. Every other line, name and label is proposed and needs Krister Johansson's yes. All data is fictional.</p>
+            <div class="set-rk-ncols">
+              <sc-for list="{{ notes }}" as="col">
+                <div class="set-rk-ncol">
+                  <sc-for list="{{ col }}" as="s">
+                    <section class="set-rk-nsec">
+                      <h3 class="t3">{{ s.h }}</h3>
+                      <sc-if value="{{ s.hasP }}"><p class="set-rk-np"><sc-for list="{{ s.p }}" as="p"><sc-if value="{{ p.m }}"><span class="set-rk-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-if>
+                      <sc-if value="{{ s.hasT }}">
+                        <div class="set-rk-nt">
+                          <div class="set-rk-nr h {{ s.g }}"><sc-for list="{{ s.heads }}" as="hd"><span>{{ hd }}</span></sc-for></div>
+                          <sc-for list="{{ s.rows }}" as="r">
+                            <div class="set-rk-nr {{ s.g }}"><sc-for list="{{ r }}" as="c"><span><sc-for list="{{ c }}" as="p"><sc-if value="{{ p.m }}"><span class="set-rk-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></sc-for></div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.hasL }}">
+                        <ul class="ul"><sc-for list="{{ s.list }}" as="l"><li><sc-for list="{{ l }}" as="p"><sc-if value="{{ p.m }}"><span class="set-rk-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                      </sc-if>
+                    </section>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+    </div>
+    </sc-if>
+  </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"text","default":"","tsType":"string"},"labels":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          this.__alive = true;
+          const root = document.getElementById(this.__rid);
+          if (root && window.MutationObserver) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true });
+          }
+          [300, 900, 2000, 4000, 7000, 11000, 16000].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 150);
+        }
+        // Annotations measured from the rendered frames, as D2's keyboard part does: the Tab stops numbered in DOM order
+        // with a legend per region (RE12 to RE14), the regions the skip link passes and its target (RE15), the settings
+        // navigation and the page column beside the frame's own landmark marks (RE23, RE24), the landings scrolled to
+        // their end (RE2, RE7, RE30), and the ring crops centred on the focused control (RE25, RE26).
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          const px = (v) => Math.round(v * 10) / 10 + "px";
+          const next = {};
+          const CFG = { RE2: { scroll: 1 }, RE7: { scroll: 1 }, RE30: { scroll: 1 }, RE12: { stops: 1 }, RE13: { stops: 1 }, RE14: { stops: 1 }, RE15: { skip: 1 }, RE23: { lm: 1 }, RE24: { lm: 1 } };
+          Object.keys(CFG).forEach((id) => {
+            const C = CFG[id];
+            const st = root.querySelector('[data-rk="' + id + '"] .set-rk-stage');
+            if (!st || !st.offsetWidth) return;
+            const scr = st.querySelector(".sh-scr");
+            if (!scr) return;
+            const sr = st.getBoundingClientRect();
+            const k = sr.width / st.offsetWidth || 1;
+            const R = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k }; };
+            const S = R(scr);
+            const pos = (x, y, w) => "left:" + px(Math.max(S.x + 1, Math.min(S.x + S.w - (w || 21), x))) + ";top:" + px(Math.max(S.y + 1, Math.min(S.y + S.h - 21, y)));
+            const rect = (r, d) => "left:" + px(r.x - d) + ";top:" + px(r.y - d) + ";width:" + px(r.w + 2 * d) + ";height:" + px(r.h + 2 * d);
+            const o = { b: [], box: [], t: [], leg: [] };
+            if (C.scroll) {
+              const pg = scr.querySelector(".set-page");
+              if (pg && pg.scrollHeight - pg.clientHeight > 1 && pg.scrollTop < pg.scrollHeight - pg.clientHeight - 1) pg.scrollTop = pg.scrollHeight;
+            }
+            if (C.stops) {
+              const textRight = (el) => { const rg = document.createRange(); rg.selectNodeContents(el); return (rg.getBoundingClientRect().right - sr.left) / k; };
+              const inView = (el) => {
+                const r = el.getBoundingClientRect();
+                const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+                for (let a = el.parentElement; a && a !== st; a = a.parentElement) {
+                  const cs = getComputedStyle(a);
+                  if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+                    const q = a.getBoundingClientRect();
+                    if (cx < q.left || cx > q.right || cy < q.top || cy > q.bottom) return false;
+                  }
+                }
+                return true;
+              };
+              const region = (el) => (el.matches(".sh-skip") ? "skip" : el.closest(".sh-rail, .sh-sb") ? "main" : el.closest("header") ? "top" : el.closest(".set-nav") ? "set" : el.closest(".set-page") ? "page" : "other");
+              const RN = { skip: "Skip link", main: "nav Main", top: "Top bar (header)", set: "nav Settings", page: "Page column", other: "main" };
+              const name = (el) => (el.getAttribute("aria-label") || el.textContent || "").replace(/\s+/g, " ").trim();
+              const all = Array.prototype.slice.call(scr.querySelectorAll("a[href], button, .inp, [tabindex='0']")).filter((el) => {
+                if (el.matches(".is-dis, [disabled], [aria-disabled='true']")) return false;
+                if (el.closest(".pop, .sh-tip, [aria-hidden='true']")) return false;
+                if (el.matches(".inp") && el.parentElement && el.parentElement.closest("a, button")) return false;
+                if (el.matches(".sh-skip")) return true;
+                const cs = getComputedStyle(el);
+                const r = el.getBoundingClientRect();
+                return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 1 && r.height > 1;
+              });
+              const stops = [];
+              all.forEach((el, i) => {
+                const n = i + 1;
+                const rg = region(el);
+                const vis = rg === "skip" || inView(el);
+                stops.push({ n: n, rg: rg, name: name(el) + (vis ? "" : " (out of view)") });
+                if (!vis) return;
+                const r = R(el);
+                let x, y;
+                if (rg === "skip") { x = S.x + 2; y = S.y + 2; }
+                else if (rg === "main") { x = r.x + r.w - 8; y = r.y - 6; }
+                else if (rg === "top") { x = r.x + r.w / 2 - 10; y = r.y + r.h - (r.h < 30 ? 2 : 8); }
+                else if (el.matches(".set-ci")) { const lb = el.querySelector(".set-cl > span") || el; const q = R(lb); x = textRight(lb) + 6; y = q.y + q.h / 2 - 10; }
+                else if (el.matches(".set-backl, .lf-cl, .set-tl")) { x = textRight(el) + 6; y = r.y + r.h / 2 - 10; }
+                else if (el.matches(".set-lr")) { x = r.x + r.w - 48; y = r.y + r.h / 2 - 10; }
+                else if (el.matches(".btn.icon")) { x = r.x - 24; y = r.y + r.h / 2 - 10; }
+                else if (el.matches("[tabindex='0']")) { x = r.x - 12; y = r.y + 8; }
+                else { x = r.x - 10; y = r.y - 10; }
+                o.b.push({ n: String(n), st: pos(x, y, n > 9 ? 25 : 21) });
+              });
+              let g = null;
+              stops.forEach((s) => {
+                if (!g || g.rg !== s.rg) { g = { rg: s.rg, a: s.n, z: s.n, items: [] }; o.leg.push(g); }
+                g.z = s.n;
+                g.items.push(s.n + " " + s.name);
+              });
+              o.leg = o.leg.map((q) => ({ h: (q.a === q.z ? String(q.a) : q.a + " to " + q.z) + " " + RN[q.rg], t: q.items.join("; ") }));
+            }
+            if (C.skip) {
+              const box = (el, cls, d) => { const r = R(el); o.box.push({ cls: cls, st: rect(r, d) }); return r; };
+              const rail = scr.querySelector(".sh-rail");
+              const hd = scr.querySelector("header");
+              const nv = scr.querySelector(".set-navcol");
+              const pg = scr.querySelector(".set-page");
+              // The boxes start clear of the skip link, which sits over the rail head and the start of the top bar.
+              const sk = scr.querySelector(".sh-skip.on");
+              const K = sk ? R(sk) : null;
+              const clip = (r, side) => {
+                if (!K) return r;
+                if (side === "top") { const y = Math.max(r.y, K.y + K.h + 8); return { x: r.x, y: y, w: r.w, h: r.h - (y - r.y) }; }
+                const x = Math.max(r.x, K.x + K.w + 8); return { x: x, y: r.y, w: r.w - (x - r.x), h: r.h };
+              };
+              const boxr = (r, cls, d) => { o.box.push({ cls: cls, st: rect(r, d) }); return r; };
+              if (rail) { const r = boxr(clip(R(rail), "top"), "", -3); o.b.push({ n: "A", st: pos(r.x + 22, r.y + r.h - 100) }); }
+              if (hd) { const r = boxr(clip(R(hd), "left"), "", -3); o.b.push({ n: "B", st: pos(r.x + r.w * 0.45, r.y + r.h / 2 - 10) }); }
+              if (nv) { const r = box(nv, "", -1); o.b.push({ n: "C", st: pos(r.x + 12, r.y + r.h - 40) }); }
+              if (pg) { const r = box(pg, "solid", 1); o.b.push({ n: "D", st: pos(r.x + 12, r.y + r.h - 40) }); }
+            }
+            if (C.lm) {
+              const nav = scr.querySelector(".set-nav");
+              const nv = scr.querySelector(".set-navcol");
+              const pg = scr.querySelector(".set-page");
+              const rail = scr.querySelector(".sh-rail");
+              if (nav && nv) { const r = R(nav); o.box.push({ cls: "solid", st: rect(r, 6) }); o.t.push({ text: "nav: Settings", st: pos(r.x - 6, r.y + r.h + 14, 110) }); }
+              if (pg) {
+                const r = R(pg);
+                // The frame's own main tag sits on main's top edge, over the page column's top right corner: the outline
+                // starts below the tag, so its dashes never cross the tag's text.
+                const tag = scr.querySelector("main .sh-lm.tr");
+                const g = tag ? R(tag) : null;
+                const top = g && g.x < r.x + r.w + 2 && g.x + g.w > r.x - 2 ? Math.max(r.y - 2, g.y + g.h + 4) : r.y - 2;
+                o.box.push({ cls: "", st: rect({ x: r.x, y: top + 2, w: r.w, h: r.y + r.h - top - 2 }, 2) });
+                o.t.push({ text: "page column, skip target", st: pos(r.x + 8, r.y + r.h - 40, 190) });
+              }
+              if (rail) { const r = R(rail); o.t.push({ text: "nav: Main", st: pos(r.x + 6, r.y + r.h - 100, 80) }); }
+            }
+            next[id] = o;
+          });
+          // Ring crops: shift the mounted part so its focused control sits in the middle of the crop, or near the top left
+          // corner for a control larger than the crop (the page column).
+          const crops = {};
+          Array.prototype.slice.call(root.querySelectorAll("[data-rk-crop]")).forEach((cr) => {
+            const inner = cr.querySelector(".set-rk-shift");
+            const box = inner && inner.firstElementChild;
+            const f = box && box.querySelector(".is-focus");
+            if (!f || !cr.offsetWidth) return;
+            const k = cr.getBoundingClientRect().width / cr.offsetWidth || 1;
+            const ir = inner.getBoundingClientRect();
+            const fr = f.getBoundingClientRect();
+            const x = (fr.left - ir.left) / k, y = (fr.top - ir.top) / k, w = fr.width / k, h = fr.height / k;
+            const cw = cr.offsetWidth, ch = cr.offsetHeight;
+            const dy = Number(cr.getAttribute("data-rk-dy") || 0);
+            // Each axis on its own: a control that fits the crop is centred, so its whole ring shows (a landing row at 320 is
+            // almost as wide as the crop); a larger one starts near the crop's corner.
+            let L, T;
+            if (cr.getAttribute("data-rk-align") === "corner") { L = x - 20; T = y - 20; }
+            else {
+              L = w <= cw - 8 ? x + w / 2 - cw / 2 : x - 20;
+              T = h <= ch - 8 ? y + h / 2 - ch / 2 + dy / 2 : y - 20;
+            }
+            L = Math.max(0, Math.min(L, box.offsetWidth - cw));
+            T = Math.max(0, Math.min(T, box.offsetHeight - ch));
+            crops[cr.getAttribute("data-rk-crop")] = "left:" + px(-L) + ";top:" + px(-T);
+          });
+          const sig = JSON.stringify([next, crops]);
+          if (sig !== this.__sig) {
+            this.__sig = sig;
+            this.setState({ ov: next, cs: crops });
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          const S = this.state || {};
+          if (!this.__rid) {
+            window.__nmSetRkSeq = (window.__nmSetRkSeq || 0) + 1;
+            this.__rid = "set-rk-" + window.__nmSetRkSeq;
+          }
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const only = pick(P.frame, "").toUpperCase();
+          const labels = pick(P.labels, "on") !== "off";
+          // Row 11 (RE28 to RE30, the long strings of company settings) is drawn after row 2, beside the other long-strings frames.
+          const ROWS = [["RE1", "RE2", "RE3", "RE4", "RE5"], ["RE6", "RE7", "RE8", "RE9", "RE10", "RE11"], ["RE12", "RE13", "RE14"], ["RE15", "RE16"], ["RE17", "RE18"], ["RE19", "RE20"], ["RE21", "RE22"], ["RE23", "RE24"], ["RE25", "RE26"], ["RE27"], ["RE28", "RE29", "RE30"]];
+          const show = {};
+          const row = {};
+          ROWS.forEach((r, i) => {
+            r.forEach((id) => { show[id] = !only || only === id; });
+            row["r" + (i + 1)] = r.some((id) => show[id]);
+          });
+          const OV = S.ov || {};
+          const ov = {};
+          ROWS.forEach((r) => r.forEach((id) => {
+            const o = OV[id] || {};
+            ov[id] = { b: o.b || [], box: o.box || [], t: o.t || [], leg: o.leg || [], hasLeg: !!(o.leg && o.leg.length) };
+          }));
+          const CS = S.cs || {};
+          const crop = {};
+          ["L", "D"].forEach((p) => { for (let i = 1; i <= 12; i++) crop[p + i] = CS[p + i] || "left:0px;top:0px"; });
+
+          // Build notes (RE27). Text in `backticks` is set in Plex Mono.
+          const tp = (s) => String(s || "").split(/(`[^`]*`)/).filter((x) => x !== "").map((x) => (x[0] === "`" ? { m: true, x: false, t: x.slice(1, -1) } : { m: false, x: true, t: x }));
+          const T = (h, p, g, heads, rows) => ({ h: h, p: tp(p), hasP: !!p, hasT: true, g: g, heads: heads, rows: rows.map((r) => r.map(tp)), hasL: false, list: [] });
+          const Ls = (h, p, list) => ({ h: h, p: tp(p), hasP: !!p, hasT: false, g: "", heads: [], rows: [], hasL: true, list: list.map(tp) });
+          const left = [
+            T("Components by shadcn name", "", "set-rk-g3a", ["Component", "Used for", "Frames"], [
+              ["Sidebar", "D2's main sidebar, `collapsible=\"icon\"`. A route with a settings navigation opens it as the 64 px rail, so the page column keeps 922 px at 1280. The automatic collapse does not write the user's stored sidebar choice, and leaving settings brings that choice back (proposed).", "RE12, RE15, RE18 to RE20, RE23"],
+              ["SidebarTrigger", "Expand sidebar on a settings page, with `aria-expanded=\"false\"` and `aria-controls` the sidebar. A user who expands it keeps it expanded on settings pages for the rest of the visit (proposed). Focus stays on it when the state flips (D2 KE5).", "RE12, RE18"],
+              ["Settings navigation (shell component, name `SettingsNav` proposed)", "Not a second shadcn Sidebar: it sits inside `main` beside the page column, never collapses and needs no SidebarProvider. A `nav` named Settings with the head (the company over the area's title, text, not a heading), then one `ul` per group labelled by its visible label. Rows look like SidebarMenuButton: 32 px, a 16 px icon, the label; the current row has `aria-current=\"page\"`. Company pages start with the link Back to {plant}.", "RE5, RE12, RE13, RE19, RE20, RE23, RE24"],
+              ["Button, size icon, variant ghost, rendered as a link", "The Settings button: lucide Settings, named Settings, after Assistant and before Help. `aria-current=\"true\"` on a settings page, `\"page\"` on a landing.", "RE17, RE18, RE25, RE26"],
+              ["Tooltip", "Settings under the button, side bottom: at once on focus, after a delay on hover, closed by Escape with focus kept.", "RE17, RE25"],
+              ["Breadcrumb", "Plant pages: BreadcrumbLink Settings to `/$plant/settings` after the plant, BreadcrumbPage for the entry. Company pages: Settings as plain text, BreadcrumbLink Acme AB to the company landing, BreadcrumbPage for the entry.", "RE3, RE8, RE12, RE13"],
+              ["Sheet", "D2's navigation sheet at 320 with the main navigation only. Its footer row holds the user button, Assistant, Settings and Help.", "RE10"],
+              ["DropdownMenu, Avatar", "The user menu from the account button at the end of the company top bar, with D2's items.", "RE13, RE24, RE25"],
+              ["Card", "The landing: one Card of 44 px rows at 320; from 1280 two columns of bordered rows, each a link with its icon, label, line and ChevronRight.", "RE1, RE2, RE6, RE7, RE18"],
+              ["Badge", "Onboarding after Plant D settings, part of the link text after a visually hidden comma (D2).", "RE2, RE13, RE24, RE28, RE30"],
+              ["DataTable, Input, Select, Button, Card", "The list and form patterns of #222 option A in the page column, unchanged.", "RE3, RE4, RE8, RE9, RE21, RE22"],
+              ["SkipLink", "D2's pattern. On a settings page its href names the page column.", "RE15, RE16"]
+            ]),
+            Ls("Tokens", "Every color is a D1 token.", [
+              "Focus ring: a 2 px `--focus-outline` outline at 2 px offset with a 2 px `--focus-ring` band. Landing rows draw it at -2 px offset with an inset 4 px band; the page column at -2 px with an inset 4 px band, so its scroller never cuts it.",
+              "Settings navigation: rows in `--foreground` on the page background; hover `--accent` and `--accent-foreground`; the current row `--secondary` and `--secondary-foreground`, semibold, with a 3 px inset bar in `--foreground`; icons `--muted-foreground`, the current one `--foreground`; group labels and the head's kicker 12/16 in `--muted-foreground`; the rule before Other settings `--border`.",
+              "Settings button marking the area: `--accent` with `--accent-foreground` and a 2 px inset line in `--foreground` at its foot.",
+              "Back links: `--link`, underlined, at least `--nm-target-min` (24 px) high.",
+              "Landing: rows on `--card` with `--border` and `--radius-xl`; lines 13/18 in `--muted-foreground`; hover `--accent`.",
+              "Onboarding badge: `--warning` on `--warning-subtle` (D2). An unavailable entry: `--muted-foreground` with a dashed icon border.",
+              "Sizes: the navigation column 220 px with a 24 px gap to the page column; rows at least 32 px; landing rows 44 px at 320 and 64 px from 1280; the h1 28/34 from 1280 and 24/30 at 320 (D2).",
+              "Long strings: icon buttons in the top bar keep their 36 px and the trail shortens with an ellipsis (RE29); an identifier in Plex Mono, such as a long username, breaks anywhere when its column is too narrow (RE28)."
+            ]),
+            T("Parts and props these frames use", "All parts are in `shell/`. The frames mount `shell-313-settings-frame.dc.html`, the copy of `Shell.dc.html` with the #313 changes, because the frozen Shell has no Settings button and no skip target past a navigation inside `main`.", "set-rk-g3b", ["Part", "Props", "Frames"], [
+              ["`shell-313-settings-frame`", "`area` work, plant or company (home draws `/`, EN37); `settings-current` page on a landing; `skip-to` the page column's id; `sidebar` sheet; `focus` skip, settings or user; `marks` landmarks; `strings` long; `theme`; `width`; `height` 160 in the ring crops; `show-title` on", "RE1 to RE26, RE28 to RE30"],
+              ["`shell-313-settings-layout`", "`area`, `width`, `company`, `plant`, `page`, `content-id` (equal to the frame's `skip-to`), `focus` page, h1, back or `nav:entry:calendars`, `strings`, `onboarding`", "RE1 to RE26, RE28 to RE30"],
+              ["`shell-313-settings-nav`", "`area`, `current`, `focus` `entry:<id>`, back or other, `theme` (ring crops); mounted by the layout elsewhere", "RE25, RE26"],
+              ["`shell-313-settings-landing`", "`area`, `size` narrow, `state` empty, `focus` first or action, `strings` long, `onboarding`", "RE1, RE2, RE6, RE7, RE11, RE18, RE25, RE26, RE29, RE30"],
+              ["`shell-313-settings-list`", "`list` machines, users or calendars; `size` narrow; `strings` long", "RE3, RE5, RE8 to RE10, RE12 to RE16, RE19, RE20, RE23, RE24, RE28"],
+              ["`shell-313-settings-form`", "`form` formats; `size` narrow; `state` saved; `focus` save", "RE4, RE21, RE22"]
+            ]),
+            T("Routes, titles and trails", "The user's plants span Acme AB and Nordic Tools AB, so plant trails start with the company crumb (ADR 0067). At 320 a plant trail keeps the plant and the parent of the page, the crumbs between them fold behind the ellipsis, and a landing's trail is the plant alone.", "set-rk-g4", ["Route", "Title", "Trail and h1", "Frames"], [
+              ["`/settings/$companyId`", "Company settings · Acme AB · NorthMES (doc)", "Settings > Acme AB; h1 Company settings", "RE1, RE2"],
+              ["`/settings/$companyId/core/users`", "Users · Acme AB · NorthMES (doc)", "Settings > Acme AB > Users (doc); h1 Users", "RE3, RE13, RE24"],
+              ["`/settings/$companyId/core/formats`", "Formats · Acme AB · NorthMES", "Settings > Acme AB > Formats; h1 Formats", "RE4, RE21, RE22"],
+              ["`/plant-a/settings`", "Settings · Plant A · NorthMES", "Acme AB > Plant A > Settings; h1 Plant A settings", "RE6, RE7, RE18"],
+              ["`/plant-a/core/machines`", "Machines · Plant A · NorthMES (doc)", "Acme AB > Plant A > Settings > Machines (doc); h1 Machines", "RE8, RE10, RE12, RE14 to RE16, RE19, RE23"],
+              ["`/plant-a/core/calendars`", "Calendars · Plant A · NorthMES", "Acme AB > Plant A > Settings > Calendars; h1 Calendars", "RE9, RE20"],
+              ["`/plant-a/planning/board`", "Planning board · Plant A · NorthMES (D2)", "As D2", "RE17"],
+              ["`/werk-sued/core/machines`", "Maschinen · Präzisionsfertigung Oberschwaben Werk Süd · NorthMES", "h1 Maschinen", "RE5"],
+              ["`/werk-sued/settings`", "Einstellungen · Präzisionsfertigung Oberschwaben Werk Süd · NorthMES", "h1 Einstellungen für Präzisionsfertigung Oberschwaben Werk Süd", "RE11"],
+              ["`/settings/$companyId/core/users`, long strings", "Benutzer · Oberschwäbische Präzisionswerkzeuge GmbH · NorthMES", "Einstellungen > Oberschwäbische Präzisionswerkzeuge GmbH > Benutzer; h1 Benutzer", "RE28"],
+              ["`/settings/$companyId`, long strings", "Unternehmenseinstellungen · Oberschwäbische Präzisionswerkzeuge GmbH · NorthMES", "Einstellungen > Oberschwäbische Präzisionswerkzeuge GmbH, shortened at 320; h1 Unternehmenseinstellungen", "RE29, RE30"]
+            ]),
+            Ls("Final English copy", "Proposed unless marked.", [
+              "Settings (doc word: the button, its tooltip, the landmark and the plant crumb); Skip to main content (doc); Expand sidebar, Collapse sidebar, Open navigation, Close navigation, Navigation, Main, Breadcrumb (D2).",
+              "Company settings; {plant} settings; {company} settings; Back to {plant}; Back to your plants; Other settings; Modules; Plugins; Onboarding (D2); Continue onboarding (D2); (unavailable) (doc).",
+              "Company entries: General, Formats, Plants, Users, Roles, Integrations, Audit log, Planning rules, AI assistant, Pyramid connector. Plant entries: Plant, Machines, Equipment groups, Calendars, Stations, System health, Planning rules, Acme tooling.",
+              "Landing lines: Company name and data language; How dates, clock times and numbers look at every plant; The company's plants and their onboarding, and New plant; People who sign in, and their roles; Default and custom roles with their permissions; The ERP connection and the AI provider; Every change, who made it and why; Planning rules for every plant of the company; Provider, budget and usage of the assistant; Polling, field mapping and write-back to Pyramid; Name, slug, time zone, production day start and formats; Equipment with its group, color and plannable flag; Groups of machines and their colors on the board; Calendar versions, shift patterns, breaks and deviations; Operator stations and their pairing; Readiness, jobs, backups, versions and the last Pyramid poll; This plant's values for the planning rules; Tool life limits at this plant.",
+              "Empty landing: You have no settings to manage here; Settings show here when one of your roles lets you manage this company or plant. Ask a company admin if you need access.",
+              "No permission on a settings page: You need the permission to read {things} in {scope}; Ask a company admin of {company} for a role that can read {things}. For example: Ask a company admin of Acme AB for a role that can read machines.",
+              "The plant list at `/`: Your plants (D2); {company} settings, the link at the end of each company group. A company with no plant: Continue onboarding (D2) to the company wizard.",
+              "Form: Save settings, Cancel, Settings saved. Dates, clock times and numbers change after the next page load or plant switch. (#222). Account button: {user}, {username}, account (D2)."
+            ])
+          ];
+          const right = [
+            T("Landmarks and names", "DOM order equals visual order (WCAG 1.3.2, 2.4.3). Names with strings long: Hauptnavigation, Brotkrümelnavigation, Einstellungen.", "set-rk-g3c", ["Element", "Role and name", "Notes"], [
+              ["Skip to main content (doc)", "link, the first stop", "`href` names the page column on a settings page, `main` elsewhere (D2)"],
+              ["Main sidebar or rail", "nav, Main (D2)", "Plant pages only: the switcher Acme AB, Plant A, switch plant; one icon per top-level entry, a link or, for a parent, a menu button with its flyout (D2); the account button Jonas Holm, jonas.holm, account"],
+              ["Top bar", "header (banner)", "Expand sidebar (plant pages), nav Breadcrumb, page actions, Assistant (plant pages of a company with an AI provider, D2 ST31), Settings, Help; on company pages the account button at the end"],
+              ["Top bar on `/`", "header (banner)", "The NorthMES mark, Help and the account button: no plant, so no nav Breadcrumb, no Assistant and no Settings button (EN37)"],
+              ["Settings button", "link, Settings, `aria-current` true or page", "The tooltip repeats the name (WCAG 2.5.3)"],
+              ["main", "main, `tabindex=\"-1\"`, `aria-busy` while a route loads", "Holds nav Settings, then the page column"],
+              ["Settings navigation", "nav, Settings", "First inside `main`. Lists labelled Plant A settings or Company settings (the head's title), Modules, Plugins and Other settings; entries are links named by their labels"],
+              ["Page column", "no role; `id` of the skip target, `tabindex=\"-1\"`", "Holds the h1 (`tabindex=\"-1\"`) and the page content; the layout's `content-id`"],
+              ["Assistant", "aside, Assistant", "Plant pages only, when docked; company pages draw none"],
+              ["Navigation sheet at 320", "dialog, `aria-modal`, Navigation (D2)", "nav Main inside it. At 320 there is no nav Settings: the landing lists the entries in lists with the same labels"]
+            ]),
+            Ls("Contribution point for settings entries (ADR 0068)", "", [
+              "Kind route, from the slot table of ADR 0068. Company settings: a module returns `/settings/$companyId/<id>/*` from `settingsRoutes(settingsRoute)` in `defineWebModule` (name proposed), and the shell checks that the path equals the module id. Release 1: core only (ADR 0066, ADR 0068).",
+              "Plant settings: a module's route under `/$plant/<id>/*` declares `nav: { area: \"settings\", ... }` on `screenRoute` (name proposed). The shell then draws the settings layout around it, lists the entry in the plant settings navigation and leaves it out of the main sidebar (ADR 0066).",
+              "The entry is manifest data: a plain label, an icon from `NavIconName`, the order and the permission. The shell draws it in the module's group: core first, then Modules in manifest order, then Plugins. A module adds entries only to its own group; Users, Roles, the plant switcher and Audit log are core's alone (ADR 0068 rule 9).",
+              "The permission decides only what shows; `can()` and the field guard decide every read and command (rule 5). An area shows only to a user who holds a permission of one of its entries.",
+              "A module that failed to load keeps its entry in its place with (unavailable) (doc), inside its own boundary (rule 8).",
+              "What a contribution renders: its pages in the page column, under the h1 of the settings layout, with the #222 list and form patterns or `SettingsForm` for a `defineSettings` schema. It sets no fixed or sticky position of its own (WCAG 2.4.11).",
+              "Links: core's link manifest has a `settings` section that builds `/settings/$companyId/<id>/...` without a plant (ADR 0062, ADR 0066). The landings `/settings/$companyId` and `/$plant/settings` are shell routes built from the navigation's entries; the plant landing makes `settings` a reserved module id (question 22)."
+            ]),
+            T("Keys and where focus goes", "", "set-rk-g4b", ["Control", "Keys", "Focus after", "Frames"], [
+              ["Skip to main content", "Tab reaches it first; Enter", "The page column, past nav Main, the top bar and nav Settings; the next Tab reaches the page's first control", "RE15, RE16"],
+              ["Settings button", "Enter", "Route change to the landing; the main sidebar collapses to the rail with no announcement and no focus move of its own; focus goes to the h1", "RE17, RE18"],
+              ["Entry, Other settings link, landing row, Back to Plant A, the link back to the landing at 320", "Enter", "Route change; focus moves to the new h1. A move between company and plant settings may be a full navigation and also lands on the h1", "RE19, RE20"],
+              ["Expand sidebar on a settings page", "Enter or Space", "Stays on the trigger, now Collapse sidebar with `aria-expanded=\"true\"`; the sidebar stays expanded on settings pages for the visit (proposed)", "D2 KE5"],
+              ["Save settings", "Enter", "Stays on Save settings; the saved note is a status message. With errors, focus moves to the error summary (#222)", "RE21, RE22"],
+              ["Settings tooltip", "Escape", "The tooltip closes; focus stays on the button", "RE17"],
+              ["Open navigation at 320", "Enter", "The sheet opens with focus on Close navigation (D2); Escape closes it and returns focus", "RE10"]
+            ]),
+            Ls("Announcements", "", [
+              "The automatic collapse: none. Focus is on the new h1; the trigger's name and `aria-expanded` change without a message, as after a manual collapse (D2).",
+              "A route change into or within settings: none. The focused h1 is read and the title changes (D2).",
+              "Save settings: \"Settings saved. Dates, clock times and numbers change after the next page load or plant switch.\" (#222) once, through `role=\"status\"`.",
+              "Onboarding: no message; the word is part of the link text."
+            ]),
+            T("WCAG 2.2 criteria", "", "set-rk-g2", ["Criterion", "How the frames meet it"], [
+              ["1.3.1", "Two named nav landmarks; each group a list labelled by its visible label; one h1 in the page column (RE23, RE24)"],
+              ["1.3.2, 2.4.3", "DOM order rail, top bar, nav Settings, page column equals the visual and the Tab order; a route change focuses the h1 (RE12 to RE14, RE18, RE20)"],
+              ["1.4.1", "The current entry has a bar and weight besides its fill; Onboarding and (unavailable) are words (RE2, RE5)"],
+              ["1.4.10", "At 320 only tables scroll sideways, each in its own region; the landing replaces the navigation column (RE1 to RE11)"],
+              ["1.4.11, 2.4.7", "The two-tone ring on every new control (RE25, RE26)"],
+              ["1.4.13", "The Settings tooltip opens on focus, stays while hovered and closes on Escape (RE17)"],
+              ["2.1.1, 2.1.2", "Every control is a link or button in the Tab order; the sheet closes on Escape (RE10, RE12 to RE14)"],
+              ["2.4.1", "One activation of the skip link passes nav Main, the top bar and nav Settings (RE15, RE16)"],
+              ["2.4.2", "One title per route (Routes, titles and trails)"],
+              ["2.4.4", "Acme AB settings, Plant A settings, Back to Plant A and Company settings name their targets (RE2, RE7, RE8)"],
+              ["2.4.5", "Settings pages are reached from the settings navigation, the landing and the All pages index (RE6, RE12)"],
+              ["2.4.11", "The navigation column and the page column scroll inside `main` below the top bar, so the bar never covers a focused control; the form footer keeps its `scroll-padding-bottom` (#222) (RE21)"],
+              ["2.5.3", "The Settings button's name is its tooltip's text; link names start with their visible text (RE17)"],
+              ["2.5.8", "Rows 32 px, back links 24 px, landing rows 44 px, icon buttons 36 px (RE25, RE26)"],
+              ["3.2.3", "The settings navigation keeps one order on every settings page (RE19, RE20)"],
+              ["3.2.4", "The Settings button has one name and icon in the top bar, the sheet and the tooltip (RE10, RE17)"],
+              ["3.2.6", "Help keeps its place after Settings in every top bar. It ends the plant top bar; on company pages and on `/` the account button follows it, as on D2's pages without a plant, while question 26 is open (RE12, RE13, EN37)"],
+              ["3.3.1, 3.3.3, 3.3.7", "Forms per #222: the error summary, field errors and values kept after a server error"],
+              ["4.1.2", "Names of both navigations, `aria-current` on the entry and the Settings button, `aria-expanded` on the trigger (RE18, RE23)"],
+              ["4.1.3", "The saved note is a status message (RE22)"]
+            ]),
+            Ls("The collapse and the assumptions that come with it", "Decided by Krister Johansson on 2026-10-08: when a page with a settings navigation opens, the main sidebar collapses on its own to D2's rail. Proposed with it:", [
+              "Leaving settings returns the main sidebar to the user's own choice.",
+              "A user who expands the main sidebar on a settings page keeps it expanded for that visit.",
+              "The collapse is announced to no one and moves no focus.",
+              "At 320 the main sidebar is the navigation sheet, so nothing changes; the landing lists Other settings after the area's entries, the way between company and plant settings.",
+              "The skip link targets the page column inside `main`, so one activation passes both navigation regions while nav Settings stays inside `main` as ADR 0066 says."
+            ])
+          ];
+          return { rid: this.__rid, rootCls: only ? "one" : "", labels: labels, show: show, row: row, ov: ov, crop: crop, notes: [left, right] };
+        }
+      }
+    </script>
+  </body>
+</html>

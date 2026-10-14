@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access management: assignment frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+        <style>
+          /* Assignment frames (AS) of the spec page core/core-304-access.dc.html, issue northMES/northmes#304: a user's
+             Access tab with the roles per company and plant, Add role with the picker that locks the roles the assigner
+             cannot give, the server's refusal, removing a role with a reason, the effective permissions with No access
+             cells, and the plant admin and company admin views. Light frames left, dark frames right at 1440; then 1280
+             (plant admin) and 1920 (company admin) in light, their dark twins in the row under them, and the states of the
+             Access tab (loading, empty, failed, and the effective permissions denied) in light and dark. Every frame mounts ./Shell.dc.html (the byte copy of
+             shell/Shell.dc.html) with the shared access parts as its route content. Each frame element has the frame's
+             real size: the screen plus the 36 px document title. Its chip sits 12 px above it in the D1 canvas label
+             colors and is not part of the UI. The Add role form keeps its main column at most 760 px wide, the width of
+             the canonical form (lf-form), beside the 340 px side column (as-cap). Classes start with as-. */
+          .as-part{position:relative}
+          .as-fr{position:absolute}
+          .as-cap{max-width:1124px}
+          .flabel.as-chip{position:absolute;left:0;bottom:calc(100% + 12px);flex-wrap:wrap;row-gap:4px;max-width:100%;box-sizing:border-box;margin:0;cursor:default}
+        </style>
+      </helmet>
+      <div class="as-part" style="width:3280px;height:15952px">
+        <div class="as-fr" style="left:0px;top:120px;width:1440px;height:936px" data-screen-label="AS1 Access tab, plant admin, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS1</span>Access tab, plant admin<span class="fth">Light, 1440. Jonas Holm reads Sara Nyberg's roles per place: Shift lead at Plant A with Remove, and Viewer at Acme AB, all plants, with the line that a company admin of Acme AB can remove it. What she can do at Plant A follows, each permission with the role and place behind it</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:120px;width:1440px;height:936px" data-screen-label="AS2 Access tab, plant admin, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS2</span>Access tab, plant admin<span class="fth">Dark, 1440. As AS1</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:1232px;width:1440px;height:936px" data-screen-label="AS3 Add role, locked roles named, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS3</span>Add role, locked roles named<span class="fth">Light, 1440. Plant A only. The listbox is open with keyboard focus on Shift lead, which is locked and names the 3 permissions Jonas Holm does not hold at Plant A with their ids; further down the list, Operator is locked because Anna Berg already holds it at Plant A, and its line still names the permission Jonas Holm lacks there. The listbox lists custom roles, then default roles, each by name, as the roles list does. The side card lists every permission of Shift lead and whether he holds it</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="plant" open="on" active="shiftLead" focus="role" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why Anna Berg gets this role</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="shiftLead" hint-size="100%,360px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:1232px;width:1440px;height:936px" data-screen-label="AS4 Add role, locked roles named, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS4</span>Add role, locked roles named<span class="fth">Dark, 1440. As AS3</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="plant" open="on" active="shiftLead" focus="role" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why Anna Berg gets this role</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="shiftLead" hint-size="100%,360px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:2344px;width:1440px;height:936px" data-screen-label="AS5 Add role, refused by the server, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS5</span>Add role, refused by the server<span class="fth">Light, 1440. Acme AB, all plants, Viewer, then Add role. The client checks only Plant A, so the server refuses: the error summary takes focus and links to Role, and the message names the 2 permissions Jonas Holm lacks at Acme AB and the assignment permission there. The place, the role and the reason stay</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-summary is-focus" tabindex="-1" role="group" aria-labelledby="as5-sum">
+                    <h2 class="lf-summary-h" id="as5-sum"><span class="ic" data-icon="CircleAlert"></span>Fix 1 field to add the role</h2>
+                    <ul><li><a href="#">You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: Read production orders and the planning board (planning.productionOrder:read) and Read job orders (planning.jobOrder:read). Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.</a></li></ul>
+                  </div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="company" value="viewer" err="on" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Reads the plan at every plant from week 2026-W42</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="viewer" hint-size="100%,360px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:2344px;width:1440px;height:936px" data-screen-label="AS6 Add role, refused by the server, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS6</span>Add role, refused by the server<span class="fth">Dark, 1440. As AS5</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-summary is-focus" tabindex="-1" role="group" aria-labelledby="as6-sum">
+                    <h2 class="lf-summary-h" id="as6-sum"><span class="ic" data-icon="CircleAlert"></span>Fix 1 field to add the role</h2>
+                    <ul><li><a href="#">You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: Read production orders and the planning board (planning.productionOrder:read) and Read job orders (planning.jobOrder:read). Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.</a></li></ul>
+                  </div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="company" value="viewer" err="on" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Reads the plan at every plant from week 2026-W42</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="viewer" hint-size="100%,360px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:3456px;width:1440px;height:936px" data-screen-label="AS7 Remove a role with a reason, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS7</span>Remove a role with a reason<span class="fth">Light, 1440. Remove Shift lead at Plant A from Sara Nyberg: the 3 permissions she loses at Plant A, what Viewer at Acme AB still lets her do, focus in the optional reason, Cancel and Remove role. Focus returns to the row's Remove after the dialog closes</span><span class="ca-url">/plant-a/core/users/$userId?tab=access (dialog state not in the URL)</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" dialog="remove" target="shiftLead" focus="reason" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:3456px;width:1440px;height:936px" data-screen-label="AS8 Remove a role with a reason, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS8</span>Remove a role with a reason<span class="fth">Dark, 1440. As AS7</span><span class="ca-url">/plant-a/core/users/$userId?tab=access (dialog state not in the URL)</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" dialog="remove" target="shiftLead" focus="reason" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:4568px;width:1440px;height:936px" data-screen-label="AS9 Every permission, No access cells, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS9</span>Every permission, No access cells<span class="fth">Light, 1440. Show every permission is checked, and the tab is scrolled to where Core ends and Planning starts. A permission that no role of Sara Nyberg grants reads No access with a lock; screen readers hear No access. No role of Sara Nyberg at Plant A or at Acme AB includes it. Planning counts 4 of 11</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" effective="all" scroll="775" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:4568px;width:1440px;height:936px" data-screen-label="AS10 Every permission, No access cells, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS10</span>Every permission, No access cells<span class="fth">Dark, 1440. As AS9</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" effective="all" scroll="775" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:5680px;width:1440px;height:936px" data-screen-label="AS11 Access tab, company admin, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS11</span>Access tab, company admin<span class="fth">Light, 1440. Karin Dahl reads the same tab: Remove on both rows, Viewer at Acme AB included, and Reset password and Block user in the top bar. Access changes follow what Sara Nyberg can do, below the fold</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="company-admin" user="Karin Dahl" nav="core.users" entity="Sara Nyberg" actions="Reset password|Block user" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" viewer="company-admin" changes="on" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:5680px;width:1440px;height:936px" data-screen-label="AS12 Access tab, company admin, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS12</span>Access tab, company admin<span class="fth">Dark, 1440. As AS11</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="company-admin" user="Karin Dahl" nav="core.users" entity="Sara Nyberg" actions="Reset password|Block user" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" viewer="company-admin" changes="on" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:6792px;width:1280px;height:836px" data-screen-label="AS13 Access tab, plant admin, light, 1280 by 800">
+          <div class="flabel as-chip"><span class="fid">AS13</span>Access tab, plant admin<span class="fth">Light, 1280. Scrolled to the end of the tab: the permissions by module, then Access changes, which Jonas Holm cannot read. The region keeps its heading and names the permission it needs (core.audit:read)</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1280" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1280px,836px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" scroll="303" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1360px;top:6792px;width:1280px;height:836px" data-screen-label="AS14 Add role, plant admin, light, 1280 by 800">
+          <div class="flabel as-chip"><span class="fid">AS14</span>Add role, plant admin<span class="fth">Light, 1280. Plant A only and Viewer chosen; Jonas Holm holds both of its permissions at Plant A. A reason is typed and focus is on Add role</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1280" theme="light" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1280px,836px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="plant" value="viewer" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Reads the plan at Plant A</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default is-focus" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="viewer" hint-size="100%,360px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:7804px;width:1920px;height:1116px" data-screen-label="AS15 Access tab, company admin, light, 1920 by 1080">
+          <div class="flabel as-chip"><span class="fid">AS15</span>Access tab, company admin<span class="fth">Light, 1920. As AS11 at 1920, with Sara Nyberg's access changes: when, who changed it and on which surface, the change and the reason</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1920" theme="light" role="company-admin" user="Karin Dahl" nav="core.users" entity="Sara Nyberg" actions="Reset password|Block user" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" viewer="company-admin" changes="on" scroll="0" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:9096px;width:1920px;height:1116px" data-screen-label="AS16 Add role, company admin, light, 1920 by 1080">
+          <div class="flabel as-chip"><span class="fid">AS16</span>Add role, company admin<span class="fth">Light, 1920. Karin Dahl adds a role for Anna Berg at Acme AB, all plants. The roles sit under Checked when you add them, because the client checks Plant A only, and the list scrolls on to the last roles. The note for an assigner who lacks permissions is left out</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+          <dc-import name="Shell" width="1920" theme="light" role="company-admin" user="Karin Dahl" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div class="ca-page"><div class="ca-two as-cap">
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" where="company" open="on" active="planner" focus="role" assigner="companyAdmin" cheld="companyAdmin" hint-size="100%,330px"></dc-import></div>
+                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why Anna Berg gets this role</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  <div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ca-col">
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import></div>
+                  <div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="planner" assigner="companyAdmin" hint-size="100%,360px"></dc-import></div>
+                </div>
+              </div></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:2000px;top:10388px;width:1280px;height:836px" data-screen-label="AS17 Access tab, plant admin, dark, 1280 by 800">
+          <div class="flabel as-chip"><span class="fid">AS17</span>Access tab, plant admin<span class="fth">Dark, 1280. As AS13</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1280" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1280px,836px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" scroll="303" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:10388px;width:1920px;height:1116px" data-screen-label="AS18 Access tab, company admin, dark, 1920 by 1080">
+          <div class="flabel as-chip"><span class="fid">AS18</span>Access tab, company admin<span class="fth">Dark, 1920. As AS15</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1920" theme="dark" role="company-admin" user="Karin Dahl" nav="core.users" entity="Sara Nyberg" actions="Reset password|Block user" bell="off" show-title="on" hint-size="1920px,1116px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" viewer="company-admin" changes="on" scroll="0" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:11680px;width:1440px;height:936px" data-screen-label="AS19 Access tab loading, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS19</span>Access tab loading<span class="fth">Light, 1440. Jonas Holm opens Sara Nyberg's Access tab. The user record came with the page, so the h1 and the tabs are drawn; Roles and What Sara Nyberg can do keep their headings and draw skeleton rows, each region aria-busy. Add role is drawn, so its place does not move</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" state="loading" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:11680px;width:1440px;height:936px" data-screen-label="AS20 Access tab loading, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS20</span>Access tab loading<span class="fth">Dark, 1440. As AS19</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" state="loading" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:12792px;width:1440px;height:936px" data-screen-label="AS21 Access tab, no role, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS21</span>Access tab, no role<span class="fth">Light, 1440. Lena Ek holds no role at Plant A or at Acme AB, as after her last role is removed. The Roles card keeps Add role and says so; What Lena Ek can do at Plant A says that permissions come from roles. Question 38 asks whether the users list shows her</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Lena Ek" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">lena.ek</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="lena.ek" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:12792px;width:1440px;height:936px" data-screen-label="AS22 Access tab, no role, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS22</span>Access tab, no role<span class="fth">Dark, 1440. As AS21</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Lena Ek" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">lena.ek</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="lena.ek" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:13904px;width:1440px;height:936px" data-screen-label="AS23 Access tab failed, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS23</span>Access tab failed<span class="fth">Light, 1440. The roles did not load: ErrorState in the Roles card with the correlation id and Try again, which stays focused while the region reloads. What Sara Nyberg can do is left out, because it is computed from the same roles</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" state="error" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:13904px;width:1440px;height:936px" data-screen-label="AS24 Access tab failed, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS24</span>Access tab failed<span class="fth">Dark, 1440. As AS23</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" state="error" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:0px;top:15016px;width:1440px;height:936px" data-screen-label="AS25 What Sara Nyberg can do, denied, light, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS25</span>What Sara Nyberg can do, denied<span class="fth">Light, 1440. The read field behind the effective permissions (question 16) answers FORBIDDEN: the region keeps its card and heading, and its EmptyState names the permission it needs. The Roles card above is unchanged</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" effective="forbidden" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="as-fr" style="left:1520px;top:15016px;width:1440px;height:936px" data-screen-label="AS26 What Sara Nyberg can do, denied, dark, 1440 by 900">
+          <div class="flabel as-chip"><span class="fid">AS26</span>What Sara Nyberg can do, denied<span class="fth">Dark, 1440. As AS25</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+            <div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" effective="forbidden" changes="forbidden" hint-size="100%,760px"></dc-import></div>
+          </dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), installed once per document.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>
