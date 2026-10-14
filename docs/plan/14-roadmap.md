@@ -4943,6 +4943,7 @@ Acceptance criteria:
 - `northmes migrate` writes one `northmes_meta.release(version, image_digest, applied_at)` row at the end of a successful run; System health and `/health` show the installed release.
 - The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
 - `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing; when the release check passes it runs boot steps 1 to 10, lists pending files at step 5 and stops before the first file.
+- `migrate --check` compares the installation's catalog with the sorted schema dump of the installed release, which the release bundle carries, and exits 1 naming each object that differs.
 - The story lands before the first release, so every released installation has a `northmes_meta.release` row; `migrate --check` refuses a database with applied migrations and no such row, naming its newest applied file.
 - The upgrade guide in `apps/docs` lists the upgrade stops.
 
@@ -4950,6 +4951,7 @@ Tests first:
 
 - `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release"; "migrate --check refuses a database with migrations and no release row".
 - `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
+- `apps/backend/src/migrate/migrate-check-drift.int.test.ts`: "a column added by hand is named before any file runs".
 
 #### E18-S08 ops: Rehearse an upgrade on a restored copy before the window
 

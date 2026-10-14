@@ -5,7 +5,7 @@ decision-makers: proposed by a planning session, to be confirmed by Krister Joha
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
-needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; notices to users from the host and from company admins; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
+needs-confirmation: "maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; the rehearsal as a requirement for the restore class; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; notices to users from the host and from company admins; the schema drift check; upgrades of an installation whose database runs elsewhere; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing)"
 ---
 
 # Upgrade paths with upgrade stops, a rehearsal on a restored copy and an upgrade matrix in CI
@@ -53,6 +53,7 @@ Chosen option: "Any supported version upgrades straight to the latest, with decl
 
 * `upgrade.sh --rehearse` restores the latest backup into a throwaway database with the drill isolation of [ADR 0045][adr-0045]: archive mode off, the repository read-only, its own Compose project, volumes and an internal network with no egress, integrations off.
 * It runs the new image's `plugin check`, `migrate --check` and `migrate` against the copy, boots the app there and runs the smoke check, prints each file's duration and the total, writes the result to `rehearsal-state.json` with the version, the backup label, the time and `peakDiskBytes` (the most bytes the copy and its WAL held at once, sampled each second), and removes the copy.
+* Schema drift: the release bundle carries the sorted `pg_dump --schema-only` of each release in the support window. `migrate --check` reads the installation's catalog, compares it with the dump of the installed release, and exits 1 naming each table, column, index, constraint and function that differs, so a change made by hand on production is found before the window and not halfway through a migration. The rehearsal reports the same. This is the job Prisma's shadow database does on a developer's machine, done here on the installation's own schema; NorthMES needs no shadow database during development, because the runner applies SQL files written by hand instead of generating them from a diff.
 * `app` keeps serving the plant during a rehearsal. The pre-flight checks the disk space for a second copy and takes the host lock of proposed [ADR 0075][adr-0075].
 * `upgrade.sh` refuses a release of the `restore` class without a passing rehearsal of that version from the last 72 hours, and names the command. A rehearsal counts only while its backup label is the newest backup; a newer backup makes it stale, so the upgrade's own backup must follow the rehearsed one with no other backup between them, and the archived WAL between the two is what the rehearsal did not see. For the `image` class the rehearsal is optional. This replaces "a version with no recorded staging pass is refused" in [ADR 0045][adr-0045] with a check the installation runs itself.
 
@@ -70,6 +71,11 @@ Chosen option: "Any supported version upgrades straight to the latest, with decl
 * System health shows the installed release, a newer release when the installation knows of one (from a bundle on the host or an optional update check), its rollback class, `minimumUpgradeFrom` and the last rehearsal result. It is read-only.
 * One settings page, Updates (name proposed), holds both: a NorthMES tab with the installed release, a newer release, the path to it, its rollback class, the last rehearsal and which plugins have a version for it, and a Plugins tab that is the Plugins page of proposed [ADR 0075][adr-0075]. Plugin compatibility belongs with the release it blocks, and the proposed `upgrade.sh --with-plugin-updates` of ADR 0075 applies the core upgrade and the plugin updates as one set. System health keeps a one-line summary that links to it. Its route, permission and layout come from a design task (E18-S16); in release 1 the NorthMES tab is read-only.
 * Later, an admin may request an upgrade in the web the way proposed [ADR 0075][adr-0075] requests a plugin install: an audited request row that a host timer applies in the upgrade window, rehearsal first, with the result written back. An installation setting that only `northmes installation set` changes turns web requests off, so a hosting partner keeps upgrades to itself. Trigger: a customer without host access asks for it.
+
+### Installations not on one Compose host
+
+* Release 1 installs on one host with Docker Compose ([ADR 0044][adr-0044]). The web screens are bundled in the `app` image and served from the same origin as the API, which the same-origin rules of [ADR 0011][adr-0011] require, so hosting the web separately, on Azure Static Web Apps or a CDN, is not supported. Kubernetes and Helm values wait for the trigger of [ADR 0044][adr-0044]: a hosting partner asks for them.
+* The database may run on a Postgres server that already exists, through `northmes db bootstrap` ([ADR 0005][adr-0005]), for example a managed Postgres 18 service. On such an installation `migrate --check`, the release check, the drift check, `migrate` and the plugin check work unchanged, because they need only a Postgres connection. The backup, the rehearsal's restore and `rollback.sh` do not, because they drive pgBackRest inside the `db` image. The upgrade guide gives that operator the same steps by hand: take the provider's snapshot after `app` stops, rehearse on a clone of it with `northmes migrate` from the new image, and roll back by restoring the snapshot. `upgrade.sh` refuses to run against an external database and names the guide.
 
 ### Notices to users
 
@@ -110,6 +116,7 @@ A minor release breaks plugins in 0.x ([ADR 0038][adr-0038]), so plugin provider
 ### Confirmation
 
 * `migrate-release.int.test.ts`: a successful `migrate` writes one `northmes_meta.release` row with the image version; a failed run writes none; a database with `northmes_meta.migration` rows and no `northmes_meta.release` row makes `migrate --check` exit 1 naming its newest applied file, and changes nothing.
+* `migrate-check-drift.int.test.ts`: a column added by hand to an installation at 0.4.1 makes `migrate --check` exit 1 naming the column, before any file runs; without it the check passes.
 * `migrate-check-path.int.test.ts`: with `minimumUpgradeFrom` 0.4.0, a database at 0.3.2 exits 1 naming 0.3.2, 0.4.0 and the path before boot step 1 runs, and `northmes_meta` is unchanged; at 0.4.1 it goes on through boot step 5, lists a pending file, applies none, and `northmes_meta` is unchanged.
 * `infra/test/rehearse.int.test.ts` (nightly): a rehearsal with a fixture migration that adds a unique index over duplicate codes reports the failing file and leaves the production database and its archive unchanged; a passing rehearsal writes `rehearsal-state.json` with `peakDiskBytes`; `upgrade.sh` refuses a `restore`-class release without one, and refuses it again after a newer backup is taken.
 * `infra/test/upgrade-matrix.int.test.ts` (release pull request and nightly): every snapshot from `minimumUpgradeFrom` upgrades, boots and passes the smoke check; the sorted schema dump equals a fresh install's.
@@ -136,16 +143,18 @@ A minor release breaks plugins in 0.x ([ADR 0038][adr-0038]), so plugin provider
 
 ## More information
 
-* Related ADRs: [0006][adr-0006] runner and `migrate --check`, [0011][adr-0011] no web setup route, [0018][adr-0018] stale tabs, [0038][adr-0038] versions and patch releases, [0045][adr-0045] upgrade, rollback, drills and the compatibility number, [0047][adr-0047] secrets per service, [0066][adr-0066] no role above a company, [0070][adr-0070] one schema, [0072][adr-0072] upgrades per installation, [0075][adr-0075] plugin check and the host lock.
+* Related ADRs: [0005][adr-0005] `db bootstrap` on an existing server, [0006][adr-0006] runner and `migrate --check`, [0011][adr-0011] no web setup route, [0018][adr-0018] stale tabs, [0038][adr-0038] versions and patch releases, [0044][adr-0044] one Compose host, [0045][adr-0045] upgrade, rollback, drills and the compatibility number, [0047][adr-0047] secrets per service, [0066][adr-0066] no role above a company, [0070][adr-0070] one schema, [0072][adr-0072] upgrades per installation, [0075][adr-0075] plugin check and the host lock.
 * Plan: [14 roadmap](../plan/14-roadmap.md) epic E18, [12 operations and security](../plan/12-operations-and-security.md).
 * GitLab upgrade paths: https://docs.gitlab.com/update/upgrade_paths. GitLab migration ordering: https://docs.gitlab.com/development/database/migration_ordering/. Sentry self-hosted hard stops: https://forum.sentry.io/t/upgrading-from-21-6-x-to-21-7-0-fails-with-error-it-looks-like-youve-skipped-a-hard-stop-in-our-upgrade-process/14754. Nextcloud upgrades: https://docs.nextcloud.com/server/14/admin_manual/maintenance/upgrade.html.
 * The `northmes` range of [ADR 0038][adr-0038], `>=X.Y.0-0 <X.(Y+1).0-0`, admits the candidates of its own minor and refuses those of the next, which is what lets a plugin built against a candidate run on the final without a rebuild.
 * Revisit at 1.0 (the first squash and stop, the support window after 1.0 of [ADR 0038][adr-0038]), when a customer without host access asks for web upgrades, or when a second replica allows upgrades without downtime.
 
+[adr-0005]: 0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md
 [adr-0006]: 0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md
 [adr-0011]: 0011-principals-credentials-and-same-origin-rules.md
 [adr-0018]: 0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md
 [adr-0038]: 0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md
+[adr-0044]: 0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md
 [adr-0045]: 0045-backups-restore-drills-upgrades-and-rollback.md
 [adr-0047]: 0047-secrets-and-the-installation-key.md
 [adr-0066]: 0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md
