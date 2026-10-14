@@ -5146,7 +5146,7 @@ As a plant admin, I want to tell users about a planned maintenance window or oth
 
 Module: core, web, ops. Blocked by: E04 (the shell's banner strip), E18-S16. Design: the notice form and list on the Updates page and in company settings (part of the Updates page design task).
 
-ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-one-scope-tree-and-the-company-admin-role.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
 
 Acceptance criteria:
 
