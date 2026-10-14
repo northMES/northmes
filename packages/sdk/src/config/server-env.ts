@@ -54,3 +54,30 @@ export const serverEnvSchema = z
   });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+
+/**
+ * The environment of the CLI's write commands, northmes company and northmes admin (ADR 0066, ADR
+ * 0072): the server's database logins without PORT and NORTHMES_ROLE, since they listen on
+ * nothing. Their work runs as nm_app under row-level security and Better Auth's writes run as
+ * nm_auth, as in the server, and NORTHMES_PUBLIC_ORIGIN is the base URL of Better Auth.
+ */
+export const adminEnvSchema = z
+  .object({
+    NODE_ENV: nodeEnv,
+    NORTHMES_PUBLIC_ORIGIN: z.string(rule(ORIGIN_RULE)),
+    DATABASE_URL: databaseUrl,
+    NORTHMES_DB_APP_PASSWORD_FILE: secretFile,
+    NORTHMES_DB_AUTH_PASSWORD_FILE: secretFile,
+    NORTHMES_AUTH_SECRET_FILE: secretFile,
+    NORTHMES_CONFIG: configFile,
+  })
+  .refine((env) => isPublicOrigin(env.NORTHMES_PUBLIC_ORIGIN, env.NODE_ENV), {
+    ...rule(ORIGIN_RULE),
+    path: ['NORTHMES_PUBLIC_ORIGIN'],
+    when: ({ issues }) =>
+      !issues.some(
+        ({ path }) => path?.[0] === 'NODE_ENV' || path?.[0] === 'NORTHMES_PUBLIC_ORIGIN',
+      ),
+  });
+
+export type AdminEnv = z.infer<typeof adminEnvSchema>;

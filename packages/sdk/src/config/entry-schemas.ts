@@ -2,7 +2,7 @@
 import { z } from 'zod';
 import { configFile, databaseUrl, nodeEnv, secretFile } from './keys.ts';
 
-/** The environment of northmes migrate, which also serves northmes admin (ADR 0060). */
+/** The environment of northmes migrate (ADR 0060). */
 export const migrateEnvSchema = z.object({
   NODE_ENV: nodeEnv,
   DATABASE_URL: databaseUrl,

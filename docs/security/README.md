@@ -38,6 +38,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Role-based access control with permissions per scope, checked by the command bus at the row's scope | built | ADR 0010, ADR 0012; `permissions.ts`; `command-bus.ts`; `role-assignment-commands.int.test.ts` |
 | A permission check on every read | gap | [#474](https://github.com/northMES/northmes/issues/474) (production orders) |
 | No one grants a permission they lack; the last Company admin is protected | built | `role-rules.ts`, `user-rules.ts`; `last-admin` tests |
+| No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
 | Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
 | Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |

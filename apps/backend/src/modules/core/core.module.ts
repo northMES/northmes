@@ -8,14 +8,17 @@ import { RoleModule } from './api/role/role.module.ts';
 import { RoleAssignmentModule } from './api/role-assignment/role-assignment.module.ts';
 import { UserModule } from './api/user/user.module.ts';
 import { ViewerModule } from './api/viewer/viewer.module.ts';
+import { AdministrationServiceModule } from './core/administration-service.module.ts';
 
 /**
- * The core module's Nest module, which AppModule imports: sign-in and the principal guard, and one
- * module per entity of its GraphQL surface (ADR 0070).
+ * The core module's Nest module, which AppModule imports: sign-in and the principal guard, one
+ * module per entity of its GraphQL surface (ADR 0070), and the service of the CLI's company and
+ * admin commands.
  */
 @Module({
   imports: [
     AccessApiModule,
+    AdministrationServiceModule,
     ArticleModule,
     ArticleGroupModule,
     CompanyModule,
