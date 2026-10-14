@@ -1,8 +1,8 @@
 ---
 status: "proposed"
 date: 2026-10-14
-decision-makers: Krister Johansson
-consulted: Anthropic's announcement that Claude Design moves into Claude Artifacts
+decision-makers: proposed by the design migration session, to be confirmed by Krister Johansson
+consulted: Krister Johansson (keeping the design project in the repository and a NorthMES design system, 2026-10-14)
 informed: contributors and coding agents
 release: "1"
 needs-confirmation: "maintainer (the artifact version as the approval record; the approved page source in docs/design/project; no etag checks for pages approved in standalone Claude Design)"
@@ -58,9 +58,9 @@ The rest of ADR 0049 stands.
 
 ### Confirmation
 
-* The design pull request review checks that the README row, the record in `docs/design/<area>/` and the issue's Design section name the same artifact URL and version id, and that the exported page is in `docs/design/project/<area>/`.
-* The operating session's run checklist in [docs/agents/handoff/README.md](../agents/handoff/README.md) compares artifact versions before a UI task's run and at its plan gate.
-* A token pull request's description links the design system publish that carries its commit.
+* `test/meta/design-index.test.ts`, added by the first design task that approves an artifact page: every row of `docs/design/project/README.md` with an artifact URL has a version id and a page file that exists in its folder, and the record in `docs/design/<area>/` for that page names the same URL and version id.
+* `test/meta/agent-files.test.ts` gains an assertion in the same task: step 7 of the operating session's run checklist in [docs/agents/handoff/README.md](../agents/handoff/README.md) names the artifact version comparison.
+* The design system republish after a token pull request stays a review item on that pull request, because the design system artifact is private and CI cannot read it: the description links the publish whose change note names the commit.
 
 ## Pros and cons of the options
 
