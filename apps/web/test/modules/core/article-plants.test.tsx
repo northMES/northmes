@@ -474,6 +474,29 @@ describe("an article's plants", () => {
     ).toBeDefined();
   });
 
+  it('ADR0073-W2 Edit article saves an article without plants for a user without core.article:assign, whom no hidden Plants field holds back', async () => {
+    const user = userEvent.setup();
+    const unassigned = withPlants(article('AX-500', 'Axle 20 mm'), false, []);
+    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href, [
+      articleQuery(unassigned),
+      companyEditor(),
+      updateOf(
+        { ...unassigned, name: 'Axle 22 mm' },
+        { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
+      ),
+    ]);
+
+    await screen.findByRole('textbox', { name: 'Name' });
+    // The viewer's answer arrives after the article; give it the time to settle the form.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(name);
+    await user.type(name, 'Axle 22 mm');
+    await user.click(screen.getByRole('button', { name: 'Save article' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Article AX-500' })).toBeDefined();
+  });
+
   it('ADR0073-W2 Edit article lists a save without a plant in the error summary and sends nothing', async () => {
     const user = userEvent.setup();
     const axle = article('AX-500', 'Axle 20 mm');
