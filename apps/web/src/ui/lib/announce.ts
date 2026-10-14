@@ -8,6 +8,8 @@ const step = 150;
 
 const queue: string[] = [];
 let speaking = false;
+/** The timer of the step in progress, so a reset can clear it. */
+let pending: ReturnType<typeof setTimeout> | undefined;
 
 /** The polite live region; created at the end of body when the page has none, as in tests. */
 function politeRegion(): HTMLElement {
@@ -28,8 +30,7 @@ function politeRegion(): HTMLElement {
  */
 function pageGone(): boolean {
   if (typeof document !== 'undefined') return false;
-  queue.length = 0;
-  speaking = false;
+  resetAnnouncements();
   return true;
 }
 
@@ -42,10 +43,10 @@ function speakNext(): void {
   }
   speaking = true;
   politeRegion().textContent = '';
-  setTimeout(() => {
+  pending = setTimeout(() => {
     if (pageGone()) return;
     politeRegion().textContent = message;
-    setTimeout(speakNext, step);
+    pending = setTimeout(speakNext, step);
   }, step);
 }
 
@@ -57,4 +58,16 @@ function speakNext(): void {
 export function announce(message: string): void {
   queue.push(message);
   if (!speaking) speakNext();
+}
+
+/**
+ * Drops the queued messages and the timer of the step in progress, so the next message starts the
+ * queue again. The web test setup calls it after each test, so a message one test leaves queued
+ * neither speaks into the next test nor fires after the test file has ended.
+ */
+export function resetAnnouncements(): void {
+  clearTimeout(pending);
+  pending = undefined;
+  queue.length = 0;
+  speaking = false;
 }

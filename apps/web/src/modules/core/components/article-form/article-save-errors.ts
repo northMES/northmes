@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { fieldErrorsOf, hasErrorCode, refusalMessage } from '../../../../ui/lib/graphql-errors.ts';
 import { setServerErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
+import { permissionPhrase } from '../../no-access.tsx';
 import type { ArticleFields, ArticleValues } from './article-form.tsx';
 
 /**
@@ -57,4 +58,26 @@ export function showSaveError(
     return;
   }
   form.setError('root.server', { type: 'server', message: 'Your entries are kept. Try again.' });
+}
+
+/**
+ * Places the failure of a plants change on the article form, after the rest of the article saved:
+ * core.forbidden names core.article:assign at the company, as design core-304 names a refused
+ * permission and its place, and any other failure goes as showSaveError places it. The typed
+ * values stay (WCAG 3.3.7).
+ */
+export function showPlantsSaveError(
+  form: ZodForm<ArticleFields>,
+  error: unknown,
+  values: ArticleValues,
+  company: string,
+): void {
+  if (hasErrorCode(error, 'core.forbidden')) {
+    form.setError('root.server', {
+      type: 'server',
+      message: `You do not have permission to change the plants of this article. This needs ${permissionPhrase('core.article:assign')} at ${company}. Your entries are kept.`,
+    });
+    return;
+  }
+  showSaveError(form, error, values);
 }
