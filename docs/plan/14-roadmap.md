@@ -5012,6 +5012,28 @@ Tests first:
 
 - `plugin-check.test.ts`: "a plugin whose range excludes the new release is named with its range and the upgrade stops".
 
+#### E18-S11 ops: Publish a release candidate of each minor for plugin providers and partners
+
+Issue: not created yet.
+
+As a plugin provider, I want a release candidate of the next minor with its SDK and a list of what changed for plugins, so that my plugin's new version is ready when plants upgrade.
+
+Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
+
+ADRs: [0078](../adr/0078-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- release-please on a `release/X.Y` branch publishes `X.Y.0-rc.N` as a GitHub pre-release at least 14 days before the final, with signed images tagged `X.Y.0-rc.N` only, the offline bundle, the seeded snapshot and the SDK tarballs.
+- The candidate's release notes have a "for plugin providers" part from the API reports, the GraphQL schema diff, the event schema diff and the changed extension points.
+- `upgrade.sh` refuses a candidate without `--allow-prerelease`, and System health shows "running a release candidate".
+- The upgrade matrix includes the last candidate to the final.
+
+Tests first:
+
+- `test/meta/release-workflow.test.ts`: "a candidate tag publishes a pre-release with no X.Y or latest image tag".
+- `infra/test/upgrade.int.test.ts`: "upgrade.sh refuses 0.6.0-rc.1 without --allow-prerelease".
+
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
 Issue: northMES/northmes#163.
