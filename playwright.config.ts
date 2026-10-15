@@ -21,7 +21,12 @@ export default defineConfig({
     ...(process.env.CI ? [['html', { open: 'never' }] as const] : []),
     [
       '@argos-ci/playwright/reporter',
-      { uploadToArgos: process.env.CI === 'true' && Boolean(process.env.ARGOS_TOKEN) },
+      {
+        uploadToArgos: process.env.CI === 'true' && Boolean(process.env.ARGOS_TOKEN),
+        // Argos is not a required check yet (ADR 0077), so a refused upload, for example over the
+        // plan's screenshot quota, leaves the e2e result to the specs.
+        ignoreUploadFailures: true,
+      },
     ],
   ],
   use: { trace: 'retain-on-failure' },

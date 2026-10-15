@@ -24,7 +24,7 @@ async function argosOptions(env: Record<string, string | undefined>) {
   const config = await playwrightConfig(env);
   const reporters = Array.isArray(config.reporter) ? config.reporter : [];
   const argos = reporters.find(([name]) => name === argosReporter);
-  return argos?.[1] as { uploadToArgos?: boolean } | undefined;
+  return argos?.[1] as { uploadToArgos?: boolean; ignoreUploadFailures?: boolean } | undefined;
 }
 
 afterEach(() => {
@@ -38,10 +38,18 @@ describe('playwright.config.ts', () => {
     const forkPullRequest = await argosOptions({ CI: 'true', ARGOS_TOKEN: undefined });
     const ci = await argosOptions({ CI: 'true', ARGOS_TOKEN: 'argos-test-token' });
 
-    expect(local).toEqual({ uploadToArgos: false });
-    expect(localWithToken).toEqual({ uploadToArgos: false });
-    expect(forkPullRequest).toEqual({ uploadToArgos: false });
-    expect(ci).toEqual({ uploadToArgos: true });
+    expect(local).toMatchObject({ uploadToArgos: false });
+    expect(localWithToken).toMatchObject({ uploadToArgos: false });
+    expect(forkPullRequest).toMatchObject({ uploadToArgos: false });
+    expect(ci).toMatchObject({ uploadToArgos: true });
+  });
+
+  // Argos is not a required check yet (ADR 0077 makes it one after two stable weeks), so a refused
+  // upload, such as a plan's screenshot quota, must not fail the e2e job once the specs pass.
+  it('ADR0077 a failed Argos upload does not fail the e2e run', async () => {
+    const ci = await argosOptions({ CI: 'true', ARGOS_TOKEN: 'argos-test-token' });
+
+    expect(ci?.ignoreUploadFailures).toBe(true);
   });
 
   it('ADR0077 the e2e project pins the viewport, locale, time zone, color scheme and font rendering', async () => {
