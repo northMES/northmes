@@ -31,6 +31,11 @@ export interface ModuleManifest {
   /** The module has screens in the web app. Static facts the server reads without web code. */
   readonly web?: {
     readonly label: string;
+    /**
+     * The icon of the module's sidebar group, by the lucide name of one of the shell's navigation
+     * icons, such as Package (ADR 0067). The shell draws a default icon for an unknown name.
+     */
+    readonly icon?: string;
     readonly permission?: string;
     /** Sidebar position. */
     readonly order: number;

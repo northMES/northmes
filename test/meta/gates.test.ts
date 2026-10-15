@@ -91,9 +91,9 @@ describe('gates', () => {
       'turbo run build --filter=@northmes/backend --output-logs=errors-only && node apps/backend/dist/main.js',
     );
     expect(rootScripts['gen:migration']).toBe('node scripts/gen-migration.mjs');
-    // scripts/plugin-build.mjs imports the SDK's dist/, which a fresh clone does not have.
+    // scripts/plugin-build.mjs imports the dist/ of both SDKs, which a fresh clone does not have.
     expect(rootScripts['plugin:build']).toBe(
-      'turbo run build --filter=@northmes/sdk --output-logs=errors-only && node scripts/plugin-build.mjs',
+      'turbo run build --filter=@northmes/sdk --filter=@northmes/web-sdk --output-logs=errors-only && node scripts/plugin-build.mjs',
     );
     expect(rootScripts.dev).toBe('node scripts/stack/dev.mjs');
     expect(rootScripts.demo).toBe('node scripts/stack/demo.mjs');
