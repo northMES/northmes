@@ -17,7 +17,7 @@ LABEL org.opencontainers.image.source="https://github.com/northMES/northmes" \
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /src /app
-COPY deploy/northmes /usr/local/bin/northmes
+COPY --chmod=755 deploy/northmes /usr/local/bin/northmes
 USER node
 ENTRYPOINT ["northmes"]
 CMD ["serve"]
