@@ -4850,7 +4850,7 @@ Tests first:
 
 Issue: northMES/northmes#159.
 
-As a plant admin, I want an upgrade that refuses an unsafe release before downtime and keeps the schema readable by the previous image, so that I can always go back.
+As a plant admin, I want an upgrade that refuses an unsafe release before downtime and tells me how to go back, by the previous image for an `image`-class release or by restoring the database for a `restore`-class one, so that I can always go back.
 
 Module: ops, platform. Blocked by: E18-S02, E17-S04 and v0.0.1 published. Design: none.
 
@@ -4968,8 +4968,8 @@ ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-resto
 Acceptance criteria:
 
 - `.env` holds `NORTHMES_VERSION=<version>@sha256:<digest>`, which every NorthMES image in `compose.yaml` reads; the `db` image stays pinned in `compose.yaml`; `app` depends on `migrate` with `condition: service_completed_successfully`; each release's notes give the line, the verify command and the three commands.
-- `docker compose run --rm migrate northmes migrate --check` with the new line runs every check while the old version serves, and changes nothing.
-- `migrate` runs the checks first (the release path, another version still running by its heartbeat in `northmes_meta.instance`, the Compose version, extensions, drift, plugins, boot steps 1 to 10) and prints each; on a failure it exits 1 naming the way on and writes nothing.
+- `docker compose run --rm migrate northmes migrate --check` with the new line runs every check while the old version serves, prints the running version instead of refusing it, and changes nothing.
+- `migrate` runs the checks first (the release path, another version still running by its heartbeat, enforced only by a migrating run, in `northmes_meta.instance`, the Compose version, extensions, drift, plugins, boot steps 1 to 10) and prints each; on a failure it exits 1 naming the way on and writes nothing.
 - It then writes the `upgrade` row, sets the restore point `northmes-upgrade-<version>`, switches the WAL file and prints the point, migrates, writes the `release` row, removes the `upgrade` row, applies the customer file (E18-S19) and exits 0.
 - The previous line and `docker compose up -d` go back for an `image`-class release; an older image refuses a schema whose compatibility number does not fit and names the guide.
 - The init script and `northmes db bootstrap` grant `nm_owner` `EXECUTE` on `pg_create_restore_point` and `pg_switch_wal`; `northmes-db-extensions` in the `db` image updates extensions, and `migrate` refuses while one is older.
@@ -4991,7 +4991,7 @@ ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-resto
 
 Acceptance criteria:
 
-- The release workflow attaches a seeded snapshot (`pg_dump` of an installation built with that release's CLI and fixtures, the example plugins included) to each release.
+- The release workflow attaches a seeded snapshot (`pg_dump` of an installation built with that release's CLI and fixtures, the example plugins included) to each release after v0.0.1; v0.0.1's snapshot is built from the `v0.0.1` tag and kept as a CI cache artifact.
 - The upgrade matrix restores the snapshot of every release from the candidate's `minimumUpgradeFrom`, runs the candidate's `migrate`, boots it, runs the smoke check and data assertions and loads the example plugins; it runs on the release-please pull request and nightly.
 - The sorted `pg_dump --schema-only` of a fresh install equals that of every upgraded snapshot, and a difference is printed.
 - A snapshot older than `minimumUpgradeFrom` is refused by `migrate --check`.
