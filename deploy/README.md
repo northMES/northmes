@@ -25,7 +25,7 @@ You need Docker Engine with Compose, and ports 80 and 443 free on the host.
 
    Set `NORTHMES_VERSION` to the line in the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.
 
-3. Create the secret files. Each holds one random value, readable only by the user the NorthMES image runs as (uid 1000):
+3. Create the secret files. With a Postgres server of your own, read [Use your own Postgres](#use-your-own-postgres) first. Each holds one random value, readable only by the user the NorthMES image runs as (uid 1000):
 
    ```sh
    mkdir -p secrets
@@ -56,6 +56,31 @@ The browser warns about the certificate, because Caddy signed it with its own au
 ```sh
 docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./northmes-root.crt
 ```
+
+## Use your own Postgres
+
+NorthMES can use a Postgres 18 server you already run, next to the other databases on it, in place of the `db` service. Do this at install, before the first `docker compose up -d`.
+
+1. On that server, create a database for NorthMES and an admin role that may create roles and owns the database. A managed service's admin role already has `CREATEROLE`:
+
+   ```sql
+   create role northmes_admin login createrole password '<the admin password>';
+   create database northmes owner northmes_admin;
+   ```
+
+2. In `.env`, select `compose.external-db.yaml`, which keeps `db` from starting, and name the server, the database and the admin:
+
+   ```sh
+   COMPOSE_FILE=compose.yaml:compose.external-db.yaml
+   NORTHMES_DATABASE_URL=postgres://pg.example.com:5432/northmes?sslmode=verify-full
+   NORTHMES_DB_ADMIN_USER=northmes_admin
+   ```
+
+   The URL never holds a user or a password: NorthMES refuses one that does. Keep `sslmode=verify-full`: it encrypts the connection and checks the server's certificate against the public certificate authorities, so the server must offer TLS. Use a direct connection, not a pooler in transaction mode, because migrations hold a session lock.
+
+3. Put the admin's password in `secrets/postgres_password` instead of a random value. Create the other secret files as in [Install](#install).
+
+`bootstrap` logs in as the admin and creates the roles NorthMES runs as: `nm_owner` for migrations, `nm_app` and `nm_auth` for the app, and `nm_ext`, with the passwords in `secrets/`. `bootstrap` runs on every `docker compose up -d` and changes nothing once the roles are in place, so keep the admin's password in its file. Role names are shared by every database on a server, so one server holds one NorthMES installation.
 
 ## Upgrade
 
