@@ -11,6 +11,7 @@ interface Service {
   secrets?: (string | { source: string })[];
   environment?: Record<string, string>;
   ports?: string[];
+  volumes?: string[];
 }
 
 interface Compose {
@@ -30,8 +31,15 @@ const secretsOf = (service: Service | undefined) =>
   (service?.secrets ?? []).map((secret) => (typeof secret === 'string' ? secret : secret.source));
 
 describe('the Compose bundle (ADR 0080)', () => {
-  it('runs db, bootstrap, migrate, app and caddy', () => {
-    expect(Object.keys(services).sort()).toEqual(['app', 'bootstrap', 'caddy', 'db', 'migrate']);
+  it('runs db, bootstrap, migrate, app and caddy, and backup when its profile is on', () => {
+    expect(Object.keys(services).sort()).toEqual([
+      'app',
+      'backup',
+      'bootstrap',
+      'caddy',
+      'db',
+      'migrate',
+    ]);
   });
 
   it('every NorthMES service reads its image from the one NORTHMES_VERSION line in .env', () => {
@@ -55,13 +63,14 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.migrate?.command).toEqual(['migrate']);
   });
 
-  it('gives the superuser password only to db and bootstrap', () => {
+  // backup dumps as the admin, which reads every table past row-level security (ADR 0045).
+  it('gives the superuser password only to db, bootstrap and backup', () => {
     const holders = Object.entries(services)
       .filter(([, service]) => secretsOf(service).includes('postgres_password'))
       .map(([name]) => name)
       .sort();
 
-    expect(holders).toEqual(['bootstrap', 'db']);
+    expect(holders).toEqual(['backup', 'bootstrap', 'db']);
   });
 
   it('gives the nm_owner password only to bootstrap and migrate, never to app', () => {
@@ -121,6 +130,34 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(read('deploy/northmes.env.example')).toContain(
       '# COMPOSE_FILE=compose.yaml:compose.external-db.yaml',
     );
+  });
+
+  it('ADR0045 backup starts only under the backup profile, on the pinned Postgres image, and writes to ./backups', () => {
+    const backup = services.backup;
+
+    expect(backup?.profiles).toEqual(['backup']);
+    expect(backup?.image).toBe(pgImage);
+    expect(backup?.command).toEqual(['nightly']);
+    expect(backup?.environment?.DATABASE_URL).toBe(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      '${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}',
+    );
+    expect(backup?.volumes).toEqual(
+      expect.arrayContaining([
+        './backup.sh:/backup.sh:ro',
+        '.:/bundle:ro',
+        './backups:/backups',
+        'caddy-data:/data',
+      ]),
+    );
+    expect(read('deploy/backup.sh')).toContain('-mtime +6 -delete');
+  });
+
+  it('ADR0045 the example .env turns the backup profile on for the bundled db, and the own-Postgres lines turn it off', () => {
+    const example = read('deploy/northmes.env.example');
+
+    expect(example.split('\n')).toContain('COMPOSE_PROFILES=backup');
+    expect(example).toContain('# COMPOSE_PROFILES=');
   });
 
   it('the example .env holds the version line and no secret', () => {
