@@ -4790,7 +4790,7 @@ Notes: labelled `human`. This is the M3 evidence.
 
 Issue: northMES/northmes#156.
 
-Goal: every release produces signed, attested images, SBOMs and an offline amd64 image bundle that installs without internet; an upgrade is new image lines in `.env` and `docker compose up -d`, whose `migrate` container checks first, pauses the running app, sets a restore point and migrates; a rollback starts the previous image or restores to that point. A nightly N-1 test proves both directions.
+Goal: every release produces signed, attested images, SBOMs and an offline amd64 image bundle that installs without internet; an upgrade is one new line in `.env` and `docker compose pull`, `down` and `up -d`, whose `migrate` container checks first, sets a restore point and migrates; a rollback starts the previous image or restores to that point. A nightly N-1 test proves both directions.
 
 Who it is for: Plant admin. Also: Maintainer.
 
@@ -4876,7 +4876,7 @@ ADRs: [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0079
 
 Acceptance criteria:
 
-- The upgrade guide's restore steps first export `audit.command` and `production_start.report` rows written after the restore point to a CSV with a command in the `migrate` container, then restore to `northmes-upgrade-<version>` with pgBackRest in the `db` container, wait until recovery ends and start the previous image lines; `rollback.sh` is later (ADR 0079).
+- The upgrade guide's restore steps first export `audit.command` and `production_start.report` rows written after the restore point to a CSV with a command in the `migrate` container, then restore to `northmes-upgrade-<version>` with pgBackRest in the `db` container, wait until recovery ends and start the previous version; `rollback.sh` is later (ADR 0079).
 - It never rolls the database image back without a restore.
 - Restore and rollback write a security event through a CLI context, and the shell shows admins and planners "Data restored to <time>; changes after that were lost." for 24 hours.
 - The Pyramid reconcile runs as the last step, after the next poll.
@@ -4952,11 +4952,11 @@ Tests first:
 - `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
 - `apps/backend/src/migrate/migrate-check-drift.int.test.ts`: "a column added by hand is named before any file runs".
 
-#### E18-S08 ops: Upgrade by editing .env and running docker compose up -d
+#### E18-S08 ops: Upgrade by editing .env and running docker compose
 
 Issue: not created yet.
 
-As a plant admin, I want to upgrade by pasting the new image lines into `.env` and running `docker compose up -d`, with every check run before anything stops, so that an upgrade needs no script and a failed one can always go back.
+As a plant admin, I want to upgrade by changing one line in `.env` and running `docker compose pull`, `down` and `up -d`, as with any self-hosted Compose application, with the checks available before the window, so that an upgrade needs no script and a failed one can always go back.
 
 Module: ops, platform. Blocked by: E18-S03, E18-S07. Design: none.
 
@@ -4964,17 +4964,17 @@ ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-resto
 
 Acceptance criteria:
 
-- `.env` holds `NORTHMES_IMAGE` and `NORTHMES_DB_IMAGE` as `<version>@sha256:<digest>`, which `compose.yaml` reads; `app` depends on `migrate` with `condition: service_completed_successfully`; each release's notes give the two lines and the command that verifies the image.
-- `migrate` runs the checks first (the release path, the Compose version, a release candidate, extensions, drift, plugins, boot steps 1 to 10); on a failure it exits 1 naming the way on, writes nothing, and the old version keeps serving.
-- It then writes the `upgrade` row; each backend pauses within 5 seconds (`503` with `Retry-After` on `/api` and `/graphql`, the maintenance page for browsers, no new jobs) and records it in `northmes_meta.instance`; `migrate` waits for every live backend, or removes the row and exits 1 after 60 seconds.
-- It sets the restore point `northmes-upgrade-<version>`, switches the WAL file and records it, migrates, writes the `release` row, removes the `upgrade` row, applies the customer file (E18-S19) and exits 0; an old backend stays paused once the `release` row names a newer version.
-- The previous image lines and `docker compose up -d` go back for an `image`-class release; an older image refuses a schema whose compatibility number does not fit and names the guide.
+- `.env` holds `NORTHMES_VERSION=<version>@sha256:<digest>`, which every NorthMES image in `compose.yaml` reads; the `db` image stays pinned in `compose.yaml`; `app` depends on `migrate` with `condition: service_completed_successfully`; each release's notes give the line, the verify command and the three commands.
+- `docker compose run --rm migrate northmes migrate --check` with the new line runs every check while the old version serves, and changes nothing.
+- `migrate` runs the checks first (the release path, another version still running by its heartbeat in `northmes_meta.instance`, the Compose version, extensions, drift, plugins, boot steps 1 to 10) and prints each; on a failure it exits 1 naming the way on and writes nothing.
+- It then writes the `upgrade` row, sets the restore point `northmes-upgrade-<version>`, switches the WAL file and prints the point, migrates, writes the `release` row, removes the `upgrade` row, applies the customer file (E18-S19) and exits 0.
+- The previous line and `docker compose up -d` go back for an `image`-class release; an older image refuses a schema whose compatibility number does not fit and names the guide.
 - The init script and `northmes db bootstrap` grant `nm_owner` `EXECUTE` on `pg_create_restore_point` and `pg_switch_wal`; `northmes-db-extensions` in the `db` image updates extensions, and `migrate` refuses while one is older.
 
 Tests first:
 
-- `apps/backend/src/migrate/migrate-pause.int.test.ts`: "a backend pauses within 5 seconds of an upgrade row"; "migrate gives up after 60 seconds and the old version serves on"; "a backend stays paused once the release row names a newer version".
-- `infra/test/compose-upgrade.int.test.ts` (nightly): "new image lines and up -d upgrade with every row kept"; "a failing check leaves N-1 serving"; "a file that fails halfway leaves the old backends paused, and the restore to the point brings back every row"; "the previous image lines roll back an image-class release".
+- `apps/backend/src/migrate/migrate-running.int.test.ts`: "migrate refuses while a backend of another version has a fresh heartbeat, naming docker compose down"; "an old heartbeat does not block".
+- `infra/test/compose-upgrade.int.test.ts` (nightly): "the new line with pull, down and up -d upgrades with every row kept"; "migrate --check beside a serving N-1 changes nothing"; "a file that fails halfway leaves the stack stopped, and the restore to the point brings back every row"; "the previous line rolls back an image-class release".
 
 #### E18-S09 ops: Test every supported upgrade path on each release
 
@@ -5010,7 +5010,7 @@ ADRs: [0079](../adr/0079-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-resto
 
 Acceptance criteria:
 
-- `migrate` exits 1 before the pause when an installed plugin has no version for the new release, and names each plugin's id, version and NorthMES range, and a newer compatible version when its index has one.
+- `migrate` exits 1 before the restore point when an installed plugin has no version for the new release, and names each plugin's id, version and NorthMES range, and a newer compatible version when its index has one.
 - System health and the Updates page show "N plugins have no version for <release>" once the installation knows of a newer release.
 
 Tests first:
@@ -5031,13 +5031,12 @@ Acceptance criteria:
 
 - release-please on a `release/X.Y` branch publishes `X.Y.0-rc.N` as a GitHub pre-release at least 14 days before the final, with signed images tagged `X.Y.0-rc.N` only, the offline bundle, the seeded snapshot and the SDK tarballs.
 - The candidate's release notes have a "for plugin providers" part from the API reports, the GraphQL schema diff, the event schema diff and the changed extension points.
-- `migrate` refuses a candidate unless `.env` sets `NORTHMES_ALLOW_PRERELEASE=true`, and System health shows "running a release candidate".
+- System health shows "running a release candidate"; installing one means writing its version on purpose.
 - The upgrade matrix includes the last candidate to the final.
 
 Tests first:
 
 - `test/meta/release-workflow.test.ts`: "a candidate tag publishes a pre-release with no X.Y or latest image tag".
-- `infra/test/upgrade.int.test.ts`: "migrate refuses 0.6.0-rc.1 without NORTHMES_ALLOW_PRERELEASE".
 
 #### E18-S12 platform: Compute the rollback class and keep contract steps a release later
 
@@ -5099,7 +5098,7 @@ Acceptance criteria:
 Tests first:
 
 - `infra/test/upgrade-crash.int.test.ts` (nightly): "migrate killed after each side effect ends working after up -d again or the previous image, with one restore point, one security event per step and no lost rows".
-- `infra/test/upgrade.int.test.ts`: "an older image is refused before the pause when the installed release is of the restore class"; "an upgrade writes one security event when migrate runs twice".
+- `infra/test/upgrade.int.test.ts`: "an older image is refused before the restore point when the installed release is of the restore class"; "an upgrade writes one security event when migrate runs twice".
 
 #### E18-S15 ops: Time migrations on a large snapshot nightly
 

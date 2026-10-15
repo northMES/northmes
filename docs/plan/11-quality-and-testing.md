@@ -388,7 +388,7 @@ An upgrade test restores a snapshot into a Testcontainers Postgres, runs the can
 |---|---|---|
 | Every pull request | Migration lint and markers; the computed rollback class; `migrate.test.ts` on a fresh database; the `migrate --check` path tests with fixture manifests | merge |
 | Pull requests that change a `migrations/` folder, the runner or a seed fixture | The upgrade test from the latest release's snapshot to the pull request, checks 1 to 7 | merge |
-| The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; the upgrade from N-1 to N through the real Compose file: the image lines of N in `.env` and `docker compose up -d` | the release |
+| The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; the upgrade from N-1 to N through the real Compose file: the line of N in `.env` and `docker compose pull`, `down` and `up -d` | the release |
 | Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
 | Before the pilot install | An upgrade from N to N+1 and a rollback on the pilot-like VM, as documented (E18-S06) | the pilot install |
 | Before every upgrade to a release of the `restore` class | A try on a copy of the customer's data restored with the drill procedure of ADR 0045, until the rehearsal command of ADR 0079 comes (its trigger: the first `restore`-class release after the pilot, or a migration that fails on an installation's data) | that upgrade |
@@ -397,13 +397,13 @@ The matrix runs one job per "from" version in parallel, each with its own contai
 
 ### Failures the tests inject
 
-- A migration that fails halfway: the old backends stay paused, and the guide's restore to the restore point brings back every row written before it.
-- `migrate` killed after each side effect and during a file: for an `image`-class release, `docker compose up -d` again, or the previous image lines, end with a working installation and no lost rows; for a `restore`-class release, the guide's restore ends with a working old installation that holds every row written before the restore point, and only writes after it are lost.
+- A migration that fails halfway: the stack stays stopped, and the guide's restore to the restore point brings back every row written before it.
+- `migrate` killed after each side effect and during a file: for an `image`-class release, `docker compose up -d` again, or the previous line in `.env`, end with a working installation and no lost rows; for a `restore`-class release, the guide's restore ends with a working old installation that holds every row written before the restore point, and only writes after it are lost.
 - A migration over its time budget: it fails on `statement_timeout`, and `northmes_meta.migration` does not record it.
-- An older image that cannot run on the schema: refused before the pause, naming the restore guide.
-- An installed plugin whose range excludes the release: `migrate` exits 1 before the pause and names it.
+- An older image that cannot run on the schema: refused before the restore point, naming the restore guide.
+- An installed plugin whose range excludes the release: `migrate` exits 1 before the restore point and names it.
 - A snapshot below `minimumUpgradeFrom`: `migrate --check` exits 1 with the path, and nothing changes.
-- A backend that does not pause within 60 seconds: `migrate` removes the `upgrade` row, exits 1, and the old version serves on.
+- `docker compose up -d` without `down` while the old version runs: `migrate` exits 1 naming the running version and `docker compose down`, and writes nothing.
 - A gateway posting during the stop: it gets `503` with `Retry-After`, and its resent batch is stored once afterwards.
 
 ### Running the tests locally
@@ -417,7 +417,7 @@ Every command runs from the repository root through pnpm ([ADR 0058](../adr/0058
 | `pnpm upgrade:test --large` | Uses the large snapshot and prints each migration's time against the budget. |
 | `pnpm upgrade:seed --ref v0.6.0` | Builds a snapshot from a tag, a branch or the working tree. |
 | `pnpm upgrade:path 0.3.2 0.7.0` | Prints the supported path. |
-| `pnpm upgrade:stack --from 0.6.1` | Starts the real Compose stack with the 0.6.1 images and its snapshot, builds the working tree's image, puts its lines in `.env` and runs `docker compose up -d`, then goes back with the previous lines, as the nightly ops test does. |
+| `pnpm upgrade:stack --from 0.6.1` | Starts the real Compose stack with the 0.6.1 images and its snapshot, builds the working tree's image, puts its line in `.env` and runs `docker compose pull`, `down` and `up -d`, then goes back with the previous line, as the nightly ops test does. |
 
 A failing local run leaves the containers up with `--keep`, and prints the connection string and the schema diff, so the contributor can inspect the database.
 
