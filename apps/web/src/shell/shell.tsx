@@ -247,7 +247,7 @@ function SignInPage({
       signedOut={search.signedOut === true}
       sessionEnded={state.sessionEnded === true}
       onSignedIn={() => {
-        const href = returnPathOf(search);
+        const href = returnPathOf(search, window.location.origin);
         if (onSignedIn) onSignedIn(href);
         else void router.navigate({ href });
       }}
