@@ -2,6 +2,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Inject, Injectable } from '@nestjs/common';
 import { toNodeHandler } from 'better-auth/node';
+import { CLIENT_ADDRESS_HEADER } from '../../infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../infrastructure/auth/better-auth.ts';
 
 /** A user to create: the email they sign in with, their username and their first password. */
@@ -82,8 +83,13 @@ export class AuthService {
 
   constructor(@Inject(BetterAuth) private readonly betterAuth: BetterAuth) {}
 
-  /** Answers a request to /api/auth/* with Better Auth's handler. */
-  handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  /**
+   * Answers a request to /api/auth/* with Better Auth's handler. The client's address goes to Better
+   * Auth in CLIENT_ADDRESS_HEADER: Express's req.ip, which follows NORTHMES_TRUSTED_PROXY_HOPS, or
+   * the connection's address. A value the client sent in that header is replaced.
+   */
+  handle(request: IncomingMessage & { ip?: string }, response: ServerResponse): Promise<void> {
+    request.headers[CLIENT_ADDRESS_HEADER] = request.ip ?? request.socket.remoteAddress ?? '';
     this.#handler ??= toNodeHandler(this.betterAuth.auth);
     return this.#handler(request, response);
   }

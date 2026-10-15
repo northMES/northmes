@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AuthService } from '../../src/modules/core/core/access/auth.service.ts';
-import { hostFactory, queryAsCore } from '../../src/testing.ts';
+import { fromNewClient, hostFactory, queryAsCore } from '../../src/testing.ts';
 import { runCli } from '../fixtures/cli-run.ts';
 import { useServerEnv } from '../fixtures/server-env.ts';
 
@@ -36,7 +36,7 @@ describe('northmes admin reset-password', () => {
   async function signInStatus(email: string, password: string) {
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     return response.status;

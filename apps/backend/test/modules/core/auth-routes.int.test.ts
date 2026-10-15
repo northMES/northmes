@@ -2,7 +2,7 @@
 import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
-import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
+import { fromNewClient, givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
 
 /** The web app's origin in these tests, as webOrigins in northmes.config.json would list it. */
 const webOrigin = 'http://localhost:5173';
@@ -35,7 +35,7 @@ describe("Better Auth's routes over HTTP", () => {
     ]);
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: webOrigin },
+      headers: { 'content-type': 'application/json', origin: webOrigin, ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
     return { user, sessionToken: signedIn.headers.get('set-auth-token') ?? '' };
