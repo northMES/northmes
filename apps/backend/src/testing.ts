@@ -443,6 +443,22 @@ export async function givenUser(ownerUrl: string, grants: readonly Grant[]): Pro
   return userId;
 }
 
+/** How many client addresses fromNewClient has handed out in this process. */
+let clients = 0;
+
+/**
+ * The X-Forwarded-For header of a request from a client address that no other request of this
+ * process names. A test app trusts one proxy hop (configForTest), so the server takes the address
+ * as the client's, and Better Auth's throttle on sign-in counts the request apart from every other
+ * test's (#476).
+ */
+export function fromNewClient(): { readonly 'x-forwarded-for': string } {
+  clients += 1;
+  return {
+    'x-forwarded-for': `10.${(clients >> 16) & 255}.${(clients >> 8) & 255}.${clients & 255}`,
+  };
+}
+
 /** A user that signIn created and signed in. */
 export interface SignedIn {
   readonly userId: string;
@@ -472,7 +488,7 @@ export async function signIn(
   const url = await app.getUrl();
   const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...fromNewClient() },
     body: JSON.stringify({ email, password }),
   });
   const sessionToken = signedIn.headers.get('set-auth-token');
@@ -480,7 +496,7 @@ export async function signIn(
     throw new Error(`signIn: sign-in answered ${signedIn.status}: ${await signedIn.text()}`);
   }
   const token = await fetch(`${url}/api/auth/token`, {
-    headers: { authorization: `Bearer ${sessionToken}` },
+    headers: { authorization: `Bearer ${sessionToken}`, ...fromNewClient() },
   });
   if (!token.ok) {
     throw new Error(`signIn: /api/auth/token answered ${token.status}: ${await token.text()}`);

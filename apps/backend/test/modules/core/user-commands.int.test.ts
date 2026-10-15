@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import {
+  fromNewClient,
   type Grant,
   givenAssignment,
   givenCompany,
@@ -88,7 +89,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   async function signInStatus(email: string, password: string): Promise<number> {
     const answer = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     return answer.status;
@@ -140,7 +141,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   async function clientOf(email: string, password: string): Promise<GqlClient> {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     const sessionToken = signedIn.headers.get('set-auth-token') ?? '';
@@ -687,7 +688,7 @@ describe('coreResetPassword', () => {
   async function signInStatus(email: string, password: string): Promise<number> {
     const answer = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     return answer.status;
@@ -706,7 +707,7 @@ describe('coreResetPassword', () => {
     const sessionToken = (
       await fetch(`${url}/api/auth/sign-in/email`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...fromNewClient() },
         body: JSON.stringify({ email: operator.email, password: operator.password }),
       })
     ).headers.get('set-auth-token');
@@ -720,7 +721,7 @@ describe('coreResetPassword', () => {
     });
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email: operator.email, password: temporary }),
     });
     const { token } = (await (
