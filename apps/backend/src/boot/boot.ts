@@ -31,6 +31,7 @@ import { builtShellDir } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
 import { BootError } from './boot-error.ts';
 import { defaultConfigFile, readConfigFile } from './config-file.ts';
+import { checkNoDevUsers } from './dev-users.ts';
 
 export interface BootOptions {
   /** The environment the server runs with. Without it, loadEnv reads process.env (ADR 0060). */
@@ -247,6 +248,14 @@ function migrationCheckUrl(
   return url.href;
 }
 
+/** DATABASE_URL with the login of Better Auth's pool, nm_auth, which reads auth.user. */
+function authUrl(databaseUrl: string, secrets: Secrets): string {
+  const url = new URL(databaseUrl);
+  url.username = 'nm_auth';
+  url.password = secrets.NORTHMES_DB_AUTH_PASSWORD ?? '';
+  return url.href;
+}
+
 /**
  * The boot steps of ADR 0002 that run before the server listens, for an entry point's validated
  * environment. pnpm northmes migrate runs the same steps before its first file.
@@ -285,6 +294,10 @@ async function bootSteps<
   const pending = await checkPending(migrationCheckUrl(env.DATABASE_URL, mode, secrets), catalog, {
     mode,
   });
+  // The seed's dev users have public passwords, so production refuses to serve them (audit W8).
+  if (mode === 'serve' && env.NODE_ENV === 'production') {
+    await checkNoDevUsers(authUrl(env.DATABASE_URL, secrets));
+  }
   const servers = await importServers(catalog);
   const root = AppModule.forRoot(config, servers, { webOrigins, ...appOptions });
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
