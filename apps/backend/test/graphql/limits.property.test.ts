@@ -68,6 +68,21 @@ const body = fc.oneof(
   fc.string(),
 );
 
+/** Runs one operation as JSON and returns the error messages of its answer. */
+async function limitMessages(source: string, variables?: Record<string, unknown>) {
+  const text = JSON.stringify({ query: source, variables });
+  const response = await server.fetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'content-length': String(Buffer.byteLength(text)),
+    },
+    body: text,
+  });
+  const answer = (await response.json()) as { errors?: { message: string }[] };
+  return (answer.errors ?? []).map((error) => error.message);
+}
+
 describe('the GraphQL request limits under generated input (B4)', () => {
   it('B4 every request body gets a client error or an answer, never a server error or a stack trace', async () => {
     await fc.assert(
@@ -86,6 +101,51 @@ describe('the GraphQL request limits under generated input (B4)', () => {
         expect(answer).not.toMatch(/\bat .+\.(ts|js):\d+/);
       }),
       { numRuns: 300 },
+    );
+  });
+
+  it('B4 the server refuses a query exactly when it is deeper than the depth limit', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 0, max: graphqlLimits.maxDepth + 8 }), async (levels) => {
+        // me is depth 1 and each friend adds one, so name sits at depth levels + 2.
+        const source = `{ me { ${'friend { '.repeat(levels)}name${' }'.repeat(levels)} } }`;
+        const refused = (await limitMessages(source)).some((m) => /depth limit/i.test(m));
+
+        expect(refused).toBe(levels + 2 > graphqlLimits.maxDepth);
+      }),
+      { numRuns: 50 },
+    );
+  });
+
+  it('B4 the server refuses a query exactly when it has more aliases than the limit', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 1, max: graphqlLimits.maxAliases * 3 }), async (count) => {
+        const source = `{ ${Array.from({ length: count }, (_, i) => `a${i}: me { name }`).join(' ')} }`;
+        const refused = (await limitMessages(source)).some((m) => /aliases limit/i.test(m));
+
+        expect(refused).toBe(count > graphqlLimits.maxAliases);
+      }),
+      { numRuns: 50 },
+    );
+  });
+
+  it('B4 the server refuses an operation exactly when its cost is over the cost limit', async () => {
+    const nested = `query ($outer: Int, $inner: Int) {
+      orders(first: $outer) { edges { node { id operations(first: $inner) { edges { node { id } } } } } }
+    }`;
+    const size = fc.integer({ min: 0, max: 200 });
+
+    await fc.assert(
+      fc.asyncProperty(size, size, async (outer, inner) => {
+        // The connection costs 1, and each edge an edge, an order, a connection and inner edges
+        // of an edge and an operation: 1 + outer × (3 + inner × 2), as in limits.test.ts.
+        const cost = 1 + outer * (3 + inner * 2);
+        const messages = await limitMessages(nested, { outer, inner });
+        const refused = messages.some((m) => /more than the limit of/.test(m));
+
+        expect(refused).toBe(cost > graphqlLimits.maxCost);
+      }),
+      { numRuns: 100 },
     );
   });
 
