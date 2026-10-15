@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F3 order palette</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.pgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px 16px}
+.pc{display:grid;gap:8px;min-width:0}
+.pc .lane{height:56px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.pc .blk{left:8px;right:8px}
+.pm{display:grid;gap:1px;font-size:12px;line-height:16px}
+.pm .rr{display:flex;gap:10px}
+.grp{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.board{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--lane)}
+.gr-row{display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;background:var(--muted);border-bottom:1px solid var(--border);font-size:12px;font-weight:600}
+.gr-dot{width:12px;height:12px;border-radius:3px;background:var(--g);box-shadow:0 0 0 1px var(--foreground)}
+.gr-mrow{display:grid;grid-template-columns:150px minmax(0,1fr);border-bottom:1px solid var(--border)}
+.gr-mh{display:flex;align-items:center;padding:0 12px 0 18px;background:var(--card);border-right:1px solid var(--border);box-shadow:inset 6px 0 0 var(--g);font-size:13px;font-weight:600}
+.erp{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.erp .esw{display:grid;align-content:center;height:56px;padding:0 12px;border:1px solid var(--block-border);border-radius:var(--radius-sm);font-size:12px;line-height:16px}
+.rules{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 40px;margin:0;padding:0 0 0 18px}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Order palette">
+        <h2 class="t2">The 20-color order palette, the equipment group colors and the block text rule</h2>
+        <p class="lede">Each sample is a board block on the {{ themeName }} lane: the fill is the order color, the edge is the 1 px block-border, and the text is pure black or pure white from textColorFor. All 20 colors and both group colors take black text in both themes. Color groups orders and never carries state; on the board the fill is the order color in every state.</p>
+        <div class="tiers">
+          <sc-for list="{{ tiers }}" as="t">
+            <div class="panel" style="padding:14px 16px"><div class="b6">{{ t.name }}</div><div class="sm mut">{{ t.desc }}</div></div>
+          </sc-for>
+        </div>
+        <div class="sec pgrid">
+          <sc-for list="{{ palette }}" as="p">
+            <div class="pc">
+              <div class="lane"><div class="blk" style="{{ p.st }}"><div class="b1"><span class="num">{{ p.num }}</span></div><div class="b2">{{ p.art }}</div></div></div>
+              <div class="pm">
+                <span class="mono b6">{{ p.n }}</span>
+                <span class="mono">oklch({{ p.v }}) {{ p.hex }}</span>
+                <span class="mut">{{ p.tier }}</span>
+                <span class="rr"><span>Black text <span class="mono b6">{{ p.bt }}</span></span><span>Ring <span class="mono b6">{{ p.ring }}</span></span></span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Equipment group colors</h3>
+          <p class="sm mut" style="margin:-4px 0 12px">A group row carries the group color as a dot and each machine row header as a 6 px stripe. The group name is always written, so the color never carries meaning alone. On import a group keeps its color, else takes the import color, else gets one of the 20 palette colors (Q10).</p>
+          <div class="grp">
+            <sc-for list="{{ groups }}" as="g">
+              <div class="board" style="{{ g.st }}">
+                <div class="gr-row"><span class="gr-dot"></span>{{ g.label }}</div>
+                <div class="gr-mrow"><div class="gr-mh">{{ g.machine }}</div><div class="lane"><div class="blk" style="left:16px;width:220px;--fill:var(--g);--ink:#000000"><div class="b1"><span class="num">{{ g.num }}</span></div><div class="b2">Group fill, black text {{ g.bt }}</div></div></div></div>
+                <div class="sm" style="padding:10px 12px;background:var(--card)"><span class="mono b6">{{ g.n }}</span> <span class="mono">oklch({{ g.v }}) {{ g.hex }}</span>. Black text {{ g.bt }}:1. Ring over the fill {{ g.ring }}:1. Stripe on card {{ g.stripe }}:1, not required because the group name is written.</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Block text rule for any color</h3>
+          <p class="sm mut" style="margin:-4px 0 12px">Order colors are not limited to the palette: the ERP sends ColorCode as #RRGGBB and a planner can pick any color. textColorFor(fill) in @northmes/contracts returns pure black or pure white, whichever contrasts more, and reaches at least 4.58:1 on every one of the 16,777,216 sRGB colors. The fills below are invented examples; #cf0dcc is the worst case. One imported hex is drawn the same in both themes until Q9 settles a dark rule.</p>
+          <div class="erp">
+            <sc-for list="{{ erp }}" as="e">
+              <div class="pm">
+                <div class="esw" style="{{ e.st }}"><span class="b6 mono">{{ e.hex }}</span><span>{{ e.ink }} text {{ e.r }}:1</span></div>
+                <span class="mut">{{ e.note }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Block edge and spacing</h3>
+          <div class="board" style="max-width:760px">
+            <div class="lane">
+              <sc-for list="{{ run }}" as="b">
+                <div class="blk" style="{{ b.st }}"><div class="b1"><span class="num">{{ b.num }}</span></div><div class="b2">{{ b.art }}</div></div>
+              </sc-for>
+            </div>
+          </div>
+          <p class="sm mut" style="margin:10px 0 0">Every block has a 1 px block-border and a 1 px gap to its neighbor, so the block edge reaches {{ edge }}:1 against the lane whatever the fill. A palette color therefore needs no 3:1 against the lane itself.</p>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Rules</h3>
+          <ul class="rules">
+            <li>Color groups and never carries state; no state maps to a hue at any density.</li>
+            <li>On the board the fill is always the order color, in every state.</li>
+            <li>Board block colors are a CSS variable, not a class per color; dynamic class names are banned.</li>
+            <li>Palette classes go through @source inline() for the swatch components.</li>
+            <li>Only the color swatch components use forced-color-adjust: none; a CI grep fails any other use.</li>
+            <li>ColorSwatchPicker offers the 20 palette colors plus any color, with text from textColorFor.</li>
+            <li>The value type is paletteColor in @northmes/contracts.</li>
+            <li>Palette values differ per theme (dark is light lightness minus 0.08). The ERP sends one hex (Q9).</li>
+          </ul>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          const P = [
+["palette-1","mid, hue 30","0.78 0.09 30","#eba295","0.7 0.09 30","#d0897d","10.13","7.55","8.35","6.46"],
+["palette-2","mid, hue 75","0.78 0.09 75","#d9af75","0.7 0.09 75","#bf965d","10.33","7.73","8.52","6.62"],
+["palette-3","mid, hue 120","0.78 0.09 120","#b0c07e","0.7 0.09 120","#97a766","10.68","8.03","8.81","6.84"],
+["palette-4","mid, hue 165","0.78 0.09 165","#7ecaa9","0.7 0.09 165","#65b090","10.90","8.16","8.98","6.98"],
+["palette-5","mid, hue 210","0.78 0.09 210","#6cc7d7","0.7 0.09 210","#51aebd","10.78","8.12","8.89","6.92"],
+["palette-6","mid, hue 255","0.78 0.09 255","#90baf1","0.7 0.09 255","#78a1d6","10.47","7.86","8.63","6.71"],
+["palette-7","mid, hue 300","0.78 0.09 300","#c0abe9","0.7 0.09 300","#a792ce","10.21","7.63","8.41","6.50"],
+["palette-8","mid, hue 345","0.78 0.09 345","#e2a0c5","0.7 0.09 345","#c788ab","10.06","7.52","8.30","6.41"],
+["palette-9","pale, hue 0","0.86 0.07 0","#f9becf","0.78 0.07 0","#dea5b5","13.29","10.15","10.95","8.67"],
+["palette-10","pale, hue 60","0.86 0.07 60","#f4c7a3","0.78 0.07 60","#d9ad8a","13.53","10.29","11.15","8.81"],
+["palette-11","pale, hue 120","0.86 0.07 120","#cbd8a5","0.78 0.07 120","#b1bf8c","13.90","10.66","11.46","9.09"],
+["palette-12","pale, hue 180","0.86 0.07 180","#9ee1d3","0.78 0.07 180","#85c7b9","14.11","10.81","11.63","9.22"],
+["palette-13","pale, hue 240","0.86 0.07 240","#a8d8fb","0.78 0.07 240","#8fbee0","13.86","10.60","11.41","9.04"],
+["palette-14","pale, hue 300","0.86 0.07 300","#d8c7f9","0.78 0.07 300","#beaede","13.45","10.28","11.09","8.76"],
+["palette-15","deep, hue 24","0.7 0.1 24","#d68580","0.62 0.1 24","#bb6d68","7.52","5.50","6.20","4.69"],
+["palette-16","deep, hue 84","0.7 0.1 84","#bc9951","0.62 0.1 84","#a38137","7.81","5.72","6.43","4.88"],
+["palette-17","deep, hue 144","0.7 0.1 144","#77af76","0.62 0.1 144","#5f965f","8.17","6.00","6.73","5.12"],
+["palette-18","deep, hue 204","0.7 0.1 204","#41b0bb","0.62 0.1 204","#1d97a2","8.15","6.00","6.72","5.12"],
+["palette-19","deep, hue 264","0.7 0.1 264","#7f9edd","0.62 0.1 264","#6785c3","7.80","5.71","6.43","4.87"],
+["palette-20","deep, hue 324","0.7 0.1 324","#bd89c2","0.62 0.1 324","#a471a8","7.52","5.49","6.19","4.68"],
+["group-1","group","0.62 0.1 195","#1d9999","0.68 0.1 195","#39abab","6.04","7.58","4.97","6.49"],
+["group-2","group","0.62 0.1 300","#8f78ba","0.68 0.1 300","#a28acd","5.56","7.04","4.58","6.00"]
+];
+          const ART = ["Bracket A", "Cover E", "Bushing G", "Shaft K", "Flange M", "Housing P", "Plate R", "Lever S", "Hub T", "Spacer U"];
+          const QTY = [120, 60, 240, 36, 80, 150, 48, 300, 90, 24];
+          const pick = (r) => ({ v: dark ? r[4] : r[2], hex: dark ? r[5] : r[3], bt: dark ? r[7] : r[6], ring: dark ? r[9] : r[8] });
+          const palette = P.filter((r) => r[0].indexOf("palette-") === 0).map((r, i) => Object.assign(pick(r), {
+            n: r[0],
+            tier: r[1].charAt(0).toUpperCase() + r[1].slice(1),
+            num: String(5001 + i) + ".10",
+            art: ART[i % 10] + " · " + QTY[i % 10] + " pcs",
+            st: "--fill:var(--" + r[0] + ");--ink:#000000"
+          }));
+          const STRIPE = { "group-1": dark ? "5.91" : "3.46", "group-2": dark ? "5.50" : "3.77" };
+          const groups = P.filter((r) => r[0].indexOf("group-") === 0).map((r, i) => Object.assign(pick(r), {
+            n: r[0],
+            label: i === 0 ? "Milling" : "Turning",
+            machine: i === 0 ? "Mill 1" : "Lathe 1",
+            num: i === 0 ? "5021.10" : "5022.10",
+            stripe: STRIPE[r[0]],
+            st: "--g:var(--" + r[0] + ")"
+          }));
+          const erp = [
+            { hex: "#1f3a68", ink: "White", r: "11.26", note: "Dark blue: white wins" },
+            { hex: "#2e7d32", ink: "White", r: "5.12", note: "Black would give 4.09:1" },
+            { hex: "#00838f", ink: "Black", r: "4.64", note: "White would give 4.52:1" },
+            { hex: "#cf0dcc", ink: "Black", r: "4.58", note: "Worst case of all sRGB colors" },
+            { hex: "#f2d500", ink: "Black", r: "14.29", note: "Yellow: black wins" },
+            { hex: "#7a1f1f", ink: "White", r: "10.27", note: "Dark red: white wins" }
+          ].map((e) => Object.assign(e, { st: "background:" + e.hex + ";color:" + (e.ink === "White" ? "#ffffff" : "#000000") }));
+          const run = [0, 8, 14, 5].map((p, i) => ({
+            num: String(5031 + i) + ".10",
+            art: ART[(i + 3) % 10],
+            st: "left:" + (12 + i * 181) + "px;width:180px;--fill:var(--palette-" + (p + 1) + ");--ink:#000000"
+          }));
+          return {
+            themeName: dark ? "dark" : "light",
+            tiers: [
+              { name: "palette-1 to palette-8, Graphite tier", desc: dark ? "L 0.70, C 0.09, hues 30 to 345 in 45 degree steps. Unchanged from Graphite." : "L 0.78, C 0.09, hues 30 to 345 in 45 degree steps. Unchanged from Graphite." },
+              { name: "palette-9 to palette-14, pale tier", desc: dark ? "L 0.78, C 0.07, hues 0, 60, 120, 180, 240, 300. Added in D1." : "L 0.86, C 0.07, hues 0, 60, 120, 180, 240, 300. Added in D1." },
+              { name: "palette-15 to palette-20, deep tier", desc: dark ? "L 0.62, C 0.10, hues 24, 84, 144, 204, 264, 324. Added in D1." : "L 0.70, C 0.10, hues 24, 84, 144, 204, 264, 324. Added in D1." }
+            ],
+            palette: palette,
+            groups: groups,
+            erp: erp,
+            run: run,
+            edge: dark ? "9.77" : "17.30"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

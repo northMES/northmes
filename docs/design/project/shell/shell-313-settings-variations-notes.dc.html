@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Option notes">
+        <h2 class="t2">{{ o.title }}</h2>
+        <p class="lede">{{ o.lede }}</p>
+        <div class="set-cols3">
+          <div>
+            <h3 class="t3">What it optimizes</h3>
+            <ul class="set-pts"><sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for></ul>
+          </div>
+          <div>
+            <h3 class="t3">What it costs</h3>
+            <ul class="set-pts"><sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for></ul>
+          </div>
+          <div>
+            <h3 class="t3">How it meets the rules</h3>
+            <div class="set-rk"><sc-for list="{{ o.rules }}" as="r"><div class="set-rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const R = (k, v) => ({ k: k, v: v });
+          const O = {
+            A: {
+              title: "A. Own sidebar",
+              lede: "Settings is a place of its own. The Settings link at the sidebar foot, where D2 drew Administration, swaps the main sidebar for the settings sidebar: the Back control at its head returns to Plant A, and one grouped list holds every scope the user administers, a collapsible group per company and per plant, then the module settings and the plugin settings. Routes form one tree, /settings/company/$companyId/... and /settings/plant/$plant/... At 320 the settings sidebar is the navigation sheet.",
+              gains: [
+                "It is the decision as written: one area with its own sidebar, grouped by scope. Every scope the user administers is one glance away, and Plant D carries Onboarding in its group header.",
+                "The table keeps the width the canonical page decided: about 974 px at 1280 and 1136 px at 1440, as on every other page.",
+                "One navigation landmark at a time, Settings in place of Main, so the landmark list and the Tab order before main stay as short as on a planner page.",
+                "The way in is one activation, always visible, at the place admins learned from D2; the way out is the first control in the settings sidebar and names its target.",
+                "At 320 nothing new: the settings sidebar becomes the D2 navigation sheet with its head, close button and footer row."
+              ],
+              costs: [
+                "R1 takes plant pages out of /$plant. The plant gate, the per-plant Apollo client, PresentationProvider and the Assistant key on /$plant (ADR 0007), so the tree needs its own plant handling, and A2 draws no Assistant.",
+                "The list grows with every company and plant: two companies and four plants already need collapsible groups, and a collapsed group hides its entries.",
+                "Module settings sit in one Modules group with no scope, so each module page needs a scope field for its company value and plant overrides (spec 3.4).",
+                "While in Settings the plant switcher and the module entries are gone, and a deep link knows no plant to go back to, so Back then reads Back to your plants.",
+                "A second Sidebar layout in the shell; Shell.dc.html has no prop for it (spec 0.4)."
+              ],
+              rules: [
+                R("Landmarks", "Skip link, nav Settings, header, main: one nav landmark replaces the other."),
+                R("Back to work", "Back to Plant A when the shell knows the plant, Back to your plants otherwise; never a default plant."),
+                R("One plant", "Broken for plant pages: R1 needs a change to ADR 0007 and ADR 0066."),
+                R("Title, crumbs", "Machines · Plant A · NorthMES; Settings > Acme AB > Plant A > Machines."),
+                R("3.2.3 order", "Companies, their plants, then Modules and Plugins; collapsing never reorders."),
+                R("3.2.4 name", "Settings with the Settings icon at the sidebar foot, in the rail and in the sheet."),
+                R("3.2.6 Help", "Help stays at the top bar end."),
+                R("Reflow", "N1: the 288 px navigation sheet; focus to Close navigation (A5)."),
+                R("One scope", "Erik Lind sees Plant A, Modules and Plugins, no company group (A3).")
+              ]
+            },
+            B: {
+              title: "B. Rail and scope picker",
+              lede: "Settings sits beside the main navigation. Settings in the user menu collapses the main sidebar to the D2 rail, and a 240 px settings navigation opens beside it. A scope picker at its head, on the pattern of the plant switcher, chooses Acme AB or one of its plants; the entries below are those of that scope, module settings included. Company pages live at /settings/$companyId/..., plant pages at /$plant/settings/... At 320 a Settings menu button opens the settings navigation as a second sheet.",
+              gains: [
+                "Plant pages stay under /$plant, so the plant gate, the per-plant client, presentation, the plant crumb and the Assistant work as on any plant page (ADR 0007).",
+                "The navigation stays short at any number of companies and plants: one scope at a time, with each module's settings at the levels it supports (spec 3.4).",
+                "The picker shows where the user is, Acme AB over Plant A, and its menu lists every scope by company, Plant D with Onboarding in its link text.",
+                "The rail keeps the switcher mark and the module icons beside Settings, so leaving needs no Back control.",
+                "A user with one scope, as Erik Lind in B3, sees a static head and no picker, as the D2 switcher does with one plant."
+              ],
+              costs: [
+                "Two navigation landmarks side by side, Main and Settings, before main: more landmarks and more Tab stops before the page.",
+                "The table is about 926 px at 1280 and 1088 px at 1440; with the Assistant docked, main keeps 616 px at 1280.",
+                "The way in takes two activations and hides in a menu every user opens; Presentation settings and Admin leave that menu.",
+                "At company scope there is no plant, so the rail holds only the switcher mark and the avatar (B1).",
+                "Other scopes are one menu away, so comparing two plants means switching scope. R2 makes settings a reserved module id under /$plant.",
+                "A move in the picker between company and plant scope goes from /settings/... to /$plant/..., which may load another module set and be a full page load (spec 7.4, 4.3.6).",
+                "At 320 two modal sheets share one page, each with its own trigger and focus return."
+              ],
+              rules: [
+                R("Landmarks", "Skip link, nav Main (the rail), nav Settings, header, main."),
+                R("Back to work", "The rail: its icons open Plant A's pages, its mark opens the plant menu; never a default plant."),
+                R("One plant", "Kept for plant pages; company pages need plant-free fields."),
+                R("Title, crumbs", "Machines · Plant A · NorthMES; Acme AB > Plant A > Settings > Machines."),
+                R("3.2.3 order", "Fixed order within each scope; the picker lists companies, then their plants."),
+                R("3.2.4 name", "Settings with the Settings icon in the user menu, opened from the sidebar footer or the rail's avatar."),
+                R("3.2.6 Help", "Help stays at the top bar end."),
+                R("Reflow", "N3: Open navigation keeps the main navigation; Settings menu opens the second sheet (B5 open, B6 closed)."),
+                R("One scope", "Erik Lind sees a static head reading Acme AB, Plant A (B3).")
+              ]
+            },
+            C: {
+              title: "C. In the page",
+              lede: "Settings is part of the page, not of the shell. A Settings button in the top bar opens the settings of the plant on screen; the main sidebar stays, and main holds a 220 px settings navigation beside the page. Company settings are a separate area at /settings/$companyId/..., which has no plant and therefore no sidebar, as D2 draws the pages without a plant. Plant pages keep their module paths, such as /plant-a/core/machines. At 320 the settings landing lists the entries.",
+              gains: [
+                "The least change to routes: plant pages keep the paths each module owns, and a route only declares that it belongs in the settings navigation (spec 4.3.9).",
+                "The main sidebar and the plant switcher stay on plant settings pages, so the user always sees the plant and the way back.",
+                "Each area is short: Plant A settings lists six entries, one module and one plugin, company settings seven entries and three modules.",
+                "The top bar button shows on every page and takes one activation."
+              ],
+              costs: [
+                "Two areas instead of one Settings area with its own sidebar, which the decision of 2026-10-08 asks for.",
+                "The table is about 730 px at 1280 and 892 px at 1440, close to the 750 px that #222 rejected because dates wrapped.",
+                "The two areas look different: company settings has no sidebar and an account button in the top bar (C1), plant settings sits in the planner shell (C2).",
+                "A new top bar control on every page before Help; at 320 it has to move into the sheet footer.",
+                "At 320 the drill-in is not the sheet that I313 asks for, and every settings page needs a link back to the landing above its h1 (C6).",
+                "The skip link lands before the Settings nav inside main, so it passes only Main (spec 4.5, WCAG 2.4.1).",
+                "Module settings appear in both areas, the company value in one and the plant override in the other."
+              ],
+              rules: [
+                R("Landmarks", "Plant pages: skip link, nav Main, header, main with nav Settings first. Company pages: skip link, header, main with nav Settings. The skip link lands before nav Settings."),
+                R("Back to work", "The main sidebar on plant pages; Back to Plant A on company pages; never a default plant."),
+                R("One plant", "Kept for plant pages; company pages need plant-free fields."),
+                R("Title, crumbs", "Machines · Plant A · NorthMES; Acme AB > Plant A > Settings > Machines."),
+                R("3.2.3 order", "Fixed order in each area."),
+                R("3.2.4 name", "Settings with the Settings icon, in the top bar of every page."),
+                R("3.2.6 Help", "Help keeps its place at the end; Settings sits before it."),
+                R("Reflow", "N2: the landing lists the entries (C5); each settings page links back to it above the h1 (C6)."),
+                R("One scope", "Erik Lind sees Plant A settings without the Acme AB settings link (C3).")
+              ]
+            }
+          };
+          return { o: O[String(P.option || "A")] || O.A };
+        }
+      }
+    </script>
+  </body>
+</html>

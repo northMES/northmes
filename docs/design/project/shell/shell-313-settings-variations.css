@@ -1,0 +1,122 @@
+/* Shared styles for the variations page shell-313-settings-variations.dc.html, issue northMES/northmes#313, and its
+   part files shell-313-settings-variations-*.dc.html.
+   They sit on the approved D1 files ../ui/tokens.css and ../ui/ui-189-tokens-page.css, the D2 shell styles
+   ./shell-190-navigation.css and the canonical list and form styles ../ui/ui-222-list-form.css, and change none of them.
+   Every UI color is a D1 token. Classes start with set-, so they never meet a D1, sh-, stn- or lf- class name.
+   A rule that changes a D1 class uses two classes, because a part loads the D1 page styles again after this file.
+   Canvas labels and review annotations use the D1 page's canvas colors and are not part of the UI. */
+
+/* Canvas */
+.frame.set-w1440{width:1440px}
+.frame.set-w320{width:320px}
+/* A 320 frame's chip runs past the frame, so the option name, the state and the route stay on one line */
+.frame.set-w320 > .flabel{width:max-content;white-space:nowrap}
+.set-url{font:400 12px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+
+/* Document frames: header, notes and comparison (not part of the UI) */
+.set-cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px}
+.set-cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;margin-top:24px}
+.set-pts{display:grid;gap:8px;margin:12px 0 0;padding:0 0 0 18px}
+.set-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 20px;margin:12px 0 0}
+.set-facts dt{color:var(--muted-foreground)}
+.set-facts dd{margin:0}
+.set-src{color:var(--muted-foreground);font-size:12px;line-height:16px}
+.set-brk{font-weight:600}
+/* Routes in the header facts: one line per option, and a route never breaks inside its path */
+.set-rts{display:grid;gap:6px}
+.set-rtl{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px}
+.set-rto{font-weight:600}
+.set-route{font-family:var(--font-mono);font-size:13px;white-space:nowrap}
+.set-tbl{display:grid;margin-top:12px;border-top:1px solid var(--border)}
+.set-tbl-r{display:grid;gap:16px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.set-tbl-r.h{font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.set-tbl-r .k{font-weight:600}
+.set-tbl-r .k .set-src{display:block;font-weight:400}
+.set-axes{grid-template-columns:180px repeat(3,minmax(0,1fr))}
+.set-moves{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) 150px}
+.set-ppl{grid-template-columns:150px 110px minmax(0,1fr)}
+.set-pls{grid-template-columns:120px 130px 70px minmax(0,1fr)}
+.set-cmp-r{grid-template-columns:220px repeat(3,minmax(0,1fr))}
+.set-qgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 40px;margin-top:14px}
+.set-qrow{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:start;font-size:13px;line-height:18px}
+.set-qrow .tag{justify-self:stretch;justify-content:center}
+.set-rk{display:grid;border-top:1px solid var(--border)}
+.set-rk-r{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.set-rk-r .k{font-weight:600}
+.set-best{display:inline-flex;align-items:flex-start;gap:4px;font-weight:600}
+.set-best .ic{width:14px;height:14px;margin-top:2px;color:var(--success)}
+.set-rec{display:grid;gap:10px;margin-top:28px;padding:20px 24px;border:1px solid var(--foreground);border-radius:var(--radius-xl);background:var(--card)}
+.set-rec p{margin:0}
+
+/* Shared pieces inside the screens */
+.set-fill{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.set-fill > .sc-host{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+
+/* The scope mark: a 32 px square like the D2 company mark, outlined, so it never reads as the plant switcher */
+.set-mk{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--radius-lg);background:var(--sidebar);color:var(--sidebar-foreground);box-shadow:inset 0 0 0 1px var(--sidebar-border)}
+
+/* Option A: the settings sidebar replaces the main sidebar (D2 .sh-sb). Its head is the Back control, and every scope
+   is a group whose header is a disclosure button. */
+.set-gh{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;padding:4px 8px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--muted-foreground);font:600 12px/16px var(--font-sans);text-align:left;cursor:pointer}
+.set-gh:hover{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+.set-gh .set-ghl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-width:0}
+.set-gh .set-ghc{width:14px;height:14px;margin-left:auto}
+.set-gh .badge{height:20px;font-size:11px;line-height:16px}
+.set-rule{flex:none;height:1px;margin:0;background:var(--sidebar-border)}
+.sh-sb-foot.set-foot{flex-direction:column;align-items:stretch;gap:2px}
+.set-foot .sh-list{margin-bottom:4px}
+
+/* Option B: the settings navigation beside the D2 rail */
+.set-snav{display:flex;flex-direction:column;flex:none;width:240px;min-height:0;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border)}
+.set-snav > nav{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+
+/* Option C: the settings navigation inside main, beside the page */
+.set-inpage{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;flex:1;min-width:0;min-height:0}
+.set-cnav{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0;padding:2px 0 0;overflow-x:hidden;overflow-y:auto}
+.set-chead{display:grid;gap:2px;padding:0 10px}
+.set-ckick{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.set-ctitle{font-size:16px;line-height:24px;font-weight:600}
+.set-clist{display:grid;gap:1px;margin:0;padding:0;list-style:none}
+.set-clab{padding:4px 10px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.set-ci{display:flex;align-items:center;gap:8px;min-height:32px;padding:6px 10px;border-radius:var(--radius-md);color:var(--foreground);font-size:14px;line-height:20px}
+.set-ci:hover{background:var(--accent);color:var(--accent-foreground)}
+.set-ci .ic{color:var(--muted-foreground)}
+.set-ci.cur{background:var(--secondary);color:var(--secondary-foreground);font-weight:600;box-shadow:inset 3px 0 0 var(--foreground)}
+.set-ci.cur .ic{color:var(--foreground)}
+.set-pcol{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0}
+.set-crule{height:1px;margin:0 10px;background:var(--border)}
+.set-cgrp{display:grid;gap:2px}
+
+/* Back control as a link (option C); option A draws it as the 48 px head row of its sidebar */
+.sh-scr a.set-backl{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:var(--nm-target-min);padding:2px 4px;margin:0 -4px;border-radius:var(--radius-sm);color:var(--link);font-size:14px;line-height:20px;text-decoration:underline;text-underline-offset:3px}
+.sh-scr a.set-backl .ic{width:16px;height:16px}
+
+/* Top bar pieces: the Settings button (option C) and the account avatar on pages without a sidebar (D2 K15) */
+.btn.set-on{background:var(--accent);color:var(--accent-foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+.set-avb{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:0;border-radius:var(--radius-md);background:transparent;cursor:pointer}
+.set-avb:hover{background:var(--accent)}
+
+/* User menu with Settings (option B), opening upward from the user button */
+.pop.set-um{bottom:68px;left:8px;width:240px}
+/* Scope picker menu (option B), under the picker */
+.pop.set-scm{top:60px;width:300px}
+.set-scm .sh-pi-m .ic{width:14px;height:14px}
+
+/* The second sheet at 320 (option B): the settings navigation from the left, beside the main navigation sheet */
+.set-ssheet{position:absolute;z-index:12;top:0;bottom:0;left:0;display:flex;flex-direction:column;width:288px;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border);box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)}
+.set-ssheet > nav{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.sh-ph.set-phc{align-items:center;justify-content:space-between}
+
+/* Option C at 320: the settings landing that lists the entries (drill-in) */
+.set-land{display:grid;margin:0;padding:0;list-style:none;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+.set-land li + li{border-top:1px solid var(--border)}
+.sh-scr a.set-lr{display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 12px;color:var(--foreground)}
+.set-lr .ic{color:var(--muted-foreground)}
+.set-lr .set-lr-c{margin-left:auto}
+.set-h2{margin:0;font-size:14px;line-height:20px;font-weight:600;color:var(--muted-foreground)}
+
+/* Page bodies */
+.set-body{display:flex;flex-direction:column;gap:12px;flex:1;min-width:0;min-height:0}
+.set-swatch{display:inline-block;flex:none;width:12px;height:12px;border-radius:3px;border:1px solid var(--block-border)}
+.set-g6{background:var(--palette-6)}
+.set-g3{background:var(--palette-3)}

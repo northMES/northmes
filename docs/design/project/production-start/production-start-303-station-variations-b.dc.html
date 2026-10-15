@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Option B, one job at a time</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <dc-import name="StationFrame" size="{{ size }}" theme="{{ theme }}" connection="{{ connection }}" hint-size="{{ hint }}">
+        <div class="ps-b {{ sz }}">
+          <section class="ps-card tight ps-bh" aria-labelledby="{{ ids.job }}">
+            <div class="ps-jh-l">
+              <div class="ps-jh-t"><span class="ps-mut">Job</span><h2 class="ps-jobno" id="{{ ids.job }}">5001.20</h2><span class="ps-art">A-2040 Housing P</span></div>
+              <p class="ps-meta">5001.20 started 12:02 by Anna Berg, last report 13:58</p>
+            </div>
+            <div class="ps-bh-r">
+              <sc-if value="{{ statsTop }}">
+                <dl class="ps-stats sm ps-bstats">
+                  <sc-for list="{{ stats }}" as="s"><div class="ps-stat"><dt>{{ s.k }}</dt><dd>{{ s.v }}<sc-if value="{{ s.u }}"><span class="u">{{ s.u }}</span></sc-if></dd></div></sc-for>
+                </dl>
+              </sc-if>
+              <span class="badge ps-badge ps-unsent" id="{{ ids.unsent }}"><span class="ic" data-icon="Upload"></span>Unsent entries on 5002.10</span>
+              <button class="btn lg v-outline" type="button" aria-haspopup="dialog" aria-describedby="{{ ids.unsent }}">Change job<span class="ps-cnt">6</span></button>
+            </div>
+            <div class="ps-brow">
+              <ol class="ps-steps {{ stepsCls }}" aria-label="Status">
+                <sc-for list="{{ steps }}" as="s">
+                  <li class="ps-stepi {{ s.cls }}" aria-current="{{ s.cur }}"><span class="ic" data-icon="{{ s.i }}"></span>{{ s.t }}</li>
+                </sc-for>
+              </ol>
+              <span class="ps-grow"></span>
+              <div class="ps-cmds">
+                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause</button>
+                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="CircleCheck"></span>Finish</button>
+              </div>
+            </div>
+            <sc-if value="{{ statsRow }}">
+              <dl class="ps-stats sm ps-bfull">
+                <sc-for list="{{ stats }}" as="s"><div class="ps-stat"><dt>{{ s.k }}</dt><dd>{{ s.v }}<sc-if value="{{ s.u }}"><span class="u">{{ s.u }}</span></sc-if></dd></div></sc-for>
+              </dl>
+            </sc-if>
+          </section>
+          <div class="ps-tabs" role="tablist" aria-label="5001.20">
+            <button class="ps-tab {{ tabRep }}" type="button" role="tab" id="{{ ids.tabRep }}" aria-selected="{{ selRep }}" aria-controls="{{ ctlRep }}">Report</button>
+            <button class="ps-tab {{ tabLast }}" type="button" role="tab" id="{{ ids.tabLast }}" aria-selected="{{ selLast }}" aria-controls="{{ ctlLast }}">Last reports<span class="ps-cnt">5</span></button>
+          </div>
+          <sc-if value="{{ showReport }}">
+            <div class="ps-b-rep {{ sz }}" role="tabpanel" id="{{ ids.panRep }}" aria-labelledby="{{ ids.tabRep }}">
+              <div class="ps-col">
+                <div class="ps-fields">
+                  <div class="ps-fld"><span class="ps-lbl">Good quantity (pcs)</span><span class="ps-nf {{ goodFocus }}">96<sc-if value="{{ caret }}"><span class="ps-caret"></span></sc-if></span></div>
+                  <div class="ps-fld"><span class="ps-lbl">Scrap quantity (pcs)</span><span class="ps-nf">{{ scrap }}</span></div>
+                </div>
+                <sc-if value="{{ showReasons }}">
+                  <fieldset class="ps-fs">
+                    <legend>Scrap reason</legend>
+                    <div class="ps-rads c4">
+                      <sc-for list="{{ reasons }}" as="r">
+                        <span class="ps-rad {{ r.cls }}" role="radio" aria-checked="{{ r.on }}"><span class="ps-rdot"></span>{{ r.t }}</span>
+                      </sc-for>
+                    </div>
+                  </fieldset>
+                </sc-if>
+                <div class="ps-sendrow">
+                  <button class="btn lg v-default ps-send {{ sendCls }}" type="button" aria-disabled="{{ sendDis }}" aria-describedby="{{ sendDesc }}"><span class="ic" data-icon="Send"></span>Send</button>
+                  <sc-if value="{{ sending }}"><p class="ps-msg busy" role="status"><span class="ic" data-icon="LoaderCircle"></span><span>Sending</span></p></sc-if>
+                  <sc-if value="{{ offline }}"><p class="ps-msg err ps-grow" id="{{ ids.err }}"><span class="ic" data-icon="CircleAlert"></span><span>Not sent. There is no connection to NorthMES. Your entries are kept. Press Send again when the connection is back.</span></p></sc-if>
+                </div>
+              </div>
+              <div class="ps-kp {{ kpCls }}">
+                <div class="ps-kp-h"><span>Keypad for Good quantity</span><button class="btn lg v-outline ps-tog" type="button" aria-pressed="false">System keyboard</button></div>
+                <div class="ps-keys">
+                  <sc-for list="{{ keys }}" as="k">
+                    <button class="ps-key {{ k.cls }}" type="button" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showLast }}">
+            <div class="ps-col scroll" role="tabpanel" id="{{ ids.panLast }}" aria-labelledby="{{ ids.tabLast }}">
+              <sc-if value="{{ lastSb }}"><span class="ps-sb {{ lastSb }}" aria-hidden="true"></span></sc-if>
+              <ul class="ps-rl">
+                <sc-for list="{{ reports }}" as="r">
+                  <li class="ps-ri {{ r.cls }}">
+                    <div class="ps-jr-b">
+                      <span class="ps-ri-t"><span class="num">{{ r.t }}</span><span>{{ r.who }}</span></span>
+                      <span class="ps-ri-v">{{ r.v }}</span>
+                    </div>
+                    <sc-if value="{{ r.can }}"><button class="btn lg v-outline" type="button" aria-label="{{ r.aria }}" aria-expanded="{{ r.exp }}">Correct</button></sc-if>
+                    <sc-if value="{{ r.open }}">
+                      <div class="ps-ri-f">
+                        <div class="ps-fields">
+                          <div class="ps-fld"><span class="ps-lbl">Change to good (pcs)</span><span class="ps-nf is-focus">-2<span class="ps-caret"></span></span></div>
+                          <div class="ps-fld"><span class="ps-lbl">Change to scrap (pcs)</span><span class="ps-nf">0</span></div>
+                        </div>
+                        <p class="ps-msg busy"><span>After the correction: <span class="num">118</span> good, <span class="num">3</span> scrap</span></p>
+                        <div class="ps-fld"><span class="ps-lbl">Reason (required)</span><span class="ps-nf txt">Two pieces counted twice</span></div>
+                        <div class="ps-kp k64">
+                          <div class="ps-kp-h"><span>Keypad for Change to good</span><button class="btn lg v-outline ps-tog" type="button" aria-pressed="false">System keyboard</button></div>
+                          <div class="ps-keys">
+                            <sc-for list="{{ signedKeys }}" as="k">
+                              <button class="ps-key {{ k.cls }}" type="button" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                            </sc-for>
+                          </div>
+                        </div>
+                        <div class="ps-foot">
+                          <button class="btn lg v-default" type="button">Save correction</button>
+                          <button class="btn lg v-ghost" type="button">Cancel</button>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+          </sc-if>
+        </div>
+      </dc-import>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1920x1080","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"state":{"editor":"enum","options":["default","noscrap","offline","sending","correct"],"default":"default","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, d, opts) => {
+            const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim();
+            return opts.indexOf(s) < 0 ? d : s;
+          };
+          const size = pick(P.size, "1920x1080", ["1920x1080", "1280x800", "800x1280"]);
+          const theme = pick(P.theme, "light", ["light", "dark"]);
+          const state = pick(P.state, "default", ["default", "noscrap", "offline", "sending", "correct"]);
+          const sz = size === "1920x1080" ? "s1920" : size === "1280x800" ? "s1280" : "s800";
+          if (!this.uid) {
+            window.__psSeq = (window.__psSeq || 0) + 1;
+            this.uid = "ps-b" + window.__psSeq;
+          }
+          const u = this.uid;
+          const N = (s) => s.replace(/ /g, " ");
+          // Status as a step row: the current status is the filled step with its word; the others are outlined.
+          const steps = [
+            { t: "Planned", i: "Info" },
+            { t: "Active", i: "Play", cur: true },
+            { t: "Paused", i: "Pause" },
+            { t: "Finished", i: "CircleCheck" }
+          ].map((s) => ({ t: s.t, i: s.i, cls: s.cur ? "cur" : "", cur: s.cur ? "step" : undefined }));
+          const digits = ["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => ({ t: d, cls: "", aria: undefined }));
+          const keys = digits.concat([
+            { t: "Clear", cls: "fn", aria: undefined },
+            { t: "0", cls: "", aria: undefined },
+            { t: "", icon: "Delete", cls: "fn", aria: "Delete last digit" }
+          ]);
+          const signedKeys = digits.concat([
+            { t: "", icon: "Minus", cls: "fn", aria: "Minus sign" },
+            { t: "0", cls: "", aria: undefined },
+            { t: "", icon: "Delete", cls: "fn", aria: "Delete last digit" }
+          ]);
+          const correcting = state === "correct";
+          const reports = [
+            { t: "13:58", who: "Anna Berg", v: "120 good, 3 scrap, Burr" },
+            { t: "13:20", who: "Anna Berg", v: "160 good, 4 scrap, Surface damage" },
+            { t: "12:47", who: "Omar Haddad", v: "200 good" },
+            { t: "12:30", who: "Omar Haddad", v: "160 good, 5 scrap, Setup piece" },
+            { t: "12:02", who: "Anna Berg", v: "Started the job", ev: true }
+          ].map((r, i) => ({
+            t: r.t, who: r.who, v: r.v, can: !r.ev, open: correcting && i === 0,
+            cls: r.ev ? "ev" : correcting && i === 0 ? "open" : "",
+            exp: r.ev ? undefined : correcting && i === 0 ? "true" : "false",
+            aria: "Correct the report of " + r.t
+          }));
+          return {
+            size: size,
+            theme: theme,
+            sz: sz,
+            hint: size.replace("x", "px,") + "px",
+            connection: state === "offline" ? "offline" : "connected",
+            ids: { job: u + "-job", unsent: u + "-unsent", err: u + "-err", tabRep: u + "-tab-rep", tabLast: u + "-tab-last", panRep: u + "-pan-rep", panLast: u + "-pan-last" },
+            // aria-controls names the panel that is drawn; the other panel is not rendered.
+            ctlRep: correcting ? undefined : u + "-pan-rep",
+            ctlLast: correcting ? u + "-pan-last" : undefined,
+            sendDesc: state === "offline" ? u + "-err" : undefined,
+            // The Last reports panel scrolls in portrait; the thumb length is the visible share.
+            lastSb: correcting && sz === "s800" ? "ps-sb-b4" : "",
+            // B6: scrap 0, so the reason group is hidden and Send sits under the fields.
+            scrap: state === "noscrap" ? "0" : "2",
+            showReasons: state !== "noscrap",
+            statsTop: sz !== "s800",
+            statsRow: sz === "s800",
+            stats: [
+              { k: "Quantity", v: N("1 200"), u: "pcs" },
+              { k: "Good", v: "640" },
+              { k: "Scrap", v: "12" },
+              { k: "Remaining", v: "548", u: "pcs" }
+            ],
+            steps: steps,
+            showReport: !correcting,
+            showLast: correcting,
+            tabRep: correcting ? "" : "on",
+            tabLast: correcting ? "on" : "",
+            selRep: correcting ? "false" : "true",
+            selLast: correcting ? "true" : "false",
+            goodFocus: state === "default" || state === "noscrap" ? "is-focus" : "",
+            caret: state === "default" || state === "noscrap",
+            kpCls: sz === "s1920" ? "k88" : "k64",
+            stepsCls: sz === "s800" ? "sm" : "",
+            keys: keys,
+            signedKeys: signedKeys,
+            reasons: ["Dimension out of tolerance", "Surface damage", "Burr", "Crack", "Wrong material", "Setup piece", "Tool wear", "Other"].map((t) => ({ t: t, cls: t === "Burr" ? "on" : "", on: t === "Burr" ? "true" : "false" })),
+            sending: state === "sending",
+            offline: state === "offline",
+            sendCls: state === "sending" ? "is-dis is-focus" : "",
+            sendDis: state === "sending" ? "true" : undefined,
+            reports: reports
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

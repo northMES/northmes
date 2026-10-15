@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F8 keyboard and focus</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.kw{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;align-items:start;margin-top:24px}
+.stop{display:inline-grid;place-items:center;flex:none;width:20px;height:20px;border-radius:999px;background:var(--foreground);color:var(--background);font:600 11px/1 var(--font-mono)}
+.stop.p{background:transparent;color:var(--foreground);box-shadow:inset 0 0 0 1.5px var(--foreground)}
+.tp{border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;background:var(--background)}
+.tp-top{display:flex;align-items:center;gap:10px;height:56px;padding:0 16px;background:var(--card);border-bottom:1px solid var(--border)}
+.tp-main{display:grid;gap:14px;padding:18px 16px}
+.w{display:inline-flex;align-items:center;gap:6px}
+.skip{display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:var(--radius-sm);background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600}
+.navl{display:inline-flex;align-items:center;height:32px;padding:0 8px;font-size:14px;font-weight:500;color:var(--muted-foreground)}
+.tbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.trow{display:flex;align-items:center;gap:18px;height:40px;padding:0 10px;border-top:1px solid var(--border);font-size:13px}
+.trow.h{background:var(--muted);border-top:0;font-size:12px;font-weight:600;color:var(--muted-foreground)}
+.keys{display:grid;border-top:1px solid var(--border)}
+.kr{display:grid;grid-template-columns:150px minmax(0,1.3fr) minmax(0,1fr);gap:14px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:20px}
+.kr.h{padding:0 0 8px;font-size:12px;font-weight:600;color:var(--muted-foreground)}
+.kr .kk{display:grid;gap:6px;align-content:start}
+.kk .w{display:flex;align-items:baseline;gap:6px}
+.kk .ks{display:flex;flex:none;align-items:baseline;gap:4px}
+.kk .ks:empty{display:none}
+.flows{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.flow{display:grid;gap:8px;align-content:start;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);font-size:13px}
+.flow .arrow{display:flex;align-items:center;gap:8px}
+.sticky{position:relative;height:210px;border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;background:var(--background)}
+.sticky .bar{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;padding:0 16px;background:var(--card);border-bottom:1px solid var(--border);font-weight:600;z-index:2}
+.sticky .pad{position:absolute;left:0;right:0;top:56px;height:16px;background:repeating-linear-gradient(135deg,var(--muted) 0 4px,transparent 4px 8px)}
+.sticky .content{position:absolute;left:16px;right:16px;top:80px;display:grid;gap:10px}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Keyboard and focus">
+        <h2 class="t2">Keyboard and focus</h2>
+        <p class="lede">Tab order, keys and where focus goes after each action, for the D1 components. The docs set the rules marked with a source; keys for the standard composites follow the WAI-ARIA Authoring Practices and Base UI defaults until Q11 is settled. Every focus stop draws the two-tone ring, except menu and listbox items, which draw a 2 px inset outline in focus-outline (P4). Keyboard-only end-to-end flows run without page.mouse.</p>
+        <div class="kw">
+          <div>
+            <h3 class="t3">Tab order on a list page (sample)</h3>
+            <div class="tp">
+              <div class="tp-top">
+                <span class="w"><span class="stop">1</span><span class="skip is-focus">Skip to main content</span></span>
+                <span class="w"><span class="stop">2</span><span class="navl">Planning</span></span>
+                <span class="w"><span class="stop">3</span><span class="navl">Orders</span></span>
+                <span class="w" style="margin-left:auto"><span class="stop">4</span><button class="btn icon v-ghost" type="button" aria-label="Account"><span class="ic" data-icon="User"></span></button></span>
+              </div>
+              <div class="tp-main">
+                <span class="w"><span class="stop p">h1</span><span class="t2">Production orders</span><span class="sm mut">tabindex -1, focus target after a route change</span></span>
+                <div class="tbar">
+                  <span class="w"><span class="stop">5</span><span class="inp" style="width:190px"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span></span>
+                  <span class="w"><span class="stop">6</span><span class="inp" style="width:130px"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span></span>
+                  <span class="w"><span class="stop">7</span><button class="btn v-ghost" type="button">Clear filters</button></span>
+                  <span class="w"><span class="stop">8</span><button class="btn v-default" type="button"><span class="ic" data-icon="Plus"></span>New order</button></span>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+                  <div class="trow h"><span class="w"><span class="stop">9</span>Order</span><span class="w"><span class="stop">10</span>Deadline</span><span>Status</span></div>
+                  <div class="trow"><span class="w"><span class="stop">11</span><a class="mono" href="#">5001.10</a></span><span class="mono">2026-10-12</span><span class="badge" style="--bb:var(--status-planned);--bf:var(--status-planned-foreground)"><span class="ic" data-icon="Info"></span>Planned</span></div>
+                  <div class="trow"><span class="w"><span class="stop">12</span><a class="mono" href="#">5002.10</a></span><span class="mono">2026-10-13</span><span class="badge" style="--bb:var(--status-active);--bf:var(--status-active-foreground)"><span class="ic" data-icon="Play"></span>Active</span></div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:10px"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><span class="w"><span class="stop">13</span><button class="btn v-outline" type="button">Next</button></span></div>
+              </div>
+            </div>
+            <p class="sm mut" style="margin:10px 0 0">Skip to main content is the first stop and moves focus into main (2.4.1). After a route change focus goes to the h1, else to main; search parameter changes do not move focus (2.4.3). Previous is disabled on the first page and is skipped.</p>
+            <h3 class="t3 sec">Focus not obscured (2.4.11)</h3>
+            <div class="sticky">
+              <div class="bar">Sticky top bar</div>
+              <div class="pad"></div>
+              <div class="content"><div class="fld" style="width:260px"><span class="lbl">Good quantity (pcs)</span><div class="inp is-focus"><span class="mono">120</span></div></div><span class="sm mut">The page scroller sets scroll-padding-top to the top bar height (hatched band shows the padding), so a focused field never scrolls under the bar.</span></div>
+            </div>
+            <p class="sm mut" style="margin:10px 0 0">The board scroller sets scroll-padding for its sticky time header and machine column, virtualized lists set scrollPaddingStart, the detail panel docks beside the content, and toasts sit away from board and form areas.</p>
+          </div>
+          <div>
+            <h3 class="t3">Keys and where focus goes</h3>
+            <div class="keys">
+              <div class="kr h"><span>Component</span><span>Keys</span><span>Focus after</span></div>
+              <sc-for list="{{ keys }}" as="k">
+                <div class="kr">
+                  <span class="b6">{{ k.c }}</span>
+                  <span class="kk"><sc-for list="{{ k.keys }}" as="b"><span class="w"><span class="ks"><sc-for list="{{ b.keys }}" as="x"><span class="kbd">{{ x.k }}</span></sc-for></span><span>{{ b.t }}</span></span></sc-for></span>
+                  <span>{{ k.after }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Where focus goes after an action</h3>
+          <div class="flows">
+            <sc-for list="{{ flows }}" as="f">
+              <div class="flow"><span class="b6">{{ f.t }}</span><span>{{ f.a }}</span><span class="arrow"><span class="ic mut" data-icon="CornerDownLeft"></span><span>{{ f.b }}</span></span><span class="sm mut">{{ f.src }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Each binding is [keys, what they do]; the page draws one binding per line, keys first.
+          const K = (...b) => b.map(([keys, t]) => ({ keys: keys.map((k) => ({ k: k })), t: t }));
+          return {
+            keys: [
+              { c: "Button, IconButton", keys: K([["Enter", "Space"], "activate"]), after: "Stays on the button, unless the action opens or closes a layer." },
+              { c: "Input, NumberField", keys: K([[], "type"], [["Up", "Down"], "NumberField steps (Base UI default, Q11)"], [["Enter"], "at a station never submits; only Send does"]), after: "Stays in the field. On a submit with errors, focus moves to the error summary." },
+              { c: "Checkbox", keys: K([["Space"], "toggles"]), after: "Stays on the checkbox." },
+              { c: "Tabs", keys: K([["Left", "Right"], "move"], [["Home", "End"], "first, last"], [["Tab"], "into the panel"]), after: "Arrow keys move between tabs; whether selection follows focus is the Base UI default (Q11)." },
+              { c: "Select", keys: K([["Enter", "Space", "Down"], "open"], [["Up", "Down"], "move"], [["Enter"], "choose"], [["Esc"], "close"]), after: "Back on the trigger after choosing or closing." },
+              { c: "Combobox", keys: K([[], "type to filter"], [["Down"], "open and move"], [["Enter"], "choose"], [["Esc"], "close"]), after: "Stays in the input; the active option is aria-activedescendant." },
+              { c: "Dropdown Menu", keys: K([["Enter", "Space", "Down"], "open"], [["Up", "Down"], "move"], [["Enter"], "activate"], [["Esc"], "close"]), after: "Back on the trigger. On a board block the menu also opens with the context-menu key and Shift+F10." },
+              { c: "Dialog, Alert Dialog, Sheet", keys: K([["Tab", "Shift+Tab"], "stay inside"], [["Esc"], "close"]), after: "Opening moves focus inside; closing returns it to the trigger." },
+              { c: "Tooltip, Hover Card", keys: K([[], "open at once on focus"], [["Esc"], "close"]), after: "Focus does not move." },
+              { c: "Table", keys: K([["Tab"], "header buttons and cell links"], [["Enter", "Space"], "sort"]), after: "Stays on the header button; aria-sort updates." },
+              { c: "Toast", keys: K([["Tab"], "reaches the action"]), after: "The toast never holds the only copy of an action." },
+              { c: "SkipLink", keys: K([["Tab"], "first stop"], [["Enter"], "go"]), after: "Moves into main." },
+              { c: "Board cell", keys: K([[], "letter commands"]), after: "Work only while a board cell has focus (2.1.4); board keys are set in D3." }
+            ],
+            flows: [
+              { t: "Open a dialog", a: "Activate Break lock on a block or row.", b: "Focus moves to the reason field; on close it returns to the trigger.", src: "06 Focus; 06 Patterns" },
+              { t: "Submit a form with errors", a: "Activate Save with two invalid fields.", b: "Focus moves to the error summary at the top; each entry links to its field.", src: "06 Forms; 3.3.1" },
+              { t: "Change the route", a: "Follow a link to another page.", b: "Focus moves to the h1, else to main.", src: "06 Shell services; 2.4.3" },
+              { t: "Close a menu", a: "Press Escape or choose an item.", b: "Focus returns to the menu trigger.", src: "WAI-ARIA Authoring Practices (Q11)" },
+              { t: "Focus a block with a hover card", a: "Tab onto a board block or an order link.", b: "The hover card opens at once; Escape closes it and focus stays.", src: "06 Focus; 1.4.13" },
+              { t: "Focus any element", a: "Tab or arrow onto it.", b: "It scrolls into view and nothing else happens; panels open on Enter or click.", src: "06 Focus; 3.2.1" }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

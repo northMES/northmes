@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Badge sign-in per option</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <dc-import name="StationFrame" size="{{ size }}" theme="{{ theme }}" connection="connected" operator="none" hint-size="{{ hint }}">
+        <sc-if value="{{ isA }}">
+          <div class="ps-si">
+            <div class="ps-si-card">
+              <div class="ps-fld">
+                <span class="ps-lbl">Badge</span>
+                <span class="inp ps-inp is-focus"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                <p class="ps-desc">Hold your badge to the reader.</p>
+              </div>
+              <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+              <div class="ps-foot">
+                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isB }}">
+          <div class="ps-si">
+            <div class="ps-si-b">
+              <div class="ps-si-card">
+                <div class="ps-tabs" role="tablist" aria-label="Sign-in method">
+                  <button class="ps-tab on" type="button" role="tab" id="{{ ids.tabBadge }}" aria-selected="true" aria-controls="{{ ids.panBadge }}"><span class="ic" data-icon="IdCard"></span>Badge</button>
+                  <button class="ps-tab" type="button" role="tab" id="{{ ids.tabUser }}" aria-selected="false"><span class="ic" data-icon="KeyRound"></span>Username</button>
+                </div>
+                <div class="ps-si-pan" role="tabpanel" id="{{ ids.panBadge }}" aria-labelledby="{{ ids.tabBadge }}">
+                  <div class="ps-fld">
+                    <span class="ps-lbl">Badge</span>
+                    <span class="ps-done"><span class="ic" data-icon="Check"></span>Badge read. Enter your PIN.</span>
+                  </div>
+                  <div class="ps-fld">
+                    <span class="ps-lbl">PIN</span>
+                    <span class="inp ps-inp is-focus"><span class="ps-dots">••••</span><span class="ps-caret"></span></span>
+                    <p class="ps-desc">This station asks for your PIN after the badge. You can also paste it.</p>
+                  </div>
+                  <div class="ps-foot">
+                    <button class="btn lg v-default" type="button">Sign in</button>
+                    <button class="btn lg v-ghost" type="button">Scan again</button>
+                  </div>
+                </div>
+              </div>
+              <div class="ps-kp k64">
+                <div class="ps-kp-h"><span>Keypad for PIN</span><button class="btn lg v-outline ps-tog" type="button" aria-pressed="false">System keyboard</button></div>
+                <div class="ps-keys">
+                  <sc-for list="{{ keys }}" as="k">
+                    <button class="ps-key {{ k.cls }}" type="button" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isC }}">
+          <div class="ps-si">
+            <div class="ps-si2">
+              <section class="ps-si-big" aria-labelledby="{{ ids.badge }}">
+                <h2 class="ps-h2" id="{{ ids.badge }}">Scan your badge</h2>
+                <div class="ps-fld">
+                  <span class="ps-lbl">Badge</span>
+                  <span class="inp ps-inp is-focus"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                  <p class="ps-desc">Hold your badge to the reader.</p>
+                </div>
+              </section>
+              <section class="ps-si-card" aria-labelledby="{{ ids.user }}">
+                <h2 class="ps-h2" id="{{ ids.user }}">Sign in with username</h2>
+                <div class="ps-fld">
+                  <span class="ps-lbl">Username</span>
+                  <span class="inp ps-inp"></span>
+                </div>
+                <div class="ps-fld">
+                  <span class="ps-lbl">Password</span>
+                  <div class="ps-pw">
+                    <span class="inp ps-inp"></span>
+                    <button class="btn lg ib v-outline" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button>
+                  </div>
+                </div>
+                <div class="ps-foot"><button class="btn lg v-default" type="button">Sign in</button></div>
+              </section>
+            </div>
+          </div>
+        </sc-if>
+      </dc-import>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"},"size":{"editor":"enum","options":["1280x800","1920x1080","800x1280"],"default":"1280x800","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, d, opts) => {
+            const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim();
+            return opts.indexOf(s) < 0 ? d : s;
+          };
+          const option = pick(P.option, "A", ["A", "B", "C"]);
+          const size = pick(P.size, "1280x800", ["1280x800", "1920x1080", "800x1280"]);
+          const theme = pick(P.theme, "light", ["light", "dark"]);
+          if (!this.uid) {
+            window.__psSeq = (window.__psSeq || 0) + 1;
+            this.uid = "ps-s" + window.__psSeq;
+          }
+          const u = this.uid;
+          const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => ({ t: d, cls: "", aria: undefined })).concat([
+            { t: "Clear", cls: "fn", aria: undefined },
+            { t: "0", cls: "", aria: undefined },
+            { t: "", icon: "Delete", cls: "fn", aria: "Delete last digit" }
+          ]);
+          return {
+            size: size,
+            theme: theme,
+            hint: size.replace("x", "px,") + "px",
+            isA: option === "A",
+            isB: option === "B",
+            isC: option === "C",
+            ids: { badge: u + "-badge", user: u + "-user", tabBadge: u + "-tab-badge", tabUser: u + "-tab-user", panBadge: u + "-pan-badge" },
+            keys: keys
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

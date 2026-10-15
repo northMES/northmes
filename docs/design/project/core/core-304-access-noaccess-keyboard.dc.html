@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+        <style>
+          /* No-access states, reflow at 320, long strings, keyboard and focus frames and the build notes (NO) of the spec
+             page core/core-304-access.dc.html, issue northMES/northmes#304. Screen frames mount ./Shell.dc.html (the byte
+             copy of shell/Shell.dc.html) and the shared parts core-304-access-*.dc.html; the list and form patterns use the
+             canonical classes of ../ui/ui-222-list-form.css (lf-) and the access classes of ./core-304-access.css (ca-).
+             NO7 and NO8 draw D2's approved page for an unknown plant (ST29, ST30) with its layout and copy; NO9, NO10 and
+             NO25 draw the access-lost dialog in the box of D2's reload dialog (ST3). Each frame element has the frame's real
+             size: the screen plus the 36 px document title. Chips, notes, badges and tags are canvas annotations in the D1
+             canvas colors or --info, not part of the UI. Classes start with nk-, so they never meet a D1, sh-, lf- or ca-
+             class. */
+          .nk-part{position:relative}
+          .nk-fr{position:absolute}
+          .flabel.nk-chip{position:absolute;left:0;bottom:calc(100% + 12px);flex-wrap:wrap;row-gap:4px;max-width:100%;box-sizing:border-box;margin:0;cursor:default}
+          .nk-chip .ca-url{min-width:0;overflow-wrap:anywhere}
+          .nk-ovl{position:absolute;inset:0;z-index:40;pointer-events:none}
+          .nk-b{position:absolute;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/1 var(--font-mono);box-sizing:border-box}
+          .nk-t{position:absolute;max-width:320px;padding:4px 8px;border-radius:4px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 12px/16px var(--font-sans);text-wrap:pretty}
+          .nk-note{position:absolute;width:360px;display:grid;gap:10px;align-content:start;padding:14px 16px 16px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 13px/18px "IBM Plex Sans",system-ui,sans-serif;box-sizing:border-box;text-wrap:pretty}
+          .nk-note-k{margin:0;color:#4f4c46;font-size:12px;line-height:16px}
+          .nk-note-h{margin:-6px 0 0;font-size:15px;line-height:20px;font-weight:600}
+          .nk-note p{margin:0}
+          .nk-ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px}
+          .nk-lg{display:grid;gap:2px;padding:8px 0;border-top:1px solid rgba(0,0,0,.12);border-bottom:1px solid rgba(0,0,0,.12)}
+          .nk-lr{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px}
+          .nk-ln{font:600 12px/18px "IBM Plex Mono",ui-monospace,monospace}
+          .nk-mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px}
+
+          /* NO1, NO2: the page opened by URL. The canonical EmptyState in a short Card (ST23), with the shared lead class
+             ca-lead of core-304-access.css, which RO31 uses too */
+          .lf-state .acts a.btn{text-decoration:none}
+
+          /* NO7, NO8: D2's page for an unknown plant (ST29, ST30), with the values of its part file */
+          .nk-shot{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+          .nk-state{display:grid;gap:16px;max-width:640px}
+          .nk-head{display:flex;align-items:flex-start;gap:12px}
+          .nk-slead{margin:0;font-size:16px;line-height:24px;font-weight:500}
+          .nk-mut{color:var(--muted-foreground)}
+          .nk-data{font:500 13px/18px var(--font-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+          .nk-h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+          .nk-cos{display:grid;gap:16px}
+          .nk-co{display:grid;gap:4px}
+          .nk-co-h{margin:0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .nk-plants{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+          .nk-plants li{display:flex;align-items:center;gap:8px;min-height:32px}
+          .nk-plants .nk-data{margin-left:4px}
+          .nk-pl{display:inline-flex;align-items:center;min-height:var(--nm-target-min);color:var(--link)}
+          .sh-scr .nk-pl{text-decoration:underline;text-underline-offset:2px}
+
+          /* NO9, NO10, NO25: the access-lost dialog over the inert page, in the box of D2's reload dialog (ST3) */
+          .nk-stage{position:relative;flex:none;width:1440px;height:900px}
+          .nk-inert{position:absolute;inset:0}
+          .nk-ov{position:absolute;inset:0;z-index:30;border-radius:var(--radius-xl);background:rgba(0,0,0,.5)}
+          .nk-dlg{position:absolute;z-index:31;left:50%;top:50%;display:grid;gap:12px;width:480px;padding:24px;transform:translate(-50%,-50%);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+          .nk-dlg-t{margin:0;padding:0;font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.01em}
+          .nk-dlg-d{display:grid;gap:8px}
+          .nk-p{margin:0;max-width:72ch}
+          .nk-dlg-f{display:flex;justify-content:flex-end;gap:8px;padding-top:8px}
+          .nk-dlg a.btn{text-decoration:none}
+          .nk-lmn{z-index:32}
+
+          /* NO26: the build notes are the part core-304-access-notes.dc.html, which brings its own styles */
+        </style>
+      </helmet>
+      <div class="nk-part" id="{{ rid }}" style="width:4480px;height:14152px">
+      <div class="nk-fr" data-nk="NO1" style="left:0px;top:160px;width:1440px;height:936px" data-screen-label="NO1 No access to Roles, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO1</span>No access to Roles<span class="fth">Light, 1440 by 900. Alex Lund, planner, opens Roles by URL without core.role:read: one h1 with focus, the missing permission, no data, a way out</span><span class="ca-url">/plant-a/core/roles</span></div>
+        <dc-import name="Shell" width="1440" theme="light" nav="none" title="No access to Roles" crumbs="Administration|Roles" doc-title="No access to Roles · Plant A · NorthMES" focus="h1" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-card auto"><div class="lf-state"><span class="big"><span class="ic" data-icon="Lock"></span></span><p class="ca-lead">Opening Roles needs the permission to read roles (core.role:read) at Plant&nbsp;A.</p>
+<p>Ask a plant admin for a role that includes it.</p>
+<div class="acts"><a class="btn v-default" href="#">Go to Planning board</a></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO2" style="left:1520px;top:160px;width:1440px;height:936px" data-screen-label="NO2 No access to Roles, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO2</span>No access to Roles<span class="fth">Dark, 1440 by 900. As NO1</span><span class="ca-url">/plant-a/core/roles</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" nav="none" title="No access to Roles" crumbs="Administration|Roles" doc-title="No access to Roles · Plant A · NorthMES" focus="h1" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-card auto"><div class="lf-state"><span class="big"><span class="ic" data-icon="Lock"></span></span><p class="ca-lead">Opening Roles needs the permission to read roles (core.role:read) at Plant&nbsp;A.</p>
+<p>Ask a plant admin for a role that includes it.</p>
+<div class="acts"><a class="btn v-default" href="#">Go to Planning board</a></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO3" style="left:3040px;top:160px;width:1440px;height:936px" data-screen-label="NO3 Forbidden region, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO3</span>Forbidden region<span class="fth">Light, 1440 by 900. Jonas Holm, plant admin, lacks core.audit:read: Access changes keeps its card and heading. The tab panel is scrolled so its top edge falls on the line above the Viewer row. The D2 admin preset still draws Audit log</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" scroll="168" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO4" style="left:0px;top:1296px;width:1440px;height:936px" data-screen-label="NO4 Forbidden region, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO4</span>Forbidden region<span class="fth">Dark, 1440 by 900. As NO3</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" changes="forbidden" scroll="168" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO5" style="left:1520px;top:1296px;width:1440px;height:936px" data-screen-label="NO5 No access cells, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO5</span>No access cells<span class="fth">Light, 1440 by 900. Ida Wall reads users and assigns roles but lacks core.role:read (a role assumed for this frame, questions 29 and NQ3): the Role cells and every Granted by cell read No access, each header names the permission in its tooltip, Add role is left out and Remove is named by the place only</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="admin" user="Ida Wall" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" effective="denied" roles="denied" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO6" style="left:3040px;top:1296px;width:1440px;height:936px" data-screen-label="NO6 No access cells, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO6</span>No access cells<span class="fth">Dark, 1440 by 900. As NO5</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="admin" user="Ida Wall" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" effective="denied" roles="denied" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO7" style="left:0px;top:2432px;width:1440px;height:936px" data-screen-label="NO7 Plant without a role, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO7</span>Plant without a role<span class="fth">Light, 1440 by 900. D2 ST29 as approved, not a new design: Alex Lund opens a Plant B link after his role there was removed; FORBIDDEN and NOT_FOUND read the same</span><span class="ca-url">/plant-b/planning/board</span></div>
+        <div class="nk-shot"><div class="sh-doc"><span class="sh-doc-k">title</span><span>Page not found · NorthMES</span></div>
+<div class="sh-scr w1440" lang="en"><a class="btn v-default sh-skip" href="#nk-no7-main">Skip to main content</a><div class="sh-col"><header class="sh-tb"><span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span><span class="sh-grow"></span><button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button><button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button></header><main class="sh-main nk-np" id="nk-no7-main" tabindex="-1"><div class="sh-ph"><h1 class="sh-h1 is-focus" tabindex="-1">Page not found</h1></div>
+<div class="panel nk-state"><div class="nk-head"><span class="ic ic24 nk-mut" data-icon="SearchX"></span><p class="nk-slead">There is no plant at <span class="nk-data">/plant-b/planning/board</span> that you can open. The link may be out of date.</p>
+</div>
+<h2 class="nk-h3">Your plants</h2><div class="nk-cos"><div class="nk-co"><h3 class="nk-co-h" id="nk-no7-c1">Acme AB</h3><ul class="nk-plants" aria-labelledby="nk-no7-c1"><li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="nk-pl" href="#">Plant A</a><span class="nk-data nk-mut">/plant-a</span></li>
+</ul>
+</div>
+</div>
+</div>
+</main></div>
+</div>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO8" style="left:1520px;top:2432px;width:1440px;height:936px" data-screen-label="NO8 Plant without a role, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO8</span>Plant without a role<span class="fth">Dark, 1440 by 900. D2 ST30 as approved, as NO7</span><span class="ca-url">/plant-b/planning/board</span></div>
+        <div class="nk-shot"><div class="sh-doc"><span class="sh-doc-k">title</span><span>Page not found · NorthMES</span></div>
+<div class="sh-scr w1440 dark" lang="en"><a class="btn v-default sh-skip" href="#nk-no8-main">Skip to main content</a><div class="sh-col"><header class="sh-tb"><span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span><span class="sh-grow"></span><button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button><button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button></header><main class="sh-main nk-np" id="nk-no8-main" tabindex="-1"><div class="sh-ph"><h1 class="sh-h1 is-focus" tabindex="-1">Page not found</h1></div>
+<div class="panel nk-state"><div class="nk-head"><span class="ic ic24 nk-mut" data-icon="SearchX"></span><p class="nk-slead">There is no plant at <span class="nk-data">/plant-b/planning/board</span> that you can open. The link may be out of date.</p>
+</div>
+<h2 class="nk-h3">Your plants</h2><div class="nk-cos"><div class="nk-co"><h3 class="nk-co-h" id="nk-no8-c1">Acme AB</h3><ul class="nk-plants" aria-labelledby="nk-no8-c1"><li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="nk-pl" href="#">Plant A</a><span class="nk-data nk-mut">/plant-a</span></li>
+</ul>
+</div>
+</div>
+</div>
+</main></div>
+</div>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO9" style="left:3040px;top:2432px;width:1440px;height:936px" data-screen-label="NO9 Access lost, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO9</span>Access lost<span class="fth">Light, 1440 by 900. Close code 4403 on the Planning board at Plant B for a planner who keeps Plant A and Plant C: the alertdialog over the inert page, focus on Go to Plant A</span><span class="ca-url">/plant-b/planning/board</span></div>
+        <div class="nk-shot"><div class="sh-doc"><span class="sh-doc-k">title</span><span>You no longer have access to Plant B · NorthMES</span></div>
+<div class="nk-stage"><div class="nk-inert" inert=""><dc-import name="Shell" width="1440" theme="light" companies="Acme AB: Plant A, Plant B; Nordic Tools AB: Plant C" plant="Plant B" nav="planning.board" bell="off" hint-size="1440px,900px"><div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+<div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+</dc-import>
+</div>
+<div class="nk-ov"></div>
+<span class="sh-lm nk-lmn" style="left:280px;bottom:4px">page: inert, its h1 is out of the accessibility tree</span><div class="nk-dlg" role="alertdialog" aria-modal="true" aria-labelledby="nk-no9-t" aria-describedby="nk-no9-d"><span class="sh-lm nk-lmn" style="left:16px;top:-10px">alertdialog: the only h1 while it is open</span><h1 class="nk-dlg-t" id="nk-no9-t" tabindex="-1">You no longer have access to Plant B</h1><div class="nk-dlg-d" id="nk-no9-d"><p class="nk-p">Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.</p>
+<p class="nk-p">Changes on this page that are not saved are lost.</p>
+</div>
+<div class="nk-dlg-f"><a class="btn v-outline" href="#">Your plants</a><a class="btn v-default is-focus" href="#">Go to Plant A</a></div>
+</div>
+</div>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO10" style="left:0px;top:3568px;width:1440px;height:936px" data-screen-label="NO10 Access lost, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO10</span>Access lost<span class="fth">Dark, 1440 by 900. As NO9, without annotations</span><span class="ca-url">/plant-b/planning/board</span></div>
+        <div class="nk-shot"><div class="sh-doc"><span class="sh-doc-k">title</span><span>You no longer have access to Plant B · NorthMES</span></div>
+<div class="nk-stage"><div class="nk-inert" inert=""><dc-import name="Shell" width="1440" theme="dark" companies="Acme AB: Plant A, Plant B; Nordic Tools AB: Plant C" plant="Plant B" nav="planning.board" bell="off" hint-size="1440px,900px"><div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+<div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+</dc-import>
+</div>
+<div class="nk-ov"></div>
+<div class="nk-dlg dark" role="alertdialog" aria-modal="true" aria-labelledby="nk-no10-t" aria-describedby="nk-no10-d"><h1 class="nk-dlg-t" id="nk-no10-t" tabindex="-1">You no longer have access to Plant B</h1><div class="nk-dlg-d" id="nk-no10-d"><p class="nk-p">Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.</p>
+<p class="nk-p">Changes on this page that are not saved are lost.</p>
+</div>
+<div class="nk-dlg-f"><a class="btn v-outline" href="#">Your plants</a><a class="btn v-default is-focus" href="#">Go to Plant A</a></div>
+</div>
+</div>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO11" style="left:1520px;top:3568px;width:320px;height:676px" data-screen-label="NO11 Roles list, light, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO11</span>Roles list<span class="fth">Light, 320 by 640. Karin Dahl. RO1 in one column: the search, then Filters, which opens the Filters sheet with Defined by; the table keeps RO1's groups and counts and scrolls in its own region; Role stays</span><span class="ca-url">/plant-a/core/roles</span></div>
+        <dc-import name="Shell" width="320" theme="light" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="320px,676px"><div class="lf-page"><span class="inp lf-search full"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span><div class="lf-tool"><button class="btn v-outline lf-fb" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>Filters</button></div>
+<div class="lf-nbox" style="--cols:148px 112px 120px;--minw:380px;--stkw:148px"><div class="lf-xs lf-xstk" tabindex="0" role="region" aria-label="Roles table, scrolls sideways"><div class="lf-grid" role="table" aria-label="Roles of Acme AB"><div class="lf-tr hd" role="row"><span class="lf-td lf-stk" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span></div>
+<div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Custom roles of Acme AB</span><span class="c">5 roles</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">IT</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">5 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Kanban reader</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">0 of 36</span><span class="lf-sub">1 not installed</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Plant admin</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">9 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Shift lead</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">5 of 36</span></span><span class="lf-td" role="cell"><span>2 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Upload ERP files</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">1 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Default roles from modules</span><span class="c">6 roles</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Company admin</a><span class="lf-sub">Core</span></span><span class="lf-td two" role="cell"><span class="lf-mono">36 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Operator</a><span class="lf-sub">Production start</span></span><span class="lf-td two" role="cell"><span class="lf-mono">1 of 36</span></span><span class="lf-td" role="cell"><span>2 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Planner</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">8 of 36</span></span><span class="lf-td" role="cell"><span>3 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Planning admin</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">11 of 36</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Tool keeper</a><span class="lf-sub">Acme tooling, plugin</span></span><span class="lf-td two" role="cell"><span class="lf-mono">2 of 36</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Viewer</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">2 of 36</span></span><span class="lf-td" role="cell"><span>3 people</span></span></div>
+</div>
+</div>
+<div class="lf-pager out"><span>2 groups, 11 roles</span></div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO12" style="left:1920px;top:3568px;width:320px;height:676px" data-screen-label="NO12 Roles list, dark, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO12</span>Roles list<span class="fth">Dark, 320 by 640. As NO11</span><span class="ca-url">/plant-a/core/roles</span></div>
+        <dc-import name="Shell" width="320" theme="dark" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="320px,676px"><div class="lf-page"><span class="inp lf-search full"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span><div class="lf-tool"><button class="btn v-outline lf-fb" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>Filters</button></div>
+<div class="lf-nbox" style="--cols:148px 112px 120px;--minw:380px;--stkw:148px"><div class="lf-xs lf-xstk" tabindex="0" role="region" aria-label="Roles table, scrolls sideways"><div class="lf-grid" role="table" aria-label="Roles of Acme AB"><div class="lf-tr hd" role="row"><span class="lf-td lf-stk" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span></div>
+<div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Custom roles of Acme AB</span><span class="c">5 roles</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">IT</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">5 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Kanban reader</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">0 of 36</span><span class="lf-sub">1 not installed</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Plant admin</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">9 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Shift lead</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">5 of 36</span></span><span class="lf-td" role="cell"><span>2 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Upload ERP files</a><span class="lf-sub">Acme AB</span></span><span class="lf-td two" role="cell"><span class="lf-mono">1 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Default roles from modules</span><span class="c">6 roles</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Company admin</a><span class="lf-sub">Core</span></span><span class="lf-td two" role="cell"><span class="lf-mono">36 of 36</span></span><span class="lf-td" role="cell"><span>1 person</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Operator</a><span class="lf-sub">Production start</span></span><span class="lf-td two" role="cell"><span class="lf-mono">1 of 36</span></span><span class="lf-td" role="cell"><span>2 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Planner</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">8 of 36</span></span><span class="lf-td" role="cell"><span>3 people</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Planning admin</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">11 of 36</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Tool keeper</a><span class="lf-sub">Acme tooling, plugin</span></span><span class="lf-td two" role="cell"><span class="lf-mono">2 of 36</span></span><span class="lf-td" role="cell"><span class="lf-mut">None</span></span></div>
+<div class="lf-tr" role="row"><span class="lf-td two lf-stk" role="cell"><a class="lf-cl" href="#">Viewer</a><span class="lf-sub">Planning</span></span><span class="lf-td two" role="cell"><span class="lf-mono">2 of 36</span></span><span class="lf-td" role="cell"><span>3 people</span></span></div>
+</div>
+</div>
+<div class="lf-pager out"><span>2 groups, 11 roles</span></div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO13" style="left:2320px;top:3568px;width:320px;height:676px" data-screen-label="NO13 Access tab, light, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO13</span>Access tab<span class="fth">Light, 320 by 640. Jonas Holm on Sara Nyberg: roles as cards, no table</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="320" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="320px,676px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" size="narrow" hint-size="100%,560px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO14" style="left:2720px;top:3568px;width:320px;height:676px" data-screen-label="NO14 Access tab, dark, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO14</span>Access tab<span class="fth">Dark, 320 by 640. As NO13</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="320" theme="dark" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="320px,676px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" size="narrow" hint-size="100%,560px"></dc-import>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO15" style="left:3120px;top:3568px;width:320px;height:690px" data-screen-label="NO15 Role editor, light, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO15</span>Role editor<span class="fth">Light, 320 by 640. Karin Dahl. One column, with Changes not saved above the reason; the Save bar stays at the bottom</span><span class="ca-url">/plant-a/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="320" theme="light" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="320px,676px"><div data-slot="header"><span>Custom role, Acme AB</span></div>
+<div class="lf-fill lf-nar"><div class="lf-fscroll"><div class="lf-form"><div class="fld"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" size="narrow" hint-size="100%,900px"></dc-import>
+</div>
+<section class="lf-fs" aria-labelledby="nk-no15-wh"><h2 class="lf-fs-h" id="nk-no15-wh">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li>
+</ul>
+</section>
+<section class="lf-fs" aria-labelledby="nk-no15-ch"><h2 class="lf-fs-h" id="nk-no15-ch">Changes not saved</h2><ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Added: Run autoplan</span><span class="ca-pid">planning.autoplan:run</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you change this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="lf-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO16" style="left:3520px;top:3568px;width:320px;height:690px" data-screen-label="NO16 Role editor, dark, 320 by 640">
+        <div class="flabel nk-chip"><span class="fid">NO16</span>Role editor<span class="fth">Dark, 320 by 640. As NO15</span><span class="ca-url">/plant-a/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="320" theme="dark" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="320px,676px"><div data-slot="header"><span>Custom role, Acme AB</span></div>
+<div class="lf-fill lf-nar"><div class="lf-fscroll"><div class="lf-form"><div class="fld"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" size="narrow" hint-size="100%,900px"></dc-import>
+</div>
+<section class="lf-fs" aria-labelledby="nk-no16-wh"><h2 class="lf-fs-h" id="nk-no16-wh">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li>
+</ul>
+</section>
+<section class="lf-fs" aria-labelledby="nk-no16-ch"><h2 class="lf-fs-h" id="nk-no16-ch">Changes not saved</h2><ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Added: Run autoplan</span><span class="ca-pid">planning.autoplan:run</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you change this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="lf-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO17" style="left:0px;top:4704px;width:1440px;height:936px" data-screen-label="NO17 Long strings, German and Finnish, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO17</span>Long strings, German and Finnish<span class="fth">Light, 1440 by 900. The role editor with German labels and data at full length; the column is scrolled to its end, where the plugin group Acme-työkalujen hallinta shows Finnish lines. Each holder's plant sits under the name</span><span class="ca-url">/werk-sued/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="company-admin" user="Karin Dahl" username="karin.dahl" strings="long" pageLang="de" nav="core.roles" entity="Schichtleitung Montage und Endprüfung bearbeiten" crumbs="Verwaltung|Rollen|Schichtleitung Montage und Endprüfung|Bearbeiten" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span lang="de">Eigene Rolle, Oberschwäbische Präzisionswerkzeuge GmbH</span></div>
+<div class="ca-page" lang="de"><div class="ca-two"><div class="ca-col scroll" data-nk-scroll="end"><div class="fld" style="max-width:480px"><span class="lbl">Rollenname</span><span class="inp">Schichtleitung Montage und Endprüfung</span><span class="desc">Eindeutig in Oberschwäbische Präzisionswerkzeuge GmbH.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" open="planning,productionStart,acme" strings="long" hint-size="100%,900px"></dc-import>
+</div>
+</div>
+<div class="ca-col"><section class="lf-fs" aria-labelledby="nk-no17-wh"><h2 class="lf-fs-h" id="nk-no17-wh">Wo Schichtleitung Montage und Endprüfung gilt</h2><p class="ca-p">Zugewiesen an <span class="ca-mono">2</span> Personen in Oberschwäbische Präzisionswerkzeuge GmbH und Präzisionsfertigung Oberschwaben Werk Süd. Eine gespeicherte Änderung gilt für sie ab ihrer nächsten Aktion.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Präzisionsfertigung Oberschwaben Werk Süd</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Hannelore Wiesenthal-Brückner</span><span class="w">Präzisionsfertigung Oberschwaben Werk Süd</span></span></li>
+</ul>
+</section>
+<section class="lf-fs" aria-labelledby="nk-no17-ch"><h2 class="lf-fs-h" id="nk-no17-ch">Nicht gespeicherte Änderungen</h2><ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Hinzugefügt: Automatische Planung starten</span><span class="ca-pid">planning.autoplan:run</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Grund der Änderung<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Warum Sie diese Rolle ändern</span></span><span class="desc">Erscheint im Verlauf der Rolle. Geben Sie keine personenbezogenen Daten ein. Bis zu 500 Zeichen.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Rolle speichern</button><button class="btn v-outline" type="button">Abbrechen</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO27" style="left:1904px;top:9248px;width:1440px;height:936px" data-screen-label="NO27 Long strings, German and Finnish, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO27</span>Long strings, German and Finnish<span class="fth">Dark, 1440 by 900. As NO17</span><span class="ca-url">/werk-sued/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="company-admin" user="Karin Dahl" username="karin.dahl" strings="long" pageLang="de" nav="core.roles" entity="Schichtleitung Montage und Endprüfung bearbeiten" crumbs="Verwaltung|Rollen|Schichtleitung Montage und Endprüfung|Bearbeiten" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span lang="de">Eigene Rolle, Oberschwäbische Präzisionswerkzeuge GmbH</span></div>
+<div class="ca-page" lang="de"><div class="ca-two"><div class="ca-col scroll" data-nk-scroll="end"><div class="fld" style="max-width:480px"><span class="lbl">Rollenname</span><span class="inp">Schichtleitung Montage und Endprüfung</span><span class="desc">Eindeutig in Oberschwäbische Präzisionswerkzeuge GmbH.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" open="planning,productionStart,acme" strings="long" hint-size="100%,900px"></dc-import>
+</div>
+</div>
+<div class="ca-col"><section class="lf-fs" aria-labelledby="nk-no27-wh"><h2 class="lf-fs-h" id="nk-no27-wh">Wo Schichtleitung Montage und Endprüfung gilt</h2><p class="ca-p">Zugewiesen an <span class="ca-mono">2</span> Personen in Oberschwäbische Präzisionswerkzeuge GmbH und Präzisionsfertigung Oberschwaben Werk Süd. Eine gespeicherte Änderung gilt für sie ab ihrer nächsten Aktion.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Präzisionsfertigung Oberschwaben Werk Süd</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Hannelore Wiesenthal-Brückner</span><span class="w">Präzisionsfertigung Oberschwaben Werk Süd</span></span></li>
+</ul>
+</section>
+<section class="lf-fs" aria-labelledby="nk-no27-ch"><h2 class="lf-fs-h" id="nk-no27-ch">Nicht gespeicherte Änderungen</h2><ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Hinzugefügt: Automatische Planung starten</span><span class="ca-pid">planning.autoplan:run</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Grund der Änderung<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Warum Sie diese Rolle ändern</span></span><span class="desc">Erscheint im Verlauf der Rolle. Geben Sie keine personenbezogenen Daten ein. Bis zu 500 Zeichen.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Rolle speichern</button><button class="btn v-outline" type="button">Abbrechen</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+      </div>
+      <div class="nk-fr" data-nk="NO18" style="left:1904px;top:4704px;width:1440px;height:936px" data-screen-label="NO18 Tab order on the Access tab, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO18</span>Tab order on the Access tab<span class="fth">Light, 1440 by 900. Numbers are the Tab sequence; the skip link has focus</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" focus="skip" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+        <div class="nk-ovl"><sc-for list="{{ ov.NO18.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO18.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO19" style="left:0px;top:5840px;width:1440px;height:936px" data-screen-label="NO19 Tab order on the role editor, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO19</span>Tab order on the role editor<span class="fth">Dark, 1440 by 900. Oskar Wik, IT: locked permissions are no Tab stops. Numbers start in main</span><span class="ca-url">/plant-a/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="admin" user="Oskar Wik" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span>Custom role, Acme AB</span></div>
+<div class="ca-page"><div class="ca-two"><div class="ca-col scroll"><div class="fld" style="max-width:480px"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" editor="it" hint-size="100%,900px"></dc-import>
+</div>
+</div>
+<div class="ca-col"><section class="lf-fs" aria-labelledby="nk-no19-wh"><h2 class="lf-fs-h" id="nk-no19-wh">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you change this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+        <div class="nk-ovl dark"><sc-for list="{{ ov.NO19.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO19.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO20" style="left:1904px;top:5840px;width:1440px;height:936px" data-screen-label="NO20 Focus in the permission checklist, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO20</span>Focus in the permission checklist<span class="fth">Light, 1440 by 900. Space ticked Run autoplan; focus stays on its checkbox</span><span class="ca-url">/plant-a/core/roles/$roleId/edit</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span>Custom role, Acme AB</span></div>
+<div class="ca-page"><div class="ca-two"><div class="ca-col scroll"><div class="fld" style="max-width:480px"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+<div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" focus="perm:planning.autoplan:run" hint-size="100%,900px"></dc-import>
+</div>
+</div>
+<div class="ca-col"><section class="lf-fs" aria-labelledby="nk-no20-wh"><h2 class="lf-fs-h" id="nk-no20-wh">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+<ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li>
+<li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li>
+</ul>
+</section>
+<section class="lf-fs" aria-labelledby="nk-no20-ch"><h2 class="lf-fs-h" id="nk-no20-ch">Changes not saved</h2><ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Added: Run autoplan</span><span class="ca-pid">planning.autoplan:run</span></span></li>
+</ul>
+</section>
+<div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you change this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+</div>
+</div>
+</dc-import>
+        <div class="nk-ovl"><sc-for list="{{ ov.NO20.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO20.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO21" style="left:0px;top:6976px;width:1440px;height:936px" data-screen-label="NO21 Focus after Add role, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO21</span>Focus after Add role<span class="fth">Dark, 1440 by 900. Shift lead at Plant A added for Alex Lund: his Access tab, its h1 has focus, the polite region speaks; the new row sits beside Planner</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="company-admin" user="Karin Dahl" nav="core.users" entity="Alex Lund" actions="Reset password|Block user" bell="off" show-title="on" focus="h1" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">alex.lund</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="alex.lund" viewer="company-admin" note="added" added="shiftLead" target="shiftLead" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+        <div class="nk-ovl dark"><sc-for list="{{ ov.NO21.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO21.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO22" style="left:1904px;top:6976px;width:1440px;height:936px" data-screen-label="NO22 Focus after a refusal, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO22</span>Focus after a refusal<span class="fth">Light, 1440 by 900. The server refused Viewer at Acme AB; the error summary has focus and its link repeats the message under Role</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="ca-page"><div class="ca-two"><div class="ca-col"><div class="lf-summary is-focus" tabindex="-1" role="group" aria-labelledby="nk-no22-sum"><h2 class="lf-summary-h" id="nk-no22-sum"><span class="ic" data-icon="CircleAlert"></span>Fix 1 field to add the role</h2><ul><li><a href="#">You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: Read production orders and the planning board (planning.productionOrder:read) and Read job orders (planning.jobOrder:read). Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.</a></li>
+</ul>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" where="company" value="viewer" err="on" active="viewer" focus="none" hint-size="100%,330px"></dc-import>
+</div>
+<div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Reads the plan at every plant from week 2026-W42</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+<div class="ca-col"><div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="viewer" hint-size="100%,360px"></dc-import>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import>
+</div>
+</div>
+</div>
+</div>
+</dc-import>
+        <div class="nk-ovl"><sc-for list="{{ ov.NO22.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO22.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO23" style="left:0px;top:8112px;width:1440px;height:936px" data-screen-label="NO23 Summary link followed, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO23</span>Summary link followed<span class="fth">Dark, 1440 by 900. Enter on the summary's link: focus on Role</span><span class="ca-url">/plant-a/core/users/$userId/roles/new</span></div>
+        <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="ca-page"><div class="ca-two"><div class="ca-col"><div class="lf-summary" tabindex="-1" role="group" aria-labelledby="nk-no23-sum"><h2 class="lf-summary-h" id="nk-no23-sum"><span class="ic" data-icon="CircleAlert"></span>Fix 1 field to add the role</h2><ul><li><a href="#">You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: Read production orders and the planning board (planning.productionOrder:read) and Read job orders (planning.jobOrder:read). Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.</a></li>
+</ul>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" where="company" value="viewer" err="on" active="viewer" focus="role" hint-size="100%,330px"></dc-import>
+</div>
+<div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span>Reads the plan at every plant from week 2026-W42</span></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+<div class="ca-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+</div>
+<div class="ca-col"><div class="lf-fit"><dc-import name="core-304-access-picker" view="person" hint-size="100%,160px"></dc-import>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" view="need" active="viewer" hint-size="100%,360px"></dc-import>
+</div>
+<div class="lf-fit"><dc-import name="core-304-access-picker" view="note" hint-size="100%,80px"></dc-import>
+</div>
+</div>
+</div>
+</div>
+</dc-import>
+        <div class="nk-ovl dark"><sc-for list="{{ ov.NO23.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO23.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO24" style="left:1904px;top:8112px;width:1440px;height:936px" data-screen-label="NO24 Focus in the remove dialog, light, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO24</span>Focus in the remove dialog<span class="fth">Light, 1440 by 900. Numbers are the Tab cycle inside the dialog; focus starts in Reason</span><span class="ca-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span class="badge ca-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ca-mono">sara.nyberg</span></div>
+<div class="lf-fill"><dc-import name="core-304-access-tab" user="sara.nyberg" dialog="remove" target="shiftLead" focus="reason" hint-size="100%,760px"></dc-import>
+</div>
+</dc-import>
+        <div class="nk-ovl"><sc-for list="{{ ov.NO24.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO24.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO25" style="left:0px;top:9248px;width:1440px;height:936px" data-screen-label="NO25 Focus in the access-lost dialog, dark, 1440 by 900">
+        <div class="flabel nk-chip"><span class="fid">NO25</span>Focus in the access-lost dialog<span class="fth">Dark, 1440 by 900. Numbers are the Tab cycle; focus starts on Go to Plant A; Escape does nothing</span><span class="ca-url">/plant-b/planning/board</span></div>
+        <div class="nk-shot"><div class="sh-doc"><span class="sh-doc-k">title</span><span>You no longer have access to Plant B · NorthMES</span></div>
+<div class="nk-stage"><div class="nk-inert" inert=""><dc-import name="Shell" width="1440" theme="dark" companies="Acme AB: Plant A, Plant B; Nordic Tools AB: Plant C" plant="Plant B" nav="planning.board" bell="off" hint-size="1440px,900px"><div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+<div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+</dc-import>
+</div>
+<div class="nk-ov"></div>
+<div class="nk-dlg dark" role="alertdialog" aria-modal="true" aria-labelledby="nk-no25-t" aria-describedby="nk-no25-d"><h1 class="nk-dlg-t" id="nk-no25-t" tabindex="-1">You no longer have access to Plant B</h1><div class="nk-dlg-d" id="nk-no25-d"><p class="nk-p">Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.</p>
+<p class="nk-p">Changes on this page that are not saved are lost.</p>
+</div>
+<div class="nk-dlg-f"><a class="btn v-outline" href="#">Your plants</a><a class="btn v-default is-focus" href="#">Go to Plant A</a></div>
+</div>
+</div>
+</div>
+        <div class="nk-ovl dark"><sc-for list="{{ ov.NO25.b }}" as="o"><span class="nk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+<sc-for list="{{ ov.NO25.t }}" as="o"><span class="nk-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+</div>
+      </div>
+      <div class="nk-fr" data-nk="NO26" style="left:0px;top:10384px;width:4480px;height:3728px" data-screen-label="NO26 Build notes, not part of the UI, light, 4480 by 3728">
+        <div class="flabel nk-chip"><span class="fid">NO26</span>Build notes, not part of the UI<span class="fth">Light, 4480 by 3728. For the whole page: components, patterns, tokens, ARIA, announcements, keyboard, permission ids, copy and WCAG 2.2</span></div>
+        <div style="height:3728px"><dc-import name="core-304-access-notes" hint-size="4480px,3728px"></dc-import>
+</div>
+      </div>
+      <div class="nk-note" style="left:3368px;top:4704px"><p class="nk-note-k">NO18 notes, not part of the UI</p>
+<p class="nk-note-h">Tab order on the Access tab</p>
+<p>Jonas Holm, plant admin, on Sara Nyberg's Access tab. The numbers follow DOM order, measured from the mounted frame; the skip link has focus, so it shows.</p>
+<div class="nk-lg"><sc-for list="{{ leg.NO18 }}" as="l"><div class="nk-lr"><span class="nk-ln">{{ l.n }}</span><span>{{ l.t }}</span></div>
+</sc-for>
+</div>
+<ul class="nk-ul"><li>The tab list is one stop: the selected tab has tabindex 0, and Left and Right move between General, Access and History (roving tabindex). Choosing a tab changes the URL parameter tab; focus stays on the tab.</li>
+<li>The Viewer row has no Remove. Its line "A company admin of Acme AB can remove it." is text, not a stop.</li>
+<li>What Sara Nyberg can do at Plant A has one stop, Show every permission (Space toggles it). Its rows are not stops.</li>
+<li>Stops scrolled out of the sidebar or the tab panel keep their number without a badge.</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:1464px;top:5840px"><p class="nk-note-k">NO19 notes, not part of the UI</p>
+<p class="nk-note-h">Tab order on the role editor</p>
+<p>Oskar Wik holds IT at Acme AB and edits Shift lead, which is assigned at Plant A. Numbers start in main; the shell stops come first, as in NO18. The edit route has no page actions.</p>
+<div class="nk-lg"><sc-for list="{{ leg.NO19 }}" as="l"><div class="nk-lr"><span class="nk-ln">{{ l.n }}</span><span>{{ l.t }}</span></div>
+</sc-for>
+</div>
+<ul class="nk-ul"><li>A permission Oskar Wik does not hold at Plant A shows a lock in place of its checkbox, with aria-disabled. It is not a Tab stop, as a disabled native checkbox is not; a screen reader reads it in browse mode with "You do not hold it at Plant A."</li>
+<li>Each module is a disclosure button (aria-expanded) inside an h3. Enter or Space opens or closes it; the permissions of a closed module are not stops. Modules without a permission of the role start closed.</li>
+<li>Unticking a permission Oskar Wik does not hold stays possible until question 31 is answered.</li>
+<li>Stops below the visible part of the column keep their number without a badge.</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:3368px;top:5840px"><p class="nk-note-k">NO20 notes, not part of the UI</p>
+<p class="nk-note-h">Focus in the permission checklist</p>
+<p>Karin Dahl moved to Run autoplan with Tab and pressed Space. The box is checked, the row turns --accent with the Added badge, Changes not saved lists it, and nothing is saved (3.2.2).</p>
+<ul class="nk-ul"><li>Focus stays on the checkbox. The count "6 of 36 selected." is a polite status (role status) and speaks after each change.</li>
+<li>Space toggles; Tab and Shift+Tab move to the next and previous stop. The module button Planning opens and closes its group with Enter or Space.</li>
+<li>The checkbox is named by its plain line and described by its id, so a screen reader reads "Run autoplan, checkbox, checked" and then planning.autoplan:run.</li>
+<li>Save role sends the change with the reason. The role detail then replaces the form with focus on its h1, and the polite region says "Shift lead saved. It applies to 2 people from their next action." (RO41, proposed).</li>
+<li>A refused Save keeps every tick, moves focus to the error summary and marks the refused rows (rule 18.3). A refusal for the whole role, such as core.role:manage held at Plant A only, names the permission in the summary (RO39).</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:1464px;top:6976px"><p class="nk-note-k">NO21 notes, not part of the UI</p>
+<p class="nk-note-h">Focus after Add role</p>
+<p>Karin Dahl chose Plant A only and Shift lead for Alex Lund, who holds Planner at Plant A, and pressed Add role. The command succeeded.</p>
+<ul class="nk-ul"><li>The route changes to Alex Lund's Access tab with a replace navigation (proposed), so Back returns to the user list, not to the form.</li>
+<li>The h1 Alex Lund has focus, as after every path change (10.1). The title reads "Alex Lund · Plant A · NorthMES".</li>
+<li>announce() sends "Shift lead at Plant A added for Alex Lund. It applies from Alex Lund's next action." once to the shell's polite region. The success note at the top of the tab holds the same text and renders with the page, so it is not read twice.</li>
+<li>The new row is the result: Shift lead at Plant A, assigned 2026-10-08 by Karin Dahl, beside his Planner row. What Alex Lund can do at Plant A now lists the permissions of both roles.</li>
+<li>Karin Dahl is a company admin, so Remove shows on every row, and Reset password and Block user sit in the top bar (12.6.2).</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:3368px;top:6976px"><p class="nk-note-k">NO22 notes, not part of the UI</p>
+<p class="nk-note-h">Focus after a refusal</p>
+<p>Jonas Holm chose Acme AB, all plants and Viewer for Anna Berg, typed a reason and pressed Add role. The client cannot check permissions at Acme AB from a plant route (6.5), so the server refused the command.</p>
+<ul class="nk-ul"><li>Focus moves to the error summary (tabindex -1, a group labelled by its heading "Fix 1 field to add the role"). The focus move is the announcement; there is no live message.</li>
+<li>The summary's link repeats the full refusal under Role, word for word, as the canonical summary does, and leads to Role. Role keeps Viewer and shows the refusal under the field, with aria-invalid and the message in its aria-describedby.</li>
+<li>Where and the reason keep their values (3.3.7).</li>
+<li>The server writes one permission.denied event per missing permission and scope (6.2).</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:1464px;top:8112px"><p class="nk-note-k">NO23 notes, not part of the UI</p>
+<p class="nk-note-h">Summary link followed</p>
+<p>Enter on the summary's link moved focus to Role: the two-tone ring on the invalid combobox, which keeps its 1 px destructive inset.</p>
+<ul class="nk-ul"><li>The combobox reads its label Role, the value Viewer, invalid, and the refusal from aria-describedby.</li>
+<li>Alt+Down or Enter opens the listbox with the active option on Viewer; Up and Down move, Enter chooses, Escape closes and keeps the value.</li>
+<li>Shift+Tab goes back to Where, one stop for the radio group, where the arrow keys change the choice. With Plant A only, Viewer can be added: Jonas Holm holds both of its permissions at Plant A.</li>
+<li>Tab goes on to Reason, Add role and Cancel.</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:3368px;top:8112px"><p class="nk-note-k">NO24 notes, not part of the UI</p>
+<p class="nk-note-h">Focus in the remove dialog</p>
+<p>Remove for Shift lead at Plant A opened ConfirmDialog with focus in Reason. The page behind is inert.</p>
+<div class="nk-lg"><sc-for list="{{ leg.NO24 }}" as="l"><div class="nk-lr"><span class="nk-ln">{{ l.n }}</span><span>{{ l.t }}</span></div>
+</sc-for>
+</div>
+<ul class="nk-ul"><li>Tab after Remove role returns to Reason; Shift+Tab runs the cycle backwards.</li>
+<li>Escape or Cancel closes the dialog and returns focus to Remove Shift lead at Plant A (10.7).</li>
+<li>Remove role runs the command. The row leaves the table, focus moves to the next row's role link, Viewer, or to Add role when no row is left (proposed), and the polite region says "Shift lead at Plant A removed from Sara Nyberg. It applies from Sara Nyberg's next action."</li>
+<li>The dialog is an alertdialog named by its heading and described by what Sara Nyberg loses and keeps.</li>
+</ul>
+</div>
+      <div class="nk-note" style="left:1464px;top:9248px"><p class="nk-note-k">NO25 notes, not part of the UI</p>
+<p class="nk-note-h">Focus in the access-lost dialog</p>
+<p>Close code 4403, or core.plant_forbidden from any request on this route, opened the dialog over the Planning board at Plant B.</p>
+<div class="nk-lg"><sc-for list="{{ leg.NO25 }}" as="l"><div class="nk-lr"><span class="nk-ln">{{ l.n }}</span><span>{{ l.t }}</span></div>
+</sc-for>
+</div>
+<ul class="nk-ul"><li>Focus starts on Go to Plant A, the default action. Tab cycles Your plants and Go to Plant A.</li>
+<li>Escape does nothing, as on the reload dialog (D2 K8): the page behind cannot load or save anything at Plant B, so there is nothing to return to.</li>
+<li>The heading is the only h1 while the dialog is open, and the title reads "You no longer have access to Plant B · NorthMES".</li>
+<li>The client stops reconnecting and refuses saves (20.11). Go to Plant A opens Plant A's home; Your plants opens /, which lists Plant A and Plant C for the planner drawn here.</li>
+<li>With exactly one plant left, / opens that plant (ADR 0066), so both actions would lead to the same place: the dialog shows only Go to Plant A. With no plant left it shows only Your plants (8.5.5). Proposed.</li>
+</ul>
+</div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), installed once per document.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // Annotations are measured from the mounted frames, so they follow the frames' real layout.
+          this.__alive = true;
+          const root = document.getElementById(this.__rid);
+          if (root) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true, characterData: true });
+          }
+          [200, 600, 1500, 3000, 5000, 8000, 12000].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 120);
+        }
+        // What each frame annotates. stops: number every Tab stop in DOM order (all: the whole screen; main: the route
+        // content; dlg: the open dialog) and list them in the frame's notes. tags: a one-line tag beside an element.
+        __spec() {
+          return {
+            NO18: { stops: "all" },
+            NO19: { stops: "main" },
+            NO20: { tags: [
+              { sel: ".cb-box.is-focus", text: "Space ticked it; nothing is saved yet", at: "afterText", row: ".ca-perm", txt: ".ca-pl" },
+              { sel: ".ca-count", text: "Polite status after each change", at: "right" }
+            ] },
+            NO21: { tags: [{ sel: ".sh-h1", text: "Polite live region: Shift lead at Plant A added for Alex Lund. It applies from Alex Lund's next action.", at: "main" }] },
+            NO22: { tags: [{ sel: ".lf-summary", text: "Focus moves to the summary; no live message", at: "inR" }] },
+            NO23: { tags: [{ sel: ".inp.ca-sel", text: "Enter on the summary link: focus on Role", at: "aboveR" }] },
+            NO24: { stops: "dlg", scope: ".lf-dlg" },
+            NO25: { stops: "dlg", scope: ".nk-dlg" }
+          };
+        }
+        __reveal() {
+          // A scroller marked data-nk-scroll="end" is drawn scrolled to its end; one marked data-nk-reveal brings its focused
+          // stop to the middle, as the browser does on focus.
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          root.querySelectorAll("[data-nk-scroll]").forEach((c) => {
+            if (c.getAttribute("data-nk-scroll") === "end" && c.scrollHeight > c.clientHeight) c.scrollTop = c.scrollHeight;
+          });
+          root.querySelectorAll("[data-nk-reveal]").forEach((c) => {
+            const f = c.querySelector(".is-focus");
+            if (!f || c.__nkDone) return;
+            const cb = c.getBoundingClientRect();
+            const fb = f.getBoundingClientRect();
+            const k = c.offsetHeight ? cb.height / c.offsetHeight : 1;
+            if (!k) return;
+            const want = c.scrollTop + (fb.top - cb.top) / k - c.clientHeight / 2 + fb.height / k / 2;
+            c.scrollTop = Math.max(0, want);
+            if (fb.height > 0) c.__nkDone = true;
+          });
+        }
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          this.__reveal();
+          const SPEC = this.__spec();
+          const next = {};
+          const legs = {};
+          const px = (v) => Math.round(v * 10) / 10 + "px";
+          const textOf = (el) => {
+            let s = "";
+            const walk = (n) => {
+              if (n.nodeType === 3) { s += n.textContent; return; }
+              if (n.nodeType !== 1) return;
+              if (n.getAttribute("aria-hidden") === "true" || n.classList.contains("ic")) return;
+              n.childNodes.forEach(walk);
+            };
+            walk(el);
+            return s.replace(/\s+/g, " ").trim();
+          };
+          const byIds = (v) => String(v || "").split(/\s+/).map((id) => document.getElementById(id)).filter(Boolean).map(textOf).join(" ");
+          const nameOf = (el) => {
+            const al = el.getAttribute("aria-label");
+            if (al) return al;
+            const lb = el.getAttribute("aria-labelledby");
+            if (lb && byIds(lb)) return byIds(lb);
+            if (el.matches(".inp")) {
+              const fld = el.closest(".fld");
+              const lbl = fld && fld.querySelector(".lbl");
+              if (lbl && lbl.firstChild) return lbl.firstChild.textContent.trim();
+              const ph = el.querySelector(".ph");
+              if (ph) return ph.textContent.trim();
+            }
+            if (el.matches(".ca-disc")) {
+              const l = el.querySelector("span[lang], span:not(.ic):not(.n):not(.badge)");
+              return (l ? textOf(l) : textOf(el)) + " (module)";
+            }
+            return textOf(el);
+          };
+          const group = (el) => {
+            if (el.matches(".sh-skip")) return ["skip", "Skip to main content"];
+            if (el.closest(".sh-sb-head")) return ["sw", nameOf(el)];
+            if (el.closest(".sh-sb-foot")) return ["user", nameOf(el)];
+            if (el.closest(".sh-sb")) return ["nav", "Sidebar entries and disclosures (D2 KE1)"];
+            if (el.closest(".sh-crumbs")) return ["crumbs", "Crumb links"];
+            return [null, nameOf(el)];
+          };
+          Object.keys(SPEC).forEach((id) => {
+            const sp = SPEC[id];
+            const fr = root.querySelector('[data-nk="' + id + '"]');
+            if (!fr) return;
+            const scr = fr.querySelector(".sh-scr");
+            if (!scr) return;
+            const fb = fr.getBoundingClientRect();
+            const k = fr.offsetWidth ? fb.width / fr.offsetWidth : 1;
+            if (!k) return;
+            const R = (el) => {
+              const r = el.getBoundingClientRect();
+              return { x: (r.left - fb.left) / k, y: (r.top - fb.top) / k, w: r.width / k, h: r.height / k };
+            };
+            const S = R(scr);
+            const pos = (x, y) => "left:" + px(Math.max(S.x + 1, Math.min(S.x + S.w - 25, x))) + ";top:" + px(Math.max(S.y + 1, y));
+            const textRight = (el) => {
+              const rg = document.createRange();
+              rg.selectNodeContents(el);
+              const tr = rg.getBoundingClientRect();
+              return (tr.right - fb.left) / k;
+            };
+            const o = { b: [], t: [] };
+            if (sp.stops) {
+              const scope = sp.stops === "main" ? scr.querySelector(".sh-content") : sp.stops === "dlg" ? fr.querySelector(sp.scope) : scr;
+              const leg = [];
+              let n = 0;
+              Array.prototype.slice.call(scope ? scope.querySelectorAll("a[href], button, [tabindex='0'], .inp:not([tabindex='-1'])") : []).forEach((el) => {
+                if (el.matches(".is-dis, [disabled], [aria-disabled='true'], [tabindex='-1']")) return;
+                if (el.closest(".pop, .lf-vh, [aria-hidden='true'], [inert], [hidden]")) return;
+                if (el.parentElement && el.parentElement.closest(".cb[tabindex='0']")) return;
+                const skip = el.matches(".sh-skip");
+                const box = el.matches(".cb") ? (el.querySelector(".cb-box") || el) : el;
+                const r = R(box);
+                if (!skip && (r.w < 2 || r.h < 2)) return;
+                n += 1;
+                const g = group(el);
+                const last = leg[leg.length - 1];
+                if (g[0] && last && last.g === g[0]) { last.to = n; } else { leg.push({ g: g[0], from: n, to: n, t: g[1] }); }
+                // A stop scrolled out of its scroller keeps its number but gets no badge.
+                const mx = r.x + r.w / 2;
+                const my = r.y + r.h / 2;
+                let shown = true;
+                [".sh-sb-body", ".sh-rail-nav", ".lf-dscroll", ".lf-fscroll", ".ca-col.scroll", ".lf-xs"].forEach((sel) => {
+                  const c = el.closest(sel);
+                  if (!c) return;
+                  const q = R(c);
+                  if (my < q.y + 4 || my > q.y + q.h - 4 || mx < q.x || mx > q.x + q.w) shown = false;
+                });
+                if (!shown) return;
+                let x;
+                let y;
+                if (skip) {
+                  x = r.x - 8; y = r.y - 8;
+                } else if (el.matches(".sh-sw")) {
+                  x = r.x + r.w - 14; y = r.y - 4;
+                } else if (el.closest(".sh-sb-foot")) {
+                  x = r.x + r.w / 2 - 10; y = r.y - 14;
+                } else if (el.matches(".sh-ni")) {
+                  x = textRight(el) + 8; y = r.y + r.h / 2 - 10;
+                } else if (el.closest(".sh-sb")) {
+                  x = r.x + r.w + 2; y = r.y + r.h / 2 - 10;
+                } else if (el.closest("header")) {
+                  x = r.x + r.w / 2 - 10; y = r.y + r.h - (r.h < 30 ? 2 : 8);
+                } else if (el.matches(".lf-tab")) {
+                  x = r.x + r.w - 10; y = r.y - 12;
+                } else if (el.matches("a.lf-cl, a.lf-id, .btn.v-link")) {
+                  x = textRight(el) + 4; y = r.y + r.h / 2 - 10;
+                } else if (el.matches(".cb")) {
+                  x = r.x - 24; y = r.y + r.h / 2 - 10;
+                } else if (el.matches(".ca-disc")) {
+                  x = r.x - 24; y = r.y + r.h / 2 - 10;
+                } else {
+                  x = r.x - 10; y = r.y - 10;
+                }
+                o.b.push({ n: String(n), st: pos(x, y) });
+              });
+              legs[id] = leg.map((l) => ({ n: l.from === l.to ? String(l.from) : l.from + " to " + l.to, t: l.t }));
+            }
+            (sp.tags || []).forEach((g) => {
+              const el = fr.querySelector(g.sel);
+              if (!el) return;
+              const r = R(el);
+              let st = "";
+              if (g.at === "afterText") {
+                const row = el.closest(g.row);
+                const tx = row && row.querySelector(g.txt);
+                const q = row ? R(row) : r;
+                st = "left:" + px((tx ? textRight(tx) : r.x + r.w) + 16) + ";top:" + px(q.y + q.h / 2 - 12) + ";white-space:nowrap";
+              } else if (g.at === "right") {
+                st = "left:" + px(r.x + r.w + 12) + ";top:" + px(r.y + r.h / 2 - 12) + ";white-space:nowrap";
+              } else if (g.at === "leftOf") {
+                st = "right:" + px(fr.offsetWidth - (r.x - 12)) + ";top:" + px(r.y + r.h / 2 - 12) + ";white-space:nowrap";
+              } else if (g.at === "inR") {
+                st = "right:" + px(fr.offsetWidth - (r.x + r.w - 12)) + ";top:" + px(r.y + 12) + ";white-space:nowrap";
+              } else if (g.at === "aboveR") {
+                st = "right:" + px(fr.offsetWidth - (r.x + r.w)) + ";top:" + px(r.y - 30) + ";white-space:nowrap";
+              } else {
+                const m = scr.querySelector(".sh-main");
+                const q = m ? R(m) : S;
+                st = "right:" + px(fr.offsetWidth - (q.x + q.w - 24)) + ";top:" + px(r.y + r.h / 2 - 12) + ";max-width:420px";
+              }
+              o.t.push({ text: g.text, st: st });
+            });
+            next[id] = o;
+          });
+          const sig = JSON.stringify([next, legs]);
+          if (sig !== this.__sig) {
+            this.__sig = sig;
+            this.setState({ ov: next, leg: legs });
+          }
+        }
+        renderVals() {
+          if (!this.__rid) {
+            window.__nkSeq = (window.__nkSeq || 0) + 1;
+            this.__rid = "nk-part-" + window.__nkSeq;
+          }
+          const st = this.state || {};
+          const ov = st.ov || {};
+          const lg = st.leg || {};
+          const out = {};
+          const leg = {};
+          ["NO18", "NO19", "NO20", "NO21", "NO22", "NO23", "NO24", "NO25"].forEach((id) => {
+            out[id] = Object.assign({ b: [], t: [] }, ov[id] || {});
+            leg[id] = lg[id] || [];
+          });
+          return { rid: this.__rid, ov: out, leg: leg };
+        }
+      }
+    </script>
+  </body>
+</html>

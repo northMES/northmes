@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">NorthMES design page shell-190-variations.dc.html, variations round, in review</p>
+        <h1 class="t1">Shell, navigation and station frame: variations (D2)</h1>
+        <p class="lede">Three layouts for the planner shell (A, B, C) and three for the station frame (S1, S2, S3), drawn on the planning board page with the approved D1 tokens and components. Krister picks one shell and one station frame, or names the parts to combine. The spec page shell-190-navigation.dc.html then draws every frame of issue #190 in light and dark.</p>
+        <div class="cols2 sec">
+          <dl class="facts2">
+            <sc-for list="{{ facts }}" as="f">
+              <dt>{{ f.k }}</dt>
+              <dd>{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+          <div>
+            <h2 class="t3">The options</h2>
+            <div class="rk">
+              <sc-for list="{{ options }}" as="o">
+                <div class="rk-r"><span class="k">{{ o.id }}. {{ o.name }}</span><span>{{ o.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="cols2 sec">
+          <div>
+            <h2 class="t2">What is being decided</h2>
+            <ol class="pts" style="margin-top:12px">
+              <sc-for list="{{ decide }}" as="d"><li>{{ d }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="pts" style="margin-top:12px">
+              <sc-for list="{{ compare }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Rules every option keeps</h2>
+          <p class="lede">From the D2 spec, with the source of each rule. A layout that breaks one of these is not an option.</p>
+          <div class="qgrid2">
+            <sc-for list="{{ rules }}" as="r">
+              <div class="qrow2"><span class="tag ok">{{ r.id }}</span><span>{{ r.t }} <span class="src2">{{ r.src }}</span></span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="cols2 sec">
+          <div>
+            <h2 class="t2">Assumptions</h2>
+            <ol class="pts" style="margin-top:12px">
+              <sc-for list="{{ assumptions }}" as="a"><li>{{ a }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">Open questions for this round</h2>
+            <div class="qgrid2" style="grid-template-columns:minmax(0,1fr)">
+              <sc-for list="{{ questions }}" as="q">
+                <div class="qrow2"><span class="tag q">{{ q.id }}</span><span>{{ q.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {
+            facts: [
+              { k: "Issue", v: "northMES/northmes#190, plan E04-S02-T01" },
+              { k: "Owning story", v: "E04-S02 (#40)" },
+              { k: "Waiting tasks", v: "The UI tasks of E04-S02 to E04-S05 and the sign-in task of E05-S05 (#53)" },
+              { k: "Area", v: "shell (apps/web)" },
+              { k: "Routes", v: "/$plant/... in the planner layout, /station/$stationId in the station layout" },
+              { k: "Personas", v: "Planner (primary) for the shell, Operator for the station frame" },
+              { k: "Direction", v: "Graphite, with the D1 tokens and components approved on 2026-10-05 (#189)" },
+              { k: "Content", v: "The planning board route, title \"Planning board\". The board grid is D3's, the chat panel E14-S03's (#136) and the station screens D4's; this page draws them as placeholders." },
+              { k: "Spec", v: "shell-190-spec.md in this project: every rule with its source. Rule numbers below (1.1.1 and so on) point into it." }
+            ],
+            options: [
+              { id: "A", name: "Labelled sidebar", t: "Core, module and plugin groups in one 256 px sidebar that collapses to a rail; plant switcher in the sidebar head; breadcrumb, page actions, assistant, help and account in the top bar." },
+              { id: "B", name: "Module bar", t: "Every module group as a link in the top bar, a sidebar with the current module's entries only, and a second header row for the breadcrumb and page actions." },
+              { id: "C", name: "Rail with flyouts", t: "A 64 px rail of module groups that open flyouts with their entries; the plant is the first breadcrumb crumb; help, assistant and account sit at the rail foot." },
+              { id: "S1", name: "Station top bar", t: "Station name, connection, Switch operator and Sign out in a 72 px bar at the top; the heading and D4's content below." },
+              { id: "S2", name: "Station bottom bar", t: "Heading at the top; Switch operator, connection, help, theme and sign out in a bar at the bottom edge." },
+              { id: "S3", name: "Station tall header", t: "The h1 \"Press 4, Anna Berg\", the connection, Switch operator and Sign out in a 96 px header band; D4's content below." }
+            ],
+            decide: [
+              "The navigation container: a labelled sidebar (A), a module bar with a module sidebar (B), or a rail with flyouts (C). Spec 9.1.",
+              "Where the plant switcher sits: the sidebar head (A), the top bar start (B) or the first breadcrumb crumb (C). Spec 9.2.",
+              "Where the breadcrumb and page actions sit: the top bar (A, C), a second header row (B), or the breadcrumb above the h1 with the actions in the top bar (B6). Spec 9.3 and V4.",
+              "Where the live-updates status and the banners show: a chip in the top bar (A), a strip under the header (B), or a chip plus a strip (C). Spec 9.4.",
+              "Where help, the account menu and the assistant trigger sit: the top bar end (A, B) or the rail foot (C). Spec 9.6 and 9.7.",
+              "The station frame: a top bar (S1), a bottom bar (S2) or a tall header (S3). Spec 9.8."
+            ],
+            compare: [
+              "Each planner option has five frames: light at 1440 by 900 in the populated state; dark at 1440 by 900 with live updates paused, Pyramid connector unavailable and the assistant docked; 320 by 640 with the page and with the navigation sheet open; and a crop of the light frame with the plant menu open. B adds B6, the breadcrumb above the h1.",
+              "Read the board width, the header height, the clicks from the board to an entry in another module, where the plant stays visible, and what changes at 320 px. Frame R lists the options against these criteria.",
+              "Dashed blue outlines with numbered pins mark slots in the light frames: 1 page actions (TopBarActions), 2 planning/board/header/v1, 3 planning/board/side/v1. They are annotations, not UI.",
+              "Focus is drawn once per frame: the skip link in A1, B1, C2 and S1; the two-tone ring on Co in A2, on Core in B2 and on Production orders in the C1 flyout.",
+              "The station options draw the same signed-in frame around a D4 placeholder, so only the frame differs.",
+              "The label \"Planning\", the route title \"Planning board\", Plant A, Plant B, the planner Alex Lund and the station Press 4 with the operator Anna Berg come from the docs. Every other nav label and Plant C are proposals; the times and the Acme tooling plugin are invented for the drawing."
+            ],
+            rules: [
+              { id: "R1", t: "Sections in the order core, modules, plugins; groups in manifest order, never by usage (3.2.3).", src: "1.1.1, P06 Shell layout, A0062" },
+              { id: "R2", t: "One group per module headed by web.label; entries nested one level; a failed module keeps its header with \"(unavailable)\" and no items.", src: "1.1.3, 1.1.4, 1.1.9" },
+              { id: "R3", t: "Nav entries and manifests have no icon field; an icon or monogram is derived, or needs a change to ADR 0062.", src: "1.1.6" },
+              { id: "R4", t: "\"Skip to main content\" is the first Tab stop and moves focus into main (2.4.1); landmarks header, nav, main and aside.", src: "2.1, 2.2" },
+              { id: "R5", t: "Title \"Planning board · Plant A · NorthMES\"; one h1 per route, in main, focused after a route change (2.4.3).", src: "2.4, 1.4.1, 7.2" },
+              { id: "R6", t: "The plant switcher is a menu of links that keep the route and its search (3.2.2); no plant switcher at a station.", src: "1.3.1, 1.3.2, 5.12" },
+              { id: "R7", t: "One help menu at a fixed place (3.2.6), entries grouped by module; page actions through TopBarActions.", src: "1.2.2, 1.2.4" },
+              { id: "R8", t: "Targets at least 24 by 24 px and 36 px controls; at a station at least 44 px.", src: "7.10, 5.3" },
+              { id: "R9", t: "The D1 two-tone focus ring on every stop; menu items draw the 2 px inset outline.", src: "7.3, D1 P4" },
+              { id: "R10", t: "At 320 px the sidebar becomes a sheet, the chat panel a modal sheet, and only the board and tables scroll in two dimensions.", src: "6.2, 6.3, 1.5.1" },
+              { id: "R11", t: "One aside slot for the chat panel, at most one docked panel, hidden when no AI provider is configured.", src: "1.5.1, 1.5.3" },
+              { id: "R12", t: "Light by default, dark per user or per station.", src: "5.6, 6.6" },
+              { id: "R13", t: "Station: full screen, no sidebar, Switch operator on every screen, no global key listener, a role=status Disconnected banner.", src: "5.1, 5.8, 5.10" },
+              { id: "R14", t: "The top bar is sticky; scroll-padding-top equals its height, so focus is never hidden under it (2.4.11).", src: "1.2.6, 7.7" }
+            ],
+            assumptions: [
+              "The drawings show the Planner permission set: core shows only Master data, and the AI and Audit groups have no planner entries. Planning Settings and the Import inbox are admin entries (P07 Permissions, P08 section 13) and appear in the Plant admin variant on the spec page.",
+              "Production start has no planner nav entry in release 1, so the drawings give it no group (V3). The trouble frames show the failed-module header on Pyramid connector, at its usual position.",
+              "Acme tooling is an invented plugin with routes, so the Plugins section has something to show.",
+              "In A and C the sidebar sections are separated by dividers only; group headers are the manifest labels (9.9).",
+              "Page actions on the board are drawn as Run autoplan and Save. D3 decides the board's actions; the slot place is what this round compares.",
+              "While the socket is down the board's Pause control shows the shared paused state; D3 owns its final copy.",
+              "Monograms in the rails are the first two letters of web.label, so the visible text starts the accessible name (2.5.3). They are a stand-in until the icon question (V1) is answered.",
+              "The product mark is a placeholder square with an N.",
+              "The sheet overlay (black at 50 percent) and the sheet's popover shadow (shadcn shadow-md) are not D1 tokens and stay questions, as in D1.",
+              "Lucide icons beyond the D1 list (PanelLeft, PanelLeftOpen, PanelLeftClose, Menu, CircleHelp, ChevronsUpDown, Factory, Send, Wifi, ArrowLeftRight, LogOut) are proposals for the build notes."
+            ],
+            questions: [
+              { id: "V1", t: "What does a rail show without an icon field: monograms (drawn), one generic icon, or a module-level icon in the manifest, which changes @northmes/web-sdk and ADR 0062? Spec question 1." },
+              { id: "V2", t: "Core's web.label (\"Core\" is drawn) and whether core groups its registers under Master data. Spec question 5." },
+              { id: "V3", t: "Does Production start show a planner group at all, and is its \"(unavailable)\" header a link to the placeholder route? A Production start group that appears only on failure inserts a group and moves the later ones, which 1.1.9 and 3.2.3 rule out; it has a group in every run or in none. Spec questions 6 and 7." },
+              { id: "V4", t: "Breadcrumb in the top bar (P06 Shell layout) or above the h1 (PageFrame renders it, drawn in B6)? A and C follow P06, B uses a second header row. Spec question 12." },
+              { id: "V5", t: "Banners for readiness, the AI budget and a restore: where they stack and whether a user can dismiss them. C draws the restore banner as a strip. Spec question 20." },
+              { id: "V6", t: "Does the collapsed sidebar state persist per browser, like the theme? Spec question 19." },
+              { id: "V7", t: "Server restarting, proposed copy: \"The server is restarting. Changes are paused until it is back, and this page reconnects by itself.\" Spec question 21." },
+              { id: "V8", t: "User menu contents: name, theme (light or dark), sign out; anything else? Spec question 18." },
+              { id: "V9", t: "Station: the title names the station, \"Press 4 · Plant A · NorthMES\" (assumed), and the h1 adds the operator. When a station serves several machines, does the title follow the selected machine? P09 4.1 moves focus to the new heading after an equipment switch. Also the help menu, the per-device theme switch and the portrait size (pilot IT question IT-22). Spec questions 10, 14 and 16." },
+              { id: "V10", t: "Station: the top bar's \"Live updates paused, reconnecting\" and the Disconnected banner both change on a drop. Only the banner speaks (role=status); the top bar text is not a live region. Agree? Spec question 15." }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

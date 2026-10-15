@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+        <style>
+          /* Board frames of the D3 spec page (issue northMES/northmes#221): the board at 1280, 1440 and 1920 in light and
+             dark, the inspector collapsed, the rule at 1280 with the assistant docked, the four zoom presets in light and
+             dark, the DST night of Sun 25 Oct, groups collapsed, and a notes frame with every state in text. Every frame
+             mounts Shell.dc.html with the shared parts planning-221-board-grid and planning-221-board-inspector; the
+             toolbar and the status line are page markup. Classes start with bo-; every UI color is a D1 token; the chips
+             use the D1 canvas label styles. */
+          .bo-part{position:relative}
+          .bo-fr{position:absolute}
+          .bo-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+          .bo-note{height:100%;overflow:hidden}
+          .bo-note .lede{max-width:none}
+          .bo-tbl{display:grid;margin-top:24px;border-top:1px solid var(--border);font-size:13px;line-height:18px}
+          .bo-tr{display:grid;grid-template-columns:184px 260px 400px minmax(0,1fr);gap:0 16px;padding:10px 12px;border-bottom:1px solid var(--border)}
+          .bo-th{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+          .bo-cue{display:flex;align-items:flex-start;gap:6px}
+          .bo-cue .ic{margin-top:1px}
+          .bo-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 48px;margin-top:28px}
+        </style>
+      </helmet>
+      <div class="bo-part" style="{{ rootStyle }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="bo-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+            <div class="flabel bo-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><sc-if value="{{ f.hasDoc }}"><span class="ftitle">Planning board · Plant A · NorthMES</span></sc-if></div>
+            <dc-import name="Shell" dc-props="{{ f.shell }}" hint-size="{{ f.hint }}">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="pb-page">
+                <div class="pb-tb" role="toolbar" aria-label="Board">
+                  <div class="pb-grp">
+                    <sc-if value="{{ f.navText }}">
+                      <button class="btn v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span>Earlier</button>
+                      <button class="btn v-outline" type="button">Now</button>
+                      <button class="btn v-outline" type="button" aria-label="Show later range">Later<span class="ic" data-icon="ChevronRight"></span></button>
+                    </sc-if>
+                    <sc-if value="{{ f.navIcon }}">
+                      <button class="btn icon v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span></button>
+                      <button class="btn v-outline" type="button">Now</button>
+                      <button class="btn icon v-outline" type="button" aria-label="Show later range"><span class="ic" data-icon="ChevronRight"></span></button>
+                    </sc-if>
+                    <sc-if value="{{ f.goto }}">
+                      <button class="btn v-ghost" type="button" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>Go to date</button>
+                    </sc-if>
+                  </div>
+                  <span class="pb-range"><sc-for list="{{ f.range }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span>
+                  <span class="pb-sp"></span>
+                  <span class="pb-lbl" id="{{ f.zoomId }}">Zoom</span>
+                  <div class="pb-tg" role="group" aria-labelledby="{{ f.zoomId }}">
+                    <sc-for list="{{ f.zooms }}" as="z"><button class="pb-tgi {{ z.cls }}" type="button" aria-pressed="{{ z.pressed }}">{{ z.label }}</button></sc-for>
+                  </div>
+                  <sc-if value="{{ f.pause }}">
+                    <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+                  </sc-if>
+                  <sc-if value="{{ f.options }}">
+                    <button class="btn icon v-outline" type="button" aria-label="Board options" aria-haspopup="menu"><span class="ic" data-icon="SlidersHorizontal"></span></button>
+                  </sc-if>
+                </div>
+                <div class="pb-stl">
+                  <span class="pb-st ok"><span class="ic" data-icon="CircleCheck"></span><span>Autoplan applied at <span class="num">06:12</span>: <span class="num">37</span> moved, <span class="num">2</span> skipped because being edited, <span class="num">3</span> late, <span class="num">1</span> conflict, <span class="num">0</span> unplaced.</span></span>
+                  <sc-if value="{{ f.lockLine }}">
+                    <span class="pb-st wait"><span class="ic" data-icon="Clock"></span><span>Your soft lock on order <span class="num">1003</span> ends in <span class="num">20</span> s.</span></span>
+                    <button class="btn v-outline" type="button">Extend</button>
+                  </sc-if>
+                </div>
+                <div class="pb-body2">
+                  <div class="pb-gw"><dc-import name="planning-221-board-grid" dc-props="{{ f.grid }}" hint-size="{{ f.ghint }}"></dc-import></div>
+                  <div class="pb-pw"><dc-import name="planning-221-board-inspector" dc-props="{{ f.ins }}" hint-size="{{ f.ihint }}"></dc-import></div>
+                </div>
+              </div>
+            </dc-import>
+          </div>
+        </sc-for>
+        <sc-if value="{{ notes.show }}">
+          <div class="bo-fr" style="{{ notes.style }}" data-screen-label="{{ notes.label }}">
+            <div class="flabel bo-chip"><span class="fid">BO12</span>Board states in text<span class="fth">Not part of the UI. Each state as BO1 draws it and as its accessible name reads</span></div>
+            <article class="sheet bo-note">
+              <p class="kick">Annotation, not part of the UI</p>
+              <h2 class="t2">Every state in text and shape</h2>
+              <p class="lede">Each job order block in BO1 to BO11 and BO13 to BO19 shows its states by an icon at the trailing edge, a border marker and, for conflicts and started job orders, a stripe or a bar. Color never carries a state alone: the fill is always the order color. The words below are the parts of each block's accessible name that the grid builds through aria-labelledby from the visible spans and a visually hidden span; the hover card and the Details tab show the same states as badges.</p>
+              <div class="bo-tbl" role="table" aria-label="Board states">
+                <div class="bo-tr bo-th" role="row"><span role="columnheader">State</span><span role="columnheader">Example in BO1</span><span role="columnheader">Shape and icon besides color</span><span role="columnheader">Words in the accessible name</span></div>
+                <sc-for list="{{ notes.rows }}" as="r">
+                  <div class="bo-tr" role="row"><span class="b6" role="cell">{{ r.state }}</span><span role="cell">{{ r.example }}</span><span class="bo-cue" role="cell"><sc-if value="{{ r.hasIcon }}"><span class="ic" data-icon="{{ r.icon }}"></span></sc-if><span>{{ r.cue }}</span></span><span role="cell">{{ r.words }}</span></div>
+                </sc-for>
+              </div>
+              <div class="bo-cols">
+                <section>
+                  <h3 class="ps-h">Rules these frames draw</h3>
+                  <ul class="ps-ul">
+                    <sc-for list="{{ notes.rules }}" as="x"><li>{{ x }}</li></sc-for>
+                  </ul>
+                </section>
+                <section>
+                  <h3 class="ps-h">Proposed here, needs Krister's yes</h3>
+                  <ul class="ps-ul">
+                    <sc-for list="{{ notes.props }}" as="x"><li>{{ x }}</li></sc-for>
+                  </ul>
+                </section>
+              </div>
+            </article>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","BO1","BO2","BO3","BO4","BO5","BO6","BO7","BO8","BO9","BO10","BO11","BO12","BO13","BO14","BO15","BO16","BO17","BO18","BO19"],"default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler the Shell and the parts install (one per document, guarded by the same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          // Range text in the toolbar per preset (proposal 19.1); times render in Plex Mono.
+          const R = {
+            hours: [{ t: "Tue 3 Nov, " }, { t: "06:00", c: "num" }, { t: " to " }, { t: "18:00", c: "num" }],
+            short: [{ t: "Tue 3 Nov" }],
+            day: [{ t: "Tue 3 Nov to Thu 5 Nov" }],
+            week: [{ t: "W45, Mon 2 Nov to Sun 8 Nov" }],
+            weeks: [{ t: "W45 to W48, Mon 2 Nov to Sun 29 Nov" }],
+            dst: [{ t: "Sat 24 Oct, " }, { t: "18:00", c: "num" }, { t: " CEST to Sun 25 Oct, " }, { t: "06:00", c: "num" }, { t: " CET" }],
+          };
+          const zooms = (on) => [["hours", "Hours"], ["day", "Day"], ["week", "Week"], ["weeks", "4 weeks"]].map((z) => ({ label: z[1], pressed: String(z[0] === on), cls: z[0] === on ? "on" : "" }));
+          // Toolbar per width (proposal): full labels at 1440 and up; at 1280 Earlier and Later keep only their icons;
+          // with the assistant docked Go to date and Pause live updates fold into Board options and the range keeps the date.
+          const TB = {
+            full: { navText: true, navIcon: false, goto: true, pause: true, options: false },
+            mid: { navText: false, navIcon: true, goto: true, pause: true, options: false },
+            tight: { navText: false, navIcon: true, goto: false, pause: false, options: true },
+          };
+          const ALL = [
+            { id: "BO1", title: "Board", theme: "light", w: 1440, h: 900, row: 0, col: 0, doc: true, tb: "full", range: "hours", zoom: "hours",
+              detail: "Light, 1440 by 900. Hours preset, 1003.20 selected, Details in the docked inspector, Not placed row, autoplan applied",
+              shell: { width: "1440", theme: "light" }, grid: {}, ins: {} },
+            { id: "BO2", title: "Board", theme: "dark", w: 1440, h: 900, row: 0, col: 1, tb: "full", range: "hours", zoom: "hours",
+              detail: "Dark, 1440 by 900, as BO1",
+              shell: { width: "1440", theme: "dark" }, grid: {}, ins: {} },
+            { id: "BO3", title: "Board", theme: "light", w: 1280, h: 800, row: 1, col: 0, doc: true, tb: "mid", range: "hours", zoom: "hours",
+              detail: "Light, 1280 by 800. Earlier and Later keep only their icons; the grid keeps 638 px beside the inspector",
+              shell: { width: "1280", theme: "light" }, grid: {}, ins: {} },
+            { id: "BO13", title: "Board", theme: "dark", w: 1280, h: 800, row: 1, col: 1, tb: "mid", range: "hours", zoom: "hours",
+              detail: "Dark, 1280 by 800, as BO3",
+              shell: { width: "1280", theme: "dark" }, grid: {}, ins: {} },
+            { id: "BO4", title: "Board", theme: "light", w: 1920, h: 1080, row: 2, col: 0, doc: true, tb: "full", range: "hours", zoom: "hours",
+              detail: "Light, 1920 by 1080. The grid keeps 1278 px; Finishing collapsed, Assembly in view",
+              shell: { width: "1920", theme: "light" }, grid: {}, ins: {} },
+            { id: "BO14", title: "Board", theme: "dark", w: 1920, h: 1080, row: 2, col: 1, tb: "full", range: "hours", zoom: "hours",
+              detail: "Dark, 1920 by 1080, as BO4",
+              shell: { width: "1920", theme: "dark" }, grid: {}, ins: {} },
+            { id: "BO5", title: "Inspector collapsed", theme: "light", w: 1440, h: 900, row: 3, col: 0, lockLine: true, tb: "full", range: "hours", zoom: "hours",
+              detail: "Light, 1440 by 900. Collapse panel leaves the 48 px strip; the soft lock warning moves to the status line; the grid keeps 1070 px",
+              shell: { width: "1440", theme: "light" }, grid: {}, ins: { chrome: "collapsed" } },
+            { id: "BO6", title: "Assistant docked at 1280", theme: "light", w: 1280, h: 800, row: 3, col: 1, lockLine: true, tb: "tight", range: "short", zoom: "hours",
+              detail: "Light, 1280 by 800. Open, the inspector would leave the grid 278 px, under 480, so it shows as its strip; the toolbar folds into Board options",
+              shell: { width: "1280", theme: "light", assistant: "docked" }, grid: {}, ins: { chrome: "collapsed" } },
+            { id: "BO7", title: "Assistant docked at 1280, Details opened", theme: "light", w: 1280, h: 800, row: 3, col: 2, tb: "tight", range: "short", zoom: "hours",
+              detail: "Light, 1280 by 800. Details expanded: grid 278 px, machine column at its 40 percent cap, soft lock warning above the tabs",
+              shell: { width: "1280", theme: "light", assistant: "docked" }, grid: {}, ins: { expiry: "on" } },
+            { id: "BO8", title: "Day preset", theme: "light", w: 1440, h: 900, row: 4, col: 0, tb: "full", range: "day", zoom: "day",
+              detail: "Light, 1440 by 900. Three production days, ticks every 6 h, steps of 1 h; Press 3 is off all of Wed 4 Nov",
+              shell: { width: "1440", theme: "light" }, grid: { zoom: "day" }, ins: { snap: "day" } },
+            { id: "BO9", title: "Week preset", theme: "light", w: 1440, h: 900, row: 4, col: 1, tb: "full", range: "week", zoom: "week",
+              detail: "Light, 1440 by 900. Blocks under 24 px merge into clusters per day, steps of 4 h; the now label names the day on the top tier",
+              shell: { width: "1440", theme: "light" }, grid: { zoom: "week" }, ins: { snap: "week" } },
+            { id: "BO10", title: "4 weeks preset", theme: "light", w: 1440, h: 900, row: 4, col: 2, tb: "full", range: "weeks", zoom: "weeks",
+              detail: "Light, 1440 by 900. Clusters per week with their counts, steps of 1 day",
+              shell: { width: "1440", theme: "light" }, grid: { zoom: "weeks" }, ins: { snap: "weeks" } },
+            { id: "BO15", title: "Day preset", theme: "dark", w: 1440, h: 900, row: 5, col: 0, tb: "full", range: "day", zoom: "day",
+              detail: "Dark, 1440 by 900, as BO8",
+              shell: { width: "1440", theme: "dark" }, grid: { zoom: "day" }, ins: { snap: "day" } },
+            { id: "BO16", title: "Week preset", theme: "dark", w: 1440, h: 900, row: 5, col: 1, tb: "full", range: "week", zoom: "week",
+              detail: "Dark, 1440 by 900, as BO9",
+              shell: { width: "1440", theme: "dark" }, grid: { zoom: "week" }, ins: { snap: "week" } },
+            { id: "BO17", title: "4 weeks preset", theme: "dark", w: 1440, h: 900, row: 5, col: 2, tb: "full", range: "weeks", zoom: "weeks",
+              detail: "Dark, 1440 by 900, as BO10",
+              shell: { width: "1440", theme: "dark" }, grid: { zoom: "weeks" }, ins: { snap: "weeks" } },
+            { id: "BO18", title: "Night of the DST change", theme: "light", w: 1920, h: 1080, row: 6, col: 0, tb: "full", range: "dst", zoom: "hours",
+              detail: "Light, 1920 by 1080. Sat 24 Oct 18:00 CEST to Sun 25 Oct 06:00 CET, 13 hours: 02:00 shows twice, and the plant day Sun 25 Oct has 25 hours",
+              shell: { width: "1920", theme: "light" }, grid: { dst: "on", selected: "none" }, ins: { details: "empty" } },
+            { id: "BO19", title: "Night of the DST change", theme: "dark", w: 1920, h: 1080, row: 6, col: 1, tb: "full", range: "dst", zoom: "hours",
+              detail: "Dark, 1920 by 1080, as BO18",
+              shell: { width: "1920", theme: "dark" }, grid: { dst: "on", selected: "none" }, ins: { details: "empty" } },
+            { id: "BO11", title: "Groups collapsed", theme: "dark", w: 1440, h: 900, row: 7, col: 0, tb: "full", range: "hours", zoom: "hours",
+              detail: "Dark, 1440 by 900. Milling and Turning collapsed, Finishing expanded; 1011.10, proposed by the assistant, selected",
+              shell: { width: "1440", theme: "dark" }, grid: { collapsed: "milling,turning", selected: "1011.10" }, ins: { job: "1011.10" } },
+          ];
+          const NOTES_H = 1530;
+          // Layout: each frame element is exactly its screen size; its chip sits 48 px above it.
+          const CHIP = 48, GAPX = 80, GAPY = 112;
+          const pick = String(P.frame || "all").trim();
+          const one = ALL.some((x) => x.id === pick);
+          const notesOnly = pick === "BO12";
+          const list = notesOnly ? [] : one ? ALL.filter((x) => x.id === pick) : ALL;
+          const rows = [];
+          list.forEach((x) => { const r = one ? 0 : x.row; rows[r] = rows[r] || []; rows[r].push(x); });
+          const showNotes = notesOnly || !one;
+          if (showNotes) { const r = notesOnly ? 0 : 7; rows[r] = rows[r] || []; rows[r].push({ notes: true, w: 1440, h: NOTES_H, col: 9 }); }
+          let top = CHIP, width = 0;
+          const frames = [];
+          let notesStyle = "";
+          rows.forEach((row) => {
+            if (!row) return;
+            let left = 0, rowH = 0;
+            row.sort((a, b) => a.col - b.col).forEach((x) => {
+              const style = "left:" + left + "px;top:" + top + "px;width:" + x.w + "px;height:" + x.h + "px";
+              if (x.notes) notesStyle = style;
+              else {
+                const key = x.id.toLowerCase();
+                const tb = TB[x.tb];
+                const collapsed = x.ins.chrome === "collapsed";
+                const bodyH = x.h - (x.h >= 1080 ? 250 : x.h >= 900 ? 240 : 236);
+                frames.push(Object.assign({}, tb, {
+                  id: x.id, title: x.title, detail: x.detail, hasDoc: !!x.doc,
+                  label: x.id + " " + x.title + ", " + x.theme + ", " + x.w + " by " + x.h,
+                  style, hint: x.w + "px," + x.h + "px", shell: x.shell,
+                  range: R[x.range], zoomId: key + "-zoom", zooms: zooms(x.zoom), lockLine: !!x.lockLine,
+                  grid: Object.assign({ idp: key }, x.grid), ghint: "100%," + bodyH + "px",
+                  ins: Object.assign({ idp: key + "i" }, x.ins), ihint: (collapsed ? "48px," : "320px,") + bodyH + "px",
+                }));
+              }
+              left += x.w + GAPX;
+              rowH = Math.max(rowH, x.h);
+            });
+            width = Math.max(width, left - GAPX);
+            top += rowH + GAPY;
+          });
+          const height = top - GAPY;
+          const notes = {
+            show: showNotes, style: notesStyle, label: "BO12 Board states in text, light, 1440 by " + NOTES_H,
+            rows: [
+              { state: "Committed", example: "1002.10 Bracket L on CNC2", cue: "None: the order color fill and a 1 px border", words: "No state words: 1002.10 Bracket L, 1 200 pcs, CNC2, Tue 3 Nov 09:45 to 12:15" },
+              { state: "In my draft", example: "1003.20 Shaft 40 on Lathe 2", icon: "Pencil", cue: "Pencil, double border", words: "changed in your draft, not saved" },
+              { state: "Held by another planner", example: "1007.10 Flange DN50 on Lathe 3", cue: "Initials ES, dashed border", words: "being edited by Erik Sand since 09:12" },
+              { state: "Hard-locked", example: "1005.10 Housing P on Mill 1", icon: "Lock", cue: "Lock, solid 2 px inner border", words: "locked" },
+              { state: "Started", example: "1001.20 Housing P on CNC1", icon: "Play", cue: "Play, progress bar along the bottom", words: "started, 40 of 120 pcs" },
+              { state: "Proposed", example: "1011.10 Cover plate on Press 4", icon: "Sparkles", cue: "Sparkles, dotted border", words: "proposed by assistant, not reviewed" },
+              { state: "Conflict", example: "1008.10 and 1009.10 on Press 3", cue: "Striped right edge; overlapping job orders stack in a 68 px row", words: "overlaps 1009.10" },
+              { state: "Late", example: "1012.30 Hub 12 on Lathe 1", icon: "Clock", cue: "Clock", words: "late by 2 days" },
+              { state: "Overdue", example: "1006.10 Hub 12 on Mill 2", icon: "ClockAlert", cue: "ClockAlert", words: "overdue, planned 07:00, not started" },
+              { state: "Finish pending", example: "1004.10 Gear blank 32 on CNC2", icon: "CircleCheckBig", cue: "CircleCheckBig", words: "finish pending, 1 200 of 1 200 pcs reported" },
+              { state: "Material warning", example: "1013.10 Spacer 8 on Mill 2", icon: "TriangleAlert", cue: "TriangleAlert", words: "material short" },
+              { state: "Cluster", example: "Press 4, 10:00 to 10:40", icon: "Layers", cue: "A target of at least 24 by 24 px with the count; Layers from 40 px wide", words: "4 jobs, 10:00 to 10:40, 2 late, 1 being edited by Erik Sand" },
+              { state: "Not placed", example: "1024.20 Hub 12 in the Not placed row", cue: "A 28 px chip with a solid border, in the pinned row under the time header", words: "1024.20 Hub 12, 1 200 pcs, not placed" },
+              { state: "Contribution field", example: "1012.30 Hub 12 in IN29", icon: "FileDiff", cue: "The contribution's icon and short text at the trailing edge, after the state icons", words: "The contribution's accessibleText: pending ERP change, quantity 480 to 600 pcs" },
+            ].map((r) => Object.assign({ hasIcon: !!r.icon, icon: r.icon || "" }, r)),
+            rules: [
+              "Blocks are at least 24 px tall; one under 24 px wide joins a cluster with its neighbours.",
+              "Machine rows are 52 px and two-line blocks 43 px, so the second line ends above the progress bar and the inner border markers. The Not placed row stays 46 px.",
+              "In each machine row the gridcells follow time order, blocks and clusters together, so the arrow keys and a screen reader meet them left to right.",
+              "The time area starts 4 px after the machine column, so a block at the range start keeps its whole focus ring.",
+              "Hour ticks come from exact instants: on the night of Sun 25 Oct 02:00 shows twice, as 02:00 CEST and 02:00 CET, and the plant day 2026-10-25 has 25 hours (BO18, BO19).",
+              "At Week and 4 weeks the now label names the day on the top tier, so every day label stays; at Hours and Day it replaces the hour labels it would touch.",
+              "One border marker per block: hard-locked, then held, then in my draft, then proposed. The icons of every state still show.",
+              "The selection is a 3 px bar on the top edge of every job order of the selected order, apart from the focus ring.",
+              "Non-working time is hatched per machine calendar: the breaks on the A1 calendar, Press 4 on two shifts, Press 3 off on Wed 4 Nov, Lathe 3 on Saturday morning.",
+              "Group bands span the grid with the disclosure button, the group color dot, the name and the machine count; a machine row header carries a 6 px stripe in the group color.",
+              "The Not placed row stays under the time header while the machine rows scroll; chips that do not fit fold into the last cell.",
+              "The inspector docks beside the grid and narrows it; it never covers a focused block. Collapse panel ends its tab row.",
+            ],
+            props: [
+              "Zoom spans and range text: Hours 06:00 to 18:00, Day three production days, Week Monday to Sunday, 4 weeks four ISO weeks.",
+              "The toolbar folds in steps: at 1280 Earlier and Later keep only their icons; when the assistant is docked, Go to date and Pause live updates move into Board options and the range keeps the date.",
+              "The inspector collapses to its strip when the grid would keep less than 480 px, as at 1280 with the assistant docked; opening Details expands it again.",
+              "While the column is collapsed the soft lock warning shows in the status line with Extend.",
+              "The machine column fits the longest name from 168 px to 272 px and never takes more than 40 percent of the grid; under 120 px the Not placed row header wraps and drops its icon.",
+              "Block density: full from 120 px (job number, article and markers; quantity and end), compact from 66 px (job number and markers; quantity), and under 66 px a bar without text, because a whole job number needs 66 px. The name, the hover card and Details keep every word.",
+              "The lead time pill sits left of the link on the successor's row, else right of the predecessor's end, wherever it covers no block, and never over the machine column.",
+              "Committed blocks on a past night, such as Sun 25 Oct, draw without a finished cue until open question 12 is answered.",
+            ],
+          };
+          return { frames, notes, rootStyle: "width:" + width + "px;height:" + height + "px" };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Entity form</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <div class="lf-fscroll" data-lf-scrolly="{{ scrolly }}">
+          <div class="lf-form">
+            <sc-if value="{{ hasNote }}">
+              <div class="lf-note ok" role="status"><span class="ic" data-icon="CircleCheck"></span><span>{{ note }}</span></div>
+            </sc-if>
+            <sc-if value="{{ hasSummary }}">
+              <div class="lf-summary {{ f.summary }}" tabindex="-1" role="group" aria-labelledby="{{ ids.sum }}">
+                <h2 class="lf-summary-h" id="{{ ids.sum }}"><span class="ic" data-icon="CircleAlert"></span>{{ sum.title }}</h2>
+                <sc-if value="{{ sum.hasList }}"><ul><sc-for list="{{ sum.items }}" as="i"><li><a href="#">{{ i }}</a></li></sc-for></ul></sc-if>
+                <sc-if value="{{ sum.hasText }}"><p>{{ sum.text }}</p></sc-if>
+                <sc-if value="{{ sum.hasCid }}"><span class="lf-cid lf-cid-l"><span>{{ t.cid }}</span><span class="v">{{ sum.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ t.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+                <sc-if value="{{ sum.hasAct }}"><div class="acts"><button class="btn v-outline {{ f.act }}" type="button"><span class="ic" data-icon="{{ sum.actIcon }}"></span>{{ sum.act }}</button></div></sc-if>
+              </div>
+            </sc-if>
+            <sc-for list="{{ sections }}" as="s">
+              <section class="lf-fs" aria-labelledby="{{ s.hid }}">
+                <h2 class="lf-fs-h" id="{{ s.hid }}">{{ s.title }}</h2>
+                <sc-if value="{{ s.hasDesc }}"><p class="lf-fs-d">{{ s.desc }}</p></sc-if>
+                <sc-for list="{{ s.rows }}" as="row">
+                  <div class="{{ row.cls }}">
+                    <sc-for list="{{ row.fields }}" as="fd">
+                      <div class="fld">
+                        <sc-if value="{{ fd.hasLabel }}"><span class="lbl">{{ fd.label }}<sc-if value="{{ fd.opt }}"><span class="lf-req">{{ t.optional }}</span></sc-if></span></sc-if>
+                        <sc-if value="{{ fd.isSetting }}">
+                          <span class="lf-src-row"><span class="lf-srcm {{ fd.mcls }}"><span class="ic" data-icon="{{ fd.micon }}"></span>{{ fd.mtext }}</span><sc-if value="{{ fd.hasClear }}"><button class="btn v-link {{ fd.ccls }}" type="button">{{ t.clearPlant }}</button></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isDate }}">
+                          <span class="lf-lk"><span class="inp {{ fd.icls }}"><span class="lf-mono">{{ fd.v }}</span></span><button class="btn icon v-outline" type="button" aria-label="{{ fd.pick }}"><span class="ic" data-icon="CalendarDays"></span></button></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isInput }}">
+                          <span class="inp {{ fd.icls }}"><sc-if value="{{ fd.hasV }}"><span class="lf-iv {{ fd.vcls }}" lang="{{ fd.lang }}">{{ fd.v }}</span></sc-if><sc-if value="{{ fd.hasTag }}"><span class="lf-lang">{{ fd.tag }}</span></sc-if><sc-if value="{{ fd.hasUnit }}"><span class="lf-unit">{{ fd.unit }}</span></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isSelect }}">
+                          <span class="lf-selw">
+                            <span class="inp lf-sel {{ fd.icls }}" role="combobox" aria-expanded="{{ fd.open }}" aria-controls="{{ fd.lid }}"><span class="lf-iv {{ fd.vcls }}" lang="{{ fd.lang }}">{{ fd.v }}</span><span class="ic lf-chev" data-icon="ChevronDown"></span></span>
+                            <sc-if value="{{ fd.open }}">
+                              <div class="pop lf-pop below lf-lb" id="{{ fd.lid }}" role="listbox" aria-label="{{ fd.label }}">
+                                <sc-for list="{{ fd.opts }}" as="o"><div class="mi {{ o.cls }}" role="option" aria-selected="{{ o.sel }}"><span>{{ o.t }}</span><sc-if value="{{ o.sel }}"><span class="ic end" data-icon="Check"></span></sc-if></div></sc-for>
+                              </div>
+                            </sc-if>
+                          </span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isArea }}">
+                          <span class="inp lf-ta {{ fd.icls }}"><sc-if value="{{ fd.hasV }}"><span lang="{{ fd.lang }}">{{ fd.v }}</span></sc-if><sc-if value="{{ fd.hasPh }}"><span class="lf-ph">{{ fd.ph }}</span></sc-if></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isLookup }}">
+                          <span class="lf-lk"><span class="inp {{ fd.icls }}"><span class="ic lf-ph" data-icon="Search"></span><sc-if value="{{ fd.hasV }}"><span class="lf-mono">{{ fd.code }}</span><span class="lf-qv" lang="{{ fd.lang }}">{{ fd.v }}</span></sc-if></span><button class="btn icon v-outline" type="button" aria-label="{{ fd.browse }}"><span class="ic" data-icon="List"></span></button></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isMeasured }}">
+                          <span class="lf-mu"><span class="inp {{ fd.icls }}"><span class="lf-mono">{{ fd.v }}</span></span><span class="inp lf-sel"><span class="lf-iv">{{ fd.unitName }}</span><span class="ic lf-chev" data-icon="ChevronDown"></span></span></span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isTrans }}">
+                          <sc-for list="{{ fd.rows }}" as="tr">
+                            <div class="lf-trans"><span class="inp lf-sel lf-tl"><span>{{ tr.language }}</span><span class="ic lf-chev" data-icon="ChevronDown"></span></span><span class="inp" lang="{{ tr.code }}">{{ tr.text }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ tr.remove }}"><span class="ic" data-icon="X"></span></button></div>
+                          </sc-for>
+                          <button class="btn v-ghost lf-add {{ fd.acls }}" type="button"><span class="ic" data-icon="Plus"></span>{{ t.addTrans }}</button>
+                        </sc-if>
+                        <sc-if value="{{ fd.isRead }}">
+                          <span class="lf-ro {{ fd.vcls }}">{{ fd.v }}</span>
+                        </sc-if>
+                        <sc-if value="{{ fd.isCheck }}">
+                          <span class="cb {{ fd.cb }}"><span class="cb-hit"><span class="cb-box {{ fd.icls }}"><span class="ic" data-icon="Check"></span></span></span>{{ fd.cbLabel }}</span>
+                        </sc-if>
+                        <sc-if value="{{ fd.hasErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ fd.err }}</span></sc-if>
+                        <sc-if value="{{ fd.hasDesc }}"><span class="desc">{{ fd.desc }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-for>
+            <div class="lf-foot">
+              <button class="btn v-default {{ f.save }}" type="button">{{ save }}</button>
+              <button class="btn v-outline {{ f.cancel }}" type="button">{{ t.cancel }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"form":{"editor":"enum","options":["article","imported","order","tool","operation","settings"],"default":"article","tsType":"string"},"mode":{"editor":"enum","options":["edit","create"],"default":"edit","tsType":"string"},"state":{"editor":"enum","options":["clean","errors","server","conflict","taken","archived","parse","limit","saved"],"default":"clean","tsType":"string"},"reason":{"editor":"enum","options":["optional","required","required-error"],"default":"optional","tsType":"string"},"open":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"plant":{"editor":"enum","options":["a","b"],"default":"a","tsType":"string"},"presentation":{"editor":"enum","options":["default","plant-b"],"default":"default","tsType":"string"},"scroll":{"editor":"int","default":0,"tsType":"number"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // A form can be drawn scrolled (prop scroll), so its lower field groups and the sticky footer show.
+          let tries = 0;
+          const scroll = () => {
+            document.querySelectorAll("[data-lf-scrolly]").forEach((el) => {
+              const y = parseInt(el.getAttribute("data-lf-scrolly"), 10) || 0;
+              if (y > 0 && el.scrollTop !== y) el.scrollTop = y;
+            });
+            if (tries++ < 40) setTimeout(scroll, 250);
+          };
+          scroll();
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons when it is
+          // rendered on its own, without a shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-f" + window.__lfSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const form = pick(P.form, ["article", "imported", "order", "tool", "operation", "settings"], "article");
+          const create = P.mode === "create" && (form === "article" || form === "tool" || form === "order");
+          const state = pick(P.state, ["clean", "errors", "server", "conflict", "taken", "archived", "parse", "limit", "saved"], "clean");
+          const reason = pick(P.reason, ["optional", "required", "required-error"], "optional");
+          const narrow = P.size === "narrow";
+          const long = P.strings === "long" && (form === "article");
+          const plantB = P.plant === "b";
+          const presB = P.presentation === "plant-b";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const focus = String(P.focus || "none");
+          const openSel = String(P.open || "");
+          const fc = (k) => (focus === k ? "is-focus" : "");
+          const t = long ? {
+            optional: "(optional)", cancel: "Abbrechen", addTrans: "Übersetzung hinzufügen", cid: "Korrelations-ID", copyCid: "Korrelations-ID kopieren",
+            clearPlant: "Werkswert löschen", reasonT: "Änderungsgrund", reasonL: "Grund", reasonPh: "Warum Sie diese Änderung vornehmen",
+            reasonD: "Erscheint im Verlauf des Artikels. Geben Sie keine personenbezogenen Daten ein. Bis zu 500 Zeichen.", remove: (l) => "Übersetzung " + l + " entfernen"
+          } : {
+            optional: "(optional)", cancel: "Cancel", addTrans: "Add translation", cid: "Correlation id", copyCid: "Copy correlation id",
+            clearPlant: "Clear plant value", reasonT: "Reason for change", reasonL: "Reason", reasonPh: "Why you made this change",
+            reasonD: null, remove: (l) => "Remove the " + l + " translation"
+          };
+          const noun = { article: "article", imported: "article", order: "order", tool: "tool", operation: "operation", settings: "settings" }[form];
+          if (!t.reasonD) t.reasonD = form === "settings" ? "Shown in the settings history. Do not enter personal data. Up to 500 characters." : "Shown in the " + noun + "'s history. Do not enter personal data. Up to 500 characters.";
+
+          // Field helpers. Every field goes through Field: label, description, error (VS 5.2.1).
+          const F = (kind, id, label, o) => Object.assign({ kind: kind, id: id, label: label, opt: false, v: "", err: "", desc: "", lang: null, vcls: "" }, o || {});
+          const finish = (fd) => {
+            const k = fd.kind;
+            const icls = (fd.err ? "is-err " : "") + (fc("field:" + fd.id) ? "is-focus " : "") + (fd.extra || "");
+            const open = k === "select" && openSel === fd.id;
+            return Object.assign(fd, {
+              hasLabel: !!fd.label, icls: icls.trim(), hasV: fd.v !== "" && fd.v != null, hasPh: !fd.v && !!fd.ph, hasTag: !!fd.tag, hasUnit: !!fd.unit,
+              hasErr: !!fd.err, hasDesc: !!fd.desc, open: open, lid: open ? uid + "-lb-" + fd.id : null,
+              opts: (fd.opts || []).map((o) => ({ t: o, sel: o === fd.v, cls: o === fd.v ? "kfocus" : "" })),
+              isInput: k === "input", isDate: k === "date", isSelect: k === "select", isArea: k === "area", isLookup: k === "lookup", isMeasured: k === "measured",
+              isTrans: k === "trans", isRead: k === "read", isCheck: k === "check", isSetting: k === "setting",
+              acls: fc("add-translation"), ccls: fc("clear:" + fd.id)
+            });
+          };
+          const R = (cols, fields) => ({ cls: cols === 2 ? "lf-g2" : "lf-g1", fields: fields.map(finish) });
+          let sn = 0;
+          const Sec = (title, rows, desc) => ({ title: title, desc: desc || "", hasDesc: !!desc, rows: rows, hid: uid + "-s" + (sn += 1) });
+          const reasonField = () => {
+            const req = reason !== "optional";
+            const typed = state === "server" || state === "conflict" ? (form === "settings" ? "Plant B uses 12-hour clocks on the floor displays" : "Drawing revision D from engineering, change note 131") : reason === "required-error" ? "ok" : "";
+            return F("area", "reason", t.reasonL, { opt: !req, v: typed, ph: typed ? "" : t.reasonPh,
+              err: reason === "required-error" ? (long ? "Geben Sie einen Grund mit 3 bis 500 Zeichen ein. Sie haben 2 eingegeben." : "Enter a reason of 3 to 500 characters. You entered 2.") : "", desc: t.reasonD });
+          };
+
+          // Presentation of dates and numbers in the order form (A0061).
+          const num = (s) => (presB ? s.replace(/ /g, ",").replace(/ /g, ",") : s);
+          let sections = [];
+          let sum = null;
+          let save = "Save " + noun;
+          let note = "";
+          const errs = [];
+          const E = (msg) => { errs.push(msg); return msg; };
+
+          if (form === "article" || form === "imported") {
+            const imp = form === "imported";
+            const errorsEdit = state === "errors" && !create;
+            const errorsCreate = state === "errors" && create;
+            const taken = state === "taken";
+            const code = imp ? "AX-31007" : create && !taken ? "" : errorsEdit ? (long ? "AX-80112-BEFESTIGUNGSFLANSCH-FVZ-1" : "AX-20410-FLANS-DN50-ROSTFRI-REV-C1") : long ? "AX-80112" : "AX-20410";
+            let name = imp ? "Hydraulslang 12 mm" : create && state !== "taken" ? (errorsCreate ? "Fläns DN65 rostfri" : "") : errorsEdit ? "" : "Fläns DN50 rostfri";
+            const codeErr = errorsEdit ? E(long ? "Die Artikelnummer darf 1 bis 32 Zeichen lang sein. Sie hat 34." : "Article number can be 1 to 32 characters. It has 34.") : errorsCreate ? E("Enter an article number.") : taken ? E("Article number AX-20410 is already in use in Acme AB. Choose another number.") : "";
+            const nameErr = errorsEdit ? E(long ? "Geben Sie eine Bezeichnung ein." : "Enter a name.") : "";
+            const unitErr = errorsCreate ? E("Choose a stock unit.") : "";
+            let trans = create && state !== "taken" ? [] : imp ? [{ language: "English", code: "en", text: "Hydraulic hose 12 mm" }] : [{ language: "English", code: "en", text: "Flange DN50 stainless" }, { language: "German", code: "de", text: "Flansch DN50 Edelstahl" }];
+            let group = imp ? "Hoses" : create && state !== "taken" ? "" : "Flanges";
+            let unit = imp ? "Metres (m)" : create && state !== "taken" ? "" : "Pieces (pcs)";
+            let noteV = imp ? "" : create ? "" : state === "server" || state === "conflict" ? "Ritning rev D gäller från vecka 2026-W45." : "Ritning rev C gäller från vecka 2026-W41.";
+            let L = { idT: "Identity", code: "Article number", name: "Name", trans: "Translations", clsT: "Classification", group: "Article group", unit: "Stock unit", note: "Note",
+              nameD: "In Swedish, the data language of Acme AB.", unitD: "Quantities of this article are counted in this unit.", lang: "sv",
+              units: ["Pieces (pcs)", "Metres (m)", "Kilograms (kg)", "Litres (l)"], groups: ["Consumables", "Flanges", "Hoses", "Housings", "Shafts"] };
+            if (long) {
+              name = errorsEdit ? "" : "Hydraulikzylinder-Befestigungsflansch, feuerverzinkt, für Schwerlastanwendungen";
+              trans = [{ language: "Finnisch", code: "fi", text: "Kiinnityslaipan tiivisterengas, ruostumaton teräs, korkeapaineinen" }, { language: "Englisch", code: "en", text: "Hydraulic cylinder mounting flange, hot-dip galvanised, for heavy-duty use" }];
+              group = "Sonderanfertigungen nach Kundenzeichnung"; unit = "Stück (Stk)"; noteV = "Zeichnung Rev. C gilt ab Kalenderwoche 2026-W41.";
+              L = { idT: "Identität", code: "Artikelnummer", name: "Bezeichnung", trans: "Übersetzungen", clsT: "Klassifizierung", group: "Artikelgruppe", unit: "Lagereinheit", note: "Notiz",
+                nameD: "Auf Deutsch, der Datensprache von Oberschwäbische Präzisionswerkzeuge GmbH.", unitD: "Mengen dieses Artikels werden in dieser Einheit gezählt.", lang: "de",
+                units: ["Stück (Stk)", "Meter (m)", "Kilogramm (kg)", "Liter (l)"], groups: ["Sonderanfertigungen nach Kundenzeichnung", "Flansche", "Schläuche"] };
+              save = "Artikel speichern";
+            } else {
+              save = "Save article";
+            }
+            sections.push(Sec(L.idT, [
+              R(2, [
+                F("input", "code", L.code, { v: code, vcls: "lf-mono", err: codeErr }),
+                F("input", "name", L.name, { v: name, lang: L.lang, tag: L.lang, err: nameErr, desc: L.nameD })
+              ]),
+              R(1, [F("trans", "translations", L.trans, { opt: true, rows: trans.map((x) => Object.assign({ remove: t.remove(x.language) }, x)) })])
+            ]));
+            sections.push(Sec(L.clsT, [
+              R(2, [
+                F("select", "group", L.group, { opt: true, v: group || (long ? "Gruppe wählen" : "Choose a group"), vcls: group ? "" : "lf-ph", lang: long ? "de" : null, opts: L.groups }),
+                F("select", "unit", L.unit, { v: unit || "Choose a unit", vcls: unit ? "" : "lf-ph", err: unitErr, desc: L.unitD, opts: L.units })
+              ]),
+              R(1, [F("area", "note", L.note, { opt: true, v: noteV, lang: noteV ? (long ? "de" : "sv") : null })])
+            ]));
+            if (imp) {
+              sections.push(Sec("Import", [
+                R(2, [F("read", "source", "Source", { v: "Pyramid" }), F("read", "ref", "External reference", { v: "AX-31007", vcls: "lf-mono" })]),
+              ], "Created by the Pyramid import. Later imports do not change this article."));
+            }
+            if (state === "errors" || state === "taken") sum = { title: (long ? "Korrigieren Sie " + errs.length + (errs.length === 1 ? " Feld" : " Felder") + ", um den Artikel zu speichern" : "Fix " + errs.length + (errs.length === 1 ? " field" : " fields") + " to save the article"), items: errs.slice() };
+          } else if (form === "order") {
+            const errorsS = state === "errors";
+            const parse = state === "parse";
+            const qty = parse ? "1.234,5" : errorsS ? "0" : num("1 200");
+            const date = parse ? "2026-02-31" : presB ? "25.10.2026" : "2026-10-25";
+            const qtyErr = parse ? E(presB ? "Enter a number such as 1,234.5." : "Enter a number such as 1 234,5.") : errorsS ? E("Enter a quantity greater than 0.") : "";
+            const dateErr = parse ? E("2026-02-31 is not a date. Enter a date as " + (presB ? "25.10.2026." : "2026-10-25.")) : "";
+            sections.push(Sec("Order", [
+              R(1, [F("lookup", "article", "Article", { code: "AX-20410", v: "Fläns DN50 rostfri", lang: "sv", browse: "Browse articles", desc: "Search by article number or name." })]),
+              R(2, [
+                F("input", "quantity", "Quantity (pcs)", { v: qty, vcls: "lf-mono", err: qtyErr, desc: "In the article's stock unit, pieces." }),
+                F("input", "priority", "Priority", { opt: true, v: "2", vcls: "lf-mono", desc: "Lower numbers go first." })
+              ]),
+              R(1, [F("lookup", "warehouse", "Output warehouse", { opt: true, code: "W-10", v: "Färdigvarulager", lang: "sv", browse: "Browse warehouses" })])
+            ]));
+            sections.push(Sec("Deadline", [
+              R(2, [
+                F("date", "deadlineDate", "Deadline date, Europe/Stockholm", { v: date, pick: "Choose the deadline date", vcls: "lf-mono", err: dateErr, desc: presB ? "Format DD.MM.YYYY. ISO dates such as 2026-10-25 also work." : "Format YYYY-MM-DD, such as 2026-10-25." }),
+                F("input", "deadlineTime", "Deadline time, Europe/Stockholm", { opt: true, v: presB ? "2:00 pm" : "14:00", vcls: "lf-mono", desc: presB ? "12-hour, such as 2:05 pm. 24-hour times such as 14:05 also work." : "24-hour, such as 14:05." })
+              ])
+            ], "Plant time. Weeks start on Monday."));
+            sections.push(Sec("Note", [R(1, [F("area", "note", "Note", { opt: true, v: "" })])]));
+            if (errs.length) sum = { title: "Fix " + errs.length + (errs.length === 1 ? " field" : " fields") + " to save the order", items: errs.slice() };
+            save = "Save order";
+          } else if (form === "tool") {
+            const taken = state === "taken";
+            const codeErr = taken ? E("Code T-100 is already in use. Choose another code.") : "";
+            sections.push(Sec("Identity", [
+              R(2, [
+                F("input", "code", "Code", { v: create && !taken ? "" : "T-100", vcls: "lf-mono", err: codeErr, desc: "1 to 32 characters, unique in Plant A and Acme AB." }),
+                F("input", "name", "Name", { v: create && !taken ? "" : taken ? "Pressverktyg 6-fack" : "Pressverktyg 4-fack", lang: "sv", tag: "sv", desc: "In Swedish, the data language of Acme AB." })
+              ]),
+              R(1, [F("select", "scope", "Scope", { v: "Plant A", opts: ["Plant A", "Acme AB, every plant"], desc: "A Plant A tool is used at Plant A only. Move to company in the row menu shares it with every plant." })])
+            ]));
+            sections.push(Sec("Notes", [R(1, [F("area", "note", "Note", { opt: true, v: "" })])]));
+            if (errs.length) sum = { title: "Fix 1 field to save the tool", items: errs.slice() };
+            save = "Save tool";
+          } else if (form === "operation") {
+            const limit = state === "limit";
+            sections.push(Sec("Operation", [
+              R(2, [F("input", "number", "Operation number", { v: "20", vcls: "lf-mono" }), F("input", "name", "Name", { v: "Svarvning", lang: "sv", tag: "sv" })])
+            ]));
+            sections.push(Sec("Times", [
+              R(1, [F("measured", "cycleTime", "Cycle time", { v: limit ? "4 000" : "420", unitName: "Pieces per hour (pcs/h)", err: limit ? E("Cycle time can be at most 3 600 pcs/h.") : "", desc: "Enter it in the unit you count in, time per piece or pieces per time." })]),
+              R(2, [
+                F("measured", "retool", "Retool time", { v: "25", unitName: "Minutes (min)" }),
+                F("input", "oee", "OEE target (%)", { v: "85", vcls: "lf-mono", desc: "0 to 100." })
+              ])
+            ]));
+            if (limit) sum = { title: "Fix 1 field to save the operation", items: errs.slice() };
+            save = "Save operation";
+          } else {
+            // Settings (VS 8): core.presentation, each field resolved on its own and showing its source.
+            const P0 = plantB ? "Plant B" : "Plant A";
+            const DF = ["2026-10-25, year first (ISO)", "25.10.2026, day first with dots", "25/10/2026, day first with slashes", "10/25/2026, month first with slashes"];
+            const HC = ["24-hour, 14:05", "12-hour, 2:05 pm"];
+            const NF = ["1 234,5, space and comma", "1,234.5, comma and point", "1.234,5, point and comma"];
+            const M = (src) => src === "plant" ? { mcls: "set", micon: "Factory", mtext: "Set for " + P0 } : src === "company" ? { mcls: "", micon: "Building2", mtext: "From Acme AB" } : { mcls: "", micon: "CircleDot", mtext: "Default" };
+            const S1 = plantB
+              ? [["dateFormat", "Date format", DF[1], "plant", "How dates are written in lists, forms and on the board. Clearing uses the default, 2026-10-25.", DF],
+                 ["hourCycle", "Clock", HC[1], "plant", "How clock times are written. Clearing uses the Acme AB value, 24-hour.", HC],
+                 ["numberFormat", "Number format", NF[1], "company", "How numbers are written and typed.", NF]]
+              : [["dateFormat", "Date format", DF[0], "default", "How dates are written in lists, forms and on the board.", DF],
+                 ["hourCycle", "Clock", HC[0], "company", "How clock times are written.", HC],
+                 ["numberFormat", "Number format", NF[0], "plant", "How numbers are written and typed. A point also works as the decimal sign. Clearing uses the Acme AB value, 1,234.5.", NF]];
+            sections.push(Sec("Presentation", S1.map((s) => R(1, [
+              F("setting", s[0] + "-src", s[1], Object.assign({ hasClear: s[3] === "plant", id: s[0] }, M(s[3]))),
+              F("select", s[0], "", { v: s[2], opts: s[5], desc: s[4] })
+            ])), "How dates, clock times and numbers look for everyone at " + P0 + ". Saved changes show after the next page load or plant switch."));
+            // A setting field is the source marker row plus the Select; give the pair one label.
+            sections[0].rows.forEach((row) => { row.cls = "lf-g1 lf-pair"; row.fields[0].hasLabel = true; row.fields[1].hasLabel = false; row.fields[1].label = row.fields[0].label; });
+            save = "Save settings";
+            if (state === "saved") note = "Settings saved. Dates, clock times and numbers change after the next page load or plant switch.";
+          }
+          if (state === "server") {
+            sum = { title: "Could not save the " + noun, text: "Your entries are kept. Try again; if it fails again, give your plant admin the correlation id.", cid: "01J9Z6K3XQ4T8M2R5V7W9YB1C3" };
+          } else if (state === "conflict") {
+            sum = { title: "This " + noun + " changed while you edited it", text: "Jonas Holm saved this " + noun + " at 14:05 after you opened it. Your entries are kept. Reload the " + noun + " to see the saved values, then make your change again.", act: "Reload " + noun, actIcon: "RotateCw" };
+          } else if (state === "archived") {
+            sum = { title: "This " + noun + " is archived", text: "Archived " + noun + "s cannot be changed until they are restored. Your entries are kept.", act: "Restore " + noun, actIcon: "ArchiveRestore" };
+          }
+          if (reason === "required-error") {
+            const rmsg = long ? "Geben Sie einen Grund mit 3 bis 500 Zeichen ein. Sie haben 2 eingegeben." : "Enter a reason of 3 to 500 characters. You entered 2.";
+            if (sum && sum.items) sum.items.push(rmsg); else if (!sum) sum = { title: "Fix 1 field to save the " + noun, items: [rmsg] };
+          }
+          sections.push(Sec(t.reasonT, [R(1, [reasonField()])]));
+          const NAMES = { article: "article", imported: "imported article", order: "production order", tool: "tool", operation: "routing operation", settings: "settings" };
+          return {
+            label: "Form, " + NAMES[form] + (create ? ", create" : "") + ", " + state + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t,
+            ids: { sum: uid + "-sum" },
+            f: { summary: fc("summary"), save: fc("save"), cancel: fc("cancel"), act: fc("action") },
+            scrolly: String(Math.max(0, parseInt(P.scroll, 10) || 0)),
+            hasNote: !!note, note: note,
+            hasSummary: !!sum,
+            sum: sum ? { title: sum.title, hasList: !!(sum.items && sum.items.length), items: sum.items || [], hasText: !!sum.text, text: sum.text || "", hasCid: !!sum.cid, cid: sum.cid || "", hasAct: !!sum.act, act: sum.act || "", actIcon: sum.actIcon || "RotateCw" } : null,
+            sections: sections,
+            save: save
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

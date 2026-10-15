@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings navigation</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+      </helmet>
+      <nav class="set-nav {{ rootCls }}" aria-label="{{ t.nav }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ hasBack }}"><a class="set-backl {{ f.back }}" href="#"><span class="ic" data-icon="ArrowLeft"></span><span>{{ backText }}</span></a></sc-if>
+        <div class="set-chead"><span class="set-ckick">{{ kicker }}</span><span class="set-ctitle" id="{{ ids.title }}">{{ title }}</span></div>
+        <sc-for list="{{ groups }}" as="g">
+          <div class="set-cgrp">
+            <sc-if value="{{ g.hasLabel }}"><div class="set-clab" id="{{ g.hid }}">{{ g.label }}</div></sc-if>
+            <ul class="set-clist" role="list" aria-labelledby="{{ g.lby }}">
+              <sc-for list="{{ g.entries }}" as="e">
+                <li><a class="set-ci {{ e.cls }}" href="#" aria-current="{{ e.cur }}" lang="{{ e.lang }}"><span class="ic" data-icon="{{ e.icon }}"></span><span class="set-cl"><span>{{ e.label }}</span><sc-if value="{{ e.unav }}"><span>{{ t.unavailable }}</span></sc-if></span></a></li>
+              </sc-for>
+            </ul>
+          </div>
+        </sc-for>
+        <sc-if value="{{ hasOthers }}">
+          <div class="set-crule" role="presentation"></div>
+          <div class="set-cgrp">
+            <div class="set-clab" id="{{ ids.others }}">{{ t.others }}</div>
+            <ul class="set-clist" role="list" aria-labelledby="{{ ids.others }}">
+              <sc-for list="{{ others }}" as="o">
+                <li><a class="set-ci {{ o.cls }}" href="#"><span class="ic" data-icon="{{ o.icon }}"></span><span class="set-cl"><span>{{ o.label }}</span><sc-if value="{{ o.onb }}"><span class="sh-vh">, </span><span class="badge sh-onboarding">{{ t.onboarding }}</span></sc-if></span></a></li>
+              </sc-for>
+            </ul>
+          </div>
+        </sc-if>
+      </nav>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"area":{"editor":"enum","options":["plant","company"],"default":"plant","tsType":"string"},"company":{"editor":"text","default":"","tsType":"string"},"plant":{"editor":"text","default":"","tsType":"string"},"current":{"editor":"text","default":"none","tsType":"string"},"entries":{"editor":"text","default":"all","tsType":"string"},"others":{"editor":"text","default":"auto","tsType":"string"},"onboarding":{"editor":"text","default":"","tsType":"string"},"back":{"editor":"enum","options":["auto","home","none"],"default":"auto","tsType":"string"},"from":{"editor":"text","default":"","tsType":"string"},"unavailable":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"hover":{"editor":"text","default":"","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // The shared data file loads with the helmet; draw again once it is there.
+          const ready = () => (window.NM313 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.NM313) ready();
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const D = window.NM313;
+          if (!this.uid) { window.__nmSetNavSeq = (window.__nmSetNavSeq || 0) + 1; this.uid = "set-n" + window.__nmSetNavSeq; }
+          const u = this.uid;
+          const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+          const pick = (v, opts, d) => { const s = has(v) ? String(v).trim() : ""; return opts.indexOf(s) >= 0 ? s : d; };
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const ids = { title: u + "-t", others: u + "-o" };
+          const empty = { t: { nav: "Settings", unavailable: "", others: "", onboarding: "" }, rootCls: "", lang: null, label: "Settings navigation", ids: ids, f: { back: "" },
+            hasBack: false, backText: "", kicker: "", title: "", groups: [], hasOthers: false, others: [] };
+          if (!D) return empty;
+
+          // Area, language and the scope names (rules 5.1 to 5.5; long strings use the D2 long preset, rules 11.6)
+          const area = pick(P.area, ["plant", "company"], "plant");
+          const long = pick(P.strings, ["default", "long"], "default") === "long";
+          const L = long ? "de" : "en";
+          const t = D.t[L];
+          const data = D.data[L];
+          // The company: the company prop, else the company that holds the plant prop, else the first company.
+          const plantIn = has(P.plant) ? String(P.plant).trim() : "";
+          const coIn = has(P.company) ? String(P.company).trim() : "";
+          const co = data.companies.filter((c) => (coIn ? c.name === coIn : plantIn && c.plants.indexOf(plantIn) >= 0))[0] || data.companies[0];
+          const company = coIn || co.name;
+          const plant = plantIn || co.plants[0];
+          const list = (v) => String(v || "").split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+          const onb = has(P.onboarding) ? (String(P.onboarding).trim() === "none" ? [] : list(P.onboarding)) : data.onboarding;
+          const current = has(P.current) ? String(P.current).trim() : "none";
+          const allowed = has(P.entries) && String(P.entries).trim() !== "all" ? list(P.entries) : null;
+          const unav = list(P.unavailable);
+          const focus = has(P.focus) ? String(P.focus).trim() : "none";
+          const hover = has(P.hover) ? String(P.hover).trim() : "";
+          const fe = (k) => (focus === k ? " is-focus" : "");
+
+          // Groups: core, then modules in manifest order, then plugins; a group with no permitted entry is not drawn (5.5, 5.6).
+          // A plant in onboarding adds Continue onboarding at the top of its plant group (5.2). A company named in onboarding
+          // (a company with no plant yet) adds the company wizard's Continue onboarding at the top of the company group.
+          const plantOnb = area === "plant" && onb.indexOf(plant) >= 0;
+          const coOnb = area === "company" && onb.indexOf(company) >= 0 && !!D.companyOnboarding;
+          let firstFocus = "";
+          const groups = [];
+          D.areas[area].forEach((g, gi) => {
+            let ents = g.entries.slice();
+            if (gi === 0 && plantOnb) ents = [D.onboarding].concat(ents);
+            if (gi === 0 && coOnb) ents = [D.companyOnboarding].concat(ents);
+            ents = ents.filter((e) => !allowed || allowed.indexOf(e.id) >= 0 || e.id === "onboarding");
+            if (!ents.length) return;
+            const hid = u + "-g" + gi;
+            groups.push({
+              hasLabel: gi > 0, label: g[L], hid: gi > 0 ? hid : null, lby: gi > 0 ? hid : ids.title,
+              entries: ents.map((e) => {
+                if (!firstFocus) firstFocus = e.id;
+                const cur = e.id === current;
+                const isUnav = unav.indexOf(e.mod) >= 0;
+                return { label: e[L], icon: e.icon, lang: long && e.langDe ? e.langDe : null, unav: isUnav, cur: cur ? "page" : null,
+                  cls: [cur ? "cur" : "", isUnav ? "set-unav" : "", hover === e.id && !cur ? "hov" : ""].filter(Boolean).join(" ") + fe("entry:" + e.id) + (focus === "first" && firstFocus === e.id ? " is-focus" : "") };
+              })
+            });
+          });
+
+          // The way between the two areas (rules 7.3): plant settings link to the company's area for a user who holds a
+          // permission at the company; company settings list each plant of the company the user administers.
+          // others="none" hides the group; a list of names replaces the default.
+          const oMode = has(P.others) ? String(P.others).trim() : "auto";
+          let oList;
+          if (oMode === "none") oList = [];
+          else if (oMode === "auto") oList = area === "plant" ? [{ name: company, kind: "company" }] : co.plants.map((n) => ({ name: n, kind: "plant" }));
+          else oList = list(oMode).map((n) => ({ name: n, kind: area === "plant" ? "company" : "plant" }));
+          const others = oList.map((o, i) => ({
+            label: t.areaLink.replace("{name}", o.name), icon: o.kind === "company" ? "Building2" : "Factory", onb: o.kind === "plant" && onb.indexOf(o.name) >= 0,
+            cls: (focus === "other" && i === 0) || focus === "other:" + i || focus === "other:" + o.name ? "is-focus" : ""
+          }));
+
+          // Back to work heads company settings: the plant the user came from, else Your plants (rules 6.7). Plant settings
+          // have the rail, so they need no back link.
+          const back = pick(P.back, ["auto", "home", "none"], "auto");
+          const from = has(P.from) ? String(P.from).trim() : co.plants[0];
+          const hasBack = area === "company" && back !== "none";
+          const backText = back === "home" ? t.backHome : t.back.replace("{plant}", from);
+          return {
+            t: t, ids: ids, f: { back: focus === "back" ? "is-focus" : "" },
+            rootCls: (theme !== "inherit" ? "set-solo " : "") + (theme === "dark" ? "dark" : ""),
+            lang: long ? "de" : null,
+            label: "Settings navigation, " + area + (current !== "none" ? ", " + current : "") + (long ? ", long strings" : ""),
+            hasBack: hasBack, backText: backText,
+            // The head as C drew it: the company over the area's title, "Company settings" or "Plant A settings" (rules 5.4).
+            kicker: company,
+            title: area === "company" ? t.companyTitle : t.plantTitle.replace("{plant}", plant),
+            groups: groups,
+            hasOthers: others.length > 0, others: others
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { randomUUIDv7 } from 'node:crypto';
 import { query, useTestDatabase } from '@northmes/testing';
 import { describe, expect, it } from 'vitest';
-import { givenCompany, givenUser } from '../../../src/testing.ts';
+import { givenCompany, givenUser, queryAsCore } from '../../../src/testing.ts';
 
 /**
- * Every module and in-process plugin writes as nm_app (ADR 0008), so the policies of core.role and
- * core.role_assignment keep a write outside the transaction's write scopes out, whoever sends it.
+ * Every module and in-process plugin writes as nm_app (ADR 0008), so the policies of core.scope,
+ * core.company, core.role and core.role_assignment keep a write outside the transaction's write
+ * scopes out, whoever sends it.
  */
-describe('the row-level security policies of roles and role assignments', () => {
+describe('the row-level security policies of the scope tree, roles and role assignments', () => {
   const db = useTestDatabase();
   const principal = { type: 'user', id: 'e05-s06-policies' } as const;
 
@@ -165,5 +167,76 @@ describe('the row-level security policies of roles and role assignments', () => 
     expect(policies).toEqual([{ cmd: 'SELECT', roles: '{nm_app}' }]);
     expect(keys).toEqual([{ key: 'core-company-admin' }]);
     expect(insert).toEqual({ refused: 'permission denied for table default_role' });
+  });
+
+  it('E05-S06 nm_app creates a company node and its core.company row only at a company among its write scopes', async () => {
+    const other = await given();
+    const companyId = randomUUIDv7();
+    const [organization] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `insert into auth.organization (name, slug, "createdAt") values ('Policy probe', $1, now())
+       returning id`,
+      [companyId],
+    );
+    const node = `insert into core.scope (id, company_id, kind, span) values ($1, $1, 'company', '(,)')`;
+    const row = 'insert into core.company (id, organization_id, name) values ($1, $2, $3)';
+
+    const nodeElsewhere = await asApp([other.company], node, [companyId]);
+    const nodeWithoutScopes = await asApp([], node, [companyId]);
+    const nodeAtCompany = await asApp([companyId], node, [companyId]);
+    const rowElsewhere = await asApp([other.company], row, [companyId, organization?.id, 'Probe']);
+    const rowAtCompany = await asApp([companyId], row, [companyId, organization?.id, 'Probe']);
+
+    expect(nodeElsewhere).toEqual({
+      refused: 'new row violates row-level security policy for table "scope"',
+    });
+    expect(nodeWithoutScopes).toEqual({
+      refused: 'new row violates row-level security policy for table "scope"',
+    });
+    expect(nodeAtCompany).toEqual({ rows: 1 });
+    expect(rowElsewhere).toEqual({
+      refused: 'new row violates row-level security policy for table "company"',
+    });
+    expect(rowAtCompany).toEqual({ rows: 1 });
+  });
+
+  it("E05-S06 nm_app adds a plant node only under a company among its write scopes, so a plugin cannot graft a node into another company's tree", async () => {
+    const acme = await given();
+    const nordic = await given();
+    const plant = `insert into core.scope (company_id, parent_id, kind, span)
+       values ($1, $1, 'plant', int8range(7::int8 << 32, 8::int8 << 32))`;
+
+    const fromNordic = await asApp([nordic.company, nordic.plant], plant, [acme.company]);
+    const fromAcme = await asApp([acme.company], plant, [acme.company]);
+
+    expect(fromNordic).toEqual({
+      refused: 'new row violates row-level security policy for table "scope"',
+    });
+    expect(fromAcme).toEqual({ rows: 1 });
+  });
+
+  it('E05-S06 core.scope and core.company have row-level security, and nm_app still reads them without scopes to resolve a principal', async () => {
+    const { company, plant } = await given();
+
+    const tables = await query<{ relname: string; relrowsecurity: boolean }>(
+      db.appUrl,
+      `select relname, relrowsecurity from pg_class
+       where oid in ('core.scope'::regclass, 'core.company'::regclass) order by relname`,
+    );
+    const nodes = await query<{ id: string }>(
+      db.appUrl,
+      `select id from core.scope where company_id = '${company}' order by parent_id nulls first`,
+    );
+    const companies = await query<{ id: string }>(
+      db.appUrl,
+      `select id from core.company where id = '${company}'`,
+    );
+
+    expect(tables).toEqual([
+      { relname: 'company', relrowsecurity: true },
+      { relname: 'scope', relrowsecurity: true },
+    ]);
+    expect(nodes).toEqual([{ id: company }, { id: plant }]);
+    expect(companies).toEqual([{ id: company }]);
   });
 });

@@ -1,6 +1,6 @@
 # D1 tokens, contrast and component states
 
-This is the approval record of design task D1, issue [northMES/northmes#189](https://github.com/northMES/northmes/issues/189), for story E04-S01 ([northMES/northmes#39](https://github.com/northMES/northmes/issues/39)). The design page is [ui/ui-189-tokens.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=ui/ui-189-tokens.dc.html) in the Claude Design project. Approved by Krister Johansson on 2026-10-05. The design project has no bound design system: the Broadsheet binding was removed on 2026-10-05. The approved page is frozen: a later change copies it under a new issue number.
+This is the approval record of design task D1, issue [northMES/northmes#189](https://github.com/northMES/northmes/issues/189), for story E04-S01 ([northMES/northmes#39](https://github.com/northMES/northmes/issues/39)). The design page is [ui/ui-189-tokens.dc.html](../project/ui/ui-189-tokens.dc.html) in the design project. Approved by Krister Johansson on 2026-10-05. The design project has no bound design system: the Broadsheet binding was removed on 2026-10-05. The approved page is frozen: a later change copies it under a new issue number.
 
 D1 draws no screen and has no route. The page assumes that this file, not the canvas, is the source of the values E04-S01 implements (Q3).
 

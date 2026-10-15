@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="./core-304-access-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">Frame F0</p>
+        <h2 class="t1">Access management and the no-access states: variations</h2>
+        <p class="lede">Issue #304 asks for a variations round before the spec page, because the role editor and the assignment screen are new kinds of screens. This page draws three whole options in the D2 shell at Plant A: A by person, B by plant and C by role. Each shows its role editor, its assignment screen and a user's access at 1440 in light, plus one dark frame and a 320 sketch, and the frame group N draws the no-access states the way each option shows them. The user list and form, empty, loading and error states, 1280 and 1920, long strings, keyboard and focus follow the canonical list and form page (option A, pages) and come with the spec page core/core-304-access.dc.html.</p>
+        <div class="ac-cols2 sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="ac-facts" style="margin-top:12px">
+              <sc-for list="{{ facts }}" as="f"><dt>{{ f.k }}</dt><dd>{{ f.v }}</dd></sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Where the pages live</h2>
+            <ul class="ac-pts">
+              <sc-for list="{{ where }}" as="w"><li>{{ w.t }} <span class="ac-src">{{ w.s }}</span></li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">What is decided</h2>
+          <p class="lede">Eight axes. Each option takes one answer per axis, so its frames show a whole product; the axes are independent, and the comparison frame R judges each one on its own.</p>
+          <div class="ac-tbl">
+            <div class="ac-tbl-r ac-axes h"><span>Axis</span><span>A. By person</span><span>B. By plant</span><span>C. By role</span></div>
+            <sc-for list="{{ axes }}" as="a"><div class="ac-tbl-r ac-axes"><span class="k">{{ a.k }}<span class="ac-src" style="display:block;font-weight:400">{{ a.f }}</span></span><span>{{ a.a }}</span><span>{{ a.b }}</span><span>{{ a.c }}</span></div></sc-for>
+          </div>
+        </div>
+        <div class="ac-cols2 sec">
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="ac-pts">
+              <sc-for list="{{ how }}" as="h"><li>{{ h }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h2 class="t2">Rules every option keeps</h2>
+            <ul class="ac-pts">
+              <sc-for list="{{ rules }}" as="r"><li>{{ r.t }} <span class="ac-src">{{ r.s }}</span></li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="ac-cols2 sec">
+          <div>
+            <h2 class="t2">People</h2>
+            <p class="lede">All fictional. Acme AB has Plant A, Plant B and Plant D (in onboarding); Nordic Tools AB has Plant C. Everyone here holds a role at Acme AB or at Plant A, so the pages at Plant A can read them.</p>
+            <div class="ac-tbl">
+              <div class="ac-tbl-r ac-ppl h"><span>Name</span><span>Username</span><span>Roles</span></div>
+              <sc-for list="{{ people }}" as="p"><div class="ac-tbl-r ac-ppl"><span lang="{{ p.lang }}">{{ p.name }}</span><span class="mono">{{ p.user }}</span><span>{{ p.roles }}</span></div></sc-for>
+            </div>
+          </div>
+          <div>
+            <h2 class="t2">Roles at Acme AB</h2>
+            <p class="lede">Default roles come from module manifests; custom roles belong to Acme AB. Plain-language lines and the ids marked proposed or invented are listed under Assumptions.</p>
+            <div class="ac-tbl">
+              <div class="ac-tbl-r ac-rls h"><span>Role</span><span>Origin</span><span>Permissions</span></div>
+              <sc-for list="{{ roles }}" as="r"><div class="ac-tbl-r ac-rls"><span class="k">{{ r.name }}</span><span>{{ r.kind }}</span><span>{{ r.perms }}</span></div></sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <ul class="ac-pts">
+            <sc-for list="{{ assume }}" as="a"><li>{{ a }}</li></sc-for>
+          </ul>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">From the spec for this round. Round marks a question that the choice of options answers; the rest stay open for Krister, the product owner (PO-74) or the task that builds the field or table.</p>
+          <div class="ac-qgrid">
+            <sc-for list="{{ qs }}" as="q"><div class="ac-qrow"><span class="tag {{ q.cls }}">{{ q.n }}</span><span>{{ q.t }}<sc-if value="{{ q.round }}"> <span class="ac-src">Round</span></sc-if></span></div></sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const F = (k, v) => ({ k: k, v: v });
+          const W = (t, s) => ({ t: t, s: s });
+          const X = (k, f, a, b, c) => ({ k: k, f: f, a: a, b: b, c: c });
+          const ROUND = [17, 18, 19, 20];
+          const Q = [
+            "Row-level security on core.role_assignment: may the pages at Plant A read a user's assignments at Plant B? It decides holder counts, a user's full access and the text of a refused block.",
+            "Should users, roles and assignments also be reachable under /admin, which needs plant-free fields beyond the release 1 list of ADR 0066?",
+            "Permission ids for assigning roles, reading roles and reading, creating, blocking and resetting users. May a planner read role names (option C's page opened by URL)?",
+            "Where do the plain-language label and description of each permission come from: a manifest field per permission, also shown in the generated permissions reference (E19-S03)?",
+            "Are module default roles read only? Does a role made from a default role keep a link to it, and does an upgrade that changes the default role show anywhere?",
+            "Does core ship a plant admin default role, and what does it hold?",
+            "Does the catalog record a level, company or plant, per permission, and should assigning a company-level permission at a plant warn that it has no effect there?",
+            "The refusal error: one code that lists every missing permission (proposed core.role_not_held with details.permissions), or core.forbidden with one permission?",
+            "Is a reason required to remove an assignment, change a role or block a user?",
+            "Removing the last company admin, or your own admin role: refuse, warn or allow, given northmes company add-admin as the way back?",
+            "Does creating a user take the first role and place in the same command, and where does can() check the create?",
+            "Can an admin add an existing user who works for another company, and how is that user found without showing other companies' users?",
+            "Does the user list show email, last sign-in or a pending temporary password, which core.user_directory does not expose?",
+            "Are unblock, rename and change of email in release 1? E05-S08 lists create, block and reset password.",
+            "Does the UI show the .invalid placeholder address or No email (M-08)?",
+            "Which read field returns another user's effective permissions at a plant?",
+            "Q22: page, dialog or banner after close code 4403, and does core.plant_forbidden on a query or mutation from the same plant route show the same state?",
+            "A plant without a role: keep ST29's one message for an unknown and an unauthorized plant?",
+            "The title of a page opened without the permission: the route's own title, or No access to {title}?",
+            "Hide or disable actions the viewer cannot use, such as Remove on a company assignment for a plant admin?",
+            "Is the add-role form its own route, as option A of the canonical page makes every form, or a dialog?",
+            "Should any FORBIDDEN make the shell fetch the module list again, so the sidebar drops entries the user lost?",
+            "A separate company admin (Karin Dahl) beside the plant admin (Jonas Holm), while D2 drew Jonas Holm in its company admin frames; and D2 K17, Admin or Company admin for the link to /admin.",
+            "PO-74, who may edit and assign roles at which scope, is open for the product owner; the page draws the working default.",
+            "E05-S15, the admin pages at /admin, has no GitHub issue yet; the D2 record lists its admin frame task as waiting.",
+            "Do role and assignment changes need the review step of WCAG 3.3.4, which the canonical page keeps for three planning commands?",
+            "Does a role carry a description, and are role names unique within a company?",
+            "Can a custom role be archived or deleted while people hold it?"
+          ];
+          const A = window.ACC;
+          return {
+            facts: [
+              F("Issue", "#304, core: Design access management and the no-access states (plan E05-S06-T01)"),
+              F("Story", "E05-S06 (#54). Waiting UI tasks: E05-S06 (#54) roles and assignments, E05-S08 (#56) user pages, E04-S02 (#40) and E04-S07 (#45) forbidden and access-lost states. Related: E05-S11 (#59) history and the admin audit list, E05-S15 the admin pages at /admin (no issue yet)"),
+              F("Area", "core, which maps to modules/core/web. The frames mount core/Shell.dc.html, a byte copy of the approved shell/Shell.dc.html"),
+              F("Routes", "/$plant/core/users, /$plant/core/users/$userId?tab=access, /$plant/core/users/$userId/roles/new (A), /$plant/core/roles, /$plant/core/roles/new, /$plant/core/roles/$roleId/edit, /$plant/core/roles/$roleId?tab=holders (C). Paths from core's link manifest, proposed"),
+              F("Personas", "Plant admin (primary): Jonas Holm, who holds Plant admin at Plant A. A plant admin who also holds core's Company admin role: Karin Dahl. Planner, for the no-access states: Alex Lund. Oskar Wik holds the custom role IT at Acme AB for the role edit refusal (B4)"),
+              F("In this round", "Each option at 1440 in light, one dark frame and one 320 sketch; the no-access group N at 1440 in light; the header, the option notes and the comparison R")
+            ],
+            where: [
+              W("Users and Roles sit in the plant's Administration section, on plant routes under /$plant/core, with the nav entries core.users and core.roles.", "D2 C7; D2 foundation, nav entry ids"),
+              W("They are not under /admin in release 1. Requests from /admin carry no plant and may select only core's plant-free admin fields; none of them reads or writes users, roles or assignments, and a test fixes the list. /admin keeps the company list, Plants and the company wizard; the wizard's People step runs on a plant route.", "ADR 0066, Routes outside the plant route and The onboarding wizard"),
+              W("Every request carries one plant. From Plant A the pages read Acme AB and Plant A rows, never Plant B, so holder counts, a user's roles and every refusal name only those two scopes, and only Acme AB and Plant A are offered as places to assign.", "ADR 0007; plan 04, One plant per request"),
+              W("Not settled: whether row-level security on core.role_assignment lets Plant A read Plant B assignments (question 1), and whether users and roles also need pages under /admin (question 2).", "Spec 1.3.3, 15")
+            ],
+            axes: [
+              X("Role editor", "Spec 12.1", "Permissions grouped by module, a checklist with one collapsed row per module", "Roles by permissions matrix; default role columns read only", "Start from a default role and show the difference, the grouped list below"),
+              X("Where assignments are made", "Spec 12.2", "From the user: Access tab and Add role", "From the plant: people by roles at Plant A", "From the role: Holders tab and Assign"),
+              X("What a user can do", "Spec 12.3", "List by module, each permission with the role and scope that grant it", "Matrix of the user's roles with an At Plant A column", "A check: pick a permission, read yes or no and why"),
+              X("A refused assignment", "Spec 12.4", "Prevented in the role picker; server refusal as fallback", "Refused on Save, in the error summary", "Checked when the role and place are chosen"),
+              X("Page opened by URL without the permission", "Spec 12.5.1", "Route title and h1 Roles, EmptyState below", "Title and h1 No access to Roles", "As A, plus the roles that include the permission"),
+              X("FORBIDDEN region", "Spec 12.5.2", "Region keeps its heading, EmptyState inside", "Cells read No access; a whole region as A", "Region shrinks to one line"),
+              X("Plant without a role", "Spec 12.5.3", "D2 ST29 as approved", "Two pages: Page not found and You have no role at this plant", "ST29 with one more line"),
+              X("Access lost after close code 4403 (Q22)", "Spec 12.5.4", "Error banner, page read only", "Page in the layout of ST29", "Dialog like the reload dialog")
+            ],
+            how: [
+              "Read the frames per task. Karin Dahl changes a role: A1, B1, C1. Jonas Holm gives Anna Berg a role he cannot fully give: A2, B2, C4. Jonas Holm reads what Sara Nyberg can do at Plant A: A3, B3, C3.",
+              "The dark frames show a second state of each option: removing a role (A4), a role edit refused on Save (B4) and assigning from the role (C4).",
+              "The 320 sketches show the widest view of each option: a user's access as cards (A5), the roles matrix in its scroll region (B5) and the check (C5).",
+              "Frame group N draws the four no-access states per option, all for Alex Lund except the FORBIDDEN region, which Jonas Holm meets on Sara Nyberg's page.",
+              "Under each option, its notes list what it optimizes, what it costs and how it meets the fixed rules. The comparison R sets the options against the criteria and ends with the recommendation."
+            ],
+            rules: [
+              W("Permissions come only from roles assigned at a scope node; a one-off grant is a custom role with one permission.", "ADR 0066, ADR 0068, M-65"),
+              W("A role at Acme AB applies to every plant of Acme AB, also plants created later; a role at Plant A applies there only; roles add up.", "ADR 0010, ADR 0066"),
+              W("There is no deny rule: a company role is removed only at Acme AB, by a holder of the permission there.", "Spec 2.5, derived"),
+              W("Editing roles needs core.role:manage at company scope; adding a permission the editor lacks where the role is assigned is refused.", "ADR 0010, E05-S06, PO-74 working default"),
+              W("Assigning a role at a scope needs the assignment permission plus every permission of that role at that scope.", "ADR 0010, E05-S06"),
+              W("Default roles come from module manifests and stay read only here; Company admin holds every installed permission.", "ADR 0066, plan 03; question 5"),
+              W("Every change is a command with an optional reason on the form, and applies from the user's next request.", "Plan 04, ADR 0051, E05-S06"),
+              W("Messages name only the reader's own missing permissions and scopes the reader can read, never another company and never a person.", "ADR 0066, spec 1.3.4"),
+              W("State never by color alone; targets at least 24 by 24 px; one h1; titles Specific part · Plant A · NorthMES.", "ADR 0021, plan 06"),
+              W("At 320 only a data table or matrix scrolls in two directions, in its own region.", "Plan 06, Reflow"),
+              W("After close code 4403 the client stops reconnecting and refuses saves; core.plant_forbidden from any request shows the same state; 4401 goes to sign-in.", "Plan 06, Live data; spec 8.5"),
+              W("States the shell owns are not redrawn; changing an approved state takes a new shell page version under a new issue.", "Plan 06, What every design page contains")
+            ],
+            people: A ? A.PEOPLE.map((p) => ({ name: p.name, user: p.user, lang: p.lang || null, roles: p.a.map((x) => A.ROLE[x[0]].name + " at " + x[1]).join(", ") + (p.blocked ? "; blocked" : "") + (p.noEmail ? "; no email" : "") })) : [],
+            roles: A ? A.ROLES.map((r) => ({ name: r.name, kind: r.kind, perms: r.all ? "Every installed permission" : r.perms.map((id) => A.PERM[id].label).join("; ") })) : [],
+            assume: [
+              "The plain-language line of each permission is proposed: the manifest declares permissions without a label (question 4).",
+              "Permission ids core.user:read, :create, :block, :resetPassword, core.role:read and core.roleAssignment:manage are proposed (question 3); acme.toolLife:read, acme.toolChange:record, kanban.board:read and core.customer:read are invented for the page.",
+              "Plant admin and IT are custom roles of Acme AB; core ships no plant admin role (question 6). Plan 07 calls the planning admin role Admin; the page names it Planning admin, to tell it from Plant admin and from Admin, the link to /admin.",
+              "Alex Lund holds Planner at Plant A, and held Planner at Plant B until Karin Dahl removed it on 2026-10-07. He holds no role at Acme AB: the spec gave him Viewer at Acme AB, which would keep Plant B open after the removal.",
+              "Jonas Holm's Plant admin holds Viewer's two read permissions, so Shift lead needs three permissions he lacks at Plant A, not the two the spec names.",
+              "Sara Nyberg also holds Viewer at Acme AB, which the spec did not give her, so that A3 shows an inherited permission. A plant admin of Plant A therefore cannot block her or reset her password (spec 7.3), and her page shows neither action.",
+              "What another user can do at a plant needs a new core read field (question 16). The D2 shell's admin preset draws every admin entry; a narrower Plant admin role, as here, would show fewer.",
+              "The access-lost states use Alex Lund on /plant-b/planning/board after the removal of 2026-10-07; the page by URL uses /plant-a/core/roles; the plant without a role uses /plant-c/planning/board."
+            ],
+            qs: Q.map((t, i) => ({ n: String(i + 1), t: t, round: ROUND.indexOf(i + 1) >= 0, cls: ROUND.indexOf(i + 1) >= 0 ? "fix" : "q" }))
+          };
+        }
+        componentDidMount() {
+          const ready = () => (window.ACC ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.ACC) ready();
+        }
+      }
+    </script>
+  </body>
+</html>

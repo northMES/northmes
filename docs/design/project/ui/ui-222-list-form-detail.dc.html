@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Entity detail</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ showTabs }}">
+          <div class="lf-tabs" role="tablist" aria-label="{{ tabsName }}">
+            <sc-for list="{{ tabs }}" as="tb">
+              <button class="lf-tab {{ tb.cls }}" type="button" role="tab" id="{{ tb.id }}" aria-selected="{{ tb.on }}" aria-controls="{{ tb.panel }}" tabindex="{{ tb.tabindex }}">{{ tb.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showGeneral }}">
+          <div class="lf-dscroll" role="tabpanel" id="{{ ids.panel }}" aria-labelledby="{{ ids.tabOn }}">
+            <div class="{{ colsCls }}">
+            <div class="lf-sects">
+              <sc-for list="{{ sects }}" as="s">
+                <section class="lf-sect {{ s.cls }}" aria-labelledby="{{ s.hid }}">
+                  <h2 class="lf-sect-h" id="{{ s.hid }}">{{ s.title }}</h2>
+                  <sc-if value="{{ s.hasDesc }}"><p class="lf-sect-d">{{ s.desc }}</p></sc-if>
+                  <sc-if value="{{ s.hasDl }}">
+                    <dl class="lf-dl">
+                      <sc-for list="{{ s.items }}" as="it">
+                        <dt>{{ it.k }}</dt>
+                        <dd>
+                          <sc-if value="{{ it.hasBadge }}"><span class="badge {{ it.bcls }}"><span class="ic" data-icon="{{ it.bicon }}"></span>{{ it.v }}</span></sc-if>
+                          <sc-if value="{{ it.plain }}"><span class="{{ it.cls }}" lang="{{ it.lang }}">{{ it.v }}</span></sc-if>
+                          <sc-for list="{{ it.subs }}" as="u"><span class="lf-sub"><sc-if value="{{ u.hasK }}"><span>{{ u.k }}: </span></sc-if><span lang="{{ u.lang }}">{{ u.t }}</span></span></sc-for>
+                        </dd>
+                      </sc-for>
+                    </dl>
+                  </sc-if>
+                  <sc-if value="{{ s.hasOps }}">
+                    <div class="lf-ops" role="table" aria-label="{{ s.title }}">
+                      <div class="lf-ops-r h" role="row"><span role="columnheader">Operation</span><span role="columnheader">Name</span><span class="w" role="columnheader">Quantity</span><span class="w" role="columnheader">Status</span></div>
+                      <sc-for list="{{ s.ops }}" as="o">
+                        <div class="lf-ops-r" role="row"><span class="lf-mono" role="cell">{{ o.num }}</span><span role="cell" lang="sv">{{ o.name }}</span><span class="w lf-mono" role="cell">{{ o.qty }}</span><span class="w" role="cell"><span class="badge {{ o.bcls }}"><span class="ic" data-icon="{{ o.icon }}"></span>{{ o.status }}</span></span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.hasText }}"><p class="lf-sect-p" lang="{{ s.lang }}">{{ s.text }}</p></sc-if>
+                </section>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasSlot }}">
+              <div class="lf-slotz sh-slot"><span class="sh-lm lf-slotz-tag">Slot planning/order/panels/v1</span><div class="lf-slotz-b"><span class="sh-phl">Contributions, each in its own frame (<span class="lf-nowrap">production-start</span> in release 1)</span></div></div>
+            </sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showHistory }}">
+          <div class="lf-card lf-hist" role="tabpanel" id="{{ ids.panel }}" aria-labelledby="{{ ids.tabOn }}" style="{{ colsStyle }}">
+            <div class="{{ histScroll }}" tabindex="{{ hTab }}" role="{{ hRole }}" aria-label="{{ hLabel }}">
+              <div class="lf-grid" role="table" aria-label="{{ t.history }}">
+                <div class="lf-tr hd" role="row">
+                  <span class="lf-td" role="columnheader"><span class="lf-vh">{{ t.details }}</span></span>
+                  <sc-for list="{{ hheads }}" as="h"><span class="lf-td" role="columnheader">{{ h }}</span></sc-for>
+                </div>
+                <sc-for list="{{ hist }}" as="h">
+                  <div class="lf-tr" role="row">
+                    <span class="lf-td" role="cell"><button class="lf-exp {{ h.fcls }}" type="button" aria-expanded="{{ h.open }}" aria-label="{{ h.expName }}"><span class="ic" data-icon="{{ h.expIcon }}"></span></button></span>
+                    <span class="lf-td lf-mono lf-nowrap" role="cell"><span>{{ h.when }}</span><sc-if value="{{ h.hasZone }}"><span class="lf-mut">CEST</span></sc-if></span>
+                    <span class="lf-td two" role="cell"><span>{{ h.who }}</span><sc-if value="{{ h.hasWhoSub }}"><span class="lf-sub">{{ h.whoSub }}</span></sc-if></span>
+                    <span class="lf-td" role="cell"><span class="badge lf-surf"><span class="ic" data-icon="{{ h.surfIcon }}"></span>{{ h.surface }}</span></span>
+                    <span class="lf-td" role="cell"><sc-if value="{{ h.hasReason }}"><span>{{ h.reason }}</span></sc-if><sc-if value="{{ h.noReason }}"><span class="lf-mut">{{ t.noReason }}</span></sc-if></span>
+                    <span class="lf-td" role="cell">{{ h.summary }}</span>
+                  </div>
+                  <sc-if value="{{ h.open }}">
+                    <div class="lf-dwrap" role="row"><div class="lf-dcell" role="cell" aria-colspan="6">
+                      <div class="lf-diff" role="table" aria-label="{{ h.expName }}">
+                        <div class="lf-dr" role="row"><span class="h" role="columnheader">{{ t.field }}</span><span class="h" role="columnheader">{{ t.before }}</span><span class="h" role="columnheader">{{ t.after }}</span></div>
+                        <sc-for list="{{ h.changes }}" as="c"><div class="lf-dr" role="row"><span role="cell">{{ c.field }}</span><span class="{{ c.bCls }}" role="cell" lang="{{ c.bLang }}">{{ c.before }}</span><span class="{{ c.aCls }}" role="cell" lang="{{ c.aLang }}">{{ c.after }}</span></div></sc-for>
+                      </div>
+                    </div></div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <div class="lf-pager"><span>{{ t.newest }}</span><span class="lf-pg"><button class="btn {{ pgBtn }} v-outline is-dis" type="button" aria-disabled="true" aria-label="{{ prevName }}"><span class="ic" data-icon="ChevronLeft"></span><sc-if value="{{ wide }}">{{ t.prev }}</sc-if></button><button class="btn {{ pgBtn }} v-outline is-dis" type="button" aria-disabled="true" aria-label="{{ nextName }}"><sc-if value="{{ wide }}">{{ t.next }}</sc-if><span class="ic" data-icon="ChevronRight"></span></button></span></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showLoading }}">
+          <div class="lf-sects" role="tabpanel" id="{{ ids.panel }}" aria-labelledby="{{ ids.tabOn }}" aria-busy="true">
+            <sc-for list="{{ skel }}" as="k">
+              <div class="lf-sect {{ k.cls }}"><span class="sk lf-skl" style="width:120px;height:16px"></span><sc-for list="{{ k.ws }}" as="w"><span class="sk lf-skl" style="{{ w }}"></span></sc-for></div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showState }}">
+          <div class="lf-card auto">
+            <div class="lf-state" role="{{ st.role }}">
+              <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+              <h2 class="lf-state-h">{{ st.title }}</h2>
+              <p>{{ st.text }}</p>
+              <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ t.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ t.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+              <sc-if value="{{ st.hasAct }}"><div class="acts"><button class="btn {{ st.actCls }}" type="button"><span class="ic" data-icon="{{ st.actIcon }}"></span>{{ st.act }}</button></div></sc-if>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"entity":{"editor":"enum","options":["article","imported","order","imported-order"],"default":"article","tsType":"string"},"tab":{"editor":"enum","options":["general","history"],"default":"general","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","not-found","forbidden","error"],"default":"populated","tsType":"string"},"open":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"presentation":{"editor":"enum","options":["default","plant-b"],"default":"default","tsType":"string"},"zone":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons when it is
+          // rendered on its own, without a shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-e" + window.__lfSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const entity = pick(P.entity, ["article", "imported", "order", "imported-order"], "article");
+          const tab = pick(P.tab, ["general", "history"], "general");
+          const state = pick(P.state, ["populated", "loading", "not-found", "forbidden", "error"], "populated");
+          const narrow = P.size === "narrow";
+          const long = P.strings === "long" && entity === "article";
+          const plantB = P.presentation === "plant-b";
+          const zoneOn = P.zone === "on";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const focus = String(P.focus || "none");
+          const isOrder = entity === "order" || entity === "imported-order";
+          const NB = " ";
+          const fmtNum = (n) => { const s = String(n).split("."); let i = s[0]; if (i.length >= 4) i = i.replace(/\B(?=(\d{3})+(?!\d))/g, plantB ? "," : NB); return i + (s[1] ? (plantB ? "." : ",") + s[1] : ""); };
+          const fmtTime = (hm) => { if (!plantB) return hm; let [h, m] = hm.split(":").map(Number); const pm = h >= 12; h = h % 12; if (h === 0) h = 12; return h + ":" + String(m).padStart(2, "0") + (pm ? " pm" : " am"); };
+          const fmtDate = (d) => (plantB ? d.slice(8, 10) + "." + d.slice(5, 7) + "." + d.slice(0, 4) : d);
+          const fmtDT = (s) => fmtDate(s.slice(0, 10)) + (s.length > 10 ? " " + fmtTime(s.slice(11, 16)) : "");
+          const t = long ? {
+            general: "Allgemein", history: "Verlauf", details: "Details", field: "Feld", before: "Vorher", after: "Nachher", empty: "Leer", noReason: "Kein Grund angegeben",
+            heads: ["Wann", "Geändert von", "Oberfläche", "Grund", "Änderungen"], newest: "Neueste zuerst", prev: "Zurück", next: "Weiter", prevName: "Vorherige Einträge", nextName: "Nächste Einträge",
+            changesOn: (w) => "Änderungen am " + w, cid: "Korrelations-ID", copyCid: "Korrelations-ID kopieren", region: "Verlauf, seitlich scrollbar"
+          } : {
+            general: "General", history: "History", details: "Details", field: "Field", before: "Before", after: "After", empty: "Empty", noReason: "No reason given",
+            heads: ["When", "Changed by", "Surface", "Reason", "Changes"], newest: "Newest first", prev: "Previous", next: "Next", prevName: "Previous entries", nextName: "Next entries",
+            changesOn: (w) => "Changes on " + w, cid: "Correlation id", copyCid: "Copy correlation id", region: "History, scrolls sideways"
+          };
+          // Fictional entities (VS 12.2, 12.4). A DefinitionList item: k, v, optional lang, class, sub lines and a badge.
+          const I = (k, v, o) => Object.assign({ k: k, v: v, cls: "", lang: null, subs: [], badge: null }, o || {});
+          const U = (txt, lang, k) => ({ t: txt, lang: lang || null, k: k || "", hasK: !!k });
+          const Sx = (title, o) => Object.assign({ title: title, items: [], desc: "", text: "", slot: "", ops: [], span: false, lang: null }, o || {});
+          let entityName, sects, hist;
+          const H = (when, who, whoSub, surface, reason, summary, changes) => ({ when: when, who: who, whoSub: whoSub, surface: surface, reason: reason, summary: summary, changes: changes });
+          const C = (field, before, after, o) => Object.assign({ field: field, before: before, after: after, aCls: "", bLang: null, aLang: null }, o || {});
+          if (entity === "article") {
+            entityName = long ? "Artikel AX-80112" : "Article AX-20410";
+            if (long) {
+              sects = [
+                Sx("Identität", { items: [I("Artikelnummer", "AX-80112", { cls: "lf-mono" }), I("Bezeichnung", "Hydraulikzylinder-Befestigungsflansch, feuerverzinkt, für Schwerlastanwendungen", { lang: "de", subs: [U("Kiinnityslaipan tiivisterengas, ruostumaton teräs, korkeapaineinen", "fi", "Finnisch"), U("Hydraulic cylinder mounting flange, hot-dip galvanised, for heavy-duty use", "en", "Englisch")] })] }),
+                Sx("Klassifizierung", { items: [I("Artikelgruppe", "Sonderanfertigungen nach Kundenzeichnung", { lang: "de" }), I("Lagereinheit", "Stück (Stk)")] }),
+                Sx("Notiz", { span: true, text: "Zeichnung Rev. C gilt ab Kalenderwoche 2026-W41. Oberflächenbehandlung nach Werksnorm WN 4711, Schichtdicke mindestens 85 µm.", lang: "de" }),
+                Sx("Herkunft", { span: true, items: [I("Geltungsbereich", "Oberschwäbische Präzisionswerkzeuge GmbH", { subs: [U("Unternehmensartikel, für jedes Werk des Unternehmens")] }), I("Quelle", "NorthMES"), I("Angelegt", fmtDT("2026-09-12 07:15"), { cls: "lf-mono", subs: [U("Von Hannelore Wiesenthal-Brückner")] }), I("Zuletzt geändert", fmtDT("2026-10-05 14:05"), { cls: "lf-mono", subs: [U("Von Hannelore Wiesenthal-Brückner")] })] })
+              ];
+              hist = [
+                H("2026-10-05 14:05", "Hannelore Wiesenthal-Brückner", "", "web", "Neue Zeichnung aus der Konstruktion, Änderungsmitteilung 118", "1 Feld", [C("Notiz", null, "Zeichnung Rev. C gilt ab Kalenderwoche 2026-W41.", { aLang: "de" })]),
+                H("2026-09-12 07:15", "Hannelore Wiesenthal-Brückner", "", "web", "", "Angelegt, 3 Felder", [C("Artikelnummer", null, "AX-80112", { aCls: "lf-mono" }), C("Bezeichnung", null, "Hydraulikzylinder-Befestigungsflansch, feuerverzinkt, für Schwerlastanwendungen", { aLang: "de" }), C("Lagereinheit", null, "Stück (Stk)")])
+              ];
+            } else {
+              sects = [
+                Sx("Identity", { items: [I("Article number", "AX-20410", { cls: "lf-mono" }), I("Name", "Fläns DN50 rostfri", { lang: "sv", subs: [U("Flange DN50 stainless", "en", "English"), U("Flansch DN50 Edelstahl", "de", "German")] })] }),
+                Sx("Classification", { items: [I("Article group", "Flanges"), I("Stock unit", "Pieces (pcs)")] }),
+                Sx("Note", { span: true, text: "Ritning rev C gäller från vecka 2026-W41.", lang: "sv" }),
+                Sx("Origin", { span: true, items: [I("Scope", "Acme AB", { subs: [U("Company article, used by every plant of Acme AB")] }), I("Source", "NorthMES"), I("Created", fmtDT("2026-09-12 07:15"), { cls: "lf-mono", subs: [U("By Jonas Holm")] }), I("Last changed", fmtDT("2026-10-05 14:05"), { cls: "lf-mono", subs: [U("By Jonas Holm")] })] })
+              ];
+              hist = [
+                H("2026-10-05 14:05", "Jonas Holm", "", "web", "New drawing from engineering, change note 118", "1 field", [C("Note", null, "Ritning rev C gäller från vecka 2026-W41.", { aLang: "sv" })]),
+                H("2026-10-01 10:22", "Jonas Holm", "", "web", "", "1 field", [C("Article group", "Fittings", "Flanges")]),
+                H("2026-09-12 07:15", "Jonas Holm", "", "web", "", "Created, 3 fields", [C("Article number", null, "AX-20410", { aCls: "lf-mono" }), C("Name", null, "Fläns DN50 rostfri", { aLang: "sv" }), C("Stock unit", null, "Pieces (pcs)")])
+              ];
+            }
+          } else if (entity === "imported") {
+            entityName = "Article AX-31007";
+            sects = [
+              Sx("Identity", { items: [I("Article number", "AX-31007", { cls: "lf-mono" }), I("Name", "Hydraulslang 12 mm", { lang: "sv", subs: [U("Hydraulic hose 12 mm", "en", "English")] })] }),
+              Sx("Classification", { items: [I("Article group", "Hoses"), I("Stock unit", "Metres (m)")] }),
+              Sx("Origin", { span: true, desc: "Created by the Pyramid import. Later imports do not change this article.", items: [I("Scope", "Acme AB", { subs: [U("Company article, used by every plant of Acme AB")] }), I("Source", "Pyramid"), I("External reference", "AX-31007", { cls: "lf-mono" }), I("Created", fmtDT("2026-10-04 06:40"), { cls: "lf-mono", subs: [U("By Pyramid connector")] }), I("Last changed", fmtDT("2026-10-04 07:12"), { cls: "lf-mono", subs: [U("By Jonas Holm")] })] })
+            ];
+            hist = [
+              H("2026-10-04 07:12", "Jonas Holm", "", "web", "Hoses are stocked by length", "1 field", [C("Stock unit", "Pieces (pcs)", "Metres (m)")]),
+              H("2026-10-04 06:40", "Pyramid connector", "System", "connector", "", "Created, 3 fields", [C("Article number", null, "AX-31007", { aCls: "lf-mono" }), C("Name", null, "Hydraulslang 12 mm", { aLang: "sv" }), C("Stock unit", null, "Pieces (pcs)")])
+            ];
+          } else if (entity === "order") {
+            entityName = "Order 1001";
+            sects = [
+              Sx("Order", { items: [I("Order", "1001", { cls: "lf-mono" }), I("Article", "AX-20410 Fläns DN50 rostfri", { lang: "sv" }), I("Quantity", fmtNum(1200) + " pcs", { cls: "lf-mono" }), I("Deadline", fmtDate("2026-10-12"), { cls: "lf-mono" }), I("Priority", "2", { cls: "lf-mono" }), I("Status", "Planned", { badge: ["lf-st-planned", "Info"] })] }),
+              Sx("Origin", { items: [I("Source", "NorthMES"), I("Output warehouse", "W-10 Färdigvarulager", { lang: "sv" }), I("Created", fmtDT("2026-10-01 08:30"), { cls: "lf-mono", subs: [U("By Alex Lund")] })] }),
+              Sx("Operations", { span: true, text: "Operations are copied from the routing of AX-20410 when the order is released. Each operation gets one job order." })
+            ];
+            hist = [
+              H("2026-10-03 11:02", "Alex Lund", "", "web", "Material confirmed by purchasing", "1 field", [C("Status", "Registered", "Planned")]),
+              H("2026-10-01 08:30", "Alex Lund", "", "web", "", "Created, 5 fields", [C("Order", null, "1001", { aCls: "lf-mono" }), C("Article", null, "AX-20410 Fläns DN50 rostfri", { aLang: "sv" }), C("Quantity", null, fmtNum(1200) + " pcs", { aCls: "lf-mono" }), C("Deadline", null, fmtDate("2026-10-12"), { aCls: "lf-mono" }), C("Priority", null, "2", { aCls: "lf-mono" })])
+            ];
+          } else {
+            entityName = "Order 1002";
+            const OP = (num, name, status) => ({ num: num, name: name, qty: "350 m", status: status[0], bcls: "lf-st-" + status[0].toLowerCase(), icon: status[1] });
+            sects = [
+              Sx("Order", { items: [I("Order", "1002", { cls: "lf-mono" }), I("Article", "AX-31007 Hydraulslang 12 mm", { lang: "sv" }), I("Quantity", "350 m", { cls: "lf-mono" }), I("Deadline", fmtDT("2026-10-12 14:00"), { cls: "lf-mono" }), I("Priority", "1", { cls: "lf-mono" }), I("Status", "Active", { badge: ["lf-st-active", "Play"] })] }),
+              Sx("External data", { desc: "As Pyramid sent it, in its order. Shown only, never changed here.", items: [I("Ritningsnummer", "D-31007", { lang: "sv" }), I("Revision", "B"), I("Leveransvecka", "2026-W42", { cls: "lf-mono" }), I("Kundorder", "KO-55120", { cls: "lf-mono" })] }),
+              Sx("Operations", { span: true, ops: [OP("1002.10", "Kapning", ["Finished", "CircleCheck"]), OP("1002.20", "Pressning av kopplingar", ["Active", "Play"]), OP("1002.30", "Provtryckning", ["Planned", "Info"])] }),
+              Sx("Origin", { span: true, items: [I("Source", "Pyramid"), I("External reference", "1002", { cls: "lf-mono" }), I("Created", fmtDT("2026-10-01 06:40"), { cls: "lf-mono", subs: [U("By Pyramid connector")] })] })
+            ];
+            hist = [
+              H("2026-10-06 09:41", "Planning assistant", "For Alex Lund", "assistant", "Raise the priority to meet the deadline", "Proposal committed, 1 field", [C("Priority", "2", "1", { aCls: "lf-mono" })]),
+              H("2026-10-05 06:40", "Pyramid connector", "System", "connector", "", "2 fields", [C("Quantity", "300 m", "350 m", { aCls: "lf-mono" }), C("External data, Leveransvecka", "2026-W41", "2026-W42", { aCls: "lf-mono" })]),
+              H("2026-10-02 10:15", "Alex Lund", "", "web", "", "Released, 3 operations", [C("Operations", null, "1002.10, 1002.20, 1002.30", { aCls: "lf-mono" })]),
+              H("2026-10-01 06:40", "Pyramid connector", "System", "connector", "", "Created, 5 fields", [C("Order", null, "1002", { aCls: "lf-mono" }), C("Article", null, "AX-31007 Hydraulslang 12 mm", { aLang: "sv" }), C("Quantity", null, "300 m", { aCls: "lf-mono" }), C("Deadline", null, fmtDT("2026-10-12 14:00"), { aCls: "lf-mono" }), C("Priority", null, "2", { aCls: "lf-mono" })])
+            ];
+          }
+          let sn = 0;
+          sects = sects.map((s) => {
+            sn += 1;
+            const items = s.items.map((it) => Object.assign(it, { hasBadge: !!it.badge, plain: !it.badge, bcls: it.badge ? it.badge[0] : "", bicon: it.badge ? it.badge[1] : "" }));
+            return Object.assign(s, { cls: s.span ? "span" : "", hid: uid + "-s" + sn, hasDesc: !!s.desc, hasDl: items.length > 0, items: items, hasOps: s.ops.length > 0, hasText: !!s.text, hasSlot: !!s.slot });
+          });
+          const SURF = { web: "Monitor", assistant: "Sparkles", station: "Tablet", connector: "ArrowLeftRight", mcp: "Bot", job: "Clock", cli: "SquareTerminal", sql: "Database" };
+          const openList = String(P.open || (entity === "article" ? "1,2" : "1")).split(",").map((x) => parseInt(x, 10));
+          const fparts = focus.split(":");
+          hist = hist.map((h, i) => {
+            const open = openList.indexOf(i + 1) >= 0;
+            return Object.assign(h, {
+              when: fmtDT(h.when), hasZone: zoneOn, hasWhoSub: !!h.whoSub, surfIcon: SURF[h.surface], hasReason: !!h.reason, noReason: !h.reason, open: open,
+              expIcon: open ? "ChevronDown" : "ChevronRight", expName: t.changesOn(fmtDT(h.when)), fcls: fparts[0] === "expand" && parseInt(fparts[1] || "1", 10) === i + 1 ? "is-focus" : "",
+              changes: open ? h.changes.map((c) => Object.assign(c, { before: c.before == null ? t.empty : c.before, bCls: c.before == null ? "lf-empty" : (c.aCls || ""), aLang: c.aLang })) : []
+            });
+          });
+          const tabsDef = [["general", t.general], ["history", t.history]];
+          const tabs = tabsDef.map((d) => {
+            const on = d[0] === tab;
+            return { label: d[1], on: on, id: uid + "-tab-" + d[0], panel: on ? uid + "-panel" : null, tabindex: on ? null : "-1",
+              cls: (on ? "on " : "") + ((fparts[0] === "tab" && (fparts[1] ? fparts[1] === d[0] : on)) ? "is-focus" : "") };
+          });
+          const NOUN = isOrder ? ["production order", "production orders", "Production orders"] : ["article", "articles", "Articles"];
+          // Articles sit at company level, production orders at plant level (rule 4.11), so the copy names that scope.
+          const SCOPE = isOrder ? ["a plant", "Plant A"] : ["a company", "Acme AB"];
+          const STATES = {
+            "not-found": { icon: "SearchX", title: "This " + NOUN[0] + " does not exist or you cannot see it", text: "The link may be out of date, or the " + NOUN[0] + " belongs to " + SCOPE[0] + " you have no role in.", act: "Back to " + NOUN[2], actIcon: "ArrowLeft", actCls: "v-default" },
+            forbidden: { icon: "Lock", title: "You need the permission to read " + NOUN[1] + " in " + SCOPE[1], text: "Ask your plant admin for a role that can read " + NOUN[1] + "." },
+            error: { icon: "CircleAlert", err: true, role: "alert", title: "Could not load the " + NOUN[0], text: "Check the connection, then try again. If it fails again, give your plant admin the correlation id.", cid: "01J9Z6P4RS8T2V5W7X9Y1Z3B4C", act: "Try again", actIcon: "RotateCw", actCls: "v-default" }
+          };
+          const sr = STATES[state];
+          const st = sr ? { icon: sr.icon, bigCls: sr.err ? "err" : "", role: sr.role || null, title: sr.title, text: sr.text, hasCid: !!sr.cid, cid: sr.cid || "", hasAct: !!sr.act, act: sr.act || "", actIcon: sr.actIcon || "ArrowLeft",
+            actCls: (sr.actCls || "v-outline") + (fparts[0] === "action" ? " is-focus" : "") } : null;
+          const pop = state === "populated";
+          const whenW = plantB ? 184 : 160;
+          const tracks = narrow ? "44px " + (whenW + (zoneOn ? 48 : 0)) + "px 170px 128px 200px 140px" : "44px " + (whenW + (zoneOn ? 48 : 0)) + "px minmax(150px,180px) 128px minmax(180px,1fr) minmax(120px,160px)";
+          const minw = narrow ? 44 + whenW + (zoneOn ? 48 : 0) + 170 + 128 + 200 + 140 : 0;
+          return {
+            label: "Detail, " + entityName + ", " + (pop ? tab : state) + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t,
+            entityName: entityName,
+            tabsName: pop ? entityName : isOrder ? "Order" : long ? "Artikel" : "Article",
+            colsCls: isOrder ? "lf-dcols" : "",
+            hasSlot: isOrder,
+            ids: { panel: uid + "-panel", tabOn: uid + "-tab-" + tab },
+            showTabs: pop || state === "loading",
+            tabs: tabs,
+            showGeneral: pop && tab === "general",
+            showHistory: pop && tab === "history",
+            showLoading: state === "loading",
+            // The skeleton has the populated General layout: two Cards side by side, then two full-width Cards.
+            skel: [{ cls: "", ws: ["width:200px", "width:160px", "width:220px"] }, { cls: "", ws: ["width:140px", "width:180px"] }, { cls: "span", ws: ["width:260px"] }, { cls: "span", ws: ["width:180px", "width:160px", "width:200px"] }],
+            showState: !!st,
+            st: st,
+            sects: sects,
+            hist: hist,
+            hheads: t.heads,
+            colsStyle: "--cols:" + tracks + (minw ? ";--minw:" + minw + "px" : ""),
+            histScroll: narrow ? "lf-xs" + (fparts[0] === "region" ? " is-focus" : "") : "lf-scroll",
+            hTab: narrow ? "0" : null, hRole: narrow ? "region" : null, hLabel: narrow ? t.region : null,
+            wide: !narrow,
+            prevName: narrow ? t.prevName : null,
+            nextName: narrow ? t.nextName : null,
+            pgBtn: narrow ? "icon" : ""
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

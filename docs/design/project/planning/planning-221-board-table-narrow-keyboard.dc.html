@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 job table, 320, long strings and keyboard</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+        <style>
+/* Part of the D3 spec page planning-221-board.dc.html (issue northMES/northmes#221): the job order table view,
+   the 320 reflow, long strings, the keyboard and focus frames and the build notes (TA1 to TA21). Every frame mounts
+   Shell.dc.html and the shared parts planning-221-board-grid and planning-221-board-inspector; the toolbars, the
+   status line, the job table and the options menu are page markup. Classes start with tk-. Every UI color is a D1
+   token. Badges, rings, marks, bands, legends and notes columns are annotations, not UI. */
+.tk-part{position:relative}
+.tk-fr{position:absolute;display:flex;align-items:flex-start;gap:16px}
+.tk-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+.tk-stage{position:relative;flex:none}
+.tk-stage.crop{overflow:hidden;border-radius:var(--radius-xl)}
+.tk-shift{position:absolute;left:0;top:0}
+.tk-ovl{position:absolute;inset:0;z-index:30;pointer-events:none}
+.tk-b{position:absolute;display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/1 var(--font-mono);white-space:nowrap}
+.tk-ring{position:absolute;border:2px solid var(--focus-outline);box-shadow:inset 0 0 0 2px var(--focus-ring)}
+.tk-tbox{position:absolute;border:2px dashed var(--info);border-radius:6px}
+.tk-band{position:absolute;background:repeating-linear-gradient(135deg,var(--info) 0 2px,transparent 2px 5px)}
+.tk-leg{position:absolute;display:grid;gap:6px;padding:12px 14px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 12px/16px "IBM Plex Sans",system-ui,sans-serif}
+.tk-leg-h{font-weight:600}
+.tk-leg-r{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;gap:8px}
+.tk-lb{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:999px;background:#2f5fb3;color:#ffffff;font:600 11px/1 "IBM Plex Mono",ui-monospace,monospace}
+/* Notes column beside a crop: annotation, not UI */
+.tk-notes{flex:none;display:grid;align-content:start;gap:12px;padding:16px 18px 18px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 13px/18px "IBM Plex Sans",system-ui,sans-serif;text-wrap:pretty}
+.tk-notes.first{order:-1}
+.tk-notes h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+.tk-notes ol{display:grid;gap:8px;margin:0;padding:0 0 0 18px}
+.tk-say{display:grid;gap:2px;padding:8px 10px;border-radius:6px;background:#eef2f8;box-shadow:inset 3px 0 0 #2f5fb3}
+.tk-say-k{font:600 11px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.tk-nf{margin:0;color:#4f4c46;font-size:12px;line-height:16px}
+.tk-keys{display:grid;gap:8px}
+.tk-keys .tk-leg-r{align-items:start}
+/* Standalone inspector box (TA13 to TA15) */
+.ps-stage.tk-solo{padding:8px;border:1px solid var(--border);border-radius:var(--radius-xl)}
+.tk-clip{position:relative;overflow:hidden}
+.tk-in{position:absolute;left:0;right:0}
+/* Page markup inside the shell: toolbar options menu, the 320 status link, narrow body */
+.pb-tb.tk-wrap{flex-wrap:wrap;row-gap:8px}
+.tk-mw{position:relative;display:inline-flex;flex:none}
+.pop.tk-menu{position:absolute;z-index:20;top:calc(100% + 6px);right:0;min-width:224px}
+.tk-mh{padding:6px 8px 2px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.tk-mi0{display:inline-flex;flex:none;width:16px;height:16px}
+.tk-lnk{display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--link);font:inherit;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.tk-lnk .ic{width:14px;height:14px}
+.tk-nb{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+/* Job order table view (TanStack Table on the D1 Table), on the shared .pb-t */
+.tk-tw{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.tk-card{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);overflow:hidden}
+.tk-cbar{display:flex;align-items:center;gap:8px;flex:none;min-height:44px;padding:4px 12px 4px 6px;border-bottom:1px solid var(--border)}
+.cb.tk-cb{gap:2px;padding-right:6px;border-radius:var(--radius-sm);font-size:14px;line-height:20px;cursor:pointer}
+.tk-scroll{position:relative;min-width:0;min-height:0;overflow:auto;scrollbar-width:none}
+.tk-scroll::-webkit-scrollbar{display:none}
+/* The table's scrollbars are drawn, as the grid draws its own, so every capture shows them; thumbs follow the measured scroll. */
+.tk-sw{display:grid;grid-template-columns:minmax(0,1fr) 10px;grid-template-rows:minmax(0,1fr) 10px;flex:1;min-width:0;min-height:0}
+.tk-vs,.tk-hs,.tk-sc{position:relative;background:var(--card)}
+.tk-vs{border-left:1px solid var(--border)}
+.tk-hs{border-top:1px solid var(--border)}
+.tk-sc{border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.tk-thm{position:absolute;border-radius:999px;background:var(--input)}
+.tk-vs .tk-thm{left:2px;right:2px}
+.tk-hs .tk-thm{top:2px;bottom:2px}
+/* ARIA table drawn as a grid; each row is a subgrid, so columns line up across rows */
+.tk-grid{display:grid;grid-template-columns:repeat(11,auto);width:100%;min-width:min-content;font-size:13px;line-height:16px}
+.tk-tr{display:grid;grid-column:1 / -1;grid-template-columns:subgrid}
+.tk-td{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-height:44px;padding:4px 10px;border-bottom:1px solid var(--border);background:var(--card);white-space:nowrap}
+.tk-td.r{align-items:flex-end;text-align:right}
+.tk-th{position:sticky;top:0;z-index:2}
+.tk-th .tk-td{min-height:38px;background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+.tk-tr.on .tk-td{background:var(--info-subtle)}
+.tk-stl{position:sticky;left:0;z-index:1;box-shadow:inset -1px 0 0 var(--border)}
+.tk-str{position:sticky;right:0;z-index:1;box-shadow:inset 1px 0 0 var(--border)}
+.tk-tr.on .tk-stl{box-shadow:inset 3px 0 0 var(--foreground),inset -1px 0 0 var(--border)}
+.tk-grid.nar .tk-str{position:static;box-shadow:none}
+.tk-td.tk-wr{white-space:normal}
+.tk-td.tk-fxc{grid-column:1 / -1;min-height:0;padding:10px 14px 12px;background:var(--background);white-space:normal}
+.tk-l1{display:block}
+.tk-sub{display:block;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.tk-wr .tk-l1,.tk-wr .tk-sub{max-width:200px}
+.tk-c1 .tk-jb{align-self:flex-start}
+.tk-c1 .tk-sub{max-width:180px;white-space:normal}
+.tk-jb{display:inline-flex;align-items:center;min-height:24px;margin:-2px 0 0 -3px;padding:0 3px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--link);font:600 13px/16px var(--font-mono);font-variant-numeric:tabular-nums;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.tk-sortb{display:inline-flex;align-items:center;gap:4px;min-height:24px;margin:0 -4px;padding:0 4px;border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font:inherit;white-space:nowrap;cursor:pointer}
+.tk-sortb .ic{width:14px;height:14px}
+.tk-sortb.on{color:var(--foreground)}
+.tk-bd{display:flex;flex-wrap:wrap;gap:4px;width:max-content;max-width:248px}
+.badge.tk-planned{--bb:var(--status-planned);--bf:var(--status-planned-foreground)}
+.tk-lt{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tk-xp{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--foreground);cursor:pointer}
+.tk-act{display:flex;justify-content:flex-end;gap:4px}
+.btn.tk-sm{height:32px;padding:0 10px;font-size:13px}
+.btn.icon.tk-sm{width:32px;padding:0}
+.tk-fx{display:grid;gap:8px;max-width:1160px}
+.tk-fh{margin:0;font-weight:600}
+.tk-fdl{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0}
+.tk-fi{display:grid;align-content:start;gap:2px}
+.tk-fi.w{flex:1 1 300px;min-width:240px;max-width:440px}
+.tk-fi dt{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.tk-fi dd{margin:0}
+.tk-pager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;flex:none;padding:8px 12px;border-top:1px solid var(--border);font-size:13px;line-height:18px;color:var(--muted-foreground)}
+.tk-pg{display:flex;gap:8px}
+/* Build notes frame */
+.sheet.tk-bn{width:1440px;min-height:100%}
+.tk-bn .lede{max-width:120ch}
+.tk-bt{display:grid;border-top:1px solid var(--border);font-size:13px;line-height:18px}
+.tk-btr{display:grid;grid-template-columns:var(--bc);gap:16px;padding:9px 12px;border-bottom:1px solid var(--border);text-wrap:pretty}
+.tk-btr.h{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+.tk-btr > span:first-child{font-weight:600}
+.tk-bp{margin:0 0 12px;max-width:120ch}
+.tk-bn code{font:500 12px/16px var(--font-mono)}
+.tk-code{font:500 12px/18px var(--font-mono);white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="tk-part" id="{{ rid }}" style="{{ rootStyle }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="tk-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}" data-tk="{{ f.id }}">
+            <div class="flabel tk-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span></div>
+            <div class="tk-stage {{ f.stageCls }}" style="{{ f.stageStyle }}">
+              <sc-if value="{{ f.isShell }}">
+                <div class="tk-shift" style="{{ f.shiftStyle }}">
+                  <dc-import name="Shell" dc-props="{{ f.shell }}" hint-size="{{ f.hint }}">
+                    <div data-slot="header"><span><sc-for list="{{ f.hdr }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></div>
+                    <div class="pb-page {{ f.pg.cls }}">
+                      <sc-if value="{{ f.pg.tbFull }}">
+                        <div class="pb-tb {{ f.tb.cls }}" role="toolbar" aria-label="{{ f.tb.name }}">
+                          <div class="pb-grp">
+                            <button class="btn v-outline" type="button" tabIndex="0" aria-label="{{ f.tb.earlierName }}" data-r="earlier"><span class="ic" data-icon="ChevronLeft"></span>{{ f.tb.earlier }}</button>
+                            <button class="btn v-outline" type="button" tabIndex="-1">{{ f.tb.now }}</button>
+                            <button class="btn v-outline" type="button" tabIndex="-1" aria-label="{{ f.tb.laterName }}">{{ f.tb.later }}<span class="ic" data-icon="ChevronRight"></span></button>
+                            <button class="btn v-ghost" type="button" tabIndex="-1" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>{{ f.tb.goto }}</button>
+                          </div>
+                          <span class="pb-range"><sc-for list="{{ f.tb.rangeSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span>
+                          <span class="pb-sp"></span>
+                          <span class="pb-lbl" id="{{ f.tb.zid }}">{{ f.tb.zoom }}</span>
+                          <div class="pb-tg" role="group" aria-labelledby="{{ f.tb.zid }}">
+                            <sc-for list="{{ f.tb.zooms }}" as="z"><button class="pb-tgi {{ z.cls }}" type="button" tabIndex="-1" aria-pressed="{{ z.pressed }}">{{ z.label }}</button></sc-for>
+                          </div>
+                          <button class="btn v-outline" type="button" tabIndex="-1" data-r="pause"><span class="ic" data-icon="Pause"></span>{{ f.tb.pause }}</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ f.pg.tbIcon }}">
+                        <div class="pb-tb" role="toolbar" aria-label="{{ f.tb.name }}">
+                          <button class="btn icon v-outline" type="button" tabIndex="0" aria-label="{{ f.tb.earlierName }}"><span class="ic" data-icon="ChevronLeft"></span></button>
+                          <button class="btn v-outline" type="button" tabIndex="-1">{{ f.tb.now }}</button>
+                          <button class="btn icon v-outline" type="button" tabIndex="-1" aria-label="{{ f.tb.laterName }}"><span class="ic" data-icon="ChevronRight"></span></button>
+                          <span class="pb-range">{{ f.tb.day }}</span>
+                          <span class="pb-sp"></span>
+                          <span class="tk-mw">
+                            <button class="btn icon v-outline {{ f.tb.optCls }}" type="button" tabIndex="-1" aria-label="{{ f.tb.opts }}" aria-haspopup="menu" aria-expanded="{{ f.tb.optOpen }}" aria-controls="{{ f.tb.menuCtl }}"><span class="ic" data-icon="SlidersHorizontal"></span></button>
+                            <sc-if value="{{ f.tb.menu }}">
+                              <div class="pop tk-menu" role="menu" id="{{ f.tb.menuId }}" aria-label="{{ f.tb.opts }}">
+                                <div class="mi kfocus" role="menuitem" tabIndex="-1"><span class="ic" data-icon="CalendarDays"></span><span>{{ f.tb.goto }}</span></div>
+                                <div class="msep" aria-hidden="true"></div>
+                                <div role="group" aria-labelledby="{{ f.tb.menuZid }}">
+                                  <div class="tk-mh" id="{{ f.tb.menuZid }}">{{ f.tb.zoom }}</div>
+                                  <sc-for list="{{ f.tb.radios }}" as="x"><div class="mi" role="menuitemradio" aria-checked="{{ x.checked }}" tabIndex="-1"><sc-if value="{{ x.on }}"><span class="ic" data-icon="Check"></span></sc-if><sc-if value="{{ x.off }}"><span class="tk-mi0"></span></sc-if><span>{{ x.t }}</span></div></sc-for>
+                                </div>
+                                <div class="msep" aria-hidden="true"></div>
+                                <div class="mi" role="menuitem" tabIndex="-1"><span class="ic" data-icon="Pause"></span><span>{{ f.tb.pause }}</span></div>
+                                <div class="mi" role="menuitem" tabIndex="-1"><span class="ic" data-icon="Table"></span><span>{{ f.tb.showTable }}</span></div>
+                              </div>
+                            </sc-if>
+                          </span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ f.pg.hasStl }}">
+                        <div class="pb-stl">
+                          <sc-for list="{{ f.pg.stl }}" as="s"><span class="pb-st {{ s.cls }}"><span class="ic" data-icon="{{ s.icon }}"></span><span><sc-for list="{{ s.segs }}" as="x"><span class="{{ x.c }}">{{ x.t }}</span></sc-for></span></span></sc-for>
+                          <sc-if value="{{ f.pg.draftLink }}"><button class="tk-lnk" type="button"><span class="ic" data-icon="Pencil"></span><span><sc-for list="{{ f.pg.draftSegs }}" as="x"><span class="{{ x.c }}">{{ x.t }}</span></sc-for></span></button></sc-if>
+                        </div>
+                      </sc-if>
+                      <div class="{{ f.pg.bodyCls }}">
+                        <sc-if value="{{ f.pg.bGrid }}">
+                          <div class="pb-gw"><dc-import name="planning-221-board-grid" dc-props="{{ f.pg.grid }}" hint-size="{{ f.pg.gridHint }}"></dc-import></div>
+                        </sc-if>
+                        <sc-if value="{{ f.pg.bTable }}">
+                          <div class="tk-tw">
+                            <div class="tk-card">
+                              <div class="tk-cbar">
+                                <span class="cb tk-cb {{ f.tbl.lateCls }}" role="checkbox" aria-checked="{{ f.tbl.late }}" tabIndex="0"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span>{{ f.tbl.t.late }}</span></span>
+                              </div>
+                              <span class="pb-vh" id="{{ f.tbl.capId }}">{{ f.tbl.caption }}</span>
+                              <div class="tk-sw">
+                              <div class="tk-scroll" data-to="{{ f.tbl.scrollTo }}" data-sx="{{ f.tbl.scrollX }}">
+                                <div class="tk-grid {{ f.tbl.gridCls }}" role="table" aria-labelledby="{{ f.tbl.capId }}">
+                                  <div class="tk-tr tk-th" role="row">
+                                    <sc-for list="{{ f.tbl.cols }}" as="c"><div class="tk-td {{ c.cls }}" role="columnheader" aria-sort="{{ c.sort }}"><sc-if value="{{ c.btn }}"><button class="tk-sortb {{ c.bcls }}" type="button">{{ c.label }}<span class="ic" data-icon="{{ c.icon }}"></span></button></sc-if><sc-if value="{{ c.txt }}"><span class="{{ c.tcls }}">{{ c.label }}</span></sc-if></div></sc-for>
+                                  </div>
+                                  <sc-for list="{{ f.tbl.rows }}" as="r">
+                                    <div class="tk-tr {{ r.cls }}" role="row" aria-current="{{ r.cur }}" data-key="{{ r.key }}">
+                                      <div class="tk-td tk-stl tk-c1" role="cell"><button class="tk-jb" type="button">{{ r.j }}</button><span class="tk-sub" lang="{{ r.alang }}">{{ r.a }}</span></div>
+                                      <div class="tk-td" role="cell"><span class="tk-l1" lang="{{ r.mlang }}">{{ r.m }}</span><span class="tk-sub" lang="{{ r.mlang }}">{{ r.g }}</span></div>
+                                      <div class="tk-td" role="cell"><span class="tk-l1 num">{{ r.s1 }}</span><span class="tk-sub">{{ r.s2 }}</span></div>
+                                      <div class="tk-td" role="cell"><span class="tk-l1 num">{{ r.e1 }}</span><span class="tk-sub">{{ r.e2 }}</span></div>
+                                      <div class="tk-td r" role="cell"><span class="tk-l1"><sc-for list="{{ r.q1 }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span><sc-if value="{{ r.hasQ2 }}"><span class="tk-sub"><sc-for list="{{ r.q2 }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></sc-if></div>
+                                      <div class="tk-td tk-wr" role="cell"><span class="tk-bd"><sc-for list="{{ r.badges }}" as="x"><span class="badge {{ x.c }}"><sc-if value="{{ x.hasIcon }}"><span class="ic" data-icon="{{ x.icon }}"></span></sc-if><span><sc-for list="{{ x.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></span></sc-for></span></div>
+                                      <div class="tk-td tk-wr" role="cell"><sc-if value="{{ r.hasLock }}"><span class="tk-l1" lang="{{ r.mlang }}">{{ r.lock1 }}</span><span class="tk-sub"><sc-for list="{{ r.lock2 }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></sc-if></div>
+                                      <div class="tk-td" role="cell"><span class="tk-l1">{{ r.dl }}</span></div>
+                                      <div class="tk-td" role="cell"><span class="tk-l1 num">{{ r.pe1 }}</span><span class="tk-sub">{{ r.pe2 }}</span></div>
+                                      <div class="tk-td" role="cell"><sc-if value="{{ r.isLate }}"><span class="tk-lt"><span><sc-for list="{{ r.lateSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span><button class="tk-xp" type="button" aria-expanded="{{ r.openStr }}" aria-controls="{{ r.fxCtl }}" aria-label="{{ r.fxName }}"><span class="ic" data-icon="{{ r.xpIcon }}"></span></button></span></sc-if></div>
+                                      <div class="tk-td tk-str" role="cell"><span class="tk-act"><button class="btn v-outline tk-sm {{ r.mvCls }}" type="button" aria-label="{{ r.mvName }}" aria-disabled="{{ r.mvDis }}" aria-describedby="{{ r.whyId }}">{{ f.tbl.t.move }}</button><button class="btn icon v-ghost tk-sm" type="button" aria-haspopup="menu" aria-label="{{ r.actName }}"><span class="ic" data-icon="Ellipsis"></span></button><sc-if value="{{ r.hasWhy }}"><span class="pb-vh" id="{{ r.whyId }}">{{ r.why }}</span></sc-if></span></div>
+                                    </div>
+                                    <sc-if value="{{ r.open }}">
+                                      <div class="tk-tr tk-fxr" role="row"><div class="tk-td tk-fxc" role="cell" aria-colspan="11"><div class="tk-fx" id="{{ r.fxId }}"><p class="tk-fh"><sc-for list="{{ r.fx.head }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></p><dl class="tk-fdl"><sc-for list="{{ r.fx.items }}" as="d"><div class="tk-fi {{ d.cls }}"><dt>{{ d.k }}</dt><dd><sc-for list="{{ d.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></dd></div></sc-for></dl></div></div></div>
+                                    </sc-if>
+                                  </sc-for>
+                                </div>
+                              </div>
+                              <div class="tk-vs" aria-hidden="true"><span class="tk-thm" style="{{ f.sb.v }}"></span></div>
+                              <div class="tk-hs" aria-hidden="true"><span class="tk-thm" style="{{ f.sb.h }}"></span></div>
+                              <span class="tk-sc" aria-hidden="true"></span>
+                              </div>
+                              <div class="tk-pager">
+                                <span><sc-for list="{{ f.tbl.rowsSegs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span>
+                                <span class="tk-pg">
+                                  <sc-if value="{{ f.tbl.wide }}"><button class="btn v-outline {{ f.tbl.prevCls }}" type="button" aria-disabled="{{ f.tbl.prevDis }}" tabIndex="{{ f.tbl.prevTi }}">{{ f.tbl.t.prev }}</button><button class="btn v-outline {{ f.tbl.nextCls }}" type="button" aria-disabled="{{ f.tbl.nextDis }}" tabIndex="{{ f.tbl.nextTi }}">{{ f.tbl.t.next }}</button></sc-if>
+                                  <sc-if value="{{ f.tbl.narrow }}"><button class="btn icon v-outline {{ f.tbl.prevCls }}" type="button" aria-label="{{ f.tbl.t.prevPage }}" aria-disabled="{{ f.tbl.prevDis }}" tabIndex="{{ f.tbl.prevTi }}"><span class="ic" data-icon="ChevronLeft"></span></button><button class="btn icon v-outline {{ f.tbl.nextCls }}" type="button" aria-label="{{ f.tbl.t.nextPage }}" aria-disabled="{{ f.tbl.nextDis }}" tabIndex="{{ f.tbl.nextTi }}"><span class="ic" data-icon="ChevronRight"></span></button></sc-if>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ f.pg.insDocked }}">
+                          <div class="pb-pw"><dc-import name="planning-221-board-inspector" dc-props="{{ f.pg.ins }}" hint-size="{{ f.pg.insHint }}"></dc-import></div>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ f.pg.hasSheet }}">
+                        <div class="sh-ov"></div>
+                        <dc-import name="planning-221-board-inspector" dc-props="{{ f.pg.sheet }}" hint-size="320px,372px"></dc-import>
+                      </sc-if>
+                    </div>
+                  </dc-import>
+                </div>
+              </sc-if>
+              <sc-if value="{{ f.isSolo }}">
+                <div class="ps-stage tk-solo {{ f.soloCls }}">
+                  <div class="tk-clip" style="{{ f.clipStyle }}">
+                    <div class="tk-in" style="{{ f.inStyle }}"><dc-import name="planning-221-board-inspector" dc-props="{{ f.solo }}" hint-size="{{ f.soloHint }}"></dc-import></div>
+                  </div>
+                </div>
+              </sc-if>
+              <div class="tk-ovl">
+                <sc-for list="{{ f.ov.x }}" as="o"><span class="tk-tbox" style="{{ o.st }}"></span></sc-for>
+                <sc-for list="{{ f.ov.band }}" as="o"><span class="tk-band" style="{{ o.st }}"></span></sc-for>
+                <sc-for list="{{ f.ov.r }}" as="o"><span class="tk-ring" style="{{ o.st }}"></span></sc-for>
+                <sc-for list="{{ f.ov.b }}" as="o"><span class="tk-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+                <sc-if value="{{ f.hasLeg }}">
+                  <div class="tk-leg" style="{{ f.leg.style }}">
+                    <span class="tk-leg-h">{{ f.leg.h }}</span>
+                    <sc-for list="{{ f.leg.rows }}" as="l"><span class="tk-leg-r"><span class="tk-lb">{{ l.k }}</span><span>{{ l.t }}</span></span></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ f.hasNotes }}">
+              <div class="tk-notes {{ f.notes.cls }}" style="{{ f.notes.style }}">
+                <h3>{{ f.notes.h }}</h3>
+                <sc-if value="{{ f.notes.hasKeys }}"><div class="tk-keys"><sc-for list="{{ f.notes.keys }}" as="k"><span class="tk-leg-r"><span class="tk-lb">{{ k.k }}</span><span>{{ k.t }}</span></span></sc-for></div></sc-if>
+                <sc-if value="{{ f.notes.hasItems }}"><ol><sc-for list="{{ f.notes.items }}" as="n"><li>{{ n.t }}</li></sc-for></ol></sc-if>
+                <sc-for list="{{ f.notes.says }}" as="s"><div class="tk-say"><span class="tk-say-k">{{ s.k }}</span><span>{{ s.t }}</span></div></sc-for>
+                <sc-if value="{{ f.notes.hasFoot }}"><p class="tk-nf">{{ f.notes.foot }}</p></sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ showBn }}">
+          <div class="tk-fr" style="{{ bnStyle }}" data-screen-label="{{ bnLabel }}" data-tk="TA19">
+            <div class="flabel tk-chip"><span class="fid">TA19</span>Build notes, not part of the UI<span class="fth">Light, 1440 wide. Table view, 320 reflow, long strings, keyboard and focus</span></div>
+            <article class="sheet tk-bn">
+              <p class="kick">Build notes, not part of the UI</p>
+              <h2 class="t2">Job table, 320 reflow, long strings and the keyboard model of the planning board</h2>
+              <p class="lede">{{ bn.lede }}</p>
+              <sc-for list="{{ bn.sections }}" as="s">
+                <section class="sec">
+                  <h3 class="t3">{{ s.h }}</h3>
+                  <sc-if value="{{ s.hasP }}"><p class="tk-bp"><sc-for list="{{ s.pSegs }}" as="g"><span class="{{ g.c }}">{{ g.t }}</span></sc-for></p></sc-if>
+                  <sc-if value="{{ s.hasRows }}">
+                    <div class="tk-bt" role="table" aria-label="{{ s.h }}" style="{{ s.cols }}">
+                      <div class="tk-btr h" role="row"><sc-for list="{{ s.head }}" as="h"><span role="columnheader">{{ h.t }}</span></sc-for></div>
+                      <sc-for list="{{ s.rows }}" as="r"><div class="tk-btr" role="row"><sc-for list="{{ r.c }}" as="c"><span role="cell">{{ c.t }}</span></sc-for></div></sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.hasList }}"><ul class="ps-ul"><sc-for list="{{ s.list }}" as="li"><li>{{ li.t }}</li></sc-for></ul></sc-if>
+                </section>
+              </sc-for>
+            </article>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","TA1","TA2","TA3","TA4","TA5","TA6","TA7","TA8","TA9","TA10","TA11","TA12","TA13","TA14","TA15","TA16","TA17","TA18","TA19","TA20","TA21"],"default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the Shell's lucide filler, same flag, so only one filler runs per document.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PB ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PB) ready();
+          // Annotations are measured from the mounted frames, so they follow the frames' real layout.
+          this.__alive = true;
+          const root = document.getElementById(this.__rid);
+          if (root) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true, characterData: true });
+          }
+          [200, 600, 1400, 2800, 5000, 8000].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 90);
+        }
+        // What each frame annotates. stops: number every Tab stop in DOM order. rings: the D1 ring drawn on an element,
+        // with a letter. marks: a dashed box on a target and a number the notes column explains. pads: the scroll
+        // padding of the board grid. clipTo: crop a standalone inspector so it starts at that element.
+        __spec() {
+          const B = (idp, key) => ({ idp: idp, key: key });
+          const ringSet = (idp) => [
+            { k: "A", sel: '[data-r="earlier"]' }, { k: "B", sel: ".pb-tgi.on" }, { k: "C", sel: '[data-r="pause"]' },
+            { k: "D", sel: ".pb-chip" }, { k: "E", sel: ".pb-disc" }, { k: "F", sel: ".pb-jb" },
+            { k: "G", block: B(idp, "1003.20"), native: true }, { k: "H", sel: ".pb-cl" },
+            { k: "I", sel: ".pb-tab.on" }, { k: "J", sel: ".pb-tabsrow .btn" }, { k: "K", sel: ".pb-tth .btn" },
+            { k: "L", sel: ".pb-mv .inp" }, { k: "M", sel: ".pb-mv .btn.v-default" }
+          ];
+          return {
+            TA8: { stops: true },
+            TA9: { stops: true },
+            TA10: { marks: [
+              { block: B("ta10", "1001.20"), k: "1" }, { block: B("ta10", "1010.10"), k: "2" },
+              { block: B("ta10", "1004.10"), k: "3" }, { block: B("ta10", "1014.10-b"), k: "4" },
+              { sel: '.pb-rh[aria-label="CNC2"] .pb-jb', k: "5" }
+            ] },
+            TA11: { marks: [
+              { block: B("ta11", "1008.10"), k: "1" }, { block: B("ta11", "1025.30"), k: "2" },
+              { sel: '.pb-rh[aria-label="Press 4"] .pb-jb', k: "3" }, { sel: '.pb-disc[aria-label="Expand Finishing"]', k: "4" },
+              { sel: ".pb-chip", k: "5" }
+            ] },
+            TA12: { marks: [{ block: B("ta12", "1003.20"), k: "1" }] },
+            TA13: { rings: [{ k: "", sel: ".pb-empty .pb-tt" }] },
+            TA15: { clipTo: ".pb-mv" },
+            TA16: { rings: ringSet("ta16") },
+            TA17: { rings: ringSet("ta17") },
+            TA18: { pads: "ta18", marks: [{ block: B("ta18", "1003.10"), k: "1" }] }
+          };
+        }
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          // Tables scroll to the row their frame shows first.
+          root.querySelectorAll(".tk-scroll[data-to]").forEach((sc) => {
+            const key = sc.getAttribute("data-to");
+            if (!key) return;
+            const tr = sc.querySelector('.tk-tr[data-key="' + key + '"]');
+            const th = sc.querySelector(".tk-th");
+            if (tr && th) { const want = Math.max(0, tr.offsetTop - th.offsetHeight); if (Math.abs(sc.scrollTop - want) > 1) sc.scrollTop = want; }
+          });
+          root.querySelectorAll('.tk-scroll[data-sx="end"]').forEach((sc) => { const want = sc.scrollWidth - sc.clientWidth; if (want > 0 && Math.abs(sc.scrollLeft - want) > 1) sc.scrollLeft = want; });
+          const SPEC = this.__spec();
+          const next = {};
+          const px = (v) => Math.round(v * 10) / 10 + "px";
+          Object.keys(SPEC).forEach((id) => {
+            const sp = SPEC[id];
+            const fr = root.querySelector('[data-tk="' + id + '"]');
+            if (!fr) return;
+            const st = fr.querySelector(".tk-stage");
+            if (!st) return;
+            const sr = st.getBoundingClientRect();
+            const k = st.offsetWidth ? sr.width / st.offsetWidth : 1;
+            if (!k) return;
+            const SW = st.offsetWidth, SH = st.offsetHeight;
+            const R = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k }; };
+            const o = { b: [], r: [], x: [], band: [], clipY: null, pads: null };
+            const find = (g) => {
+              if (g.block) { const j = st.querySelector("#" + g.block.idp + "-" + g.block.key.replace(/[^\w]/g, "-") + "-j"); return j ? j.closest(".pb-bk") : null; }
+              return g.sel ? st.querySelector(g.sel) : null;
+            };
+            // A point is visible when it lies inside the stage and inside every clipping ancestor.
+            const shown = (el) => {
+              const r = R(el);
+              const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+              if (cx < 0 || cy < 0 || cx > SW || cy > SH) return false;
+              let a = el.parentElement;
+              while (a && a !== st) {
+                const cs = getComputedStyle(a);
+                if (cs.overflow !== "visible" || cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+                  const q = R(a);
+                  if (cx < q.x - 1 || cx > q.x + q.w + 1 || cy < q.y - 1 || cy > q.y + q.h + 1) return false;
+                }
+                a = a.parentElement;
+              }
+              return true;
+            };
+            const clampX = (x) => Math.max(2, Math.min(SW - 24, x));
+            const clampY = (y) => Math.max(2, Math.min(SH - 22, y));
+            const placed = [];
+            const putBadge = (n, x, y) => {
+              x = clampX(x); y = clampY(y);
+              for (let i = 0; i < 6; i += 1) { if (!placed.some((p) => Math.abs(p.x - x) < 22 && Math.abs(p.y - y) < 20)) break; x += 24; }
+              placed.push({ x: x, y: y });
+              o.b.push({ n: String(n), st: "left:" + px(x) + ";top:" + px(y) });
+            };
+            if (sp.stops) {
+              const scr = st.querySelector(".sh-scr") || st;
+              let n = 0;
+              Array.prototype.slice.call(scr.querySelectorAll("a[href], button, [tabindex], .pb-mv .inp")).forEach((el) => {
+                const isInp = el.matches(".pb-mv .inp");
+                if (!isInp && el.tabIndex < 0) return;
+                if (el.disabled || el.closest(".pb-vh")) return;
+                const skip = el.matches(".sh-skip");
+                const r = R(el);
+                if (!skip && (r.w < 2 || r.h < 2)) return;
+                n += 1;
+                if (!skip && !shown(el)) return;
+                let x = r.x - 10, y = r.y - 10;
+                if (skip) { x = r.w < 4 ? 4 : r.x + r.w + 4; y = r.w < 4 ? 4 : r.y + 4; }
+                else if (el.matches(".sh-ni")) { const t = el.querySelector(".sh-ni-l") || el; const rg = document.createRange(); rg.selectNodeContents(t); const tr = rg.getBoundingClientRect(); x = (tr.right - sr.left) / k + 8; y = r.y + r.h / 2 - 10; }
+                else if (el.closest(".sh-sb-head, .sh-sb-foot")) { x = r.x + r.w - 30; y = r.y + r.h / 2 - 10; }
+                else if (el.closest(".sh-rail")) { x = r.x + r.w - 10; y = r.y - 6; }
+                else if (el.closest("header")) { x = r.x + r.w / 2 - 10; y = r.y + r.h - 6; }
+                else if (el.matches(".tk-jb")) { x = r.x + r.w + 4; y = r.y + r.h / 2 - 10; }
+                else if (el.closest(".tk-td")) { x = r.x + r.w - 8; y = r.y - 8; }
+                putBadge(n, x, y);
+              });
+            }
+            (sp.rings || []).forEach((g) => {
+              const el = find(g);
+              if (!el || !shown(el)) return;
+              const r = R(el);
+              const rad = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+              if (!g.native) o.r.push({ st: "left:" + px(r.x - 4) + ";top:" + px(r.y - 4) + ";width:" + px(r.w + 8) + ";height:" + px(r.h + 8) + ";border-radius:" + px(rad + 4) });
+              if (g.k) putBadge(g.k, r.x + r.w - 6, r.y - 18);
+            });
+            (sp.marks || []).forEach((g) => {
+              const el = find(g);
+              if (!el) return;
+              const r = R(el);
+              o.x.push({ st: "left:" + px(r.x - 4) + ";top:" + px(r.y - 4) + ";width:" + px(r.w + 8) + ";height:" + px(r.h + 8) });
+              putBadge(g.k, r.x + r.w - 6, r.y - 14);
+            });
+            if (sp.pads) {
+              const gh = st.querySelector(".pb-gh"), pin = st.querySelector(".pb-row.pinned"), rh = st.querySelector(".pb-row:not(.pinned):not(.band) .pb-rh"), rows = st.querySelector(".pb-rows");
+              if (gh && pin && rh && rows) {
+                const G = R(gh), Pn = R(pin), H = R(rh), Rw = R(rows);
+                const top = Math.round(G.h + Pn.h) + 8, left = Math.round(H.w) + 8;
+                o.band.push({ st: "left:" + px(H.x + H.w) + ";top:" + px(Pn.y + Pn.h) + ";width:" + px(Rw.x + Rw.w - H.x - H.w) + ";height:8px" });
+                o.band.push({ st: "left:" + px(H.x + H.w) + ";top:" + px(Pn.y + Pn.h + 8) + ";width:8px;height:" + px(Rw.y + Rw.h - Pn.y - Pn.h - 8) });
+                putBadge("2", Rw.x + Rw.w - 34, Pn.y + Pn.h - 6);
+                putBadge("3", H.x + H.w + 12, Pn.y + Pn.h + 50);
+                o.pads = { top: top, left: left, header: Math.round(G.h), pinned: Math.round(Pn.h), col: Math.round(H.w) };
+              }
+            }
+            if (sp.clipTo) {
+              const t = st.querySelector(sp.clipTo), ins = st.querySelector(".tk-in");
+              if (t && ins) o.clipY = Math.round((t.getBoundingClientRect().top - ins.getBoundingClientRect().top) / k) - 12;
+            }
+            next[id] = o;
+          });
+          // Scroll thumbs of each table: position and size from the scroller's measured scroll, hidden when nothing overflows.
+          root.querySelectorAll("[data-tk]").forEach((fr) => {
+            const sc = fr.querySelector(".tk-scroll");
+            if (!sc) return;
+            const id = fr.getAttribute("data-tk");
+            const pc = (v) => Math.round(v * 1000) / 10 + "%";
+            const v = sc.scrollHeight > sc.clientHeight + 1 ? "top:" + pc(sc.scrollTop / sc.scrollHeight) + ";height:" + pc(sc.clientHeight / sc.scrollHeight) : "display:none";
+            const h = sc.scrollWidth > sc.clientWidth + 1 ? "left:" + pc(sc.scrollLeft / sc.scrollWidth) + ";width:" + pc(sc.clientWidth / sc.scrollWidth) : "display:none";
+            next[id] = Object.assign(next[id] || { b: [], r: [], x: [], band: [], clipY: null, pads: null }, { sb: { v, h } });
+          });
+          const sig = JSON.stringify(next);
+          if (sig !== this.__sig) {
+            this.__sig = sig;
+            this.setState({ ov: next });
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.__rid) {
+            window.__tkSeq = (window.__tkSeq || 0) + 1;
+            this.__rid = "tk-part-" + window.__tkSeq;
+          }
+          const PB = window.PB;
+          const base = { rid: this.__rid, frames: [], showBn: false, bn: { lede: "", sections: [] }, bnStyle: "", bnLabel: "", rootStyle: "width:2960px;height:400px" };
+          if (!PB) return base;
+          const ovState = (this.state && this.state.ov) || {};
+          const seg = PB.segs, hm = PB.hm, num = PB.num, dayLabel = PB.dayLabel, dayOf = PB.dayOf;
+          const segsOf = (t) => seg(t);
+
+          // Toolbar copy for the board and the job table, English and German (long strings).
+          const TBX = {
+            board: { name: "Board", earlier: "Earlier", earlierName: "Show earlier range", now: "Now", later: "Later", laterName: "Show later range", goto: "Go to date", zoom: "Zoom", pause: "Pause live updates", presets: ["Hours", "Day", "Week", "4 weeks"], range: "Tue 3 Nov, 06:00 to 18:00", day: "Tue 3 Nov", opts: "Board options", showTable: "Show job table" },
+            table: { name: "Job table", earlier: "Earlier", earlierName: "Show earlier range", now: "Now", later: "Later", laterName: "Show later range", goto: "Go to date", zoom: "Range", pause: "Pause live updates", presets: ["Hours", "Day", "Week", "4 weeks"], range: "Tue 3 Nov, 06:00 to 18:00", day: "Tue 3 Nov", opts: "Table options", showTable: "Show board" },
+            boardDe: { name: "Plantafel", earlier: "Früher", earlierName: "Früheren Zeitraum zeigen", now: "Jetzt", later: "Später", laterName: "Späteren Zeitraum zeigen", goto: "Zu Datum springen", zoom: "Zoom", pause: "Live-Aktualisierung pausieren", presets: ["Stunden", "Tag", "Woche", "4 Wochen"], range: "Tue 3 Nov, 06:00 bis 18:00", day: "Tue 3 Nov", opts: "Optionen der Plantafel", showTable: "Auftragstabelle zeigen" },
+            tableDe: { name: "Auftragstabelle", earlier: "Früher", earlierName: "Früheren Zeitraum zeigen", now: "Jetzt", later: "Später", laterName: "Späteren Zeitraum zeigen", goto: "Zu Datum springen", zoom: "Zeitraum", pause: "Live-Aktualisierung pausieren", presets: ["Stunden", "Tag", "Woche", "4 Wochen"], range: "Tue 3 Nov, 06:00 bis 18:00", day: "Tue 3 Nov", opts: "Optionen der Tabelle", showTable: "Plantafel zeigen" }
+          };
+          const tbOf = (key, idp, extra) => {
+            const x = TBX[key];
+            return Object.assign({}, x, {
+              cls: "", zid: idp + "-zoom", rangeSegs: segsOf(x.range),
+              zooms: x.presets.map((l, i) => ({ label: l, pressed: String(i === 0), cls: i === 0 ? "on" : "" })),
+              radios: x.presets.map((l, i) => ({ t: l, checked: String(i === 0), on: i === 0, off: i !== 0 })),
+              optCls: "", optOpen: "false", menuCtl: undefined, menuId: idp + "-opts", menuZid: idp + "-opts-zoom", menu: false
+            }, extra || {});
+          };
+          const APPLIED = { cls: "ok", icon: "CircleCheck", segs: segsOf("Autoplan applied at 06:12: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced.") };
+          const APPLIED_DE = { cls: "ok", icon: "CircleCheck", segs: segsOf("Automatische Planung angewendet um 06:12: 37 verschoben, 2 übersprungen, weil in Bearbeitung, 3 verspätet, 1 Konflikt, 0 nicht eingeplant.") };
+          const HDR = segsOf("Pyramid data as of 06:40"), HDR_DE = segsOf("Pyramid-Daten Stand 06:40");
+
+          // Job table copy, English and German.
+          const TEN = {
+            late: "Late only", caption: "Job orders, Tue 3 Nov 06:00 to 18:00", captionLate: "Late job orders, Tue 3 Nov 06:00 to 18:00",
+            cJob: "Job order", cMachine: "Machine", cStart: "Start", cEnd: "End", cQty: "Quantity", cStatus: "Status", cLock: "Soft lock", cDeadline: "Deadline", cPend: "Planned end", cLate: "Late by", cAct: "Actions",
+            pcs: "pcs", reported: (n) => num(n) + " reported", planned: "Planned", you: "You", since: (t) => "since " + t,
+            days: (n) => n + (n === 1 ? " day" : " days"),
+            move: "Move", moveName: (j) => "Move " + j, actName: (j) => "Actions for " + j, factsName: (j) => "Late facts for " + j,
+            whyStarted: "A started job order cannot move.", whyLock: "Locked. Unlock it to move it.", whyHeld: (p, o) => p + " holds the soft lock on order " + o + ".",
+            rows: (a, b, n) => "Rows " + a + " to " + b + " of " + n, prev: "Previous", next: "Next", prevPage: "Previous page", nextPage: "Next page",
+            fHead: (o, d) => "Order " + o + " is late by " + d, fRule: "Deadline rule", fRuleV: "Start of day: 00:00 on the deadline date", fDl: "Deadline", fPe: "Planned end", fDelay: "Delay", fAsOf: "As of", fFb: "Forward fallback",
+            fbYes: "Yes. Backward from the deadline, the order would start before its allowed start, so it was planned forward.", fbNo: "No. The order was planned backward from its deadline.",
+            dur: (d, h, m) => d + (d === 1 ? " day " : " days ") + h + " h " + m + " min"
+          };
+          const TDE = {
+            late: "Nur verspätete", caption: "Arbeitsaufträge, Tue 3 Nov 06:00 bis 18:00", captionLate: "Verspätete Arbeitsaufträge, Tue 3 Nov 06:00 bis 18:00",
+            cJob: "Arbeitsauftrag", cMachine: "Maschine", cStart: "Beginn", cEnd: "Ende", cQty: "Menge", cStatus: "Status", cLock: "Bearbeitungssperre", cDeadline: "Liefertermin", cPend: "Geplantes Ende", cLate: "Verspätung", cAct: "Aktionen",
+            pcs: "Stk", reported: (n) => num(n) + " gemeldet", planned: "Geplant", you: "Sie", since: (t) => "seit " + t,
+            days: (n) => n + (n === 1 ? " Tag" : " Tage"),
+            move: "Verschieben", moveName: (j) => j + " verschieben", actName: (j) => "Aktionen für " + j, factsName: (j) => "Verspätungsfakten für " + j,
+            whyStarted: "Ein gestarteter Arbeitsauftrag kann nicht verschoben werden.", whyLock: "Gesperrt. Entsperren Sie ihn, um ihn zu verschieben.", whyHeld: (p, o) => p + " hält die Bearbeitungssperre für Auftrag " + o + ".",
+            rows: (a, b, n) => "Zeilen " + a + " bis " + b + " von " + n, prev: "Vorherige", next: "Nächste", prevPage: "Vorherige Seite", nextPage: "Nächste Seite",
+            fHead: (o, d) => "Auftrag " + o + " ist " + d + " verspätet", fRule: "Terminregel", fRuleV: "Tagesbeginn: 00:00 am Tag des Liefertermins", fDl: "Liefertermin", fPe: "Geplantes Ende", fDelay: "Verzug", fAsOf: "Stand", fFb: "Vorwärtsplanung",
+            fbYes: "Ja. Rückwärts vom Liefertermin geplant, würde der Auftrag vor seinem frühesten Start beginnen, daher wurde er vorwärts geplant.", fbNo: "Nein. Der Auftrag wurde rückwärts vom Liefertermin geplant.",
+            dur: (d, h, m) => d + (d === 1 ? " Tag " : " Tage ") + h + " h " + m + " min"
+          };
+
+          // Rows: every job order of the range (Tue 3 Nov 06:00 to 18:00), in board order (equipment group, machine, start).
+          const mIdx = {};
+          PB.MACHINES.forEach((m, i) => { mIdx[m.id] = i; });
+          const byBoard = (x, y) => (mIdx[x.m] - mIdx[y.m]) || (x.s - y.s) || (x.key < y.key ? -1 : 1);
+          const inRange = PB.JOBS.filter((b) => b.e > 30 && b.s < 42);
+          const orderEnd = {};
+          PB.JOBS.forEach((b) => { orderEnd[b.order] = Math.max(orderEnd[b.order] || 0, b.e); });
+          orderEnd["1003"] = 48 + 9; // 1003.30 on Wash 1 ends Wed 4 Nov 09:00
+          const PAGE = 25;
+          const tableOf = (o) => {
+            const L = o.strings === "long", T = L ? TDE : TEN, strings = L ? "long" : "default";
+            let list = inRange.slice().sort(byBoard);
+            if (o.late) list = list.filter((b) => b.st.indexOf("late") >= 0).sort((x, y) => ((y.lateBy || 1) - (x.lateBy || 1)) || byBoard(x, y));
+            const total = list.length, page = list.slice(0, PAGE), idp = o.idp;
+            const rows = page.map((b) => {
+              const st = b.st, has = (k) => st.indexOf(k) >= 0;
+              const started = has("started") || has("finpend");
+              const an = PB.aName(b.a, strings);
+              const mm = PB.machine(b.m);
+              const bs = PB.badges(b, strings);
+              let badges = bs.filter((x) => x.k === "started" || x.k === "finpend");
+              if (!badges.length) badges = [{ k: "planned", c: "tk-planned", segs: segsOf(T.planned), hasIcon: false, icon: "" }];
+              badges = badges.concat(bs.filter((x) => ["draft", "conf", "lock", "prop", "overdue", "mat", "erp"].indexOf(x.k) >= 0));
+              const n = Number(b.order);
+              const dlD = 2 + (n % 3);
+              const lateBy = has("late") ? (b.lateBy || 1) : 0;
+              const pe = lateBy ? dlD * 24 + lateBy * 24 + 10.75 + (n % 4) * 0.5 : orderEnd[b.order];
+              const held = has("held"), mine = has("draft");
+              const holder = held ? PB.person(b.holder, strings) : null;
+              const key = b.key, kid = key.replace(/[^\w]/g, "-");
+              const canMove = !(started || has("lock") || held);
+              const why = canMove ? "" : held ? T.whyHeld(holder.name, b.order) : has("lock") ? T.whyLock : T.whyStarted;
+              const open = (o.open || []).indexOf(key) >= 0;
+              let fx = { head: [], items: [] };
+              if (lateBy) {
+                const delay = pe - dlD * 24, d = Math.floor(delay / 24), rem = Math.round((delay - d * 24) * 60);
+                fx = { head: segsOf(T.fHead(b.order, T.days(lateBy))), items: [
+                  { k: T.fRule, segs: segsOf(T.fRuleV), cls: "" },
+                  { k: T.fDl, segs: segsOf(dayLabel(dlD) + " 00:00"), cls: "" },
+                  { k: T.fPe, segs: segsOf(dayLabel(dayOf(pe)) + " " + hm(pe)), cls: "" },
+                  { k: T.fDelay, segs: segsOf(T.dur(d, Math.floor(rem / 60), rem % 60)), cls: "" },
+                  { k: T.fAsOf, segs: segsOf("Tue 3 Nov 06:12"), cls: "" },
+                  { k: T.fFb, segs: segsOf(n % 2 === 0 ? T.fbYes : T.fbNo), cls: "w" }
+                ] };
+              }
+              const isSel = key === o.sel;
+              return {
+                key: key, cls: isSel ? "on" : "", cur: isSel ? "true" : undefined,
+                j: b.j, a: an.t, alang: an.lang, m: PB.mName(b.m, strings), g: PB.gName(mm.group, strings), mlang: L ? "de" : "en",
+                s1: hm(b.s), s2: dayLabel(dayOf(b.s)), e1: hm(b.e), e2: dayLabel(dayOf(b.e - 1e-6)),
+                q1: segsOf(num(b.q) + " " + T.pcs), hasQ2: started, q2: segsOf(started ? T.reported(b.done || 0) : ""),
+                badges: badges, hasLock: held || mine, lock1: held ? holder.name : mine ? T.you : "", lock2: segsOf(held ? T.since(b.since) : mine ? T.since("09:36") : ""),
+                dl: dayLabel(dlD), pe1: hm(pe), pe2: dayLabel(dayOf(pe)),
+                isLate: !!lateBy, lateSegs: segsOf(lateBy ? T.days(lateBy) : ""), openStr: String(open), xpIcon: open ? "ChevronDown" : "ChevronRight",
+                fxId: idp + "-fx-" + kid, fxCtl: open ? idp + "-fx-" + kid : undefined, fxName: T.factsName(b.j), open: open, fx: fx,
+                mvName: T.moveName(b.j), mvDis: canMove ? undefined : "true", mvCls: canMove ? "" : "is-dis",
+                whyId: canMove ? undefined : idp + "-why-" + kid, hasWhy: !canMove, why: why, actName: T.actName(b.j)
+              };
+            });
+            const sortKey = o.late ? "late" : "machine", dir = o.late ? "descending" : "ascending";
+            const C = [["job", T.cJob, true, "tk-stl"], ["machine", T.cMachine, true, ""], ["start", T.cStart, true, ""], ["end", T.cEnd, true, ""], ["qty", T.cQty, false, "r"], ["status", T.cStatus, false, ""], ["lock", T.cLock, false, ""], ["deadline", T.cDeadline, true, ""], ["pend", T.cPend, true, ""], ["late", T.cLate, true, ""], ["act", T.cAct, false, "tk-str"]];
+            const cols = C.map((c) => { const on = c[0] === sortKey; return { label: c[1], cls: c[3], btn: c[2], txt: !c[2], tcls: c[0] === "act" ? "pb-vh" : "", sort: on ? dir : undefined, bcls: on ? "on" : "", icon: on ? (dir === "ascending" ? "ArrowUp" : "ArrowDown") : "ArrowUpDown" }; });
+            const more = total > PAGE;
+            return {
+              t: T, late: String(!!o.late), lateCls: o.late ? "on" : "", capId: idp + "-cap", caption: o.late ? T.captionLate : T.caption,
+              cols: cols, rows: rows, scrollTo: o.scrollTo || "", scrollX: o.scrollX || "", gridCls: o.narrow ? "nar" : "", rowsSegs: segsOf(T.rows(total ? 1 : 0, Math.min(PAGE, total), total)),
+              wide: !o.narrow, narrow: !!o.narrow, prevCls: "is-dis", prevDis: "true", prevTi: "-1",
+              nextCls: more ? "" : "is-dis", nextDis: more ? undefined : "true", nextTi: more ? "0" : "-1", total: total
+            };
+          };
+          const EMPTY_TBL = { t: TEN, late: "false", lateCls: "", capId: "", caption: "", cols: [], rows: [], scrollTo: "", scrollX: "", gridCls: "", rowsSegs: [], wide: false, narrow: false, prevCls: "", prevDis: undefined, prevTi: "-1", nextCls: "", nextDis: undefined, nextTi: "-1" };
+
+          // Page content of a shell frame: toolbar, status line, body (grid or table, inspector), sheet.
+          const pageOf = (x) => Object.assign({
+            cls: "", tbFull: false, tbIcon: false, hasStl: true, stl: [APPLIED], draftLink: false, draftSegs: segsOf("My draft: 6 changes, not saved"),
+            bodyCls: "pb-body2", bGrid: false, bTable: false, insDocked: false, grid: {}, gridHint: "100%,660px", ins: {}, insHint: "320px,660px", hasSheet: false, sheet: {}
+          }, x);
+          const shellFrame = (x) => Object.assign({ isShell: true, isSolo: false, hint: x.w + "px," + x.h + "px", hdr: HDR, tb: tbOf("board", x.id.toLowerCase()), tbl: EMPTY_TBL, solo: {}, soloHint: "", soloCls: "", clipStyle: "", inStyle: "" }, x);
+
+          const F = [];
+          // TA1: job table, light, 1440. Sidebar as rail and the inspector collapsed to its strip, so the table takes the width.
+          F.push(shellFrame({ id: "TA1", title: "Job table", theme: "light", w: 1440, h: 900,
+            detail: "Light, 1440 by 900. Sorted by machine; 1003.20 selected; late facts of 1012.30 open; inspector collapsed",
+            shell: { width: "1440", theme: "light", sidebar: "rail", nav: "planning.job-table" }, tb: tbOf("table", "ta1"),
+            pg: pageOf({ tbFull: true, bTable: true, insDocked: true, ins: { idp: "ta1i", chrome: "collapsed" }, insHint: "48px,620px" }),
+            tbl: tableOf({ idp: "ta1", sel: "1003.20", open: ["1012.30"], scrollTo: "1010.10" }) }));
+          // TA2: Late only, sorted by Late by, the inspector open on 1012.30; the table scrolls sideways with sticky edges.
+          F.push(shellFrame({ id: "TA2", title: "Job table, late only", theme: "dark", w: 1440, h: 900,
+            detail: "Dark, 1440 by 900. Late only, sorted by Late by; Details of 1012.30 open; table scrolled to its end",
+            shell: { width: "1440", theme: "dark", nav: "planning.job-table" }, tb: tbOf("table", "ta2"),
+            pg: pageOf({ tbFull: true, bTable: true, insDocked: true, ins: { idp: "ta2i", job: "1012.30" } }),
+            tbl: tableOf({ idp: "ta2", late: true, sel: "1012.30", scrollX: "end" }) }));
+          // TA3 to TA5: 320 by 640.
+          F.push(shellFrame({ id: "TA3", title: "Job table", theme: "light", w: 320, h: 640,
+            detail: "Light, 320 by 640",
+            shell: { width: "320", theme: "light", nav: "planning.job-table" }, tb: tbOf("table", "ta3"),
+            pg: pageOf({ cls: "nar", tbIcon: true, stl: [], draftLink: true, bodyCls: "tk-nb", bTable: true }),
+            tbl: tableOf({ idp: "ta3", sel: "1003.20", narrow: true }) }));
+          F.push(shellFrame({ id: "TA4", title: "Details sheet", theme: "dark", w: 320, h: 640,
+            detail: "Dark, 320 by 640",
+            shell: { width: "320", theme: "dark", nav: "planning.job-table" }, tb: tbOf("table", "ta4"),
+            pg: pageOf({ cls: "nar", tbIcon: true, stl: [], draftLink: true, bodyCls: "tk-nb", bTable: true, hasSheet: true, sheet: { idp: "ta4i", chrome: "sheet", focus: "close" } }),
+            tbl: tableOf({ idp: "ta4", sel: "1003.20", narrow: true, scrollTo: "1021.10" }) }));
+          F.push(shellFrame({ id: "TA5", title: "Board options", theme: "light", w: 320, h: 640,
+            detail: "Light, 320 by 640",
+            shell: { width: "320", theme: "light", nav: "planning.board" },
+            tb: tbOf("board", "ta5", { optCls: "on", optOpen: "true", menuCtl: "ta5-opts", menu: true }),
+            pg: pageOf({ cls: "nar", tbIcon: true, stl: [], draftLink: true, bodyCls: "tk-nb", bGrid: true, grid: { idp: "ta5", size: "narrow", r0: "9", r1: "13" }, gridHint: "100%,360px" }) }));
+          // TA6, TA7: long strings at 1440.
+          F.push(shellFrame({ id: "TA6", title: "Board, long strings", theme: "light", w: 1440, h: 900,
+            detail: "Light, 1440 by 900. German chrome and data, a Finnish article, labels at full length",
+            shell: { width: "1440", theme: "light", strings: "long", nav: "planning.board" }, hdr: HDR_DE, tb: tbOf("boardDe", "ta6", { cls: "tk-wrap" }),
+            pg: pageOf({ tbFull: true, stl: [APPLIED_DE], bGrid: true, insDocked: true, grid: { idp: "ta6", strings: "long" }, ins: { idp: "ta6i", strings: "long", expiry: "on" } }) }));
+          F.push(shellFrame({ id: "TA20", title: "Board, long strings", theme: "dark", w: 1440, h: 900,
+            detail: "Dark, 1440 by 900, as TA6",
+            shell: { width: "1440", theme: "dark", strings: "long", nav: "planning.board" }, hdr: HDR_DE, tb: tbOf("boardDe", "ta20", { cls: "tk-wrap" }),
+            pg: pageOf({ tbFull: true, stl: [APPLIED_DE], bGrid: true, insDocked: true, grid: { idp: "ta20", strings: "long" }, ins: { idp: "ta20i", strings: "long", expiry: "on" } }) }));
+          F.push(shellFrame({ id: "TA7", title: "Job table, long strings", theme: "light", w: 1440, h: 900,
+            detail: "Light, 1440 by 900. German column names, machines, groups and articles at full length",
+            shell: { width: "1440", theme: "light", strings: "long", sidebar: "rail", nav: "planning.job-table" }, hdr: HDR_DE, tb: tbOf("tableDe", "ta7", { cls: "tk-wrap" }),
+            pg: pageOf({ tbFull: true, stl: [APPLIED_DE], bTable: true, insDocked: true, ins: { idp: "ta7i", chrome: "collapsed", strings: "long" }, insHint: "48px,600px" }),
+            tbl: tableOf({ idp: "ta7", strings: "long", sel: "1003.20", open: ["1012.30"], scrollTo: "1010.10" }) }));
+          F.push(shellFrame({ id: "TA21", title: "Job table, long strings, scrolled to the end", theme: "dark", w: 1440, h: 900,
+            detail: "Dark, 1440 by 900. TA7 scrolled to its end: Geplantes Ende, Verspätung and the open late facts",
+            shell: { width: "1440", theme: "dark", strings: "long", sidebar: "rail", nav: "planning.job-table" }, hdr: HDR_DE, tb: tbOf("tableDe", "ta21", { cls: "tk-wrap" }),
+            pg: pageOf({ tbFull: true, stl: [APPLIED_DE], bTable: true, insDocked: true, ins: { idp: "ta21i", chrome: "collapsed", strings: "long" }, insHint: "48px,600px" }),
+            tbl: tableOf({ idp: "ta21", strings: "long", sel: "1003.20", open: ["1012.30"], scrollTo: "1010.10", scrollX: "end" }) }));
+          // TA8, TA9: Tab order.
+          F.push(shellFrame({ id: "TA8", title: "Tab order, board", theme: "light", w: 1440, h: 900,
+            detail: "Light, 1440 by 900. Badges number the Tab stops in DOM order; toolbar, grid and tab list are one stop each",
+            shell: { width: "1440", theme: "light", nav: "planning.board", focus: "skip" }, tb: tbOf("board", "ta8"),
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta8" }, ins: { idp: "ta8i" } }) }));
+          F.push(shellFrame({ id: "TA9", title: "Tab order, job table", theme: "dark", w: 1440, h: 900,
+            detail: "Dark, 1440 by 900. Stop 1 is the hidden skip link; rows below the fold keep their numbers without a badge",
+            shell: { width: "1440", theme: "dark", sidebar: "rail", nav: "planning.job-table" }, tb: tbOf("table", "ta9"),
+            pg: pageOf({ tbFull: true, bTable: true, insDocked: true, ins: { idp: "ta9i", chrome: "collapsed" }, insHint: "48px,620px" }),
+            tbl: tableOf({ idp: "ta9", sel: "1003.20", open: ["1012.30"] }) }));
+          // TA10 to TA12, TA18: crops of the board at 1440 with a notes column.
+          const CROP = { x: 272, y: 202, w: 810, h: 674 };
+          const cropFrame = (x) => shellFrame(Object.assign({ w: 1440, h: 900, tb: tbOf("board", x.id.toLowerCase()) }, x, { crop: x.crop || CROP }));
+          F.push(cropFrame({ id: "TA10", title: "Arrow keys in the grid", theme: "light",
+            detail: "Light, crop of the board at 1440. Focus on 1002.10",
+            shell: { width: "1440", theme: "light", nav: "planning.board" },
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta10", selected: "1002.10", focus: "1002.10" }, ins: { idp: "ta10i", job: "1002.10" } }),
+            notes: { h: "Focus on 1002.10 on CNC2, from 09:45", keys: [
+              { k: "1", t: "Up: 1001.20 on CNC1, which runs at 09:45." },
+              { k: "2", t: "Down: 1010.10 on Mill 1, which runs at 09:45." },
+              { k: "3", t: "Left and Home: 1004.10, the first job order of the row." },
+              { k: "4", t: "Right and End: 1014.10, the last job order of the row in the loaded range." },
+              { k: "5", t: "Left again from 1004.10: Jobs on this machine, CNC2. Right returns to the row." }
+            ], items: [
+              "Tab enters the grid at the selected job order, and the next Tab leaves it. The grid is one Tab stop with a roving tabindex.",
+              "Up and Down go to the job order on the next machine row that runs at the focused one's start, else to the one that starts nearest to it.",
+              "Page Up and Page Down move by the machine rows in view, to the job order nearest in time.",
+              "Enter opens Details in the inspector and focus stays on the job order. M starts move mode. Shift+F10 or the context menu key opens the block menu.",
+              "Focus scrolls the job order into view and opens its hover card at once. Nothing else changes.",
+              "Escape closes the hover card, then a popover, then move mode, then clears the selection."
+            ], foot: "Proposed: the nearest in time rule for Up and Down, and focus staying on the job order after Enter." } }));
+          F.push(cropFrame({ id: "TA11", title: "Between rows, groups and Not placed", theme: "dark",
+            detail: "Dark, crop of the board at 1440. Rows scrolled to Lathe 1; focus on 1017.10",
+            shell: { width: "1440", theme: "dark", nav: "planning.board" },
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta11", selected: "1017.10", focus: "1017.10", skip: "6" }, ins: { idp: "ta11i", job: "1017.10" } }),
+            notes: { h: "Focus on 1017.10 on Press 4, from 06:00", keys: [
+              { k: "1", t: "Up: 1008.10 on Press 3, the nearest start. A row of stacked conflicts counts as one row." },
+              { k: "2", t: "Down: 1025.30 on Assembly 1. Finishing is collapsed, so Down skips its five machines." },
+              { k: "3", t: "Left from the first job order: Jobs on this machine, Press 4." },
+              { k: "4", t: "Down from 3, in the row header column: the button of the Finishing band. Enter or Space expands the group." },
+              { k: "5", t: "Up from CNC1, the first machine row: 1024.20 in the Not placed row. Left and Right move along the chips; Down returns to CNC1." }
+            ], items: [
+              "In the row header column, Up and Down pass every row header and group band button; Right returns to the first job order in view.",
+              "The Not placed row stays pinned under the time header while the machine rows scroll.",
+              "Rows that hold focus or a move preview stay mounted while the rest virtualize."
+            ], foot: "Proposed: the row header column as its own Up and Down path through the group bands." } }));
+          F.push(cropFrame({ id: "TA12", title: "Focus after Move", theme: "light",
+            detail: "Light, crop of the board at 1440. 1003.20 placed on Lathe 2 and focused",
+            crop: { x: 272, y: 202, w: 1160, h: 560 },
+            shell: { width: "1440", theme: "light", nav: "planning.board" },
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta12", selected: "1003.20", focus: "1003.20" }, ins: { idp: "ta12i" } }),
+            notes: { h: "After the move of 1003.20", keys: [
+              { k: "1", t: "Focus returns to 1003.20 by id, at its new place on Lathe 2." }
+            ], items: [
+              "Move in the block menu opens the Move dialog. Its Move button writes the draft change, the dialog closes and focus returns to the job order.",
+              "Enter in keyboard move mode does the same without a dialog.",
+              "The message uses the times the server returns, because breaks and closed time decide the placement.",
+              "The hover card opens at once on the focused job order. Escape closes it and focus stays.",
+              "In the job table, focus returns to the row's Move button. When the new values move the row in the sort order, focus follows the row by id."
+            ], says: [{ k: "announce, polite", t: "1003.20 moved to Lathe 2, Tue 3 Nov 11:30 to 14:45. Not saved." }], foot: "Proposed: the message copy." } }));
+          F.push(cropFrame({ id: "TA18", title: "Focus not obscured by the sticky axes", theme: "light",
+            detail: "Light, crop of the board at 1440. Rows scrolled; focus on 1003.10 under the pinned rows",
+            crop: { x: 272, y: 202, w: 810, h: 600 },
+            shell: { width: "1440", theme: "light", nav: "planning.board" },
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta18", selected: "1003.10", focus: "1003.10", skip: "6" }, ins: { idp: "ta18i", job: "1003.10" } }),
+            notes: { h: "Scroll padding of the board and the job table", keys: [], items: [] } }));
+          // TA13 to TA15: the inspector on its own, with a notes column first.
+          const soloFrame = (x) => Object.assign({ isShell: false, isSolo: true, shell: {}, hint: "", hdr: [], tb: tbOf("board", "solo"), tbl: EMPTY_TBL, pg: pageOf({}),
+            soloCls: x.theme === "dark" ? "dark" : "", soloHint: "320px,624px", clipStyle: "width:320px;height:" + (x.h - 18) + "px", inStyle: "top:0px" }, x);
+          F.push(soloFrame({ id: "TA13", title: "Focus after Save", theme: "dark", w: 736, h: 640,
+            detail: "Dark. The inspector column after Save 4 changes",
+            solo: { idp: "ta13i", view: "draft", draft: "saved", theme: "dark", height: "624" },
+            notes: { cls: "first", h: "Saving my draft", items: [
+              "Save in the top bar opens My draft, expanding a collapsed column, and moves focus to the tab's heading.",
+              "Save 4 changes commits the draft. The rows leave the list, so focus moves to the heading, which now reads No changes in your draft.",
+              "The board shows the committed job orders without the draft cues. Save releases the soft locks of the committed orders.",
+              "With conflicts, Save keeps the rows and moves focus to the error summary instead."
+            ], says: [{ k: "announce, polite", t: "4 changes saved at 09:40." }], foot: "Proposed: the heading as the focus target after Save." } }));
+          F.push(soloFrame({ id: "TA14", title: "Break soft lock, the trigger", theme: "light", w: 736, h: 640,
+            detail: "Light. 1007.10 held by Erik Sand",
+            solo: { idp: "ta14i", details: "held", focus: "breaklock", height: "624" },
+            notes: { cls: "first", h: "Where focus goes around Break soft lock", items: [
+              "Break soft lock opens a confirmation dialog that requires a reason of 3 to 500 characters. Focus moves to the reason field.",
+              "Cancel or Escape closes the dialog and returns focus to Break soft lock.",
+              "Break soft lock in the dialog moves the soft lock to you in one command. This button goes away, so focus moves to Machine (TA15).",
+              "When the dialog was opened from the block menu, focus returns to the job order on the board instead."
+            ], says: [], foot: "The dialog itself is drawn with the soft lock frames of this page." } }));
+          F.push(soloFrame({ id: "TA15", title: "After breaking the soft lock", theme: "dark", w: 736, h: 420,
+            detail: "Dark. The move fields of Details",
+            solo: { idp: "ta15i", details: "taken", focus: "machine", theme: "dark", height: "624" },
+            notes: { cls: "first", h: "Focus on Machine of 1007.10", keys: [], items: [
+              "The move fields of 1007.10 are open to you now; Details shows the soft lock as yours since 09:40.",
+              "Erik Sand hears an assertive message in his session."
+            ], says: [{ k: "announce, polite, to you", t: "You hold the soft lock on order 1007 now. Erik Sand was told." }, { k: "announce, assertive, to Erik Sand", t: "Alex Lund broke your soft lock on order 1007 at 09:40. Reason: \"Erik Sand is away and order 1007 must move today\"" }], foot: "Proposed: focus on Machine and both messages, in the copy of IN20." } }));
+          // TA16, TA17: the D1 focus ring on every board surface.
+          const ringLeg = (y) => ({ style: "left:12px;top:" + y + "px;width:232px", h: "The D1 two-tone ring", rows: [
+            { k: "A", t: "Toolbar button" }, { k: "B", t: "Toggle Group item" }, { k: "C", t: "Pause live updates" }, { k: "D", t: "Not placed chip" },
+            { k: "E", t: "Group band button" }, { k: "F", t: "Jobs on this machine" }, { k: "G", t: "Job order block, drawn by the grid" }, { k: "H", t: "Cluster" },
+            { k: "I", t: "Inspector tab" }, { k: "J", t: "Collapse panel" }, { k: "K", t: "Actions for the job order" }, { k: "L", t: "Machine select" }, { k: "M", t: "Apply" }
+          ] });
+          F.push(shellFrame({ id: "TA16", title: "D1 focus ring on board surfaces", theme: "light", w: 1440, h: 900,
+            detail: "Light, 1440 by 900. 2 px focus-outline over a 2 px focus-ring; letters name the surfaces",
+            shell: { width: "1440", theme: "light", nav: "planning.board" }, tb: tbOf("board", "ta16"),
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta16", focus: "1003.20" }, ins: { idp: "ta16i" } }), hasLeg: true, leg: ringLeg(420) }));
+          F.push(shellFrame({ id: "TA17", title: "D1 focus ring on board surfaces", theme: "dark", w: 1440, h: 900,
+            detail: "Dark, 1440 by 900. The same surfaces as TA16",
+            shell: { width: "1440", theme: "dark", nav: "planning.board" }, tb: tbOf("board", "ta17"),
+            pg: pageOf({ tbFull: true, bGrid: true, insDocked: true, grid: { idp: "ta17", focus: "1003.20" }, ins: { idp: "ta17i" } }), hasLeg: true, leg: ringLeg(420) }));
+
+          // TA18 notes use the measured scroll padding.
+          const ta18 = F.find((f) => f.id === "TA18");
+          const pads = (ovState.TA18 && ovState.TA18.pads) || { top: 102, left: 176, header: 48, pinned: 46, col: 168 };
+          ta18.notes.keys = [
+            { k: "1", t: "1003.10 on Lathe 1 has focus right under the pinned rows and right of the machine column, clear of both." },
+            { k: "2", t: "scroll-padding-top " + pads.top + " px: the time header (" + pads.header + " px), the Not placed row (" + pads.pinned + " px) and 8 px for the focus ring." },
+            { k: "3", t: "scroll-padding-left " + pads.left + " px: the machine column (" + pads.col + " px here) and 8 px. The column fits the longest machine name, from 168 to 272 px and at most 40 percent of the grid." }
+          ];
+          ta18.notes.items = [
+            "The virtualizers get the same values, so a focused job order never sits under the time header, the Not placed row or the machine column.",
+            "The job table sets scroll-padding-top to its header row plus 8 px, and scroll-padding-left and scroll-padding-right to the sticky Job order and Actions columns plus 8 px.",
+            "The inspector docks beside the grid and never covers it."
+          ];
+          ta18.notes.foot = "Hatched bands: the padding the scroller keeps clear.";
+
+          // Layout: rows of frames, 80 px apart; 140 px between rows leaves room for each label chip.
+          const ROWS = [["TA1", "TA2"], ["TA3", "TA4", "TA5"], ["TA6", "TA20"], ["TA7", "TA21"], ["TA8", "TA9"], ["TA10", "TA11"], ["TA12", "TA13"], ["TA14", "TA15"], ["TA16", "TA17"], ["TA18"]];
+          const want = P.frame === undefined || P.frame === null || String(P.frame).trim() === "" ? "all" : String(P.frame).trim();
+          const byId = {};
+          F.forEach((f) => { byId[f.id] = f; });
+          const NOTES_W = 334;
+          F.forEach((f) => {
+            f.hasNotes = !!f.notes;
+            f.notes = Object.assign({ cls: "", h: "", keys: [], items: [], says: [], foot: "", style: "" }, f.notes || {});
+            f.notes.items = f.notes.items.map((t) => (typeof t === "string" ? { t: t } : t));
+            f.notes.hasKeys = f.notes.keys.length > 0;
+            f.notes.hasItems = f.notes.items.length > 0;
+            f.notes.hasFoot = !!f.notes.foot;
+            const stageW = f.crop ? f.crop.w : f.isSolo ? 338 : f.w;
+            const stageH = f.crop ? f.crop.h : f.h;
+            f.fw = stageW + (f.hasNotes ? 16 + (f.isSolo ? 384 : NOTES_W) : 0);
+            f.fh = stageH;
+            f.notes.style = "width:" + (f.isSolo ? 384 : NOTES_W) + "px;min-height:" + Math.min(stageH, 240) + "px";
+            f.stageCls = (f.crop ? "crop " : "") + (f.theme === "dark" ? "dark" : "");
+            f.stageStyle = "width:" + stageW + "px;height:" + stageH + "px";
+            f.shiftStyle = f.crop ? "left:" + -f.crop.x + "px;top:" + -f.crop.y + "px" : "";
+            f.hasLeg = !!f.hasLeg;
+            f.leg = f.leg || { style: "", h: "", rows: [] };
+            const ov = ovState[f.id] || {};
+            f.ov = { b: ov.b || [], r: ov.r || [], x: ov.x || [], band: ov.band || [] };
+            f.sb = ov.sb || { v: "display:none", h: "display:none" };
+            if (f.isSolo && ov.clipY !== null && ov.clipY !== undefined) f.inStyle = "top:" + -ov.clipY + "px";
+            const size = f.crop || f.isSolo ? f.fw + " by " + f.fh : f.w + " by " + f.h;
+            f.label = f.id + " " + f.title + ", " + f.theme + ", " + size;
+          });
+          let y = 60, width = 0;
+          const frames = [];
+          ROWS.forEach((row) => {
+            const ids = row.filter((id) => want === "all" || want === id);
+            if (!ids.length) return;
+            let x = 0, hmax = 0;
+            ids.forEach((id) => {
+              const f = byId[id];
+              f.style = "left:" + x + "px;top:" + y + "px;width:" + f.fw + "px;height:" + f.fh + "px";
+              frames.push(f);
+              x += f.fw + 80;
+              hmax = Math.max(hmax, f.fh);
+            });
+            width = Math.max(width, x - 80);
+            y += hmax + 140;
+          });
+          const BN_H = 6680;
+          const showBn = want === "all" || want === "TA19";
+          const bnStyle = "left:0px;top:" + y + "px;width:1440px;height:" + BN_H + "px";
+          let height = y - 140 + 20;
+          if (showBn) { width = Math.max(width, 1440); height = y + BN_H + 20; }
+          return {
+            rid: this.__rid, frames: frames, showBn: showBn, bnStyle: bnStyle, bnLabel: "TA19 Build notes, not part of the UI, light, 1440 by " + BN_H,
+            bn: this.__notes(), rootStyle: "width:" + width + "px;height:" + height + "px"
+          };
+        }
+        // Build notes (TA19): rows of plain text, rendered as tables and lists.
+        __notes() {
+          const R = (...c) => ({ c: c.map((t) => ({ t: t })) });
+          const H = (...h) => h.map((t) => ({ t: t }));
+          const Li = (...l) => l.map((t) => ({ t: t }));
+          const COLS = { 2: "--bc:220px minmax(0,1fr)", 3: "--bc:220px 300px minmax(0,1fr)", 4: "--bc:200px 220px minmax(0,1fr) 240px" };
+          // Text in backticks is code: Plex Mono, never broken at a hyphen.
+          const CODE = (t) => String(t).split("`").map((x, i) => ({ t: x, c: i % 2 ? "tk-code" : "" })).filter((x) => x.t !== "");
+          const sec = (x) => Object.assign({ p: "", hasP: !!x.p, head: [], rows: [], hasRows: !!x.rows, list: [], hasList: !!x.list, cols: x.head ? COLS[x.head.length] : "" }, x, { pSegs: CODE(x.p || "") });
+          return {
+            lede: "Notes for the job order table view, the 320 reflow, long strings and the keyboard and focus model of the planning board, frames TA1 to TA18, TA20 and TA21. The implementer takes layout, states, copy and the keyboard model from here, never markup, class names or demo numbers. Values marked proposed need Krister's yes before the page is approved.",
+            sections: [
+              sec({ h: "shadcn components", head: H("Component", "Where", "What these frames fix"), rows: [
+                R("Table, DataTable (TanStack Table v9)", "Job table, TA1 to TA4, TA7, TA9, TA21", "A semantic table with a visually hidden caption, th scope col, a sort button in each sortable header and aria-sort on the sorted one only. The Job order and Actions columns stick to the edges when the table scrolls sideways, and its scroller keeps visible scrollbars. Server paging through the Relay connection, 25 rows a page, no row virtualization."),
+                R("Button", "Toolbars, row Move, pager, inspector", "Outline, ghost and default. A Move that cannot run keeps its place with aria-disabled, stays focusable and names its reason through aria-describedby."),
+                R("Toggle Group", "Zoom on the board, Range in the job table", "Hours, Day, Week, 4 weeks with aria-pressed, labelled by the word before it; its items join the toolbar's arrow key order."),
+                R("Checkbox", "Late only", "16 px box in a 24 px hit area, as D1 draws it."),
+                R("Collapsible", "Late facts of a row", "A 28 px disclosure button in the Late by cell with aria-expanded, and aria-controls while the facts row is open."),
+                R("Dropdown Menu", "Board options and Table options at 320, row Actions, block menu", "Board options: Go to date, the presets as radio items under Zoom, Pause live updates, Show job table. Table options: the same with Range and Show board."),
+                R("Tabs", "Inspector", "Details, My draft and Large orders; the selected tab is the list's one Tab stop."),
+                R("Sheet", "Inspector at 320", "Modal, named by its heading, Close details takes focus on open."),
+                R("Badge", "Status column of the job table", "Planned, Started and Finish pending first, then the board's state badges: In my draft, not saved; Overlaps; Locked; Proposed by assistant; Overdue; Material short; ERP change waiting."),
+                R("Tooltip", "Strip of the collapsed inspector", "Opens on focus and hover, to the left of the strip."),
+                R("Select, Input", "Machine and Start in Details", "As the inspector part draws them."),
+                R("Alert Dialog", "Break soft lock", "Requires a reason of 3 to 500 characters; drawn with the soft lock frames of this page."),
+                R("Pagination", "Pager of the job table", "Previous and Next only, with Rows 1 to 25 of 105; keyset paging, no page numbers. At 320 icon buttons named Previous page and Next page.")
+              ] }),
+              sec({ h: "Tokens and the order palette", list: Li(
+                "Every color in these frames is a D1 token: card, muted, muted-foreground, border and input for the table; info-subtle for the selected row and foreground for its 3 px bar; link for the job order buttons and the My draft link; the status tokens and late for badges; focus-outline and focus-ring for the ring; lane, lane-alt, off-time, block-border, now and the palette on the board. These frames add no token.",
+                "Values that are not tokens, proposed: the 3 px bar at the leading edge of the selected row (the board's 3 px selection bar), 44 px rows and a 38 px header row in the job table, 28 px disclosure and 32 px row buttons. Row heights follow rem, so 200 percent text grows them.",
+                "Order palette rule from D1: a block's fill is always its order's color, one of palette-1 to palette-20 or any color the ERP or a planner sets, passed as a CSS variable and never as a class per color. Text on the fill is pure black or pure white from textColorFor, at least 4.58:1 on any sRGB color. Every block has a 1 px block-border and a 1 px gap. Color groups orders and never carries a state, at any density.",
+                "The job table shows no order color, so nothing in it depends on color. The selected row has the 3 px bar and aria-current besides its tint.",
+                "Only the color swatch components use forced-color-adjust: none."
+              ) }),
+              sec({ h: "ARIA roles", head: H("Element", "Role and properties"), rows: [
+                R("Board", "role grid, never role application: ADR 0021 and plan 06 require an ARIA grid with a roving tabindex. Named Plant A board, Tue 3 Nov 06:00 to 18:00; aria-rowcount; aria-busy while loading; aria-readonly while moves are off."),
+                R("Time header", "A row with aria-rowindex 1 and columnheader cells; the corner reads Machines, 40 in 6 groups."),
+                R("Not placed row", "A row with aria-rowindex 2: a rowheader named Not placed, 3 job orders and one gridcell per chip."),
+                R("Group band", "A row whose rowheader holds the disclosure button with aria-expanded and tabindex -1."),
+                R("Machine row", "A row with aria-rowindex: a rowheader with the machine name and the Jobs on this machine button (tabindex -1), then one gridcell per job order in time order. A cluster is a gridcell with aria-haspopup dialog."),
+                R("Job order", "A gridcell named through aria-labelledby from the job number, the article with lang and a hidden span with times and states; aria-selected on the selected order's job orders; no interactive children."),
+                R("Toolbar", "role toolbar named Board, or Job table in the table view: one Tab stop, arrow keys inside. The presets are a group labelled Zoom (Range in the table view), each item with aria-pressed."),
+                R("Status line", "No live role; its messages go through announce()."),
+                R("Job table", "In the build a native table with a caption and th scope col; aria-sort only on the sorted header; the selected row carries aria-current true. These frames draw the same structure with the roles table, row, columnheader and cell."),
+                R("Inspector", "A section named Board panel with tablist, tab and tabpanel; collapsed, a section with buttons and tooltips; at 320 a dialog with aria-modal, named by its heading."),
+                R("Options menus", "menu with menuitem; the presets are menuitemradio with aria-checked inside a group labelled Zoom or Range.")
+              ] }),
+              sec({ h: "Names and announcements", head: H("What", "Kind", "Final English", "Source"), rows: [
+                R("Grid", "Name", "Plant A board, Tue 3 Nov 06:00 to 18:00", "Foundation"),
+                R("Job order", "Name", "1003.20 Shaft 40, 480 pcs, Lathe 2, Tue 3 Nov 11:30 to 14:45, changed in your draft, not saved, overlaps 1021.10", "Plan 07 pattern"),
+                R("Cluster", "Name", "4 jobs, 10:00 to 10:40, 2 late, 1 being edited by Erik Sand", "Plan 07 pattern"),
+                R("Not placed chip", "Name", "1024.20 Hub 12, 1 200 pcs, not placed", "Foundation 19.8, proposed"),
+                R("Row header button", "Name", "Jobs on this machine, CNC2", "Foundation 20.6, proposed"),
+                R("Group band button", "Name", "Collapse Milling; Expand Finishing", "Foundation, proposed"),
+                R("Range buttons", "Name", "Show earlier range; Show later range", "Option A"),
+                R("Job table", "Caption", "Job orders, Tue 3 Nov 06:00 to 18:00; with Late only: Late job orders, Tue 3 Nov 06:00 to 18:00", "Proposed"),
+                R("Row buttons", "Name", "1003.20 (opens Details); Move 1003.20; Actions for 1003.20; Late facts for 1012.30", "Proposed"),
+                R("Move that cannot run", "Description", "A started job order cannot move. Locked. Unlock it to move it. Erik Sand holds the soft lock on order 1007.", "Proposed"),
+                R("Options at 320", "Name", "Board options; Table options", "Option A; proposed for the table"),
+                R("Move mode step", "Polite, debounced to about 300 ms", "Lathe 2, Tue 3 Nov 11:45 to 15:00. Not saved.", "Plan 07"),
+                R("Move committed", "Polite, server times", "1003.20 moved to Lathe 2, Tue 3 Nov 11:30 to 14:45. Not saved.", "Proposed"),
+                R("Move refused", "Assertive", "Cannot move 1007.10: soft lock held by Erik Sand since 09:12.", "Plan 07, soft lock wording"),
+                R("Draft saved", "Polite", "4 changes saved at 09:40.", "Proposed"),
+                R("Soft lock broken, to you", "Polite", "You hold the soft lock on order 1007 now. Erik Sand was told.", "Proposed, as IN20"),
+                R("Soft lock broken, to the holder", "Assertive", "Alex Lund broke your soft lock on order 1007 at 09:40. Reason: \"Erik Sand is away and order 1007 must move today\"", "Proposed, as IN20"),
+                R("Focused job order moved by someone else", "Polite", "1002.10 was moved by Erik Sand. Focus is on 1004.10.", "Proposed"),
+                R("Late only turned on", "Polite", "9 late job orders.", "Proposed"),
+                R("Sort changed", "None", "aria-sort changes and focus stays on the header button.", "D1")
+              ] }),
+              sec({ h: "Keyboard model", cols: "--bc:150px 220px minmax(0,1fr) 260px", head: H("Where", "Keys", "What happens", "Focus after"), rows: [
+                R("Board grid", "Tab, Shift+Tab", "Tab enters at the selected job order, else at the first job order of the first expanded machine row nearest the now line (proposed), and the next Tab leaves the grid.", "On that cell"),
+                R("Board grid", "Left, Right, Home, End", "Along the row in time order; Home and End go to the first and last job order of the row in the loaded range. Left from the first reaches the row header button.", "The cell reached"),
+                R("Board grid", "Up, Down", "To the next machine row, skipping group bands and collapsed groups: the job order that runs at the focused one's start, else the one that starts nearest (proposed). Up from the first machine row reaches the Not placed row.", "The cell reached"),
+                R("Row header column", "Up, Down, Enter, Space, Right", "Up and Down through the row headers and the group bands' buttons; Enter or Space collapses or expands a group; Right returns to the first job order in view (proposed).", "The button reached"),
+                R("Board grid", "Page Up, Page Down", "By the machine rows in view, to the job order nearest in time.", "The cell reached"),
+                R("Board grid", "Enter", "Opens Details in the inspector, expanding a collapsed column; at 320 opens the sheet.", "Stays on the job order (proposed); at 320 Close details"),
+                R("Board grid", "M", "Move mode: Left and Right one snap step, Up and Down allowed machines, Enter commits, Escape cancels.", "The moving job order, then the placed one by id"),
+                R("Board grid", "Shift+F10, context menu key", "The block menu: Move, Lock or Unlock, Break soft lock on another planner's order, Open order.", "First menu item; back on the job order on close"),
+                R("Board grid", "Escape", "Closes the hover card, a popover, move mode, then clears the selection.", "Stays"),
+                R("Toolbar", "Tab, Left, Right, Home, End, Enter, Space", "One Tab stop; arrow keys move across Earlier, Now, Later, Go to date, the presets and Pause live updates.", "The control reached"),
+                R("Inspector", "Tab, Left, Right", "The tab list is one stop and arrow keys move between tabs; Collapse panel follows the tab list in DOM order.", "The tab reached"),
+                R("Job table", "Tab, Enter, Space", "Header sort buttons, then per row the job order button, the late facts button, Move and Actions, then the pager. A header sorts and keeps focus. The job order button opens Details.", "Stays on the control"),
+                R("Job table", "Space on Late only", "Filters the table; a search change never moves focus.", "Stays on the checkbox")
+              ] }),
+              sec({ h: "Focus after an action", head: H("Action", "Focus goes to"), rows: [
+                R("Move from the dialog or move mode", "The job order by id at its new place (TA12); its hover card opens at once. In the job table, the row's Move button, following the row by id."),
+                R("Save in the top bar", "The My draft heading, the column expanded if it was collapsed."),
+                R("Save 4 changes", "The My draft heading, which then reads No changes in your draft (TA13, proposed)."),
+                R("Break soft lock confirmed", "Machine in Details, since the button goes away (TA15, proposed); the job order when the dialog came from the block menu."),
+                R("Break soft lock cancelled", "The Break soft lock button (TA14)."),
+                R("Collapse panel, Expand panel", "Expand panel in the strip; the selected tab after expanding."),
+                R("A strip button", "That tab in the expanded column."),
+                R("Close details at 320", "The job order or the table row that opened the sheet."),
+                R("Previous to the first page", "Next, since Previous becomes disabled and is skipped (proposed)."),
+                R("A focused job order moved by someone else", "The nearest job order in the same row, with a polite message.")
+              ] }),
+              sec({ h: "Focus not obscured", list: Li(
+                "The board scroller sets scroll-padding-top to the time header plus the Not placed row plus 8 px (102 px at the drawn size) and scroll-padding-left to the machine column plus 8 px, and passes both to the virtualizers (TA18).",
+                "The job table sets scroll-padding-top to its header row plus 8 px, and scroll-padding-left and scroll-padding-right to the sticky Job order and Actions columns plus 8 px.",
+                "The inspector docks and narrows the grid at 1280 and up; at 320 it is a modal sheet. Toasts sit away from the board."
+              ) }),
+              sec({ h: "Slots", cols: "--bc:240px 300px minmax(0,1fr)", head: H("Slot", "Kind and props", "What a contribution may render"), rows: [
+                R("planning/board/side/v1", "region; props plantId and paused", "One WidgetFrame section labelled by the contribution's label, inside the inspector tab of the same name, 288 px wide; at 320 inside the sheet's tab. It renders its own content and controls inside its frame, never per block or per row, never over the grid. A failure renders the fallback, Large orders could not be shown. The rest of the board works as usual. Try again, and focus that was inside moves to the fallback. While paused it receives paused and keeps its content still."),
+                R("planning/board/block-fields/v1", "field; props plantId; items are the blocks of the loaded range", "Per block, a synchronous render returns text, an optional icon and accessibleText; the board draws them at the trailing edge and adds accessibleText to the block's name. No interactive content and no WidgetFrame per block. A hover renderer may fetch; its fields show in the hover card and in Details. Drawn in IN29 and IN30."),
+                R("planning/board/header/v1", "field; props plantId; one item", "One line of text beside the h1, such as Pyramid data as of 06:40; it wraps at 320.")
+              ] }),
+              sec({ h: "URL state", cols: "--bc:120px minmax(0,1fr) minmax(0,1fr) 300px", head: H("Key", "Values", "Default, stripped", "History"), rows: [
+                R("view", "table", "board", "Push when switching views"),
+                R("zoom", "hours, day, week, weeks", "the default preset (open question 1)", "Replace (proposed)"),
+                R("from", "plant-local date, 2026-11-03", "the current production day", "Replace; Earlier, Later, Now and Go to date"),
+                R("order", "production order id, 1003", "none", "Push, so Back closes Details"),
+                R("sort", "machine, start, end, deadline, plannedEnd, lateBy, job; a minus sign for descending", "machine (proposed names; the codegen SortField enum fixes them)", "Replace"),
+                R("late", "1", "off", "Replace; drops the cursor"),
+                R("after, before, page", "cursor and page counter", "first page", "Replace")
+              ] }),
+              sec({ h: "URL state that stays local", p: "Collapsed groups, move mode, paused live updates, the collapsed inspector, the inspector tab and open late facts rows never reach the URL. Examples: `/plant-a/planning/board?view=table&late=1&sort=-lateBy` opens TA2; `/plant-a/planning/board?zoom=week&from=2026-11-02&order=1003` opens the week with Details of order 1003." }),
+              sec({ h: "Final English copy in these frames", head: H("Where", "Copy"), rows: [
+                R("Table view toolbar", "Earlier; Now; Later; Go to date; Tue 3 Nov, 06:00 to 18:00; Range; Hours; Day; Week; 4 weeks; Pause live updates"),
+                R("Table", "Late only; Job order; Machine; Start; End; Quantity; Status; Soft lock; Deadline; Planned end; Late by; Actions (hidden); Move; Planned; You; since 09:36; 40 reported; 2 days"),
+                R("Late facts", "Order 1012 is late by 2 days; Deadline rule; Start of day: 00:00 on the deadline date; Deadline; Planned end; Delay; 2 days 10 h 45 min; As of; Forward fallback"),
+                R("Forward fallback values", "Yes. Backward from the deadline, the order would start before its allowed start, so it was planned forward. No. The order was planned backward from its deadline."),
+                R("Pager", "Rows 1 to 25 of 105; Previous; Next; Previous page; Next page"),
+                R("320", "Board options; Table options; Show job table; Show board; My draft: 6 changes, not saved"),
+                R("Status line", "Autoplan applied at 06:12: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced.")
+              ] }),
+              sec({ h: "WCAG 2.2 criteria", cols: "--bc:300px minmax(0,1fr)", head: H("Criterion", "How these frames meet it"), rows: [
+                R("1.3.1 Info and Relationships", "Grid rows, row headers and gridcells; the table's caption, column headers and aria-sort; the toolbar and its labelled group."),
+                R("1.3.2 Meaningful Sequence", "DOM order equals visual order: toolbar, status line, grid, inspector; in a row, job orders in time order."),
+                R("1.4.1 Use of Color", "States are icons, line styles and words; the selected row has a bar and aria-current besides its tint."),
+                R("1.4.3 Contrast (Minimum), 1.4.11 Non-text Contrast", "D1 tokens only; block-border, the checkbox border and the focus ring reach their ratios in both themes."),
+                R("1.4.4 Resize Text, 1.4.12 Text Spacing", "Rows in rem; labels wrap at full length (TA6, TA7, TA20, TA21); the toolbar wraps; tabs wrap to two lines."),
+                R("1.4.10 Reflow", "At 320 only the grid and the job table scroll in two directions, each in its own container; the toolbar folds into Board options or Table options (TA3 to TA5)."),
+                R("1.4.13 Content on Hover or Focus", "The hover card opens on focus, stays while hovered, and Escape closes it without moving focus."),
+                R("2.1.1 Keyboard, 2.1.2 No Keyboard Trap", "Every command has a key and a menu item; Tab always leaves the grid and the table."),
+                R("2.1.4 Character Key Shortcuts", "M and the other letter commands work only while a board cell has focus."),
+                R("2.2.1 Timing Adjustable", "The soft lock warning 20 s ahead with Extend (TA6)."),
+                R("2.2.2 Pause, Stop, Hide", "Pause live updates on the board and in the job table."),
+                R("2.4.3 Focus Order", "TA8 and TA9; focus after each action as listed above."),
+                R("2.4.6 Headings and Labels", "Column names, the caption and visible labels before the presets and Late only."),
+                R("2.4.7 Focus Visible", "The D1 two-tone ring on every surface (TA16, TA17)."),
+                R("2.4.11 Focus Not Obscured (Minimum)", "Scroll padding for the sticky axes and the sticky table columns (TA18); the inspector never covers the grid."),
+                R("2.5.2 Pointer Cancellation", "A drag commits on pointer up and Escape cancels it."),
+                R("2.5.3 Label in Name", "Move 1003.20 starts with Move; Show earlier range holds Earlier."),
+                R("2.5.7 Dragging Movements", "Move in every table row, the Move dialog, the Details fields and keyboard move mode."),
+                R("2.5.8 Target Size (Minimum)", "Sort buttons, job order buttons and the Late only hit area are 24 px or more; the disclosure button 28 px; row buttons 32 px."),
+                R("3.2.1 On Focus", "Focus only scrolls into view and opens the hover card."),
+                R("3.3.4 Error Prevention", "My draft reviews before Save; Break soft lock asks for a reason."),
+                R("4.1.2 Name, Role, Value", "aria-pressed, aria-checked, aria-expanded, aria-current, aria-sort, aria-disabled with a reason."),
+                R("4.1.3 Status Messages", "Moves, saves, soft lock changes and the Late only count go through announce(); the status line has no live role."),
+                R("EN 301 549 clause 9.7", "Forced colors keep borders, icons and line styles, as ADR 0021 requires.")
+              ] }),
+              sec({ h: "Proposed in this part", list: Li(
+                "The job table's default sort by machine in board order, then start; the Range label and the same presets as the board; Late only in a bar at the top of the table card.",
+                "Late facts in an expandable row under a late row, with the deadline rule, deadline, planned end, delay, as of and the forward fallback.",
+                "Move kept in every row, aria-disabled with its reason when the job order is started, locked or held by another planner.",
+                "The toolbar as one Tab stop with arrow keys inside.",
+                "Up and Down by the nearest job order in time; the row header column as its own path through the group bands.",
+                "Focus staying on the job order after Enter; focus on the My draft heading after Save; focus on Machine after Break soft lock.",
+                "At 320 the board's toolbar folds into Board options, which holds Show job table; the table view's into Table options with Show board.",
+                "The announcement copy marked proposed above."
+              ) }),
+              sec({ h: "Open questions from this part", list: Li(
+                "Should the table view open with the inspector collapsed, as TA1 draws it, or keep the planner's last state? TA2 draws it open.",
+                "Should 320 open the job table by default without rewriting view, as option B did? TA5 keeps the board and offers Show job table.",
+                "Rule 13.6 as amended puts Collapse panel before the tab list, while rule 19.6 puts it after the tab list in the same row. These frames follow 19.6, so Collapse panel follows the tab list in DOM and Tab order.",
+                "Do the job table's sort fields follow the GraphQL SortField names, such as plannedEnd and lateBy?"
+              ) })
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

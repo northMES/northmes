@@ -1,6 +1,6 @@
 # D2 shell, navigation and station frame
 
-This is the approval record of design task D2, issue [northMES/northmes#190](https://github.com/northMES/northmes/issues/190), for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The design page is [shell/shell-190-navigation.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=shell%2Fshell-190-navigation.dc.html) in the Claude Design project. It builds on the direction chosen in the variations round ([shell-190-variations.md](shell-190-variations.md)) and on the tokens and components of D1 ([ui-189-tokens.md](../ui/ui-189-tokens.md)).
+This is the approval record of design task D2, issue [northMES/northmes#190](https://github.com/northMES/northmes/issues/190), for story E04-S02 ([northMES/northmes#40](https://github.com/northMES/northmes/issues/40)). The design page is [shell/shell-190-navigation.dc.html](../project/shell/shell-190-navigation.dc.html) in the design project. It builds on the direction chosen in the variations round ([shell-190-variations.md](shell-190-variations.md)) and on the tokens and components of D1 ([ui-189-tokens.md](../ui/ui-189-tokens.md)).
 
 Every planner and station screen mounts one of two shared frames, `shell/Shell.dc.html` or `shell/StationFrame.dc.html`, so the page draws the states the shell owns once and module pages reuse them. The sign-in page renders outside the shell with the same top bar classes.
 

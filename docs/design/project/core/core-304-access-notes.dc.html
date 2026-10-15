@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access management: build notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <style>
+          /* Build notes of the spec page core/core-304-access.dc.html (issue northMES/northmes#304), frame NO26 of
+             core-304-access-noaccess-keyboard.dc.html, which mounts this part. A document, not part of the UI: components,
+             patterns, tokens, ARIA, announcements, keyboard, permission ids, copy and WCAG 2.2 for the whole page. */
+          .sheet.nk-doc{box-sizing:border-box;overflow:hidden}
+          .nk-bcols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:48px;margin-top:28px;align-items:start}
+          .nk-col{display:grid;gap:32px;align-content:start;min-width:0}
+          .nk-sec{display:grid;gap:8px;align-content:start;min-width:0}
+          .nk-sec .t3{margin:0}
+          .nk-sn{margin:0;color:var(--muted-foreground);font-size:12px;line-height:16px}
+          .nk-pp{margin:0;font-size:13px;line-height:18px}
+          .nk-tb{display:grid;border-top:1px solid var(--border)}
+          .nk-tr{display:grid;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .nk-tr span,.nk-tr b{min-width:0;overflow-wrap:anywhere}
+          .nk-tr.h{padding:6px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .nk-tr b{font-weight:600}
+          .nk-c3 .nk-tr{grid-template-columns:128px minmax(0,1.2fr) minmax(0,1fr)}
+          .nk-c3p .nk-tr{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) 92px}
+          .nk-c2 .nk-tr{grid-template-columns:150px minmax(0,1fr)}
+          .nk-c2w .nk-tr{grid-template-columns:72px minmax(0,1fr)}
+          .nk-cpgs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px 32px;margin-top:40px}
+          .nk-cpg{display:grid;gap:6px;align-content:start;min-width:0}
+          .nk-cph{margin:0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .nk-cps{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+          .nk-cps li{display:inline-flex;align-items:baseline;max-width:100%;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);font-size:12px;line-height:18px;overflow-wrap:anywhere}
+          .nk-bot{margin-top:40px}
+          .nk-pg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:48px}
+        </style>
+      </helmet>
+      <div class="sheet nk-doc" style="width:4480px;height:3728px">
+<p class="kick">Build notes, not part of the UI</p>
+<h2 class="t2">Access management and the no-access states: build notes</h2>
+<p class="lede">For E05-S06 (#54), E05-S08 (#56), E04-S02 (#40) and E04-S07 (#45). Option A of the variations, by person, with C's Start from, read-only Holders tab and access-lost dialog, and B's title No access to Roles and No access cells (decision of 2026-10-08). Take layout, region order, states and their transitions, copy verbatim, the keyboard model and slot placements; never markup, class names, inline styles, token values or demo numbers. A value that is not a D1 token is a question. When design and the accessibility rules disagree, the rules win. All data is fictional.</p>
+<div class="nk-bcols"><div class="nk-col"><section class="nk-sec"><h3 class="t3">shadcn components</h3>
+<p class="nk-sn">By name, with the D1 look</p>
+<div class="nk-tb nk-c3"><div class="nk-tr h"><span>Component</span><span>Use on this page</span><span>States and rules</span></div>
+<div class="nk-tr"><b>Sidebar, Breadcrumb</b><span>The D2 shell on plant routes: Administration with Users (Users) and Roles (Shield); the planner shell on the page opened by URL</span><span>bell off in release 1 (ADR 0055); one h1 per page; the crumb starts with the plant</span></div>
+<div class="nk-tr"><b>Card, Table</b><span>DataTable on TanStack Table v9: the users and roles lists, Roles on the Access tab, What {name} can do, Access changes, Holders</span><span>populated, loading, empty, error, a forbidden region, No access cells; the roles list groups its rows with the canonical grouped pager; at 320 the roles table scrolls in its own region with Role sticky (NO11)</span></div>
+<div class="nk-tr"><b>DropdownMenu</b><span>Row menus: Actions for a user (Reset password, Block user or Unblock user, US3) and for a role (Edit role and New role from the role on a custom role, New role from the role on a default role, RO35, RO37); Page actions at 320</span><span>button with aria-haspopup menu and aria-expanded; focus on the first item; Company admin and a reader without the permission get no menu</span></div>
+<div class="nk-tr"><b>Tabs</b><span>User: General, Access, History. Role: Permissions, Holders, History</span><span>roving tabindex; the tab is the URL parameter tab; focus stays on the tab</span></div>
+<div class="nk-tr"><b>Collapsible</b><span>One per module in the permission checklist; the trigger is a button inside an h3</span><span>aria-expanded, aria-controls; 44 px trigger; a closed module shows its count</span></div>
+<div class="nk-tr"><b>Checkbox</b><span>Each permission; Show every permission</span><span>24 px hit area; a locked permission draws Lock in its place with aria-disabled and no Tab stop; a refused one is aria-invalid</span></div>
+<div class="nk-tr"><b>RadioGroup</b><span>Where: Plant A only, Acme AB, all plants</span><span>one Tab stop; arrow keys choose; each radio described by its line</span></div>
+<div class="nk-tr"><b>Combobox</b><span>Role: Popover with a Command listbox in two groups</span><span>disabled options stay in the list with what they need; aria-activedescendant; aria-invalid after a refusal</span></div>
+<div class="nk-tr"><b>Select</b><span>Start from on New role</span><span>the role copied once; the difference group follows</span></div>
+<div class="nk-tr"><b>Input, Textarea</b><span>Role name; Name, Username and Email on New user; Reason on every form and dialog</span><span>Field wires label, description, aria-invalid and aria-describedby</span></div>
+<div class="nk-tr"><b>Badge</b><span>Added, Removed, Not installed, Plugin; StatusBadge Active and Blocked</span><span>text always carries the state</span></div>
+<div class="nk-tr"><b>Button</b><span>Add role, Remove, Save role, Create role, Create user, Copy password, Done, Try again; links as Buttons: Go to Planning board, Go to Roles, Your plants, Go to Plant A</span><span>at most one default Button per region; 36 px</span></div>
+<div class="nk-tr"><b>Alert Dialog</b><span>ConfirmDialog for Remove role (NO24), Block user (US11), Unblock user (US13) and Reset password (US15); the access-lost dialog after close code 4403 (NO9, NO10, NO25)</span><span>the page behind is inert; Block user is destructive; the access-lost dialog has no Cancel and ignores Escape</span></div>
+<div class="nk-tr"><b>Dialog</b><span>Temporary password, shown once after Reset password (US17) and after Create user</span><span>role dialog; focus on Copy password; Done closes it and focus returns to Reset password; never a toast</span></div>
+<div class="nk-tr"><b>Tooltip</b><span>The Granted by column header button (NO5, NO6)</span><span>opens on focus and hover, stays while hovered, Escape closes it (1.4.13)</span></div>
+<div class="nk-tr"><b>Alert</b><span>The error summary; the success note; info notes</span><span>the summary takes focus; the note echoes the announcement</span></div>
+<div class="nk-tr"><b>Skeleton</b><span>LoadingState rows of the tables</span><span>aria-busy on the region</span></div>
+</div>
+</section>
+<section class="nk-sec"><h3 class="t3">Patterns and hooks</h3>
+<p class="nk-sn">@northmes/ui and @northmes/web-sdk</p>
+<div class="nk-tb nk-c2"><div class="nk-tr h"><span>Pattern or hook</span><span>Use</span></div>
+<div class="nk-tr"><b>PageFrame</b><span>Every state of a page: populated, loading, empty, error, forbidden</span></div>
+<div class="nk-tr"><b>EntityListPage</b><span>Users and Roles, with the toolbar and DataTable in a Card (canonical page, option A). The users list takes loading, empty, error and forbidden from the canonical page unchanged, with users as the noun; the roles list draws its own (RO5 to RO10)</span></div>
+<div class="nk-tr"><b>EntityDetailPage, HistoryTab</b><span>The user with General, Access and History; the role with Permissions, Holders and History</span></div>
+<div class="nk-tr"><b>EntityForm, useCommandForm</b><span>New role, Edit role, Add role, New user: error summary, server fieldErrors on the field, typed values kept, the shared reason argument</span></div>
+<div class="nk-tr"><b>ConfirmDialog</b><span>Remove role, Block user, Unblock user and Reset password, each with the reason field</span></div>
+<div class="nk-tr"><b>EmptyState, ErrorState, LoadingState</b><span>The page opened by URL and the edit route without the permission (Lock, one short Card as the canonical ST23, NO1, RO31), a forbidden region (Lock), an empty Roles card, a failed load with the correlation id and Try again</span></div>
+<div class="nk-tr"><b>DefinitionList</b><span>The person card on Add role</span></div>
+<div class="nk-tr"><b>VisuallyHidden</b><span>Included on a read-only permission; the reason behind a No access cell</span></div>
+<div class="nk-tr"><b>screenRoute</b><span>Checks the route permission before load and renders the page opened by URL (8.1.1); writes no permission.denied event (8.1.5)</span></div>
+<div class="nk-tr"><b>usePermission, &lt;Can&gt;</b><span>Hide an action the reader cannot use on a record (D.5); lock what cannot be added</span></div>
+<div class="nk-tr"><b>useConnection</b><span>FORBIDDEN on a relation path becomes No access cells (8.2.1)</span></div>
+<div class="nk-tr"><b>announce()</b><span>The shell's polite region for the messages under Announcements</span></div>
+</div>
+</section>
+</div>
+<div class="nk-col"><section class="nk-sec"><h3 class="t3">D1 tokens</h3>
+<p class="nk-sn">Every UI color, radius and font on the page</p>
+<p class="nk-pp"><span class="nk-mono">--background</span>, <span class="nk-mono">--foreground</span>, <span class="nk-mono">--card</span>, <span class="nk-mono">--card-foreground</span>, <span class="nk-mono">--muted</span>, <span class="nk-mono">--muted-foreground</span>, <span class="nk-mono">--accent</span>, <span class="nk-mono">--border</span>, <span class="nk-mono">--input</span>, <span class="nk-mono">--primary</span>, <span class="nk-mono">--primary-foreground</span>, <span class="nk-mono">--secondary</span>, <span class="nk-mono">--secondary-foreground</span>, <span class="nk-mono">--destructive</span>, <span class="nk-mono">--destructive-subtle</span>, <span class="nk-mono">--success</span>, <span class="nk-mono">--success-subtle</span>, <span class="nk-mono">--info</span>, <span class="nk-mono">--info-subtle</span>, <span class="nk-mono">--link</span>, <span class="nk-mono">--focus-outline</span>, <span class="nk-mono">--focus-ring</span>, <span class="nk-mono">--radius-sm</span>, <span class="nk-mono">--radius</span>, <span class="nk-mono">--radius-lg</span>, <span class="nk-mono">--radius-xl</span>, <span class="nk-mono">--font-sans</span>, <span class="nk-mono">--font-mono</span>, <span class="nk-mono">--nm-control-height</span>, <span class="nk-mono">--nm-target-min</span>. Dark uses the D1 dark values of the same tokens.</p>
+</section>
+<section class="nk-sec"><h3 class="t3">Values that are not tokens</h3>
+<p class="nk-sn">Each one is a question for the implementer</p>
+<div class="nk-tb nk-c2"><div class="nk-tr h"><span>Value</span><span>Where</span></div>
+<div class="nk-tr"><b>340 px</b><span>Side column of the role editor and Add role at 1280 and wider</span></div>
+<div class="nk-tr"><b>480 px</b><span>Role name field; the access-lost dialog (the box of D2's reload dialog)</span></div>
+<div class="nk-tr"><b>520 px</b><span>ConfirmDialog (canonical page)</span></div>
+<div class="nk-tr"><b>44 px</b><span>Module disclosure button</span></div>
+<div class="nk-tr"><b>36 px</b><span>Minimum height of a permission row</span></div>
+<div class="nk-tr"><b>24 px</b><span>Lock and read-only check boxes in place of a checkbox</span></div>
+<div class="nk-tr"><b>280 px</b><span>Tooltip of the Granted by header</span></div>
+<div class="nk-tr"><b>148 px</b><span>Sticky Role column of the roles table at 320</span></div>
+<div class="nk-tr"><b>168 px</b><span>When column of Access changes</span></div>
+<div class="nk-tr"><b>200 px</b><span>Held at Acme AB and Plant A column of the roles list</span></div>
+<div class="nk-tr"><b>220 px, 248 px</b><span>Row menus of the users and roles lists</span></div>
+<div class="nk-tr"><b>black at 50 percent</b><span>Overlay behind both dialogs (the D1 Dialog question of D2)</span></div>
+</div>
+</section>
+<section class="nk-sec"><h3 class="t3">Shell, frame and slots</h3>
+<p class="nk-sn">D2 shell/Shell.dc.html</p>
+<p class="nk-pp">The pages mount the D2 shell: plant routes under /$plant/core/users and /$plant/core/roles, with the entries core.users and core.roles in Administration. Decision of 2026-10-08 on #313: administration moves into one Settings area with a secondary sidebar, so the frame around these pages changes once #313 has a direction; the content does not. Page actions render in TopBarActions (New user, New role, Edit role, Reset password, Block user; at most one default Button, folded into Page actions at 320). The header slot beside the h1 holds the StatusBadge and the username on a user, and the kind of a role on a role. These pages add no module slot.</p>
+</section>
+<section class="nk-sec"><h3 class="t3">Open questions this part touches</h3>
+<p class="nk-sn">Numbers of the page's question list; NQ are new</p>
+<div class="nk-tb nk-c2w"><div class="nk-tr h"><span></span><span>Open</span></div>
+<div class="nk-tr"><b>29</b><span>Which reading of B's No access cells holds; NO5 and NO6 draw the second (the reader may not read roles)</span></div>
+<div class="nk-tr"><b>30</b><span>What removing an assignment needs; NO24 keeps option A's Remove for a plant admin</span></div>
+<div class="nk-tr"><b>31</b><span>May an editor untick a permission he does not hold; NO19 leaves it possible</span></div>
+<div class="nk-tr"><b>NQ1</b><span>Escape in the access-lost dialog does nothing, as in D2's reload dialog. Keep it?</span></div>
+<div class="nk-tr"><b>NQ2</b><span>After Remove role, focus goes to the next row's role link, else Add role. Keep it?</span></div>
+<div class="nk-tr"><b>NQ3</b><span>NO5 and NO6 assume a role with core.user:read and without core.role:read. Does such a role exist, and does core.user:read alone return a user's role names?</span></div>
+</div>
+</section>
+</div>
+<div class="nk-col"><section class="nk-sec"><h3 class="t3">ARIA roles and names</h3>
+<div class="nk-tb nk-c2"><div class="nk-tr h"><span>Element</span><span>Role, name and state</span></div>
+<div class="nk-tr"><b>Page opened by URL</b><span>h1 No access to Roles, tabindex -1, focused on arrival; the EmptyState has no heading of its own; Go to Planning board is a link</span></div>
+<div class="nk-tr"><b>Forbidden region</b><span>The section keeps its h2 (Access changes); its EmptyState heading is an h3</span></div>
+<div class="nk-tr"><b>No access cell</b><span>Text No access with Lock (aria-hidden); the Granted by header is a button whose aria-describedby is the tooltip</span></div>
+<div class="nk-tr"><b>Module group</b><span>section labelled by its h3; the h3 holds a button with aria-expanded and aria-controls</span></div>
+<div class="nk-tr"><b>Permission</b><span>checkbox named by its plain line, described by its id and its reason line; aria-checked; locked: aria-disabled, not focusable; refused: aria-invalid</span></div>
+<div class="nk-tr"><b>Selected count</b><span>status: {n} of {m} selected.</span></div>
+<div class="nk-tr"><b>Where</b><span>radiogroup labelled by Where; each radio described by its line</span></div>
+<div class="nk-tr"><b>Role</b><span>combobox with aria-expanded, aria-controls the listbox, aria-activedescendant; listbox groups labelled by their headings; disabled options aria-disabled</span></div>
+<div class="nk-tr"><b>Roles on a user</b><span>table Roles of Sara Nyberg; each Remove named Remove Shift lead at Plant A. When the reader may not read roles, the Role header is a button described by its tooltip, the cells read No access and Remove is named Remove role at Plant A (NO5)</span></div>
+<div class="nk-tr"><b>Row menu</b><span>button named Actions for Shift lead, aria-haspopup menu, aria-expanded, aria-controls the menu; the menu is labelled the same; items are menuitems</span></div>
+<div class="nk-tr"><b>Temporary password</b><span>dialog, aria-modal, labelled by its heading, described by its two sentences; the password is a read-only textbox labelled Temporary password</span></div>
+<div class="nk-tr"><b>Tabs</b><span>tablist named by the person; tabpanel labelled by its tab</span></div>
+<div class="nk-tr"><b>Error summary</b><span>group labelled by its h2, tabindex -1; each link repeats its field's message and leads to the field; a refusal for the whole role is a list item without a link (RO39)</span></div>
+<div class="nk-tr"><b>Remove dialog</b><span>alertdialog, aria-modal, labelled by its heading, described by the permissions lost and kept</span></div>
+<div class="nk-tr"><b>Access-lost dialog</b><span>alertdialog over an inert page; its heading is the only h1; described by its two sentences. With one plant left it shows only Go to Plant A, with none only Your plants (proposed)</span></div>
+<div class="nk-tr"><b>Roles table at 320</b><span>region Roles table, scrolls sideways, tabindex 0</span></div>
+</div>
+</section>
+<section class="nk-sec"><h3 class="t3">Announcements</h3>
+<p class="nk-sn">One message per event, through the shell's polite region</p>
+<div class="nk-tb nk-c2"><div class="nk-tr h"><span>Event</span><span>Polite region (announce())</span></div>
+<div class="nk-tr"><b>Add role</b><span>Shift lead at Plant A added for Alex Lund. It applies from Alex Lund's next action.</span></div>
+<div class="nk-tr"><b>Remove role</b><span>Shift lead at Plant A removed from Sara Nyberg. It applies from Sara Nyberg's next action.</span></div>
+<div class="nk-tr"><b>Save role</b><span>Shift lead saved. It applies to 2 people from their next action. (proposed, RO41)</span></div>
+<div class="nk-tr"><b>Create role</b><span>Night planner created. (proposed)</span></div>
+<div class="nk-tr"><b>Create user</b><span>None: the Temporary password dialog opens over the new user's page and is read on open (proposed)</span></div>
+<div class="nk-tr"><b>Block user</b><span>Päivi Kärkkäinen-Leppänen is blocked and signed out within a minute. (proposed)</span></div>
+<div class="nk-tr"><b>Unblock user</b><span>Mikael Strand is unblocked and can sign in again. (proposed)</span></div>
+<div class="nk-tr"><b>Reset password</b><span>None: the Temporary password dialog opens and is read on open</span></div>
+<div class="nk-tr"><b>Copy password</b><span>Password copied. (proposed)</span></div>
+<div class="nk-tr"><b>Tick or untick</b><span>The status count speaks: 6 of 36 selected.</span></div>
+<div class="nk-tr"><b>Refusal, field errors</b><span>None: focus moves to the error summary</span></div>
+<div class="nk-tr"><b>Page opened by URL</b><span>None: the title and the focused h1</span></div>
+<div class="nk-tr"><b>Access lost</b><span>None beyond the alertdialog, which screen readers read on open</span></div>
+<div class="nk-tr"><b>Loading</b><span>None: aria-busy on the region</span></div>
+</div>
+</section>
+</div>
+<div class="nk-col"><section class="nk-sec"><h3 class="t3">Keyboard and focus after each action</h3>
+<div class="nk-tb nk-c2"><div class="nk-tr h"><span>Action</span><span>Where focus goes</span></div>
+<div class="nk-tr"><b>Route change</b><span>The h1, also on the page opened by URL (10.1)</span></div>
+<div class="nk-tr"><b>Tab change</b><span>Stays on the tab; the URL parameter changes</span></div>
+<div class="nk-tr"><b>Space on a permission</b><span>Stays; the count speaks (NO20)</span></div>
+<div class="nk-tr"><b>Enter on a module</b><span>Stays; the group opens or closes</span></div>
+<div class="nk-tr"><b>Save role</b><span>Role detail h1 with a replace navigation (RO41, proposed)</span></div>
+<div class="nk-tr"><b>Save role refused</b><span>Error summary (RO39); its links lead to the refused permissions</span></div>
+<div class="nk-tr"><b>Row menu</b><span>Enter, Space or Down on Actions opens the menu with focus on the first item; Escape closes it and returns focus to the button (RO35, US3)</span></div>
+<div class="nk-tr"><b>Create user</b><span>The new user's page with a replace navigation, the Temporary password dialog open and focus on Copy password; after Done the user's h1 (proposed)</span></div>
+<div class="nk-tr"><b>Create user refused</b><span>Error summary (US7, US9)</span></div>
+<div class="nk-tr"><b>Block user, Unblock user</b><span>Reason in the dialog (US11, US13); after confirming, the top bar button that takes the place of the one that opened it, Unblock user or Block user (proposed); Escape or Cancel back to the button</span></div>
+<div class="nk-tr"><b>Reset password</b><span>Reason in the dialog (US15); after confirming, Copy password in the Temporary password dialog (US17)</span></div>
+<div class="nk-tr"><b>Done</b><span>Back to Reset password in the top bar</span></div>
+<div class="nk-tr"><b>Add role</b><span>The user's h1 on the Access tab (NO21)</span></div>
+<div class="nk-tr"><b>Add role refused</b><span>Error summary (NO22), then Role (NO23)</span></div>
+<div class="nk-tr"><b>Remove</b><span>Reason in the dialog (NO24); Escape or Cancel back to Remove; after Remove role the next row's role link, else Add role (proposed)</span></div>
+<div class="nk-tr"><b>Close code 4403</b><span>Go to Plant A in the dialog (NO25); Escape does nothing</span></div>
+<div class="nk-tr"><b>Try again</b><span>Stays on the button while the region reloads</span></div>
+</div>
+</section>
+<section class="nk-sec"><h3 class="t3">WCAG 2.2 criteria</h3>
+<p class="nk-sn">Level AA (ADR 0021)</p>
+<div class="nk-tb nk-c2w"><div class="nk-tr h"><span>Criterion</span><span>How the page meets it</span></div>
+<div class="nk-tr"><b>1.3.1</b><span>Tables with headers, module sections with h3, radiogroup, error summary group</span></div>
+<div class="nk-tr"><b>1.4.1</b><span>Added, Removed, Not installed, locked, refused and No access carry text and an icon</span></div>
+<div class="nk-tr"><b>1.4.3</b><span>D1 token pairs in both themes</span></div>
+<div class="nk-tr"><b>1.4.10</b><span>320 by 640 without page scroll sideways (NO11 to NO16); only the roles table scrolls in two directions, in its own region</span></div>
+<div class="nk-tr"><b>1.4.11</b><span>Focus ring, checkbox and lock borders</span></div>
+<div class="nk-tr"><b>1.4.13</b><span>The Granted by tooltip</span></div>
+<div class="nk-tr"><b>2.1.1</b><span>Every control by keyboard; listbox, radios and disclosures keep their keys</span></div>
+<div class="nk-tr"><b>2.1.2</b><span>ConfirmDialog closes with Escape; the access-lost dialog leaves by its links</span></div>
+<div class="nk-tr"><b>2.4.2</b><span>No access to Roles · Plant A · NorthMES; You no longer have access to Plant B · NorthMES</span></div>
+<div class="nk-tr"><b>2.4.3</b><span>Tab order NO18, NO19, NO24, NO25</span></div>
+<div class="nk-tr"><b>2.4.6</b><span>Headings name each region; labels name each field</span></div>
+<div class="nk-tr"><b>2.4.7</b><span>D1 two-tone ring on every stop</span></div>
+<div class="nk-tr"><b>2.4.11</b><span>The Save bar at 320 keeps the focused field clear (scroll-padding, canonical page)</span></div>
+<div class="nk-tr"><b>2.5.8</b><span>24 px checkbox and lock boxes, 36 px buttons, 44 px module buttons</span></div>
+<div class="nk-tr"><b>3.2.2</b><span>Ticking a permission does not save</span></div>
+<div class="nk-tr"><b>3.2.3, 3.2.4</b><span>Modules in sidebar order; one word for one meaning (question 29)</span></div>
+<div class="nk-tr"><b>3.3.1, 3.3.3</b><span>Refusals name the permission, the place and who can act</span></div>
+<div class="nk-tr"><b>3.3.7</b><span>Typed values stay after a refusal</span></div>
+<div class="nk-tr"><b>4.1.2</b><span>Checkbox, combobox, disclosure and tabs expose name, role and value</span></div>
+<div class="nk-tr"><b>4.1.3</b><span>The count and the announcements</span></div>
+</div>
+</section>
+</div>
+</div>
+<div class="nk-bot"><section class="nk-sec"><h3 class="t3">Permission ids shown on the page</h3>
+<p class="nk-sn">Each permission row shows its plain line, then its id in Plex Mono. The plain lines are proposed (question 4); proposed ids wait on question 3; invented ids exist only on this page. Not installed permissions never appear in what a person can do.</p>
+<div class="nk-pg2"><div class="nk-tb nk-c3p"><div class="nk-tr h"><span>Permission id</span><span>Plain line (proposed)</span><span>Id from</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.user:read</span></b><span>Read users and their roles</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.user:create</span></b><span>Create users</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.user:block</span></b><span>Block users</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.user:resetPassword</span></b><span>Reset passwords</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.role:read</span></b><span>Read roles</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.role:manage</span></b><span>Create and edit roles</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.roleAssignment:manage</span></b><span>Assign and remove roles</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.audit:read</span></b><span>Read the audit log</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.settings:manage</span></b><span>Change core settings</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.plant:create</span></b><span>Create plants</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.onboarding:manage</span></b><span>Run onboarding</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">core.company:update</span></b><span>Rename the company</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.productionOrder:read</span></b><span>Read production orders and the planning board</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.productionOrder:create</span></b><span>Create production orders</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.productionOrder:update</span></b><span>Change production orders</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.productionOrder:release</span></b><span>Release production orders to the floor</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.productionOrder:cancel</span></b><span>Cancel production orders</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.jobOrder:read</span></b><span>Read job orders</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.jobOrder:schedule</span></b><span>Move and schedule job orders and save the plan</span><span>plan docs</span></div>
+</div>
+<div class="nk-tb nk-c3p"><div class="nk-tr h"><span>Permission id</span><span>Plain line (proposed)</span><span>Id from</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.jobOrder:lock</span></b><span>Lock job orders</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.jobOrder:breakLock</span></b><span>Break another planner's lock</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.autoplan:run</span></b><span>Run autoplan</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">planning.settings:manage</span></b><span>Change planning settings</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">productionStart.report:create</span></b><span>Report production at a station</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">productionStart.report:correct</span></b><span>Correct operator reports</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.import:upload</span></b><span>Upload Pyramid files</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.settings:manage</span></b><span>Change Pyramid connector settings</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.import:sync</span></b><span>Use Sync now</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.inbox:resolve</span></b><span>Resolve files in the import inbox</span><span>proposed id</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.pendingChange:decide</span></b><span>Accept or reject pending ERP changes</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">pyramidConnector.importRun:read</span></b><span>Read the import log</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">ai.assistant:use</span></b><span>Use the assistant</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">ai.provider:manage</span></b><span>Set up AI providers</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">ai.usage:read</span></b><span>Read AI usage</span><span>plan docs</span></div>
+<div class="nk-tr"><b><span class="nk-mono">acme.toolLife:read</span></b><span>Read tool life</span><span>invented</span></div>
+<div class="nk-tr"><b><span class="nk-mono">acme.toolChange:record</span></b><span>Record tool changes</span><span>invented</span></div>
+<div class="nk-tr"><b><span class="nk-mono">kanban.board:read</span></b><span>Read the kanban board</span><span>invented</span></div>
+</div>
+</div>
+</section>
+</div>
+<section class="nk-sec" style="margin-top:40px"><h3 class="t3">Final English copy by region</h3>
+<p class="nk-sn">Proposed copy; names, places and numbers are the frames' fictional data</p>
+<div class="nk-cpgs"><div class="nk-cpg"><p class="nk-cph">Page opened by URL</p>
+<ul class="nk-cps"><li>No access to Roles</li>
+<li>No access to Roles · Plant A · NorthMES</li>
+<li>Opening Roles needs the permission to read roles (core.role:read) at Plant A.</li>
+<li>Ask a plant admin for a role that includes it.</li>
+<li>Go to Planning board</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Forbidden region and cells</p>
+<ul class="nk-cps"><li>Access changes</li>
+<li>Who added or removed Sara Nyberg's roles, and why.</li>
+<li>You cannot see access changes here</li>
+<li>This needs the permission to read the audit log (core.audit:read) at Plant A.</li>
+<li>No access</li>
+<li>Granted by needs the permission to read roles (core.role:read) at Plant A.</li>
+<li>No role of Sara Nyberg at Plant A or at Acme AB includes it.</li>
+<li>You cannot see what Sara Nyberg can do here</li>
+<li>This needs the permission to read users and their roles (core.user:read) at Plant A.</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Plant without a role (D2 ST29, unchanged)</p>
+<ul class="nk-cps"><li>Page not found</li>
+<li>Page not found · NorthMES</li>
+<li>There is no plant at /plant-b/planning/board that you can open. The link may be out of date.</li>
+<li>Your plants</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Access lost</p>
+<ul class="nk-cps"><li>You no longer have access to Plant B</li>
+<li>You no longer have access to Plant B · NorthMES</li>
+<li>Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.</li>
+<li>Changes on this page that are not saved are lost.</li>
+<li>Your plants</li>
+<li>Go to Plant A</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Roles list</p>
+<ul class="nk-cps"><li>Roles</li>
+<li>11 roles at Acme AB</li>
+<li>New role</li>
+<li>Search roles</li>
+<li>Defined by</li>
+<li>Filters</li>
+<li>Role</li>
+<li>Permissions</li>
+<li>Held at Acme AB and Plant A</li>
+<li>Last changed</li>
+<li>Custom roles of Acme AB</li>
+<li>Default roles from modules</li>
+<li>5 roles</li>
+<li>Acme AB</li>
+<li>Core</li>
+<li>Acme tooling, plugin</li>
+<li>5 of 36</li>
+<li>1 not installed</li>
+<li>1 person</li>
+<li>3 people</li>
+<li>None</li>
+<li>by Karin Dahl</li>
+<li>by the permission sync</li>
+<li>2 groups, 11 roles</li>
+<li>Actions for Shift lead</li>
+<li>Edit role</li>
+<li>New role from Shift lead</li>
+<li>New role from Planner</li>
+<li>Roles table, scrolls sideways</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Roles list states and refusals</p>
+<ul class="nk-cps"><li>No custom roles yet</li>
+<li>Acme AB uses the default roles of its modules. Create a role when a job needs another set of permissions, starting from a default role or from none.</li>
+<li>2 groups, 6 roles</li>
+<li>Could not load roles</li>
+<li>Check the connection, then try again. If it fails again, give your plant admin the correlation id.</li>
+<li>Correlation id</li>
+<li>Copy correlation id</li>
+<li>Try again</li>
+<li>Creating or changing a role needs the permission to create and edit roles (core.role:manage) at Acme AB. A company admin of Acme AB has it.</li>
+<li>No access to Edit role</li>
+<li>No access to Edit role · Plant A · NorthMES</li>
+<li>Editing a role needs the permission to create and edit roles (core.role:manage) at Acme AB.</li>
+<li>Ask a company admin of Acme AB for a role that includes it.</li>
+<li>Go to Roles</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Role editor</p>
+<ul class="nk-cps"><li>Edit Shift lead</li>
+<li>Role name</li>
+<li>Unique within Acme AB.</li>
+<li>Permissions</li>
+<li>Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support.</li>
+<li>6 of 36 selected.</li>
+<li>2 of 11</li>
+<li>Added</li>
+<li>Removed</li>
+<li>Not installed</li>
+<li>Plugin</li>
+<li>You do not hold it at Plant A.</li>
+<li>You can add a permission to Shift lead only when you hold it at Plant A, where Shift lead is assigned. The others show a lock.</li>
+<li>Refused: you do not hold it at Plant B, where Shift lead is assigned.</li>
+<li>Where Shift lead applies</li>
+<li>Assigned to 2 people at Acme AB and Plant A. A saved change applies to them from their next action.</li>
+<li>Changes not saved</li>
+<li>Added: Run autoplan</li>
+<li>Removed: Lock job orders</li>
+<li>Reason for change (optional)</li>
+<li>Why you change this role</li>
+<li>Shown in the role's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Save role</li>
+<li>Cancel</li>
+<li>Shift lead was not saved</li>
+<li>Changing a role of Acme AB needs the permission to create and edit roles (core.role:manage) at Acme AB. A company admin of Acme AB has it and can make the change.</li>
+<li>Shift lead saved. It applies to 2 people from their next action.</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Read-only roles</p>
+<ul class="nk-cps"><li>Default roles come from their module and cannot be changed here. To change one, create a role from it.</li>
+<li>Company admin always holds every installed permission. The permission sync adds the permissions of modules installed later, so this role cannot be changed here.</li>
+<li>Changing a role needs the permission to create and edit roles (core.role:manage) at Acme AB.</li>
+<li>Included</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">New role</p>
+<ul class="nk-cps"><li>New role</li>
+<li>Start from</li>
+<li>No role</li>
+<li>Start with no permissions.</li>
+<li>Default roles</li>
+<li>Custom roles of Acme AB</li>
+<li>Planning, default role. 8 permissions.</li>
+<li>Custom role. 5 permissions.</li>
+<li>The new role copies its permissions once. It does not follow later changes to Planner.</li>
+<li>The new role starts with no permissions. Tick the ones it needs below.</li>
+<li>Role name</li>
+<li>Unique within Acme AB.</li>
+<li>Difference from Planner</li>
+<li>Night planner holds 7 permissions: Planner's 8, with 1 added and 2 removed.</li>
+<li>Added (1)</li>
+<li>Removed (2)</li>
+<li>Who holds the new role</li>
+<li>Who holds Night planner</li>
+<li>Nobody yet. After you create the role, add it to people on their Access tab.</li>
+<li>Reason (optional)</li>
+<li>Why you create this role</li>
+<li>Shown in the role's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Create role</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Add role</p>
+<ul class="nk-cps"><li>Add role for Anna Berg</li>
+<li>Role and place</li>
+<li>Where</li>
+<li>Plant A only</li>
+<li>Applies at Plant A.</li>
+<li>Acme AB, all plants</li>
+<li>Applies to every plant of Acme AB, also plants created later.</li>
+<li>Role</li>
+<li>Choose a role</li>
+<li>Roles that need permissions you do not hold at Plant A stay in the list, with what they need.</li>
+<li>Checked when you add it: you need every permission of the role at Acme AB.</li>
+<li>You can assign these at Plant A</li>
+<li>Needs permissions you do not hold at Plant A</li>
+<li>Production start, default role. Anna Berg already holds it at Plant A. Needs 1 permission you do not hold at Plant A: Report production at a station (productionStart.report:create).</li>
+<li>Checked when you add them</li>
+<li>You hold it at Plant A</li>
+<li>You do not hold it at Plant A</li>
+<li>Why Anna Berg gets this role</li>
+<li>Shown in the user's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Add role</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Refusal: the summary link and the message under Role are the same full sentence</p>
+<ul class="nk-cps"><li>Fix 1 field to add the role</li>
+<li>You cannot assign Viewer at Acme AB. It includes 2 permissions you do not hold at Acme AB: {list}. Assigning at Acme AB also needs Assign and remove roles (core.roleAssignment:manage) there. Ask a company admin of Acme AB to assign it.</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Access tab</p>
+<ul class="nk-cps"><li>General</li>
+<li>Access</li>
+<li>History</li>
+<li>Roles</li>
+<li>Sara Nyberg's roles that apply at Plant A.</li>
+<li>Role</li>
+<li>Where</li>
+<li>Assigned</li>
+<li>by Karin Dahl</li>
+<li>Remove</li>
+<li>A company admin of Acme AB can remove it.</li>
+<li>What Sara Nyberg can do at Plant A</li>
+<li>Every permission of the roles above, by module. A change applies from Sara Nyberg's next action.</li>
+<li>Permission</li>
+<li>Granted by</li>
+<li>Shift lead at Plant A</li>
+<li>Viewer at Acme AB</li>
+<li>Show every permission</li>
+<li>Every installed permission, through Company admin at Acme AB</li>
+<li>Plant D is not open yet. These permissions apply once its onboarding is complete.</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Access tab states</p>
+<ul class="nk-cps"><li>Lena Ek holds no role at Plant A or at Acme AB.</li>
+<li>Add a role so that Lena Ek can work at Plant A.</li>
+<li>Lena Ek can do nothing at Plant A yet.</li>
+<li>Permissions come from roles. Add a role above.</li>
+<li>Could not load Sara Nyberg's roles</li>
+<li>Check the connection, then try again. If it fails again, give your plant admin the correlation id.</li>
+<li>Correlation id</li>
+<li>Copy correlation id</li>
+<li>Try again</li>
+<li>Shift lead at Plant A added for Alex Lund. It applies from Alex Lund's next action.</li>
+<li>Shift lead at Plant A removed from Sara Nyberg. It applies from Sara Nyberg's next action.</li>
+<li>Role needs the permission to read roles (core.role:read) at Plant A.</li>
+<li>Remove role at Plant A</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Remove dialog</p>
+<ul class="nk-cps"><li>Remove Shift lead at Plant A from Sara Nyberg?</li>
+<li>From the next action, Sara Nyberg loses these permissions at Plant A:</li>
+<li>Viewer at Acme AB still lets Sara Nyberg read production orders and the planning board, and read job orders.</li>
+<li>Reason (optional)</li>
+<li>Why you remove this role</li>
+<li>Shown in the user's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Cancel</li>
+<li>Remove role</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Holders tab</p>
+<ul class="nk-cps"><li>Permissions</li>
+<li>Holders</li>
+<li>History</li>
+<li>At Acme AB, all plants</li>
+<li>A role assigned here applies to every plant of Acme AB, also plants created later.</li>
+<li>Nobody holds Shift lead at Acme AB.</li>
+<li>At Plant A</li>
+<li>2 people hold Shift lead at Plant A.</li>
+<li>Person</li>
+<li>Username</li>
+<li>Assigned</li>
+<li>Holders at the other plants of Acme AB are listed in the Administration of each plant.</li>
+<li>To add or remove a role, open the person and use the Access tab.</li>
+<li>A role assigned here applies at Plant A only.</li>
+<li>Nobody holds Planning admin at Plant A.</li>
+<li>New role from Planning admin</li>
+<li>Edit role</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Users list (US1 to US4; loading, empty, error and forbidden as the canonical list, with users as the noun)</p>
+<ul class="nk-cps"><li>Users</li>
+<li>New user</li>
+<li>Search users</li>
+<li>Role</li>
+<li>Status</li>
+<li>Columns</li>
+<li>Name</li>
+<li>Username</li>
+<li>Roles at Acme AB and Plant A</li>
+<li>Planner at Plant A</li>
+<li>Viewer at Acme AB</li>
+<li>Active</li>
+<li>Blocked</li>
+<li>Actions for Anna Berg</li>
+<li>Reset password</li>
+<li>Block user</li>
+<li>Unblock user</li>
+<li>A company admin of Acme AB can block this user or reset the password.</li>
+<li>Rows 1 to 10 of 10</li>
+<li>Previous</li>
+<li>Next</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">New user (US5 to US8)</p>
+<ul class="nk-cps"><li>New user</li>
+<li>Person</li>
+<li>Name</li>
+<li>Username</li>
+<li>Used to sign in. It cannot be changed later, and no one else can ever use it.</li>
+<li>Email (optional)</li>
+<li>Leave it empty for a person without email, such as an operator who signs in at a station.</li>
+<li>Without an email, Tove Lindqvist gets a placeholder address that receives no mail, and NorthMES shows No email on the user.</li>
+<li>Password</li>
+<li>Temporary, shown to you once after you create the user</li>
+<li>Tove Lindqvist must choose a new password at the first sign-in.</li>
+<li>Reason for change</li>
+<li>Reason (optional)</li>
+<li>Why you create this user</li>
+<li>Shown in the user's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Create user</li>
+<li>Cancel</li>
+<li>Fix 2 fields to create the user</li>
+<li>Enter a username.</li>
+<li>Enter an email such as name@acme.example, or leave the field empty.</li>
+<li>No email</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Username refused (US9, US10)</p>
+<ul class="nk-cps"><li>Fix 1 field to create the user</li>
+<li>The username t.lindqvist is taken or was used before. Choose another username.</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Block user (US11, US12)</p>
+<ul class="nk-cps"><li>Block Päivi Kärkkäinen-Leppänen?</li>
+<li>Päivi Kärkkäinen-Leppänen is signed out within a minute and cannot sign in until unblocked.</li>
+<li>The roles stay, so unblocking gives the same access back.</li>
+<li>Reason (optional)</li>
+<li>Shown in the user's history. Do not enter personal data. Up to 500 characters.</li>
+<li>Cancel</li>
+<li>Block user</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Unblock user (US13, US14)</p>
+<ul class="nk-cps"><li>Unblock Mikael Strand?</li>
+<li>Mikael Strand can sign in again with the current password.</li>
+<li>The roles stayed while the user was blocked: Viewer at Plant A.</li>
+<li>Unblock user</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Reset password (US15, US16)</p>
+<ul class="nk-cps"><li>Reset the password of Alex Lund?</li>
+<li>NorthMES replaces the password with a temporary one and shows it to you once.</li>
+<li>Alex Lund must choose a new password at the next sign-in, before anything else.</li>
+<li>Why you reset the password</li>
+<li>Reset password</li>
+</ul>
+</div>
+<div class="nk-cpg"><p class="nk-cph">Temporary password (US17, US18)</p>
+<ul class="nk-cps"><li>Temporary password for Alex Lund</li>
+<li>Give it to Alex Lund, who must choose a new password at the next sign-in.</li>
+<li>The old password no longer works.</li>
+<li>Temporary password</li>
+<li>Copy password</li>
+<li>Shown only now. After you close this dialog, it cannot be shown again.</li>
+<li>Done</li>
+</ul>
+</div>
+</div>
+</section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

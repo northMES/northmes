@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 option B, module bar</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="scr vert {{ scrCls }}" data-screen-label="Option B, module bar">
+        <sc-if value="{{ skip }}"><a class="btn v-default is-focus skipl" href="#main" style="left:723px">Skip to main content</a></sc-if>
+        <sc-if value="{{ wide }}">
+          <header class="col">
+            <div class="tb card">
+              <span class="mark"><span class="mark-sq">N</span>NorthMES</span>
+              <button class="plantc {{ plantCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ menu }}" aria-label="Plant: Plant A"><span class="ic" data-icon="Factory"></span>Plant A<span class="ic" data-icon="ChevronsUpDown"></span></button>
+              <span class="vsep"></span>
+              <nav class="mods" aria-label="Modules">
+                <sc-for list="{{ mods }}" as="m">
+                  <sc-if value="{{ m.sep }}"><span class="mods-sep"></span><span class="mods-k">Plugins</span></sc-if>
+                  <sc-if value="{{ m.link }}"><a class="mod {{ m.cls }}" href="#"><sc-if value="{{ m.alert }}"><span class="ic" data-icon="CircleAlert"></span></sc-if>{{ m.label }}</a></sc-if>
+                </sc-for>
+              </nav>
+              <span class="grow"></span>
+              <sc-if value="{{ crumbMain }}"><span class="slotg"><button class="btn v-outline" type="button">Run autoplan</button><button class="btn v-default" type="button">Save</button></span><span class="vsep"></span></sc-if>
+              <button class="btn v-ghost {{ asstCls }}" type="button" aria-expanded="{{ trouble }}"><span class="ic" data-icon="Sparkles"></span>Assistant</button>
+              <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu"><span class="ic" data-icon="CircleHelp"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Account, Alex Lund" aria-haspopup="menu"><span class="avatar">AL</span></button>
+            </div>
+            <sc-if value="{{ twoRows }}"><div class="tb2">
+              <sc-if value="{{ trouble }}"><button class="btn icon v-ghost" type="button" aria-label="Show the Planning menu" aria-expanded="false"><span class="ic" data-icon="PanelLeftOpen"></span></button></sc-if>
+              <nav class="crumbs" aria-label="Breadcrumb"><a class="cr" href="#">Planning</a><span class="ic" data-icon="ChevronRight"></span><span class="here" aria-current="page">Planning board</span></nav>
+              <span class="grow"></span>
+              <span class="slotg {{ slotCls }}"><sc-if value="{{ marks }}"><span class="pin">1</span></sc-if><button class="btn v-outline" type="button">Run autoplan</button><button class="btn v-default" type="button">Save</button></span>
+            </div></sc-if>
+          </header>
+          <sc-if value="{{ trouble }}"><div class="strip warn"><span class="ic" data-icon="LoaderCircle"></span><span><span class="b6">Live updates paused, reconnecting.</span> Board moves are off until the connection is back.</span></div></sc-if>
+          <div class="row fill">
+            <sc-if value="{{ normal }}">
+              <div class="sb msb">
+                <nav class="sb-body" aria-label="Planning">
+                  <div class="grp">
+                    <div class="grp-h">Planning</div>
+                    <sc-for list="{{ planning }}" as="it">
+                      <a class="ni {{ it.cls }}" href="#">{{ it.label }}</a>
+                      <sc-if value="{{ it.hasKids }}"><div class="sub"><sc-for list="{{ it.kids }}" as="k"><a class="ni" href="#">{{ k }}</a></sc-for></div></sc-if>
+                    </sc-for>
+                  </div>
+                </nav>
+                <div class="sb-foot"><button class="btn v-ghost" type="button" aria-expanded="true"><span class="ic" data-icon="PanelLeftClose"></span>Hide the Planning menu</button></div>
+              </div>
+            </sc-if>
+            <main class="main" id="main">
+              <div class="ph">
+                <sc-if value="{{ crumbMain }}"><nav class="crumbs" aria-label="Breadcrumb"><a class="cr" href="#">Planning</a><span class="ic" data-icon="ChevronRight"></span><span class="here" aria-current="page">Planning board</span></nav></sc-if>
+                <h1 class="h1" tabindex="-1">Planning board</h1>
+                <span class="meta {{ slotCls }}"><sc-if value="{{ marks }}"><span class="pin">2</span></sc-if>Pyramid data as of <span class="num">06:40</span></span>
+              </div>
+              <div class="toolbar">
+                <div class="seg" role="group" aria-label="View"><button class="s on" type="button" aria-pressed="true">Board</button><button class="s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num">2026-10-05</span>
+                <span class="grow"></span>
+                <sc-if value="{{ trouble }}"><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="Pause"></span>Live updates paused</button></sc-if>
+                <sc-if value="{{ normal }}"><button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button></sc-if>
+              </div>
+              <div class="bd">
+                <div class="bd-grid phbox"><span class="phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="bd-side {{ slotCls }}" aria-labelledby="b-lo"><sc-if value="{{ marks }}"><span class="pin">3</span></sc-if>
+                  <div class="wf-h"><h2 class="wf-t" id="b-lo">Large orders</h2><span class="meta">example-widget</span></div>
+                  <div class="wf-b phbox"><span class="phl">Contribution example-widget.large-orders</span></div>
+                </section>
+              </div>
+            </main>
+            <sc-if value="{{ trouble }}">
+              <aside class="aside" aria-labelledby="b-as">
+                <div class="as-h"><h2 class="as-t" id="b-as">Assistant</h2><span class="grow"></span><button class="btn icon v-ghost" type="button" aria-label="Close assistant"><span class="ic" data-icon="X"></span></button></div>
+                <p class="as-n">Written by an AI assistant. Check before you commit.</p>
+                <div class="as-b phbox"><span class="phl">Chat panel, designed under E14-S03 (#136)</span></div>
+                <div class="as-f"><span class="inp"><span class="ph">Message the assistant</span></span><button class="btn icon v-default" type="button" aria-label="Send"><span class="ic" data-icon="Send"></span></button></div>
+              </aside>
+            </sc-if>
+          </div>
+          <sc-if value="{{ menu }}">
+            <div class="pop abs" style="left:134px;top:50px" role="menu" aria-label="Plant">
+              <div class="mh">Switch plant</div>
+              <sc-for list="{{ plants }}" as="p">
+                <a class="mi pm {{ p.cls }}" href="#" role="menuitem"><span class="ic ck {{ p.ck }}" data-icon="Check"></span><span class="pm-t"><span>{{ p.name }}</span><span class="pm-u">{{ p.url }}</span></span></a>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+        <sc-if value="{{ narrow }}">
+          <header class="col">
+            <div class="tb card nar">
+              <button class="btn icon v-ghost" type="button" aria-label="Open navigation" aria-expanded="{{ sheet }}"><span class="ic" data-icon="Menu"></span></button>
+              <button class="plantc" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Plant: Plant A">Plant A<span class="ic" data-icon="ChevronsUpDown"></span></button>
+              <span class="grow"></span>
+              <button class="btn icon v-ghost" type="button" aria-label="Assistant"><span class="ic" data-icon="Sparkles"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu"><span class="ic" data-icon="CircleHelp"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Account, Alex Lund" aria-haspopup="menu"><span class="avatar">AL</span></button>
+            </div>
+            <div class="tb2 nar">
+              <nav class="crumbs fill" aria-label="Breadcrumb"><a class="cr" href="#"><span class="ic" data-icon="ChevronLeft"></span>Planning</a></nav>
+              <button class="btn icon v-ghost" type="button" aria-label="Page actions" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+            </div>
+          </header>
+          <main class="main nar">
+            <div class="ph"><h1 class="h1" tabindex="-1">Planning board</h1><span class="meta">Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="toolbar">
+              <div class="seg" role="group" aria-label="View"><button class="s on" type="button" aria-pressed="true">Board</button><button class="s" type="button" aria-pressed="false">Job table</button></div>
+              <span class="grow"></span>
+              <button class="btn icon v-outline" type="button" aria-label="Board options" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+            </div>
+            <div class="bd stack">
+              <div class="bd-grid phbox"><span class="phl">Board grid (D3). It scrolls in both directions inside this box; the page never scrolls sideways.</span></div>
+              <section class="bd-side flat" aria-labelledby="b-lo2"><div class="wf-h only"><h2 class="wf-t" id="b-lo2">Large orders</h2><span class="meta">example-widget, stacked below the board</span></div></section>
+            </div>
+          </main>
+        </sc-if>
+        <sc-if value="{{ sheet }}">
+          <div class="ov"></div>
+          <div class="nsheet" role="dialog" aria-modal="true" aria-label="Navigation">
+            <div class="sb-head">
+              <span class="mark"><span class="mark-sq">N</span>NorthMES</span>
+              <button class="btn icon v-ghost" type="button" aria-label="Close navigation"><span class="ic" data-icon="X"></span></button>
+            </div>
+            <nav class="sb-body" aria-label="Modules">
+              <sc-for list="{{ acc }}" as="a">
+                <sc-if value="{{ a.heading }}"><div class="sec-h">{{ a.heading }}</div></sc-if>
+                <div class="grp">
+                  <button class="acc" type="button" aria-expanded="{{ a.open }}"><span class="ic" data-icon="{{ a.icon }}"></span>{{ a.label }}</button>
+                  <sc-if value="{{ a.open }}">
+                    <div class="sub">
+                      <sc-for list="{{ planning }}" as="it">
+                        <a class="ni {{ it.cls }}" href="#">{{ it.label }}</a>
+                        <sc-if value="{{ it.hasKids }}"><div class="sub"><sc-for list="{{ it.kids }}" as="k"><a class="ni" href="#">{{ k }}</a></sc-for></div></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </nav>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"state":{"editor":"enum","options":["normal","trouble","menu","crumbmain"],"default":"normal","tsType":"string"},"view":{"editor":"enum","options":["page","sheet"],"default":"page","tsType":"string"},"marks":{"editor":"enum","options":["on","off"],"default":"off","tsType":"string"},"focus":{"editor":"enum","options":["none","skip","nav"],"default":"none","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const narrow = this.props.size === "narrow";
+          const trouble = !narrow && this.props.state === "trouble";
+          const menu = !narrow && this.props.state === "menu";
+          const sheet = narrow && this.props.view === "sheet";
+          const marks = !narrow && this.props.marks === "on";
+          const skip = !narrow && this.props.focus === "skip";
+          const focusNav = trouble && this.props.focus === "nav";
+          const crumbMain = !narrow && this.props.state === "crumbmain";
+          // Module links in manifest order; plugins after a divider. A failed module keeps its link at its usual place (1.1.9).
+          const mods = [
+            { link: true, label: "Core", cls: focusNav ? "is-focus" : "" },
+            { link: true, label: "Planning", cls: "cur" },
+            trouble ? { link: true, label: "Pyramid connector (unavailable)", cls: "unav", alert: true } : { link: true, label: "Pyramid connector", cls: "" },
+            { sep: true },
+            { link: true, label: "Acme tooling", cls: "" }
+          ];
+          // Planner permission set: Planning Settings is an admin entry (P07 Permissions).
+          const planning = [
+            { label: "Board", cls: "cur", hasKids: true, kids: ["Job table"] },
+            { label: "Production orders", cls: "", hasKids: false, kids: [] },
+            { label: "Proposals", cls: "", hasKids: false, kids: [] }
+          ];
+          const acc = [
+            { heading: "", label: "Core", icon: "ChevronRight", open: false },
+            { heading: "", label: "Planning", icon: "ChevronDown", open: true },
+            { heading: "", label: "Pyramid connector", icon: "ChevronRight", open: false },
+            { heading: "Plugins", label: "Acme tooling", icon: "ChevronRight", open: false }
+          ];
+          const plants = [
+            { name: "Plant A", url: "/plant-a/planning/board", ck: "on", cls: "" },
+            { name: "Plant B", url: "/plant-b/planning/board", ck: "", cls: "kfocus" },
+            { name: "Plant C", url: "/plant-c/planning/board", ck: "", cls: "" }
+          ];
+          return {
+            scrCls: narrow ? "s320" : "s1440",
+            wide: !narrow,
+            narrow: narrow,
+            normal: !trouble,
+            trouble: trouble,
+            sheet: sheet,
+            marks: marks,
+            skip: skip,
+            crumbMain: crumbMain,
+            twoRows: !crumbMain,
+            slotCls: marks ? "slot" : "",
+            asstCls: trouble ? "on" : "",
+            plantCls: menu ? "open" : "",
+            menu: menu,
+            mods: mods,
+            planning: planning,
+            acc: acc,
+            plants: plants
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

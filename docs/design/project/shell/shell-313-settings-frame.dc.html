@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings frame</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+      </helmet>
+      <div class="sh-root {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ screenLabel }}">
+        <sc-if value="{{ showTitle }}">
+          <div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ docTitle }}</span></div>
+        </sc-if>
+        <div class="sh-scr {{ scrCls }}" id="{{ ids.scr }}" style="{{ scrStyle }}">
+          <a class="btn v-default sh-skip {{ skipCls }}" href="#{{ skipHref }}">{{ t.skip }}</a>
+          <sc-if value="{{ showSidebar }}">
+            <div class="sh-sb {{ sbCls }}" id="{{ ids.sidebar }}" role="{{ sbRole }}" aria-modal="{{ sbModal }}" aria-label="{{ sbLabel }}">
+              <nav class="sh-sb-nav {{ lmCls }}" aria-label="{{ t.navName }}">
+                <sc-if value="{{ lm }}"><span class="sh-lmbox"></span><span class="sh-lm" style="{{ lmNavStyle }}">nav: {{ t.navName }}</span></sc-if>
+                <div class="sh-sb-head">
+                  <sc-if value="{{ switcher }}">
+                    <button class="sh-sw {{ swCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ swOpen }}" aria-label="{{ swLabel }}">
+                      <span class="sh-cm" aria-hidden="true"><sc-if value="{{ markText }}">{{ companyInitial }}</sc-if><sc-if value="{{ markIcon }}"><span class="ic" data-icon="Building2"></span></sc-if></span>
+                      <span class="sh-sw-t"><span class="sh-sw-a">{{ headA }}</span><span class="sh-sw-b">{{ headB }}</span></span>
+                      <span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span>
+                    </button>
+                  </sc-if>
+                  <sc-if value="{{ noSwitcher }}">
+                    <div class="sh-sw static">
+                      <span class="sh-cm" aria-hidden="true"><sc-if value="{{ markText }}">{{ companyInitial }}</sc-if><sc-if value="{{ markIcon }}"><span class="ic" data-icon="Building2"></span></sc-if></span>
+                      <span class="sh-sw-t"><span class="sh-sw-a">{{ headA }}</span><span class="sh-sw-b">{{ headB }}</span></span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ sheetOpen }}">
+                    <button class="btn icon v-ghost {{ f.close }}" type="button" aria-label="{{ t.closeNav }}"><span class="ic" data-icon="X"></span></button>
+                  </sc-if>
+                </div>
+                <div class="sh-sb-body" id="{{ ids.sbBody }}">
+                  <sc-for list="{{ sections }}" as="s">
+                    <div class="sh-sec {{ s.cls }}">
+                      <sc-for list="{{ s.groups }}" as="g">
+                        <div class="sh-grp" lang="{{ g.lang }}">
+                          <div class="sh-grp-h" id="{{ g.hid }}"><span>{{ g.label }}</span><sc-if value="{{ g.unav }}"><span class="sh-unav">{{ t.unavailable }}</span></sc-if><sc-if value="{{ g.loading }}"><span class="sh-unav">{{ t.loadingTag }}</span></sc-if></div>
+                          <sc-if value="{{ g.hasEntries }}">
+                            <ul class="sh-list" role="list" aria-labelledby="{{ g.hid }}">
+                              <sc-for list="{{ g.entries }}" as="e">
+                                <li>
+                                  <div class="sh-ni-row">
+                                    <a class="sh-ni {{ e.cls }}" href="#" aria-current="{{ e.current }}"><span class="ic" data-icon="{{ e.icon }}"></span><span class="sh-ni-l">{{ e.label }}</span></a>
+                                    <sc-if value="{{ e.hasKids }}"><button class="sh-disc {{ e.discCls }}" type="button" aria-label="{{ e.discLabel }}" aria-expanded="{{ e.open }}"><span class="ic" data-icon="ChevronRight"></span></button></sc-if>
+                                  </div>
+                                  <sc-if value="{{ e.showKids }}">
+                                    <ul class="sh-sub" role="list">
+                                      <sc-for list="{{ e.kids }}" as="k">
+                                        <li><a class="sh-ni {{ k.cls }}" href="#" aria-current="{{ k.current }}"><span class="ic" data-icon="{{ k.icon }}"></span><span class="sh-ni-l">{{ k.label }}</span></a></li>
+                                      </sc-for>
+                                    </ul>
+                                  </sc-if>
+                                </li>
+                              </sc-for>
+                            </ul>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="sh-sb-foot">
+                  <button class="sh-sw sh-nu {{ userCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ userOpen }}" aria-label="{{ accountLabel }}">
+                    <span class="sh-av" aria-hidden="true">{{ initials }}</span>
+                    <span class="sh-sw-t"><span class="sh-sw-a">{{ user }}</span><span class="sh-sw-b">{{ username }}</span></span>
+                    <span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span>
+                  </button>
+                  <sc-if value="{{ sheetOpen }}">
+                    <sc-if value="{{ assistantOn }}"><button class="btn icon v-ghost" type="button" aria-label="{{ t.assistant }}" aria-expanded="false"><span class="ic" data-icon="Sparkles"></span></button></sc-if>
+                    <sc-if value="{{ settingsOn }}"><a class="btn icon v-ghost {{ settingsCls }}" href="#" aria-label="{{ t.settings }}" aria-current="{{ settingsCur }}"><span class="ic" data-icon="Settings"></span></a></sc-if>
+                    <button class="btn icon v-ghost" type="button" aria-label="{{ t.help }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <sc-if value="{{ bellShown }}">
+                      <button class="btn icon v-ghost sh-bell {{ bellCls }}" type="button" aria-label="{{ bellLabel }}" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="Bell"></span><sc-if value="{{ bellBadge }}"><span class="sh-badge" aria-hidden="true">{{ bellCountText }}</span></sc-if></button>
+                    </sc-if>
+                    <sc-if value="{{ bellFailed }}">
+                      <button class="btn icon v-ghost sh-tfail {{ bellCls }}" type="button" aria-label="{{ t.notificationsUnavailable }}"><span class="ic" data-icon="CircleAlert"></span></button>
+                    </sc-if>
+                  </sc-if>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <sc-if value="{{ rail }}">
+            <div class="sh-rail" id="{{ ids.sidebar }}">
+              <nav class="sh-rail-in {{ lmCls }}" aria-label="{{ t.navName }}">
+                <sc-if value="{{ lm }}"><span class="sh-lmbox"></span></sc-if>
+                <div class="sh-rail-top">
+                  <sc-if value="{{ switcher }}">
+                    <button class="sh-rmark {{ swCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ swOpen }}" aria-label="{{ swLabel }}"><span class="sh-cm" aria-hidden="true"><sc-if value="{{ markText }}">{{ companyInitial }}</sc-if><sc-if value="{{ markIcon }}"><span class="ic" data-icon="Building2"></span></sc-if></span></button>
+                  </sc-if>
+                  <sc-if value="{{ noSwitcher }}">
+                    <span class="sh-rmark static"><span class="sh-cm" aria-hidden="true"><sc-if value="{{ markText }}">{{ companyInitial }}</sc-if><sc-if value="{{ markIcon }}"><span class="ic" data-icon="Building2"></span></sc-if></span><span class="sh-vh">{{ staticName }}</span></span>
+                  </sc-if>
+                </div>
+                <div class="sh-rail-nav" id="{{ ids.railNav }}">
+                  <sc-for list="{{ railGroups }}" as="rg">
+                    <sc-if value="{{ rg.sep }}"><span class="sh-rsep" aria-hidden="true"></span></sc-if>
+                    <ul class="sh-rlist" role="list" aria-label="{{ rg.label }}" lang="{{ rg.lang }}">
+                      <sc-for list="{{ rg.items }}" as="r">
+                        <li>
+                          <sc-if value="{{ r.link }}"><a class="sh-rb {{ r.cls }}" href="#" data-rail="{{ r.id }}" aria-label="{{ r.name }}" aria-current="{{ r.current }}" lang="{{ r.lang }}"><span class="ic" data-icon="{{ r.icon }}"></span></a></sc-if>
+                          <sc-if value="{{ r.btn }}"><button class="sh-rb {{ r.cls }}" type="button" data-rail="{{ r.id }}" aria-label="{{ r.name }}" aria-current="{{ r.current }}" aria-haspopup="menu" aria-expanded="{{ r.open }}" lang="{{ r.lang }}"><span class="ic" data-icon="{{ r.icon }}"></span></button></sc-if>
+                        </li>
+                      </sc-for>
+                    </ul>
+                  </sc-for>
+                </div>
+                <div class="sh-rail-foot">
+                  <button class="sh-rmark {{ userCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ userOpen }}" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span></button>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <div class="sh-col">
+            <header class="sh-tb {{ tbCls }}" id="{{ ids.tb }}">
+              <sc-if value="{{ lm }}"><span class="sh-lmbox"></span></sc-if>
+              <sc-if value="{{ trigWide }}">
+                <button class="btn icon v-ghost sh-trig {{ f.toggle }}" type="button" aria-label="{{ toggleLabel }}" aria-expanded="{{ expanded }}" aria-controls="{{ ids.sidebar }}"><span class="ic" data-icon="PanelLeft"></span></button>
+                <span class="sh-tsep" aria-hidden="true"></span>
+              </sc-if>
+              <sc-if value="{{ trigNarrow }}">
+                <button class="btn icon v-ghost sh-trig {{ f.toggle }}" type="button" aria-label="{{ t.openNav }}" aria-haspopup="dialog" aria-expanded="{{ sheetOpen }}"><span class="ic" data-icon="Menu"></span></button>
+              </sc-if>
+              <sc-if value="{{ homeMark }}"><span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span></sc-if>
+              <sc-if value="{{ showCrumbs }}">
+              <nav class="sh-crumbs" aria-label="{{ t.crumbName }}">
+                <ol>
+                  <sc-for list="{{ crumbList }}" as="c">
+                    <li class="{{ c.liCls }}" lang="{{ c.lang }}">
+                      <sc-if value="{{ c.sep }}"><span class="ic sh-sep" data-icon="ChevronRight"></span></sc-if>
+                      <sc-if value="{{ c.ell }}"><button class="sh-ell {{ ellCls }}" type="button" aria-label="{{ t.fullPath }}" aria-haspopup="menu" aria-expanded="{{ pathOpen }}"><span class="ic" data-icon="Ellipsis"></span></button></sc-if>
+                      <sc-if value="{{ c.text }}"><span class="sh-cx">{{ c.label }}</span></sc-if>
+                      <sc-if value="{{ c.ctx }}"><a class="sh-cx sh-cxl {{ c.cls }}" href="#">{{ c.label }}</a></sc-if>
+                      <sc-if value="{{ c.link }}"><a class="sh-cr {{ c.cls }}" href="#"><sc-for list="{{ c.parts }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></a></sc-if>
+                      <sc-if value="{{ c.here }}"><span class="sh-here" aria-current="page"><sc-for list="{{ c.parts }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></span></sc-if>
+                    </li>
+                  </sc-for>
+                </ol>
+              </nav>
+              </sc-if>
+              <span class="sh-grow sh-lmw">
+                <sc-if value="{{ lm }}"><span class="sh-lm" style="left:8px;top:-9px">header</span><span class="sh-lm" style="left:84px;top:-9px">nav: {{ t.crumbName }}</span></sc-if>
+              </span>
+              <sc-if value="{{ chipTop }}"><span class="sh-chip warn"><span class="ic" data-icon="LoaderCircle"></span><span>{{ t.reconnecting }}</span></span></sc-if>
+              <sc-if value="{{ wide }}">
+                <div class="sh-actions {{ slotCls }}">
+                  <sc-if value="{{ slots }}"><span class="sh-pin">1</span></sc-if>
+                  <sc-if value="{{ inlineKids }}">{{ actionKids }}</sc-if>
+                  <sc-if value="{{ inlineList }}">
+                    <sc-for list="{{ actionList }}" as="a">
+                      <button class="btn {{ a.cls }}" type="button"><sc-if value="{{ a.hasIcon }}"><span class="ic" data-icon="{{ a.icon }}"></span></sc-if>{{ a.label }}</button>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ actionsCollapsed }}">
+                    <button class="btn icon v-ghost {{ actionsCls }}" type="button" aria-label="{{ t.pageActions }}" aria-haspopup="menu" aria-expanded="{{ actionsMenuWide }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                  </sc-if>
+                  <sc-if value="{{ actionsMenuWide }}">
+                    <div class="pop sh-menu r" role="menu" aria-label="{{ t.pageActions }}">
+                      <sc-if value="{{ useActionList }}">
+                        <sc-for list="{{ actionMenuItems }}" as="m">
+                          <div class="mi {{ m.cls }}" role="menuitem"><sc-if value="{{ m.hasIcon }}"><span class="ic" data-icon="{{ m.icon }}"></span></sc-if>{{ m.label }}</div>
+                        </sc-for>
+                      </sc-if>
+                      <sc-if value="{{ useActionKids }}">{{ actionKids }}</sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ showVsep }}"><span class="sh-vsep"></span></sc-if>
+                <sc-if value="{{ assistantShown }}">
+                  <span class="sh-tipw">
+                    <sc-if value="{{ assistantFull }}">
+                      <button class="btn v-ghost {{ assistantCls }}" type="button" aria-expanded="{{ docked }}" aria-controls="{{ asideControls }}" aria-disabled="{{ assistantDis }}" aria-describedby="{{ assistantDesc }}"><span class="ic" data-icon="Sparkles"></span>{{ t.assistant }}</button>
+                    </sc-if>
+                    <sc-if value="{{ assistantIcon }}">
+                      <button class="btn icon v-ghost {{ assistantCls }}" type="button" aria-label="{{ t.assistant }}" aria-expanded="{{ docked }}" aria-controls="{{ asideControls }}" aria-disabled="{{ assistantDis }}" aria-describedby="{{ assistantDesc }}"><span class="ic" data-icon="Sparkles"></span></button>
+                    </sc-if>
+                    <sc-if value="{{ assistantTipOn }}"><span class="sh-tip sh-tip-l" role="tooltip" id="{{ ids.asTip }}">{{ assistantTip }}</span></sc-if>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ settingsOn }}">
+                  <span class="sh-tipw">
+                    <a class="btn icon v-ghost {{ settingsCls }}" href="#" aria-label="{{ t.settings }}" aria-current="{{ settingsCur }}"><span class="ic" data-icon="Settings"></span></a>
+                    <sc-if value="{{ settingsTipOn }}"><span class="sh-tip sh-tip-b" role="tooltip">{{ t.settings }}</span></sc-if>
+                  </span>
+                </sc-if>
+                <button class="btn icon v-ghost {{ helpCls }}" type="button" aria-label="{{ t.help }}" aria-haspopup="menu" aria-expanded="{{ helpOpen }}"><span class="ic" data-icon="CircleHelp"></span></button>
+                <sc-if value="{{ bellShown }}">
+                  <button class="btn icon v-ghost sh-bell {{ bellCls }}" type="button" aria-label="{{ bellLabel }}" aria-haspopup="dialog" aria-expanded="{{ bellOpen }}" aria-controls="{{ bellControls }}"><span class="ic" data-icon="Bell"></span><sc-if value="{{ bellBadge }}"><span class="sh-badge" aria-hidden="true">{{ bellCountText }}</span></sc-if></button>
+                </sc-if>
+                <sc-if value="{{ bellFailed }}">
+                  <span class="sh-tipw">
+                    <button class="btn icon v-ghost sh-tfail {{ bellCls }}" type="button" aria-label="{{ t.notificationsUnavailable }}" aria-describedby="{{ failDesc }}"><span class="ic" data-icon="CircleAlert"></span></button>
+                    <sc-if value="{{ failTipOn }}"><span class="sh-tip sh-tip-b" role="tooltip" id="{{ ids.failTip }}">{{ t.slotRetry }}</span></sc-if>
+                  </span>
+                </sc-if>
+              </sc-if>
+              <sc-if value="{{ helpNarrowTop }}">
+                <button class="btn icon v-ghost {{ helpCls }}" type="button" aria-label="{{ t.help }}" aria-haspopup="menu" aria-expanded="{{ helpOpen }}"><span class="ic" data-icon="CircleHelp"></span></button>
+              </sc-if>
+              <sc-if value="{{ acctTop }}">
+                <button class="btn icon v-ghost set-acct {{ userCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ userOpen }}" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span></button>
+              </sc-if>
+              <sc-if value="{{ narrowActions }}">
+                <button class="btn icon v-ghost {{ actionsCls }}" type="button" aria-label="{{ t.pageActions }}" aria-haspopup="menu" aria-expanded="{{ actionsOpen }}"><span class="ic" data-icon="Ellipsis"></span></button>
+              </sc-if>
+            </header>
+            <sc-if value="{{ chipStrip }}">
+              <div class="sh-strip warning"><span class="ic" data-icon="LoaderCircle"></span><span class="sh-strip-t">{{ t.reconnecting }}</span></div>
+            </sc-if>
+            <sc-if value="{{ showBanner }}">
+              <div class="sh-strip {{ bannerKind }}">
+                <span class="ic" data-icon="{{ bannerIcon }}"></span>
+                <span class="sh-strip-t"><sc-for list="{{ bannerParts }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></span>
+                <sc-if value="{{ hasBannerAction }}"><a class="sh-strip-a" href="#">{{ bannerAction }}</a></sc-if>
+              </div>
+            </sc-if>
+            <div class="sh-body">
+              <main class="sh-main {{ mainCls }}" id="{{ ids.main }}" tabIndex="-1" aria-busy="{{ busy }}">
+                <sc-if value="{{ lm }}"><span class="sh-lmbox"></span><span class="sh-lm tr">main</span></sc-if>
+                <sc-if value="{{ showHeading }}">
+                  <div class="sh-ph" lang="{{ routeLang }}">
+                    <h1 class="sh-h1 {{ f.h1 }}" tabIndex="-1"><sc-for list="{{ h1Parts }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></h1>
+                    <sc-if value="{{ hasHeaderKids }}">
+                      <div class="sh-ph-slot {{ slotCls }}"><sc-if value="{{ slots }}"><span class="sh-pin">2</span></sc-if>{{ headerKids }}</div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <div class="sh-content {{ slotCls }}" lang="{{ routeLang }}">
+                  <sc-if value="{{ slots }}"><span class="sh-pin">3</span></sc-if>
+                  <sc-if value="{{ hasMainKids }}">{{ mainKids }}</sc-if>
+                  <sc-if value="{{ noMainKids }}"><div class="sh-phbox"><span class="sh-phl">{{ contentPh }}</span></div></sc-if>
+                </div>
+              </main>
+              <sc-if value="{{ dockedWide }}">
+                <aside class="sh-aside" id="{{ ids.aside }}" aria-labelledby="{{ ids.asideTitle }}">
+                  <sc-if value="{{ lm }}"><span class="sh-lmbox"></span><span class="sh-lm bl">aside: {{ t.assistant }}</span></sc-if>
+                  <div class="sh-as-h"><h2 class="sh-as-t" id="{{ ids.asideTitle }}">{{ t.assistant }}</h2><span class="sh-grow"></span><button class="btn icon v-ghost" type="button" aria-label="{{ t.closeAssistant }}"><span class="ic" data-icon="X"></span></button></div>
+                  <p class="sh-as-n">{{ t.aiNote }}</p>
+                  <div class="sh-as-b {{ slotCls }}">
+                    <sc-if value="{{ slots }}"><span class="sh-pin">4</span></sc-if>
+                    <sc-if value="{{ hasAsideKids }}">{{ asideKids }}</sc-if>
+                    <sc-if value="{{ noAsideKids }}"><div class="sh-phbox"><span class="sh-phl">Chat panel, designed under E14-S03 (#136)</span></div></sc-if>
+                  </div>
+                  <div class="sh-as-f"><span class="inp {{ msgCls }}"><span class="ph">{{ t.message }}</span></span><button class="btn icon v-default" type="button" aria-label="{{ t.send }}"><span class="ic" data-icon="Send"></span></button></div>
+                </aside>
+              </sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ overlay }}"><div class="sh-ov"></div></sc-if>
+          <sc-if value="{{ dockedNarrow }}">
+            <div class="sh-aside sh-modal" id="{{ ids.aside }}" role="dialog" aria-modal="true" aria-labelledby="{{ ids.asideTitle }}">
+              <div class="sh-as-h"><h2 class="sh-as-t" id="{{ ids.asideTitle }}">{{ t.assistant }}</h2><span class="sh-grow"></span><button class="btn icon v-ghost" type="button" aria-label="{{ t.closeAssistant }}"><span class="ic" data-icon="X"></span></button></div>
+              <p class="sh-as-n">{{ t.aiNote }}</p>
+              <div class="sh-as-b">
+                <sc-if value="{{ hasAsideKids }}">{{ asideKids }}</sc-if>
+                <sc-if value="{{ noAsideKids }}"><div class="sh-phbox"><span class="sh-phl">Chat panel, designed under E14-S03 (#136)</span></div></sc-if>
+              </div>
+              <div class="sh-as-f"><span class="inp {{ msgCls }}"><span class="ph">{{ t.message }}</span></span><button class="btn icon v-default" type="button" aria-label="{{ t.send }}"><span class="ic" data-icon="Send"></span></button></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ railTipOn }}">
+            <span class="sh-tip" role="tooltip" style="{{ railTipStyle }}" lang="{{ railTipLang }}">{{ railTipText }}</span>
+          </sc-if>
+          <sc-if value="{{ flyOpen }}">
+            <div class="pop sh-menu sh-fly" style="{{ flyStyle }}" role="menu" aria-label="{{ flyLabel }}" lang="{{ flyLang }}">
+              <div class="sh-mh" role="presentation">{{ flyHead }}</div>
+              <sc-for list="{{ flyItems }}" as="m">
+                <a class="mi {{ m.cls }}" href="#" role="menuitem" aria-current="{{ m.current }}"><span class="ic" data-icon="{{ m.icon }}"></span><span class="sh-trunc">{{ m.label }}</span><span class="ic end sh-ck {{ m.ck }}" data-icon="Check"></span></a>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ swOpen }}">
+            <div class="pop sh-menu sh-swm" style="{{ swMenuStyle }}" role="menu" aria-label="{{ t.switchPlant }}">
+              <sc-for list="{{ swGroups }}" as="g">
+                <sc-if value="{{ g.sep }}"><div class="msep" role="separator"></div></sc-if>
+                <div class="sh-mg" role="{{ g.role }}" aria-labelledby="{{ g.lby }}" lang="{{ g.lang }}">
+                  <sc-if value="{{ g.head }}"><div class="sh-mh" id="{{ g.hid }}" role="presentation">{{ g.label }}</div></sc-if>
+                  <sc-for list="{{ g.items }}" as="m">
+                    <a class="mi sh-pi {{ m.cls }}" href="#" role="menuitem" aria-current="{{ m.current }}"><span class="sh-pi-m"><span class="ic" data-icon="Factory"></span></span><span class="sh-pn"><span class="sh-trunc">{{ m.name }}</span><sc-if value="{{ m.onboarding }}"><span class="sh-vh">, </span><span class="badge sh-onboarding">{{ t.onboarding }}</span></sc-if></span><span class="ic end sh-ck {{ m.ck }}" data-icon="Check"></span></a>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <div class="msep" role="separator"></div>
+              <a class="mi sh-pi" href="#" role="menuitem"><span class="sh-pi-m"><span class="ic" data-icon="LayoutGrid"></span></span><span class="sh-trunc">{{ t.allPlants }}</span></a>
+            </div>
+          </sc-if>
+          <sc-if value="{{ pathOpen }}">
+            <div class="pop sh-menu" style="{{ pathMenuStyle }}" role="menu" aria-label="{{ t.fullPath }}">
+              <sc-if value="{{ pathHead }}"><div class="sh-mh" role="presentation">{{ company }}</div></sc-if>
+              <sc-for list="{{ pathItems }}" as="m">
+                <a class="mi {{ m.cls }}" href="#" role="menuitem" lang="{{ m.lang }}"><sc-for list="{{ m.parts }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></a>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ helpOpen }}">
+            <div class="pop sh-menu" style="{{ helpMenuStyle }}" role="menu" aria-label="{{ t.help }}">
+              <sc-for list="{{ helpGroups }}" as="hg">
+                <div role="group" aria-labelledby="{{ hg.hid }}" lang="{{ hg.lang }}">
+                  <div class="sh-mh" id="{{ hg.hid }}" role="presentation">{{ hg.label }}</div>
+                  <sc-for list="{{ hg.items }}" as="m">
+                    <a class="mi {{ m.cls }}" href="#" role="menuitem">{{ m.label }}</a>
+                  </sc-for>
+                </div>
+              </sc-for>
+              <div class="msep" role="separator"></div>
+              <a class="mi" href="#" role="menuitem">{{ t.allPages }}</a>
+              <a class="mi" href="#" role="menuitem">{{ t.accessibility }}</a>
+            </div>
+          </sc-if>
+          <sc-if value="{{ bellOpen }}">
+            <div class="pop sh-np {{ panelCls }}" id="{{ ids.bell }}" style="{{ bellPanelStyle }}" role="dialog" aria-labelledby="{{ ids.bellT }}" aria-describedby="{{ ids.bellM }}" tabIndex="-1">
+              <div class="sh-np-h"><h2 class="sh-np-t" id="{{ ids.bellT }}">{{ t.notifications }}</h2></div>
+              <div class="sh-np-e"><span class="sh-np-ic"><span class="ic" data-icon="Bell"></span></span><p class="sh-np-m" id="{{ ids.bellM }}">{{ t.noNotifications }}</p></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ userOpen }}">
+            <div class="pop sh-menu sh-um" style="{{ userMenuStyle }}" role="menu" aria-label="{{ accountLabel }}">
+              <div class="sh-who" role="presentation"><span class="sh-av" aria-hidden="true">{{ initials }}</span><span class="sh-sw-t"><span class="sh-sw-a">{{ user }}</span><span class="sh-sw-b">{{ username }}</span></span></div>
+              <div class="msep" role="separator"></div>
+              <a class="mi kfocus" href="#" role="menuitem"><span class="ic" data-icon="User"></span>{{ t.profile }}</a>
+              <div class="msep" role="separator"></div>
+              <div role="group" aria-labelledby="{{ ids.themeHead }}">
+                <div class="sh-mh" id="{{ ids.themeHead }}" role="presentation">{{ t.theme }}</div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isLight }}"><span class="ic" data-icon="Sun"></span>{{ t.light }}<span class="ic end sh-ck {{ lightCk }}" data-icon="Check"></span></div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isDark }}"><span class="ic" data-icon="Moon"></span>{{ t.dark }}<span class="ic end sh-ck {{ darkCk }}" data-icon="Check"></span></div>
+              </div>
+              <div class="msep" role="separator"></div>
+              <a class="mi" href="#" role="menuitem"><span class="ic" data-icon="SlidersHorizontal"></span>{{ t.presentation }}</a>
+              <div class="msep" role="separator"></div>
+              <div class="mi" role="menuitem"><span class="ic" data-icon="LogOut"></span>{{ t.signOut }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ actionsOpen }}">
+            <div class="pop sh-menu" style="{{ actionsMenuStyle }}" role="menu" aria-label="{{ t.pageActions }}">
+              <sc-if value="{{ useActionList }}">
+                <sc-for list="{{ actionMenuItems }}" as="m">
+                  <div class="mi {{ m.cls }}" role="menuitem"><sc-if value="{{ m.hasIcon }}"><span class="ic" data-icon="{{ m.icon }}"></span></sc-if>{{ m.label }}</div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ useActionKids }}">{{ actionKids }}</sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"width":{"editor":"enum","options":["1280","1440","1920","320"],"default":"1440","tsType":"string"},"area":{"editor":"enum","options":["work","plant","company","home"],"default":"work","tsType":"string"},"settingsButton":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"settingsCurrent":{"editor":"enum","options":["true","page"],"default":"true","tsType":"string"},"skipTo":{"editor":"text","default":"","tsType":"string"},"sidebar":{"editor":"enum","options":["auto","expanded","rail","sheet"],"default":"auto","tsType":"string"},"role":{"editor":"enum","options":["planner","admin","company-admin"],"default":"planner","tsType":"string"},"access":{"editor":"enum","options":["one-company","companies","one-plant"],"default":"one-company","tsType":"string"},"companies":{"editor":"text","default":"","tsType":"string | Array<{ name: string, plants: string[] | string }>"},"company":{"editor":"text","default":"","tsType":"string"},"plant":{"editor":"text","default":"","tsType":"string"},"plants":{"editor":"text","default":"","tsType":"string | string[]"},"onboarding":{"editor":"text","default":"","tsType":"string | string[]"},"user":{"editor":"text","default":"","tsType":"string"},"username":{"editor":"text","default":"","tsType":"string"},"nav":{"editor":"text","default":"","tsType":"string"},"title":{"editor":"text","default":"","tsType":"string"},"entity":{"editor":"text","default":"","tsType":"string"},"crumbs":{"editor":"text","default":"","tsType":"string | Array<string | { label: string }>"},"actions":{"editor":"text","default":"","tsType":"string | Array<{ label: string, variant?: string, icon?: string }>"},"status":{"editor":"enum","options":["none","reconnecting","banner","both"],"default":"none","tsType":"string"},"bannerKind":{"editor":"enum","options":["info","warning","error"],"default":"info","tsType":"string"},"banner":{"editor":"text","default":"","tsType":"string"},"bannerAction":{"editor":"text","default":"","tsType":"string"},"assistant":{"editor":"enum","options":["closed","docked","sheet","off","disabled"],"default":"closed","tsType":"string"},"assistantTip":{"editor":"text","default":"","tsType":"string"},"bell":{"editor":"enum","options":["none","unread","open","off","failed"],"default":"none","tsType":"string"},"bellCount":{"editor":"int","default":3,"tsType":"number"},"menu":{"editor":"enum","options":["none","plant","help","user","actions","path"],"default":"none","tsType":"string"},"flyout":{"editor":"text","default":"","tsType":"string"},"tip":{"editor":"text","default":"","tsType":"string"},"focus":{"editor":"enum","options":["none","skip","toggle","nav","plant","crumb","path","actions","assistant","settings","help","bell","panel","user","h1","main","message"],"default":"none","tsType":"string"},"pageLang":{"editor":"text","default":"","tsType":"string"},"unavailable":{"editor":"text","default":"","tsType":"string"},"loading":{"editor":"text","default":"","tsType":"string"},"open":{"editor":"text","default":"planning.board","tsType":"string"},"navScroll":{"editor":"enum","options":["current","top","end"],"default":"current","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"marks":{"editor":"enum","options":["off","slots","landmarks"],"default":"off","tsType":"string"},"showTitle":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"docTitle":{"editor":"text","default":"","tsType":"string"},"collapse":{"editor":"enum","options":["auto","none","crumbs","actions","all"],"default":"auto","tsType":"string"},"heading":{"editor":"enum","options":["auto","show","none"],"default":"auto","tsType":"string"},"busy":{"editor":"boolean","default":false,"tsType":"boolean"},"height":{"editor":"int","default":0,"tsType":"number"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          this.__fitSoon(true);
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__fitSoon(true));
+        }
+        componentDidUpdate(prev) {
+          const keys = ["width", "area", "settingsButton", "settingsCurrent", "sidebar", "strings", "nav", "title", "entity", "crumbs", "actions", "status", "assistant", "plant", "plants", "company", "companies", "onboarding", "access", "bell", "collapse", "role", "unavailable", "loading", "user", "menu", "open", "navScroll", "flyout", "tip"];
+          const sig = (p) => JSON.stringify(keys.map((k) => (p && p[k] !== undefined ? p[k] : null)));
+          this.__fitSoon(sig(prev) !== sig(this.props));
+        }
+        componentWillUnmount() {
+          clearTimeout(this.__fitT);
+        }
+        __fitSoon(reset) {
+          clearTimeout(this.__fitT);
+          this.__fitT = setTimeout(() => this.__fit(reset), 40);
+        }
+        // collapse="auto": when the top bar runs out of room, the middle crumbs fold into an ellipsis first,
+        // then the page actions fold into the Page actions menu, then the Assistant toggle drops its label.
+        __fit(reset) {
+          const cur = (this.state && this.state.fit) || 0;
+          if (reset && cur !== 0) { this.setState({ fit: 0 }); return; }
+          if (!this.__auto) { this.__place(); return; }
+          const tb = document.getElementById(this.uid + "-tb");
+          if (!tb) return;
+          let over = tb.scrollWidth > tb.clientWidth + 1;
+          const ol = tb.querySelector(".sh-crumbs ol");
+          if (ol && ol.scrollWidth > ol.clientWidth + 1) over = true;
+          tb.querySelectorAll(".sh-cr").forEach((el) => { if (el.scrollWidth > el.clientWidth + 1) over = true; });
+          const here = tb.querySelector(".sh-here");
+          if (here && here.clientWidth + 1 < Math.min(here.scrollWidth, 320)) over = true;
+          if (over && cur < 3) { this.setState({ fit: cur + 1 }); return; }
+          this.__place();
+        }
+        // After the layout settles: scroll the nav as nav-scroll asks, then place the menus that follow
+        // an element whose position only the browser knows (the full path menu, rail tooltips and flyouts).
+        __place() {
+          this.__scrollNav();
+          this.__placePath();
+          this.__placeRail();
+        }
+        // current: from the top, scrolled just enough to show the current entry; top: from the top; end: to the end.
+        __scrollNav() {
+          const mode = this.__navScroll || "current";
+          [this.uid + "-sbb", this.uid + "-rn"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (mode === "end") { el.scrollTop = el.scrollHeight; return; }
+            let want = 0;
+            const cur = mode === "current" ? el.querySelector(".cur") : null;
+            if (cur) {
+              const k = (el.offsetHeight ? el.getBoundingClientRect().height / el.offsetHeight : 1) || 1;
+              const y = (cur.getBoundingClientRect().top - el.getBoundingClientRect().top) / k + el.scrollTop;
+              const bottom = y + cur.offsetHeight + 12;
+              if (bottom > el.clientHeight) want = Math.ceil(bottom - el.clientHeight);
+            }
+            if (Math.abs(el.scrollTop - want) > 1) el.scrollTop = want;
+          });
+        }
+        // The Show the full path menu opens under the ellipsis crumb, wherever the crumbs end up.
+        __placePath() {
+          const tb = document.getElementById(this.uid + "-tb");
+          if (!tb) return;
+          const ell = tb.querySelector(".sh-ell");
+          const scr = tb.closest(".sh-scr");
+          if (!ell || !scr) return;
+          const k = scr.offsetWidth ? scr.getBoundingClientRect().width / scr.offsetWidth : 1;
+          const left = Math.max(8, Math.round((ell.getBoundingClientRect().left - scr.getBoundingClientRect().left) / (k || 1)) - 8);
+          if (((this.state && this.state.pathLeft) || 0) !== left) this.setState({ pathLeft: left });
+        }
+        // Rail tooltips and flyouts sit beside their rail icon, outside the scrolling rail.
+        __placeRail() {
+          const scr = document.getElementById(this.uid + "-scr");
+          if (!scr) return;
+          const k = (scr.offsetWidth ? scr.getBoundingClientRect().width / scr.offsetWidth : 1) || 1;
+          const top0 = scr.getBoundingClientRect().top + scr.clientTop * k;
+          const tops = {};
+          scr.querySelectorAll("[data-rail]").forEach((el) => {
+            tops[el.getAttribute("data-rail")] = Math.round((el.getBoundingClientRect().top - top0) / k);
+          });
+          let flyTop = null;
+          const fly = scr.querySelector(".sh-fly");
+          if (fly && this.__flyId && tops[this.__flyId] !== undefined) {
+            flyTop = Math.max(8, Math.min(tops[this.__flyId] - 4, scr.clientHeight - 8 - fly.offsetHeight));
+          }
+          const next = JSON.stringify({ tops: tops, flyTop: flyTop });
+          if (next !== this.__railSig) {
+            this.__railSig = next;
+            this.setState({ railTops: tops, flyTop: flyTop });
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          const S = this.state || {};
+          const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+          const pick = (v, d) => (has(v) ? String(v).trim() : d);
+          const oneOf = (v, opts, d) => (opts.indexOf(pick(v, d)) >= 0 ? pick(v, d) : d);
+          if (!this.uid) {
+            window.__nmShellSeq = (window.__nmShellSeq || 0) + 1;
+            this.uid = "nm-shell-" + window.__nmShellSeq;
+          }
+          const uid = this.uid;
+
+          // Copy. The UI ships in English; strings="long" swaps in German labels (and a Finnish plugin)
+          // for the long-strings frame, so the layout is checked at full length (spec 6.7).
+          const long = oneOf(P.strings, ["default", "long"], "default") === "long";
+          const EN = {
+            skip: "Skip to main content", collapse: "Collapse sidebar", expand: "Expand sidebar",
+            openNav: "Open navigation", closeNav: "Close navigation", navigation: "Navigation",
+            navName: "Main", crumbName: "Breadcrumb", switchPlant: "Switch plant", switcherLabel: "{company}, {plant}, switch plant",
+            reconnecting: "Live updates paused, reconnecting", assistant: "Assistant", closeAssistant: "Close assistant",
+            aiNote: "Written by an AI assistant. Check before you commit.", message: "Message the assistant", send: "Send",
+            help: "Help", account: "{user}, {username}, account", pageActions: "Page actions", theme: "Theme", light: "Light", dark: "Dark",
+            signOut: "Sign out", allPages: "All pages", accessibility: "Accessibility", unavailable: "(unavailable)",
+            entries: "Entries under {label}", fullPath: "Show the full path", administration: "Administration",
+            allPlants: "All plants", profile: "Profile", presentation: "Presentation settings", loadingTag: "(loading)",
+            notifications: "Notifications", notificationsUnread: "Notifications, {n} unread", noNotifications: "No notifications",
+            onboarding: "Onboarding", adminArea: "Admin", choosePlant: "Choose a plant", adminSwitcherLabel: "Admin, choose a plant", noPlant: "No plant yet",
+            notificationsUnavailable: "Notifications (unavailable)", slotRetry: "Notifications could not load. Select to try again.",
+            settings: "Settings"
+          };
+          const DE = {
+            skip: "Zum Hauptinhalt springen", collapse: "Seitenleiste einklappen", expand: "Seitenleiste ausklappen",
+            openNav: "Navigation öffnen", closeNav: "Navigation schließen", navigation: "Navigation",
+            navName: "Hauptnavigation", crumbName: "Brotkrümelnavigation", switchPlant: "Werk wechseln", switcherLabel: "{company}, {plant}, Werk wechseln",
+            reconnecting: "Live-Aktualisierung pausiert, Verbindung wird wiederhergestellt", assistant: "Assistent", closeAssistant: "Assistent schließen",
+            aiNote: "Von einem KI-Assistenten geschrieben. Vor dem Übernehmen prüfen.", message: "Nachricht an den Assistenten", send: "Senden",
+            help: "Hilfe", account: "{user}, {username}, Konto", pageActions: "Seitenaktionen", theme: "Darstellung", light: "Hell", dark: "Dunkel",
+            signOut: "Abmelden", allPages: "Alle Seiten", accessibility: "Barrierefreiheit", unavailable: "(nicht verfügbar)",
+            entries: "Einträge unter {label}", fullPath: "Vollständigen Pfad anzeigen", administration: "Verwaltung",
+            allPlants: "Alle Werke", profile: "Profil", presentation: "Darstellungseinstellungen", loadingTag: "(wird geladen)",
+            notifications: "Benachrichtigungen", notificationsUnread: "Benachrichtigungen, {n} ungelesen", noNotifications: "Keine Benachrichtigungen",
+            onboarding: "Onboarding", adminArea: "Adminbereich", choosePlant: "Werk auswählen", adminSwitcherLabel: "Adminbereich, Werk auswählen", noPlant: "Noch kein Werk",
+            notificationsUnavailable: "Benachrichtigungen (nicht verfügbar)", slotRetry: "Benachrichtigungen konnten nicht geladen werden. Zum erneuten Versuch auswählen.",
+            settings: "Einstellungen"
+          };
+          const t = long ? DE : EN;
+          const L = (en, de) => (long ? de : en);
+
+          // Numbers, dates and times render in Plex Mono with tabular figures.
+          const NUM = /(\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?|\b\d{1,2}:\d{2}\b|\b\d{3,}(?:\.\d+)?\b)/;
+          const NUMF = /^(\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?|\d{1,2}:\d{2}|\d{3,}(?:\.\d+)?)$/;
+          const parts = (s) => String(s || "").split(NUM).filter((x) => x !== "").map((x) => ({ text: x, num: NUMF.test(x), txt: !NUMF.test(x) }));
+
+          // Frame
+          const theme = oneOf(P.theme, ["light", "dark"], "light");
+          const width = oneOf(P.width, ["1280", "1440", "1920", "320"], "1440");
+          const narrow = width === "320";
+          const wide = !narrow;
+          // area (#313): work is any page without a settings navigation; plant and company are the two settings areas.
+          // A plant settings page opens with the main sidebar collapsed to the rail (K1008r; rules 1.6); sidebar="expanded"
+          // draws a user who opened it again for this visit, and at 320 the sidebar is the navigation sheet as on any page.
+          // Company settings have no plant, so they have no main sidebar at any width (ADR 0066; rules 1.7): no rail, no
+          // sheet, no sidebar trigger, and the account button at the end of the top bar (rules 6.8).
+          // home is the plant list at / (D2 ST38): no plant, so no main sidebar, no crumbs, no Assistant and no Settings
+          // button (rules 6.3); the top bar starts with the NorthMES mark and ends with Help and the account button. The
+          // list itself is the frame's content.
+          const area = oneOf(P.area, ["work", "plant", "company", "home"], "work");
+          const inSettings = area === "plant" || area === "company";
+          const companyArea = area === "company";
+          const homeArea = area === "home";
+          const noPlant = companyArea || homeArea;
+          const navMain = !noPlant;
+          const sidebar = oneOf(P.sidebar, ["expanded", "rail", "sheet"], inSettings ? "rail" : "expanded");
+          const rail = navMain && wide && sidebar === "rail";
+          const expanded = navMain && wide && !rail;
+          const sheetOpen = navMain && narrow && sidebar === "sheet";
+          // Roles: a planner; a plant admin (admin); or a company admin (company-admin), who holds core's company admin
+          // role. Since #313 admins reach their pages through the Settings button in the top bar; the Administration
+          // section and the Admin links are gone. No role sits above a company (ADR 0066).
+          const role = oneOf(P.role, ["planner", "admin", "company-admin"], "planner");
+          const admin = role !== "planner";
+          const companyAdmin = role === "company-admin";
+          // area="company" draws company settings at /settings/$companyId: no plant, so no plant crumb and no Assistant.
+          const focus = pick(P.focus, "none");
+          const F = (k) => (focus === k ? "is-focus" : "");
+          const marks = oneOf(P.marks, ["off", "slots", "landmarks"], "off");
+          const slots = marks === "slots";
+          const lm = marks === "landmarks";
+          const menu = pick(P.menu, "none");
+          const hgt = parseInt(P.height, 10);
+          this.__navScroll = oneOf(P.navScroll, ["current", "top", "end"], "current");
+
+          // Companies and plants the user holds roles in. Plant slugs are unique per installation,
+          // so planner URLs stay /$plant. access picks a preset; companies or plants replace its data.
+          const access = oneOf(P.access, ["one-company", "companies", "one-plant"], "one-company");
+          const PRESET = long
+            ? {
+                "one-company": [{ name: "Oberschwäbische Präzisionswerkzeuge GmbH", plants: ["Präzisionsfertigung Oberschwaben Werk Süd", "Werk Biberach an der Riß"] }],
+                companies: [{ name: "Oberschwäbische Präzisionswerkzeuge GmbH", plants: ["Präzisionsfertigung Oberschwaben Werk Süd", "Werk Biberach an der Riß"] }, { name: "Allgäuer Feinmechanik GmbH", plants: ["Werk Kempten"] }],
+                "one-plant": [{ name: "Oberschwäbische Präzisionswerkzeuge GmbH", plants: ["Präzisionsfertigung Oberschwaben Werk Süd"] }]
+              }
+            : {
+                "one-company": [{ name: "Acme AB", plants: ["Plant A", "Plant B"] }],
+                companies: [{ name: "Acme AB", plants: ["Plant A", "Plant B"] }, { name: "Nordic Tools AB", plants: ["Plant C"] }],
+                "one-plant": [{ name: "Acme AB", plants: ["Plant A"] }]
+              };
+          const splitPlants = (v) => (Array.isArray(v) ? v.map(String) : String(v || "").split(/[|,]/)).map((s) => s.trim()).filter(Boolean);
+          const parseCo = (c) => {
+            if (c && typeof c === "object") return { name: String(c.name || "").trim(), plants: splitPlants(c.plants) };
+            const s = String(c || "");
+            const i = s.indexOf(":");
+            return { name: (i >= 0 ? s.slice(0, i) : s).trim(), plants: i >= 0 ? splitPlants(s.slice(i + 1)) : [] };
+          };
+          let companies;
+          if (Array.isArray(P.companies)) companies = P.companies.map(parseCo);
+          else if (has(P.companies)) companies = String(P.companies).split(";").map(parseCo);
+          else if (Array.isArray(P.plants) || has(P.plants)) companies = [{ name: pick(P.company, PRESET[access][0].name), plants: splitPlants(Array.isArray(P.plants) ? P.plants : String(P.plants).split("|")) }];
+          else companies = PRESET[access].map((c) => ({ name: c.name, plants: c.plants.slice() }));
+          companies = companies.filter((c) => c.name && c.plants.length > 0);
+          if (!companies.length) companies = PRESET[access].map((c) => ({ name: c.name, plants: c.plants.slice() }));
+          const plant = pick(P.plant, companies[0].plants[0]);
+          let home = null;
+          companies.forEach((c) => { if (!home && c.plants.indexOf(plant) >= 0) home = c; });
+          if (!home) { home = companies[0]; home.plants.unshift(plant); }
+          const company = pick(P.company, home.name);
+          const plantCount = companies.reduce((n, c) => n + c.plants.length, 0);
+          // Plants whose onboarding is in progress (ADR 0066). The server lists them only for a holder of
+          // core.onboarding:manage, so onboarding names plants only in frames of a company admin.
+          const inOnboarding = splitPlants(P.onboarding);
+          // Roles in exactly one plant: no switcher, the head shows the same mark, company and plant as text.
+          const switcher = plantCount > 1;
+          const multi = companies.length > 1;
+          const companyInitial = ((company.match(/[A-Za-zÀ-ÖØ-öø-ÿ0-9]/) || ["?"])[0]).toUpperCase();
+
+          // Navigation model after #313. Sections: core, modules, plugins; the admin entries live in Settings, except the
+          // import inbox and AI usage (plan 06 Sidebar; rules 5.9). Machines, Equipment groups and Calendars leave Master
+          // data for plant settings; Tools and Warehouses stay while question 6 is open. One group per
+          // module headed by its manifest label, at its manifest order; entries nested one level through
+          // nav.parent (spec 1.1). Every entry and every module has a lucide icon (proposal, needs the
+          // contract field). Labels are proposals except "Planning" and the route title "Planning board" (doc).
+          const E = (id, en, de, icon, o) => Object.assign({ id: id, label: L(en, de), title: L(en, de), icon: icon, path: "", kids: [], admin: false, actions: "" }, o || {});
+          const PLANT_G = [
+            { sec: 0, id: "core", mod: "core", icon: "Database", label: L("Core", "Basisfunktionen"), lang: null, help: [L("Set up a plant", "Ein Werk einrichten")], entries: [
+              E("core.master-data", "Master data", "Stammdaten", "Database", { path: "core/master-data", kids: [
+                E("core.tools", "Tools", "Werkzeuge", "Hammer", { path: "core/tools" }),
+                E("core.articles", "Articles", "Artikel", "Package", { path: "core/articles" }),
+                E("core.routings", "Routings", "Arbeitspläne", "Route", { path: "core/routings" }),
+                E("core.warehouses", "Warehouses", "Lagerorte", "Warehouse", { path: "core/warehouses" }),
+                E("core.customers", "Customers", "Kunden", "Handshake", { path: "core/customers" })
+              ] })
+            ] },
+            { sec: 1, id: "planning", mod: "planning", icon: "ChartGantt", label: L("Planning", "Produktionsplanung"), lang: null, help: [L("Board keyboard commands", "Tastaturbefehle der Plantafel")], entries: [
+              E("planning.board", "Board", "Plantafel", "ChartGantt", { title: L("Planning board", "Plantafel"), path: "planning/board", actions: L("Run autoplan|*Save", "Automatische Planung starten|*Speichern"), kids: [
+                E("planning.job-table", "Job table", "Auftragstabelle", "Table", { path: "planning/board?view=table", actions: L("Run autoplan|*Save", "Automatische Planung starten|*Speichern") })
+              ] }),
+              E("planning.orders", "Production orders", "Fertigungsaufträge", "ClipboardList", { path: "planning/orders", actions: L("*New order", "*Neuer Fertigungsauftrag") }),
+              E("planning.proposals", "Proposals", "Vorschläge des Assistenten", "ListChecks", { path: "planning/proposals" })
+            ] },
+            { sec: 1, id: "production-start", mod: "production-start", icon: "CirclePlay", label: L("Production start", "Fertigungsstart"), lang: null, help: [], entries: [] },
+            { sec: 1, id: "pyramid-connector", mod: "pyramid-connector", icon: "ArrowLeftRight", label: L("Pyramid connector", "Pyramid-Anbindung"), lang: null, help: [L("Import inbox codes", "Fehlercodes im Importeingang")], entries: [
+              E("pyramid-connector.pending-changes", "Pending changes", "Ausstehende Änderungen", "FileDiff", { path: "pyramid-connector/pending-changes" }),
+              E("pyramid-connector.import-log", "Import log", "Importprotokoll", "Logs", { path: "pyramid-connector/import-log" }),
+              E("pyramid-connector.import-inbox", "Import inbox", "Importeingang", "Inbox", { path: "pyramid-connector/import-inbox", admin: true })
+            ] },
+            // The import inbox and AI usage stay where D2 put them while question 9 of the variations round is open
+            // (plan 06 Sidebar); Audit log moves to company settings.
+            { sec: 1, id: "ai", mod: "ai", icon: "Sparkles", label: L("AI", "KI-Assistent"), lang: null, help: [], entries: [
+              E("ai.usage", "Usage", "Verbrauch und Budget", "Gauge", { title: L("AI usage", "KI-Verbrauch und Budget"), path: "ai/usage", admin: true })
+            ] },
+            { sec: 2, id: "acme", mod: "acme", icon: "Wrench", label: L("Acme tooling", "Acme-työkalujen hallinta"), lang: long ? "fi" : null, help: [], entries: [
+              E("acme.tool-life", "Tool life", "Työkalujen käyttöikä", "Hourglass", { path: "acme/tool-life" }),
+              E("acme.tool-changes", "Tool changes", "Työkalunvaihdot", "Repeat", { path: "acme/tool-changes" })
+            ] }
+          ];
+          // Company settings have no plant and so no module set and no main sidebar. Core's help entry stays in the Help
+          // menu, as D2 drew it on /admin.
+          const COMPANY_G = [
+            { sec: 0, id: "core", mod: "core", icon: "Database", label: L("Core", "Basisfunktionen"), lang: null, help: [L("Set up a plant", "Ein Werk einrichten")], entries: [] }
+          ];
+          const G = companyArea ? COMPANY_G : PLANT_G;
+
+          // Active entry
+          // A settings page has no current entry in the main sidebar (its entry is current in the settings navigation).
+          const navId = pick(P.nav, inSettings || homeArea ? "none" : "planning.board");
+          let act = null;
+          let actParent = null;
+          let actGroup = null;
+          G.forEach((g) => g.entries.forEach((e) => {
+            if (e.id === navId) { act = e; actGroup = g; }
+            e.kids.forEach((k) => { if (k.id === navId) { act = k; actParent = e; actGroup = g; } });
+          }));
+
+          // Visibility: nav filters on the plant's permissions; a failed module keeps its header and place (1.1.9).
+          // A group shows when its module has entries this user may see, loaded or failed, so a failure never
+          // adds or removes a group. Production start has no planner entry in release 1 and never shows one.
+          const vis = (e) => (e.admin ? admin : true);
+          const unav = pick(P.unavailable, "").split(",").map((s) => s.trim()).filter(Boolean);
+          const loadingIds = pick(P.loading, "").split(",").map((s) => s.trim()).filter(Boolean);
+          const shown = G.map((g) => {
+            const isUnav = unav.indexOf(g.mod) >= 0 || unav.indexOf(g.id) >= 0;
+            const isLoading = !isUnav && (loadingIds.indexOf(g.mod) >= 0 || loadingIds.indexOf(g.id) >= 0);
+            const visible = g.entries.filter(vis);
+            return { g: g, isUnav: isUnav, isLoading: isLoading, has: visible.length > 0, entries: isUnav || isLoading ? [] : visible };
+          }).filter((x) => x.has);
+          const bySec = [0, 1, 2, 3].map((si) => shown.filter((x) => x.g.sec === si)).filter((a) => a.length > 0);
+          const focusNav = focus === "nav";
+          const openSet = pick(P.open, "planning.board").split(",").map((s) => s.trim());
+          const entryVM = (e) => {
+            const kids = e.kids.filter(vis);
+            const cur = e.id === navId;
+            const inside = kids.some((k) => k.id === navId);
+            const open = kids.length > 0 && (inside || openSet.indexOf(e.id) >= 0);
+            return {
+              label: e.label,
+              icon: e.icon,
+              cls: (cur ? "cur" : "") + (cur && focusNav ? " is-focus" : ""),
+              current: cur ? "page" : null,
+              hasKids: kids.length > 0,
+              open: open,
+              showKids: open,
+              discCls: open ? "open" : "",
+              discLabel: t.entries.replace("{label}", e.label),
+              kids: kids.map((k) => ({
+                label: k.label,
+                icon: k.icon,
+                cls: (k.id === navId ? "cur" : "") + (k.id === navId && focusNav ? " is-focus" : ""),
+                current: k.id === navId ? "page" : null
+              }))
+            };
+          };
+          const sections = bySec.map((arr, i) => ({
+            cls: (i ? "div" : "") + (arr[0].g.sec === 3 ? " adm" : ""),
+            groups: arr.map((x) => ({
+              label: x.g.label,
+              lang: x.g.lang,
+              hid: uid + "-g-" + x.g.id,
+              unav: x.isUnav,
+              loading: x.isLoading,
+              hasEntries: x.entries.length > 0,
+              entries: x.entries.map(entryVM)
+            }))
+          }));
+
+          // Rail: one icon per top-level entry, a rule between module groups. A parent opens a flyout menu
+          // with itself and its nested entries. A failed or loading module keeps its place as its module icon.
+          // Every icon has the label as its accessible name and a tooltip on hover and focus (1.4.13).
+          // Each module's icons form one list labelled by the module, as in the labelled sidebar (1.3.1).
+          // A label that repeats in the rail uses the route title as its name and tooltip instead, so the links
+          // stay apart (2.4.4, 2.4.6).
+          // A parent holds aria-current: page on its own route, true while one of its nested entries is current.
+          const flyId = pick(P.flyout, "");
+          const tipId = pick(P.tip, "");
+          const railGroups = [];
+          const railMeta = {};
+          const railLabels = shown.reduce((a, x) => a.concat(x.isUnav || x.isLoading ? [] : x.entries.map((e) => e.label)), []);
+          const dupLabel = (l) => railLabels.filter((v) => v === l).length > 1;
+          let estY = 64;
+          shown.forEach((x) => {
+            const grp = { sep: railGroups.length > 0, label: x.g.label, lang: x.g.lang, items: [] };
+            if (grp.sep) estY += 9;
+            railGroups.push(grp);
+            const add = (o) => { railMeta[o.id] = { y: estY, text: o.tipText, lang: o.lang, item: o }; grp.items.push(o); estY += 34; };
+            if (x.isUnav || x.isLoading) {
+              const tag = x.isUnav ? t.unavailable : t.loadingTag;
+              add({ link: true, btn: false, id: x.g.id, icon: x.g.icon, name: x.g.label + " " + tag, tipText: x.g.label + " " + tag, lang: x.g.lang, current: null, open: null, baseCls: x.isUnav ? "unav" : "loading", cur: false });
+              return;
+            }
+            x.entries.forEach((e) => {
+              const kids = e.kids.filter(vis);
+              const inside = kids.some((k) => k.id === navId);
+              const cur = e.id === navId || inside;
+              const isBtn = kids.length > 0;
+              const name = dupLabel(e.label) ? e.title : e.label;
+              add({ link: !isBtn, btn: isBtn, id: e.id, icon: e.icon, name: name, tipText: name, lang: x.g.lang, current: e.id === navId ? "page" : inside ? "true" : null, open: isBtn ? flyId === e.id : null, baseCls: cur ? "cur" : "", cur: cur, kids: kids, entry: e, group: x.g });
+            });
+          });
+          const railItems = railGroups.reduce((a, g) => a.concat(g.items), []);
+          const flyMeta = rail && railMeta[flyId] && railMeta[flyId].item.btn ? railMeta[flyId] : null;
+          this.__flyId = flyMeta ? flyId : "";
+          let tipFor = rail && tipId && railMeta[tipId] ? tipId : "";
+          if (rail && focusNav) {
+            const c = railItems.filter((r) => r.cur)[0];
+            if (c) tipFor = c.id;
+          }
+          if (tipFor && flyMeta && tipFor === flyId) tipFor = "";
+          railItems.forEach((r) => {
+            const hov = r.id === tipFor && !r.cur && !(focusNav && r.cur);
+            r.cls = [r.baseCls, r.open ? "open" : "", hov ? "hov" : "", focusNav && r.cur ? "is-focus" : ""].filter(Boolean).join(" ");
+          });
+          const tops = S.railTops || {};
+          const yOf = (id) => (tops[id] !== undefined ? tops[id] : railMeta[id] ? railMeta[id].y : 64);
+          let flyItems = [];
+          if (flyMeta) {
+            const r = flyMeta.item;
+            flyItems = [r.entry].concat(r.kids).map((e, i) => ({ label: e.label, icon: e.icon, cls: i === 0 ? "kfocus" : "", current: e.id === navId ? "page" : null, ck: e.id === navId ? "on" : "" }));
+          }
+
+          // Title, h1 and breadcrumb. entity replaces the last crumb and the specific part of the title.
+          const entity = pick(P.entity, "");
+          const routeTitle = has(P.title) ? pick(P.title, "") : act ? act.title : "";
+          // Language of the route's own text (route crumbs, h1, content): the module's, else the page's.
+          const routeLang = has(P.pageLang) ? pick(P.pageLang, "") : actGroup && actGroup.lang ? actGroup.lang : null;
+          const h1 = entity || routeTitle;
+          const docTitle = has(P.docTitle) ? pick(P.docTitle, "") : [h1, homeArea ? "" : companyArea ? company : plant, "NorthMES"].filter(Boolean).join(" · ");
+          let crumbs = [];
+          if (Array.isArray(P.crumbs)) {
+            crumbs = P.crumbs.map((c) => (typeof c === "string" ? c : c && c.label)).filter(Boolean);
+          } else if (has(P.crumbs)) {
+            crumbs = String(P.crumbs).split("|").map((s) => s.trim()).filter(Boolean);
+          } else {
+            if (actGroup) crumbs.push(actGroup.label);
+            if (actParent) crumbs.push(actParent.label);
+            if (act) crumbs.push(act.title);
+            else if (routeTitle) crumbs.push(routeTitle);
+            if (entity) crumbs.push(entity);
+          }
+          // #313 crumbs (rules 4.6). A landing (settings-current="page") is its area's own page. Plant settings pages put
+          // a Settings crumb, a link to the plant landing, after the plant; on the plant landing Settings is the current
+          // page. Company settings read Settings, as text because no /settings route exists, then the company, a link to
+          // the company landing, then the page; on the company landing the company is the current page.
+          const ownCrumbs = Array.isArray(P.crumbs) || has(P.crumbs);
+          const landing = inSettings && oneOf(P.settingsCurrent, ["true", "page"], "true") === "page";
+          if (area === "plant" && !ownCrumbs) crumbs = landing ? [t.settings] : [t.settings].concat(crumbs);
+          if (companyArea && !ownCrumbs && landing) crumbs = [];
+          // The trail starts with the plant, a plain link to the plant home. When the user has plants in
+          // more than one company, the company comes first, as text (a company has no planner route).
+          const C0 = { label: "", parts: [], lang: null, liCls: "", sep: true, ell: false, text: false, ctx: false, link: false, here: false, cls: "" };
+          const coCrumb = Object.assign({}, C0, { label: company, liCls: "ctx", sep: false, text: true });
+          const plantCrumb = Object.assign({}, C0, { label: plant, liCls: "ctx", sep: multi, ctx: true, cls: F("crumb") });
+          const setText = Object.assign({}, C0, { label: t.settings, liCls: "ctx", text: true });
+          const coLink = Object.assign({}, C0, { label: company, liCls: "ctx", ctx: true, cls: F("crumb") });
+          const coHere = Object.assign({}, C0, { label: company, parts: parts(company), here: true });
+          const routeAll = crumbs.map((label, i) => Object.assign({}, C0, { label: label, parts: parts(label), lang: routeLang, link: i < crumbs.length - 1, here: i === crumbs.length - 1 }));
+          // Fold level: 0 all inline, 1 middle crumbs in an ellipsis, 2 page actions in a menu, 3 Assistant icon only.
+          const collapse = oneOf(P.collapse, ["auto", "none", "crumbs", "actions", "all"], "auto");
+          const FORCED = { none: 0, crumbs: 1, actions: 2, all: 3 };
+          this.__auto = wide && collapse === "auto";
+          const level = narrow ? 0 : collapse === "auto" ? S.fit || 0 : FORCED[collapse];
+          const ELL = Object.assign({}, C0, { liCls: "ell", ell: true });
+          let crumbList;
+          let folded = false;
+          const lead = companyArea ? [setText, landing ? coHere : coLink] : (multi ? [coCrumb] : []).concat([plantCrumb]);
+          if (narrow) {
+            // At 320 the trail keeps the plant crumb and the parent of the current page, and the h1 names the page.
+            // The company and the crumbs above the parent fold into the ellipsis, whose menu keeps the full trail.
+            const parent = routeAll.length > 1 ? Object.assign({}, routeAll[routeAll.length - 2], { link: true, here: false }) : null;
+            // Company settings at 320 keep Settings and the company; the h1 names the page (C5, C6).
+            // The ellipsis folds only crumbs that sit between the plant and the parent; on a landing nothing follows the
+            // plant crumb, so the trail reads Plant A and the h1 names the page.
+            folded = !companyArea && ((multi && routeAll.length > 1) || routeAll.length > 2);
+            crumbList = companyArea ? lead : [plantCrumb].concat(folded ? [ELL] : []).concat(parent ? [parent] : []);
+          } else if (level >= 1 && routeAll.length > 1) {
+            folded = true;
+            crumbList = lead.concat([ELL, routeAll[routeAll.length - 1]]);
+          } else {
+            crumbList = lead.concat(routeAll);
+          }
+          if (crumbList.length) crumbList[0] = Object.assign({}, crumbList[0], { sep: false });
+          const pathOpen = menu === "path" && folded;
+          // The menu lists the full path above the current page: the company as its label, then the links.
+          const pathItems = (companyArea ? [] : [{ parts: parts(plant), lang: null }]).concat(routeAll.slice(0, routeAll.length - 1).map((c) => ({ parts: c.parts, lang: c.lang }))).map((m, i) => Object.assign(m, { cls: i === 0 ? "kfocus" : "" }));
+
+          // Company and plant switcher: a menu of links grouped by company, the current plant marked.
+          // Each link keeps the route and its search; on an entity route it goes to the nearest ancestor
+          // without entity params (1.3.2). A plant in onboarding carries Onboarding in its link text, drawn as a
+          // badge after the name that moves under it when the name is long; a visually hidden comma makes
+          // the link read "Plant D, Onboarding" (ADR 0067).
+          // With plants of one company the menu has no group label (ADR 0067). In company settings no plant is current.
+          let kf = false;
+          const swGroups = companies.map((c, ci) => ({
+            hid: uid + "-co-" + ci,
+            label: c.name,
+            head: multi,
+            role: multi ? "group" : "presentation",
+            lby: multi ? uid + "-co-" + ci : null,
+            sep: ci > 0,
+            lang: null,
+            items: c.plants.map((n) => {
+              const cur = !companyArea && n === plant && c === home;
+              const k = !cur && !kf;
+              if (k) kf = true;
+              return { name: n, onboarding: inOnboarding.indexOf(n) >= 0, ck: cur ? "on" : "", cls: k ? "kfocus" : "", current: cur ? "page" : null };
+            })
+          }));
+          const swOpen = switcher && menu === "plant" && (wide || sheetOpen);
+
+          // Help menu: one menu at a fixed place, entries grouped by module label (3.2.6)
+          let hf = false;
+          // Company settings draw no nav groups, so their help groups come from the company model itself.
+          const helpSrc = companyArea ? G.map((g) => ({ g: g, isUnav: unav.indexOf(g.mod) >= 0, isLoading: loadingIds.indexOf(g.mod) >= 0 })) : shown;
+          const helpGroups = helpSrc.filter((x) => !x.isUnav && !x.isLoading && x.g.help.length > 0).map((x) => ({
+            label: x.g.label,
+            lang: x.g.lang,
+            hid: uid + "-h-" + x.g.id,
+            items: x.g.help.map((label) => { const k = !hf; hf = true; return { label: label, cls: k ? "kfocus" : "" }; })
+          }));
+
+          // User menu (NavUser) in the sidebar footer: avatar with initials, name and username.
+          const user = pick(P.user, long ? "Hannelore Wiesenthal-Brückner" : admin ? "Jonas Holm" : "Alex Lund");
+          const translit = (s) => s.toLowerCase().replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
+          const username = pick(P.username, translit(user).replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, ""));
+          const words = user.split(/\s+/).filter(Boolean);
+          const initials = ((words[0] || "?").charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : "")).toUpperCase();
+          const accountLabel = t.account.replace("{user}", user).replace("{username}", username);
+
+          // Page actions: route default, the actions prop, or a child with data-slot="actions"
+          const kidsAll = [].concat(P.children === undefined || P.children === null ? [] : P.children).filter((c) => c !== null && c !== undefined && c !== false);
+          const isEl = (c) => !!c && typeof c === "object" && !!c.props;
+          const slotOf = (c) => (isEl(c) && c.props["data-slot"]) || "";
+          const meaningful = (arr) => arr.some((c) => isEl(c) || typeof c === "number" || (typeof c === "string" && c.trim() !== ""));
+          const actionKids = kidsAll.filter((c) => slotOf(c) === "actions");
+          const headerKids = kidsAll.filter((c) => slotOf(c) === "header");
+          const asideKids = kidsAll.filter((c) => slotOf(c) === "aside");
+          const mainKids = kidsAll.filter((c) => ["actions", "header", "aside"].indexOf(slotOf(c)) < 0);
+          // Settings button (#313): shown to a user with at least one settings entry, so by default to admin roles and in
+          // every settings area; settings-button="on" draws it for a narrower permission, "off" hides it. In a settings area
+          // it marks the current area (aria-current true, page on a landing).
+          const sbMode = oneOf(P.settingsButton, ["auto", "on", "off"], "auto");
+          const settingsOn = !homeArea && (sbMode === "on" || (sbMode === "auto" && (admin || inSettings)));
+          const settingsCur = settingsOn && inSettings ? (landing ? "page" : "true") : null;
+          // Skip link (rules 7.2): on a settings page it targets the page column of the layout part (skip-to, the same id
+          // as the part's content-id), so it passes the main navigation, the top bar and the settings navigation.
+          const skipTo = pick(P.skipTo, "");
+          const parseOne = (x) => (x.charAt(0) === "*" ? { label: x.slice(1).trim(), variant: "default", icon: "" } : { label: x, variant: "outline", icon: "" });
+          // actions="" or no attribute: the route default; actions="none": no page actions.
+          const actSrc = Array.isArray(P.actions) || has(P.actions) ? P.actions : act ? act.actions : "";
+          let actions = [];
+          if (Array.isArray(actSrc)) {
+            actions = actSrc.map((a) => (typeof a === "string" ? parseOne(a.trim()) : { label: a.label, variant: a.variant || "outline", icon: a.icon || "" }));
+          } else if (has(actSrc) && String(actSrc).trim() !== "none") {
+            actions = String(actSrc).split("|").map((s) => parseOne(s.trim()));
+          }
+          actions = actions.filter((a) => a && a.label);
+          const useActionKids = meaningful(actionKids);
+          const useActionList = !useActionKids && actions.length > 0;
+          const actionList = actions.map((a, i) => ({ label: a.label, icon: a.icon, hasIcon: !!a.icon, cls: "v-" + a.variant + (i === 0 && focus === "actions" ? " is-focus" : "") }));
+          const actionMenuItems = actions.map((a, i) => ({ label: a.label, icon: a.icon, hasIcon: !!a.icon, cls: i === 0 ? "kfocus" : "" }));
+          const hasActions = useActionKids || useActionList;
+
+          // Live status: a chip for reconnecting, a strip under the top bar for banners
+          const status = oneOf(P.status, ["none", "reconnecting", "banner", "both"], "none");
+          const reconnecting = status === "reconnecting" || status === "both";
+          const showBanner = status === "banner" || status === "both";
+          const bannerKind = oneOf(P.bannerKind, ["info", "warning", "error"], "info");
+          const BANNER = {
+            info: L("Data restored to 2026-10-04 22:00; changes after that were lost.", "Daten auf den Stand vom 2026-10-04 22:00 zurückgesetzt; spätere Änderungen sind verloren."),
+            warning: L("NorthMES is restarting. Changes are paused until it is back; you do not need to reload.", "NorthMES wird neu gestartet. Änderungen sind pausiert, bis es wieder erreichbar ist; Sie müssen die Seite nicht neu laden."),
+            error: L("The database is not ready. Changes cannot be saved until it is back.", "Die Datenbank ist nicht bereit. Änderungen können erst wieder gespeichert werden, wenn sie verfügbar ist.")
+          };
+          const ICON = { info: "Info", warning: "TriangleAlert", error: "CircleAlert" };
+
+          // Assistant: a top bar toggle; docked in the aside slot beside main, a modal sheet at 320 (1.5).
+          // off: no provider is configured, so there is no toggle and no aside (1.5.3).
+          // disabled: the AI budget is used up; the toggle stays in place with aria-disabled and a tooltip.
+          const assistant = oneOf(P.assistant, ["closed", "docked", "sheet", "off", "disabled"], "closed");
+          // The assistant acts inside a plant, so company settings have none (proposed, rules 8.6).
+          const assistantOn = assistant !== "off" && !noPlant;
+          const assistantDis = assistantOn && assistant === "disabled";
+          const docked = assistantOn && (assistant === "docked" || assistant === "sheet");
+          const assistantTip = pick(P.assistantTip, L("The AI budget for this month is used up", "Das KI-Budget für diesen Monat ist aufgebraucht"));
+
+          // Notifications: the bell shows only when the notifications module is installed (release 1 ships
+          // without it, ADR 0055, so bell="off" is the release 1 top bar). Top bar end: Assistant, Settings, Help, bell.
+          // The bell is a contribution to the top bar slot core/top-bar/items/v1 (ADR 0067, proposed id), which also
+          // renders in company settings with plantId null. failed: the contribution threw at stage slot, and its place holds
+          // the fallback, an icon button named Notifications (unavailable) whose tooltip says how to try again.
+          const bell = oneOf(P.bell, ["none", "unread", "open", "off", "failed"], "none");
+          const bellOn = bell !== "off";
+          const bellFailed = bell === "failed";
+          const failTipOn = wide && bellFailed && focus === "bell";
+          const bellN = Math.max(1, parseInt(P.bellCount, 10) || 3);
+          const bellBadge = bell === "unread";
+          const bellOpen = wide && bell === "open";
+
+          // Menus
+          const helpOpen = wide && menu === "help";
+          const userOpen = menu === "user" && (wide || sheetOpen || noPlant);
+          const actionsOpen = narrow && menu === "actions" && hasActions;
+          const sbW = expanded ? 256 : rail ? 64 : 0;
+
+          const scrStyle = hgt > 0 ? "height:" + hgt + "px" : "";
+          const remote = actGroup ? G.filter((g) => g.id === actGroup.mod)[0] || actGroup : null;
+          const contentPh = navId === "planning.board" ? "Board grid, designed in D3: machine column, time axis in plant time, job order blocks" : remote ? "Route content from the " + remote.label + " remote" : "Route content";
+          const railTip = tipFor ? railMeta[tipFor] : null;
+          const flyTop = flyMeta ? (S.flyTop !== undefined && S.flyTop !== null ? S.flyTop : Math.max(8, yOf(flyId) - 4)) : 0;
+
+          return {
+            t: t,
+            lang: long ? "de" : "en",
+            rootCls: theme === "dark" ? "dark" : "",
+            screenLabel: "Settings frame, " + area + ", " + width + ", " + theme,
+            showTitle: oneOf(P.showTitle, ["off", "on"], "off") === "on",
+            docTitle: docTitle,
+            scrCls: "w" + width,
+            scrStyle: scrStyle,
+            ids: { scr: uid + "-scr", tb: uid + "-tb", main: uid + "-main", sidebar: uid + "-sidebar", sbBody: uid + "-sbb", railNav: uid + "-rn", aside: uid + "-aside", asideTitle: uid + "-aside-t", themeHead: uid + "-theme", asTip: uid + "-as-tip", bell: uid + "-bell", bellT: uid + "-bell-t", bellM: uid + "-bell-m", failTip: uid + "-fail-tip" },
+            skipCls: focus === "skip" ? "on is-focus" : "",
+            skipHref: skipTo || uid + "-main",
+            f: { toggle: F("toggle"), close: F("toggle"), h1: F("h1") },
+            settingsOn: settingsOn && (wide || sheetOpen),
+            settingsCur: settingsCur,
+            settingsCls: (settingsCur ? "set-on " : "") + F("settings"),
+            settingsTipOn: wide && settingsOn && focus === "settings",
+            trigWide: wide && navMain,
+            trigNarrow: narrow && navMain,
+            helpNarrowTop: narrow && noPlant,
+            acctTop: noPlant,
+            homeMark: homeArea,
+            showCrumbs: !homeArea,
+            toggleLabel: expanded ? t.collapse : t.expand,
+            ellCls: (pathOpen ? "open " : "") + F("path"),
+            pathOpen: pathOpen,
+            pathHead: multi && !companyArea,
+            company: company,
+            pathItems: pathItems,
+            pathMenuStyle: narrow ? "left:8px;top:50px" : "left:" + (S.pathLeft || sbW + 160) + "px;top:50px",
+            routeLang: routeLang,
+            msgCls: F("message"),
+            wide: wide,
+            narrow: narrow,
+            expanded: expanded,
+            rail: rail,
+            sheetOpen: sheetOpen,
+            showSidebar: expanded || sheetOpen,
+            sbCls: sheetOpen ? "sh-sheet" : "",
+            sbRole: sheetOpen ? "dialog" : null,
+            sbModal: sheetOpen ? "true" : null,
+            sbLabel: sheetOpen ? t.navigation : null,
+            sections: sections,
+            railGroups: railGroups,
+            railTipOn: !!railTip,
+            railTipText: railTip ? railTip.text : "",
+            railTipLang: railTip ? railTip.lang : null,
+            railTipStyle: railTip ? "left:68px;top:" + (yOf(tipFor) + 2) + "px" : "",
+            flyOpen: !!flyMeta,
+            flyHead: flyMeta ? flyMeta.item.group.label : "",
+            flyLabel: flyMeta ? flyMeta.item.entry.label : "",
+            flyLang: flyMeta ? flyMeta.item.lang : null,
+            flyItems: flyItems,
+            flyStyle: "left:68px;top:" + flyTop + "px",
+            lm: lm,
+            lmCls: lm ? "sh-lmw" : "",
+            lmNavStyle: "right:4px;bottom:72px",
+            slots: slots,
+            slotCls: slots ? "sh-slot" : "",
+            tbCls: (narrow ? "nar " : "") + (lm ? "sh-lmw" : ""),
+            plant: plant,
+            switcher: switcher,
+            noSwitcher: !switcher,
+            staticName: company + ", " + plant,
+            companyInitial: companyInitial,
+            markText: true,
+            markIcon: false,
+            headA: company,
+            headB: plant,
+            swLabel: t.switcherLabel.replace("{company}", company).replace("{plant}", plant),
+            swCls: (swOpen ? "open " : "") + F("plant"),
+            swOpen: swOpen,
+            swGroups: swGroups,
+            swMenuStyle: rail ? "left:68px;top:8px;width:240px" : sheetOpen ? "left:8px;top:56px;width:272px" : "left:8px;top:56px;width:240px",
+            crumbList: crumbList,
+            chipTop: wide && reconnecting,
+            chipStrip: narrow && reconnecting,
+            showBanner: showBanner,
+            bannerKind: bannerKind,
+            bannerIcon: ICON[bannerKind],
+            bannerParts: parts(pick(P.banner, BANNER[bannerKind])),
+            bannerAction: pick(P.bannerAction, ""),
+            hasBannerAction: has(P.bannerAction),
+            useActionKids: useActionKids,
+            useActionList: useActionList,
+            inlineKids: wide && level < 2 && useActionKids,
+            inlineList: wide && level < 2 && useActionList,
+            actionsCollapsed: wide && level >= 2 && hasActions,
+            actionsMenuWide: wide && level >= 2 && hasActions && menu === "actions",
+            actionKids: actionKids,
+            actionList: actionList,
+            actionMenuItems: actionMenuItems,
+            showVsep: hasActions && level < 2,
+            narrowActions: narrow && hasActions,
+            actionsOpen: actionsOpen,
+            actionsCls: (actionsOpen || (wide && level >= 2 && menu === "actions") ? "open " : "") + F("actions"),
+            actionsMenuStyle: "right:8px;top:50px",
+            assistantOn: assistantOn,
+            assistantShown: assistantOn,
+            assistantFull: assistantOn && level < 3,
+            assistantIcon: assistantOn && level >= 3,
+            assistantDis: assistantDis ? "true" : null,
+            assistantDesc: assistantDis && focus === "assistant" ? uid + "-as-tip" : null,
+            assistantTipOn: assistantDis && focus === "assistant",
+            assistantTip: assistantTip,
+            docked: docked,
+            assistantCls: (docked ? "on " : "") + (assistantDis ? "is-dis " : "") + F("assistant"),
+            dockedWide: wide && docked,
+            // aria-controls names the aside only while it is in the DOM.
+            asideControls: wide && docked ? uid + "-aside" : null,
+            dockedNarrow: narrow && docked,
+            overlay: sheetOpen || (narrow && docked),
+            helpOpen: helpOpen,
+            helpCls: (helpOpen ? "open " : "") + F("help"),
+            helpGroups: helpGroups,
+            helpMenuStyle: "right:" + (16 + (bellOn ? 44 : 0) + (noPlant ? 44 : 0)) + "px;top:50px",
+            bellOn: bellOn,
+            bellShown: bellOn && !bellFailed,
+            bellFailed: bellFailed,
+            failTipOn: failTipOn,
+            failDesc: failTipOn ? uid + "-fail-tip" : null,
+            bellBadge: bellBadge,
+            bellCountText: bellN > 9 ? "9+" : String(bellN),
+            bellLabel: bellBadge ? t.notificationsUnread.replace("{n}", String(bellN)) : t.notifications,
+            bellOpen: bellOpen,
+            bellControls: bellOpen ? uid + "-bell" : null,
+            bellCls: (bellOpen ? "open " : "") + F("bell"),
+            bellPanelStyle: "right:16px;top:50px",
+            panelCls: F("panel"),
+            userOpen: userOpen,
+            userCls: (userOpen ? "open " : "") + F("user"),
+            userMenuStyle: noPlant ? "right:8px;top:50px;width:" + (narrow ? 272 : 240) + "px" : rail ? "left:68px;bottom:8px;width:240px" : sheetOpen ? "left:8px;bottom:60px;width:272px" : "left:8px;bottom:60px;width:240px",
+            user: user,
+            username: username,
+            initials: initials,
+            accountLabel: accountLabel,
+            isLight: theme === "light",
+            isDark: theme === "dark",
+            lightCk: theme === "light" ? "on" : "",
+            darkCk: theme === "dark" ? "on" : "",
+            mainCls: (narrow ? "nar " : "") + F("main") + (lm ? " sh-lmw" : ""),
+            busy: P.busy === true || P.busy === "true",
+            // In a settings area the layout part draws the h1 in its page column, so the frame's h1 row defaults to none.
+            showHeading: oneOf(P.heading, ["show", "none"], inSettings ? "none" : "show") === "show" && h1 !== "",
+            h1Parts: parts(h1),
+            headerKids: headerKids,
+            hasHeaderKids: meaningful(headerKids),
+            mainKids: mainKids,
+            hasMainKids: meaningful(mainKids),
+            noMainKids: !meaningful(mainKids),
+            contentPh: contentPh,
+            asideKids: asideKids,
+            hasAsideKids: meaningful(asideKids),
+            noAsideKids: !meaningful(asideKids)
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

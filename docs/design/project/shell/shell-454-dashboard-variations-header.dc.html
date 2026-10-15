@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">Frame F0</p>
+        <h2 class="t1">Dashboard with shared and personal tabs: variations</h2>
+        <p class="lede">Issue #454 asks for a variations round before the spec page, because the dashboard is the landing page and its layout model is new. Krister Johansson answered the issue's questions on 2026-10-10: shared tabs exist at the company and at the plant, and the role that may change them is decided later; a user's own tabs follow the user to every plant; release 1 ships four demo widget types, List, Table, Value and Chart, each with its own settings. This page draws three whole options that differ in the tab control and the edit model: A, tabs and edit mode; B, side column; C, tab picker and tiles. Each option draws nine frames: the shared tab, the catalog, one widget's settings beside a second copy, the shared tab for someone who may change it, the own tab at another plant with the widget states, the empty own tab, a move without dragging and two 320 frames. Frame G holds the grid library, the widget sizes in grid units and draft build notes. The rest of the issue's frame list (1920, long strings, the full keyboard and focus frames, every tab management dialog) follows on the spec page for the chosen option.</p>
+        <div class="db-cols2 sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="db-facts">
+              <sc-for list="{{ facts }}" as="f"><dt>{{ f.k }}</dt><dd>{{ f.v }}</dd></sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Rules the options are judged against</h2>
+            <ul class="db-pts">
+              <sc-for list="{{ rules }}" as="r"><li>{{ r.t }}<sc-if value="{{ r.x }}"> <span class="db-brk">({{ r.x }})</span></sc-if> <span class="db-src">{{ r.s }}</span></li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">What is decided</h2>
+          <p class="lede">Ten axes. Each option takes one answer per axis, so its frames show a whole product; the comparison frame R judges each axis on its own, and a mix of options is possible.</p>
+          <div class="db-tbl">
+            <div class="db-tbl-r db-axes h"><span>Axis</span><span>A. Tabs and edit mode</span><span>B. Side column</span><span>C. Tab picker and tiles</span></div>
+            <sc-for list="{{ axes }}" as="a"><div class="db-tbl-r db-axes"><span class="k">{{ a.k }}</span><span>{{ a.a }}</span><span>{{ a.b }}</span><span>{{ a.c }}</span></div></sc-for>
+          </div>
+        </div>
+        <div class="db-cols2 sec">
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="db-pts">
+              <sc-for list="{{ how }}" as="h"><li>{{ h }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h2 class="t2">Plants</h2>
+            <p class="lede">All fictional, from D2, D3 and #222.</p>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-pls h"><span>Plant</span><span>Company</span><span>Slug</span><span>What the frames use</span></div>
+              <sc-for list="{{ plants }}" as="p"><div class="db-tbl-r db-pls"><span class="k">{{ p.n }}</span><span>{{ p.c }}</span><span class="mono">{{ p.s }}</span><span>{{ p.u }}</span></div></sc-for>
+            </div>
+            <h2 class="t2" style="margin-top:28px">People</h2>
+            <p class="lede">Names from D2 and #304. Personas from the brief: Planner and Plant admin.</p>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-ppl h"><span>Name</span><span>Username</span><span>Roles and what the frames show</span></div>
+              <sc-for list="{{ people }}" as="p"><div class="db-tbl-r db-ppl"><span class="k">{{ p.n }}</span><span class="mono">{{ p.u }}</span><span>{{ p.r }}</span></div></sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <ul class="db-pts">
+            <sc-for list="{{ assume }}" as="a"><li>{{ a }}</li></sc-for>
+          </ul>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">From reading the issue, the ADRs and the code, plus questions 16 to 18 from drawing the options and choosing the grid library. Round marks a question that the choice of option answers; the rest stay open for Krister or the task that builds the dashboard.</p>
+          <div class="db-qgrid">
+            <sc-for list="{{ qs }}" as="q"><div class="db-qrow"><span class="tag {{ q.cls }}">{{ q.n }}</span><span>{{ q.t }}<sc-if value="{{ q.round }}"> <span class="db-src">{{ q.rnote }}</span></sc-if></span></div></sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const F = (k, v) => ({ k: k, v: v });
+          const W = (t, s, x) => ({ t: t, s: s, x: x || "" });
+          const X = (k, a, b, c) => ({ k: k, a: a, b: b, c: c });
+          const ROUND = { 2: "Round answers the page title and h1", 9: "Round", 12: "Round" };
+          const Q = [
+            "Which shell to mount: shell/Shell.dc.html as approved, without the Settings button and with the Administration section that #313 removes, or #313's settings frame, which is in review? Drawn: the approved shell with role planner.",
+            "Who owns the dashboard, the shell in apps/web or core's web module, and its route at the /$plant index: its title, its h1 and whether the sidebar gets a Dashboard entry. Drawn: no entry; the plant crumb opens the dashboard, and the crumb Dashboard repeats it.",
+            "Is core.dashboardTab:manage, labelled Manage shared dashboard tabs, the right permission id, and does it stay out of companyPermissions, so that Company admin and Plant admin both get it? Which other default roles include it is decided later.",
+            "Do a user's own tabs follow the user across companies, or only across the plants of one company? Drawn: plants of Acme AB.",
+            "A personal widget whose setting names something a plant lacks: one setting for every plant with the Not at Plant B state (drawn), a setting per plant, or a tab limited to some plants?",
+            "Is a demo widget a contribution to core/dashboard/widgets/v1 (M-32, a change to ADR 0068: a new slot kind or a wider region kind) or a built-in component of the dashboard's owner? How are per-copy settings and grid sizes typed in the contract?",
+            "Chart series colors: D1 has no chart tokens and charts are not in @northmes/ui in release 1. Drawn: --foreground and a hatched --muted-foreground. Which chart library, if any, and which tokens?",
+            "The grid library is a new dependency (frame G): react-grid-layout 2.2.4 in its own pull request, under ADR 0040's license gate. Does it pass style-src 'self' with the shell's one stylesheet in a real build?",
+            "Are tab and layout changes audited commands (ADR 0012, ADR 0051 rule 6), and is a whole edit session one command (A) or each change one (B, C)?",
+            "Admin names: #304 draws Jonas Holm as plant admin, #313 as company admin (#313 question 15). Drawn: #304's pair.",
+            "Glossary: dashboard, dashboard tab, widget type and placed widget have no entries, and contribution lists widget as a word to avoid. Which terms go in the glossary, and does the UI say widget?",
+            "Does the document title name the open tab? A and B: Dashboard · Plant A · NorthMES; C: My shift · Plant A · NorthMES.",
+            "Which tab opens when the dashboard opens: the one last opened at this plant (drawn), the first shared tab, or a default the company or plant sets?",
+            "Can a user hide a shared tab for themselves and copy one to their own tabs? Drawn in every option as proposals.",
+            "Is a Demo badge on every widget header wanted in release 1, so no one reads demo numbers as plant data?",
+            "When a shared tab changes while someone has it open, does the grid update live? When two people edit one shared tab, does the later save win, or does a version check refuse it?",
+            "Does pointer resize exist, or only the Size menu and field? Recommended in frame G: keep the handle and snap to the type's sizes on release.",
+            "What do Move up and Move down do at 6 columns and at one column? Recommended in frame G: change the reading order and write it back to the 12-column layout."
+          ];
+          return {
+            facts: [
+              F("Issue", "#454, web: Design the dashboard as the landing page, with shared and personal tabs of widgets on a grid"),
+              F("Story", "None linked yet. The build task for the dashboard gets this page's Design section."),
+              F("Area", "shell, which maps to apps/web; the dashboard's owner is question 2. Frames mount the approved shell/Shell.dc.html and link the list classes of #222 read only."),
+              F("Route", "/$plant?tab=$tabId in every option, proposed: the dashboard is the index route of /$plant, and the open tab is a search parameter (ADR 0062)."),
+              F("Personas", "Planner: Alex Lund in frames 1 to 3 and 5 to 9. Plant admin: Jonas Holm in frame 4, as #304 draws him, holding the proposed core.dashboardTab:manage at Plant A."),
+              F("In this round", "Per option: nine frames at 1440, 1280 and 320, light and dark, and the notes. Frame R compares; frame G holds the grid library, the sizes in grid units and draft build notes.")
+            ],
+            rules: [
+              W("The dashboard is the plant root, /$plant. The open tab is in the URL; a tab switch pushes history and never moves focus; an unknown tab falls back to the first with the status line.", "Plan 06, ADR 0062, ADR 0066"),
+              W("Shared tabs exist at the company and at each plant. Changing one needs a permission held at that node or above it; which role holds it is decided later.", "I454 answer 1, ADR 0007, ADR 0066"),
+              W("A user's own tabs follow the user to every plant they open. A widget whose data or permission is missing there says so in its own frame and shows no data.", "I454 answer 2, plan 06 page states"),
+              W("Release 1 has four widget types on demo data; two copies of one type differ only in their settings.", "I454 answer 3"),
+              W("The user sees the tabs and switches tab with one activation.", "Krister, 2026-10-10: a tabs system", "C breaks this"),
+              W("Every move and resize has a path without dragging; focus stays on the moved widget and the polite region announces the result.", "WCAG 2.5.7, 2.1.1, 4.1.3; D3 board"),
+              W("Focus order follows the reading order of the widgets: top to bottom, then left to right.", "WCAG 2.4.3, 1.3.2"),
+              W("At 320 the grid is one column in reading order; only tables scroll sideways, each in its own region.", "WCAG 1.4.10; plan 06 Reflow"),
+              W("Each widget is a section named by its title, inside its own error boundary. A failed data request shows \"{title} could not be loaded.\" with the correlation id, Copy correlation id and Try again; a widget that fails while drawing shows \"{title} could not be shown.\" with its stage, its code and Try again.", "ADR 0068; D2 ST27, ST6; #306"),
+              W("Deleting a tab asks first in a ConfirmDialog; Forbidden names the permission and shows no data.", "WCAG 3.3.4; #222, plan 06"),
+              W("Targets are at least 24 by 24 px; every color is a D1 token; color never carries state alone.", "WCAG 2.5.8, 1.4.1; D1"),
+              W("Help keeps its place; the release 1 top bar has no bell.", "WCAG 3.2.6; D2")
+            ],
+            axes: [
+              X("Tab control", "A row of tabs under the h1, grouped by scope with a scope icon", "A 280 px column inside the page, the tabs as links under the headings Acme AB, Plant A and My tabs", "The h1 names the open tab; Switch tab beside it opens a menu grouped by scope"),
+              X("Edit model", "Edit layout puts the tab in edit mode; Done saves the session as one command, Cancel discards it", "No mode; a widget's Edit button opens its settings in the side column, and each Save is one command", "No mode; Widget actions on every widget, and each change is one command"),
+              X("Adding a widget", "Add widget in the edit bar opens the catalog in a Sheet", "Add widget turns the side column into the catalog", "An Add widget tile at the first free place opens the catalog in a popover"),
+              X("Widget settings", "A modal Sheet; the widget changes on Apply, and Done saves it with the session", "The side column, previewed live in the grid", "Inside the widget itself; a Small widget would need a popover"),
+              X("Move without dragging", "The move button: Enter picks up, arrow keys move, Enter drops", "Move up, down, left and right buttons in the settings", "Move in Widget actions, then arrow keys"),
+              X("Resize without dragging", "Size in Widget actions and in the settings", "Size radio group in the settings", "Size in Widget actions"),
+              X("Tab management", "The open tab's actions menu: Rename, Move left, Move right, Hide for me, Copy to my tabs, Delete", "A menu on each tab row: Rename, Move up, Move down, Hide for me, Copy to my tabs, Delete", "Manage tabs: one dialog to order, rename, hide and delete"),
+              X("Who may change it", "Edit layout and the shared choice in New tab only with the permission", "Edit buttons, Add widget and row menu items only with the permission", "Widget actions, the tile and Manage tabs items only with the permission"),
+              X("Grid at 1280 and 1440", "12 columns, 974 and 1134 px", "6 columns, 670 and 830 px", "12 columns, 974 and 1134 px"),
+              X("320", "Tabs as a Select; one column", "A Tabs button opens the list as a sheet; settings as a full-screen sheet", "The same Switch tab menu; one column with the tile last")
+            ],
+            how: [
+              "Frame 1 of each option is the shared tab Shift overview as Alex Lund, a planner, sees it, with the option's tab control open.",
+              "Frames 2 and 3 work on his own tab My shift: adding a widget from the catalog, then the settings of Production orders, Milling. Production orders, Pressing beside it is a second copy of the same List with another equipment group.",
+              "Frame 4, in dark, is Shift overview for Jonas Holm, who may change it: a new shared tab (A4), deleting a shared tab (B4), Manage tabs (C4).",
+              "Frame 5, in dark, is Alex Lund's own tab Press line at Plant B. It followed him there, and each widget shows one state: not at Plant B, no permission, an error, loading, a removed plugin, empty and one with data.",
+              "Frame 6 is a new, empty own tab at 1280. Frame 7, in dark, is a move without dragging with what the polite region says. Frames 8 and 9 are the 320 reflow: My shift in one column, then the way to move and resize there.",
+              "Under each option, its notes; R compares the options and recommends one; G holds the grid library, the sizes in grid units and draft build notes."
+            ],
+            plants: [
+              { n: "Plant A", c: "Acme AB", s: "plant-a", u: "Every frame but 5. Equipment groups Milling, Turning, Pressing and more; machines CNC1, Mill 1, Press 3, Press 4 and more." },
+              { n: "Plant B", c: "Acme AB", s: "plant-b", u: "Frame 5. No Pressing equipment group and no Press 4." }
+            ],
+            people: [
+              { n: "Alex Lund", u: "alex.lund", r: "Planner at Plant A. At Plant B a role that reads production orders but not machine downtime (frame 5). Downtime has no page in release 1, so the sidebar is the same at both plants." },
+              { n: "Jonas Holm", u: "jonas.holm", r: "Plant admin at Plant A, so he holds the proposed core.dashboardTab:manage there (frame 4)." },
+              { n: "Karin Dahl", u: "karin.dahl", r: "Company admin at Acme AB; she can change the company tab Acme overview. Not drawn." }
+            ],
+            assume: [
+              "The dashboard is the index route of /$plant, and plantHome() returns it in place of the first sidebar entry, so the plant crumb opens it. No sidebar entry is drawn (question 2). A and B title the page Dashboard; C titles it with the open tab.",
+              "The proposed permission core.dashboardTab:manage is held at a scope node like any permission: held at Acme AB it covers the company tabs and every plant's tabs, held at a plant only that plant's tabs. It stays out of companyPermissions, so Company admin and Plant admin get it at the next migrate (question 3).",
+              "Frames mount the approved shell/Shell.dc.html with role planner, so no Administration section and no Settings button show (question 1). Jonas Holm is drawn in that shell.",
+              "Release 1's four types come from core and show demo data. Each demo data source names the permission of the data it stands for, so the no-permission state can be built and tested. Frame 5 uses the demo source Machine downtime, which stands for data that has no page in release 1. Every widget header carries a Demo badge (question 15).",
+              "A personal widget keeps one set of settings at every plant. Where a setting names something the plant lacks, such as an equipment group or a machine, the widget says Not at Plant B and links to the plant where it applies (question 5).",
+              "The Andon plugin and its widget Andon calls are fictional and stand for a later plugin widget whose plugin was removed; release 1 has no plugin widgets. The saved widget keeps its title, so the frame can still name it.",
+              "Numbers follow the default presentation settings: 1 284 with a no-break space, 2,8 %, ISO dates and a 24-hour clock. The demo day is Monday 2026-10-12 at 10:40.",
+              "Chart bars use --foreground and a hatched --muted-foreground, both D1 tokens, with a legend; a text summary is the chart's accessible name (question 7).",
+              "Grids follow frame G: 12 columns from a 900 px container, 6 from 600 px, one column below. B's side column takes 304 px, so B's grid has 6 columns at 1280 and 1440.",
+              "Labels, icons and copy are proposals. The scope icons are Building2 for the company, Factory for the plant and User for the user's own tabs."
+            ],
+            qs: Q.map((t, i) => ({ n: String(i + 1), t: t, round: !!ROUND[i + 1], rnote: ROUND[i + 1] || "", cls: ROUND[i + 1] ? "fix" : "q" }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

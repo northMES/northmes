@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F6 components</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.cg{display:grid;gap:16px 14px;align-items:center}
+.cg6{grid-template-columns:120px repeat(6,minmax(0,1fr))}
+.cg5{grid-template-columns:120px repeat(5,minmax(0,1fr))}
+.cg7{grid-template-columns:repeat(7,minmax(0,1fr))}
+.cg .fld{align-self:start}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+.cbox{padding:20px 22px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+.cap{margin:10px 0 0;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.zoomcb{position:relative;height:150px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);overflow:hidden}
+.zoomcb .z{position:absolute;left:32px;top:24px;transform:scale(4);transform-origin:0 0}
+.opens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:20px;align-items:start}
+.opens .pop{margin-top:6px}
+.tabs{display:inline-flex;gap:4px;padding:3px;border-radius:var(--radius);background:var(--muted)}
+.tab{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:var(--radius-md);font-size:14px;font-weight:500;color:var(--muted-foreground)}
+.tab.is-hover{color:var(--foreground)}
+.tab.on{background:var(--card);color:var(--foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+.tab.on.is-focus,.tab.on:focus-visible{box-shadow:0 0 0 2px var(--focus-ring),inset 0 -2px 0 var(--foreground)}
+.is-busy{cursor:progress}
+.dlg-stage{position:relative;height:380px;border-radius:var(--radius-xl);background:var(--background);border:1px solid var(--border);overflow:hidden}
+.dlg-stage .ov{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.dlg{position:absolute;left:50%;top:40px;width:440px;transform:translateX(-50%);display:grid;gap:14px;padding:22px 24px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground)}
+.dlg .acts{display:flex;justify-content:flex-end;gap:8px}
+.dlg .dhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sheetp{position:absolute;top:0;right:0;bottom:0;width:300px;display:grid;align-content:start;gap:14px;padding:20px;border-left:1px solid var(--border);background:var(--background)}
+.tip{position:absolute;padding:6px 10px;border-radius:var(--radius-sm);background:var(--primary);color:var(--primary-foreground);font-size:12px;line-height:16px;white-space:nowrap}
+.tbl{border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;background:var(--card)}
+.tr{display:grid;grid-template-columns:52px 110px minmax(0,1.4fr) 120px 140px 150px 140px;align-items:center;min-height:44px;border-top:1px solid var(--border)}
+.tr.hd{min-height:38px;border-top:0;background:var(--muted);font-size:12px;font-weight:600;color:var(--muted-foreground)}
+.tr.hov{background:var(--accent)}
+.tr.sel{background:var(--info-subtle)}
+.td{display:flex;align-items:center;gap:6px;min-width:0;padding:0 12px}
+.td.num{justify-content:flex-end}
+.sortb{display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 4px;margin:0 -4px;border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.sortb.on{color:var(--foreground)}
+.pager{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--border);font-size:13px;color:var(--muted-foreground)}
+.toast{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:center;width:360px;padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--popover);color:var(--popover-foreground);box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);font-size:13px;line-height:18px}
+.badges{display:flex;flex-wrap:wrap;gap:10px}
+.card{display:grid;gap:12px;padding:20px 22px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground)}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Components">
+        <h2 class="t2">shadcn components in every state</h2>
+        <p class="lede">Names are shadcn component names; @northmes/ui wraps them (Button also serves IconButton). Hover, focus-visible and active are drawn as fixed states; the real buttons on this page also respond to the pointer and the keyboard. Controls are 36 px tall and every target is at least 24 by 24 px. A dash in the spec's state matrix means the state does not apply, so it is not drawn.</p>
+
+        <div class="sec">
+          <h3 class="t3">Button</h3>
+          <div class="cg cg6">
+            <span></span>
+            <sc-for list="{{ stateHeads6 }}" as="h"><span class="st-h">{{ h }}</span></sc-for>
+            <sc-for list="{{ buttons }}" as="b">
+              <span class="st-r mono">{{ b.v }}</span>
+              <sc-for list="{{ b.cells }}" as="c">
+                <button class="btn {{ c.cls }}" type="button"><sc-if value="{{ c.load }}"><span class="ic" data-icon="LoaderCircle"></span></sc-if>{{ c.text }}</button>
+              </sc-for>
+            </sc-for>
+          </div>
+          <p class="cap">Variant names are shadcn's. Primary hover uses primary-hover. Outline and ghost hover use accent; outline also darkens its border to foreground. Secondary hovers with shadcn's 80 percent opacity, which is not a token (P2). Destructive keeps Graphite's outlined look: destructive text and border on card, and destructive-subtle on hover. Active is the hover color plus a 1 px press, with no token of its own. Disabled is 50 percent opacity (Q8). Loading (Q8, proposal) keeps full opacity, swaps in a progress label with LoaderCircle and sets aria-busy and aria-disabled. Buttons have no invalid state.</p>
+        </div>
+
+        <div class="sec">
+          <h3 class="t3">Button as IconButton (size icon, required label)</h3>
+          <div class="cg cg6">
+            <span></span>
+            <sc-for list="{{ stateHeads6 }}" as="h"><span class="st-h">{{ h }}</span></sc-for>
+            <sc-for list="{{ iconButtons }}" as="b">
+              <span class="st-r mono">{{ b.v }}</span>
+              <sc-for list="{{ b.cells }}" as="c">
+                <sc-if value="{{ c.na }}"><span class="sm mut">Not drawn</span></sc-if>
+                <sc-if value="{{ !c.na }}"><button class="btn icon {{ c.cls }}" type="button" aria-label="{{ b.label }}"><span class="ic" data-icon="{{ b.icon }}"></span></button></sc-if>
+              </sc-for>
+            </sc-for>
+          </div>
+          <p class="cap">36 by 36 px. The label prop is required and becomes the accessible name ("More actions", "Close"); the Tooltip shows the same text.</p>
+        </div>
+
+        <div class="sec">
+          <h3 class="t3">Field with Label, Input and NumberField</h3>
+          <div class="cg cg5">
+            <span></span>
+            <sc-for list="{{ stateHeads5 }}" as="h"><span class="st-h">{{ h }}</span></sc-for>
+            <sc-for list="{{ fields }}" as="f">
+              <span class="st-r mono">{{ f.v }}</span>
+              <sc-for list="{{ f.cells }}" as="c">
+                <div class="fld">
+                  <span class="lbl">{{ f.label }}</span>
+                  <div class="inp {{ c.cls }}"><sc-if value="{{ c.ph }}"><span class="ph">{{ f.ph }}</span></sc-if><sc-if value="{{ !c.ph }}"><span class="{{ f.vcls }}">{{ c.val }}</span></sc-if><sc-if value="{{ f.unit }}"><span class="end sm">{{ f.unit }}</span></sc-if></div>
+                  <sc-if value="{{ c.err }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ c.err }}</span></sc-if>
+                  <sc-if value="{{ !c.err }}"><span class="desc">{{ f.desc }}</span></sc-if>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+          <p class="cap">Label, description and error are wired with aria-describedby; an invalid field sets aria-invalid. Messages state the rule and the fix. Labels carry units, and number fields show a format hint. The invalid border adds a 1 px inset so it does not rely on color alone.</p>
+        </div>
+
+        <div class="sec">
+          <h3 class="t3">Select and Combobox</h3>
+          <div class="cg cg5">
+            <span></span>
+            <sc-for list="{{ stateHeads5 }}" as="h"><span class="st-h">{{ h }}</span></sc-for>
+            <sc-for list="{{ selects }}" as="f">
+              <span class="st-r mono">{{ f.v }}</span>
+              <sc-for list="{{ f.cells }}" as="c">
+                <div class="fld">
+                  <span class="lbl">{{ f.label }}</span>
+                  <div class="inp {{ c.cls }}"><sc-if value="{{ f.search }}"><span class="ic ph" data-icon="Search"></span></sc-if><span class="{{ c.vcls }}">{{ c.val }}</span><span class="ic end" data-icon="ChevronDown"></span></div>
+                  <sc-if value="{{ c.err }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ c.err }}</span></sc-if>
+                </div>
+              </sc-for>
+            </sc-for>
+          </div>
+          <div class="opens">
+            <div class="fld"><span class="lbl">Machine (Select, open)</span><div class="inp is-focus"><span>Mill 2</span><span class="ic end" data-icon="ChevronDown"></span></div>
+              <div class="pop"><div class="mi"><span>Mill 1</span></div><div class="mi kfocus"><span>Mill 2</span><span class="ic end" data-icon="Check"></span></div><div class="mi is-hover"><span>Lathe 1</span></div><div class="mi is-dis"><span>Lathe 2 (archived)</span></div></div>
+              <span class="cap">Selected option: Check icon. Keyboard focus: highlight plus inset outline (P4). Pointer hover: highlight. Disabled option: 50 percent.</span></div>
+            <div class="fld"><span class="lbl">Article (Combobox, results)</span><div class="inp is-focus"><span class="ic ph" data-icon="Search"></span><span>bra</span><span class="ic end" data-icon="ChevronDown"></span></div>
+              <div class="pop"><div class="mi kfocus"><span>Bracket A</span><span class="end sm mono mut">A-1001</span></div><div class="mi"><span>Bracket B</span><span class="end sm mono mut">A-1002</span></div><div class="mi"><span>Brace C</span><span class="end sm mono mut">A-1017</span></div></div>
+              <span class="cap">Focus stays in the input; the active option is set with aria-activedescendant.</span></div>
+            <div class="fld"><span class="lbl">Article (Combobox, loading)</span><div class="inp is-focus"><span class="ic ph" data-icon="Search"></span><span>hou</span><span class="ic end" data-icon="ChevronDown"></span></div>
+              <div class="pop" aria-busy="true"><div class="mi"><span class="ic mut" data-icon="LoaderCircle"></span><span class="mut">Searching articles</span></div></div>
+              <span class="cap">The list announces its result count in a polite live region when the search returns.</span></div>
+          </div>
+        </div>
+
+        <div class="sec two">
+          <div>
+            <h3 class="t3">Checkbox with its 24 px hit area (dashed)</h3>
+            <div class="cg cg7">
+              <sc-for list="{{ checks }}" as="c"><span class="st-h">{{ c.h }}</span></sc-for>
+              <sc-for list="{{ checks }}" as="c">
+                <span class="cb {{ c.cls }}"><span class="cb-hit show"><span class="cb-box {{ c.box }}"><span class="ic" data-icon="{{ c.icon }}"></span></span></span></span>
+              </sc-for>
+            </div>
+            <p class="cap">The shadcn checkbox box is 16 px. Its hit area is var(--nm-target-min), 24 px by default and 44 px in the station layout, and the label is part of the target. Checked and indeterminate use the primary fill. Indeterminate (Q8, proposal) shows Minus and sets aria-checked="mixed". Invalid adds the destructive border and inset.</p>
+          </div>
+          <div>
+            <h3 class="t3">Hit area, enlarged 4 times</h3>
+            <div class="zoomcb"><div class="z"><span class="cb on"><span class="cb-hit show"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="sm">Include archived</span></span></div></div>
+            <p class="cap">Outer dashed square: 24 by 24 px target (2.5.8). Inner box: 16 by 16 px with a 1 px input border, 3.6 px radius (radius-sm). The box edge meets 3:1 against card ({{ inputOnCard }}:1).</p>
+          </div>
+        </div>
+
+        <div class="sec two">
+          <div>
+            <h3 class="t3">Tabs</h3>
+            <div class="tabs"><span class="tab on">Orders</span><span class="tab is-hover">Operations</span><span class="tab is-focus">Materials</span><span class="tab">Routing</span><span class="tab is-dis">History</span></div>
+            <p class="cap">Left to right: selected, hover, focus-visible, default, disabled. The selected tab adds a 2 px foreground underline, because its card fill against the muted list measures about 1.1:1.</p>
+          </div>
+          <div>
+            <h3 class="t3">Dropdown Menu (Menu), open</h3>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <button class="btn icon v-ghost is-hover" type="button" aria-label="More actions" aria-expanded="true"><span class="ic" data-icon="Ellipsis"></span></button>
+              <div class="pop" style="width:280px"><div class="mi"><span>Open order</span></div><div class="mi is-hover"><span>Edit in draft</span></div><div class="mi kfocus"><span>Move to another machine</span></div><div class="mi"><span>Copy order number</span></div><div class="msep"></div><div class="mi is-dis"><span class="ic" data-icon="Lock"></span><span>Break lock</span><span class="end sm">Planner only</span></div></div>
+            </div>
+            <p class="cap">Item states top to bottom: default, pointer hover, keyboard focus (highlight plus 2 px inset outline, P4), default, disabled. The trigger keeps its hover look while the menu is open.</p>
+          </div>
+        </div>
+
+        <div class="sec two">
+          <div>
+            <h3 class="t3">Alert Dialog (ConfirmDialog) with a required reason, focus inside</h3>
+            <div class="dlg-stage"><div class="ov"></div>
+              <div class="dlg" role="alertdialog" aria-label="Break the lock on 5003.10?">
+                <div class="t2" style="font-size:18px;line-height:24px">Break the lock on 5003.10?</div>
+                <div class="mut">Planner B is editing this order. Breaking the lock discards their unsaved draft changes.</div>
+                <div class="fld"><span class="lbl">Reason</span><div class="inp is-err is-focus"><span>ok</span></div><span class="err"><span class="ic" data-icon="CircleAlert"></span>Enter a reason of 3 to 500 characters. You entered 2.</span></div>
+                <div class="acts"><button class="btn v-outline" type="button">Cancel</button><button class="btn v-destructive" type="button">Break lock</button></div>
+              </div>
+            </div>
+            <p class="cap">Overlay is shadcn's black at 50 percent. The dialog surface is background. Cancel is the outline variant and the confirming action the destructive variant.</p>
+          </div>
+          <div>
+            <h3 class="t3">Dialog, focus inside</h3>
+            <div class="dlg-stage"><div class="ov"></div>
+              <div class="dlg" role="dialog" aria-label="Change the deadline of 5003.10">
+                <div class="dhead"><div class="t2" style="font-size:18px;line-height:24px">Change the deadline of 5003.10</div><button class="btn icon v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+                <div class="fld"><span class="lbl">Deadline</span><div class="inp is-focus"><span class="mono">2026-10-14</span></div><span class="desc">Format YYYY-MM-DD</span></div>
+                <div class="acts"><button class="btn v-outline" type="button">Cancel</button><button class="btn v-default" type="button">Save</button></div>
+              </div>
+            </div>
+            <p class="cap">Dialog: same surface, overlay and focus rules as Alert Dialog, plus the close button.</p>
+          </div>
+        </div>
+
+        <div class="sec two">
+          <div>
+            <h3 class="t3">Sheet, open</h3>
+            <div class="dlg-stage"><div class="ov"></div>
+              <div class="sheetp" role="dialog" aria-label="Order 5003.10">
+                <div style="display:flex;align-items:center;justify-content:space-between"><span class="t3" style="margin:0">Order 5003.10</span><button class="btn icon v-ghost is-focus" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+                <div class="sm mut">Bushing G &#183; 240 pcs &#183; Mill 1</div>
+                <div class="fld"><span class="lbl">Deadline</span><div class="inp"><span class="mono">2026-10-14</span></div><span class="desc">Format YYYY-MM-DD</span></div>
+                <span class="badge" style="--bb:var(--status-planned);--bf:var(--status-planned-foreground)"><span class="ic" data-icon="Info"></span>Planned</span>
+              </div>
+            </div>
+            <p class="cap">Sheet is the side form of Dialog, with the same focus rules. Here focus sits on Close, the first focusable element.</p>
+          </div>
+          <div>
+            <h3 class="t3">Tooltip and Hover Card</h3>
+            <div class="cbox" style="position:relative;height:260px">
+              <div style="position:absolute;left:24px;top:64px"><button class="btn icon v-outline is-focus" type="button" aria-label="Filter by status"><span class="ic" data-icon="Search"></span></button></div>
+              <span class="tip" style="left:12px;top:22px">Filter by status</span>
+              <div class="lane" style="position:absolute;left:150px;right:20px;top:20px;border:1px solid var(--border);border-radius:var(--radius-sm)"><div class="blk" style="left:10px;width:170px;--fill:var(--palette-5);--ink:#000000"><div class="b1"><span class="num">5005.10</span><span class="ic" data-icon="Clock"></span></div><div class="b2">Flange M &#183; 80 pcs</div></div></div>
+              <div class="pop" style="position:absolute;left:150px;top:86px;width:300px;gap:2px;padding:12px 14px"><span class="b6"><span class="mono">5005.10</span> Flange M</span><span class="sm"><span class="mono">80</span> pcs, Mon <span class="mono">06:00</span> to Mon <span class="mono">14:00</span>, Mill 1</span><span class="sm">Late by 2 days</span></div>
+            </div>
+            <p class="cap">Tooltip: primary fill. Both open after a short delay on hover and at once on focus, close on Escape without moving focus, stay open while the pointer is over them, and hold no interactive content (1.4.13).</p>
+          </div>
+        </div>
+
+        <div class="sec two">
+          <div>
+            <h3 class="t3">Toast (Sonner)</h3>
+            <div style="display:grid;gap:12px">
+              <div class="toast"><span class="ic" data-icon="CircleCheck" style="color:var(--success)"></span><span>Order 5003.10 saved.</span><span></span></div>
+              <div class="toast"><span class="ic" data-icon="CircleX" style="color:var(--destructive)"></span><span>The server did not answer. Your changes are kept in the form.</span><button class="btn v-outline is-focus" type="button">Retry</button></div>
+              <div class="toast"><span class="ic" data-icon="Info" style="color:var(--info)"></span><span>Live updates paused while you edit.</span><span></span></div>
+            </div>
+            <p class="cap">States: success, error with its action focused, info. Toasts echo what is visible elsewhere and are never the only copy of a message or the only Undo; errors also stay inline. They sit away from board and form areas and do not slide under reduced motion.</p>
+          </div>
+          <div>
+            <h3 class="t3">Card and Skeleton</h3>
+            <div class="two" style="gap:16px">
+              <div class="card"><span class="t3" style="margin:0">Mill 2</span><span class="sm mut">Current job</span><span><span class="mono b6">5005.10</span> Flange M, <span class="mono">20</span> of <span class="mono">80</span> pcs</span></div>
+              <div class="card" aria-busy="true"><span class="sk" style="width:60px;height:16px"></span><span class="sk" style="width:90px;height:12px"></span><span class="sk" style="width:180px;height:16px"></span></div>
+            </div>
+            <p class="cap">Card is the panel surface, with no hand-written panel classes. The Skeleton matches the populated layout and uses accent.</p>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h3 class="t3">Table</h3>
+          <div class="tbl">
+            <div class="tr hd"><span class="td"><span class="cb"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span></span><span class="td"><button class="sortb on" type="button" aria-sort="ascending">Order<span class="ic ic14" data-icon="ArrowUp"></span></button></span><span class="td">Article</span><span class="td num">Quantity (pcs)</span><span class="td"><button class="sortb is-focus" type="button">Deadline<span class="ic ic14" data-icon="ArrowUpDown"></span></button></span><span class="td">Status</span><span class="td">State</span></div>
+            <sc-for list="{{ rows }}" as="r">
+              <div class="tr {{ r.cls }}">
+                <span class="td"><span class="cb {{ r.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span></span>
+                <span class="td"><sc-if value="{{ !r.sk }}"><a class="mono {{ r.lk }}" href="#">{{ r.num }}</a></sc-if><sc-if value="{{ r.sk }}"><span class="sk" style="width:64px;height:12px"></span></sc-if></span>
+                <span class="td"><sc-if value="{{ !r.sk }}">{{ r.art }}</sc-if><sc-if value="{{ r.sk }}"><span class="sk" style="width:120px;height:12px"></span></sc-if></span>
+                <span class="td num mono"><sc-if value="{{ !r.sk }}">{{ r.qty }}</sc-if><sc-if value="{{ r.sk }}"><span class="sk" style="width:36px;height:12px"></span></sc-if></span>
+                <span class="td mono"><sc-if value="{{ !r.sk }}">{{ r.date }}</sc-if><sc-if value="{{ r.sk }}"><span class="sk" style="width:80px;height:12px"></span></sc-if></span>
+                <span class="td"><sc-if value="{{ !r.sk }}"><span class="badge" style="{{ r.bst }}"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.status }}</span></sc-if><sc-if value="{{ r.sk }}"><span class="sk" style="width:72px;height:18px;border-radius:999px"></span></sc-if></span>
+                <span class="td sm mut">{{ r.note }}</span>
+              </div>
+            </sc-for>
+            <div class="pager"><span>Rows 1 to 5</span><span style="display:flex;gap:8px"><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Previous</button><button class="btn v-outline" type="button">Next<span class="ic" data-icon="ChevronRight"></span></button></span></div>
+          </div>
+          <p class="cap">Header: muted fill. Sortable headers are buttons, and the column sets aria-sort. Row hover uses accent; the selected row uses info-subtle with its checkbox checked, so selection does not rest on the fill. The focused element is a link or a header button, never the row fill. Loading keeps the populated layout as a Skeleton and main sets aria-busy. Paging is keyset with Previous and Next.</p>
+        </div>
+
+        <div class="sec">
+          <h3 class="t3">Badge (StatusBadge), one per status</h3>
+          <div class="badges">
+            <sc-for list="{{ badges }}" as="b"><span class="badge" style="{{ b.st }}"><span class="ic" data-icon="{{ b.icon }}"></span>{{ b.t }}</span></sc-for>
+          </div>
+          <p class="cap">Icon plus text, never color alone. Planned, active, paused, finished and late follow Graphite's chips; registered, delivered, cancelled and the lock owner are proposals (P1). The pill shape is Graphite's.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          const S6 = [["", "Default"], ["is-hover", "Hover"], ["is-focus", "Focus-visible"], ["is-hover is-active", "Active"], ["is-dis", "Disabled"], ["load", "Loading (Q8)"]];
+          const S5 = [["", "Default"], ["is-hover", "Hover"], ["is-focus", "Focus-visible"], ["is-dis", "Disabled"], ["is-err", "Invalid"]];
+          const BV = [["default", "Save draft", "Saving"], ["secondary", "Discard", "Discarding"], ["outline", "Export", "Exporting"], ["ghost", "Clear filters", "Clearing"], ["destructive", "Break lock", "Breaking"], ["link", "View history", "Loading"]];
+          const buttons = BV.map((b) => ({
+            v: b[0],
+            cells: S6.map((s) => s[0] === "load"
+              ? { cls: "v-" + b[0] + " is-busy", text: b[2], load: true }
+              : { cls: "v-" + b[0] + " " + s[0], text: b[1], load: false })
+          }));
+          const iconButtons = [["ghost", "Ellipsis", "More actions"], ["outline", "X", "Close"]].map((b) => ({
+            v: b[0], icon: b[1], label: b[2],
+            cells: S6.map((s) => ({ cls: "v-" + b[0] + " " + (s[0] === "load" ? "" : s[0]), na: s[0] === "load" }))
+          }));
+          const fields = [
+            { v: "Input", label: "Article", ph: "Article number or name", desc: "Search by number or name", unit: "", vcls: "", vals: ["", "", "Bracket A", "Bracket A", "Bracket"], err: "No article matches \"Bracket\". Check the spelling or browse the list." },
+            { v: "NumberField", label: "Scrap (pcs)", ph: "0", desc: "Whole number, 0 to 37", unit: "", vcls: "mono", vals: ["4", "4", "12", "4", "40"], err: "Scrap can be at most 37, the remaining quantity." }
+          ].map((f) => Object.assign(f, {
+            cells: S5.map((s, i) => ({ cls: s[0], ph: f.v === "Input" && i < 2, val: f.vals[i], err: s[0] === "is-err" ? f.err : "" }))
+          }));
+          const selects = [
+            { v: "Select", label: "Machine", search: false, vals: ["Choose a machine", "Choose a machine", "Mill 2", "Mill 2", "Choose a machine"], err: "Choose the machine that runs this operation." },
+            { v: "Combobox", label: "Article", search: true, vals: ["Search articles", "Search articles", "Bracket A", "Bracket A", "Bracket"], err: "Choose an article from the list." }
+          ].map((f) => Object.assign(f, {
+            cells: S5.map((s, i) => ({ cls: s[0], val: f.vals[i], vcls: f.vals[i] === f.vals[0] ? "ph" : "", err: s[0] === "is-err" ? f.err : "" }))
+          }));
+          const checks = [
+            { h: "Default", cls: "", box: "", icon: "Check" },
+            { h: "Hover", cls: "is-hover", box: "", icon: "Check" },
+            { h: "Focus-visible", cls: "", box: "is-focus", icon: "Check" },
+            { h: "Disabled", cls: "is-dis", box: "", icon: "Check" },
+            { h: "Invalid", cls: "is-err", box: "", icon: "Check" },
+            { h: "Checked", cls: "on", box: "", icon: "Check" },
+            { h: "Indeterminate", cls: "mixed", box: "", icon: "Minus" }
+          ];
+          const B = (s) => "--bb:var(--" + s + ");--bf:var(--" + s + "-foreground)";
+          const badges = [
+            { t: "Registered", s: "status-registered", icon: "CircleDashed" },
+            { t: "Planned", s: "status-planned", icon: "Info" },
+            { t: "Active", s: "status-active", icon: "Play" },
+            { t: "Paused", s: "status-paused", icon: "Pause" },
+            { t: "Finished", s: "status-finished", icon: "CircleCheck" },
+            { t: "Delivered", s: "status-delivered", icon: "Truck" },
+            { t: "Cancelled", s: "status-cancelled", icon: "Ban" },
+            { t: "Late by 2 days", s: "late", icon: "Clock" },
+            { t: "Planner B is editing", s: "lock-owner", icon: "Lock" }
+          ].map((b) => Object.assign(b, { st: B(b.s) }));
+          const rows = [
+            { cls: "", cb: "", lk: "", num: "5001.10", art: "Bracket A", qty: "120", date: "2026-10-12", status: "Planned", icon: "Info", s: "status-planned", note: "Default" },
+            { cls: "hov", cb: "", lk: "", num: "5002.10", art: "Cover E", qty: "60", date: "2026-10-13", status: "Active", icon: "Play", s: "status-active", note: "Pointer hover" },
+            { cls: "", cb: "", lk: "is-focus", num: "5003.10", art: "Bushing G", qty: "240", date: "2026-10-14", status: "Paused", icon: "Pause", s: "status-paused", note: "Link focused" },
+            { cls: "sel", cb: "on", lk: "", num: "5004.10", art: "Shaft K", qty: "36", date: "2026-10-15", status: "Registered", icon: "CircleDashed", s: "status-registered", note: "Selected" },
+            { cls: "", cb: "", lk: "", sk: true, note: "Loading (Skeleton)" }
+          ].map((r) => Object.assign(r, { bst: r.s ? B(r.s) : "" }));
+          return {
+            stateHeads6: S6.map((s) => s[1]),
+            stateHeads5: S5.map((s) => s[1]),
+            buttons: buttons,
+            iconButtons: iconButtons,
+            fields: fields,
+            selects: selects,
+            checks: checks,
+            badges: badges,
+            rows: rows,
+            inputOnCard: dark ? "4.16" : "3.93"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

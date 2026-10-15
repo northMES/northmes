@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Keyboard and focus frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <div class="er-part {{ partCls }}" id="{{ rid }}">
+        <sc-for list="{{ kfs }}" as="k" hint-placeholder-count="2">
+          <section class="er-f er-k {{ k.wcls }}" data-kf="{{ k.id }}" data-screen-label="{{ k.label }}">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">{{ k.id }}</span>{{ k.name }}<span class="fth">{{ k.th }}</span></div></sc-if>
+            <div class="er-stage {{ k.stageCls }}" style="{{ k.stageStyle }}">
+              <div class="{{ k.shiftCls }}" style="{{ k.shift }}">
+                <sc-if value="{{ k.inshell }}"><dc-import name="shell-306-errors-inshell" dc-props="{{ k.props }}" hint-size="{{ k.hint }}"></dc-import></sc-if>
+                <sc-if value="{{ k.outside }}"><dc-import name="shell-306-errors-outside" dc-props="{{ k.props }}" hint-size="{{ k.hint }}"></dc-import></sc-if>
+                <sc-if value="{{ k.static }}"><dc-import name="shell-306-errors-static" dc-props="{{ k.props }}" hint-size="{{ k.hint }}"></dc-import></sc-if>
+              </div>
+              <sc-if value="{{ k.rings }}">
+                <div class="er-sheet {{ k.sheetCls }}">
+                  <h2 class="t2">Focus ring on every new control</h2>
+                  <p class="lede">Annotation, as D2 KE17: each control this page adds, drawn in its focus-visible state. Shell controls keep the rings of D2. The D1 ring is a 2 px outline in --focus-outline at a 2 px offset with a 2 px band in --focus-ring; the maintenance page inlines the same values as hex.</p>
+                  <div class="er-rings er-kfh">
+                    <sc-for list="{{ k.ringItems }}" as="r">
+                      <div class="er-ring">
+                        <div class="er-ring-c {{ r.boxCls }}">
+                          <sc-if value="{{ r.isIcon }}"><button class="btn icon v-ghost is-focus" type="button" aria-label="{{ r.label }}"><span class="ic" data-icon="{{ r.icon }}"></span></button></sc-if>
+                          <sc-if value="{{ r.isBtn }}"><button class="btn is-focus {{ r.cls }}" type="button"><sc-if value="{{ r.hasIcon }}"><span class="ic" data-icon="{{ r.icon }}"></span></sc-if>{{ r.label }}</button></sc-if>
+                          <sc-if value="{{ r.isLink }}"><a class="btn is-focus {{ r.cls }}" href="#"><sc-if value="{{ r.hasIcon }}"><span class="ic" data-icon="{{ r.icon }}"></span></sc-if>{{ r.label }}</a></sc-if>
+                          <sc-if value="{{ r.isX }}"><a class="er-x-btn er-x-focus" href="#">Try again</a></sc-if>
+                        </div>
+                        <span class="b6">{{ r.label }}</span>
+                        <span class="er-ring-m">{{ r.where }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <div class="er-ovl">
+                <sc-for list="{{ k.ov.band }}" as="o"><span class="er-band" style="{{ o.st }}"></span></sc-for>
+                <sc-for list="{{ k.ov.g }}" as="o"><span class="er-ghost" style="{{ o.st }}">Skip to main content, shown on focus</span></sc-for>
+                <sc-for list="{{ k.ov.dim }}" as="o"><span class="er-dim" style="{{ o.st }}"></span></sc-for>
+                <sc-for list="{{ k.ov.b }}" as="o"><span class="er-kb" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+                <sc-for list="{{ k.ov.t }}" as="o"><span class="er-kt" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+              </div>
+              <sc-if value="{{ k.legIn }}">
+                <div class="er-leg" style="{{ k.legStyle }}"><span class="er-leg-h">{{ k.leg.h }}</span><span>{{ k.leg.t }}</span></div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ k.legOut }}">
+              <div class="er-leg er-leg-out"><span class="er-leg-h">{{ k.leg.h }}</span><span>{{ k.leg.t }}</span></div>
+            </sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame": {"editor": "text", "default": "", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          this.__alive = true;
+          const root = document.getElementById(this.__rid);
+          if (root && window.MutationObserver) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true });
+          }
+          [300, 900, 2000, 4000, 7000, 11000].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 120);
+        }
+        // Annotations measured from the rendered frames: the Tab stops numbered in DOM order, and the sticky block that sets
+        // scroll-padding-top (as D2 KE19 and KE20).
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          const next = {};
+          const px = (v) => Math.round(v * 10) / 10 + "px";
+          this.__list().forEach((K) => {
+            const st = root.querySelector('[data-kf="' + K.id + '"] .er-stage');
+            if (!st) return;
+            const sr = st.getBoundingClientRect();
+            const k = st.offsetWidth ? sr.width / st.offsetWidth : 1;
+            if (!k) return;
+            const R = (el) => {
+              const r = el.getBoundingClientRect();
+              return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };
+            };
+            const o = { b: [], t: [], band: [], dim: [], g: [] };
+            const scr = st.querySelector(".sh-scr, .er-x-scr");
+            if (K.stops && scr) {
+              const S = R(scr);
+              const pos = (x, y) => "left:" + px(Math.max(S.x + 1, Math.min(S.x + S.w - 21, x))) + ";top:" + px(Math.max(S.y + 1, y));
+              const textRight = (el) => {
+                const rg = document.createRange();
+                rg.selectNodeContents(el);
+                return (rg.getBoundingClientRect().right - sr.left) / k;
+              };
+              let n = 0;
+              Array.prototype.slice.call(scr.querySelectorAll("a[href], button, [data-stop]")).forEach((el) => {
+                if (el.matches(".is-dis, [disabled], [aria-disabled='true']")) return;
+                const skip = el.matches(".sh-skip");
+                const r = R(el);
+                if (!skip && (r.w < 2 || r.h < 2)) return;
+                n += 1;
+                const clip = el.closest(".sh-sb-body");
+                if (clip) {
+                  const c = R(clip);
+                  const mid = r.y + r.h / 2;
+                  if (mid < c.y + 4 || mid > c.y + c.h - 4) return;
+                }
+                let x, y;
+                // A hidden skip link is drawn as a dashed ghost at its focused place, and badge 1 sits on the ghost.
+                if (skip) { if (r.w < 4) o.g.push({ st: "left:" + px(r.x) + ";top:" + px(r.y) }); x = r.x - 8; y = r.y - 8; }
+                else if (el.matches(".sh-sw")) { x = r.x + r.w - 14; y = r.y - 4; }
+                else if (el.closest(".sh-sb-head") || el.closest(".sh-sb-foot")) { x = r.x + r.w / 2 - 10; y = el.closest(".sh-sb-foot") ? r.y - 14 : r.y + r.h - 8; }
+                else if (el.matches(".sh-disc")) { x = r.x + r.w + 2; y = r.y + r.h / 2 - 10; }
+                else if (el.matches(".sh-ni")) { x = textRight(el) + 8; y = r.y + r.h / 2 - 10; }
+                else if (el.closest("header")) { x = r.x + r.w / 2 - 10; y = r.y + r.h - (r.h < 30 ? 2 : 8); }
+                else if (el.matches(".er-eye")) { x = r.x + r.w + 4; y = r.y - 12; }
+                else if (el.matches("[data-stop]")) { x = r.x - 26; y = r.y + r.h / 2 - 10; }
+                else { x = r.x - 10; y = r.y - 10; }
+                o.b.push({ n: String(n), st: pos(x, y) });
+              });
+            }
+            if (K.pads && scr) {
+              const hd = scr.querySelector("header");
+              const mn = scr.querySelector(".sh-main");
+              if (hd && mn) {
+                const S = R(scr);
+                const H = R(hd);
+                let bottom = H.y + H.h;
+                const parts = ["top bar " + Math.round(H.h)];
+                Array.prototype.slice.call(scr.querySelectorAll(".sh-strip")).forEach((q0) => { const q = R(q0); bottom = Math.max(bottom, q.y + q.h); parts.push("strip " + Math.round(q.h)); });
+                const M = R(mn);
+                let total = 8;
+                parts.forEach((t) => { total += parseInt(t.replace(/^\D+/, ""), 10) || 0; });
+                o.band.push({ st: "left:" + px(M.x + 1) + ";top:" + px(bottom) + ";width:" + px(M.w - 2) + ";height:8px" });
+                o.dim.push({ st: "left:" + px(M.x + M.w - 10) + ";top:" + px(S.y + 1) + ";height:" + px(bottom + 8 - S.y - 1) });
+                o.t.push({ text: "scroll-padding-top " + total + " px: " + parts.join(" + ") + " + 8", st: "left:" + px(M.x + 12) + ";top:" + px(S.y + S.h - 40) + ";max-width:" + px(M.w - 24) });
+              }
+            }
+            next[K.id] = o;
+          });
+          const sig = JSON.stringify(next);
+          if (sig !== this.__sig) {
+            this.__sig = sig;
+            this.setState({ ov: next });
+          }
+        }
+        __list() {
+          // crop: the screen point, in px, at the crop's top left corner.
+          const T = (frame, extra) => Object.assign({ frame: frame, labels: "off" }, extra || {});
+          return [
+            { id: "KF1", name: "Tab order, server error", theme: "light", w: 1440, h: 900, part: "inshell", props: T("SE1"), stops: true,
+              what: "SE1 with every Tab stop numbered in DOM order: the skip link, the sidebar, the top bar, then the panel. The h1 has focus on arrival and is no stop",
+              leg: { h: "Arrival", t: "The h1 has focus (tabindex -1), so the next Tab reaches the skip link." } },
+            { id: "KF2", name: "Try again pressed", theme: "light", w: 720, h: 400, crop: { x: 262, y: 60 }, part: "inshell", props: T("SE7", { titles: "off" }),
+              what: "SE7, focus stays on Try again",
+              leg: { h: "Try again", t: "The request runs; the button keeps focus with aria-busy and aria-disabled. On success focus moves to the h1 (KF3)." } },
+            { id: "KF3", name: "Data loaded", theme: "light", w: 1440, h: 900, part: "inshell", props: T("KFPO"),
+              what: "Production orders rendered after KF2; focus on its h1",
+              leg: { h: "Success", t: "The page renders and focus moves to its h1. No live message: the focused h1 is read." } },
+            { id: "KF4", name: "Copy correlation id", theme: "dark", w: 720, h: 320, crop: { x: 262, y: 110 }, part: "inshell", props: T("SE2", { titles: "off", focus: "copy" }),
+              what: "Crop of SE2: focus stays on Copy correlation id",
+              leg: { h: "Polite region, once", t: "Correlation id copied" } },
+            { id: "KF5", name: "Open without these settings", theme: "light", w: 720, h: 320, crop: { x: 262, y: 60 }, part: "inshell", props: T("BL1", { titles: "off", focus: "open" }),
+              what: "BL1 with the link focused",
+              leg: { h: "Enter", t: "Opens the same path with no search keys, with replace; focus moves to the route's h1 (KF6)." } },
+            { id: "KF6", name: "Settings dropped", theme: "light", w: 1440, h: 900, part: "inshell", props: T("KFPO"),
+              what: "After KF5: Production orders in its default view, the URL without search, focus on the h1",
+              leg: { h: "Focus", t: "The button that had focus is gone, so focus moves to the h1, the one exception to the rule that a search change keeps focus." } },
+            { id: "KF7", name: "Back to the list", theme: "dark", w: 720, h: 320, crop: { x: 262, y: 60 }, part: "inshell", props: T("NF6", { titles: "off", focus: "back" }),
+              what: "Crop of NF6 with focus on Back to Production orders",
+              leg: { h: "Enter", t: "Opens Production orders; the route changes and focus moves to its h1." } },
+            { id: "KF8", name: "Maintenance page focus", theme: "light", w: 720, h: 400, crop: { x: 360, y: 120 }, part: "static", props: T("MA1", { titles: "off", focus: "try" }),
+              what: "MA1: Try again, the only stop",
+              leg: { h: "Inline ring", t: "outline 2 px #171b1f, offset 2 px, band 2 px #f9fafb" } },
+            { id: "KF9", name: "Inline ring", theme: "dark", w: 320, h: 640, part: "static", props: T("MA4", { focus: "try" }),
+              what: "MA4 with Try again focused",
+              leg: { h: "Inline ring, dark", t: "outline #f0f2f4, band #151719" } },
+            { id: "KF10", name: "Session ended, tab order", theme: "light", w: 1440, h: 900, part: "outside", props: T("SO1"), stops: true,
+              what: "SO1: the h1 has focus on arrival; then the skip link, the two fields, Show password and Sign in",
+              leg: { h: "Arrival", t: "Reached by navigation, so the h1 has focus. Polite region, once: Your session ended. Sign in again to continue." } },
+            { id: "KF11", name: "Boot failure, tab order", theme: "light", w: 1440, h: 900, part: "outside", props: T("BO3"), stops: true,
+              what: "BO3: a first load, so nothing is focused; the skip link, Copy correlation id, Reload page",
+              leg: { h: "Polite region, once", t: "NorthMES could not start." } },
+            { id: "KF12", name: "HTTPS page, tab order", theme: "dark", w: 1440, h: 900, part: "outside", props: T("HS2"), stops: true,
+              what: "HS2: nothing is focused on the first load; the skip link, then Open with HTTPS",
+              leg: { h: "First load", t: "Nothing is focused; the first Tab reaches the skip link." } },
+            { id: "KF13", name: "Not obscured", theme: "dark", w: 320, h: 640, part: "inshell", props: T("SE6", { focus: "goto" }), pads: true,
+              what: "SE6 with Go to Planning board focused and the sticky block measured",
+              leg: { h: "Focus not obscured", t: "This page fits the 320 by 640 screen, so it does not scroll here. On a taller page the browser scrolls a focused control to scroll-padding-top, 8 px under the sticky top bar, so the bar never covers it." } },
+            { id: "KF14", name: "Focus ring on every new control", theme: "light", w: 1440, h: 900, rings: true, what: "Annotation, as D2 KE17: every control this page adds, ringed" },
+            { id: "KF15", name: "Focus ring on every new control", theme: "dark", w: 1440, h: 900, rings: true, what: "As KF14" }
+          ];
+        }
+        renderVals() {
+          const P = this.props || {};
+          const S = this.state || {};
+          if (!this.__rid) {
+            window.__nmErKfSeq = (window.__nmErKfSeq || 0) + 1;
+            this.__rid = "er-kf-" + window.__nmErKfSeq;
+          }
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const only = pick(P.frame, "").toUpperCase();
+          const labels = pick(P.labels, "on") !== "off";
+          const OV = S.ov || {};
+          const RINGS = [
+            { label: "Copy correlation id", where: "Server error; boot failure at 44 px", icon: "Copy", kind: "icon" },
+            { label: "Try again", where: "Server error, no connection", icon: "RotateCw", cls: "v-default", kind: "btn" },
+            { label: "Go to Planning board", where: "Server error: the module's first entry", cls: "v-outline", kind: "link" },
+            { label: "Open Production orders without these settings", where: "Link cannot be used", cls: "v-default", kind: "link" },
+            { label: "Go back", where: "Link cannot be used, with an earlier entry in the tab", icon: "ArrowLeft", cls: "v-outline", kind: "btn" },
+            { label: "Go to Plant A", where: "Unknown path in a plant", cls: "v-default", kind: "link" },
+            { label: "See all pages", where: "Unknown path in a plant and under /admin", cls: "v-outline", kind: "link" },
+            { label: "Go to Overview", where: "Unknown path under /admin", cls: "v-default", kind: "link" },
+            { label: "Back to Production orders", where: "Record not found", icon: "ArrowLeft", cls: "v-default", kind: "link" },
+            { label: "Reload page", where: "Boot failure, no answer at boot; 44 px", icon: "RotateCw", cls: "v-default er-b44", kind: "btn" },
+            { label: "Open with HTTPS", where: "HTTPS required; a link, 44 px", cls: "v-default er-b44", kind: "link" },
+            { label: "Try again on the maintenance page", where: "Maintenance page: a link, 44 px, the ring in inline hex values", kind: "x" }
+          ];
+          const kfs = this.__list().filter((K) => !only || K.id === only).map((K) => {
+            const ov = OV[K.id] || { b: [], t: [], band: [], dim: [], g: [] };
+            const legOut = !!K.leg && (!!K.crop || K.w === 320);
+            const dark = K.theme === "dark";
+            const wh = K.w + " by " + K.h + (K.crop ? " crop" : "");
+            const hint = K.crop ? "1440px,900px" : K.w + "px," + (K.h + 72) + "px";
+            const ringItems = RINGS.map((r) => ({
+              label: r.label, where: r.where, icon: r.icon || "", hasIcon: !!r.icon, cls: r.cls || "",
+              isIcon: r.kind === "icon", isBtn: r.kind === "btn", isLink: r.kind === "link", isX: r.kind === "x",
+              boxCls: r.kind === "x" ? "er-ring-x" + (dark ? " er-x-dark" : "") : ""
+            }));
+            return {
+              id: K.id,
+              name: K.name,
+              th: (dark ? "Dark, " : "Light, ") + wh + (K.w === 320 ? "" : ". " + K.what),
+              label: K.id + " " + K.name + ", " + K.theme + ", " + K.w + " by " + K.h,
+              wcls: "w" + K.w,
+              stageCls: K.crop ? "er-crop" : "",
+              stageStyle: K.crop ? "width:" + K.w + "px;height:" + K.h + "px" : "",
+              shiftCls: K.crop ? "er-shift" : "",
+              shift: K.crop ? "left:-" + K.crop.x + "px;top:-" + K.crop.y + "px" : "",
+              inshell: K.part === "inshell",
+              outside: K.part === "outside",
+              static: K.part === "static",
+              props: K.props || {},
+              hint: hint,
+              rings: !!K.rings,
+              sheetCls: dark ? "dark" : "",
+              ringItems: K.rings ? ringItems : [],
+              ov: ov,
+              legIn: !!K.leg && !legOut,
+              legOut: legOut,
+              leg: K.leg || { h: "", t: "" },
+              legStyle: "right:24px;bottom:24px;max-width:360px"
+            };
+          });
+          return { kfs: kfs, labels: labels && !only, rid: this.__rid, partCls: only ? "one" : "" };
+        }
+      }
+    </script>
+  </body>
+</html>

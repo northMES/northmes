@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 planning board</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+        <style>
+/* D3 spec page: one header frame, then one row per part file. Row labels are canvas annotations in the D1 label colors. */
+.ps-row{display:flex;flex-direction:column;align-items:flex-start}
+.ps-rh{position:relative;z-index:30;display:grid;gap:6px;max-width:1440px;margin:0 0 32px;padding:14px 20px 16px;border-radius:8px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);cursor:grab;user-select:none}
+.ps-rh1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font:600 28px/36px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.01em}
+.ps-rn{padding:3px 10px;border-radius:5px;background:#1a1a1a;color:#ffffff;font:600 18px/26px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0}
+.ps-ids{font:500 18px/26px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;letter-spacing:0}
+.ps-rh2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;font:400 16px/24px "IBM Plex Sans",system-ui,sans-serif;color:#4f4c46}
+.ps-file{font:400 14px/20px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.ps-part{position:relative;z-index:1}
+.ps-part.pad{margin:-80px 0 0 -80px}
+.ps-dir{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:32px;align-items:start}
+.ps-dir p{margin:0}
+.ps-dir p + p{margin-top:10px}
+.ps-tbl code,.ps-ul code,.ps-ol code,.ps-facts code,.ps-dir code{font:400 13px/18px var(--font-mono);white-space:nowrap}
+.ps-tbl td.ps-fn{white-space:nowrap}
+.ps-tbl td.ps-id{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ps-st{display:inline-flex;padding:0 7px;border-radius:999px;font-size:11px;line-height:18px;font-weight:600;white-space:nowrap;background:var(--warning-subtle);color:var(--warning)}
+.ps-st.none{background:var(--muted);color:var(--muted-foreground)}
+.ps-st.ok{background:var(--success-subtle);color:var(--success)}
+.ps-note{margin:12px 0 0;color:var(--muted-foreground)}
+.ps-grp{margin:0 0 6px;font-size:13px;line-height:18px;font-weight:600;color:var(--muted-foreground)}
+.ps-grps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 56px}
+        </style>
+      </helmet>
+      <div class="frame w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, chosen direction, rows, acceptance criteria, frames per item, assumptions, proposals, known limits and open questions</span></div>
+        <article class="sheet ps-sheet">
+          <p class="kick">Design task D3, spec page, approved by Krister Johansson on 2026-10-08. Every name, number and time on this page is fictional.</p>
+          <h1 class="t1">Planning board</h1>
+          <p class="lede">The planning board of a plant inside the D2 shell: machines grouped by equipment group on a time axis in plant time, job order blocks with every state in text and shape, the docked inspector beside the grid and the pinned Not placed row. Rows 1 to 4 below hold the frames; each frame names its theme and size.</p>
+          <dl class="ps-facts">
+            <dt>Issue</dt><dd>#221, planning: Design the planning board (D3), plan id E08-S01-T01</dd>
+            <dt>Story</dt><dd>E08-S01 (#88), draw the board's axis, rows and blocks in plant time. The UI tasks of E08-S01 to E08-S11 (#88 to #98) wait on this page.</dd>
+            <dt>Area</dt><dd>planning, built in <code>modules/planning/web</code></dd>
+            <dt>Route</dt><dd><code>/$plant/planning/board</code>, with the job order table at <code>?view=table</code>. The URL keeps <code>view</code>, <code>zoom</code>, <code>from</code> and <code>order</code>, without their defaults.</dd>
+            <dt>Persona</dt><dd>Planner. Alex Lund is signed in; Erik Sand and Lena Ek are the other planners.</dd>
+            <dt>Shell</dt><dd><code>shell/Shell.dc.html</code> from D2, mounted read-only through <code>planning/Shell.dc.html</code>, a byte-equal copy.</dd>
+            <dt>Plan drawn</dt><dd>Acme AB, Plant A, Tue 3 Nov 2026 at 09:40 CET in week 45: 40 machines in 6 equipment groups. The Hours preset shows 06:00 to 18:00, and job order 1003.20 is moved in my draft and selected. BO18 and BO19 show the night of Sat 24 to Sun 25 Oct, when summer time ends.</dd>
+            <dt>Shared files</dt><dd><code>planning-221-board.css</code>, <code>planning-221-board-data.js</code> and the parts <code>planning-221-board-grid</code>, <code>planning-221-board-notplaced</code> and <code>planning-221-board-inspector</code>, which every row mounts.</dd>
+          </dl>
+          <section class="sec ps-dir">
+            <div>
+              <h2 class="ps-h">Chosen direction</h2>
+              <p>Krister Johansson chose on 2026-10-07 option A of the variations round, a docked 320 px inspector beside the grid with the tabs Details, My draft and Large orders, plus option C's pinned Not placed row under the time header. The board side slot <code>planning/board/side/v1</code> becomes the inspector's Large orders tab instead of D2's separate column, and from A the page takes the Zoom Toggle Group with Earlier, Now, Later and Go to date and the full-width group bands. A review step comes only before saving my draft and breaking a soft lock, after his decision of the same day on #222 for the commands under WCAG 3.3.4.</p>
+            </div>
+            <div>
+              <h2 class="ps-h">Variations round</h2>
+              <p><code>planning/planning-221-board-variations.dc.html</code>, recorded in <code>docs/design/planning/planning-221-board-variations.md</code> (merged in #287). The two additions it asked for are drawn in row 1: Collapse panel (BO5) and the rule for 1280 with the assistant docked (BO6, BO7).</p>
+            </div>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Rows on this page</h2>
+            <table class="ps-tbl">
+              <thead>
+                <tr><th>Row</th><th>Frames</th><th>Part file</th><th>What the row shows</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1 Board</td><td class="ps-id">BO1 to BO19</td><td class="ps-fn"><code>planning-221-board-board.dc.html</code></td><td>The board at 1280, 1440 and 1920 and the four zoom presets, each in light and dark; the inspector collapsed; the assistant docked at 1280; the night of the DST change in light and dark; groups collapsed; and every block state in text (BO12).</td></tr>
+                <tr><td>2 Interaction</td><td class="ps-id">IN1 to IN34</td><td class="ps-fn"><code>planning-221-board-interact.dc.html</code></td><td>The hover card, links with lead time, the cluster popover, pointer and keyboard moves, the Actions menu and the Move dialog, the Details states not found, field error and server error, soft locks and breaking one with its errors, the Large orders tab and the block fields slot, with dark twins. IN20 holds the interaction build notes.</td></tr>
+                <tr><td>3 Draft, autoplan and page states</td><td class="ps-id">DR1 to DR32</td><td class="ps-fn"><code>planning-221-board-draft-autoplan.dc.html</code></td><td>My draft review and Save, discarding a draft and a row, autoplan from queued to failed, every status line message, live updates paused and reconnecting, loading, empty, error, range too large, no access, stale connector data and the read-only timeline, with dark twins of loading, empty and error. DR25 holds the build notes for the row.</td></tr>
+                <tr><td>4 Job table, 320, long strings, keyboard and focus</td><td class="ps-id">TA1 to TA21</td><td class="ps-fn"><code>planning-221-board-table-narrow-keyboard.dc.html</code></td><td>The job order table view, the 320 reflow, German and Finnish strings in light and dark, Tab order, arrow keys, focus after each action, the focus ring and the sticky offsets. TA19 holds the build notes for rows 1 and 4.</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Acceptance criteria of #221</h2>
+            <table class="ps-tbl">
+              <thead>
+                <tr><th>Criterion</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Every frame in the list exists in light and dark.</td><td><span class="ps-st ok">Met</span> The next table lists the light and the dark frames of each item.</td></tr>
+                <tr><td>No comment thread on the page is open.</td><td><span class="ps-st none">At approval</span> The page has no comment threads.</td></tr>
+                <tr><td>Krister approved the page and the design project's README row holds the etag.</td><td><span class="ps-st ok">Met</span> Krister Johansson approved the page on 2026-10-08, and the README row holds the etag.</td></tr>
+                <tr><td>The design pull request with PNGs and build notes is merged.</td><td><span class="ps-st">Not met</span> It follows the approval.</td></tr>
+                <tr><td>The waiting UI tasks carry the Design section.</td><td><span class="ps-st">Not met</span> It follows the approval.</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">The frames #221 lists, and where they are</h2>
+            <table class="ps-tbl">
+              <thead>
+                <tr><th>Item in #221</th><th>Light</th><th>Dark</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Machines grouped by equipment group with group colors and collapse, on a time axis in plant time; the four zoom presets; Earlier, Today and Later; non-working time shaded per machine</td><td class="ps-id">BO1, BO3, BO4, BO8, BO9, BO10, BO18</td><td class="ps-id">BO2, BO11, BO13, BO14, BO15, BO16, BO17, BO19</td></tr>
+                <tr><td>Job order blocks at least 24 px tall with the fields a planner chooses, every state in text and shape; narrow blocks merged into cluster targets that name their state counts</td><td class="ps-id">BO1, BO8, BO9, BO10, BO12, IN27</td><td class="ps-id">BO2, BO11, BO15, BO16, BO17, IN28</td></tr>
+                <tr><td>The hover card; the selected order's links with lead time</td><td class="ps-id">IN1, IN2, IN3, BO1</td><td class="ps-id">IN21, BO2</td></tr>
+                <tr><td>Moving a block by pointer into my draft, with snapping and frozen-window feedback; moving a block without dragging</td><td class="ps-id">IN4 to IN9, TA12</td><td class="ps-id">IN22, IN23, IN24</td></tr>
+                <tr><td>Other planners' locks live, and breaking a lock with a reason</td><td class="ps-id">IN10 to IN16, IN34, TA14</td><td class="ps-id">IN25, BO2 (held block), DR14 (my soft lock warning), TA15</td></tr>
+                <tr><td>The job order table view</td><td class="ps-id">TA1, TA3, TA7</td><td class="ps-id">TA2, TA4, TA9, TA21</td></tr>
+                <tr><td>Reviewing my draft and saving it; conflicts and row statuses after a save</td><td class="ps-id">DR1, DR2, DR3, DR5, DR6, DR30, DR31</td><td class="ps-id">DR4, TA13</td></tr>
+                <tr><td>Starting autoplan from the board and following its status; pausing live updates</td><td class="ps-id">DR7 to DR9, DR11 to DR13, IN18</td><td class="ps-id">DR10, DR14</td></tr>
+                <tr><td>The board side slot <code>planning/board/side/v1</code> and the block fields slot <code>planning/board/block-fields/v1</code></td><td class="ps-id">IN17, IN18, IN19, IN29, DR13, DR23</td><td class="ps-id">IN26, IN30</td></tr>
+                <tr><td>Empty, loading, error and degraded states</td><td class="ps-id">DR15, DR17 to DR20, DR22 to DR24, DR32, IN31 to IN33</td><td class="ps-id">DR16, DR21, DR26 to DR29</td></tr>
+                <tr><td>Widths 1280, 1440, 1920 and a 320 reflow frame; one frame with long German or Finnish labels and data</td><td class="ps-id">BO3, BO1, BO4, BO6, BO7, TA3, TA5, TA6, TA7</td><td class="ps-id">BO13, BO2, BO14, TA4, TA20, TA21</td></tr>
+                <tr><td>Keyboard and focus frames</td><td class="ps-id">TA8, TA10, TA12, TA14, TA16, TA18</td><td class="ps-id">TA9, TA11, TA13, TA15, TA17, IN23</td></tr>
+              </tbody>
+            </table>
+            <p class="ps-note">A dark twin repeats its light frame with the dark tokens and names that frame in its chip. Each item above has frames in both themes; single states inside an item, such as the refused drop (IN5) or the status line sheet (DR12), are drawn in one theme.</p>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Assumptions</h2>
+            <ul class="ps-ul ps-two">
+              <li>Every value is fictional: Acme AB, Plant A, the people, and the order, article and machine numbers. The implementer takes layout, region order, states, copy, the keyboard model and slot placements, not demo numbers.</li>
+              <li>The production day starts at 06:00. The Hours preset spans 12 h from it; the snap steps are 15 min at Hours, 1 h at Day, 4 h at Week and 1 day at 4 weeks.</li>
+              <li>The range control reads Now, as option A drew it, where #221 says Today. The row header button reads Jobs on this machine.</li>
+              <li>Plant time is CET, apart from BO18 and BO19, which show CEST before 03:00 on Sun 25 Oct and CET after it. In the long-strings frames dates and times stay in English, while labels and data are German, with one Finnish article.</li>
+              <li>States the shell owns stay D2's: the reconnecting chip, a module unavailable and a failed slot. The board draws only its own part of them, such as Resume live updates disabled and moves off.</li>
+              <li>Large orders, the example contribution, stands for any contribution to <code>planning/board/side/v1</code>.</li>
+              <li>Pause live updates is drawn as #98 specifies, while PO-45 in plan 16 asks whether it is wanted.</li>
+              <li>A save of my draft reviews in the My draft tab, and breaking a soft lock confirms in a dialog with a reason. Discarding a draft asks first and a discarded row keeps Undo, as proposals outside decision D.7 (open question 27).</li>
+              <li>If the board spike SP3 fails twice, the job table and a read-only timeline carry the page in the same layout (DR24).</li>
+              <li>Every color is a D1 token. Values that are not tokens, such as the 3 px selection bar, the 2 px frozen and snap lines, the 48 px strip, 52 px machine rows and the 4 px gutter before the time area, are proposals.</li>
+              <li>The Pyramid connector's block fields in IN29 and IN30 are an example contribution; their texts and icons are the connector's, not planning's.</li>
+            </ul>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Proposals that need Krister's yes</h2>
+            <div class="ps-grps">
+              <div>
+                <p class="ps-grp">Row 1, board</p>
+                <ul class="ps-ul">
+                  <li>The range text per preset: "Tue 3 Nov, 06:00 to 18:00", "Tue 3 Nov to Thu 5 Nov", "W45, Mon 2 Nov to Sun 8 Nov" and "W45 to W48, Mon 2 Nov to Sun 29 Nov" (BO1, BO8 to BO10).</li>
+                  <li>Collapse panel folds the inspector to a 48 px strip with Expand panel and one button per tab; the soft lock warning and Extend then sit in the status line (BO5, IN12).</li>
+                  <li>When the grid would keep under 480 px, the inspector shows as its strip until the planner expands it (BO6, BO7).</li>
+                  <li>At 1280 Earlier and Later keep only their icons; with the assistant docked, Go to date and Pause live updates move into Board options (BO3, BO6).</li>
+                  <li>A block that a cluster's 24 px target would cover joins the cluster, and its state counts with it (BO8).</li>
+                  <li>Machine rows are 52 px, so a two-line block's second line ends above its progress bar and border markers; the time area starts 4 px after the machine column, so a block at the range start keeps its focus ring.</li>
+                  <li>Under 66 px a block draws no text, because a whole job number needs 66 px; compact density runs from 66 to 119 px (BO7, BO8).</li>
+                  <li>At Week and 4 weeks the now label names the day on the top tier, so every day label stays (BO9, BO10).</li>
+                  <li>The lead time pill sits left of the link on the successor's row, else right of the predecessor's end, wherever it covers no block (BO1, IN3).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="ps-grp">Row 2, interaction</p>
+                <ul class="ps-ul">
+                  <li>The hover card opens after 700 ms and closes after 300 ms; keyboard focus opens it at once (IN1, IN2).</li>
+                  <li>The soft lock warning is announced once as assertive and counts down on screen; after Extend focus goes to the Details tab (IN10, IN11).</li>
+                  <li>A refused drop returns the block with an assertive message and the copy of IN5.</li>
+                  <li>The side slot content mounts only while its tab is open (IN17).</li>
+                  <li>The cluster popover keeps Tab inside it until Escape returns focus to the cluster (IN27).</li>
+                  <li>A server error in Details or in the Break soft lock dialog keeps every value and focus on the button, and is announced as assertive (IN33, IN34).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="ps-grp">Row 3, draft, autoplan and page states</p>
+                <ul class="ps-ul">
+                  <li>The status line copy of DR12, apart from the result counts, "already queued by" and the pause line, which come from the docs.</li>
+                  <li>The Save result in My draft: the heading "Nothing was saved", the badge Needs a reason and the summary "2 rows need your action" (DR3, DR4).</li>
+                  <li>The EmptyState and ErrorState copy, the error id and Show Week as the way out of <code>range_too_large</code> (DR19 to DR22).</li>
+                  <li>No Run autoplan or Save on the first run and on No access, and no Pause live updates while the board failed to load (DR19 to DR22).</li>
+                  <li>The stale header slot text (DR23), and moves through Details in the read-only timeline (DR24).</li>
+                  <li>With no job order in the range the first "No jobs in this range" cell holds the grid's Tab stop, or the Not placed row's "No job orders without a place" when it is empty; while the board loads the grid itself holds it (DR17, DR18, DR32).</li>
+                  <li>Discard draft asks first in an Alert Dialog, and Discard on a row keeps the row with Undo until the next Save (DR30, DR31).</li>
+                </ul>
+              </div>
+              <div>
+                <p class="ps-grp">Row 4, job table, keyboard and focus</p>
+                <ul class="ps-ul">
+                  <li>The table sorts by machine in board order, then start; the toolbar names the presets Range; Late only sits at the top of the card; late facts open in an expandable row; Move stays in every row, aria-disabled with its reason (TA1, TA2).</li>
+                  <li>The toolbar is one Tab stop. Up and Down go to the job order nearest in time, and the row header column is its own path through the group bands (TA8, TA10, TA11).</li>
+                  <li>After Enter focus stays on the job order, after Save it goes to the My draft heading, and after Break soft lock it goes to Machine (TA12 to TA15).</li>
+                  <li>At 320 the toolbar folds into Board options or Table options, which hold Show job table and Show board (TA3, TA5).</li>
+                  <li>The announcement copy in IN20, DR25 and TA19.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Known limits</h2>
+            <ul class="ps-ul ps-two">
+              <li>At the Day preset the blocks are close together, so the lead time pill can cover part of a block when no free place fits it (BO8, BO15).</li>
+              <li>Job orders on a past night, such as Sun 25 Oct in BO18 and BO19, draw as committed without a finished cue until open question 12 is answered.</li>
+              <li>The frames draw the job table as ARIA table roles on a CSS grid; the build uses a native table (TA19).</li>
+            </ul>
+          </section>
+          <section class="sec">
+            <h2 class="ps-h">Open questions</h2>
+            <ol class="ps-ol ps-two">
+              <li>Which zoom preset is the default, and where does Hours start when <code>from</code> is a date only?</li>
+              <li>Is 06:00 the production day start?</li>
+              <li>How long is the frozen window (PO-15)?</li>
+              <li>What is the idle expiry of a soft lock (PO-42)?</li>
+              <li>What does a planner without <code>breakLock</code> see (PO-41), and which permission covers Lock and Unlock?</li>
+              <li>May a planner save new overlaps with a reason (PO-43)?</li>
+              <li>Does autoplan apply directly or write a proposal (PO-16), and does it hold my own draft rows?</li>
+              <li>Is pause wanted at all (PO-45)?</li>
+              <li>Does the block menu include split?</li>
+              <li>Does the board get an equipment group filter, and is it URL state?</li>
+              <li>How do rows of equipment tracked only for OEE look, and do they take drops?</li>
+              <li>Do finished and cancelled job orders show on the board, and with which cue? Mon 2 Nov and the night of Sun 25 Oct draw committed blocks without a finished cue.</li>
+              <li>Where do toasts sit, away from the board?</li>
+              <li>Is the pending change badge with its dialog part of D3 or its own task (E10-S03)?</li>
+              <li>Does D3 draw the proposal review panel's "show on board", or only the proposed state (E15-S03)?</li>
+              <li>Which unit do planned durations use? The frames draw "2 h 55 min".</li>
+              <li>Which range limits apply until SP3 (PO-44), and what does <code>range_too_large</code> suggest?</li>
+              <li>What sits beside the h1 when no connector fills the header slot?</li>
+              <li>Where does Tab enter the grid when nothing is selected? Proposed: the first block of the first expanded machine row nearest the now line.</li>
+              <li>Is Go to date a Calendar popover?</li>
+              <li>With several contributions to <code>planning/board/side/v1</code>, does each get a tab, or do they share one tab?</li>
+              <li>Is 480 px the right grid width below which the inspector shows as its strip?</li>
+              <li>Should 320 open the job table first? Option A keeps the board grid at 320; TA3 to TA5 draw both.</li>
+              <li>Does Collapse panel sit before or after the tab list? The frames put it after.</li>
+              <li>What does a superseded autoplan mean for the planner? DR12 draws a neutral line.</li>
+              <li>Do Save and Run autoplan stay enabled while reconnecting? The frames draw them enabled.</li>
+              <li>Does Discard draft get a review step, and a discarded row an Undo? Plan 06 lists only saving a draft, breaking a lock and releasing an order under WCAG 3.3.4, and decision D.7 follows it; rule 21.5 makes Discard draft the only undo, so DR30 and DR31 draw both as proposals.</li>
+            </ol>
+          </section>
+        </article>
+      </div>
+      <div class="frame ps-row" style="left:80px;top:4636px;width:4480px" data-screen-label="Row 1 Board">
+        <div class="ps-rh" data-drags-parent="1">
+          <div class="ps-rh1"><span class="ps-rn">Row 1</span><span>Board</span><span class="ps-ids">BO1 to BO19</span></div>
+          <div class="ps-rh2"><span>The board at 1440, 1280 and 1920, each in light and dark; the inspector collapsed to its strip; the assistant docked at 1280, with the strip and with Details opened; the Day, Week and 4 weeks presets in light and dark; the night of the DST change in light and dark; groups collapsed with a proposed job order selected; BO12 gives every block state in text.</span><span class="ps-file">planning-221-board-board.dc.html</span></div>
+        </div>
+        <div class="ps-part"><dc-import name="planning-221-board-board" hint-size="4480px,8922px"></dc-import></div>
+      </div>
+      <div class="frame ps-row" style="left:80px;top:13974px;width:4480px" data-screen-label="Row 2 Interaction">
+        <div class="ps-rh" data-drags-parent="1">
+          <div class="ps-rh1"><span class="ps-rn">Row 2</span><span>Interaction</span><span class="ps-ids">IN1 to IN34</span></div>
+          <div class="ps-rh2"><span>The hover card by pointer and by focus, the links with lead time, the cluster popover, a pointer move into my draft and a refused one, keyboard move mode, the Actions menu, the Move dialog and its field error, Details not found, with a field error and with a server error, my soft lock warning and Extend, another planner's soft lock and breaking it with a reason, its errors, my soft lock broken, the Large orders tab, paused and failed, and the block fields slot; dark twins sit beside their light frames; IN20 holds the interaction build notes.</span><span class="ps-file">planning-221-board-interact.dc.html</span></div>
+        </div>
+        <div class="ps-part pad"><dc-import name="planning-221-board-interact" hint-size="4640px,15997px"></dc-import></div>
+      </div>
+      <div class="frame ps-row" style="left:80px;top:30331px;width:4480px" data-screen-label="Row 3 Draft, autoplan and page states">
+        <div class="ps-rh" data-drags-parent="1">
+          <div class="ps-rh1"><span class="ps-rn">Row 3</span><span>Draft, autoplan and page states</span><span class="ps-ids">DR1 to DR32</span></div>
+          <div class="ps-rh2"><span>My draft review, ready to save, Save stopped with its row statuses and the reason field, saved, Discard draft and a discarded row; autoplan queued, running, applied and failed, and every status line message; live updates paused and reconnecting; loading, no jobs in the range, nothing unplaced, no machines, the board could not be loaded, range too large, no access, stale connector data with Large orders failed, and the read-only timeline; dark twins of loading, empty and error; DR25 holds the build notes for the row.</span><span class="ps-file">planning-221-board-draft-autoplan.dc.html</span></div>
+        </div>
+        <div class="ps-part"><dc-import name="planning-221-board-draft-autoplan" hint-size="4480px,13106px"></dc-import></div>
+      </div>
+      <div class="frame ps-row" style="left:80px;top:43877px;width:2960px" data-screen-label="Row 4 Job table, 320, long strings, keyboard and focus">
+        <div class="ps-rh" data-drags-parent="1">
+          <div class="ps-rh1"><span class="ps-rn">Row 4</span><span>Job table, 320, long strings, keyboard and focus</span><span class="ps-ids">TA1 to TA21</span></div>
+          <div class="ps-rh2"><span>The job order table view in light and dark, at 320 with the Details sheet and Board options, the board and the table in German with a Finnish article in light and dark, Tab order on the board and in the table, arrow keys in the grid, focus after Move, Save and Break soft lock, the D1 focus ring on every board surface, and the sticky offsets; TA19 holds the build notes for rows 1 and 4.</span><span class="ps-file">planning-221-board-table-narrow-keyboard.dc.html</span></div>
+        </div>
+        <div class="ps-part"><dc-import name="planning-221-board-table-narrow-keyboard" hint-size="2960px,15854px"></dc-import></div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

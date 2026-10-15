@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Effective permissions</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+      </helmet>
+      <div class="lf-part fit {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <section class="lf-card auto {{ cardCls }}" aria-labelledby="{{ headRef }}" aria-label="{{ headName }}" aria-busy="{{ busy }}" style="--cols:minmax(0,1.3fr) minmax(0,1fr)">
+          <sc-if value="{{ hasHead }}">
+            <div class="ca-card-h">
+              <div class="ca-hgrp"><h2 class="ca-h2" id="{{ ids.h }}">{{ title }}</h2><p class="ca-desc">{{ desc }}</p></div>
+              <sc-if value="{{ hasToggle }}"><span class="cb ca-cbl {{ allCb }}" role="checkbox" aria-checked="{{ allChecked }}" tabindex="0"><span class="cb-hit"><span class="cb-box {{ f.toggle }}"><span class="ic" data-icon="Check"></span></span></span><span>{{ tx.showAll }}</span></span></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasNote }}">
+            <div class="ca-card-b"><div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>{{ note }}</span></div></div>
+          </sc-if>
+          <sc-if value="{{ isOne }}">
+            <div class="ca-one"><span class="ic" data-icon="CircleCheck"></span><span class="ca-pt"><span class="ca-b">{{ one.t }}</span><span class="ca-sm ca-mut">{{ one.d }}</span></span></div>
+          </sc-if>
+          <sc-if value="{{ isTable }}">
+            <div class="lf-grid" role="table" aria-labelledby="{{ headRef }}" aria-label="{{ headName }}">
+              <div class="lf-tr hd" role="row">
+                <span class="lf-td" role="columnheader">{{ tx.colPerm }}</span>
+                <span class="lf-td" role="columnheader">
+                  <sc-if value="{{ plainHead }}"><span>{{ tx.colGranted }}</span></sc-if>
+                  <sc-if value="{{ deniedHead }}"><span class="ca-tw"><button class="btn v-ghost ca-hb {{ f.head }}" type="button" aria-describedby="{{ ids.tip }}">{{ tx.colGranted }}<span class="ic ic14" data-icon="Info"></span></button><span class="ca-tip" role="tooltip" id="{{ ids.tip }}" hidden="{{ tipHidden }}">{{ tx.deniedTip }}</span></span></sc-if>
+                </span>
+              </div>
+              <sc-for list="{{ groups }}" as="g">
+                <div class="ca-gh" role="row"><span role="rowheader" aria-colspan="2"><span lang="{{ g.lang }}">{{ g.label }}</span> <span class="n">{{ g.n }}</span></span></div>
+                <sc-for list="{{ g.rows }}" as="r">
+                  <div class="lf-tr" role="row">
+                    <span class="lf-td two" role="cell"><span lang="{{ r.lang }}">{{ r.label }}</span><span class="ca-pid">{{ r.id }}</span></span>
+                    <span class="lf-td" role="cell">
+                      <sc-if value="{{ r.hasSrc }}"><span class="ca-src-l"><sc-for list="{{ r.src }}" as="s"><span class="ca-src-i"><span class="ic" data-icon="{{ s.icon }}"></span><span lang="{{ s.lang }}">{{ s.t }}</span></span></sc-for></span></sc-if>
+                      <sc-if value="{{ r.noAcc }}"><span class="ca-noacc"><span class="ic" data-icon="Lock"></span><span>{{ tx.noAccess }}</span><sc-if value="{{ r.hasVh }}"><span class="lf-vh">{{ r.vh }}</span></sc-if></span></sc-if>
+                    </span>
+                  </div>
+                </sc-for>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isCards }}">
+            <div class="ca-card-b">
+              <sc-for list="{{ groups }}" as="g">
+                <section class="ca-ci" aria-labelledby="{{ g.hid }}">
+                  <h3 class="ca-h3" id="{{ g.hid }}"><span lang="{{ g.lang }}">{{ g.label }}</span> <span class="ca-pid">{{ g.n }}</span></h3>
+                  <ul class="ca-cards">
+                    <sc-for list="{{ g.rows }}" as="r">
+                      <li class="ca-pt" style="padding-top:6px;border-top:1px solid var(--border)">
+                        <span lang="{{ r.lang }}">{{ r.label }}</span><span class="ca-pid">{{ r.id }}</span>
+                        <sc-if value="{{ r.hasSrc }}"><span class="ca-src-l" style="margin-top:4px"><sc-for list="{{ r.src }}" as="s"><span class="ca-src-i"><span class="ic" data-icon="{{ s.icon }}"></span><span lang="{{ s.lang }}">{{ s.t }}</span></span></sc-for></span></sc-if>
+                        <sc-if value="{{ r.noAcc }}"><span class="ca-noacc" style="margin-top:4px"><span class="ic" data-icon="Lock"></span><span>{{ tx.noAccess }}</span><sc-if value="{{ r.hasVh }}"><span class="lf-vh">{{ r.vh }}</span></sc-if></span></sc-if>
+                      </li>
+                    </sc-for>
+                  </ul>
+                </section>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isLoading }}">
+            <div class="lf-grid">
+              <div class="lf-tr hd"><span class="lf-td">{{ tx.colPerm }}</span><span class="lf-td">{{ tx.colGranted }}</span></div>
+              <sc-for list="{{ skel }}" as="k">
+                <div class="lf-tr"><span class="lf-td two"><span class="sk lf-skl" style="{{ k.a }}"></span><span class="sk lf-skl h" style="{{ k.b }}"></span></span><span class="lf-td"><span class="sk lf-skl" style="{{ k.c }}"></span></span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isState }}">
+            <div class="lf-state ca-st" role="{{ st.role }}">
+              <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+              <h3 class="lf-state-h">{{ st.title }}</h3>
+              <p>{{ st.text }}</p>
+              <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ tx.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ tx.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+              <sc-if value="{{ st.hasAct }}"><div class="acts"><button class="btn v-outline {{ f.action }}" type="button"><span class="ic" data-icon="RotateCw"></span>{{ tx.tryAgain }}</button></div></sc-if>
+            </div>
+          </sc-if>
+        </section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"user":{"editor":"enum","options":["sara.nyberg","alex.lund","anna.berg","karin.dahl","jonas.holm","erik.lind","h.wiesenthal","lena.ek"],"default":"sara.nyberg","tsType":"string"},"added":{"editor":"text","default":"","tsType":"string"},"show":{"editor":"enum","options":["granted","all"],"default":"granted","tsType":"string"},"denied":{"editor":"enum","options":["off","roles"],"default":"off","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","error","forbidden","empty"],"default":"populated","tsType":"string"},"onboarding":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"plantname":{"editor":"text","default":"","tsType":"string"},"toggle":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"heading":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"focus":{"editor":"enum","options":["none","toggle","head","action"],"default":"none","tsType":"string"},"tip":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons alone.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.CA ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.CA) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__caSeq = (window.__caSeq || 0) + 1;
+            this.uid = "ca-e" + window.__caSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const narrow = P.size === "narrow";
+          const lang = P.strings === "long" ? "de" : "en";
+          const ids = { h: uid + "-h", tip: uid + "-tip" };
+          const base = { label: "Effective permissions", lang: lang, rootCls: "", ids: ids, tx: {}, f: {}, groups: [], skel: [], st: {}, one: {}, isTable: false, isCards: false, isLoading: false, isState: false, isOne: false, hasHead: false, hasToggle: false, hasNote: false };
+          const C = window.CA;
+          if (!C) return base;
+          const t = (k, v) => C.t(lang, k, v);
+          const person = C.PERSON[P.user] || (lang === "de" ? C.PERSON["h.wiesenthal"] : C.PERSON["sara.nyberg"]);
+          const name = person.name;
+          const plant = String(P.plantname || "").trim() || C.place("pl", lang), company = C.place("co", lang);
+          const placeName = (tok) => (tok === "pl" ? plant : C.place(tok, lang));
+          const state = pick(P.state, ["populated", "loading", "error", "forbidden", "empty"], "populated");
+          const denied = P.denied === "roles";
+          const all = P.show === "all" && !denied;
+          const focus = pick(P.focus, ["none", "toggle", "head", "action"], "none");
+          // added: a role assigned at the plant in this frame (NO21), as the Access tab part passes it.
+          const own = C.ROLE[P.added] ? person.a.concat([[P.added, "pl", "2026-10-08", "Karin Dahl"]]) : person.a;
+          const isAdmin = own.some((x) => C.ROLE[x[0]].all);
+          const empty = state === "empty" || (state === "populated" && own.length === 0);
+          // Sources: every role of the person at the plant or at the company, by the ancestor walk (rule 5.2).
+          const src = {};
+          own.forEach((x) => C.ROLE[x[0]].perms.forEach((id) => {
+            if (C.PERM[id].ni) return;
+            (src[id] = src[id] || []).push({ t: t("at", { role: C.roleName(x[0], lang), place: placeName(x[1]) }), lang: C.roleLang(x[0], lang), icon: x[1] === "co" ? "Building2" : "Factory" });
+          }));
+          const groups = C.MODULES.filter((m) => !m.removed).map((m) => {
+            const rows = m.perms.filter((p) => all || src[p.id]).map((p) => {
+              const s = src[p.id];
+              return {
+                id: p.id, label: C.permLabel(p.id, lang), lang: C.permLang(p.id, lang),
+                hasSrc: !!s && !denied, src: s || [], noAcc: !s || denied,
+                hasVh: !s, vh: ". " + t("noAccessVh", { name: name, plant: plant, company: company })
+              };
+            });
+            const n = m.perms.filter((p) => src[p.id]).length;
+            return { id: m.id, label: C.modLabel(m.id, lang), lang: C.modLang(m.id, lang), hid: uid + "-g-" + m.id, rows: rows, n: all ? t("ofN", { n: n, m: m.perms.length }) : String(n) };
+          }).filter((g) => g.rows.length);
+          const populated = state === "populated" && !empty;
+          const showTable = populated && !isAdmin;
+          let st = {};
+          if (state === "error") st = { role: "alert", bigCls: "err", icon: "CircleAlert", title: t("effErr", { name: name }), text: t("errText"), hasCid: true, cid: "01J9ZB4M7Q2R8S6T3V5W9X1Y0Z", hasAct: true };
+          else if (state === "forbidden") st = { role: null, bigCls: "", icon: "Lock", title: t("effNo", { name: name }), text: t("effNoD", { plant: plant }), hasCid: false, hasAct: false };
+          else if (empty) st = { role: null, bigCls: "", icon: "ShieldCheck", title: t("effEmpty", { name: name, plant: plant }), text: t("effEmptyD"), hasCid: false, hasAct: false };
+          const hasHead = P.heading !== "off";
+          const tipMode = pick(P.tip, ["auto", "on", "off"], "auto");
+          const tipOn = tipMode === "on" || (tipMode === "auto" && focus === "head");
+          const W = ["width:62%", "width:48%", "width:71%", "width:55%", "width:66%", "width:44%"];
+          return Object.assign(base, {
+            label: "Effective permissions, " + person.user + ", " + state + (all ? ", every permission" : "") + (denied ? ", roles denied" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            tx: { colPerm: t("colPerm"), colGranted: t("colGranted"), noAccess: t("noAccess"), showAll: t("showAll"), deniedTip: t("deniedTip", { plant: plant }), cid: t("cid"), copyCid: t("copyCid"), tryAgain: t("tryAgain") },
+            f: { toggle: focus === "toggle" ? "is-focus" : "", head: focus === "head" ? "is-focus" : "", action: focus === "action" ? "is-focus" : "" },
+            hasHead: hasHead, headRef: hasHead ? ids.h : null, headName: hasHead ? null : t("effH", { name: name, plant: plant }),
+            title: t("effH", { name: name, plant: plant }), desc: t("effD", { name: name }),
+            hasToggle: hasHead && P.toggle !== "off" && showTable && !denied, allCb: all ? "on" : "", allChecked: all ? "true" : "false",
+            hasNote: P.onboarding === "on" && populated, note: t("onboarding", { plant: plant }),
+            isOne: populated && isAdmin, one: { t: t("effAll", { company: company }), d: t("effAllD") },
+            isTable: showTable && !narrow, isCards: showTable && narrow, cardCls: showTable && narrow ? "ca-effc" : "", groups: groups,
+            plainHead: !denied, deniedHead: denied, tipHidden: !tipOn,
+            isLoading: state === "loading", busy: state === "loading" ? "true" : null, skel: [0, 1, 2, 3, 4].map((i) => ({ a: W[i % 6], b: "width:" + (30 + (i * 7) % 20) + "%", c: W[(i + 2) % 6] })),
+            isState: state === "error" || state === "forbidden" || (state !== "loading" && empty), st: st
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

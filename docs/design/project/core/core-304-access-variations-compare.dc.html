@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access variations comparison</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the constraints of each axis in the spec for this round (sections 2 to 12) and from issue #304; the build cost row is derived. A check mark shows the strongest option on a row. Rows without one have no single strongest option.</p>
+        <div class="ac-tbl">
+          <div class="ac-tbl-r ac-cmp-r h"><span>Criterion</span><span>A. By person</span><span>B. By plant</span><span>C. By role</span></div>
+          <sc-for list="{{ rows }}" as="r">
+            <div class="ac-tbl-r ac-cmp-r">
+              <span class="k">{{ r.k }}<span class="src">{{ r.src }}</span></span>
+              <sc-for list="{{ r.cells }}" as="c"><span><sc-if value="{{ c.best }}"><span class="ac-best"><span class="ic" data-icon="Check"></span><span>{{ c.t }}</span></span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span></sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div class="ac-rec">
+          <h3 class="t2">Recommendation: A, by person, with parts of B and C</h3>
+          <p>A fits how the sources describe the work. An assignment is a (user, scope, role) row that an admin adds one at a time, so A puts Add role on the user's Access tab, with a picker that shows which roles the assigner can give at Plant A before anything is submitted; B shows the same refusal only on Save. A doomed submit then never reaches the server or the security log, and the server's refusal in the error summary stays the fallback for Acme AB, which a plant route cannot check. The grouped checklist keeps 36 permissions, and every plugin's additions, in one column at any width, and the list of what a user can do, with the role and place behind each permission, answers the support question without a matrix. B's matrices give the best overview of a plant and the fewest steps to give one person a role, but eleven roles already overflow 1440, one save becomes several commands, and screen reader users meet 185 checkboxes in a grid of 407 cells. C's role-first flow starts the common task from the role instead of the person and spreads a person's access over role pages. Keep from the others: C's "Start from" on New role (a one-time copy, question 5) and its Holders tab as a read-only list on the role detail; B's title "No access to Roles", which matches D2's unavailable module state, and its "No access" cells for denied relations; and C's dialog after close code 4403, which reuses the reload dialog's rules (inert page, one h1, saves refused) and settles Q22. For a plant without a role, keep ST29 as approved, so no message tells a user that some company has a plant at that path. For question 20, hide an action the reader cannot use on a record, as Sara Nyberg's page leaves out Block user and Reset password, and put a line naming who can in its place inside a list, as A3 does for Remove; keep a locked choice visible with its reason, as A2's picker does.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const row = (k, src, best, a, b, c) => ({ k: k, src: src, cells: [a, b, c].map((t, i) => ({ t: t, best: best === i, plain: best !== i })) });
+          return {
+            rows: [
+              row("Role editor at 36 permissions and more", "Spec 12.1; plan 03, ADR 0068", 0,
+                "One column; a closed module is one row with its count; plugins add rows",
+                "Plugins add rows and roles add columns; 11 roles already scroll sideways at 1440",
+                "As A, with the difference above while creating"),
+              row("Making a custom role from a default role", "Spec 2.6, 3.11, 12.1 C; M-65", 2,
+                "Tick from an empty list",
+                "Tick down a new column",
+                "Start from Planner and read what was added and removed"),
+              row("Giving one person a role", "I304 Frames; E05-S06", 1,
+                "Users, the person, Access, Add role, choose, Add",
+                "Users, find the row, scroll to the role's column, tick, Save",
+                "Roles, the role, Holders, Assign, choose the person, Assign role"),
+              row("Who holds a role at each place", "I304 Frames; spec 3.6", 1,
+                "Holders by name and place beside the role editor; each user page",
+                "The whole plant on one screen",
+                "Holders tab, one section per place"),
+              row("Company roles shown at the plant, in text", "Spec 2.3, 2.5, 10.3", -1,
+                "Acme AB, all plants on the row; Granted by Viewer at Acme AB",
+                "Acme AB pill in the cell",
+                "At Acme AB section; Assigned at Acme AB"),
+              row("What a user can do", "Spec 5.2, 12.3; question 16", 0,
+                "Every permission with the role and place behind it",
+                "Every permission against each role, plus At Plant A",
+                "One permission at a time"),
+              row("A refused assignment", "Spec 4.1, 6.2, 6.5", 0,
+                "Prevented in the picker at Plant A; the server refusal for Acme AB",
+                "Refused on Save; honest mistakes write permission.denied events",
+                "Field message before Save; Save still sends"),
+              row("Commands per save", "Plan 04, Commands", -1,
+                "One",
+                "Several, or a batch command no document defines",
+                "One"),
+              row("Reflow at 320 and screen readers", "Plan 06, Reflow; WCAG 1.4.10, 1.3.1", 0,
+                "Cards and lists with headings",
+                "A two-way scroll region; 407 cells, 185 of them checkboxes",
+                "Cards and a status message"),
+              row("Page opened by URL", "Spec 8.1, 12.5.1; A0021", 1,
+                "Title \"Roles\"; the state shows only in main",
+                "Title and h1 \"No access to Roles\", as D2 ST1 names its state",
+                "As A, and names roles to someone who may not read them"),
+              row("FORBIDDEN region and cells", "Spec 8.2, 12.5.2", 1,
+                "Region keeps its heading and an EmptyState",
+                "Cells read \"No access\"; whole regions as A",
+                "One line under the heading"),
+              row("Plant without a role", "Spec 8.3, 12.5.3; plan 06", 0,
+                "ST29 as approved; nothing new to build or leak",
+                "Tells that a plant exists at the path; new shell page version",
+                "One more line; new shell page version"),
+              row("Access lost after 4403 (Q22)", "Spec 8.5, 12.5.4; D2 ST3", 2,
+                "Banner: context stays, every save control needs a disabled state, polite announcement",
+                "Page: robust, but what was on screen is gone",
+                "Dialog: as the reload dialog, saves refused, focus moved, read once"),
+              row("Build cost in @northmes/ui", "Spec 11.2, derived", 0,
+                "EntityDetailPage tab, EntityForm with a Select of locked options, a list",
+                "A new matrix pattern with a save bar and batch saves",
+                "A difference view, a check field and a role-first assign form")
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 option notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Option notes">
+        <h2 class="t2">{{ o.title }}</h2>
+        <p class="lede">{{ o.lede }}</p>
+        <div class="cols3">
+          <div>
+            <h3 class="t3">What it optimizes</h3>
+            <ul class="pts">
+              <sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">What it costs</h3>
+            <ul class="pts">
+              <sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">How it keeps the fixed rules</h3>
+            <div class="rk">
+              <sc-for list="{{ o.rules }}" as="r">
+                <div class="rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ planner }}">
+          <div class="legend">
+            <span class="li"><span class="pin">1</span>Page actions slot (TopBarActions)</span>
+            <span class="li"><span class="pin">2</span>planning/board/header/v1, Pyramid connector</span>
+            <span class="li"><span class="pin">3</span>planning/board/side/v1, example-widget.large-orders</span>
+            <span class="li">Dashed outlines and pins are annotations on the light frame, not UI.</span>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C","S1","S2","S3"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const R = (k, v) => ({ k: k, v: v });
+          const all = {
+            A: {
+              title: "A. Labelled sidebar",
+              lede: "Frames A1 to A5. The sidebar holds core, module and plugin groups with their entries; it collapses to a rail of links, drawn in A2.",
+              gains: [
+                "Every group and its top-level entries are visible at once, so Pending changes or Production orders is one click from the board.",
+                "It is the P06 shell layout as written: the sections in the sidebar; the breadcrumb, page actions, help and account in the top bar.",
+                "shadcn Sidebar builds most of it: SidebarGroup per module, collapsible=\"icon\" for the rail and a Sheet below the mobile breakpoint.",
+                "Long German or Finnish labels can wrap inside the 256 px column instead of pushing the top bar (not drawn this round)."
+              ],
+              costs: [
+                "The sidebar takes 256 px: main is 1184 px wide at 1440. As a rail, main is 1376 px.",
+                "The rail needs a mark per group. Without an icon field it shows monograms from web.label: Pl and Py differ by one letter, and a Production start group would add Pr (V1).",
+                "In the rail the plant shows only as a factory icon; its name is in the menu, the tooltip and the title. At 320 px the plant shows only inside the navigation sheet (A3).",
+                "With the assistant docked, main is 824 px beside the sidebar and 1016 px beside the rail, where the board grid keeps 672 px next to the side widget."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop, drawn focused over the sidebar head in A1; it moves focus into main."),
+                R("Landmarks", "nav \"Main\" in the sidebar; header with the breadcrumb nav; main; aside \"Assistant\" when docked."),
+                R("Title pattern", "\"Planning board · Plant A · NorthMES\"; the h1 \"Planning board\" in main is the route-change focus target."),
+                R("Plant switcher", "A 36 px menu button in the sidebar head, the factory button in the rail. Its items are links that keep the route: /plant-b/planning/board."),
+                R("Nested one level", "Job table nests under Board (a preset search, view=table). Master data opens its registers with a disclosure button."),
+                R("Rail", "Each monogram links to the group's first entry; a tooltip shows web.label (7.6). Other entries need the expanded sidebar."),
+                R("24 px targets", "Nav items 32 px tall, rail buttons and controls 36 px. The Master data disclosure is 28 px as shadcn SidebarMenuAction; D1 sets IconButton at 36 px, so its size is a question against D1."),
+                R("Focus ring", "The D1 two-tone ring on every stop, drawn on Co in the A2 rail. Menu items draw the 2 px inset outline, shown on Plant B in A5."),
+                R("Pause control", "Shows the paused state while the socket reconnects (3.7): disabled and labelled \"Live updates paused\" in A2. D3 owns its final copy."),
+                R("Sticky offset", "scroll-padding-top is 56 px, the top bar height (R14).")
+              ]
+            },
+            B: {
+              title: "B. Module bar and module sidebar",
+              lede: "Frames B1 to B6. Every module group is a link in the top bar; the sidebar lists the current module's entries and can hide, drawn hidden in B2. B6 moves the breadcrumb above the h1.",
+              gains: [
+                "The module bar shows every group in manifest order on every page, so the module boundary of the federation is always visible.",
+                "The board gets the most width: main is 1216 px with the module menu and 1440 px with it hidden.",
+                "The second header row gives the breadcrumb and the page actions a row of their own. B6 draws the other answer to V4: one header row, the breadcrumb above the h1.",
+                "The plant switcher sits at the top bar start at every width, 320 px included."
+              ],
+              costs: [
+                "Two header rows take 104 px of height, 48 px more than A and C, and the board loses those rows.",
+                "An entry in another module is two clicks away: the module link, then the entry.",
+                "The bar can overflow with long labels or more plugins. A German label set at 1280 px may need a More menu, which hides groups (an estimate, not drawn).",
+                "Tab order runs module links, Assistant, Help, Account, breadcrumb, page actions and only then the Planning entries, which departs from the D1 order (navigation before the account button).",
+                "B has no collapsed rail, which issue #190 lists as a frame, and it moves the sections out of the sidebar, so P06 Shell layout and the E04-S02 tests change."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop, drawn focused in the free space of the top bar in B1; it moves focus into main."),
+                R("Landmarks", "header with two navs (\"Modules\" and the breadcrumb); nav \"Planning\" in the module sidebar; main; aside when docked."),
+                R("Title pattern", "Same pattern; the h1 sits in main under the second header row."),
+                R("Plant switcher", "A menu button at the top bar start, at every width. Its items are links that keep the route."),
+                R("Nested one level", "Job table nests under Board in the module sidebar. At 320 px the sheet is an accordion of module groups."),
+                R("24 px targets", "Module links 40 px tall, sidebar items 32 px, controls 36 px."),
+                R("Focus ring", "The two-tone ring on every stop, drawn on the Core link in B2; the current module link keeps a 2 px underline, so the current state does not rely on the ring or on color."),
+                R("Pause control", "Shows the paused state while the socket reconnects (3.7): disabled and labelled \"Live updates paused\" in B2. D3 owns its final copy."),
+                R("Sticky offset", "scroll-padding-top is 104 px, plus the strip while it shows; 56 px in B6 (R14).")
+              ]
+            },
+            C: {
+              title: "C. Rail with flyouts",
+              lede: "Frames C1 to C5. A rail of module groups opens a flyout with the group's entries, drawn open on Planning in C1 with focus on Production orders. The plant is the first breadcrumb crumb.",
+              gains: [
+                "The board keeps width with one header row: main is 1376 px at 1440 and the top bar is 56 px.",
+                "The plant name stays visible in the breadcrumb at every width and in every navigation state.",
+                "The assistant trigger, help and account sit together at the rail foot, so the top bar holds only the page.",
+                "Status splits by kind: a chip for reconnecting in the top bar, a full-width strip for the readiness, budget and restore banners (C2)."
+              ],
+              costs: [
+                "Every entry is two actions away: the rail button opens the flyout, then the link.",
+                "The rail shows monograms from web.label until the manifest gets a module icon, which changes ADR 0062 (V1).",
+                "shadcn Sidebar has no flyout, so C adds a Popover per group with its own keyboard handling and the 1.4.13 rules.",
+                "The plant crumb is the shell's plant switcher, which P06 keeps out of @northmes/ui, while PageFrame renders the breadcrumb. The shell has to render the plant button in front of PageFrame's crumbs inside one breadcrumb nav, which also answers V4.",
+                "Help and the account leave the top bar, so the P06 Shell layout list changes (1.2.1). At 320 px help, the account and the assistant move into the navigation sheet, two taps away."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop, drawn focused in the free space of the top bar in C2, so the plant crumb stays visible; it moves focus into main."),
+                R("Landmarks", "nav \"Modules\" in the rail with its flyouts; header with the breadcrumb nav; main; aside when docked."),
+                R("Title pattern", "Same pattern; the h1 in main."),
+                R("Plant switcher", "The first breadcrumb crumb is a menu button; its items are links that keep the route."),
+                R("Nested one level", "Job table nests under Board inside the Planning flyout and in the 320 px sheet."),
+                R("24 px targets", "Rail buttons 36 px, flyout items 32 px, controls 36 px."),
+                R("Focus ring", "Two-tone ring on rail buttons and flyout links, drawn on Production orders in C1. A rail button is a disclosure button with aria-expanded; Escape closes the flyout and returns focus to it."),
+                R("Pause control", "Shows the paused state while the socket reconnects (3.7): disabled and labelled \"Live updates paused\" in C2. D3 owns its final copy."),
+                R("Sticky offset", "scroll-padding-top equals the top bar plus the banner strip while a banner shows (R14).")
+              ]
+            },
+            S1: {
+              title: "S1. Station top bar",
+              lede: "Station Press 4 at 1280 by 800, signed in. The bar holds the station, the connection and Switch operator; the area below is D4's (E11) and drawn as a placeholder.",
+              gains: [
+                "P09 section 9 gives the station a top bar that shows \"Live updates paused, reconnecting\"; S1 is that bar, and the station layout shares the shell's header code.",
+                "The bottom edge stays free for the app keypad or the device keyboard.",
+                "The Disconnected banner opens under the bar, next to the connection chip that changes with it."
+              ],
+              costs: [
+                "On a wall-mounted screen the top edge is the hardest place to reach with gloves.",
+                "The bar takes 72 px of the 800 px height.",
+                "At 800 px wide (portrait) the bar runs out of room, so Sign out moves into the More menu."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop, drawn focused in the free space of the bar in S1, 48 px tall; it moves focus into main."),
+                R("Landmarks", "header (the station bar) and main; no nav and no sidebar."),
+                R("Title", "\"Press 4 · Plant A · NorthMES\" is assumed (V9). After sign-in focus moves to the h1 \"Press 4, Anna Berg\"."),
+                R("44 px targets", "Bar buttons and the skip link 48 px."),
+                R("Switch operator", "Visible in the bar on every station screen."),
+                R("Help and theme", "In the More menu: Help, then Dark theme as a checkbox item, at the same place on every station screen."),
+                R("Badge input", "Read only in the focused badge field and on the Switch operator screen; no global key listener."),
+                R("Disconnected", "A role=status banner under the bar, announced once; the chip changes to \"Live updates paused, reconnecting\" (P09 section 9) without speaking (V10).")
+              ]
+            },
+            S2: {
+              title: "S2. Station bottom bar",
+              lede: "The same frame with the station controls in a bar along the bottom edge, and the plant under the heading.",
+              gains: [
+                "Switch operator, help, theme and sign out sit at the bottom edge, the easiest reach on a tall or portrait screen.",
+                "The top holds only the heading.",
+                "The per-device theme switch is visible as Dark theme instead of sitting in a menu."
+              ],
+              costs: [
+                "The Windows touch keyboard, and the app keypad if D4 docks it at the bottom, cover the bar while a number field has focus.",
+                "In DOM order the bar follows main, so Switch operator is the last Tab stop; moving it first would break the reading order (1.3.2, 2.4.3).",
+                "It differs from the planner shell, so the station layout keeps frame code of its own. P09 section 9 also places \"Live updates paused, reconnecting\" in a top bar, which S2 does not have.",
+                "At 800 px wide (portrait) the bar also runs out of room, so Help and Dark theme move into a menu."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop; it moves focus into main."),
+                R("Landmarks", "main, then the bar as footer; no nav and no sidebar."),
+                R("Title", "As S1; the h1 \"Press 4, Anna Berg\" receives focus after sign-in."),
+                R("44 px targets", "Bar buttons 56 px."),
+                R("Switch operator", "Visible at the bottom left on every station screen."),
+                R("Help and theme", "Visible in the bar: Help opens a menu, Dark theme is a toggle button with aria-pressed."),
+                R("Badge input", "As S1: only in the focused badge field and on the Switch operator screen."),
+                R("Disconnected", "A role=status banner above the bar, announced once; the chip in the bar changes to \"Live updates paused, reconnecting\" (P09 section 9) without speaking (V10).")
+              ]
+            },
+            S3: {
+              title: "S3. Station tall header",
+              lede: "The station heading as the h1 in a 96 px header band with the connection chip, Switch operator and Sign out; main starts with D4's content.",
+              gains: [
+                "The heading \"Press 4, Anna Berg\" is the largest text on the screen, so the operator checks the machine and the name at a glance.",
+                "Switch operator is 56 px tall, as in S2, and stays at the top like S1.",
+                "The bottom edge stays free for the app keypad or the device keyboard, as in S1."
+              ],
+              costs: [
+                "The h1 sits in the header, outside main, so Skip to main content passes over it, while the planner shell keeps its h1 in main (9.3).",
+                "The header takes 96 px of the 800 px height, 24 px more than S1, and it is a header pattern of its own.",
+                "On a wall-mounted screen the top edge is the hardest place to reach with gloves, as in S1.",
+                "At 800 px wide (portrait) the heading and the controls need two rows, or Sign out moves into the More menu."
+              ],
+              rules: [
+                R("Skip link", "First Tab stop; it moves focus into main, past the h1."),
+                R("Landmarks", "header with the h1, then main; no nav and no sidebar."),
+                R("Title", "As S1; after sign-in focus moves to the h1 in the header."),
+                R("44 px targets", "Header buttons 56 px."),
+                R("Switch operator", "Visible in the header on every station screen."),
+                R("Help and theme", "In the More menu, as S1."),
+                R("Badge input", "As S1: only in the focused badge field and on the Switch operator screen."),
+                R("Disconnected", "A role=status banner under the header, announced once; the chip changes to \"Live updates paused, reconnecting\" without speaking (V10).")
+              ]
+            }
+          };
+          const key = all[this.props.option] ? this.props.option : "A";
+          return { o: all[key], planner: key === "A" || key === "B" || key === "C" };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error pages build notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <section class="er-f w2960" data-screen-label="BN Build notes, not part of the UI, light, 2960">
+        <div class="flabel"><span class="fid">BN</span>Build notes, not part of the UI<span class="fth">Light, 2960 wide. Components, tokens, icons, roles, focus, announcements, titles, the error classification, the pages without the shell, the static page rules, WCAG 2.2 criteria and the final English copy</span></div>
+        <div class="sheet er-notes">
+          <p class="kick">Build notes, not part of the UI</p>
+          <h2 class="t2">Error and system pages: build notes for the implementers</h2>
+          <p class="lede">For the shell's error, not-found and boot handling in E04-S02 to E04-S05, the page states of E04-S07 (#45) and the maintenance page of the release bundle in E17-S02 (#150). A line marked doc is verbatim from the docs, D2 marks approved copy from the D2 record, and every other line is proposed and needs Krister Johansson's yes. Keys in brackets name the source: P05, P06, P09, P12, P14 and P15 are the plan files, A0019 to A0064 the ADRs, D1 and D2 the approved records, D2S the D2 spec in the design project.</p>
+          <div class="er-ncols">
+            <sc-for list="{{ cols }}" as="col">
+              <div class="er-ncol">
+                <sc-for list="{{ col }}" as="s">
+                  <section class="er-nsec">
+                    <h3 class="t3">{{ s.h }}</h3>
+                    <sc-if value="{{ s.hasP }}"><p class="er-p mut"><sc-for list="{{ s.p }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-if>
+                    <sc-if value="{{ s.hasT }}">
+                      <div class="er-nt">
+                        <div class="er-nr h {{ s.g }}"><sc-for list="{{ s.heads }}" as="hd"><span>{{ hd }}</span></sc-for></div>
+                        <sc-for list="{{ s.rows }}" as="r">
+                          <div class="er-nr {{ s.g }}"><sc-for list="{{ r }}" as="c"><span><sc-for list="{{ c }}" as="p"><sc-if value="{{ p.sw }}"><span class="er-sw" style="{{ p.st }}"></span></sc-if><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></sc-for></div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ s.hasL }}">
+                      <ul class="ul"><sc-for list="{{ s.list }}" as="l"><li><sc-for list="{{ l }}" as="p"><sc-if value="{{ p.m }}"><span class="er-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                    </sc-if>
+                  </section>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Text with `backticks` is set in Plex Mono (tokens, paths, codes); [[#rrggbb]] draws a swatch.
+          const tp = (s) => String(s || "").split(/(`[^`]*`|\[\[#[0-9a-f]{6}\]\])/).filter((x) => x !== "").map((x) => {
+            if (/^\[\[#/.test(x)) return { sw: true, st: "background:" + x.slice(2, 9), m: false, x: false, t: "" };
+            if (x[0] === "`") return { m: true, x: false, sw: false, t: x.slice(1, -1) };
+            return { x: true, m: false, sw: false, t: x };
+          });
+          const T = (h, p, g, heads, rows) => ({ h: h, p: tp(p), hasP: !!p, hasT: true, g: g, heads: heads, rows: rows.map((r) => r.map(tp)), hasL: false, list: [] });
+          const Ls = (h, p, list) => ({ h: h, p: tp(p), hasP: !!p, hasT: false, g: "", heads: [], rows: [], hasL: true, list: list.map(tp) });
+
+          const left = [
+            T("Components by shadcn name", "", "er-c3a", ["shadcn", "Used for", "Frames"], [
+              ["Card", "The state panel in main; the sign-in, boot and HTTPS cards", "All"],
+              ["Button, variant default", "Open {route title} without these settings, Go to {plant}, Go to Overview, Back to Production orders, Try again, Reload page, Open with HTTPS", "All"],
+              ["Button, variant outline", "Go back, See all pages, Go to {first entry}", "BL, NF, SE"],
+              ["Button, size icon (IconButton)", "Copy correlation id; the label is required", "SE, BO3 to BO5"],
+              ["Button loading state (D1 Q8)", "Try again while the request runs: LoaderCircle and the progress label Trying again, full opacity, `aria-busy`, `aria-disabled`", "SE7, SE8, KF2"],
+              ["Alert, info tone", "One setting ignored; Your session ended", "BL5, BL6, SO1 to SO3"],
+              ["Alert, warning tone, and the D2 Badge chip", "The restarting strip and the reconnecting chip, from Shell.dc.html", "NC1 to NC8"],
+              ["Skeleton (LoadingState)", "The page while NorthMES restarts, as D2 ST23", "NC7, NC8"],
+              ["Empty state pattern (EmptyState)", "Record not found, page not found", "NF"],
+              ["Error state pattern (ErrorState)", "Link cannot be used, server error, no connection, boot failure, HTTPS", "BL, SE, NC, BO, HS"],
+              ["SkipLink", "First stop on the shell, sign-in, boot and HTTPS pages", "All but MA, UB"],
+              ["None", "The maintenance page and the unsupported browser page: plain HTML elements styled to match", "MA, UB"]
+            ]),
+            T("What decides the page", "One classifier in `@northmes/web-sdk` reads `code` and `errorCode` (P05 GraphQL errors). The first matching row wins.", "er-c3b", ["Signal", "Page or state", "Frames"], [
+              ["A search key fails its own schema", "The page renders; one setting ignored", "BL5, BL6"],
+              ["`validateSearch` throws, `BAD_USER_INPUT` or REST 400 on the route's primary request", "Link cannot be used", "BL1 to BL4"],
+              ["Unmatched path in a plant, or under `/admin`", "Page not found in that layout", "NF1 to NF4"],
+              ["Unmatched path under a loaded module", "D2 ST5", ""],
+              ["Unknown plant slug", "D2 ST29", ""],
+              ["`NOT_FOUND` on the route's entity", "Record not found", "NF5 to NF8"],
+              ["`FORBIDDEN` on the route's primary request, close code 4403", "#304, not drawn here", ""],
+              ["HTTP 401, `UNAUTHENTICATED`, close code 4401", "Session ended, sign-in", "SO1 to SO5"],
+              ["`CONFLICT` or REST 409, `PRECONDITION` or REST 412", "The form or dialog that sent the command shows it, such as the version conflict in #222 (DE19); not a page", ""],
+              ["`INTERNAL_SERVER_ERROR`, HTTP 500, any other error status", "Server error", "SE1 to SE8"],
+              ["502, 503, 504 from `/graphql` or `/api`", "Restarting strip and skeleton, retry", "NC7, NC8"],
+              ["No response or timeout", "No connection", "NC1 to NC6"],
+              ["The route component throws while it renders", "D2 ST6", ""],
+              ["Failed dynamic import, `core.client_outdated`, `GRAPHQL_VALIDATION_FAILED`", "D2 ST3 reload dialog", ""],
+              ["`NOT_FOUND` or `FORBIDDEN` on a relation path in a list", "Cell state, not a page", ""],
+              ["A secondary region's request fails (a widget, a side panel, a tab)", "That region's ErrorState, not the page", ""],
+              ["Modules request fails at boot", "NorthMES could not start, no answer at boot", "BO3 to BO7"],
+              ["No secure context at boot", "HTTPS required", "HS1 to HS3"],
+              ["`CSS.supports` false in `browser-check.js`", "Newer browser needed", "UB1 to UB3"],
+              ["Caddy cannot reach `app` on a full page load", "Maintenance page", "MA1 to MA9"]
+            ]),
+            T("Pages with and without the shell", "None of the pages outside the shell shows Help or an account menu: none of them knows the user. Their header holds only the mark, as the sign-in page.", "er-c3c", ["Page", "Renders", "Why"], [
+              ["Link cannot be used, one setting ignored, record not found, server error, no connection, page load while restarting", "Inside `Shell.dc.html`, plant mount, in main", "The shell, its routes and the plant are loaded; only the route's data failed (P06 Page states)"],
+              ["Unknown path in a plant", "Inside the Shell, plant mount, no current entry", "`defaultNotFoundComponent` renders in the nearest parent layout (`notFoundMode` fuzzy; A0062)"],
+              ["Unknown path under /admin", "Inside the Shell, `mount=\"admin\"`", "As above, in the admin layout"],
+              ["Back on the page after sign-in", "Inside the Shell", "The return URL is an ordinary route"],
+              ["Session ended", "Outside: D2's sign-in layout", "No session, so no plant, sidebar or menus"],
+              ["Boot, NorthMES could not start, no answer at boot", "Outside: the static main of `index.html`, with D1 tokens and Plex from the shell stylesheet", "The shell has not rendered; boot errors are a heading plus text (P06 Boot sequence)"],
+              ["HTTPS required", "Outside: the static main, with tokens and Plex", "Boot stops before the modules request"],
+              ["Newer browser needed", "Outside: a plain page from `browser-check.js`, own sheet, hex colors, system fonts", "No app script runs, and the browser may not support the token colors"],
+              ["Maintenance", "Outside: Caddy's static file, inline CSS and script, system fonts", "The app is down; Caddy serves the file without it (A0044)"]
+            ]),
+            T("Server error page (SE) against D2's error panel (ST6)", "", "er-c3d", ["Aspect", "Error panel, D2 ST6", "Server error page, SE"], [
+              ["Cause", "The route's component threw while React rendered it: a fault in the remote's code", "The server answered the route's data request with an error: a fault on the server"],
+              ["Data", "The data may have loaded; the screen failed to draw it", "No data arrived"],
+              ["Reported", "The route error component posts stage `render` to `/api/v1/web/client-errors`", "Nothing from the browser: the server's exception filter already logged the masked error with its correlation id"],
+              ["Correlation id", "Shown; the docs name no source for a render error", "From the failed response (`extensions.correlationId` or the problem body), the id of the server's log line"],
+              ["Rows", "Correlation id, Stage `render`, Code `web.render_error`", "Correlation id, Code `core.internal`; no Stage, since stages name client lifecycle steps (E6)"],
+              ["h1 and title", "{route title} could not be shown", "{route title} could not be loaded"],
+              ["Try again", "Renders the route again from the same data; focus to its h1", "Sends the request again; the button keeps focus in its loading state; focus to the h1 on success"],
+              ["Shared", "Card with the ErrorState pattern in main, CircleAlert in `--destructive`, the D2 second paragraph, Copy correlation id, the way out to the module's first entry, sidebar and crumbs kept, page actions removed, h1 focused, no live message on arrival", "Same"]
+            ]),
+            T("Landmarks, roles and names", "", "er-c3a", ["Element", "Role and state", "Name"], [
+              ["State panel", "Inside main; no role", ""],
+              ["Description list", "`dl` with `dt` and `dd`", ""],
+              ["Copy correlation id", "button", "Copy correlation id"],
+              ["Try again in progress", "button, `aria-busy`, `aria-disabled`", "Trying again"],
+              ["One setting ignored", "Alert without a live role", ""],
+              ["Session info box", "group named by its h2, no live role", "Your session ended"],
+              ["Maintenance status paragraph", "`role=\"status\"`", ""],
+              ["Boot main", "main, `aria-busy` while loading", ""],
+              ["Version list", "`ul`", ""],
+              ["Page heading", "h1, `tabindex -1`", "The page's heading"]
+            ]),
+            T("Where focus goes", "", "er-c2b", ["Control or event", "Focus after"], [
+              ["Arrival on BL, NF, SE, NC, SO", "The h1"],
+              ["Arrival on BO, UB, HS, MA (first load)", "Nothing; the first Tab reaches the first stop"],
+              ["Open {route title} without these settings", "The route's h1 (the one exception to the search-change rule, because the focused button disappears)"],
+              ["Go back, Go to {plant}, Go to Overview, Go to {first entry}, See all pages, Back to {list}", "The new page's h1"],
+              ["Try again (server error, no connection)", "Stays on the button while it runs; the h1 on success; stays on failure"],
+              ["Copy correlation id", "Stays on the button"],
+              ["Reload page, maintenance Try again, Open with HTTPS", "A fresh page load; nothing focused"],
+              ["Sign in after a session ended", "The return page's h1"],
+              ["No connection, the page loads by itself", "The h1, when focus was on the h1, in main or on Try again; otherwise unchanged"]
+            ]),
+            T("Announcements", "Messages go once through the polite region in `index.html` outside `#root`. Status boxes carry no live role of their own, except the maintenance page's `role=\"status\"` paragraph, which has no app.", "er-c3e", ["When", "How", "Text"], [
+              ["Arrival on a state page", "None", "The focused h1 is read"],
+              ["A search key dropped", "Polite, once", "This link had 1 setting that no longer applies, so it was ignored. (doc)"],
+              ["Correlation id copied", "Polite, once", "Correlation id copied (D2)"],
+              ["Try again failed, server error", "Polite, once", "{route title} still could not be loaded. The correlation id changed."],
+              ["Try again failed, no connection", "Polite, once", "Still no connection to NorthMES."],
+              ["Session ended", "Polite, once", "Your session ended. Sign in again to continue. (D2 S4)"],
+              ["Boot failed", "Polite, once", "NorthMES could not start."],
+              ["Maintenance check answered", "The `role=\"status\"` paragraph changes", "NorthMES is back. Opening it now."],
+              ["Restarting", "Polite, once", "D2's strip text"]
+            ]),
+            T("Shell props per frame", "Every mount sets `bell=\"off\"` (release 1 ships without the notifications module) and `show-title=\"on\"`, with the hint height plus 36 px.", "er-c2a", ["Frames", "Shell attributes"], [
+              ["BL1 to BL4", "`nav=\"planning.orders\" title=\"Production orders could not open this link\" actions=\"none\" focus=\"h1\"`"],
+              ["BL5, BL6", "`nav=\"planning.orders\"`; content: the inline status, then a placeholder naming the list and form page"],
+              ["NF1, NF2", "`nav=\"none\" title=\"Page not found\" crumbs=\"Page not found\" doc-title=\"Page not found · Plant A · NorthMES\" focus=\"h1\"`"],
+              ["NF3, NF4", "`role=\"company-admin\" mount=\"admin\" nav=\"none\" title=\"Page not found\" crumbs=\"Admin|Page not found\" doc-title=\"Page not found · Admin · NorthMES\" focus=\"h1\"`"],
+              ["NF5 to NF8", "`nav=\"planning.orders\" title=\"Production order not found\" crumbs=\"Planning|Production orders|Production order not found\" actions=\"none\" focus=\"h1\"`"],
+              ["SE1 to SE8", "`nav=\"planning.orders\" title=\"Production orders could not be loaded\" actions=\"none\" focus=\"h1\"`; SE7 and SE8 without focus, the ring on Try again"],
+              ["NC1 to NC6", "`nav=\"planning.proposals\" title=\"No connection to NorthMES\" actions=\"none\" status=\"reconnecting\" focus=\"h1\"`"],
+              ["NC7, NC8", "`nav=\"planning.orders\" status=\"both\" banner-kind=\"warning\" banner=\"NorthMES is restarting. ...\" actions=\"none\" busy=\"true\" focus=\"h1\"`; content: the ST23 skeleton"],
+              ["SO4, SO5", "`nav=\"planning.orders\" focus=\"h1\"`"],
+              ["LS1, LS2", "`strings=\"long\" nav=\"planning.orders\" title=\"Fertigungsaufträge konnten nicht geladen werden\" actions=\"none\" focus=\"h1\"`"],
+              ["LS3", "`strings=\"long\" width=\"1280\" nav=\"acme.tool-life\" heading=\"none\" actions=\"none\" page-lang=\"de\"`; the h1 drawn in the content with its `lang=\"fi\"` span and the ring"]
+            ])
+          ];
+
+          const right = [
+            T("Titles", "Pattern: specific part, plant, NorthMES. A page without a plant leaves the plant out; a page under /admin puts Admin in its place.", "er-c3f", ["Title", "Frames", "Source"], [
+              ["Production orders could not open this link · Plant A · NorthMES", "BL1 to BL4", "proposed"],
+              ["Production orders · Plant A · NorthMES", "BL5, BL6, NC7, NC8, SO4, SO5, KF3, KF6", "D2"],
+              ["Page not found · Plant A · NorthMES", "NF1, NF2", "proposed"],
+              ["Page not found · Admin · NorthMES", "NF3, NF4", "proposed"],
+              ["Production order not found · Plant A · NorthMES", "NF5 to NF8", "proposed"],
+              ["Production orders could not be loaded · Plant A · NorthMES", "SE1 to SE8", "proposed"],
+              ["No connection to NorthMES · Plant A · NorthMES", "NC1 to NC6", "proposed"],
+              ["NorthMES is not available right now · NorthMES", "MA1 to MA9", "proposed"],
+              ["Sign in · NorthMES", "SO1 to SO3", "D2"],
+              ["Loading · NorthMES", "BO1, BO2", "proposed"],
+              ["NorthMES could not start · NorthMES", "BO3 to BO7", "proposed"],
+              ["NorthMES needs a newer browser · NorthMES", "UB1 to UB3", "proposed"],
+              ["NorthMES needs HTTPS · NorthMES", "HS1 to HS3", "proposed"]
+            ]),
+            T("Final English copy", "Sentence case, no dashes. Braces mark values the page fills in.", "er-c3g", ["Group", "Copy", "Source"], [
+              ["Link cannot be used", "{route title} could not open this link", "proposed"],
+              ["", "The link holds settings this page cannot use, such as a filter value or a position in the list that no longer exists.", "proposed"],
+              ["", "Open the page without these settings, or go back to the page you came from. / Open the page without these settings.", "proposed"],
+              ["", "Open {route title} without these settings · Go back", "proposed"],
+              ["One setting ignored", "This link had 1 setting that no longer applies, so it was ignored.", "doc"],
+              ["", "This link had {n} settings that no longer apply, so they were ignored.", "proposed"],
+              ["Not found", "Page not found", "doc"],
+              ["", "{plant} has no page at {path}. The link may be out of date. · Admin has no page at {path}. The link may be out of date.", "proposed"],
+              ["", "Go to {plant} · Go to Overview", "proposed"],
+              ["", "See all pages", "D2"],
+              ["", "{entity type} not found · This production order does not exist in {plant}, or you cannot open it. The link may be out of date. · Back to {list}", "proposed"],
+              ["Server error", "{route title} could not be loaded", "proposed"],
+              ["", "The server stopped with an error while it loaded the data for this page. Saved data is not affected.", "proposed"],
+              ["", "Try again. If the error comes back, give your plant admin the correlation id. · Correlation id copied · Try again", "D2"],
+              ["", "Correlation id · Code · Copy correlation id · Go to {first entry}", "D2"],
+              ["", "Trying again", "proposed"],
+              ["", "{route title} still could not be loaded. The correlation id changed.", "proposed"],
+              ["No connection", "No connection to NorthMES", "doc"],
+              ["", "{route title} could not load, because this browser cannot reach the NorthMES server. Check the network connection of this computer.", "proposed"],
+              ["", "The page loads by itself when the connection is back. · Still no connection at {time}. · Still no connection to NorthMES.", "proposed"],
+              ["Restarting", "NorthMES is restarting. Changes are paused until it is back; you do not need to reload.", "D2"],
+              ["", "Live updates paused, reconnecting", "doc"],
+              ["Maintenance", "NorthMES is not available right now · NorthMES is restarting or being updated. Saved data is not affected.", "proposed"],
+              ["", "This page checks every 10 seconds and opens NorthMES again by itself when it is back. You do not need to reload.", "proposed"],
+              ["", "NorthMES is back. Opening it now. · If NorthMES stays unavailable, tell your plant admin. · Try again", "proposed"],
+              ["Session ended", "Sign in to NorthMES · Your session ended. Sign in again to continue.", "D2"],
+              ["", "Your session ended · Sign in again to go back to the page you were on.", "proposed"],
+              ["Boot", "Loading NorthMES", "doc"],
+              ["", "Starting NorthMES in this browser. · NorthMES could not start", "proposed"],
+              ["", "The server sent an error when this browser asked which modules to load, so no page can open.", "proposed"],
+              ["", "Reload to try again. If NorthMES still does not start, give your plant admin the correlation id.", "proposed"],
+              ["", "NorthMES did not answer. It may be restarting, or this browser cannot reach the server. · This page tries again every 10 seconds and opens NorthMES when it answers.", "proposed"],
+              ["", "Reload page", "D2"],
+              ["Newer browser needed", "NorthMES needs a newer browser · NorthMES runs in these browsers, in this version or newer:", "proposed"],
+              ["", "Chrome 111 · Edge 111 · Firefox 128 · Safari 16.4", "doc"],
+              ["", "This browser is {browser} {version}. · NorthMES could not tell which browser this is.", "proposed"],
+              ["", "Update this browser, or open NorthMES in one of the browsers above. If you cannot update it, ask your IT department.", "proposed"],
+              ["HTTPS required", "NorthMES needs HTTPS", "proposed"],
+              ["", "This page was opened over HTTP, which is not secure. NorthMES checks every module it loads, and browsers allow that check only over HTTPS.", "proposed"],
+              ["", "Open NorthMES at its HTTPS address. If that does not work, ask your IT department. · Address · Open with HTTPS", "proposed"]
+            ]),
+            Ls("Long-strings text, a layout test, not copy", "The screen root carries `lang=\"de\"`; the Finnish route title carries `lang=\"fi\"`.", [
+              "LS1, LS2: Fertigungsaufträge konnten nicht geladen werden · Beim Laden der Daten für diese Seite ist auf dem Server ein Fehler aufgetreten. Gespeicherte Daten sind nicht betroffen. · Versuchen Sie es erneut. Wenn der Fehler wieder auftritt, geben Sie Ihrer Werksadministration die Korrelations-ID. · Korrelations-ID · Code · Korrelations-ID kopieren · Erneut versuchen · Zur Plantafel",
+              "LS3: Työkalujen käyttöikä konnte nicht geladen werden, the first two words in `lang=\"fi\"`; the rest as LS1; the outline action Alle Seiten anzeigen",
+              "LS4: NorthMES ist gerade nicht verfügbar · NorthMES wird neu gestartet oder aktualisiert. Gespeicherte Daten sind nicht betroffen. · Diese Seite prüft alle 10 Sekunden und öffnet NorthMES wieder von selbst, sobald es zurück ist. Sie müssen nicht neu laden. · Wenn NorthMES nicht verfügbar bleibt, wenden Sie sich an Ihre Werksadministration. · Erneut versuchen"
+            ]),
+            Ls("Tokens and the values copied from D2", "Every UI color on the shell, sign-in, boot and HTTPS frames is a D1 token: `--background`, `--foreground`, `--card`, `--card-foreground`, `--border`, `--input`, `--muted-foreground`, `--accent`, `--primary`, `--primary-foreground`, `--primary-hover`, `--destructive`, `--warning`, `--warning-subtle`, `--info`, `--info-subtle`, `--focus-outline`, `--focus-ring`; sizes `--radius`, `--nm-control-height`, `--nm-target-min`, `--nm-target-min-station`; fonts `--font-sans`, `--font-mono`.", [
+              "State panel: `.panel` (D1) plus a grid with a 16 px gap and max-width 640 px; the head row an icon of 24 px and the lead at 16 / 24, 500; paragraphs max 72ch.",
+              "Description list: a top border, rows of a 140 px label and the value, min-height 40 px, 6 px padding above and below, 1 px `--border` under each; 8 px between a value and its Copy button, so the focus ring clears both (D2 ST6 has 4 px); labels 12 / 16, 600, `--muted-foreground`; data in Plex Mono 13 / 18, 500, with `overflow-wrap: anywhere`. At 320 the label sits above the value.",
+              "Actions wrap with 8 px gaps; at 320 they stack and span the width, 36 px high for one line of label (7 px padding above and below), 44 px on the pages a station can show.",
+              "Copy correlation id is an IconButton of 36 by 36 px (44 by 44 px on the boot failure page) that never shrinks; the id wraps beside it.",
+              "Sign-in card: main padding 96 px 24 px 24 px, card 416 px wide (600 px for the boot, boot failure and HTTPS cards, so the boot card keeps its width when boot fails), 32 px padding, 20 px gap, `--radius-xl`; h1 28 / 34, 600, at 320 24 / 30; the status box 12 px 14 px padding, `--radius`, title 14 / 20, 600, with a 16 px icon.",
+              "Mark: 24 px square, `--radius-sm`, 13 px bold N, word 15 / 20, 700.",
+              "Controls on the pages a station can show (boot failure, maintenance, HTTPS) are 44 px high, `--nm-target-min-station` (proposed, E13)."
+            ]),
+            T("Inlined values for the static pages", "Converted from D1's oklch tokens to sRGB hex. Ratios measured on the hex values: text on page 16.57:1 light, 16.01:1 dark; text on card 17.31:1 and 14.60:1; muted text on page 6.54:1 and 8.06:1, on card 6.84:1 and 7.34:1; button text on button 14.68:1 and 15.19:1; focus outline on page 16.57:1 and 16.01:1.", "er-c4", ["Role", "D1 token", "Light", "Dark"], [
+              ["Page", "`--background`", "[[#f9fafb]]`#f9fafb`", "[[#151719]]`#151719`"],
+              ["Card", "`--card`", "[[#ffffff]]`#ffffff`", "[[#1d2022]]`#1d2022`"],
+              ["Text", "`--foreground`", "[[#171b1f]]`#171b1f`", "[[#f0f2f4]]`#f0f2f4`"],
+              ["Muted text", "`--muted-foreground`", "[[#575b60]]`#575b60`", "[[#aaaeb3]]`#aaaeb3`"],
+              ["Card and header border", "`--border`", "[[#dbdee1]]`#dbdee1`", "[[#3a3d41]]`#3a3d41`"],
+              ["Button", "`--primary`", "[[#22272c]]`#22272c`", "[[#e9ebee]]`#e9ebee`"],
+              ["Button text", "`--primary-foreground`", "[[#fcfcfc]]`#fcfcfc`", "[[#13161a]]`#13161a`"],
+              ["Button hover", "`--primary-hover`", "[[#383e43]]`#383e43`", "[[#cfd1d3]]`#cfd1d3`"],
+              ["Focus outline", "`--focus-outline`", "[[#171b1f]]`#171b1f`", "[[#f0f2f4]]`#f0f2f4`"],
+              ["Focus ring band", "`--focus-ring`", "[[#f9fafb]]`#f9fafb`", "[[#151719]]`#151719`"]
+            ]),
+            Ls("The maintenance page file, proposed unless marked", "", [
+              "One self-contained HTML file in the release bundle next to the vendor Caddyfile: inline `<style>`, inline `<script>`, the mark as inline markup; no web font, no icon library, no `tokens.css`, no request except the check. A request for a separate asset would hit the stopped app and get this page back.",
+              "Served by `handle_errors 502 503 504` with status 503 and `Retry-After: 15` (doc). Caddy sets a CSP header for this response with hashes for the inline style and script and `connect-src 'self'`.",
+              "Head: `<meta charset=\"utf-8\">`, the viewport meta without `maximum-scale`, `<meta name=\"color-scheme\" content=\"light dark\">`, the title.",
+              "Fonts: `system-ui, -apple-system, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif`. Sizes in rem: body 1rem / 1.5rem; h1 1.75rem / 2.125rem from 768 px up, 1.5rem / 1.875rem below. The card is at most 37.5rem wide, as the boot card.",
+              "Colors: the hex values above, light in `:root`, dark in `@media (prefers-color-scheme: dark)` (doc in #306). Radius 6 px on the button, 8 px on the card. Below 768 px the card loses its border and padding and Try again spans the width.",
+              "The check: a script requests `/health/ready` every 10 seconds (doc interval) with `cache: \"no-store\"`; on a 200 it writes NorthMES is back. Opening it now. into the status element and reloads the same URL. It never reloads while the app is down, so a screen reader is not moved to the top every 10 seconds (F41 under 2.2.1). Without script, a `<meta http-equiv=\"refresh\" content=\"10\">` inside `<noscript>` reloads instead.",
+              "Try again is a real link to the current URL, 44 px high, so it works without script.",
+              "Focus ring with inlined values: a 2 px outline in the text color at a 2 px offset plus a 2 px box-shadow in the page color, on `:focus-visible`.",
+              "The button keeps a 1 px transparent border, so forced-colors mode draws its edge; no `forced-color-adjust`. No animation.",
+              "The page also serves `/station/...`; an unattended station comes back within 30 s after the app is up (doc), which the 10 s check meets (P09 section 9).",
+              "On the canvas the class `er-x-dark` stands in for the media query and `er-x-n` for the narrow layout."
+            ]),
+            Ls("The unsupported browser page, proposed unless marked", "", [
+              "`/assets/browser-check.js` is ES2017 and loads no other script (doc). It builds the page with DOM calls; its styles come from a static sheet such as `/assets/browser-check.css`, because the CSP refuses inline style elements.",
+              "The sheet uses the hex values above, system fonts and plain selectors: no custom properties, `oklch()`, `color-mix()`, `@property`, nesting or `:has()`.",
+              "Theme: the script reads the stored theme key; light by default. No controls, nothing focused."
+            ]),
+            T("Icons, lucide 1.45.0", "Decorative next to their text (`aria-hidden`). Link2Off, WifiOff, ShieldAlert and ArrowLeft are new to the D1 icon list (E20); the others are in D1 or D2.", "er-c2a", ["Icon", "Where"], [
+              ["Link2Off", "Link cannot be used, `--muted-foreground`"],
+              ["SearchX", "Page not found, record not found, `--muted-foreground`"],
+              ["CircleAlert", "Server error, boot failure, `--destructive`"],
+              ["WifiOff", "No connection, no answer at boot, `--warning`"],
+              ["ShieldAlert", "HTTPS required, `--warning`"],
+              ["Info", "One setting ignored, Your session ended, `--info`"],
+              ["LoaderCircle", "Loading NorthMES; Try again in progress; no rotation under `prefers-reduced-motion`"],
+              ["RotateCw", "Try again, Reload page"],
+              ["ArrowLeft", "Go back, Back to Production orders"],
+              ["Copy", "Copy correlation id"],
+              ["TriangleAlert", "The restarting strip (D2)"]
+            ]),
+            T("WCAG 2.2 criteria", "", "er-c2a", ["Criterion", "Where"], [
+              ["1.3.1", "Headings, the description lists, the version list, landmarks on every page"],
+              ["1.4.1", "Icon and text on every state; the info, warning and error tones repeat the words"],
+              ["1.4.3, 1.4.11", "D1 tokens; the static pages' measured values"],
+              ["1.4.4, 1.4.10, 1.4.12", "The 320 frames; rem sizes; wrapping paths and ids"],
+              ["2.1.1", "Every control by keyboard; KF frames"],
+              ["2.2.1", "The maintenance check is no time limit and never reloads while the app is down; sessions last 7 days, above the 20 hour exception (P15)"],
+              ["2.4.1", "Skip link on the shell, sign-in, boot and HTTPS pages; landmarks on the maintenance and unsupported browser pages"],
+              ["2.4.2", "Unique titles"],
+              ["2.4.3", "Focus to the h1 on arrival; retries keep focus"],
+              ["2.4.4", "Action names carry their target: Go to Plant A, Back to Production orders"],
+              ["2.4.5", "See all pages on the not-found pages"],
+              ["2.4.6", "Each h1 names what happened"],
+              ["2.4.7", "Two-tone ring on every stop, KF14, KF15"],
+              ["2.4.11", "`scroll-padding-top`, KF13"],
+              ["2.5.8", "24 px minimum, 36 px shell controls, 44 px on the pages a station can show"],
+              ["3.1.1, 3.1.2", "`lang=\"en\"`; the Finnish route title in LS3 carries `lang=\"fi\"`"],
+              ["3.2.1, 3.2.2", "Nothing changes on focus; the maintenance page reloads only when the server answers, as its text says"],
+              ["3.2.6", "Help keeps its place on the shell pages"],
+              ["3.3.1", "The link and server error pages say what went wrong in text"],
+              ["3.3.7", "The return URL keeps the page and its search after sign-in"],
+              ["3.3.8", "The sign-in rules of D2"],
+              ["4.1.2", "Names, roles and states above"],
+              ["4.1.3", "The announcements above, each read once"]
+            ]),
+            Ls("Rules for every frame", "", [
+              "Each screen has exactly one h1 and a unique title. The status code or correlation id shows only where it helps support: the correlation id and code on the server error and boot failure pages; the browser and version on the unsupported browser page; the address on the HTTPS page; the path on the unknown path pages; nothing on the link, record not found, no connection, maintenance and session pages.",
+              "Each page says what happened in plain words and offers a way out or a retry; a record not found offers Back to {list}.",
+              "Inside the shell the skip link, sidebar with the switcher and user button, top bar, crumbs and Help keep their places; the route's page actions leave the top bar, as in ST6. The h1 is the state's own heading, rendered by PageFrame outside every data Suspense, `tabindex -1`, focused one frame after the route renders.",
+              "A secondary region's failure never becomes the page state. The page while the server restarts shows no error component (P06 Failure handling).",
+              "Outside the shell: a header with the mark only, then main with one h1, `<html lang=\"en\">`. Boot, boot failure, HTTPS and session pages have the skip link first. On a first load nothing is focused. The boot screen and boot errors follow the stored theme, applied before first paint (E15).",
+              "At 320 by 640 nothing scrolls sideways; long paths and correlation ids wrap; no fixed heights on text containers.",
+              "Focus order equals the visual order. A retry keeps focus in its loading state; success moves focus to the h1; failure leaves focus on the button and says so once. The focused control is never under the sticky top bar. No single-key shortcut."
+            ])
+          ];
+          return { cols: [left, right] };
+        }
+      }
+    </script>
+  </body>
+</html>

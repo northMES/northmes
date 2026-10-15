@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 option A, labelled sidebar</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="scr {{ scrCls }}" data-screen-label="Option A, labelled sidebar">
+        <sc-if value="{{ skip }}"><a class="btn v-default is-focus skipl" href="#main">Skip to main content</a></sc-if>
+        <sc-if value="{{ wideNormal }}">
+          <div class="sb">
+            <div class="sb-head">
+              <span class="mark"><span class="mark-sq">N</span>NorthMES</span>
+              <button class="btn icon v-ghost" type="button" aria-label="Collapse sidebar"><span class="ic" data-icon="PanelLeft"></span></button>
+            </div>
+            <div class="sb-plant">
+              <button class="plant {{ plantCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ menu }}" aria-label="Plant: Plant A"><span class="ic" data-icon="Factory"></span>Plant A<span class="ic end" data-icon="ChevronsUpDown"></span></button>
+            </div>
+            <nav class="sb-body" aria-label="Main">
+              <sc-for list="{{ sections }}" as="s">
+                <div class="secw {{ s.cls }}">
+                  <sc-if value="{{ s.heading }}"><div class="sec-h">{{ s.heading }}</div></sc-if>
+                  <sc-for list="{{ s.groups }}" as="g">
+                    <div class="grp">
+                      <div class="grp-h">{{ g.label }}</div>
+                      <sc-for list="{{ g.items }}" as="it">
+                        <div class="ni-row"><a class="ni {{ it.cls }}" href="#">{{ it.label }}</a><sc-if value="{{ it.disc }}"><button class="disc" type="button" aria-label="{{ it.discLabel }}" aria-expanded="false"><span class="ic" data-icon="ChevronRight"></span></button></sc-if></div>
+                        <sc-if value="{{ it.hasKids }}"><div class="sub"><sc-for list="{{ it.kids }}" as="k"><a class="ni" href="#">{{ k }}</a></sc-for></div></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </nav>
+          </div>
+        </sc-if>
+        <sc-if value="{{ wideTrouble }}">
+          <div class="rail">
+            <div class="rail-top"><button class="btn icon v-ghost" type="button" aria-label="Expand sidebar"><span class="ic" data-icon="PanelLeft"></span></button></div>
+            <button class="rb" type="button" aria-label="Plant: Plant A" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Factory"></span></button>
+            <span class="rsep"></span>
+            <nav aria-label="Main">
+              <sc-for list="{{ rail }}" as="r">
+                <sc-if value="{{ r.sep }}"><span class="rsep"></span></sc-if>
+                <sc-if value="{{ r.btn }}"><a class="rb {{ r.cls }}" href="#" aria-label="{{ r.name }}">{{ r.m }}</a></sc-if>
+              </sc-for>
+            </nav>
+          </div>
+        </sc-if>
+        <div class="col fill">
+          <sc-if value="{{ wide }}">
+            <header class="tb">
+              <nav class="crumbs" aria-label="Breadcrumb"><a class="cr" href="#">Planning</a><span class="ic" data-icon="ChevronRight"></span><span class="here" aria-current="page">Planning board</span></nav>
+              <span class="grow"></span>
+              <sc-if value="{{ trouble }}"><span class="chip warn"><span class="ic" data-icon="LoaderCircle"></span>Live updates paused, reconnecting</span></sc-if>
+              <span class="slotg {{ slotCls }}"><sc-if value="{{ marks }}"><span class="pin">1</span></sc-if><button class="btn v-outline" type="button">Run autoplan</button><button class="btn v-default" type="button">Save</button></span>
+              <span class="vsep"></span>
+              <button class="btn v-ghost {{ asstCls }}" type="button" aria-expanded="{{ trouble }}"><span class="ic" data-icon="Sparkles"></span>Assistant</button>
+              <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu"><span class="ic" data-icon="CircleHelp"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Account, Alex Lund" aria-haspopup="menu"><span class="avatar">AL</span></button>
+            </header>
+            <div class="row fill">
+              <main class="main" id="main">
+                <div class="ph">
+                  <h1 class="h1" tabindex="-1">Planning board</h1>
+                  <span class="meta {{ slotCls }}"><sc-if value="{{ marks }}"><span class="pin">2</span></sc-if>Pyramid data as of <span class="num">06:40</span></span>
+                </div>
+                <div class="toolbar">
+                  <div class="seg" role="group" aria-label="View"><button class="s on" type="button" aria-pressed="true">Board</button><button class="s" type="button" aria-pressed="false">Job table</button></div>
+                  <span class="inp w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                  <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                  <button class="btn v-outline" type="button">Today</button>
+                  <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                  <span class="num">2026-10-05</span>
+                  <span class="grow"></span>
+                  <sc-if value="{{ trouble }}"><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="Pause"></span>Live updates paused</button></sc-if>
+                  <sc-if value="{{ wideNormal }}"><button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button></sc-if>
+                </div>
+                <div class="bd">
+                  <div class="bd-grid phbox"><span class="phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                  <section class="bd-side {{ slotCls }}" aria-labelledby="a-lo"><sc-if value="{{ marks }}"><span class="pin">3</span></sc-if>
+                    <div class="wf-h"><h2 class="wf-t" id="a-lo">Large orders</h2><span class="meta">example-widget</span></div>
+                    <div class="wf-b phbox"><span class="phl">Contribution example-widget.large-orders</span></div>
+                  </section>
+                </div>
+              </main>
+              <sc-if value="{{ trouble }}">
+                <aside class="aside" aria-labelledby="a-as">
+                  <div class="as-h"><h2 class="as-t" id="a-as">Assistant</h2><span class="grow"></span><button class="btn icon v-ghost" type="button" aria-label="Close assistant"><span class="ic" data-icon="X"></span></button></div>
+                  <p class="as-n">Written by an AI assistant. Check before you commit.</p>
+                  <div class="as-b phbox"><span class="phl">Chat panel, designed under E14-S03 (#136)</span></div>
+                  <div class="as-f"><span class="inp"><span class="ph">Message the assistant</span></span><button class="btn icon v-default" type="button" aria-label="Send"><span class="ic" data-icon="Send"></span></button></div>
+                </aside>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ narrow }}">
+            <header class="tb nar">
+              <button class="btn icon v-ghost" type="button" aria-label="Open navigation" aria-expanded="{{ sheet }}"><span class="ic" data-icon="Menu"></span></button>
+              <nav class="crumbs fill" aria-label="Breadcrumb"><a class="cr" href="#"><span class="ic" data-icon="ChevronLeft"></span>Planning</a></nav>
+              <button class="btn icon v-ghost" type="button" aria-label="Assistant"><span class="ic" data-icon="Sparkles"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Page actions" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu"><span class="ic" data-icon="CircleHelp"></span></button>
+              <button class="btn icon v-ghost" type="button" aria-label="Account, Alex Lund" aria-haspopup="menu"><span class="avatar">AL</span></button>
+            </header>
+            <main class="main nar">
+              <div class="ph"><h1 class="h1" tabindex="-1">Planning board</h1><span class="meta">Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="toolbar">
+                <div class="seg" role="group" aria-label="View"><button class="s on" type="button" aria-pressed="true">Board</button><button class="s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="grow"></span>
+                <button class="btn icon v-outline" type="button" aria-label="Board options" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+              </div>
+              <div class="bd stack">
+                <div class="bd-grid phbox"><span class="phl">Board grid (D3). It scrolls in both directions inside this box; the page never scrolls sideways.</span></div>
+                <section class="bd-side flat" aria-labelledby="a-lo2"><div class="wf-h only"><h2 class="wf-t" id="a-lo2">Large orders</h2><span class="meta">example-widget, stacked below the board</span></div></section>
+              </div>
+            </main>
+          </sc-if>
+        </div>
+        <sc-if value="{{ menu }}">
+          <div class="pop abs" style="left:8px;top:104px" role="menu" aria-label="Plant">
+            <div class="mh">Switch plant</div>
+            <sc-for list="{{ plants }}" as="p">
+              <a class="mi pm {{ p.cls }}" href="#" role="menuitem"><span class="ic ck {{ p.ck }}" data-icon="Check"></span><span class="pm-t"><span>{{ p.name }}</span><span class="pm-u">{{ p.url }}</span></span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sheet }}">
+          <div class="ov"></div>
+          <div class="nsheet" role="dialog" aria-modal="true" aria-label="Navigation">
+            <div class="sb-head">
+              <span class="mark"><span class="mark-sq">N</span>NorthMES</span>
+              <button class="btn icon v-ghost" type="button" aria-label="Close navigation"><span class="ic" data-icon="X"></span></button>
+            </div>
+            <div class="sb-plant">
+              <button class="plant" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Plant: Plant A"><span class="ic" data-icon="Factory"></span>Plant A<span class="ic end" data-icon="ChevronsUpDown"></span></button>
+            </div>
+            <nav class="sb-body" aria-label="Main">
+              <sc-for list="{{ sections }}" as="s">
+                <div class="secw {{ s.cls }}">
+                  <sc-if value="{{ s.heading }}"><div class="sec-h">{{ s.heading }}</div></sc-if>
+                  <sc-for list="{{ s.groups }}" as="g">
+                    <div class="grp">
+                      <div class="grp-h">{{ g.label }}</div>
+                      <sc-for list="{{ g.items }}" as="it">
+                        <div class="ni-row"><a class="ni {{ it.cls }}" href="#">{{ it.label }}</a><sc-if value="{{ it.disc }}"><button class="disc" type="button" aria-label="{{ it.discLabel }}" aria-expanded="false"><span class="ic" data-icon="ChevronRight"></span></button></sc-if></div>
+                        <sc-if value="{{ it.hasKids }}"><div class="sub"><sc-for list="{{ it.kids }}" as="k"><a class="ni" href="#">{{ k }}</a></sc-for></div></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </nav>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"state":{"editor":"enum","options":["normal","trouble","menu"],"default":"normal","tsType":"string"},"view":{"editor":"enum","options":["page","sheet"],"default":"page","tsType":"string"},"marks":{"editor":"enum","options":["on","off"],"default":"off","tsType":"string"},"focus":{"editor":"enum","options":["none","skip","nav"],"default":"none","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const narrow = this.props.size === "narrow";
+          const trouble = !narrow && this.props.state === "trouble";
+          const menu = !narrow && this.props.state === "menu";
+          const sheet = narrow && this.props.view === "sheet";
+          const marks = !narrow && this.props.marks === "on";
+          const skip = !narrow && this.props.focus === "skip";
+          const focusNav = trouble && this.props.focus === "nav";
+          // One entry per nav item: { label, cls, disc, discLabel, hasKids, kids }. Labels are proposals except "Planning".
+          // Planner permission set: Planning Settings and the Import inbox are admin entries (P07 Permissions, P08 section 13).
+          // Sections are separated by dividers only (spec 9.9).
+          const item = (label, extra) => Object.assign({ label: label, cls: "", disc: false, discLabel: "", hasKids: false, kids: [] }, extra || {});
+          const sections = [
+            { cls: "", heading: "", groups: [
+              { label: "Core", items: [item("Master data", { disc: true, discLabel: "Show the Master data registers" })] }
+            ] },
+            { cls: "div", heading: "", groups: [
+              { label: "Planning", items: [item("Board", { cls: "cur", hasKids: true, kids: ["Job table"] }), item("Production orders"), item("Proposals")] },
+              { label: "Pyramid connector", items: [item("Pending changes"), item("Import log")] }
+            ] },
+            { cls: "div", heading: "", groups: [
+              { label: "Acme tooling", items: [item("Tool life"), item("Tool changes")] }
+            ] }
+          ];
+          // Rail monograms are the first two letters of web.label, so the visible text starts the accessible name (2.5.3).
+          // Each monogram links to the group's first entry. The failed module keeps its place (1.1.9).
+          const rail = [
+            { btn: true, m: "Co", name: "Core", cls: focusNav ? "is-focus" : "" },
+            { sep: true },
+            { btn: true, m: "Pl", name: "Planning", cls: "cur" },
+            { btn: true, m: "Py", name: "Pyramid connector (unavailable)", cls: "unav" },
+            { sep: true },
+            { btn: true, m: "Ac", name: "Acme tooling", cls: "" }
+          ];
+          const plants = [
+            { name: "Plant A", url: "/plant-a/planning/board", ck: "on", cls: "" },
+            { name: "Plant B", url: "/plant-b/planning/board", ck: "", cls: "kfocus" },
+            { name: "Plant C", url: "/plant-c/planning/board", ck: "", cls: "" }
+          ];
+          return {
+            scrCls: narrow ? "s320" : "s1440",
+            wide: !narrow,
+            narrow: narrow,
+            wideNormal: !narrow && !trouble,
+            wideTrouble: trouble,
+            trouble: trouble,
+            sheet: sheet,
+            marks: marks,
+            skip: skip,
+            slotCls: marks ? "slot" : "",
+            asstCls: trouble ? "on" : "",
+            plantCls: menu ? "open" : "",
+            menu: menu,
+            sections: sections,
+            rail: rail,
+            plants: plants
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

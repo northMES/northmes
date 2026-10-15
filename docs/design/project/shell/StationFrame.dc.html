@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StationFrame</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+      </helmet>
+      <div class="stn-root {{ rootCls }}" lang="en" data-screen-label="{{ screenLabel }}">
+        <sc-if value="{{ showTitle }}">
+          <div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ docTitle }}</span></div>
+        </sc-if>
+        <div class="stn-scr {{ scrCls }}">
+          <a class="btn v-default stn-skip {{ skipCls }}" href="#{{ ids.main }}">Skip to main content</a>
+          <header class="stn-tb {{ tbCls }}">
+            <sc-if value="{{ lm }}"><span class="sh-lmbox"></span><span class="sh-lm" style="left:50%;bottom:4px">header</span></sc-if>
+            <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span><sc-if value="{{ wordmark }}">NorthMES</sc-if><sc-if value="{{ noWordmark }}"><span class="sh-vh">NorthMES</span></sc-if></span>
+            <span class="sh-vsep"></span>
+            <span class="stn-id"><span class="b6">{{ station }}</span><span class="k">{{ plant }}</span></span>
+            <span class="sh-grow"></span>
+            <span class="stn-chip {{ chipCls }}"><span class="ic" data-icon="{{ chipIcon }}"></span><span>{{ chipText }}</span></span>
+            <sc-if value="{{ showSwitch }}">
+              <button class="btn lg v-outline {{ f.switch }}" type="button"><span class="ic" data-icon="ArrowLeftRight"></span>Switch operator</button>
+            </sc-if>
+            <sc-if value="{{ signOutFull }}">
+              <button class="btn lg v-ghost {{ f.signout }}" type="button"><span class="ic" data-icon="LogOut"></span>Sign out</button>
+            </sc-if>
+            <sc-if value="{{ signOutIcon }}">
+              <button class="btn lg ib v-ghost {{ f.signout }}" type="button" aria-label="Sign out"><span class="ic" data-icon="LogOut"></span></button>
+            </sc-if>
+            <button class="btn lg ib v-ghost {{ moreCls }}" type="button" aria-label="More" aria-haspopup="menu" aria-expanded="{{ moreOpen }}"><span class="ic" data-icon="Ellipsis"></span></button>
+          </header>
+          <sc-if value="{{ offline }}">
+            <div class="stn-strip" role="status"><span class="ic" data-icon="WifiOff"></span><span>No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back.</span></div>
+          </sc-if>
+          <main class="stn-main {{ mainCls }}" id="{{ ids.main }}" tabIndex="-1">
+            <sc-if value="{{ lm }}"><span class="sh-lmbox"></span><span class="sh-lm tr">main</span></sc-if>
+            <sc-if value="{{ showHeading }}">
+              <div class="stn-head">
+                <h1 class="stn-h1 {{ f.h1 }}" tabIndex="-1">{{ h1 }}</h1>
+                <sc-if value="{{ hasHeaderKids }}">{{ headerKids }}</sc-if>
+              </div>
+            </sc-if>
+            <div class="stn-content">
+              <sc-if value="{{ hasMainKids }}">{{ mainKids }}</sc-if>
+              <sc-if value="{{ noMainKids }}"><div class="sh-phbox"><span class="sh-phl">{{ contentPh }}</span></div></sc-if>
+            </div>
+          </main>
+          <sc-if value="{{ moreOpen }}">
+            <div class="pop stn-menu" style="right:20px;top:66px" role="menu" aria-label="More">
+              <a class="mi kfocus" href="#" role="menuitem"><span class="ic" data-icon="CircleHelp"></span>Help</a>
+              <div class="msep" role="separator"></div>
+              <div role="group" aria-labelledby="{{ ids.themeHead }}">
+                <div class="sh-mh" id="{{ ids.themeHead }}" role="presentation">Theme on this station</div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isLight }}"><span class="ic" data-icon="Sun"></span>Light<span class="ic end sh-ck {{ lightCk }}" data-icon="Check"></span></div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isDark }}"><span class="ic" data-icon="Moon"></span>Dark<span class="ic end sh-ck {{ darkCk }}" data-icon="Check"></span></div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ idle }}">
+            <div class="sh-ov"></div>
+            <div class="stn-dlg" role="alertdialog" aria-modal="true" aria-labelledby="{{ ids.dlgTitle }}" aria-describedby="{{ ids.dlgText }}">
+              <h2 class="stn-dlg-t" id="{{ ids.dlgTitle }}">You will be signed out in <span class="num">30</span> seconds</h2>
+              <p id="{{ ids.dlgText }}">Your entries on this screen are kept.</p>
+              <div class="stn-dlg-f"><button class="btn lg v-default is-focus" type="button">Stay signed in</button></div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1280x800","1920x1080","800x1280"],"default":"1280x800","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"connection":{"editor":"enum","options":["connected","reconnecting","offline"],"default":"connected","tsType":"string"},"station":{"editor":"text","default":"Press 4","tsType":"string"},"plant":{"editor":"text","default":"Plant A","tsType":"string"},"operator":{"editor":"text","default":"Anna Berg","tsType":"string"},"title":{"editor":"text","default":"","tsType":"string"},"heading":{"editor":"enum","options":["show","none"],"default":"show","tsType":"string"},"screen":{"editor":"enum","options":["default","switch"],"default":"default","tsType":"string"},"menu":{"editor":"enum","options":["none","more"],"default":"none","tsType":"string"},"dialog":{"editor":"enum","options":["none","idle"],"default":"none","tsType":"string"},"focus":{"editor":"enum","options":["none","skip","switch","signout","more","h1","main"],"default":"none","tsType":"string"},"marks":{"editor":"enum","options":["off","landmarks"],"default":"off","tsType":"string"},"showTitle":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"docTitle":{"editor":"text","default":"","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          const has = (v) => v !== undefined && v !== null && String(v).trim() !== "";
+          const pick = (v, d) => (has(v) ? String(v).trim() : d);
+          const oneOf = (v, opts, d) => (opts.indexOf(pick(v, d)) >= 0 ? pick(v, d) : d);
+          if (!this.uid) {
+            window.__nmStationSeq = (window.__nmStationSeq || 0) + 1;
+            this.uid = "nm-station-" + window.__nmStationSeq;
+          }
+          const uid = this.uid;
+          const size = oneOf(P.size, ["1280x800", "1920x1080", "800x1280"], "1280x800");
+          const portrait = size === "800x1280";
+          const theme = oneOf(P.theme, ["light", "dark"], "light");
+          const connection = oneOf(P.connection, ["connected", "reconnecting", "offline"], "connected");
+          const focus = pick(P.focus, "none");
+          const F = (k) => (focus === k ? "is-focus" : "");
+          // Station "Press 4", operator "Anna Berg" and "Plant A" are doc values (P09, P06).
+          const station = pick(P.station, "Press 4");
+          const plant = pick(P.plant, "Plant A");
+          // operator="" or operator="none" draws the frame before anyone signs in.
+          const operator = P.operator === undefined || P.operator === null ? "Anna Berg" : String(P.operator).trim() === "none" ? "" : String(P.operator).trim();
+          const signedIn = operator !== "";
+          const h1 = has(P.title) ? pick(P.title, "") : signedIn ? station + ", " + operator : "Sign in at " + station;
+          const docTitle = has(P.docTitle) ? pick(P.docTitle, "") : [station, plant, "NorthMES"].join(" · ");
+          const moreOpen = oneOf(P.menu, ["none", "more"], "none") === "more";
+          // screen="switch": the Switch operator screen itself, so the top bar leaves out its Switch operator button.
+          const switching = oneOf(P.screen, ["default", "switch"], "default") === "switch";
+          const lm = oneOf(P.marks, ["off", "landmarks"], "off") === "landmarks";
+          // Content slot: children; a child with data-slot="header" sits beside the h1.
+          const kidsAll = [].concat(P.children === undefined || P.children === null ? [] : P.children).filter((c) => c !== null && c !== undefined && c !== false);
+          const isEl = (c) => !!c && typeof c === "object" && !!c.props;
+          const slotOf = (c) => (isEl(c) && c.props["data-slot"]) || "";
+          const meaningful = (arr) => arr.some((c) => isEl(c) || typeof c === "number" || (typeof c === "string" && c.trim() !== ""));
+          const headerKids = kidsAll.filter((c) => slotOf(c) === "header");
+          const mainKids = kidsAll.filter((c) => slotOf(c) !== "header");
+          // Connection: connected shows a chip; reconnecting shows the top bar status; offline adds the
+          // role=status banner under the top bar (spec 5.10).
+          const CHIP = {
+            connected: { cls: "ok", icon: "Wifi", text: "Connected" },
+            reconnecting: { cls: "warn", icon: "LoaderCircle", text: "Live updates paused, reconnecting" },
+            offline: { cls: "warn", icon: "LoaderCircle", text: "Live updates paused, reconnecting" }
+          };
+          const chip = CHIP[connection];
+          return {
+            rootCls: theme === "dark" ? "dark" : "",
+            screenLabel: "Station frame, " + size + ", " + theme,
+            showTitle: oneOf(P.showTitle, ["off", "on"], "off") === "on",
+            docTitle: docTitle,
+            scrCls: portrait ? "s800" : size === "1920x1080" ? "s1920" : "s1280",
+            ids: { main: uid + "-main", themeHead: uid + "-theme", dlgTitle: uid + "-dlg-t", dlgText: uid + "-dlg-d" },
+            skipCls: focus === "skip" ? "on is-focus" : "",
+            tbCls: (portrait ? "por " : "") + (lm ? "sh-lmw" : ""),
+            wordmark: !portrait,
+            noWordmark: portrait,
+            station: station,
+            plant: plant,
+            chipCls: chip.cls,
+            chipIcon: chip.icon,
+            chipText: chip.text,
+            signedIn: signedIn,
+            showSwitch: signedIn && !switching,
+            // In portrait, Sign out is a 48 px IconButton so the top bar keeps one line next to the chip.
+            signOutFull: signedIn && !portrait,
+            signOutIcon: signedIn && portrait,
+            f: { switch: F("switch"), signout: F("signout"), h1: F("h1") },
+            moreOpen: moreOpen,
+            moreCls: (moreOpen ? "open " : "") + F("more"),
+            offline: connection === "offline",
+            mainCls: F("main") + (lm ? " sh-lmw" : ""),
+            lm: lm,
+            showHeading: oneOf(P.heading, ["show", "none"], "show") === "show",
+            h1: h1,
+            headerKids: headerKids,
+            hasHeaderKids: meaningful(headerKids),
+            mainKids: mainKids,
+            hasMainKids: meaningful(mainKids),
+            noMainKids: !meaningful(mainKids),
+            contentPh: signedIn ? "Station screen content, designed in D4 (E11)" : "Badge sign-in, designed in D4 (E11)",
+            isLight: theme === "light",
+            isDark: theme === "dark",
+            lightCk: theme === "light" ? "on" : "",
+            darkCk: theme === "dark" ? "on" : "",
+            idle: oneOf(P.dialog, ["none", "idle"], "none") === "idle"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

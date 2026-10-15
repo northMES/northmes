@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings: page states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+          /* Part of the spec page shell-313-settings.dc.html, issue northMES/northmes#313: the page states of the settings
+             area (plan 06 Page states, #222): loading, could not load, a first run without an action, a server error that
+             keeps values, no permission, a module that did not load, a plant in onboarding and a filtered-empty list.
+             Every frame mounts the settings frame, the settings layout and a list, form or landing part with the state prop
+             those parts already have. Classes start with set-ps-; the chips are canvas labels, not part of the UI. */
+          .set-ps{display:flex;flex-direction:column;align-items:flex-start;gap:96px;width:max-content}
+          .set-ps-line{display:flex;align-items:flex-start;gap:80px}
+          .set-ps-f{display:flex;flex-direction:column;align-items:flex-start;flex:none;width:1440px}
+          .set-ps-f > .flabel{max-width:100%;flex-wrap:wrap;row-gap:4px;cursor:default}
+          .set-ps-f > .sc-host{display:block;width:100%}
+        </style>
+      </helmet>
+      <div class="set-ps">
+        <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="2">
+          <div class="set-ps-line">
+            <sc-for list="{{ ln }}" as="f" hint-placeholder-count="2">
+              <section class="set-ps-f" data-screen-label="{{ f.label }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span><span class="set-url">{{ f.url }}</span></div>
+                <dc-import name="shell-313-settings-frame" dc-props="{{ f.fp }}" hint-size="1440px,936px">
+                  <dc-import name="shell-313-settings-layout" dc-props="{{ f.lp }}" hint-size="100%,100%">
+                    <sc-if value="{{ f.isList }}"><dc-import name="shell-313-settings-list" dc-props="{{ f.cp }}" hint-size="100%,400px"></dc-import></sc-if>
+                    <sc-if value="{{ f.isForm }}"><dc-import name="shell-313-settings-form" dc-props="{{ f.cp }}" hint-size="100%,400px"></dc-import></sc-if>
+                    <sc-if value="{{ f.isLanding }}"><dc-import name="shell-313-settings-landing" dc-props="{{ f.cp }}" hint-size="100%,600px"></dc-import></sc-if>
+                  </dc-import>
+                </dc-import>
+              </section>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Part of shell-313-settings.dc.html (issue #313): the page states of plan 06 for the settings area, drawn with
+          // the state props of the shared parts (the list states and the form's server error are #222's patterns and
+          // copy). Plant settings pages draw the main sidebar collapsed to the rail (K1008r, rules 1.6); company pages
+          // draw no main sidebar (rules 1.7). Light at x 0 and dark at x 1520, one line per state.
+          const CO = "Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C";
+          const JH = { role: "company-admin", companies: CO, onboarding: "Plant D", user: "Jonas Holm", bell: "off" };
+          const EL = { role: "admin", access: "one-plant", user: "Erik Lind", bell: "off" };
+          const ONB = "Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it.";
+          // id, chip name, chip detail, route, page: { area, scope, page, title, actions, kind, cp, fx (frame), lx (layout), who }
+          const S = [
+            ["PS1", "Machines at Plant A, loading", "Skeleton rows in the table's own layout; aria-busy on main until the rows arrive", "/plant-a/core/machines",
+              { page: "machines", title: "Machines", actions: "*New machine", kind: "list", cp: { list: "machines", state: "loading" }, fx: { busy: "true" } }],
+            ["PS3", "Machines at Plant A, could not load", "The error with the correlation id and Try again; the settings navigation stays as the way out", "/plant-a/core/machines",
+              { page: "machines", title: "Machines", actions: "*New machine", kind: "list", cp: { list: "machines", state: "error" } }],
+            ["PS5", "Stations at Plant A, none yet", "First run without an action: a station shows here when it asks to pair, so the page has no New button", "/plant-a/core/stations",
+              { page: "stations", title: "Stations", kind: "list", cp: { list: "stations", state: "empty" } }],
+            ["PS7", "Plant at Plant A, could not save", "A server error keeps every value; the error summary has focus and gives the correlation id", "/plant-a/core/plant",
+              { page: "plant", title: "Plant", kind: "form", cp: { form: "plant", plant: "a", state: "server", focus: "summary" } }],
+            ["PS9", "Erik Lind opens Machines, no permission", "No machines permission: the missing permission, no data, and a company admin of Acme AB as the way to it", "/plant-a/core/machines",
+              { page: "machines", title: "Machines", kind: "list", who: EL, cp: { list: "machines", state: "forbidden" }, lx: { entries: "calendars,stations,planning,acme", others: "none" } }],
+            ["PS11", "Plant A settings, Planning did not load", "Planning rules keeps its place with (unavailable) in the settings navigation, on the landing and in the rail", "/plant-a/settings",
+              { page: "landing", title: "Settings", landing: true, kind: "landing", cp: { area: "plant", plant: "Plant A", unavailable: "planning" }, fx: { unavailable: "planning" }, lx: { unavailable: "planning" } }],
+            ["PS13", "Plant D settings, in onboarding", "The onboarding banner, and Continue onboarding first in the navigation and on the landing", "/plant-d/settings",
+              { scope: "Plant D", page: "landing", title: "Settings", landing: true, kind: "landing", cp: { area: "plant", plant: "Plant D" }, fx: { status: "banner", banner: ONB, bannerAction: "Continue onboarding" } }],
+            ["PS15", "Machines at Plant A, filtered empty", "Assembly holds no machine here: the chip counts 0, and Clear filters (#222 ST17)", "/plant-a/core/machines?equipmentGroup=Assembly",
+              { page: "machines", title: "Machines", actions: "*New machine", kind: "list", cp: { list: "machines", state: "filtered-empty" } }]
+          ];
+          const frame = (r, theme) => {
+            const n = Number(r[0].slice(2)) + (theme === "dark" ? 1 : 0);
+            const id = "PS" + n, idp = "ps" + n;
+            const p = r[4];
+            const area = p.area || "plant";
+            const scope = p.scope || "Plant A";
+            const sc = area === "plant" ? { plant: scope } : { company: scope };
+            const fp = Object.assign({ width: "1440", theme: theme, area: area, title: p.title, actions: p.actions || "none", skipTo: idp + "-page", showTitle: "on" },
+              p.who || JH, sc, p.landing ? { settingsCurrent: "page" } : {}, p.fx || {});
+            const lp = Object.assign({ area: area, width: "1440", page: p.page, contentId: idp + "-page" }, sc, p.lx || {});
+            return {
+              id: id, name: r[1], url: r[3],
+              th: (theme === "dark" ? "Dark, 1440 by 900. As PS" + (n - 1) : "Light, 1440 by 900. " + r[2]),
+              label: id + " " + r[1] + ", " + theme + ", 1440 by 900",
+              fp: fp, lp: lp, cp: p.cp,
+              isList: p.kind === "list", isForm: p.kind === "form", isLanding: p.kind === "landing"
+            };
+          };
+          return { lines: S.map((r) => [frame(r, "light"), frame(r, "dark")]) };
+        }
+      }
+    </script>
+  </body>
+</html>

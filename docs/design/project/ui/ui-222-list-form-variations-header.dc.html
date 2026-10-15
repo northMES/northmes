@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">NorthMES design page ui-222-list-form-variations.dc.html, variations round, in review</p>
+        <h1 class="t1">Canonical list and form page: variations</h1>
+        <p class="lede">Three ways to arrange the list, the detail and the form of a master data screen, drawn on the articles of Acme AB inside the approved D2 shell with the D1 tokens and components. Articles are not a register: core declares their routes with screenRoute and uses the command forms directly, and a register such as tools gets the same four routes from masterDataRoutes. Krister picks one option, or names the parts to combine. The spec page ui-222-list-form.dc.html then draws every frame of issue #222 in light and dark, at 1280, 1440, 1920 and 320 px.</p>
+        <div class="lf-cols2 sec">
+          <dl class="lf-facts">
+            <sc-for list="{{ facts }}" as="f">
+              <dt>{{ f.k }}</dt>
+              <dd>{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+          <div>
+            <h2 class="t3">The options</h2>
+            <div class="lf-rk">
+              <sc-for list="{{ options }}" as="o">
+                <div class="lf-rk-r"><span class="k">{{ o.id }}. {{ o.name }}</span><span>{{ o.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="lf-cols2 sec">
+          <div>
+            <h2 class="t2">What is being decided</h2>
+            <ol class="lf-pts">
+              <sc-for list="{{ decide }}" as="d"><li>{{ d }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="lf-pts">
+              <sc-for list="{{ compare }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">The axes per option</h2>
+          <div class="lf-cmp">
+            <div class="lf-cmp-r h"><span>Axis</span><span>A. Pages</span><span>B. Side sheet</span><span>C. Split view</span></div>
+            <sc-for list="{{ axes }}" as="x">
+              <div class="lf-cmp-r"><span class="k">{{ x.k }}</span><span>{{ x.a }}</span><span>{{ x.b }}</span><span>{{ x.c }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Rules every option keeps</h2>
+          <p class="lede">From plan 06, the ADRs, D1 and D2, with the source of each rule. A layout that breaks one of these is not an option.</p>
+          <div class="lf-qgrid">
+            <sc-for list="{{ rules }}" as="r">
+              <div class="lf-qrow"><span class="tag ok">{{ r.id }}</span><span>{{ r.t }} <span class="lf-src">{{ r.src }}</span></span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="lf-cols2 sec">
+          <div>
+            <h2 class="t2">Assumptions</h2>
+            <ol class="lf-pts">
+              <sc-for list="{{ assumptions }}" as="a"><li>{{ a }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">Open questions for this round</h2>
+            <div class="lf-qgrid one">
+              <sc-for list="{{ questions }}" as="q">
+                <div class="lf-qrow"><span class="tag q">{{ q.id }}</span><span>{{ q.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            facts: [
+              { k: "Issue", v: "northMES/northmes#222, plan E04-S07-T01" },
+              { k: "Owning story", v: "E04-S07 (#45), PageFrame and forms" },
+              { k: "Waiting tasks", v: "E06-S03 (#65) DataTable with URL state, the core registers of E06-S04 to E06-S06 (#66 to #68), users and roles, settings pages, the History tab and audit list, the production order list and detail, and the connector's settings and reports" },
+              { k: "Area", v: "ui (packages/ui)" },
+              { k: "Route", v: "/$plant/core/articles. A adds /$plant/core/articles/$articleId, /new and /$articleId/edit; B and C keep the list route and add the search key selected (proposed)." },
+              { k: "Personas", v: "Plant admin (master data and settings) in every frame here; Planner (production orders) on the spec page" },
+              { k: "Direction", v: "Graphite with the D1 tokens and components (approved 2026-10-05) inside the D2 shell (approved 2026-10-06), with the release 1 top bar that has no bell" },
+              { k: "Content", v: "The articles of Acme AB at Plant A, seen by the plant admin Jonas Holm. Article numbers, names, counts and times are invented." }
+            ],
+            options: [
+              { id: "A", name: "Pages", t: "List, detail, create and edit as their own routes (screenRoute for articles, masterDataRoutes for registers): filter menus and chips with counts, a row menu and a bulk bar, History as a table, the reason as a field at the end of the form." },
+              { id: "B", name: "Side sheet", t: "The list stays in place and a modal side sheet holds the detail tabs and the edit form. Filters sit in a facet column with counts, row actions show on hover and focus, and a reason is added through a disclosure beside Save." },
+              { id: "C", name: "Split view", t: "A narrow list beside the selected article, both always in view, with preset views as tabs. Edit opens in a dialog, and Save goes through a review step that holds the reason." }
+            ],
+            decide: [
+              "How list, detail and edit relate: separate pages (A), a side sheet over the list (B) or a split view (C).",
+              "Where filters live: filter menus in the toolbar with chips (A), a facet column (B), or preset view tabs plus a Filters menu (C).",
+              "How create and edit open: as a page (A), in the sheet (B) or in a dialog (C).",
+              "Where the change reason is asked: a field at the end of the form (A), a disclosure beside Save (B) or a review step on Save (C).",
+              "How History shows: a table with expandable rows (A) or a timeline (B and C).",
+              "Row and bulk actions: a row menu and a bulk bar (A), buttons on the row under the pointer or focus with an Actions menu (B), or actions on the detail only with a bulk bar (C).",
+              "The table at 320 px: a sticky first column (A), fewer columns (B) or cards (C)."
+            ],
+            compare: [
+              "Each option has five screens: the list (light, 1440 by 900), the detail with its History tab (light), the edit form with two field errors and the error summary focused (light), one dark frame with the selection and the row or bulk actions, and the list at 320 by 640. The document title sits above each screen; the frame label gives the URL.",
+              "All options draw the same articles, the same History entries and the same two errors, so only the arrangement differs. C draws the review step on Save in its dark frame. Jonas Holm created AX-20410 on the web, so its Source is NorthMES; an article the connector creates, such as AX-31007 (Source Pyramid), shows Pyramid connector and the connector surface in its creating History entry.",
+              "Read the width left for the table at 1280 (main is about 974 px wide there), the steps from the list to a saved edit, what a copied link opens, where focus goes, and what changes at 320 px. Frame R lists the options against these criteria.",
+              "Under each option a notes frame lists what it optimizes, what it costs and how it keeps the rules below.",
+              "States that the shell owns (module unavailable, route error, reload) are drawn in D2 and not here. Loading, empty and error states of the list follow on the spec page for the chosen option.",
+              "The labels General, History and Clear filters, Previous and Next, and the pattern \"Rows 1 to 25 of 248\" come from the docs. Every other label and message is a proposal."
+            ],
+            axes: [
+              { k: "List and detail", a: "Separate routes", b: "Modal side sheet, 560 px", c: "Split view, list 452 px" },
+              { k: "Filters", a: "Toolbar menus and chips, both with counts", b: "Facet column with counts", c: "Preset view tabs and a Filters menu" },
+              { k: "Create and edit", a: "Own page, sticky Save", b: "In the sheet", c: "Dialog, then a review step" },
+              { k: "Change reason", a: "Optional field at the end of the form", b: "Add a reason disclosure beside Save", c: "Field in the review step" },
+              { k: "History", a: "Table with expandable rows", b: "Timeline", c: "Timeline" },
+              { k: "Row and bulk actions", a: "Row menu, bulk bar replaces the toolbar", b: "Buttons on the row under the pointer or focus, Actions menu", c: "No row actions, actions in the pane, bulk bar" },
+              { k: "320 px", a: "Sticky article number, the whole table scrolls sideways", b: "Selection and three columns, Columns for the rest", c: "Cards with checkboxes, a Sort menu and a Table switch" }
+            ],
+            rules: [
+              { id: "R1", t: "List, detail, create and edit are routes with a title each: masterDataRoutes yields them for a register, core declares them with screenRoute for articles; a copied detail link opens the same tab in another browser.", src: "P06 Master-data kit UI, A0062" },
+              { id: "R2", t: "Filters, sort, search, page and the open detail live in the URL; opening a detail or a tab pushes a history entry, other changes replace it; dialogs, menus and the selection stay in component state.", src: "P06 View state in the URL, A0062" },
+              { id: "R3", t: "Keyset paging with Previous and Next; \"Rows 1 to 25 of 248\" comes from the page counter and totalCount; page size 1 to 100 with 25 as default; search at most 100 characters.", src: "P06 Lists, A0016" },
+              { id: "R4", t: "One h1 per route, focused after a route change; a filter or sort change never moves focus.", src: "P06 Focus, D2" },
+              { id: "R5", t: "With a detail open the title reads \"Article AX-20410 · Plant A · NorthMES\" and the last crumb names the article.", src: "P06 Routes and typed links, D2" },
+              { id: "R6", t: "Page actions are top bar Buttons, at most one default; at 320 px they fold into the Page actions menu.", src: "D2 TopBarActions" },
+              { id: "R7", t: "Every input goes through Field; on submit the error summary takes focus and links to each field; a server error keeps the typed values; a version conflict shows inline with a way to reload.", src: "P06 Forms, WCAG 3.3.1, 3.3.3, 3.3.7" },
+              { id: "R8", t: "One shared optional reason, required only where a contract says so; archive and restore ask through ConfirmDialog with an optional reason.", src: "P04 Commands, A0012, P06 Master-data kit UI" },
+              { id: "R9", t: "History lists each command with who, when, surface, reason and the changed fields, values formatted by kind in plant time.", src: "P06 Detail pages, A0013, A0061" },
+              { id: "R10", t: "Selection shows by checkbox and info-subtle, never by color alone; status and archived use StatusBadge with icon and text.", src: "D1 Components, WCAG 1.4.1" },
+              { id: "R11", t: "Numbers, dates and times in IBM Plex Mono with the plant's presentation settings; master data text carries its lang.", src: "A0061, A0053" },
+              { id: "R12", t: "At 320 px only the table container scrolls sideways; toolbars collapse into a menu, filters wrap and a panel becomes a full-width sheet.", src: "P06 Reflow, WCAG 1.4.10" },
+              { id: "R13", t: "Targets at least 24 by 24 px, 36 px controls, and the D1 two-tone focus ring on every stop.", src: "D1, WCAG 2.5.8, 2.4.7" },
+              { id: "R14", t: "Loading is a skeleton of the populated layout, first run shows New article, a filtered empty list shows Clear filters, an error offers a way out.", src: "P06 Page states" }
+            ],
+            assumptions: [
+              "Jonas Holm holds a role at Acme AB scope that lets him edit company-level articles. A plant-only admin would see the same list read-only (Q1).",
+              "Article group is a fixed list shown as a Select (Q3).",
+              "The company data language of Acme AB is Swedish, so names carry lang=\"sv\" and each translation its own lang.",
+              "B and C keep the selected article in a new search key, selected, outside the reserved keys; opening it pushes a history entry.",
+              "The release 1 top bar has no bell, as D2 draws it.",
+              "Bulk archive is drawn as one action for the selection, although no command defines it yet (Q2).",
+              "The presets in C (Imported, Changed this week) are views the route declares, not views a user saves, which ADR 0016 defers."
+            ],
+            questions: [
+              { id: "Q1", t: "Who edits company-level articles from /$plant/core/articles: only holders of a company-scope role, with a read-only list for a plant-only admin, or only under /admin?" },
+              { id: "Q2", t: "Which bulk actions exist in release 1: one command per row or a batch command, one reason for all rows, how a partial failure shows, and what select all means under keyset paging?" },
+              { id: "Q3", t: "Is article_group free text, a fixed list or a register with its own Lookup?" },
+              { id: "Q4", t: "Column choice: kept in the URL, per browser like the theme, or not kept? Is it in release 1?" },
+              { id: "Q5", t: "B and C: which URL key holds the selected id, and does opening it move focus into the panel?" },
+              { id: "Q6", t: "If create and edit open in a sheet or a dialog, do they keep a route and a title, and which element is the h1? Without a route ADR 0062 changes." },
+              { id: "Q7", t: "Change reason for master data: its label, its maximum length (500 as for break lock), and whether archive and restore require one." },
+              { id: "Q8", t: "Does leaving a form with unsaved edits ask first?" },
+              { id: "Q9", t: "Page actions order (D2 Q13): New article in the top bar before the filters, or after them as in D1 F8?" },
+              { id: "Q10", t: "Is a cards view at 320 px (C5) acceptable, given that the plan and the issue say the table scrolls?" }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

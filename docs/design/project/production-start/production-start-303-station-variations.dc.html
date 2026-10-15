@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 operator station: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <div class="frame ps-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, what is decided, how to compare, the rules every option keeps, assumptions and open questions</span></div>
+        <dc-import name="production-start-303-station-variations-header" hint-size="1440px,3215px"></dc-import>
+      </div>
+      <div class="frame ps-w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the criteria, and the recommended option</span></div>
+        <dc-import name="production-start-303-station-variations-compare" hint-size="1440px,1184px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:80px;top:3583px" data-screen-label="A1 List beside the job, Light, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A1</span>List beside the job<span class="fth">Light, 1920 by 1080. 5001.20 selected in the list, 96 good and 2 scrap typed with Burr, the last reports as a third column</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-a" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:2080px;top:3583px" data-screen-label="A2 List beside the job, Dark, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A2</span>List beside the job<span class="fth">Dark, 1920 by 1080. Send pressed with the connection lost: the frame's strip, the error under Send, the entries kept</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-a" theme="dark" state="offline" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:80px;top:4831px" data-screen-label="A3 List beside the job, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A3</span>List beside the job<span class="fth">Light, 1280 by 800. Send waits: Send reads Sending, a polite status says it, focus stays on Send</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-a" size="1280x800" state="sending" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w800" style="left:1440px;top:4831px" data-screen-label="A4 List beside the job, Light, 800 by 1280">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A4</span>List beside the job<span class="fth">Light, 800 by 1280. Correction Dialog</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-a" size="800x1280" state="correct" hint-size="800px,1280px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:2320px;top:4831px" data-screen-label="A5 List beside the job, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A5</span>List beside the job<span class="fth">Light, 1280 by 800. Nobody signed in; the badge field has focus, Sign in with username below it (the D2 proposal)</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-signin" option="A" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame ps-w1440" style="left:3680px;top:4831px" data-screen-label="A List beside the job, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A</span>List beside the job<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="production-start-303-station-variations-notes" option="A" hint-size="1440px,629px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:80px;top:6399px" data-screen-label="B1 One job at a time, Light, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B1</span>One job at a time<span class="fth">Light, 1920 by 1080. 5001.20 with the step row, the keypad docked beside the fields, focus in Good quantity</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-b" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:2080px;top:6399px" data-screen-label="B2 One job at a time, Dark, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B2</span>One job at a time<span class="fth">Dark, 1920 by 1080. Send pressed with the connection lost: the frame's strip, the error beside Send, the entries kept</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-b" theme="dark" state="offline" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:4080px;top:6399px" data-screen-label="B6 One job at a time, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B6</span>One job at a time<span class="fth">Light, 1280 by 800. Scrap quantity 0: no reason group, Send under the fields (compare B3)</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-b" size="1280x800" state="noscrap" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:80px;top:7647px" data-screen-label="B3 One job at a time, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B3</span>One job at a time<span class="fth">Light, 1280 by 800. Send waits: a status line beside Send, which is aria-disabled</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-b" size="1280x800" state="sending" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w800" style="left:1440px;top:7647px" data-screen-label="B4 One job at a time, Light, 800 by 1280">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B4</span>One job at a time<span class="fth">Light, 800 by 1280. Inline correction</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-b" size="800x1280" state="correct" hint-size="800px,1280px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:2320px;top:7647px" data-screen-label="B5 One job at a time, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B5</span>One job at a time<span class="fth">Light, 1280 by 800. Badge and Username tabs; the badge was read, focus in PIN, the keypad beside it</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-signin" option="B" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame ps-w1440" style="left:3680px;top:7647px" data-screen-label="B One job at a time, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>One job at a time<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="production-start-303-station-variations-notes" option="B" hint-size="1440px,645px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:80px;top:9215px" data-screen-label="C1 Job tiles, Light, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C1</span>Job tiles<span class="fth">Light, 1920 by 1080. The tile home with six jobs, an edge line per status</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-c" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:2080px;top:9215px" data-screen-label="C2 Job tiles, Dark, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C2</span>Job tiles<span class="fth">Dark, 1920 by 1080. Job screen after Send with the connection lost: the frame's strip, the error under the job header, the entries kept</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-c" theme="dark" state="offline" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:80px;top:10463px" data-screen-label="C3 Job tiles, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C3</span>Job tiles<span class="fth">Light, 1280 by 800. Job screen while Send waits: the status line under the job header, Send aria-disabled</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-c" size="1280x800" state="sending" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w800" style="left:1440px;top:10463px" data-screen-label="C4 Job tiles, Light, 800 by 1280">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C4</span>Job tiles<span class="fth">Light, 800 by 1280. Correction screen</span><span class="ftitle">Correct report · Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-c" size="800x1280" state="correct" hint-size="800px,1280px"></dc-import>
+      </div>
+      <div class="frame w1280" style="left:2320px;top:10463px" data-screen-label="C5 Job tiles, Light, 1280 by 800">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C5</span>Job tiles<span class="fth">Light, 1280 by 800. Badge and username side by side; the badge field has focus</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-signin" option="C" hint-size="1280px,800px"></dc-import>
+      </div>
+      <div class="frame w1920" style="left:4080px;top:9215px" data-screen-label="C6 Job tiles, Light, 1920 by 1080">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C6</span>Job tiles<span class="fth">Light, 1920 by 1080. Job screen with Change scrap open: the Sheet with the scrap stepper and the reasons</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+        <dc-import name="production-start-303-station-variations-c" state="scrap" hint-size="1920px,1080px"></dc-import>
+      </div>
+      <div class="frame ps-w1440" style="left:3680px;top:10463px" data-screen-label="C Job tiles, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C</span>Job tiles<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="production-start-303-station-variations-notes" option="C" hint-size="1440px,609px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 direction B, Control room</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500;700&amp;family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&amp;display=swap" />
+        <style>
+.pg{--font-ui:"Atkinson Hyperlegible Next",system-ui,sans-serif;--font-head:"Atkinson Hyperlegible Next",system-ui,sans-serif;--font-num:"Atkinson Hyperlegible Mono",ui-monospace,monospace;--head-w:700;--head-ls:0;--btn-w:700;--btn-ls:0;--btn-tt:none;--btn-px:14px;--radius:2px;--radius-sm:2px;--radius-xs:1px;--radius-lg:4px;--radius-chip:2px;--radius-blk:2px;--bw:1px;--bw-cb:1px;--ctl-h:32px;--row-h:38px;--lane-h:52px;--fs-body:14px;--ring-gap:2px;--ring-w:2px;--kick-tt:uppercase;--kick-ls:.08em}
+.th,.top{--cb-on:var(--primary);--cb-on-fg:var(--primary-fg);--btn-p-border:transparent;--shadow:none}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+.pg{min-width:1180px;background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:var(--fs-body);line-height:1.45;-webkit-font-smoothing:antialiased}
+.pg a{color:var(--link);text-decoration:underline;text-underline-offset:2px}
+.pg a:hover{color:var(--fg);text-decoration-thickness:2px}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic-lg{width:24px;height:24px}
+.mono{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.mut{color:var(--muted-fg)}
+.grow{flex:1}
+.top{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:48px;padding:40px 48px 36px;border-bottom:1px solid var(--border);background:var(--surface);color:var(--fg)}
+.kick{margin:0 0 10px;font-size:12px;color:var(--muted-fg)}
+.ttl{margin:0 0 12px;font-family:var(--font-head);font-weight:var(--head-w);font-size:34px;line-height:1.15;letter-spacing:var(--head-ls)}
+.lede{margin:0;max-width:64ch;font-size:15px;line-height:1.55;text-wrap:pretty}
+.back{margin:14px 0 0;font-size:13px}
+.facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 18px;margin:0;font-size:13px}
+.facts dt{color:var(--muted-fg)}
+.facts dd{margin:0}
+.notes{display:grid;gap:4px;margin:16px 0 0;padding:0 0 0 18px;font-size:13px;line-height:1.5;color:var(--muted-fg)}
+.th{padding:40px 48px 56px;background:var(--bg);color:var(--fg);border-bottom:1px solid var(--border)}
+.th-head{display:flex;align-items:baseline;gap:14px;margin:0 0 28px}
+.th-name{margin:0;font-family:var(--font-head);font-weight:var(--head-w);font-size:26px;letter-spacing:var(--head-ls)}
+.th-note{font-size:13px;color:var(--muted-fg)}
+.blk{margin:0 0 44px}
+.h3{margin:0 0 4px;font-family:var(--font-head);font-weight:var(--head-w);font-size:18px;letter-spacing:var(--head-ls)}
+.sub{margin:0 0 16px;max-width:96ch;font-size:13px;color:var(--muted-fg);text-wrap:pretty}
+.grp-t{margin:18px 0 8px;font-size:12px;font-weight:600;color:var(--muted-fg)}
+.toks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 16px}
+.tok{display:flex;align-items:center;gap:10px;min-width:0}
+.tok-c{width:36px;height:36px;flex:none;border-radius:var(--radius-sm);box-shadow:0 0 0 1px var(--border)}
+.tok-t{display:grid;min-width:0;font-size:12px;line-height:1.35}
+.tok-n{font-weight:600}
+.tok-h{font-family:var(--font-num);color:var(--muted-fg)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.tiles-o{grid-template-columns:repeat(8,minmax(0,1fr))}
+.tile{display:grid;align-content:start;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+.tile-s{height:52px;display:flex;align-items:center;padding:0 14px;font-size:16px;font-weight:600;border-bottom:1px solid var(--border)}
+.tile-m{display:grid;gap:2px;padding:8px 12px 10px;font-size:12px;line-height:1.35}
+.tile-l{font-weight:600}
+.tile-h{font-family:var(--font-num);color:var(--muted-fg);overflow-wrap:anywhere}
+.uibox{width:44px;height:26px;border-radius:var(--radius-sm)}
+.badge{justify-self:start;margin-top:4px;padding:1px 7px;border-radius:var(--radius-chip);font-size:12px;font-weight:600;background:var(--ok-subtle);color:var(--ok)}
+.badge.fail{background:var(--danger-subtle);color:var(--danger)}
+.badge.deco{background:var(--muted);color:var(--muted-fg)}
+.split{display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1.7fr);gap:48px;align-items:start}
+.spec{margin:4px 0 14px;font-family:var(--font-head);font-weight:var(--head-w);font-size:44px;line-height:1.1}
+.ts-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:baseline;padding:9px 0;border-top:1px solid var(--border)}
+.ts-k{display:grid;font-size:12px;line-height:1.3;color:var(--muted-fg)}
+.ts-v{font-family:var(--font-num);font-size:11px}
+.ts-s{min-width:0;overflow-wrap:anywhere}
+.long{display:grid;gap:2px;padding:10px 0 0;border-top:1px solid var(--border)}
+.cg{display:grid;grid-template-columns:118px repeat(5,minmax(0,1fr));gap:14px 12px;align-items:start}
+.cg-h{font-size:12px;font-weight:600;color:var(--muted-fg)}
+.cg-r{align-self:center;font-size:13px;font-weight:600}
+.cg-x{grid-row:span 3;align-self:stretch;display:grid;align-content:center;justify-items:start;gap:10px;padding:12px;border:1px dashed var(--input);border-radius:var(--radius);font-size:12px;color:var(--muted-fg)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:var(--ctl-h);padding:0 var(--btn-px);border:var(--bw) solid transparent;border-radius:var(--radius);background:transparent;color:var(--fg);font:inherit;font-size:var(--fs-body);font-weight:var(--btn-w);line-height:1.2;letter-spacing:var(--btn-ls);text-transform:var(--btn-tt);white-space:nowrap;cursor:pointer;box-shadow:none}
+.btn-p{background:var(--primary);color:var(--primary-fg);border-color:var(--btn-p-border)}
+.btn-p:hover,.btn-p.is-hover{background:var(--primary-hover)}
+.btn-s{background:var(--surface);border-color:var(--input)}
+.btn-s:hover,.btn-s.is-hover{background:var(--muted);border-color:var(--fg)}
+.btn-g:hover,.btn-g.is-hover{background:var(--muted)}
+.btn-d{background:var(--surface);color:var(--danger);border-color:var(--danger)}
+.btn-d:hover{background:var(--danger-subtle)}
+.btn.is-dis{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.btn.is-focus,.inp.is-focus,.blkb.is-focus{outline:none;box-shadow:0 0 0 var(--ring-gap) var(--bg),0 0 0 calc(var(--ring-gap) + var(--ring-w)) var(--fg)}
+.fld{display:grid;gap:6px;min-width:0}
+.lbl{font-size:12px;font-weight:600}
+.inp{display:flex;align-items:center;min-width:0;min-height:var(--ctl-h);padding:0 12px;border:var(--bw) solid var(--input);border-radius:var(--radius);background:var(--surface);color:var(--fg);font-size:var(--fs-body)}
+.inp.ph{color:var(--muted-fg)}
+.inp.is-hover,.inp.is-focus{border-color:var(--fg)}
+.inp.is-dis{opacity:.45;background:var(--muted)}
+.inp.is-err{border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger)}
+.err{display:flex;align-items:flex-start;gap:5px;font-size:12px;line-height:1.3;color:var(--danger)}
+.err .ic{width:14px;height:14px;margin-top:1px}
+.cb{display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.cb-hit{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:2px}
+.cb.show .cb-hit{outline:1px dashed var(--muted-fg)}
+.cb-box{width:16px;height:16px;display:grid;place-items:center;border:var(--bw-cb) solid var(--input);border-radius:var(--radius-xs);background:var(--surface);color:var(--cb-on-fg)}
+.cb-box .ic{width:12px;height:12px;stroke-width:3;visibility:hidden}
+.cb.on .cb-box{background:var(--cb-on);border-color:var(--cb-on)}
+.cb.on .cb-box .ic{visibility:visible}
+.cb.is-hover .cb-box{border-color:var(--fg)}
+.cb.is-focus .cb-box{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--fg)}
+.cb.is-dis{opacity:.45}
+.cb.is-err .cb-box{border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger)}
+.board{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--lane)}
+.bh,.grp,.row{display:grid;grid-template-columns:150px minmax(0,1fr)}
+.bh{background:var(--surface);border-bottom:1px solid var(--border)}
+.bh-c{display:flex;align-items:flex-end;padding:0 12px 6px;font-size:12px;font-weight:600;color:var(--muted-fg);border-right:1px solid var(--border)}
+.bh-t{position:relative;height:50px}
+.day{position:absolute;top:0;height:25px;display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:600;border-left:1px solid var(--border)}
+.tick{position:absolute;top:25px;height:25px;display:flex;align-items:center;padding:0 5px;font-size:11px;color:var(--muted-fg);border-left:1px solid var(--border);font-family:var(--font-num)}
+.nowl{position:absolute;top:3px;height:19px;display:flex;align-items:center;padding:0 6px;font-size:11px;font-weight:700;color:var(--bg);background:var(--now);border-radius:var(--radius-xs);transform:translateX(-50%);z-index:2}
+.grp{background:var(--muted);border-bottom:1px solid var(--border)}
+.grp-n{display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;font-size:12px;font-weight:600}
+.gdot{width:12px;height:12px;border-radius:3px;box-shadow:0 0 0 1px var(--fg)}
+.row{height:var(--lane-h);border-bottom:1px solid var(--border)}
+.rh{display:flex;align-items:center;padding:0 12px 0 18px;font-size:13px;font-weight:600;background:var(--surface);border-right:1px solid var(--border)}
+.lane{position:relative;overflow:hidden;background:var(--lane)}
+.lane.alt{background:var(--lane-alt)}
+.off{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--off-time) 0 5px,transparent 5px 10px)}
+.gl{position:absolute;top:0;bottom:0;border-left:1px solid var(--border)}
+.now{position:absolute;top:0;bottom:0;border-left:2px solid var(--now);z-index:1}
+.blkb{position:absolute;top:7px;bottom:7px;display:grid;align-content:center;padding:2px 10px;border:1px solid var(--block-border);border-radius:var(--radius-blk);font-size:12px;line-height:16px;overflow:hidden;z-index:2}
+.b1{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700}
+.b1 .ic{width:14px;height:14px}
+.bnum{font-family:var(--font-num)}
+.b2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ini{padding:0 4px;border:1.5px solid currentColor;border-radius:999px;font-size:10px;line-height:13px;font-weight:700}
+.st-draft{outline:3px double currentColor;outline-offset:-5px}
+.st-held{outline:2px dashed currentColor;outline-offset:-4px}
+.st-lock{outline:2px solid currentColor;outline-offset:-4px}
+.st-conf{z-index:3}
+.st-conf::after{content:"";position:absolute;top:0;right:0;bottom:0;width:12px;background:repeating-linear-gradient(135deg,currentColor 0 2px,transparent 2px 5px)}
+.blkb.is-focus{z-index:5}
+.legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 28px;margin:16px 0 0}
+.lg{display:flex;align-items:center;gap:12px}
+.lg-b{position:relative;width:104px;height:40px;flex:none}
+.lg-b .blkb{top:0;bottom:0;left:0;right:0}
+.lg-n{font-size:13px;font-weight:600}
+.lg-c{font-size:12px;color:var(--muted-fg)}
+.bnote{margin:14px 0 0;font-size:12px;color:var(--muted-fg)}
+.app{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+.lp-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:20px 24px 14px}
+.crumb{margin:0 0 4px;font-size:12px;color:var(--muted-fg)}
+.lp-t{font-family:var(--font-head);font-weight:var(--head-w);font-size:24px;line-height:1.2;letter-spacing:var(--head-ls)}
+.acts{display:flex;align-items:center;gap:8px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 24px 16px}
+.srch{position:relative;width:260px}
+.srch .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted-fg)}
+.srch .inp{padding-left:34px}
+.tr{display:grid;grid-template-columns:52px 96px minmax(0,1.3fr) 110px 130px 150px minmax(0,1fr);align-items:center;border-top:1px solid var(--border)}
+.tr.hd{background:var(--muted);font-size:12px;font-weight:600;color:var(--muted-fg)}
+.tr.hd .td{min-height:38px}
+.tr.sel{background:var(--info-subtle)}
+.td{display:flex;align-items:center;gap:6px;min-width:0;min-height:var(--row-h);padding:0 12px}
+.td.num{justify-content:flex-end}
+.td.srt{color:var(--fg)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 7px;border-radius:var(--radius-chip);background:var(--c-bg);color:var(--c-fg);font-size:12px;font-weight:600;line-height:18px;white-space:nowrap}
+.chip .ic{width:14px;height:14px}
+.c-ok{--c-bg:var(--ok-subtle);--c-fg:var(--ok)}
+.c-warn{--c-bg:var(--warn-subtle);--c-fg:var(--warn)}
+.c-danger{--c-bg:var(--danger-subtle);--c-fg:var(--danger)}
+.c-info{--c-bg:var(--info-subtle);--c-fg:var(--info)}
+.c-neutral{--c-bg:var(--muted);--c-fg:var(--fg)}
+.pager{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-top:1px solid var(--border);font-size:13px;color:var(--muted-fg)}
+.st-wrap{overflow-x:auto;padding:4px}
+.st{width:1280px;height:800px;display:grid;grid-template-rows:72px minmax(0,1fr);overflow:hidden;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);font-size:16px}
+.st-top{display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.st-name{font-family:var(--font-head);font-weight:var(--head-w);font-size:22px}
+.st-op{display:flex;align-items:center;gap:8px;font-weight:600}
+.st .btn{min-height:56px;padding:0 20px;font-size:16px}
+.st .chip{padding:5px 12px 5px 10px;font-size:14px;line-height:22px}
+.st .chip .ic{width:18px;height:18px}
+.st-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;align-items:start;min-height:0;padding:24px}
+.st-col{display:grid;gap:24px;align-content:start}
+.card{display:grid;gap:16px;align-content:start;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow)}
+.card-k{font-size:13px;font-weight:600;color:var(--muted-fg);text-transform:var(--kick-tt);letter-spacing:var(--kick-ls)}
+.st-job{display:flex;align-items:center;gap:16px}
+.st-no{font-size:40px;line-height:1;font-weight:700}
+.st-art{font-size:18px}
+.st-pl{display:flex;justify-content:space-between;margin:0 0 8px;font-size:15px}
+.prog{height:14px;overflow:hidden;border-radius:var(--radius-chip);background:var(--muted);box-shadow:inset 0 0 0 1px var(--input)}
+.prog span{display:block;height:100%;background:var(--ok)}
+.st-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.st .big{min-height:72px;font-size:20px}
+.nx{display:grid;grid-template-columns:96px minmax(0,1fr) 80px 100px;align-items:center;gap:12px;min-height:56px;border-top:1px solid var(--border);font-size:16px}
+.stepper{display:grid;grid-template-columns:72px minmax(0,1fr) 72px;gap:10px}
+.st .step{min-height:72px;padding:0}
+.st .step .ic{width:28px;height:28px}
+.step-v{justify-content:center;min-height:72px;font-size:32px;font-weight:600}
+.lbl.big-l{font-size:16px}
+.radios{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.rad{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border:var(--bw) solid var(--input);border-radius:var(--radius);background:var(--surface);font-size:16px}
+.dot{width:24px;height:24px;flex:none;display:grid;place-items:center;border:2px solid var(--input);border-radius:50%}
+.rad.on{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.rad.on .dot{border-color:var(--fg)}
+.rad.on .dot::after{content:"";width:12px;height:12px;border-radius:50%;background:var(--fg)}
+.wide{width:100%}
+.ttl{font-size:30px;text-transform:uppercase;letter-spacing:.04em}
+.th-name{font-size:18px;text-transform:uppercase;letter-spacing:.08em}
+.h3{font-size:14px;text-transform:uppercase;letter-spacing:.08em}
+.grp-t{text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.top{border-bottom-color:var(--input)}
+.board{border-color:var(--input)}
+.bh{border-bottom-color:var(--input)}
+.gl{border-left-style:dashed}
+.grp{background:var(--surface);border-bottom-color:var(--input)}
+.grp-n{text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+.now{border-left-width:3px}
+.tr.hd{text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.tr.sel{box-shadow:inset 3px 0 0 var(--primary)}
+.app,.card,.st{border-color:var(--input)}
+.st-top{background:var(--muted);border-bottom-color:var(--input)}
+.st-no{font-size:48px}
+.st-name{text-transform:uppercase;letter-spacing:.06em;font-size:18px}
+        </style>
+      </helmet>
+      <div class="pg" style="{{ pageVars }}">
+        <svg class="sprite" aria-hidden="true">
+          <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></symbol>
+          <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></symbol>
+          <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></symbol>
+          <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></symbol>
+          <symbol id="i-err" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></symbol>
+          <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></symbol>
+          <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3l14 9-14 9z"></path></symbol>
+          <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"></rect><rect x="6" y="4" width="4" height="16" rx="1"></rect></symbol>
+          <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"></path></symbol>
+          <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></symbol>
+          <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+          <symbol id="i-sort" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></symbol>
+          <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="M12 5v14"></path></symbol>
+          <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"></path></symbol>
+          <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></symbol>
+          <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+        </svg>
+        <header class="top" data-screen-label="Direction header">
+          <div>
+            <p class="kick">NorthMES · Design task D1, tokens and contrast · Variations round: direction only, not the final tokens</p>
+            <h1 class="ttl">{{ dir.title }}</h1>
+            <p class="lede">{{ dir.desc }}</p>
+            <p class="back"><a href="ui-d1-directions.dc.html">Compare all five directions</a></p>
+          </div>
+          <div>
+            <dl class="facts">
+              <sc-for list="{{ dir.facts }}" as="f"><dt>{{ f.k }}</dt><dd>{{ f.v }}</dd></sc-for>
+            </dl>
+            <ul class="notes">
+              <sc-for list="{{ dir.notes }}" as="n"><li>{{ n.t }}</li></sc-for>
+            </ul>
+          </div>
+        </header>
+        <sc-for list="{{ themes }}" as="t">
+          <section class="{{ t.cls }}" style="{{ t.vars }}" data-screen-label="{{ t.label }}">
+            <div class="th-head"><h2 class="th-name">{{ t.label }}</h2><span class="th-note">{{ t.note }}</span></div>
+            <div class="blk">
+              <h3 class="h3">Palette</h3>
+              <p class="sub">Every role in this theme. Hex values are the sRGB rendering of oklch values.</p>
+              <div class="toks">
+                <sc-for list="{{ t.toks }}" as="k">
+                  <div class="tok"><span class="tok-c" style="{{ k.style }}"></span><span class="tok-t"><span class="tok-n">{{ k.name }}</span><span class="tok-h">{{ k.hex }}</span></span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="blk">
+              <h3 class="h3">Contrast pairs</h3>
+              <p class="sub">The page computes each ratio from the hex values with the WCAG 2 formula and rounds down. Text needs 4.5:1. Control boundaries, focus ring tones, block borders and the now line need 3:1.</p>
+              <sc-for list="{{ t.pairGroups }}" as="g">
+                <div>
+                  <div class="grp-t">{{ g.title }}</div>
+                  <div class="tiles">
+                    <sc-for list="{{ g.items }}" as="p">
+                      <div class="tile">
+                        <div class="tile-s" style="{{ p.sampleStyle }}">
+                          <sc-if value="{{ p.isText }}"><span>Aa 5001.10</span></sc-if>
+                          <sc-if value="{{ p.isUi }}"><span class="uibox" style="{{ p.boxStyle }}"></span></sc-if>
+                        </div>
+                        <div class="tile-m"><span class="tile-l">{{ p.label }}</span><span class="tile-h">{{ p.hexes }}</span><span class="{{ p.badgeCls }}">{{ p.badge }}</span></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <div class="grp-t">Order colors on the board, black or white text chosen per fill, 4.5:1</div>
+              <div class="tiles tiles-o">
+                <sc-for list="{{ t.orders }}" as="o">
+                  <div class="tile">
+                    <div class="tile-s" style="{{ o.style }}"><span class="mono">{{ o.sample }}</span></div>
+                    <div class="tile-m"><span class="tile-l">{{ o.name }}</span><span class="tile-h">{{ o.hexes }}</span><span class="{{ o.badgeCls }}">{{ o.badge }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="blk split">
+              <div>
+                <h3 class="h3">Type</h3>
+                <p class="sub">{{ dir.fontLine }}</p>
+                <div class="spec">Aa Bb Il1 O0 0123456789</div>
+                <sc-for list="{{ dir.type }}" as="y">
+                  <div class="ts-row"><span class="ts-k">{{ y.name }}<span class="ts-v">{{ y.spec }}</span></span><span class="ts-s" style="{{ y.style }}">{{ y.sample }}</span></div>
+                </sc-for>
+                <div class="long"><span class="ts-k">Long labels at body size</span><span>Fertigungsauftragsnummer</span><span>Tuotantotilauksen numero</span><span>Ausschussmenge (Stk.)</span></div>
+              </div>
+              <div>
+                <h3 class="h3">Controls</h3>
+                <p class="sub">Hover and focus are forced on these samples. The focus ring is two-tone: an inner ring in the background color and an outer ring in the text color, so one of the two contrasts with any fill.</p>
+                <div class="cg">
+                  <span></span><span class="cg-h">Default</span><span class="cg-h">Hover</span><span class="cg-h">Focus</span><span class="cg-h">Disabled</span><span class="cg-h">Error</span>
+                  <span class="cg-r">Primary button</span>
+                  <div><button type="button" class="btn btn-p">Save draft</button></div>
+                  <div><button type="button" class="btn btn-p is-hover">Save draft</button></div>
+                  <div><button type="button" class="btn btn-p is-focus">Save draft</button></div>
+                  <div><button type="button" class="btn btn-p is-dis" aria-disabled="true">Save draft</button></div>
+                  <div class="cg-x"><span>Buttons have no error state. A destructive action uses the danger variant.</span><button type="button" class="btn btn-d">Break lock</button></div>
+                  <span class="cg-r">Secondary button</span>
+                  <div><button type="button" class="btn btn-s">Discard</button></div>
+                  <div><button type="button" class="btn btn-s is-hover">Discard</button></div>
+                  <div><button type="button" class="btn btn-s is-focus">Discard</button></div>
+                  <div><button type="button" class="btn btn-s is-dis" aria-disabled="true">Discard</button></div>
+                  <span class="cg-r">Ghost button</span>
+                  <div><button type="button" class="btn btn-g">Clear filters</button></div>
+                  <div><button type="button" class="btn btn-g is-hover">Clear filters</button></div>
+                  <div><button type="button" class="btn btn-g is-focus">Clear filters</button></div>
+                  <div><button type="button" class="btn btn-g is-dis" aria-disabled="true">Clear filters</button></div>
+                  <span class="cg-r">Text input</span>
+                  <div class="fld"><span class="lbl">Good quantity (pcs)</span><div class="inp mono">40</div></div>
+                  <div class="fld"><span class="lbl">Good quantity (pcs)</span><div class="inp mono is-hover">40</div></div>
+                  <div class="fld"><span class="lbl">Good quantity (pcs)</span><div class="inp mono is-focus">40</div></div>
+                  <div class="fld"><span class="lbl">Good quantity (pcs)</span><div class="inp mono is-dis">40</div></div>
+                  <div class="fld"><span class="lbl">Good quantity (pcs)</span><div class="inp mono is-err">140</div><span class="err"><svg class="ic" aria-hidden="true"><use href="#i-err"></use></svg>Enter 0 to 120, the remaining quantity</span></div>
+                  <span class="cg-r">Checkbox, 24 px hit area</span>
+                  <div><span class="cb show"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span>Include archived</span></div>
+                  <div><span class="cb is-hover"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span>Include archived</span></div>
+                  <div><span class="cb on is-focus"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span>Include archived</span></div>
+                  <div><span class="cb on is-dis"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span>Include archived</span></div>
+                  <div class="fld"><span class="cb is-err"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span>Confirm quantity</span><span class="err"><svg class="ic" aria-hidden="true"><use href="#i-err"></use></svg>Confirm before you send</span></div>
+                </div>
+                <p class="bnote">The dashed square marks the 24 by 24 px hit area around the 16 px box.</p>
+              </div>
+            </div>
+            <div class="blk">
+              <h3 class="h3">Planning board slice</h3>
+              <p class="sub">Two days on four machines. The fill is always the order color. States are drawn in the block text color as an icon, a line style or words, never by color alone. 5006.10 shows the focus ring.</p>
+              <div class="board" role="grid" aria-label="Planning board, Plant A, Tue 6 Oct to Wed 7 Oct">
+                <div class="bh">
+                  <div class="bh-c">Machine</div>
+                  <div class="bh-t">
+                    <sc-for list="{{ board.days }}" as="d"><span class="day" style="{{ d.style }}">{{ d.label }}</span></sc-for>
+                    <sc-for list="{{ board.ticks }}" as="k"><span class="tick" style="{{ k.style }}">{{ k.label }}</span></sc-for>
+                    <span class="nowl" style="{{ board.now }}">Now 14:20</span>
+                  </div>
+                </div>
+                <sc-for list="{{ t.groups }}" as="g">
+                  <div class="grp"><div class="grp-n"><span class="gdot" style="{{ g.dot }}"></span>{{ g.name }}</div><div></div></div>
+                  <sc-for list="{{ g.rows }}" as="r">
+                    <div class="row" role="row">
+                      <div class="rh" role="rowheader" style="{{ r.stripe }}">{{ r.name }}</div>
+                      <div class="{{ r.laneCls }}">
+                        <sc-for list="{{ board.off }}" as="x"><span class="off" style="{{ x.style }}"></span></sc-for>
+                        <sc-for list="{{ board.ticks }}" as="k"><span class="gl" style="{{ k.style }}"></span></sc-for>
+                        <span class="now" style="{{ board.now }}"></span>
+                        <sc-for list="{{ r.blocks }}" as="b">
+                          <div class="{{ b.cls }}" style="{{ b.style }}" role="gridcell" aria-label="{{ b.aria }}">
+                            <span class="b1"><span class="bnum">{{ b.num }}</span><sc-if value="{{ b.iPencil }}"><svg class="ic" aria-hidden="true"><use href="#i-pencil"></use></svg></sc-if><sc-if value="{{ b.iLock }}"><svg class="ic" aria-hidden="true"><use href="#i-lock"></use></svg></sc-if><sc-if value="{{ b.iClock }}"><svg class="ic" aria-hidden="true"><use href="#i-clock"></use></svg></sc-if><sc-if value="{{ b.ini }}"><span class="ini">{{ b.ini }}</span></sc-if></span>
+                            <span class="b2">{{ b.art }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-for>
+              </div>
+              <div class="legend">
+                <sc-for list="{{ t.legend }}" as="l">
+                  <div class="lg">
+                    <div class="lg-b"><div class="{{ l.cls }}" style="{{ l.style }}"><span class="b1"><span class="bnum">5101.10</span><sc-if value="{{ l.iPencil }}"><svg class="ic" aria-hidden="true"><use href="#i-pencil"></use></svg></sc-if><sc-if value="{{ l.iLock }}"><svg class="ic" aria-hidden="true"><use href="#i-lock"></use></svg></sc-if><sc-if value="{{ l.iClock }}"><svg class="ic" aria-hidden="true"><use href="#i-clock"></use></svg></sc-if><sc-if value="{{ l.ini }}"><span class="ini">{{ l.ini }}</span></sc-if></span></div></div>
+                    <div><div class="lg-n">{{ l.name }}</div><div class="lg-c">{{ l.cue }}</div></div>
+                  </div>
+                </sc-for>
+              </div>
+              <p class="bnote">{{ t.boardNote }}</p>
+            </div>
+            <div class="blk">
+              <h3 class="h3">List page</h3>
+              <p class="sub">Production orders with filters, sort on Deadline and one selected row.</p>
+              <div class="app">
+                <div class="lp-head">
+                  <div><p class="crumb">Plant A / Planning</p><div class="lp-t">Production orders</div></div>
+                  <div class="acts"><button type="button" class="btn btn-s">Export</button><button type="button" class="btn btn-p"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg>New order</button></div>
+                </div>
+                <div class="bar">
+                  <div class="srch"><svg class="ic" aria-hidden="true"><use href="#i-search"></use></svg><div class="inp ph">Search orders</div></div>
+                  <button type="button" class="btn btn-s">Status<svg class="ic" aria-hidden="true"><use href="#i-down"></use></svg></button>
+                  <button type="button" class="btn btn-s">Deadline: Oct 2026<svg class="ic" aria-hidden="true"><use href="#i-x"></use></svg></button>
+                  <button type="button" class="btn btn-s">Machine<svg class="ic" aria-hidden="true"><use href="#i-down"></use></svg></button>
+                  <button type="button" class="btn btn-s">Group by: None<svg class="ic" aria-hidden="true"><use href="#i-down"></use></svg></button>
+                  <button type="button" class="btn btn-g">Clear filters</button>
+                </div>
+                <div role="table" aria-label="Production orders">
+                  <div class="tr hd" role="row">
+                    <span class="td" role="columnheader"><span class="cb"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span></span></span>
+                    <span class="td" role="columnheader">Order</span>
+                    <span class="td" role="columnheader">Article</span>
+                    <span class="td num" role="columnheader">Quantity</span>
+                    <span class="td srt" role="columnheader" aria-sort="ascending">Deadline<svg class="ic" aria-hidden="true"><use href="#i-sort"></use></svg></span>
+                    <span class="td" role="columnheader">Status</span>
+                    <span class="td" role="columnheader">Machine</span>
+                  </div>
+                  <sc-for list="{{ rows }}" as="r">
+                    <div class="{{ r.cls }}" role="row">
+                      <span class="td" role="cell"><span class="{{ r.cbCls }}"><span class="cb-hit"><span class="cb-box"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></span></span></span></span>
+                      <span class="td mono" role="cell"><a href="#">{{ r.no }}</a></span>
+                      <span class="td" role="cell">{{ r.art }}</span>
+                      <span class="td num mono" role="cell">{{ r.qty }}</span>
+                      <span class="td" role="cell">{{ r.dl }}</span>
+                      <span class="td" role="cell"><span class="{{ r.chipCls }}"><sc-if value="{{ r.iClock }}"><svg class="ic" aria-hidden="true"><use href="#i-clock"></use></svg></sc-if><sc-if value="{{ r.iPlay }}"><svg class="ic" aria-hidden="true"><use href="#i-play"></use></svg></sc-if><sc-if value="{{ r.iInfo }}"><svg class="ic" aria-hidden="true"><use href="#i-info"></use></svg></sc-if><sc-if value="{{ r.iPencil }}"><svg class="ic" aria-hidden="true"><use href="#i-pencil"></use></svg></sc-if><sc-if value="{{ r.iPause }}"><svg class="ic" aria-hidden="true"><use href="#i-pause"></use></svg></sc-if><sc-if value="{{ r.iCheck }}"><svg class="ic" aria-hidden="true"><use href="#i-check"></use></svg></sc-if>{{ r.st }}</span></span>
+                      <span class="td" role="cell">{{ r.m }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="pager"><span>Rows 1 to 6 of 6</span><div class="acts"><button type="button" class="btn btn-s is-dis" aria-disabled="true">Previous</button><button type="button" class="btn btn-s is-dis" aria-disabled="true">Next</button></div></div>
+              </div>
+            </div>
+            <div class="blk">
+              <h3 class="h3">Operator station at 1280 by 800</h3>
+              <p class="sub">Touch targets here are 56 to 72 px. The plan sets a 44 px floor at stations until a glove test on pilot hardware fixes the final value.</p>
+              <div class="st-wrap">
+                <div class="st" data-screen-label="Operator station">
+                  <div class="st-top">
+                    <span class="st-name">Station 3</span>
+                    <button type="button" class="btn btn-s">Mill 2<svg class="ic" aria-hidden="true"><use href="#i-down"></use></svg></button>
+                    <span class="grow"></span>
+                    <span class="chip c-ok"><svg class="ic" aria-hidden="true"><use href="#i-ok"></use></svg>Connected</span>
+                    <span class="st-op"><svg class="ic" aria-hidden="true"><use href="#i-user"></use></svg>Operator 0142</span>
+                    <button type="button" class="btn btn-s">Switch operator</button>
+                  </div>
+                  <div class="st-body">
+                    <div class="st-col">
+                      <div class="card">
+                        <div class="card-k">Current job</div>
+                        <div class="st-job"><span class="st-no mono">5005.10</span><span class="chip c-warn"><svg class="ic" aria-hidden="true"><use href="#i-pause"></use></svg>Paused</span></div>
+                        <div class="st-art">Cover E · Operation 10, rough milling</div>
+                        <div><div class="st-pl"><span>20 of 60 pcs good</span><span>1 scrap</span></div><div class="prog"><span style="width:33%"></span></div></div>
+                        <div class="st-acts">
+                          <button type="button" class="btn btn-p big"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-play"></use></svg>Start</button>
+                          <button type="button" class="btn btn-s big is-dis" aria-disabled="true"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-pause"></use></svg>Pause</button>
+                          <button type="button" class="btn btn-s big"><svg class="ic ic-lg" aria-hidden="true"><use href="#i-check"></use></svg>Finish</button>
+                        </div>
+                      </div>
+                      <div class="card">
+                        <div class="card-k">Next on Mill 2</div>
+                        <div><div class="nx"><span class="mono">5006.10</span><span>Plate F</span><span class="mono">200 pcs</span><span class="mut">Wed 07:00</span></div><div class="nx"><span class="mono">5014.10</span><span>Lid N</span><span class="mono">75 pcs</span><span class="mut">Thu 06:00</span></div></div>
+                      </div>
+                    </div>
+                    <div class="card">
+                      <div class="card-k">Report quantities on 5005.10</div>
+                      <div class="fld"><span class="lbl big-l">Good quantity (pcs)</span><div class="stepper"><button type="button" class="btn btn-s step" aria-label="Decrease good quantity"><svg class="ic" aria-hidden="true"><use href="#i-minus"></use></svg></button><div class="inp step-v mono">12</div><button type="button" class="btn btn-s step" aria-label="Increase good quantity"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg></button></div></div>
+                      <div class="fld"><span class="lbl big-l">Scrap quantity (pcs)</span><div class="stepper"><button type="button" class="btn btn-s step" aria-label="Decrease scrap quantity"><svg class="ic" aria-hidden="true"><use href="#i-minus"></use></svg></button><div class="inp step-v mono">1</div><button type="button" class="btn btn-s step" aria-label="Increase scrap quantity"><svg class="ic" aria-hidden="true"><use href="#i-plus"></use></svg></button></div></div>
+                      <div class="fld"><span class="lbl big-l">Scrap reason</span><div class="radios"><span class="rad on"><span class="dot"></span>Tool wear</span><span class="rad"><span class="dot"></span>Material defect</span><span class="rad"><span class="dot"></span>Setup</span><span class="rad"><span class="dot"></span>Measurement</span></div></div>
+                      <button type="button" class="btn btn-p big wide">Send report</button>
+                      <div class="mut">Last report 13:52: 8 good, 0 scrap</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+const TOK = {
+  dark: {"bg":"#050b10","surface":"#0b141a","muted":"#131d24","fg":"#f2f6f7","mutedFg":"#b1bdc2","border":"#2a343c","input":"#748a95","primary":"#36dcec","primaryHover":"#77f0fd","primaryFg":"#040c13","link":"#55e1f0","ok":"#65e287","okSubtle":"#0f3118","warn":"#fec84b","warnSubtle":"#3c2b02","danger":"#ff7d7d","dangerSubtle":"#4f1a1b","info":"#abb9fe","infoSubtle":"#232849","lane":"#080f15","laneAlt":"#0c151b","offTime":"#030609","blockBorder":"#d1d9dc","now":"#36dcec","groups":["#4cbd88","#c889d7"],"orders":["#f07f77","#dc932e","#aaac31","#5bbd74","#00bcbc","#3faff3","#9c96f8","#d582ce"]},
+  light: {"bg":"#f4f7f9","surface":"#ffffff","muted":"#e6ecef","fg":"#09131a","mutedFg":"#4c575f","border":"#cbd2d7","input":"#6a767f","primary":"#006678","primaryHover":"#005463","primaryFg":"#fdfdfd","link":"#006071","ok":"#146d34","okSubtle":"#dff6e2","warn":"#8d5406","warnSubtle":"#feefcf","danger":"#b32228","dangerSubtle":"#ffebe9","info":"#4953ab","infoSubtle":"#ecefff","lane":"#ffffff","laneAlt":"#f3f7f9","offTime":"#e3e9ec","blockBorder":"#09131a","now":"#006678","groups":["#179765","#a264b0"],"orders":["#f28881","#df9b44","#b0b246","#69c27e","#00c3c3","#52b5f4","#a39ef9","#d98cd2"]}
+};
+const DIR = {
+  title: 'Direction B · Control room',
+  desc: 'High contrast and dark first, like a control room screen. Blue-black surfaces, a bright cyan primary and saturated status colors that stay readable from a distance, with square corners, visible grid lines and dense rows for planners on wide monitors. The light theme keeps the same roles with a deep teal primary.',
+  order: ['dark', 'light'],
+  themeNotes: { dark: 'First theme, the default for planners and stations.', light: 'Second theme for bright rooms and printouts.' },
+  fontLine: 'Atkinson Hyperlegible Next for text and headings, Atkinson Hyperlegible Mono for order numbers, times and quantities. The Braille Institute drew the family for low-vision readers, with distinct forms for I, l and 1 and for O and 0. SIL Open Font License. Latin script only: no Greek or Cyrillic.',
+  shape: '2 px radius, 1 px borders, 32 px controls, 38 px table rows',
+  boundary: ['primary', 'Primary fill on background'],
+  extraTiles: [],
+  notes: [
+    'Direction only. D1 sets the final tokens, the 20 order colors and the contrast table from the repository test.',
+    'Fonts load from Google Fonts on this page. The app self-hosts its fonts and makes no CDN calls.',
+    'Icons are Lucide shapes, the set @northmes/ui uses. This page does not use the bound Broadsheet design system.',
+    'Open question: does a dark default suit planner offices, or only stations and control rooms?',
+    'Open question: the font has no Greek or Cyrillic, so Greek or Bulgarian master data would fall back to another font.'
+  ],
+  type: [
+    { name: 'Page title', spec: '24/30, 700', fs: 24, lh: 30, w: 700, ff: 'head', sample: 'Production orders' },
+    { name: 'Section', spec: '18/24, 700', fs: 18, lh: 24, w: 700, ff: 'head', sample: 'Planning board' },
+    { name: 'Body', spec: '14/20, 400', fs: 14, lh: 20, w: 400, ff: 'ui', sample: 'Job 5002.10 moved to Mill 1. Not saved.' },
+    { name: 'Small', spec: '12/16, 400', fs: 12, lh: 16, w: 400, ff: 'ui', sample: 'Live updates on · saved 13:52' },
+    { name: 'Data', spec: '13/18, mono', fs: 13, lh: 18, w: 500, ff: 'num', sample: '5001.10 · 120 pcs · 06:00' },
+    { name: 'Station', spec: '40/48, 700', fs: 40, lh: 48, w: 700, ff: 'num', sample: '20 of 60 pcs' }
+  ]
+};
+const BOARD = [
+  { name: 'Milling', rows: [
+    { name: 'Mill 1', blocks: [['5001.10', 'Bracket A', '120 pcs', 6, 14, 0, 'commit'], ['5002.10', 'Housing B', '80 pcs', 14.5, 21.5, 1, 'draft'], ['5003.10', 'Flange C', '300 pcs', 30, 40, 2, 'lock']] },
+    { name: 'Mill 2', blocks: [['5004.10', 'Shaft D', '60 pcs', 6, 13, 3, 'held'], ['5005.10', 'Cover E', '60 pcs', 13.5, 21, 4, 'late', 'Cover E · late 9 h'], ['5006.10', 'Plate F', '200 pcs', 31, 41, 5, 'commit', '', true]] }
+  ] },
+  { name: 'Turning', rows: [
+    { name: 'Lathe 1', blocks: [['5008.10', 'Pin H', '400 pcs', 14.5, 21.5, 7, 'commit'], ['5007.10', 'Bushing G', '500 pcs', 6, 15, 6, 'conf', 'Bushing G · overlaps 5008.10'], ['5009.10', 'Sleeve J', '150 pcs', 30, 38, 1, 'commit']] },
+    { name: 'Lathe 2', blocks: [['5010.10', 'Axle K', '40 pcs', 7, 17, 2, 'commit'], ['5011.10', 'Collar L', '90 pcs', 30, 36, 3, 'commit'], ['5012.10', 'Ring M', '250 pcs', 36.25, 44, 4, 'commit']] }
+  ] }
+];
+const ST = {
+  commit: { name: 'Committed', cue: 'No marker', aria: '' },
+  draft: { icon: 'pencil', name: 'Mine in draft', cue: 'Pencil icon and double border', aria: 'changed in your draft, not saved' },
+  held: { ini: 'PB', name: 'Held by another planner', cue: 'Initials badge and dashed border', aria: 'being edited by Planner B' },
+  lock: { icon: 'lock', name: 'Hard-locked', cue: 'Padlock icon and solid inner border', aria: 'locked' },
+  late: { icon: 'clock', name: 'Late', cue: 'Clock icon and the word late', aria: 'late by 9 hours' },
+  conf: { name: 'Conflict', cue: 'Striped edge and the word overlaps', aria: 'overlaps 5008.10' }
+};
+const ROWS = [
+  ['5005', 'Cover E', '60 pcs', 'Tue 6 Oct', 'Late', 'danger', 'clock', 'Mill 2'],
+  ['5007', 'Bushing G', '500 pcs', 'Thu 8 Oct', 'Active', 'ok', 'play', 'Lathe 1', true],
+  ['5001', 'Bracket A', '120 pcs', 'Fri 9 Oct', 'Planned', 'info', 'info', 'Mill 1'],
+  ['5002', 'Housing B', '80 pcs', 'Fri 9 Oct', 'Draft', 'neutral', 'pencil', 'Mill 1'],
+  ['5003', 'Flange C', '300 pcs', 'Mon 12 Oct', 'On hold', 'warn', 'pause', 'Mill 1'],
+  ['5010', 'Axle K', '40 pcs', 'Tue 13 Oct', 'Finished', 'ok', 'check', 'Lathe 2']
+];
+function lum(h) { const n = [1, 3, 5].map((i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }); return 0.2126 * n[0] + 0.7152 * n[1] + 0.0722 * n[2]; }
+function cr(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+function rt(r) { return (Math.floor(r * 100) / 100).toFixed(2) + ':1'; }
+function textOn(f) { return cr('#000000', f) >= cr('#ffffff', f) ? '#000000' : '#ffffff'; }
+function pct(h) { return (h / 48) * 100 + '%'; }
+function hh(h) { const x = h % 24, H = Math.floor(x), M = Math.round((x - H) * 60); return (h < 24 ? 'Tue ' : 'Wed ') + String(H).padStart(2, '0') + ':' + String(M).padStart(2, '0'); }
+function ico(name) { return { iPencil: name === 'pencil', iLock: name === 'lock', iClock: name === 'clock', iPlay: name === 'play', iInfo: name === 'info', iPause: name === 'pause', iCheck: name === 'check' }; }
+function tile(a, b, label, kind, ring) {
+  const r = cr(a, b), need = kind === 'text' ? 4.5 : 3, pass = r >= need;
+  return { label: label, hexes: a + ' on ' + b, isText: kind === 'text', isUi: kind !== 'text',
+    sampleStyle: { background: b, color: a }, boxStyle: ring ? { boxShadow: '0 0 0 2px ' + b + ', 0 0 0 4px ' + a, background: b } : { boxShadow: 'inset 0 0 0 3px ' + a },
+    badge: kind === 'deco' ? rt(r) + ', decorative' : rt(r) + (pass ? ', passes' : ', fails'),
+    badgeCls: kind === 'deco' ? 'badge deco' : pass ? 'badge' : 'badge fail' };
+}
+function vars(t) {
+  return { '--bg': t.bg, '--surface': t.surface, '--muted': t.muted, '--fg': t.fg, '--muted-fg': t.mutedFg, '--border': t.border, '--input': t.input, '--primary': t.primary, '--primary-hover': t.primaryHover, '--primary-fg': t.primaryFg, '--link': t.link, '--ok': t.ok, '--ok-subtle': t.okSubtle, '--warn': t.warn, '--warn-subtle': t.warnSubtle, '--danger': t.danger, '--danger-subtle': t.dangerSubtle, '--info': t.info, '--info-subtle': t.infoSubtle, '--lane': t.lane, '--lane-alt': t.laneAlt, '--off-time': t.offTime, '--block-border': t.blockBorder, '--now': t.now };
+}
+function theme(key) {
+  const t = TOK[key];
+  const P = (a, b, label, kind) => tile(t[a], t[b], label, kind);
+  const bd = Array.isArray(DIR.boundary) ? DIR.boundary : DIR.boundary[key];
+  const ex = Array.isArray(DIR.extraTiles) ? DIR.extraTiles : DIR.extraTiles[key] || [];
+  let worst = null;
+  t.orders.forEach((f) => { const a = cr(t.fg, f), b = cr(t.bg, f); const best = Math.max(a, b); if (!worst || best < worst.r) worst = { f: f, r: best, tone: a >= b ? t.fg : t.bg }; });
+  const pairGroups = [
+    { title: 'Text on surfaces, 4.5:1', items: [P('fg', 'bg', 'Text on background', 'text'), P('fg', 'surface', 'Text on surface', 'text'), P('fg', 'muted', 'Text on muted', 'text'), P('mutedFg', 'bg', 'Muted text on background', 'text'), P('mutedFg', 'surface', 'Muted text on surface', 'text'), P('mutedFg', 'muted', 'Muted text on muted', 'text')] },
+    { title: 'Primary and links, 4.5:1', items: [P('primaryFg', 'primary', 'Primary label on primary', 'text'), P('primaryFg', 'primaryHover', 'Primary label on hover', 'text'), P('link', 'bg', 'Link on background', 'text'), P('link', 'surface', 'Link on surface', 'text'), P('link', 'infoSubtle', 'Link on selected row', 'text')] },
+    { title: 'Control boundaries and focus, 3:1', items: [P('input', 'bg', 'Input border on background', 'ui'), P('input', 'surface', 'Input border on surface', 'ui'), P(bd[0], 'bg', bd[1], 'ui')].concat(ex.map((x) => P(x[0], x[1], x[2], x[3]))).concat([tile(t.fg, t.bg, 'Focus ring outer tone on background', 'ui', true), P('danger', 'surface', 'Error border on surface', 'ui'), P('border', 'bg', 'Divider on background', 'deco')]) },
+    { title: 'Board, 3:1 for lines and 4.5:1 for text', items: [P('blockBorder', 'lane', 'Block border on lane', 'ui'), P('blockBorder', 'laneAlt', 'Block border on alternate lane', 'ui'), tile(worst.tone, worst.f, 'Two-tone ring on order fills, worst case', 'ui', true), P('now', 'lane', 'Now line on lane', 'ui'), P('bg', 'now', 'Now label text', 'text')] },
+    { title: 'Status colors, 4.5:1', items: [P('ok', 'bg', 'OK on background', 'text'), P('ok', 'okSubtle', 'OK on OK tint', 'text'), P('warn', 'bg', 'Warning on background', 'text'), P('warn', 'warnSubtle', 'Warning on warning tint', 'text'), P('danger', 'bg', 'Danger on background', 'text'), P('danger', 'dangerSubtle', 'Danger on danger tint', 'text'), P('info', 'bg', 'Info on background', 'text'), P('info', 'infoSubtle', 'Info on info tint', 'text')] }
+  ];
+  const TK = [['bg', 'Background'], ['surface', 'Surface'], ['muted', 'Muted'], ['lane', 'Lane'], ['laneAlt', 'Lane alternate'], ['offTime', 'Off time'], ['fg', 'Text'], ['mutedFg', 'Muted text'], ['link', 'Link'], ['border', 'Divider'], ['input', 'Input border'], ['blockBorder', 'Block border'], ['primary', 'Primary'], ['primaryHover', 'Primary hover'], ['primaryFg', 'Primary label'], ['now', 'Now line'], ['ok', 'OK'], ['okSubtle', 'OK tint'], ['warn', 'Warning'], ['warnSubtle', 'Warning tint'], ['danger', 'Danger'], ['dangerSubtle', 'Danger tint'], ['info', 'Info'], ['infoSubtle', 'Info tint']];
+  const toks = TK.map((k) => ({ name: k[1], hex: t[k[0]], style: { background: t[k[0]] } }));
+  toks.push({ name: 'Focus ring', hex: 'text and background', style: { background: t.primary, boxShadow: '0 0 0 2px ' + t.bg + ', 0 0 0 4px ' + t.fg } });
+  toks.push({ name: 'Group Milling', hex: t.groups[0], style: { background: t.groups[0] } });
+  toks.push({ name: 'Group Turning', hex: t.groups[1], style: { background: t.groups[1] } });
+  const orders = t.orders.map((f, i) => { const x = textOn(f), r = cr(x, f); return { name: 'Order color ' + (i + 1), sample: '500' + (i + 1) + '.10', hexes: x + ' on ' + f, style: { background: f, color: x }, badge: rt(r) + (r >= 4.5 ? ', passes' : ', fails'), badgeCls: r >= 4.5 ? 'badge' : 'badge fail' }; });
+  const groups = BOARD.map((g, gi) => ({ name: g.name, dot: { background: t.groups[gi] }, rows: g.rows.map((r, ri) => ({ name: r.name, stripe: { boxShadow: 'inset 6px 0 0 ' + t.groups[gi] }, laneCls: ri % 2 ? 'lane alt' : 'lane', blocks: r.blocks.map((b) => { const S = ST[b[6]], f = t.orders[b[5]]; return Object.assign({ num: b[0], art: b[7] || b[1] + ' · ' + b[2], cls: 'blkb st-' + b[6] + (b[8] ? ' is-focus' : ''), style: { left: pct(b[3]), width: 'calc(' + pct(b[4] - b[3]) + ' - 2px)', background: f, color: textOn(f) }, ini: S.ini || '', aria: [b[0], b[1], b[2], hh(b[3]) + ' to ' + hh(b[4]), r.name, S.aria].filter(Boolean).join(', ') }, ico(S.icon)); }) })) }));
+  const lf = t.orders[5];
+  const legend = ['commit', 'draft', 'held', 'lock', 'late', 'conf'].map((k) => Object.assign({ name: ST[k].name, cue: ST[k].cue, cls: 'blkb st-' + k, style: { background: lf, color: textOn(lf) }, ini: ST[k].ini || '' }, ico(ST[k].icon)));
+  const own = t.blockBorder === t.fg ? 'the text token' : 'a light block border token';
+  let boardNote = 'Block border: ' + own + ', ' + rt(cr(t.blockBorder, t.lane)) + ' against the lane.';
+  if (key === 'dark') boardNote += ' The plan names the background token for block borders in dark themes. That token measures ' + rt(cr(t.bg, t.lane)) + ' against the lane, so it cannot give the 3:1 block edge, and D1 should change the rule.';
+  return { cls: 'th th-' + key, label: key === 'light' ? 'Light theme' : 'Dark theme', note: DIR.themeNotes[key], vars: vars(t), toks: toks, pairGroups: pairGroups, orders: orders, groups: groups, legend: legend, boardNote: boardNote };
+}
+class Component extends DCLogic {
+  renderVals() {
+    const L = TOK.light, D = TOK.dark;
+    const facts = [
+      { k: 'Font', v: DIR.fontLine.split('.')[0] },
+      { k: 'Primary', v: L.primary + ' light, ' + D.primary + ' dark' },
+      { k: 'Surface', v: L.surface + ' light, ' + D.surface + ' dark' },
+      { k: 'Background', v: L.bg + ' light, ' + D.bg + ' dark' },
+      { k: 'Shape', v: DIR.shape },
+      { k: 'Theme order', v: DIR.order[0] === 'light' ? 'Light first, dark second' : 'Dark first, light second' }
+    ];
+    return {
+      pageVars: vars(TOK[DIR.order[0]]),
+      dir: { title: DIR.title, desc: DIR.desc, fontLine: DIR.fontLine, facts: facts, notes: DIR.notes.map((x) => ({ t: x })), type: DIR.type.map((y) => ({ name: y.name, spec: y.spec, sample: y.sample, style: { fontSize: y.fs + 'px', lineHeight: y.lh + 'px', fontWeight: y.w, fontFamily: 'var(--font-' + y.ff + ')', fontVariantNumeric: 'tabular-nums', textTransform: y.tt || 'none' } })) },
+      themes: DIR.order.map(theme),
+      board: {
+        days: [{ label: 'Tue 6 Oct', style: { left: '0%', width: '50%' } }, { label: 'Wed 7 Oct', style: { left: '50%', width: '50%' } }],
+        ticks: [0, 6, 12, 18, 24, 30, 36, 42].map((h) => ({ label: String(h % 24).padStart(2, '0') + ':00', style: { left: pct(h) } })),
+        off: [[0, 6], [22, 30], [46, 48]].map((p) => ({ style: { left: pct(p[0]), width: pct(p[1] - p[0]) } })),
+        now: { left: pct(14.33) }
+      },
+      rows: ROWS.map((r) => Object.assign({ no: r[0], art: r[1], qty: r[2], dl: r[3], st: r[4], m: r[7], cls: r[8] ? 'tr sel' : 'tr', cbCls: r[8] ? 'cb on' : 'cb', chipCls: 'chip c-' + r[5] }, ico(r[6])))
+    };
+  }
+}
+    </script>
+  </body>
+</html>

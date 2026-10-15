@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 station header: machine switch</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+      </helmet>
+      <div class="ps-part {{ rootCls }}" lang="{{ lang }}">
+        <sc-if value="{{ several }}">
+          <div class="ps-mach" role="group" aria-labelledby="{{ ids.lbl }}">
+            <span class="ps-mach-l" id="{{ ids.lbl }}">{{ t.machine }}</span>
+            <div class="ps-mach-g">
+              <sc-for list="{{ machines }}" as="m">
+                <button class="btn lg v-outline ps-mbtn {{ m.cls }}" type="button" aria-pressed="{{ m.pressed }}">{{ m.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"machines":{"editor":"text","default":"Press 3,Press 4","tsType":"string"},"shown":{"editor":"text","default":"Press 4","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"solo":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"idp":{"editor":"text","default":"mh","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the frame's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PS ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PS) ready();
+        }
+        renderVals() {
+          const p = this.props || {};
+          const PS = window.PS;
+          const idp = String(p.idp || "mh");
+          // Rendered as the page root, the part draws the station's main area itself; mounted in a frame it inherits.
+          const solo = p.solo === "on" || (p.solo !== "off" && !!window.__dcRootName && window.__dcRootName() === "production-start-303-station-header");
+          const base = { rootCls: (solo ? "solo" : "") + (p.theme === "dark" ? " dark" : ""), lang: "en", several: false, ids: { lbl: idp + "-lbl" }, t: { machine: "" }, machines: [] };
+          if (!PS) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const T = PS.tr(strings);
+          const list = String(p.machines || "Press 3,Press 4").split(",").map((s) => s.trim()).filter(Boolean);
+          const shown = String(p.shown || "Press 4").trim();
+          const focus = String(p.focus || "none").trim();
+          return Object.assign(base, {
+            lang: T.lang,
+            t: T,
+            // One machine: the station shows no switch (VH assumption 1); two or more: one button per machine (19.12).
+            several: list.length > 1,
+            machines: list.map((m) => ({
+              name: PS.mName(m, strings),
+              pressed: m === shown ? "true" : "false",
+              cls: (m === shown ? "on" : "") + (focus === m ? " is-focus" : "")
+            }))
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

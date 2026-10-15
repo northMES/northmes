@@ -1,6 +1,6 @@
 # Canonical list and form page variations: chosen direction
 
-This is the decision record of the variations round for the canonical list and form page, issue [northMES/northmes#222](https://github.com/northMES/northmes/issues/222), for story E04-S07 ([northMES/northmes#45](https://github.com/northMES/northmes/issues/45)). The variations page is [ui/ui-222-list-form-variations.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=ui%2Fui-222-list-form-variations.dc.html) in the Claude Design project. It is not an approved page; the spec page `ui/ui-222-list-form.dc.html` follows the chosen direction and is approved on its own.
+This is the decision record of the variations round for the canonical list and form page, issue [northMES/northmes#222](https://github.com/northMES/northmes/issues/222), for story E04-S07 ([northMES/northmes#45](https://github.com/northMES/northmes/issues/45)). The variations page is [ui/ui-222-list-form-variations.dc.html](../project/ui/ui-222-list-form-variations.dc.html) in the design project. It is not an approved page; the spec page `ui/ui-222-list-form.dc.html` follows the chosen direction and is approved on its own.
 
 The round drew three arrangements of a master data screen on the articles of Acme AB inside the D2 shell: A, pages; B, side sheet; C, split view.
 

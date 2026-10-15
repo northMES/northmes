@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Option notes">
+        <h2 class="t2">{{ o.title }}</h2>
+        <p class="lede">{{ o.lede }}</p>
+        <div class="ps-cols3">
+          <div>
+            <h3 class="t3">What it optimizes</h3>
+            <ul class="ps-pts">
+              <sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">What it costs</h3>
+            <ul class="ps-pts">
+              <sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+          <div>
+            <h3 class="t3">How it meets the fixed rules</h3>
+            <div class="ps-rk">
+              <sc-for list="{{ o.rules }}" as="r">
+                <div class="ps-rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const id = ["A", "B", "C"].indexOf(String(P.option || "A").trim()) >= 0 ? String(P.option || "A").trim() : "A";
+          const rule = (k, v) => ({ k: k, v: v });
+          const O = {
+            A: {
+              title: "A. List beside the job",
+              lede: "The job list, the selected job and its report form are in view together. At 1920 the last reports join as a third column; at 1280 and in portrait they sit under the form.",
+              gains: [
+                "Changing job is one tap on the list, and every job's status, remaining quantity and flags stay in view while the operator reports. A job with unsent entries carries an Unsent entries badge on its row.",
+                "The scrap reasons are always in view, so nothing moves when scrap goes above 0 (WCAG 3.2.2).",
+                "Sending on the pressed button and the error under it keep the feedback where the operator's finger and eyes already are.",
+                `The last reports are in view at 1920 and one scroll away at 1280, which helps the operator spot a double report before "Report again?" asks.`,
+                "Corrected totals need no minus sign, so the keypad and the system keyboard stay digits only.",
+                "It is built from shadcn parts the station needs anyway: Button, Badge, Field, Input, Radio Group, Table and Dialog."
+              ],
+              costs: [
+                "At 1280 by 800 the list takes 320 px and the form fills the rest, so the last reports need a scroll. The list scrolls too, so the row with the Unsent entries badge can leave the view.",
+                "On a touch-only station the system keyboard covers the lower half of the screen, so the Keypad toggle would have to be on by default (Q3).",
+                "The correction Dialog covers the list and the form while it is open.",
+                "In portrait the list becomes a Change job bar, so A works like B there; the Unsent entries badge moves onto the bar."
+              ],
+              rules: [
+                rule("Status", "StatusBadge with icon and word in every row and in the job header."),
+                rule("Sending", "Send reads Sending and is aria-disabled; a polite status says Sending; focus stays on Send."),
+                rule("Lost connection", "The frame's strip, the error under Send, which Send names with aria-describedby, and the entries kept in their fields. The failed Send is announced once through announce() in the polite region, apart from the strip's announcement of the drop."),
+                rule("Targets", "48 px buttons, 56 px fields, 48 px reason rows."),
+                rule("Focus", "Selecting a job moves focus to its heading; after a report focus stays on Send."),
+                rule("Corrections", "A new row with a required reason; the totals are checked against the original.")
+              ]
+            },
+            B: {
+              title: "B. One job at a time",
+              lede: "The selected job fills the screen with a keypad docked beside the fields. The job list and the last reports are one tap away.",
+              gains: [
+                "The docked keypad gives 64 to 88 px keys for gloves and never opens the system keyboard over the form.",
+                "One job, one form and one keypad: the screen holds little to read.",
+                "The step row names the current status and shows the statuses a job can reach.",
+                "Everything fits at 1280 by 800 without scrolling, keypad included."
+              ],
+              costs: [
+                "Changing job takes two taps and hides the other jobs. A job with unsent entries shows only as the Unsent entries badge next to Change job and on its row in the list.",
+                "The last reports sit behind a tab, so the operator does not see the previous report while typing the next one.",
+                "The reason group appears when scrap goes above 0 and moves Send down under the finger (WCAG 3.2.2): compare B6, with scrap at 0, and B3.",
+                `Signed changes need a minus key, and the operator has to read "-2" right.`,
+                "The step row reads as a sequence, but a job goes back from paused to active, and it takes a row of height.",
+                "At 1920 the space below the form stays empty."
+              ],
+              rules: [
+                rule("Status", "The step row with the current step filled and named; the Change job list uses StatusBadge."),
+                rule("Sending", "A role=status line beside Send, which is aria-disabled."),
+                rule("Lost connection", "The frame's strip and the error beside Send, which Send names with aria-describedby; the entries stay. The failed Send is announced once through announce() in the polite region, apart from the strip's announcement of the drop."),
+                rule("Keypad", "Adds digits to the focused field only, inputmode none while shown, System keyboard brings the device keyboard back, no decimal key for pcs."),
+                rule("Focus", "Change job returns focus to the job heading; after a report focus stays on Send."),
+                rule("Corrections", "Inline under the original row, reason required, with the totals after the correction.")
+              ]
+            },
+            C: {
+              title: "C. Job tiles",
+              lede: "A home screen of large tiles shows every job at a glance. A tile opens the job screen with steppers, and scrap goes in a Sheet.",
+              gains: [
+                "The tiles read from a distance: remaining quantity, status and flags per job in large type.",
+                "Steppers make small counts and fixes quick: one press for 1 or 10 more, with no keyboard.",
+                "The job screen keeps the last reports in a column beside the form.",
+                "A correction on its own screen has room for the original values and large controls."
+              ],
+              costs: [
+                "Every report starts from the tiles: switching job takes two taps, and the job screen hides the other jobs. A job with unsent entries shows as the Unsent entries badge next to All jobs.",
+                "Steppers are slow for counts like 96 or 160, so typed entry has to stay: two ways to enter one value.",
+                "Scrap and its reason move to a Sheet: one more step for every report with scrap, and the Sheet covers Switch operator while it is open.",
+                "Sending and errors show under the job header, away from Send.",
+                "The edge lines echo the board's markers (double for a draft, dashed for held, solid for hard-locked) with another meaning here (D1 state markers).",
+                "The tiles, the steppers, the Sheet and the correction screen are four new pieces to build and test."
+              ],
+              rules: [
+                rule("Status", "StatusBadge on every tile and in the job header; the edge line adds a shape and is never the only cue."),
+                rule("Sending", "A role=status line under the job header; Send is aria-disabled."),
+                rule("Lost connection", "The frame's strip and an error line under the job header, which Send names with aria-describedby; the entries stay. The failed Send is announced once through announce() in the polite region, apart from the strip's announcement of the drop."),
+                rule("Steppers", "64 to 72 px, typed entry through the same NumberField, and Enter never submits."),
+                rule("Focus", "Opening a tile moves focus to the job heading; All jobs returns focus to the tile."),
+                rule("Corrections", "Own screen with its own title, reason required, corrected totals.")
+              ]
+            }
+          };
+          return { o: O[id] };
+        }
+      }
+    </script>
+  </body>
+</html>

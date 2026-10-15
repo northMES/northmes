@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access tab</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+      </helmet>
+      <div class="lf-part {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ hasTabs }}">
+          <div class="lf-tabs" role="tablist" aria-label="{{ name }}">
+            <sc-for list="{{ tabs }}" as="tb">
+              <button class="lf-tab {{ tb.cls }}" type="button" role="tab" id="{{ tb.id }}" aria-selected="{{ tb.on }}" aria-controls="{{ tb.panel }}" tabindex="{{ tb.tabindex }}">{{ tb.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div class="lf-dscroll" role="{{ panelRole }}" id="{{ ids.panel }}" aria-labelledby="{{ panelRef }}" data-ca-scrolly="{{ scrolly }}">
+          <sc-if value="{{ hasNote }}">
+            <div class="lf-note ok" role="status"><span class="ic" data-icon="CircleCheck"></span><span>{{ note }}</span></div>
+          </sc-if>
+          <sc-if value="{{ wideRoles }}">
+            <section class="lf-card auto" aria-labelledby="{{ ids.rh }}" aria-busy="{{ busy }}" style="--cols:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.3fr) 220px">
+              <div class="ca-card-h">
+                <div class="ca-hgrp"><h2 class="ca-h2" id="{{ ids.rh }}">{{ tx.roles }}</h2><p class="ca-desc">{{ rolesD }}</p></div>
+                <sc-if value="{{ hasAdd }}"><a class="btn v-outline {{ f.add }}" href="#"><span class="ic" data-icon="Plus"></span>{{ tx.addRole }}</a></sc-if>
+              </div>
+              <sc-if value="{{ showTable }}">
+                <div class="lf-grid" role="table" aria-label="{{ tableName }}">
+                  <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader"><sc-if value="{{ plainRoleHead }}"><span>{{ tx.colRole }}</span></sc-if><sc-if value="{{ rolesDenied }}"><span class="ca-tw"><button class="btn v-ghost ca-hb" type="button" aria-describedby="{{ ids.rtip }}">{{ tx.colRole }}<span class="ic ic14" data-icon="Info"></span></button><span class="ca-tip" role="tooltip" id="{{ ids.rtip }}" hidden="{{ true }}">{{ roleTip }}</span></span></sc-if></span><span class="lf-td" role="columnheader">{{ tx.colWhere }}</span><span class="lf-td" role="columnheader">{{ tx.colAssigned }}</span><span class="lf-td" role="columnheader"><span class="lf-vh">{{ tx.colActions }}</span></span></div>
+                  <sc-for list="{{ rows }}" as="r">
+                    <div class="lf-tr" role="row">
+                      <span class="lf-td two ca-td-l" role="cell"><sc-if value="{{ r.known }}"><a class="lf-cl {{ r.fLink }}" href="#" lang="{{ r.lang }}">{{ r.name }}</a><span class="lf-sub">{{ r.kind }}</span></sc-if><sc-if value="{{ r.unknown }}"><span class="ca-noacc"><span class="ic" data-icon="Lock"></span><span>{{ tx.noAccess }}</span></span></sc-if></span>
+                      <span class="lf-td" role="cell"><span class="ca-where"><span class="ic" data-icon="{{ r.icon }}"></span><span>{{ r.where }}</span></span></span>
+                      <span class="lf-td two" role="cell"><span class="ca-mono">{{ r.on }}</span><span class="lf-sub">{{ r.by }}</span></span>
+                      <span class="lf-td end" role="cell"><sc-if value="{{ r.canRemove }}"><button class="btn v-outline {{ r.fRemove }}" type="button" aria-label="{{ r.removeName }}">{{ tx.remove }}</button></sc-if><sc-if value="{{ r.cannot }}"><span class="ca-line">{{ coLine }}</span></sc-if></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isLoading }}">
+                <div class="lf-grid">
+                  <div class="lf-tr hd"><span class="lf-td">{{ tx.colRole }}</span><span class="lf-td">{{ tx.colWhere }}</span><span class="lf-td">{{ tx.colAssigned }}</span><span class="lf-td"></span></div>
+                  <sc-for list="{{ skel }}" as="k">
+                    <div class="lf-tr"><span class="lf-td two"><span class="sk lf-skl" style="width:96px"></span><span class="sk lf-skl h" style="width:120px"></span></span><span class="lf-td"><span class="sk lf-skl" style="width:110px"></span></span><span class="lf-td two"><span class="sk lf-skl" style="width:84px"></span><span class="sk lf-skl h" style="width:96px"></span></span><span class="lf-td"></span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isRolesState }}">
+                <div class="lf-state ca-st" role="{{ st.role }}">
+                  <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+                  <h3 class="lf-state-h">{{ st.title }}</h3>
+                  <p>{{ st.text }}</p>
+                  <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ tx.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ tx.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+                  <sc-if value="{{ st.hasAct }}"><div class="acts"><button class="btn v-outline {{ f.action }}" type="button"><span class="ic" data-icon="RotateCw"></span>{{ tx.tryAgain }}</button></div></sc-if>
+                </div>
+              </sc-if>
+            </section>
+          </sc-if>
+          <sc-if value="{{ narrowRoles }}">
+            <section class="ca-rg" aria-labelledby="{{ ids.rh }}" aria-busy="{{ busy }}">
+              <div class="ca-tool"><h2 class="ca-h2" id="{{ ids.rh }}">{{ tx.roles }}</h2><sc-if value="{{ hasAdd }}"><a class="btn v-outline {{ f.add }}" href="#"><span class="ic" data-icon="Plus"></span>{{ tx.addRole }}</a></sc-if></div>
+              <sc-if value="{{ showTable }}">
+                <ul class="ca-cards">
+                  <sc-for list="{{ rows }}" as="r">
+                    <li class="ca-ci">
+                      <div class="ca-ci-h"><a class="ca-b {{ r.fLink }}" href="#" lang="{{ r.lang }}">{{ r.name }}</a><span class="ca-sm ca-mut">{{ r.kindShort }}</span></div>
+                      <span class="ca-ci-row"><span class="ic" data-icon="{{ r.icon }}"></span><span>{{ r.where }}</span></span>
+                      <span class="ca-sm ca-mut">{{ r.assigned }}</span>
+                      <sc-if value="{{ r.canRemove }}"><button class="btn v-outline {{ r.fRemove }}" type="button" aria-label="{{ r.removeName }}">{{ tx.remove }}</button></sc-if>
+                      <sc-if value="{{ r.cannot }}"><span class="ca-line">{{ coLine }}</span></sc-if>
+                    </li>
+                  </sc-for>
+                </ul>
+              </sc-if>
+              <sc-if value="{{ isLoading }}">
+                <ul class="ca-cards"><sc-for list="{{ skel }}" as="k"><li class="ca-ci"><span class="sk lf-skl" style="width:110px"></span><span class="sk lf-skl h" style="width:160px"></span><span class="sk lf-skl h" style="width:140px"></span></li></sc-for></ul>
+              </sc-if>
+              <sc-if value="{{ isRolesState }}">
+                <div class="lf-card auto">
+                  <div class="lf-state ca-st" role="{{ st.role }}">
+                    <span class="big {{ st.bigCls }}"><span class="ic" data-icon="{{ st.icon }}"></span></span>
+                    <h3 class="lf-state-h">{{ st.title }}</h3>
+                    <p>{{ st.text }}</p>
+                    <sc-if value="{{ st.hasCid }}"><span class="lf-cid"><span>{{ tx.cid }}</span><span class="v">{{ st.cid }}</span><button class="btn icon v-ghost" type="button" aria-label="{{ tx.copyCid }}"><span class="ic" data-icon="Copy"></span></button></span></sc-if>
+                    <sc-if value="{{ st.hasAct }}"><div class="acts"><button class="btn v-outline {{ f.action }}" type="button"><span class="ic" data-icon="RotateCw"></span>{{ tx.tryAgain }}</button></div></sc-if>
+                  </div>
+                </div>
+              </sc-if>
+            </section>
+          </sc-if>
+          <sc-if value="{{ hasEff }}">
+            <div class="lf-fit"><dc-import name="core-304-access-effective" user="{{ user }}" added="{{ added }}" show="{{ effShow }}" denied="{{ effDenied }}" state="{{ effState }}" size="{{ size }}" strings="{{ strings }}" hint-size="100%,420px"></dc-import></div>
+          </sc-if>
+          <sc-if value="{{ hasChanges }}">
+            <section class="lf-card auto" aria-labelledby="{{ ids.ch }}" style="--cols:168px minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.4fr)">
+              <div class="ca-card-h"><div class="ca-hgrp"><h2 class="ca-h2" id="{{ ids.ch }}">{{ tx.changes }}</h2><p class="ca-desc">{{ changesD }}</p></div></div>
+              <sc-if value="{{ changesTable }}">
+                <div class="lf-grid" role="table" aria-labelledby="{{ ids.ch }}">
+                  <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader">{{ tx.colWhen }}</span><span class="lf-td" role="columnheader">{{ tx.colWho }}</span><span class="lf-td" role="columnheader">{{ tx.colChange }}</span><span class="lf-td" role="columnheader">{{ tx.colReason }}</span></div>
+                  <sc-for list="{{ hist }}" as="h">
+                    <div class="lf-tr" role="row"><span class="lf-td ca-mono" role="cell">{{ h.when }}</span><span class="lf-td two" role="cell"><span>{{ h.who }}</span><span class="lf-sub">{{ h.surface }}</span></span><span class="lf-td" role="cell">{{ h.change }}</span><span class="lf-td" role="cell">{{ h.reason }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ changesCards }}">
+                <div class="ca-card-b"><ul class="ca-cards"><sc-for list="{{ hist }}" as="h"><li class="ca-ci"><span class="ca-mono ca-sm">{{ h.when }}</span><span class="ca-b">{{ h.change }}</span><span class="ca-sm ca-mut">{{ h.who }}, {{ h.surface }}</span><span class="ca-sm">{{ h.reason }}</span></li></sc-for></ul></div>
+              </sc-if>
+              <sc-if value="{{ changesNone }}"><div class="ca-card-b"><p class="ca-p ca-sm ca-mut">{{ changesEmpty }}</p></div></sc-if>
+              <sc-if value="{{ changesNo }}">
+                <div class="lf-state ca-st"><span class="big"><span class="ic" data-icon="Lock"></span></span><h3 class="lf-state-h">{{ tx.changesNo }}</h3><p>{{ changesNoD }}</p></div>
+              </sc-if>
+            </section>
+          </sc-if>
+        </div>
+        <sc-if value="{{ hasDialog }}">
+          <div class="lf-ov"></div>
+          <div class="lf-dlg {{ dlgCls }}" role="alertdialog" aria-modal="true" aria-labelledby="{{ ids.dt }}" aria-describedby="{{ ids.dd }}">
+            <div class="lf-dlg-h"><h2 class="lf-dlg-t" id="{{ ids.dt }}">{{ dlg.title }}</h2></div>
+            <div class="lf-dlg-b">
+              <div class="ca-rg" id="{{ ids.dd }}">
+                <p class="ca-p">{{ dlg.lose }}</p>
+                <sc-if value="{{ dlg.hasLost }}"><ul class="lf-pts" style="margin:0"><sc-for list="{{ dlg.lost }}" as="l"><li lang="{{ l.lang }}">{{ l.t }}</li></sc-for></ul></sc-if>
+                <sc-if value="{{ dlg.hasKeep }}"><p class="ca-p ca-mut">{{ dlg.keep }}</p></sc-if>
+              </div>
+              <div class="fld">
+                <span class="lbl">{{ tx.reason }}<sc-if value="{{ dlg.opt }}"><span class="lf-req">{{ tx.optional }}</span></sc-if></span>
+                <span class="inp lf-ta {{ dlg.reasonCls }}"><sc-if value="{{ dlg.hasV }}"><span>{{ dlg.v }}</span></sc-if><sc-if value="{{ dlg.hasPh }}"><span class="lf-ph">{{ tx.reasonPh }}</span></sc-if></span>
+                <sc-if value="{{ dlg.hasErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ dlg.err }}</span></sc-if>
+                <span class="desc">{{ dlg.reasonD }}</span>
+              </div>
+            </div>
+            <div class="lf-dlg-f">
+              <button class="btn v-outline {{ f.cancel }}" type="button">{{ tx.cancel }}</button>
+              <button class="btn v-destructive {{ f.confirm }}" type="button">{{ tx.removeRole }}</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"user":{"editor":"enum","options":["sara.nyberg","alex.lund","anna.berg","karin.dahl","jonas.holm","erik.lind","mikael.strand","h.wiesenthal","lena.ek"],"default":"sara.nyberg","tsType":"string"},"viewer":{"editor":"enum","options":["plant-admin","company-admin"],"default":"plant-admin","tsType":"string"},"tabs":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","empty","error"],"default":"populated","tsType":"string"},"effective":{"editor":"enum","options":["on","off","all","denied","forbidden"],"default":"on","tsType":"string"},"roles":{"editor":"enum","options":["shown","denied"],"default":"shown","tsType":"string"},"added":{"editor":"text","default":"","tsType":"string"},"changes":{"editor":"enum","options":["off","on","forbidden"],"default":"off","tsType":"string"},"dialog":{"editor":"enum","options":["none","remove"],"default":"none","tsType":"string"},"target":{"editor":"text","default":"","tsType":"string"},"reason":{"editor":"enum","options":["optional","required","required-error"],"default":"optional","tsType":"string"},"note":{"editor":"enum","options":["none","added","removed"],"default":"none","tsType":"string"},"focus":{"editor":"enum","options":["none","tab","add","remove","role","reason","confirm","cancel","action"],"default":"none","tsType":"string"},"scroll":{"editor":"int","default":0,"tsType":"number"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // The 320 frames can draw the tab panel scrolled (prop scroll).
+          let tries = 0;
+          const scroll = () => {
+            document.querySelectorAll("[data-ca-scrolly]").forEach((el) => { const y = parseInt(el.getAttribute("data-ca-scrolly"), 10) || 0; if (y > 0 && el.scrollTop !== y) el.scrollTop = y; });
+            if (tries++ < 40) setTimeout(scroll, 250);
+          };
+          scroll();
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons alone.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.CA ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.CA) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__caSeq = (window.__caSeq || 0) + 1;
+            this.uid = "ca-a" + window.__caSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const narrow = P.size === "narrow";
+          const lang = P.strings === "long" ? "de" : "en";
+          const ids = { panel: uid + "-panel", rh: uid + "-rh", ch: uid + "-ch", dt: uid + "-dt", dd: uid + "-dd", rtip: uid + "-rtip" };
+          const base = { label: "Access tab", lang: lang, rootCls: "", ids: ids, tx: {}, f: {}, tabs: [], rows: [], skel: [], hist: [], st: {}, dlg: {}, hasTabs: false, wideRoles: false, narrowRoles: false, hasEff: false, hasChanges: false, hasDialog: false, hasNote: false };
+          const C = window.CA;
+          if (!C) return base;
+          const t = (k, v) => C.t(lang, k, v);
+          const person = C.PERSON[P.user] || (lang === "de" ? C.PERSON["h.wiesenthal"] : C.PERSON["sara.nyberg"]);
+          const name = person.name;
+          const plant = C.place("pl", lang), company = C.place("co", lang);
+          const state = pick(P.state, ["populated", "loading", "empty", "error"], "populated");
+          const viewer = pick(P.viewer, ["plant-admin", "company-admin"], "plant-admin");
+          const focus = pick(P.focus, ["none", "tab", "add", "remove", "role", "reason", "confirm", "cancel", "action"], "none");
+          // added: a role assigned in this frame (NO21), at the plant, today, by the company admin who reads the tab.
+          const addedKey = C.ROLE[P.added] ? P.added : "";
+          const own = addedKey ? person.a.concat([[addedKey, "pl", "2026-10-08", "Karin Dahl"]]) : person.a;
+          const empty = state === "empty" || (state === "populated" && own.length === 0);
+          const assigns = empty ? [] : own;
+          // roles="denied": the reader may not read roles (core.role:read), so the Role cells read No access (NO5, NO6).
+          const rolesDenied = P.roles === "denied";
+          // The row a dialog, a note or a focus ring refers to: the target role, else the first row the viewer can remove.
+          const removable = (x) => viewer === "company-admin" || x[1] === "pl";
+          const tgt = assigns.filter((x) => x[0] === P.target)[0] || assigns.filter(removable)[0] || assigns[0] || null;
+          const whoText = (w) => (w === "command line" ? t("cmdLine") : w);
+          const rows = assigns.map((x) => {
+            const co = x[1] === "co";
+            const isT = tgt && x === tgt;
+            const nm = C.roleName(x[0], lang);
+            const where = co ? t("companyAll", { company: company }) : plant;
+            return {
+              name: nm, lang: C.roleLang(x[0], lang), kind: C.roleKind(x[0], lang), kindShort: C.roleKindShort(x[0], lang),
+              where: where, icon: co ? "Building2" : "Factory", on: x[2], by: t("by", { who: whoText(x[3]) }), assigned: t("assignedOn", { on: x[2], who: whoText(x[3]) }),
+              known: !rolesDenied, unknown: rolesDenied,
+              canRemove: removable(x), cannot: !removable(x), removeName: rolesDenied ? t("removeNameNo", { place: C.place(x[1], lang) }) : t("removeName", { role: nm, place: C.place(x[1], lang) }),
+              fLink: focus === "role" && isT ? "is-focus" : "", fRemove: focus === "remove" && isT ? "is-focus" : ""
+            };
+          });
+          let st = {};
+          if (state === "error") st = { role: "alert", bigCls: "err", icon: "CircleAlert", title: t("loadErr", { name: name }), text: t("errText"), hasCid: true, cid: "01J9ZB2K5N8P4Q7R1S3T6V9W0X", hasAct: true };
+          else if (empty) st = { role: null, bigCls: "", icon: "Shield", title: t("rolesEmpty", { name: name, plant: plant, company: company }), text: t("rolesEmptyD", { name: name, plant: plant }), hasCid: false, hasAct: false };
+          // Tabs of the user detail; only the Access panel is drawn.
+          const tabs = ["general", "access", "history"].map((k) => ({
+            id: uid + "-t-" + k, label: t(k), on: k === "access" ? "true" : "false", cls: (k === "access" ? "on " : "") + (k === "access" && focus === "tab" ? "is-focus" : ""),
+            panel: k === "access" ? ids.panel : null, tabindex: k === "access" ? "0" : "-1"
+          }));
+          const hasTabs = P.tabs !== "off";
+          // Remove dialog: what the person loses at the plant, and what another role still grants (rule 4.5 amended).
+          let dlg = {};
+          const hasDialog = P.dialog === "remove" && !!tgt && state === "populated";
+          if (hasDialog) {
+            const others = assigns.filter((x) => x !== tgt);
+            const otherHeld = C.heldBy(others.map((x) => x[0]));
+            const tPerms = C.ROLE[tgt[0]].perms.filter((id) => !C.PERM[id].ni);
+            const lost = tPerms.filter((id) => !otherHeld[id]);
+            const kept = tPerms.filter((id) => otherHeld[id]);
+            const keepRoles = others.filter((x) => C.ROLE[x[0]].perms.some((id) => kept.indexOf(id) >= 0)).map((x) => t("at", { role: C.roleName(x[0], lang), place: C.place(x[1], lang) }));
+            const and = lang === "de" ? " und " : " and ";
+            const what = kept.map((id) => { const l = C.permLabel(id, lang); return lang === "de" ? l : l.charAt(0).toLowerCase() + l.slice(1); });
+            const reason = pick(P.reason, ["optional", "required", "required-error"], "optional");
+            const tName = C.roleName(tgt[0], lang), tPlace = C.place(tgt[1], lang);
+            dlg = {
+              title: t("rmTitle", { role: tName, place: tPlace, name: name }),
+              lose: lost.length ? t("rmLose", { name: name, plant: tgt[1] === "co" ? company : plant }) : t("rmLoseNone", { name: name, role: tName }),
+              lost: lost.map((id) => ({ t: C.permLabel(id, lang), lang: C.permLang(id, lang) })), hasLost: lost.length > 0,
+              hasKeep: kept.length > 0 && lost.length > 0, keep: t("rmKeep", { roles: C.joinAnd(keepRoles, and), name: name, what: C.joinAnd(what, what.some((w) => w.indexOf(and) >= 0) ? "," + and : and) }),
+              opt: reason === "optional", hasErr: reason === "required-error", err: t("reasonReq", { n: 2 }),
+              hasV: reason === "required-error", v: "ok", hasPh: reason !== "required-error",
+              reasonCls: (focus === "reason" ? "is-focus " : "") + (reason === "required-error" ? "is-err" : ""),
+              reasonD: t("reasonD", { name: name })
+            };
+          }
+          const noteKind = pick(P.note, ["none", "added", "removed"], "none");
+          const hasNote = noteKind !== "none" && !!tgt && state === "populated";
+          const note = hasNote ? t(noteKind === "added" ? "noteAdded" : "noteRemoved", { role: C.roleName(tgt[0], lang), place: C.place(tgt[1], lang), name: name }) : "";
+          const eff = pick(P.effective, ["on", "off", "all", "denied", "forbidden"], "on");
+          const changes = pick(P.changes, ["off", "on", "forbidden"], "off");
+          const hist = (C.HISTORY[person.user] || []).map((h) => ({ when: h.when, who: h.who === "Command line" ? t("cmdLine") : h.who, surface: h.surface === "Command line" ? t("cmdLine") : t("web"), change: h.change, reason: h.reason }));
+          const busy = state === "loading" ? "true" : null;
+          return Object.assign(base, {
+            label: "Access tab, " + person.user + ", " + viewer + ", " + state + (hasDialog ? ", remove dialog" : "") + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            name: name, user: person.user, size: narrow ? "narrow" : "wide", strings: lang === "de" ? "long" : "default",
+            tx: { noAccess: t("noAccess"), roles: t("roles"), addRole: t("addRole"), colRole: t("colRole"), colWhere: t("colWhere"), colAssigned: t("colAssigned"), colActions: t("colActions"), remove: t("remove"), cid: t("cid"), copyCid: t("copyCid"), tryAgain: t("tryAgain"), changes: t("changes"), colWhen: t("colWhen"), colWho: t("colWho"), colChange: t("colChange"), colReason: t("colReason"), changesNo: t("changesNo"), reason: t("reason"), optional: t("optional"), reasonPh: t("reasonPh"), cancel: t("cancel"), removeRole: t("removeRole") },
+            f: { add: focus === "add" ? "is-focus" : "", action: focus === "action" ? "is-focus" : "", cancel: focus === "cancel" ? "is-focus" : "", confirm: focus === "confirm" ? "is-focus" : "" },
+            hasTabs: hasTabs, tabs: tabs, panelRole: hasTabs ? "tabpanel" : null, panelRef: hasTabs ? uid + "-t-access" : null, scrolly: String(parseInt(P.scroll, 10) || 0),
+            hasNote: hasNote, note: note,
+            wideRoles: !narrow, narrowRoles: narrow, busy: busy, hasAdd: !rolesDenied, rolesDenied: rolesDenied, plainRoleHead: !rolesDenied, roleTip: t("roleTip", { plant: plant }), added: addedKey,
+            rolesD: t("rolesD", { name: name, plant: plant }), tableName: t("rolesTable", { name: name }), coLine: t("coLine", { company: company }),
+            showTable: state === "populated" && !empty, rows: rows,
+            isLoading: state === "loading", skel: [0, 1],
+            isRolesState: state === "error" || (state !== "loading" && empty), st: st,
+            hasEff: eff !== "off" && state !== "error", effShow: eff === "all" ? "all" : "granted", effDenied: eff === "denied" ? "roles" : "off", effState: state === "loading" ? "loading" : eff === "forbidden" ? "forbidden" : empty ? "empty" : "populated",
+            hasChanges: changes !== "off" && state === "populated", changesD: t("changesD", { name: name }),
+            changesTable: changes === "on" && hist.length > 0 && !narrow, changesCards: changes === "on" && hist.length > 0 && narrow, changesNone: changes === "on" && hist.length === 0,
+            changesEmpty: t("changesEmpty", { plant: plant, company: company }), changesNo: changes === "forbidden", changesNoD: t("changesNoD", { plant: plant }), hist: hist,
+            hasDialog: hasDialog, dlgCls: narrow ? "nar" : "", dlg: dlg
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

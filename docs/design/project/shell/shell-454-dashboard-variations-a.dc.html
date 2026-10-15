@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard option A, tabs and edit mode</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-454-dashboard-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-o" data-screen-label="{{ label }}">
+        <dc-import name="Shell" width="{{ sh.width }}" theme="{{ sh.theme }}" role="planner" user="{{ sh.user }}" username="{{ sh.username }}" plant="{{ sh.plant }}" nav="core.dashboard" title="Dashboard" crumbs="Dashboard" actions="{{ sh.actions }}" bell="off" show-title="on" hint-size="{{ sh.hint }}">
+          <div class="db-page">
+            <sc-if value="{{ wide }}">
+              <div class="db-tabrow">
+                <div class="lf-tabs" role="tablist" aria-label="Dashboard tabs">
+                  <sc-for list="{{ tabs }}" as="t">
+                    <sc-if value="{{ t.sep }}"><span class="db-tsep" aria-hidden="true"></span></sc-if>
+                    <button class="lf-tab db-tab {{ t.cls }}" type="button" role="tab" aria-selected="{{ t.sel }}" tabindex="{{ t.ti }}" aria-label="{{ t.aria }}"><span class="ic" data-icon="{{ t.icon }}"></span>{{ t.name }}</button>
+                  </sc-for>
+                </div>
+                <span class="db-wrap">
+                  <button class="btn v-ghost {{ newCls }}" type="button" aria-haspopup="{{ newPop }}" aria-expanded="{{ newOpen }}"><span class="ic" data-icon="Plus"></span>New tab</button>
+                  <sc-if value="{{ newOpen }}">
+                    <div class="pop db-pop below" role="menu" aria-label="New tab" style="width:260px">
+                      <a class="mi kfocus" href="#" role="menuitem"><span class="ic" data-icon="User"></span>My tab<span class="db-mi-d">Only you</span></a>
+                      <a class="mi" href="#" role="menuitem"><span class="ic" data-icon="Factory"></span>Shared tab<span class="db-mi-d">Everyone at Plant A</span></a>
+                    </div>
+                  </sc-if>
+                </span>
+                <span class="db-grow"></span>
+                <span class="db-scope"><span class="ic" data-icon="{{ scopeIcon }}"></span><span>{{ scopeText }}</span></span>
+                <span class="db-wrap">
+                  <button class="btn icon v-outline {{ actCls }}" type="button" aria-label="Actions for {{ tabName }}" aria-haspopup="menu" aria-expanded="{{ actOpen }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                  <sc-if value="{{ actOpen }}">
+                    <div class="pop db-pop below-r" role="menu" aria-label="Actions for {{ tabName }}" style="width:220px">
+                      <div class="mi kfocus" role="menuitem"><span class="ic" data-icon="Copy"></span>Copy to my tabs</div>
+                      <div class="mi" role="menuitem"><span class="ic" data-icon="EyeOff"></span>Hide for me</div>
+                    </div>
+                  </sc-if>
+                </span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ narrow }}">
+              <div class="db-sel320">
+                <div class="fld"><span class="lbl">Tab</span><span class="inp lf-sel"><span class="ic" data-icon="{{ scopeIcon }}" style="color:var(--muted-foreground)"></span><span class="lf-iv">{{ tabName }}</span><span class="ic lf-chev" data-icon="ChevronsUpDown"></span></span></div>
+                <button class="btn icon v-outline" type="button" aria-label="Actions for {{ tabName }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button>
+                <button class="btn icon v-outline" type="button" aria-label="New tab"><span class="ic" data-icon="Plus"></span></button>
+              </div>
+              <sc-if value="{{ narrowScope }}"><span class="db-scope"><span class="ic" data-icon="{{ scopeIcon }}"></span><span>{{ scopeText }}</span></span></sc-if>
+            </sc-if>
+            <sc-if value="{{ editBar }}">
+              <div class="db-ebar" role="group" aria-label="Editing {{ tabName }}">
+                <span class="ic" data-icon="Pencil"></span>
+                <span class="db-grow">{{ editText }}</span>
+                <button class="btn v-outline db-btn-s {{ addCls }}" type="button" aria-haspopup="dialog" aria-expanded="{{ catOpen }}"><span class="ic" data-icon="Plus"></span>Add widget</button>
+                <button class="btn v-outline db-btn-s" type="button">Cancel</button>
+                <button class="btn v-default db-btn-s" type="button"><span class="ic" data-icon="Check"></span>Done</button>
+              </div>
+            </sc-if>
+            <div class="db-fill" role="tabpanel" aria-label="{{ tabName }}">
+              <dc-import name="shell-454-dashboard-variations-grid" scene="{{ scene }}" hint-size="100%,600px"></dc-import>
+            </div>
+            <sc-if value="{{ catOpen }}">
+              <div class="db-ov"></div>
+              <div class="db-sheet" role="dialog" aria-modal="true" aria-label="Add widget">
+                <div class="db-sh-h"><div class="db-grow"><h2 class="db-sh-t">Add widget</h2><p class="db-sh-d">To {{ tabName }}. In this release every widget shows demo data.</p></div><button class="btn icon v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+                <div class="db-sh-b"><dc-import name="shell-454-dashboard-variations-catalog" variant="sheet" hint-size="100%,560px"></dc-import></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ setOpen }}">
+              <div class="db-ov"></div>
+              <div class="db-sheet" role="dialog" aria-modal="true" aria-label="Widget settings, Production orders, Milling">
+                <div class="db-sh-h"><div class="db-grow"><h2 class="db-sh-t">Widget settings</h2><p class="db-sh-d">Production orders, Milling: a List on {{ tabName }}.</p></div><button class="btn icon v-ghost" type="button" aria-label="Close"><span class="ic" data-icon="X"></span></button></div>
+                <div class="db-sh-b"><dc-import name="shell-454-dashboard-variations-settings" variant="sheet" focus="title" hint-size="100%,620px"></dc-import></div>
+                <div class="db-sh-f"><button class="btn v-default" type="button">Apply</button><button class="btn v-outline" type="button">Cancel</button></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasAnn }}">
+              <div class="db-ann {{ annCls }}" aria-hidden="true"><span class="k">Polite region, debounced to about 300 ms</span><ol><sc-for list="{{ ann }}" as="a"><li>{{ a }}</li></sc-for></ol></div>
+            </sc-if>
+          </div>
+        </dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["1","2","3","4","5","6","7","8","9"],"default":"1","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.DB454 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.DB454) ready();
+        }
+        renderVals() {
+          // Option A: the tab row above the grid (D1 Tabs) and an Edit layout mode per tab. Changes made in edit mode
+          // are held until Done and saved as one command; Cancel discards them. The catalog and the settings open in
+          // a Sheet from the right. The settings Sheet's Apply puts its changes into the session; its Cancel drops only them.
+          const P = this.props || {};
+          const D = window.DB454;
+          const id = "A" + String(P.state || "1");
+          const base = { label: "Option A, frame " + id, scene: id, sh: { width: "1440", theme: "light", hint: "1440px,936px", user: "Alex Lund", username: "alex.lund", plant: "Plant A", actions: "none" }, tabs: [], ann: [] };
+          if (!D || !D.SCENES[id]) return base;
+          const S = D.SCENES[id];
+          const tab = D.TABS[S.tab];
+          const who = D.PEOPLE[S.who];
+          const L = D.TABLISTS[S.tabs];
+          const ICON = { company: "Building2", plant: "Factory", mine: "User" };
+          const SCOPE = { company: "Acme AB", plant: S.plant, mine: "yours" };
+          const tabs = [];
+          ["company", "plant", "mine"].forEach((g, gi) => L[g].forEach((t, i) => tabs.push({
+            name: D.TABS[t].name, icon: ICON[g], sep: gi > 0 && i === 0,
+            sel: t === S.tab ? "true" : "false", ti: t === S.tab ? "0" : "-1", cls: t === S.tab ? "on" : "",
+            aria: D.TABS[t].name + ", " + (g === "mine" ? "your tab" : "shared, " + SCOPE[g])
+          })));
+          const narrow = S.w === "320";
+          const editMode = S.mode === "edit";
+          const mine = tab.scope === "mine";
+          const scopeText = mine ? "Only you see this tab, at every plant you open." : S.edit ? "Everyone at " + S.plant + " sees this tab. You can change it." : "Everyone at " + S.plant + " sees this tab.";
+          const actions = editMode || !S.edit ? "none" : [{ label: "Edit layout", variant: "outline", icon: "LayoutGrid" }];
+          const ann = (D.ANN[id] || []);
+          return {
+            label: "Option A, frame " + id + ", " + tab.name + ", " + S.theme + ", " + S.w,
+            scene: id,
+            sh: {
+              width: S.w, theme: S.theme, hint: S.w === "320" ? "320px,676px" : S.w === "1280" ? "1280px,836px" : "1440px,936px",
+              user: who.user, username: who.username, plant: S.plant, actions: actions
+            },
+            wide: !narrow,
+            narrow: narrow,
+            narrowScope: narrow && !editMode,
+            tabs: tabs,
+            tabName: tab.name,
+            scopeIcon: ICON[tab.scope],
+            scopeText: scopeText,
+            newOpen: S.menu === "newTab",
+            newPop: S.edit && !mine ? "menu" : null,
+            newCls: S.menu === "newTab" ? "open" : "",
+            actOpen: S.menu === "tabActions",
+            actCls: S.menu === "tabActions" ? "open" : "",
+            editBar: editMode,
+            editText: narrow ? "Editing " + tab.name + "." : "Editing " + tab.name + ". Only you see this tab. Changes are saved when you select Done.",
+            catOpen: S.panel === "catalog",
+            addCls: S.panel === "catalog" ? "open" : "",
+            setOpen: S.panel === "settings" && !S.move,
+            hasAnn: ann.length > 0,
+            annCls: narrow ? "nar" : "",
+            ann: ann
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

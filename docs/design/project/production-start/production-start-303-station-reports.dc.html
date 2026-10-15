@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 last reports</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+      </helmet>
+      <div class="ps-part {{ rootCls }}" lang="{{ lang }}" style="{{ rootStyle }}">
+        <section class="ps-card ps-lr {{ lrCls }}" aria-labelledby="{{ ids.h }}" aria-busy="{{ busy }}">
+          <div class="ps-cardh"><h3 class="ps-h3 {{ f.heading }}" id="{{ ids.h }}" tabIndex="-1">{{ t.lastReports }}</h3><span class="ps-sm ps-mut">{{ sub }}</span></div>
+          <sc-if value="{{ hasRows }}">
+            <div class="ps-tbl" role="table" aria-labelledby="{{ ids.h }}">
+              <div class="ps-tr h" role="row"><span role="columnheader">{{ t.time }}</span><span role="columnheader">{{ t.operator }}</span><span class="r" role="columnheader">{{ t.good }}</span><span class="r" role="columnheader">{{ t.scrap }}</span><span role="columnheader">{{ t.reason }}</span><span role="columnheader"><span class="ps-vh">{{ t.action }}</span></span></div>
+              <sc-for list="{{ rows }}" as="r">
+                <div class="ps-tr {{ r.cls }}" role="row">
+                  <span role="cell"><span class="ps-day"><span class="ps-num">{{ r.t }}</span><sc-if value="{{ r.day }}"><span class="k">{{ r.day }}</span></sc-if></span></span>
+                  <span class="ps-who" role="cell"><span>{{ r.who }}</span><sc-if value="{{ r.sub }}"><span class="k">{{ r.sub }}</span></sc-if></span>
+                  <sc-if value="{{ r.ev }}"><span class="span" role="cell">{{ r.ev }}</span></sc-if>
+                  <sc-if value="{{ r.qty }}">
+                    <span class="ps-num r" role="cell">{{ r.good }}</span>
+                    <span class="ps-num r" role="cell">{{ r.scrap }}</span>
+                    <span role="cell">{{ r.reason }}</span>
+                  </sc-if>
+                  <span role="cell" class="ps-act">
+                    <sc-if value="{{ r.can }}"><button class="btn lg v-outline {{ r.fcls }}" type="button" aria-label="{{ r.aria }}">{{ t.correct }}</button></sc-if>
+                    <sc-if value="{{ r.sup }}"><span class="ps-na">{{ t.needsSupervisor }}</span></sc-if>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hasSup }}"><p class="ps-tnote">{{ t.supervisorNote }}</p></sc-if>
+          </sc-if>
+          <sc-if value="{{ loading }}">
+            <span class="ps-vh">{{ t.loadingReports }}</span>
+            <div class="ps-tbl" aria-hidden="true">
+              <sc-for list="{{ skel }}" as="s"><div class="ps-tr ps-sktr"><span class="sk" style="width:44px"></span><span class="sk" style="{{ s }}"></span><span class="sk" style="width:36px"></span><span class="sk" style="width:20px"></span><span class="sk" style="width:70%"></span><span></span></div></sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ empty }}"><p class="ps-mut">{{ emptyText }}</p></sc-if>
+        </section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1920x1080","tsType":"string"},"job":{"editor":"text","default":"5001.20","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","corrected"],"default":"populated","tsType":"string"},"after":{"editor":"enum","options":["none","sent","corrected"],"default":"none","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"solo":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"idp":{"editor":"text","default":"lr","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the frame's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PS ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PS) ready();
+        }
+        renderVals() {
+          const p = this.props || {};
+          const PS = window.PS;
+          const idp = String(p.idp || "lr");
+          const pick = (v, d, opts) => { const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim(); return opts.indexOf(s) < 0 ? d : s; };
+          const size = pick(p.size, "1920x1080", ["1920x1080", "1280x800", "800x1280"]);
+          const aside = size === "1920x1080";
+          // Rendered as the page root, the part draws the station's main area itself; mounted in a frame it inherits.
+          const solo = p.solo === "on" || (p.solo !== "off" && !!window.__dcRootName && window.__dcRootName() === "production-start-303-station-reports");
+          const colW = size === "1920x1080" ? 600 : size === "1280x800" ? 890 : 750;
+          const ids = { h: idp + "-h" };
+          const rootStyle = solo ? "width:" + (colW + 48) + "px" + (aside ? ";display:flex;flex-direction:column" : "") : aside ? "display:flex;flex-direction:column;flex:1 1 auto;min-width:0;min-height:0" : "";
+          const base = { rootCls: (solo ? "solo" : "") + (p.theme === "dark" ? " dark" : ""), rootStyle: rootStyle, lang: "en", ids: ids, t: {}, f: {}, rows: [], skel: [], lrCls: aside ? "fill" : "" };
+          if (!PS) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const L = strings === "long";
+          const T = PS.tr(strings);
+          const key = String(p.job || "5001.20").trim();
+          const j = PS.job(key);
+          const state = pick(p.state, "populated", ["populated", "loading", "corrected"]);
+          const focus = String(p.focus || "none").trim();
+          const N = (v) => PS.num(v, j.dec);
+          const reasonName = (i) => (i === undefined ? "" : L ? PS.REASONS[i].de : PS.REASONS[i].en);
+          // After the correction of 13:58 (state="corrected" or after="corrected") the correction row leads, after the report of
+          // 14:06 (after="sent") the new report leads; the list keeps five rows (rules 7.1, 19.17).
+          const afterK = state === "corrected" ? "corrected" : pick(p.after, "none", ["none", "sent", "corrected"]);
+          const list = PS.reportsAfter(j.num, afterK);
+          const EV = { start: T.started, pause: T.paused, finish: T.finished };
+          const rows = list.map((r) => {
+            const corr = r.kind === "correction";
+            const qty = r.kind === "report" || corr;
+            const old = !!r.day;
+            const can = r.kind === "report" && !old;
+            return {
+              t: r.t,
+              day: old ? (L ? r.dayDe : r.day) : "",
+              who: PS.person(r.who, strings),
+              sub: corr ? T.correctionOf(r.of) + ": " + (L ? r.noteDe : r.note) : "",
+              ev: EV[r.kind] || "",
+              qty: qty,
+              good: qty ? N(r.good) : "",
+              scrap: qty ? N(r.scrap) : "",
+              reason: qty ? reasonName(r.reason) : "",
+              can: can,
+              sup: r.kind === "report" && old,
+              aria: T.correctName(r.t),
+              fcls: focus === r.t ? "is-focus" : "",
+              cls: (EV[r.kind] ? "ev" : "") + (corr ? " corr" : "")
+            };
+          });
+          return Object.assign(base, {
+            lang: T.lang,
+            t: T,
+            f: { heading: focus === "heading" ? "is-focus" : "" },
+            sub: T.onJob(j.num),
+            busy: state === "loading" ? "true" : undefined,
+            hasRows: state !== "loading" && rows.length > 0,
+            rows: rows,
+            hasSup: rows.some((r) => r.sup),
+            loading: state === "loading",
+            skel: ["width:60%", "width:70%", "width:50%", "width:66%", "width:56%"],
+            empty: state !== "loading" && rows.length === 0,
+            emptyText: T.noReports(j.num)
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

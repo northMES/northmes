@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access management: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="frame ac-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">What is decided, how to compare, the fixed rules and the open questions</span></div>
+        <dc-import name="core-304-access-variations-header" hint-size="1440px,3929px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the criteria</span></div>
+        <dc-import name="core-304-access-variations-compare" hint-size="1440px,1304px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:4180px" data-screen-label="A1 By person, role editor, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A1</span>By person: role editor<span class="fth">Light, 1440. Karin Dahl edits Shift lead; Run autoplan ticked, not saved</span><span class="ac-url">/plant-a/core/roles/$roleId/edit</span></div>
+        <dc-import name="core-304-access-variations-a" state="editor" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:4180px" data-screen-label="A2 By person, adding a role, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A2</span>By person: adding a role<span class="fth">Light, 1440. Jonas Holm adds a role for Anna Berg; the picker locks roles he cannot give at Plant A</span><span class="ac-url">/plant-a/core/users/$userId/roles/new</span></div>
+        <dc-import name="core-304-access-variations-a" state="assign" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:4180px" data-screen-label="A3 By person, a user's access, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A3</span>By person: a user's access<span class="fth">Light, 1440. Jonas Holm reads Sara Nyberg's roles and what she can do at Plant A</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-a" state="access" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:5260px" data-screen-label="A notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A</span>By person<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="core-304-access-variations-notes" option="A" hint-size="1440px,788px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:5260px" data-screen-label="A4 By person, removing a role, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A4</span>By person: removing a role<span class="fth">Dark, 1440. ConfirmDialog with the permissions lost, the role that still applies and the reason</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-a" state="remove" theme="dark" hint-size="1440px,934px"></dc-import>
+      </div>
+      <div class="frame ac-w320" style="left:3120px;top:5260px" data-screen-label="A5 By person, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A5</span>320 by 640<span class="fth">A user's access as cards</span></div>
+        <dc-import name="core-304-access-variations-a" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:6364px" data-screen-label="B1 By plant, roles by permissions, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B1</span>By plant: roles by permissions<span class="fth">Light, 1440. Karin Dahl ticks Run autoplan for Shift lead; the matrix scrolls sideways</span><span class="ac-url">/plant-a/core/roles</span></div>
+        <dc-import name="core-304-access-variations-b" state="roles" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:6364px" data-screen-label="B2 By plant, people by roles, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B2</span>By plant: people by roles<span class="fth">Light, 1440. Jonas Holm ticks Shift lead for Anna Berg and is refused on Save</span><span class="ac-url">/plant-a/core/users</span></div>
+        <dc-import name="core-304-access-variations-b" state="people" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:6364px" data-screen-label="B3 By plant, a user's access, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B3</span>By plant: a user's access<span class="fth">Light, 1440. Sara Nyberg's roles against every permission, with At Plant A</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-b" state="access" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:7444px" data-screen-label="B notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>By plant<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="core-304-access-variations-notes" option="B" hint-size="1440px,681px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:7444px" data-screen-label="B4 By plant, a role edit refused, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B4</span>By plant: a role edit refused<span class="fth">Dark, 1440. Oskar Wik (IT at Acme AB) adds Break another planner's lock to Shift lead</span><span class="ac-url">/plant-a/core/roles</span></div>
+        <dc-import name="core-304-access-variations-b" state="roles-refused" theme="dark" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w320" style="left:3120px;top:7444px" data-screen-label="B5 By plant, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B5</span>320 by 640<span class="fth">The matrix in its own scroll region</span></div>
+        <dc-import name="core-304-access-variations-b" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:8548px" data-screen-label="C1 By role, new role from a default role, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C1</span>By role: new role from a default role<span class="fth">Light, 1440. Karin Dahl starts Night planner from Planner</span><span class="ac-url">/plant-a/core/roles/new?from=$roleId</span></div>
+        <dc-import name="core-304-access-variations-c" state="new" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:8548px" data-screen-label="C2 By role, holders, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C2</span>By role: holders<span class="fth">Light, 1440. Who holds Shift lead at Acme AB and at Plant A</span><span class="ac-url">/plant-a/core/roles/$roleId?tab=holders</span></div>
+        <dc-import name="core-304-access-variations-c" state="holders" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:8548px" data-screen-label="C3 By role, a user's access as a check, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C3</span>By role: a user's access as a check<span class="fth">Light, 1440. Can Sara Nyberg break another planner's lock at Plant A?</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-c" state="check" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:9628px" data-screen-label="C notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C</span>By role<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="core-304-access-variations-notes" option="C" hint-size="1440px,681px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:9628px" data-screen-label="C4 By role, assigning, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C4</span>By role: assigning, checked on choice<span class="fth">Dark, 1440. Jonas Holm assigns Shift lead to Anna Berg at Plant A</span><span class="ac-url">/plant-a/core/roles/$roleId/holders/new</span></div>
+        <dc-import name="core-304-access-variations-c" state="assign" theme="dark" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w320" style="left:3120px;top:9628px" data-screen-label="C5 By role, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C5</span>320 by 640<span class="fth">The check, scrolled to its answer</span></div>
+        <dc-import name="core-304-access-variations-c" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:10732px" data-screen-label="N1A No-access states, option A, page opened by URL without the permission, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N1A</span>Page opened by URL without the permission, option A<span class="fth">Light, 1440. Alex Lund. The route keeps its title and h1 Roles; the EmptyState names core.role:read</span><span class="ac-url">/plant-a/core/roles</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="url-a" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:10732px" data-screen-label="N1B No-access states, option B, page opened by URL without the permission, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N1B</span>Page opened by URL without the permission, option B<span class="fth">Light, 1440. Alex Lund. Title and h1 No access to Roles</span><span class="ac-url">/plant-a/core/roles</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="url-b" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:10732px" data-screen-label="N1C No-access states, option C, page opened by URL without the permission, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N1C</span>Page opened by URL without the permission, option C<span class="fth">Light, 1440. Alex Lund. As A, plus the roles at Acme AB that include the permission</span><span class="ac-url">/plant-a/core/roles</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="url-c" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:11812px" data-screen-label="N2A No-access states, option A, FORBIDDEN region, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N2A</span>FORBIDDEN region, option A<span class="fth">Light, 1440. Jonas Holm on Sara Nyberg. Access changes keeps its heading; an EmptyState names core.audit:read</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="region-a" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:11812px" data-screen-label="N2B No-access states, option B, FORBIDDEN region, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N2B</span>FORBIDDEN region, option B<span class="fth">Light, 1440. Alex Lund on Production orders. Customer cells read No access; the header tooltip names the permission</span><span class="ac-url">/plant-a/planning/orders</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="region-b" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:11812px" data-screen-label="N2C No-access states, option C, FORBIDDEN region, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N2C</span>FORBIDDEN region, option C<span class="fth">Light, 1440. Jonas Holm on Sara Nyberg. Access changes shrinks to one line</span><span class="ac-url">/plant-a/core/users/$userId?tab=access</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="region-c" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:12892px" data-screen-label="N3A No-access states, option A, plant without a role, ST29 not redrawn">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N3A</span>Plant without a role, option A<span class="fth">ST29 as approved, not redrawn</span><span class="ac-url">/plant-c/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="plant-a" hint-size="1440px,300px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:12892px" data-screen-label="N3B No-access states, option B, plant without a role, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N3B</span>Plant without a role, option B<span class="fth">Light, 1440. Alex Lund. A 403 page apart from Page not found; no sidebar</span><span class="ac-url">/plant-c/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="plant-b" hint-size="1440px,934px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:12892px" data-screen-label="N3C No-access states, option C, plant without a role, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N3C</span>Plant without a role, option C<span class="fth">Light, 1440. Alex Lund. ST29 with one more line</span><span class="ac-url">/plant-c/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="plant-c" hint-size="1440px,934px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:80px;top:13972px" data-screen-label="N4A No-access states, option A, access lost after close code 4403, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N4A</span>Access lost after close code 4403, option A<span class="fth">Light, 1440. Alex Lund after Planner at Plant B was removed. Error banner; the board stays, read only</span><span class="ac-url">/plant-b/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="lost-a" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:1600px;top:13972px" data-screen-label="N4B No-access states, option B, access lost after close code 4403, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N4B</span>Access lost after close code 4403, option B<span class="fth">Light, 1440. Alex Lund. A page at the same path, the plants left</span><span class="ac-url">/plant-b/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="lost-b" hint-size="1440px,934px"></dc-import>
+      </div>
+      <div class="frame ac-w1440" style="left:3120px;top:13972px" data-screen-label="N4C No-access states, option C, access lost after close code 4403, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">N4C</span>Access lost after close code 4403, option C<span class="fth">Light, 1440. Alex Lund. An alertdialog over the inert board, focus on Go to Plant A</span><span class="ac-url">/plant-b/planning/board</span></div>
+        <dc-import name="core-304-access-variations-noaccess" state="lost-c" hint-size="1440px,934px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html (flag __nmIconFill2), so the header, notes and
+          // comparison frames get their icons even before a shell mounts.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

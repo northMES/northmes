@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070, 0075 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-14 the index holds 80 ADRs: 48 accepted and 32 proposed, 77 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
+On 2026-10-15 the index holds 81 ADRs: 48 accepted and 33 proposed, 78 for release 1 and 3 for a later release. 26 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064 and 0069.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -175,6 +175,7 @@ On 2026-10-14 the index holds 80 ADRs: 48 accepted and 32 proposed, 77 for relea
 | 0076 | [Secure development lifecycle with a security note per change, a controls index and an internal audit each release](0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) | proposed | 1 | |
 | 0077 | [Visual regression snapshots with Argos from the Playwright specs](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) | proposed | 1 | maintainer (the Argos plan and its cost; when the Argos check becomes required; which screenshots leave the repository for Argos) |
 | 0078 | [Dashboard tabs in core, with a user's own tabs guarded by the user id in row-level security](0078-dashboard-tabs-in-core-with-a-users-own-tabs-guarded-by-the-user-id-in-row-level-security.md) | proposed | 1 | maintainer (northmes.user_id as a third transaction setting; a user's own tabs at the company node, so they follow the user across the plants of one company; reading the dashboard with no permission beyond opening the plant; core.dashboardTab:manage for shared tabs outside companyPermissions; the layout as one jsonb column per tab) |
+| 0079 | [Design pages as artifacts on the NorthMES design system, with the approved source in the repository](0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | 1 | maintainer (the artifact version as the approval record; the approved page source in docs/design/project; no etag checks for pages approved in standalone Claude Design) |
 | 0080 | [Upgrade paths with upgrade stops, a rehearsal on a restored copy and an upgrade matrix in CI](0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md) | proposed | 1 | maintainer (the support window of the last 3 minors in 0.x; northmes_meta.release; upgrades by NORTHMES_VERSION in .env and docker compose pull, down and up -d, with upgrade.sh, the rehearsal and rollback.sh later; migrate refusing while another version runs; the restore point before the first file; the customer file applied by migrate on every start; seeded snapshots as release assets; stopping instead of warning on an incompatible plugin; web upgrade requests waiting for a trigger; one Updates page with the Plugins page as a tab; notices to users from the host and from company admins; the schema drift check; three ways to host and how each upgrades; the web build as a release asset; the order backend first, then web; plugins from a site image on a platform; a release candidate of each minor from a release branch at least 14 days before the final; the SDK candidate as a release asset until npm publishing) |
 | 0081 | [Safer upgrades with contract steps a release later, a computed rollback class and a resumable, audited upgrade](0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md) | proposed | 1 | maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; backfills as background jobs after start; the migration time budget; resuming by running docker compose up -d again; the read-only smoke check in CI, with the watch period and the restore-class deadline in a script later; the 503 with Retry-After during the stop; a late window of at least 24 hours; the gateway requirements in the install guide; polling adapters outside app) |
 

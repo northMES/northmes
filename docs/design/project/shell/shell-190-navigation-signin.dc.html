@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 sign-in page frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+          /* Sign-in page frames for D2 (issue northMES/northmes#190). The page renders outside the planner shell:
+             nobody is signed in, so there is no sidebar, plant or menu. Screen, skip link, mark and top bar reuse the
+             sh- classes of shell-190-navigation.css; the classes below start with si-. Every UI color is a D1 token. */
+          .si-part{display:grid;grid-template-columns:1440px 1440px 320px;gap:80px;align-items:start;justify-items:start;width:max-content}
+          .si-part.one{display:block;width:max-content}
+          .si-frame{display:flex;flex-direction:column;align-items:flex-start}
+          .si-frame.w1440{width:1440px}
+          .si-frame.w320{width:320px}
+          .si-frame.notes{grid-column:1 / span 2;width:1440px}
+          .si-lbl{flex-wrap:wrap;max-width:100%}
+          .si-tb{flex:none}
+          .si-main{display:flex;flex-direction:column;align-items:center;flex:1;min-height:0;padding:96px 24px 24px;overflow:hidden;background:var(--background)}
+          .si-main.n{align-items:stretch;padding:24px 16px}
+          .si-card{display:grid;gap:20px;width:416px;padding:32px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground)}
+          .si-card.n{width:auto;padding:0;border:0;background:transparent}
+          .si-h1{justify-self:start;margin:0;padding:0 2px;border-radius:var(--radius-sm);font-size:28px;line-height:34px;font-weight:600;letter-spacing:-0.01em}
+          .si-h1.n{font-size:24px;line-height:30px}
+          .si-intro{margin:0}
+          .si-sum{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--destructive);border-radius:var(--radius);background:var(--destructive-subtle);color:var(--foreground)}
+          .si-sum.ok{border-color:var(--success);background:var(--success-subtle)}
+          .si-sum-t{display:flex;align-items:flex-start;gap:8px;margin:0;font-size:14px;line-height:20px;font-weight:600;color:var(--destructive)}
+          .si-sum-t.ok{color:var(--success)}
+          .si-sum-t .ic{margin-top:2px}
+          .si-sum-b{margin:0;padding-left:24px}
+          .si-sum-l{display:grid;gap:4px;margin:0;padding:0 0 0 24px;list-style:none}
+          .si-sum .si-sum-a{display:inline-flex;align-items:center;min-height:var(--nm-target-min);color:var(--destructive);text-decoration:underline;text-underline-offset:3px}
+          .si-sum .si-sum-a:hover{color:var(--foreground)}
+          .si-form{display:grid;gap:16px;margin:0}
+          .si-pw{padding-right:6px}
+          .si-dots{min-width:0;letter-spacing:0.12em;overflow:hidden}
+          .si-eye{display:grid;place-items:center;flex:none;width:28px;height:28px;margin-left:auto;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted-foreground);cursor:pointer}
+          .si-eye:hover{background:var(--accent);color:var(--accent-foreground)}
+          .si-submit{width:100%;margin-top:4px}
+          .si-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+          .si-who{display:grid;gap:4px}
+          .si-who-v{font-weight:600}
+          .si-help{margin:0;color:var(--muted-foreground)}
+          .si-notes{width:1440px}
+          .si-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 48px;margin-top:32px}
+          .si-sec{display:grid;align-content:start;gap:8px}
+          .si-sec p{margin:0}
+          .si-code{font:400 12px/16px var(--font-mono);white-space:nowrap}
+          .si-codew{font:400 12px/16px var(--font-mono);overflow-wrap:anywhere}
+          .si-tr{grid-template-columns:150px minmax(0,1fr) minmax(0,1.4fr)}
+        </style>
+      </helmet>
+      <div class="si-part {{ partCls }}">
+        <sc-for list="{{ frames }}" as="f">
+          <div class="si-frame {{ f.wrapCls }}" data-screen-label="{{ f.screenLabel }}">
+            <sc-if value="{{ showLabels }}">
+              <div class="flabel si-lbl"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span><sc-if value="{{ f.wide }}"><span class="ftitle">{{ f.docTitle }}</span></sc-if></div>
+            </sc-if>
+            <div class="sh-scr {{ f.scrCls }}" lang="en">
+              <a class="btn v-default sh-skip" href="#{{ f.mainId }}">Skip to main content</a>
+              <div class="sh-col">
+                <header class="sh-tb si-tb">
+                  <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                </header>
+                <main class="si-main {{ f.n }}" id="{{ f.mainId }}" tabIndex="-1">
+                  <div class="si-card {{ f.n }}">
+                    <h1 class="si-h1 {{ f.h1Cls }}" tabIndex="-1">{{ f.h1 }}</h1>
+                    <sc-if value="{{ f.isNewpw }}">
+                      <p class="si-intro">You signed in with a temporary password. Choose a new password to continue.</p>
+                    </sc-if>
+                    <sc-if value="{{ f.hasSum }}">
+                      <div class="si-sum {{ f.sumCls }}" tabIndex="{{ f.sumTab }}" role="{{ f.sumRole }}" aria-labelledby="{{ f.sumLab }}">
+                        <h2 class="si-sum-t {{ f.sumKind }}" id="{{ f.sumTid }}"><span class="ic" data-icon="{{ f.sumIcon }}"></span><span><sc-for list="{{ f.sumTitle }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></span></h2>
+                        <sc-if value="{{ f.hasSumBody }}">
+                          <p class="si-sum-b"><sc-for list="{{ f.sumBody }}" as="p"><sc-if value="{{ p.num }}"><span class="num">{{ p.text }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.text }}</sc-if></sc-for></p>
+                        </sc-if>
+                        <sc-if value="{{ f.hasSumLinks }}">
+                          <ul class="si-sum-l">
+                            <sc-for list="{{ f.sumLinks }}" as="l">
+                              <li><a class="si-sum-a" href="#">{{ l.text }}</a></li>
+                            </sc-for>
+                          </ul>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.isSignin }}">
+                      <form class="si-form" onSubmit="{{ stop }}">
+                        <div class="fld">
+                          <span class="lbl">Username or email</span>
+                          <span class="inp {{ f.userCls }}"><span>{{ f.userVal }}</span></span>
+                          <sc-if value="{{ f.userErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span><span>Enter your username or email.</span></span></sc-if>
+                        </div>
+                        <div class="fld">
+                          <span class="lbl">Password</span>
+                          <span class="inp si-pw {{ f.passCls }}"><span class="si-dots">{{ f.passVal }}</span><button class="si-eye" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button></span>
+                          <sc-if value="{{ f.passErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span><span>{{ f.passErrText }}</span></span></sc-if>
+                        </div>
+                        <button class="btn v-default si-submit" type="button">Sign in</button>
+                      </form>
+                      <p class="si-help">Forgot your password? Ask a plant admin to reset it.</p>
+                    </sc-if>
+                    <sc-if value="{{ f.isNewpw }}">
+                      <form class="si-form" onSubmit="{{ stop }}">
+                        <div class="si-who"><span class="lbl">Username</span><span class="si-who-v">alex.lund</span></div>
+                        <div class="fld">
+                          <span class="lbl">New password</span>
+                          <span class="inp si-pw is-focus"><span class="si-dots">{{ f.newVal }}</span><button class="si-eye" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button></span>
+                          <span class="desc">Use at least <span class="num">8</span> characters.</span>
+                        </div>
+                        <div class="si-btns">
+                          <button class="btn v-default" type="button">Save and continue</button>
+                          <button class="btn v-ghost" type="button">Sign out</button>
+                        </div>
+                      </form>
+                    </sc-if>
+                  </div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ showNotes }}">
+          <div class="si-frame notes" data-screen-label="SI22 Sign-in build notes, light, 1440">
+            <sc-if value="{{ showLabels }}">
+              <div class="flabel si-lbl"><span class="fid">SI22</span>Sign-in build notes<span class="fth">Not part of the UI</span></div>
+            </sc-if>
+            <div class="sheet si-notes">
+              <p class="kick">Build notes, not part of the UI</p>
+              <h2 class="t1">Sign-in page</h2>
+              <p class="lede">The sign-in page is a shell route outside the plant routes. Nobody is signed in yet, so it renders without the planner shell: no sidebar, no plant switcher and no menus. Frames SI1 to SI21 draw seven states at 1440 by 900 in light and dark and at 320 by 640. Operators at a station sign in through the station screens of D4, not here.</p>
+              <div class="si-cols">
+                <div class="si-sec">
+                  <h3 class="t2">Route, title and landmarks</h3>
+                  <ul class="ul">
+                    <li>Path, proposed: <span class="si-code">/sign-in</span>. Its first segment joins the reserved plant slugs (spec question 2, ADR 0064). Setting a new password is a second step of the same route.</li>
+                    <li>Titles, proposed (spec question 10): "Sign in · NorthMES" and "Set a new password · NorthMES".</li>
+                    <li>Skip to main content is the first focus stop and moves focus into main (2.4.1). The header holds only the product mark. Main holds the card with one h1 (tabIndex -1).</li>
+                    <li>The theme is the browser's stored choice from the user menu, applied before the first render. The page has no theme control.</li>
+                    <li>At 320 the card drops its border and padding, and nothing scrolls sideways (1.4.10). Text containers grow with 200 percent text and with text spacing.</li>
+                    <li>Page title at 320: 1.5rem / 1.875rem (24 / 30), proposed for D1 Q18; 1440 uses the D1 Page title role, 28 / 34.</li>
+                  </ul>
+                </div>
+                <div class="si-sec">
+                  <h3 class="t2">Components and tokens</h3>
+                  <ul class="ul">
+                    <li>Card for the form surface. Field and Label, Input. Button default for Sign in and Save and continue, Button ghost for Sign out.</li>
+                    <li>Button size icon (IconButton, label "Show password") inside the password input for the toggle, 28 px, above the 24 px minimum (2.5.8).</li>
+                    <li>Alert, variant destructive, as the error summary (ErrorSummary in @northmes/ui, proposed; D1 question 13). Alert in the success tone for "You are signed out", without a live role: the polite region says it once.</li>
+                    <li>Tokens: <span class="si-code">--card</span>, <span class="si-code">--border</span>, <span class="si-code">--input</span>; <span class="si-code">--destructive</span> on <span class="si-code">--destructive-subtle</span> for the summary (5.68:1 light, 5.92:1 dark); <span class="si-code">--success</span> on <span class="si-code">--success-subtle</span> for the status; <span class="si-code">--muted-foreground</span> for help text; the two-tone focus ring. Pairs to add to the contrast test: <span class="si-code">--foreground</span> on <span class="si-code">--destructive-subtle</span> and on <span class="si-code">--success-subtle</span>.</li>
+                    <li>Icons: CircleAlert (summary, field error), Eye and EyeOff (toggle), CircleCheck (signed out; proposed, not in the D1 icon list).</li>
+                  </ul>
+                </div>
+                <div class="si-sec">
+                  <h3 class="t2">Fields and autocomplete (1.3.5)</h3>
+                  <div class="gt">
+                    <div class="gr si-tr gh"><span>Field</span><span>Element</span><span>Attributes</span></div>
+                    <div class="gr si-tr"><span>Username or email</span><span class="si-codew">input type="text" name="username"</span><span class="si-codew">autocomplete="username" autocapitalize="none" spellcheck="false"</span></div>
+                    <div class="gr si-tr"><span>Password</span><span class="si-codew">input type="password" name="password"</span><span class="si-codew">autocomplete="current-password"</span></div>
+                    <div class="gr si-tr"><span>New password</span><span class="si-codew">input type="password" name="new-password"</span><span class="si-codew">autocomplete="new-password"</span></div>
+                    <div class="gr si-tr"><span>Username, new password step</span><span class="si-codew">input type="text" name="username" readOnly</span><span><span class="si-codew">autocomplete="username"</span> with the account's username, visually hidden and out of the tab order, so a password manager saves the new password for the right account. The visible text shows the same value.</span></div>
+                  </div>
+                </div>
+                <div class="si-sec">
+                  <h3 class="t2">Accessible authentication (3.3.8)</h3>
+                  <ul class="ul">
+                    <li>No step has a cognitive function test: no CAPTCHA, no puzzle, no characters to transcribe and no security question.</li>
+                    <li>A password manager can fill every field: a real form element with a submit button, the autocomplete values in the table, labels tied to their inputs and never <span class="si-code">autocomplete="off"</span>.</li>
+                    <li>Paste works in every field: no paste, copy or drop handlers, and no maxlength below 128, Better Auth's maximum password length.</li>
+                    <li>Show password: aria-pressed with a fixed label. Pressed, the input becomes type text and the icon EyeOff; focus stays on the toggle; the input is masked again after submit.</li>
+                    <li>A forgotten password goes to a plant admin (E05-S08), never through a test.</li>
+                  </ul>
+                </div>
+                <div class="si-sec">
+                  <h3 class="t2">Errors, focus and announcements</h3>
+                  <ul class="ul">
+                    <li>Field errors (SI4 to SI6): text under the field with CircleAlert, aria-invalid, aria-describedby to the error text. The summary lists the same messages as links to the fields (3.3.1, 3.3.3).</li>
+                    <li>On a submit with errors or a refusal from the server, focus moves to the summary: a group named by its h2 title, tabIndex -1. The focus move makes a screen reader read it, so it carries no alert role.</li>
+                    <li>Wrong password (SI7 to SI9): the username keeps its value (3.3.7) and the password clears. The password input gets aria-invalid="true" and aria-describedby pointing at its error text, "Enter your password again. Passwords are case-sensitive.", until the user types. The summary link moves focus to the password field. An unknown user gets the same message.</li>
+                    <li>Rate limited (SI10 to SI12): Better Auth's rate limiter (storage in the database; by default 3 sign-in requests in 10 seconds) answers 429 with an X-Retry-After header in seconds, which the message fills in. Sign in stays enabled; pressing it early shows the message again.</li>
+                    <li>Blocked (SI13 to SI15): an account an admin banned (E05-S08). The message shows only after the right password, so it tells nothing to someone who does not know the password.</li>
+                    <li>New password (SI16 to SI18): after a sign-in with a temporary password every other request fails until the new password is saved. Sign out leaves without saving.</li>
+                    <li>Signed out (SI19 to SI21): the route changes, focus goes to the h1 (2.4.3) and the polite region says "You are signed out." once (4.1.3). The box shows the same text and has no live role, so it is not read twice. The fields stay empty.</li>
+                    <li>Sign-in, failed sign-in and sign-out write security events (E05-S05). Enter in a field submits the form.</li>
+                  </ul>
+                </div>
+                <div class="si-sec">
+                  <h3 class="t2">Keyboard order and criteria</h3>
+                  <ul class="ul">
+                    <li>Sign in: Skip to main content, the summary links when shown, Username or email, Password, Show password, Sign in.</li>
+                    <li>New password: Skip to main content, New password, Show password, Save and continue, Sign out.</li>
+                    <li>WCAG 2.2: 1.3.1, 1.3.5, 1.4.10, 2.4.1, 2.4.3, 2.4.6, 2.4.7, 2.4.11, 2.5.8 (the summary links are 24 px high), 3.3.1, 3.3.2, 3.3.3, 3.3.7, 3.3.8, 4.1.2, 4.1.3.</li>
+                  </ul>
+                  <h3 class="t2" style="margin-top:16px">Questions</h3>
+                  <ul class="ul">
+                    <li>Q17: where does the user land after sign-in and after a new password: the original URL after a 4401 close, or the plant root (spec questions 3 and 17)?</li>
+                    <li>S1: the new password step asks for no current password, because the user just typed the temporary one (3.3.7). Better Auth's changePassword takes the current password, so E05-S08 needs a server step that keeps it.</li>
+                    <li>S2: "Use at least 8 characters" is Better Auth's default minimum length. The password policy setting of the regulated profile (plan 15) can change it.</li>
+                    <li>S3: word for a banned account: "blocked", proposed, and the same word on the user list (E05-S08). "Locked" is left out because it names soft locks on the board.</li>
+                    <li>S4: copy for a 4401 close, not drawn: "Your session ended. Sign in again to continue." in the status box, info tone.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"text","default":"all","tsType":"string"},"labels":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (block from Shell.dc.html).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const only = pick(P.frame, "all");
+          const showLabels = pick(P.labels, "on") !== "off";
+          const dots = (n) => "•".repeat(n);
+          const T = (text) => ({ text: text, txt: true, num: false });
+          const N = (text) => ({ text: text, txt: false, num: true });
+
+          // Seven states. "alex.lund" is an invented username for the planner Alex Lund (P06).
+          // The wait in the rate limit message comes from X-Retry-After on the 429 response; 10 s is Better Auth's default sign-in window.
+          const states = [
+            { name: "Default", short: "Default", what: "empty form, nothing focused" },
+            { name: "Field errors", short: "Field errors", what: "Sign in pressed with both fields empty, focus on the error summary", userErr: true, passErr: "Enter your password.", focus: "sum",
+              sum: { kind: "err", title: [T("Fix "), N("2"), T(" fields to sign in")], links: ["Enter your username or email", "Enter your password"] } },
+            { name: "Wrong password", short: "Wrong password", what: "username kept, password cleared and marked invalid, focus on the error summary", user: "alex.lund", focus: "sum", passErr: "Enter your password again. Passwords are case-sensitive.",
+              sum: { kind: "err", title: [T("The username or password is wrong")], body: [T("Passwords are case-sensitive.")], links: ["Enter your password again"] } },
+            { name: "Rate limited", short: "Rate limited", what: "too many attempts, username kept, focus on the error summary", user: "alex.lund", focus: "sum",
+              sum: { kind: "err", title: [T("Too many sign-in attempts")], body: [T("Wait "), N("10"), T(" seconds, then sign in again.")] } },
+            { name: "Account blocked", short: "Blocked", what: "right password for a banned account, focus on the error summary", user: "alex.lund", focus: "sum",
+              sum: { kind: "err", title: [T("This account is blocked")], body: [T("Ask a plant admin if you still need access.")] } },
+            { name: "New password", short: "New password", what: "after a sign-in with a temporary password, new password typed, focus in the field", newpw: true },
+            { name: "Signed out", short: "Signed out", what: "after Sign out, status shown, focus on the h1", focus: "h1",
+              sum: { kind: "ok", title: [T("You are signed out")] } }
+          ];
+          const variants = [
+            { theme: "light", w: 1440, h: 900 },
+            { theme: "dark", w: 1440, h: 900 },
+            { theme: "light", w: 320, h: 640 }
+          ];
+
+          const frames = [];
+          let n = 0;
+          states.forEach((s) => {
+            variants.forEach((v) => {
+              n += 1;
+              const id = "SI" + n;
+              const narrow = v.w === 320;
+              const theme = v.theme === "dark" ? "Dark" : "Light";
+              const sum = s.sum || null;
+              const docTitle = s.newpw ? "Set a new password · NorthMES" : "Sign in · NorthMES";
+              const user = s.user || "";
+              frames.push({
+                id: id,
+                name: narrow ? s.short : s.name,
+                th: narrow ? theme + ", 320 by 640" : theme + ", 1440 by 900, " + s.what,
+                docTitle: docTitle,
+                wide: !narrow,
+                screenLabel: id + " Sign-in " + s.name.toLowerCase() + ", " + v.theme + ", " + v.w,
+                wrapCls: "w" + v.w,
+                scrCls: "w" + v.w + (v.theme === "dark" ? " dark" : ""),
+                n: narrow ? "n" : "",
+                mainId: "si-main-" + n,
+                h1: s.newpw ? "Set a new password" : "Sign in to NorthMES",
+                h1Cls: (narrow ? "n" : "") + (s.focus === "h1" ? " is-focus" : ""),
+                isSignin: !s.newpw,
+                isNewpw: !!s.newpw,
+                hasSum: !!sum,
+                sumCls: sum ? (sum.kind === "ok" ? "ok" : "") + (s.focus === "sum" ? " is-focus" : "") : "",
+                sumKind: sum && sum.kind === "ok" ? "ok" : "",
+                // The error summary is a group named by its title and takes focus. The signed-out box has no role:
+                // the polite region says "You are signed out." once.
+                sumRole: sum && sum.kind === "ok" ? null : "group",
+                sumLab: sum && sum.kind === "ok" ? null : "si-sum-" + n,
+                sumTab: sum && sum.kind === "ok" ? null : "-1",
+                sumTid: "si-sum-" + n,
+                sumIcon: sum && sum.kind === "ok" ? "CircleCheck" : "CircleAlert",
+                sumTitle: sum ? sum.title : [],
+                hasSumBody: !!(sum && sum.body),
+                sumBody: (sum && sum.body) || [],
+                hasSumLinks: !!(sum && sum.links),
+                sumLinks: ((sum && sum.links) || []).map((t) => ({ text: t })),
+                userVal: user,
+                userCls: s.userErr ? "is-err" : "",
+                userErr: !!s.userErr,
+                passVal: "",
+                passCls: s.passErr ? "is-err" : "",
+                passErr: !!s.passErr,
+                passErrText: s.passErr || "",
+                newVal: dots(14)
+              });
+            });
+          });
+
+          const pickFrames = only === "all" ? frames : frames.filter((f) => f.id === only);
+          const showNotes = only === "all" || only === "SI22";
+          return {
+            frames: pickFrames,
+            showNotes: showNotes,
+            showLabels: showLabels,
+            partCls: only === "all" ? "" : "one",
+            stop: (e) => { if (e && e.preventDefault) e.preventDefault(); }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
