@@ -77,6 +77,8 @@ beforeAll(async () => {
     NORTHMES_DB_APP_PASSWORD_FILE: writeSecret('db_app_password', passwords.app),
     NORTHMES_DB_AUTH_PASSWORD_FILE: writeSecret('db_auth_password', passwords.auth),
   };
+  // The first run creates the roles, which is the run whose statements carry the passwords.
+  await northmes(['db', 'bootstrap']);
 }, 120_000);
 
 afterAll(async () => {
@@ -86,7 +88,6 @@ afterAll(async () => {
 
 describe('an external Postgres with an admin that is not a superuser (ADR 0080)', () => {
   it('ADR0080 db bootstrap as NORTHMES_DB_ADMIN_USER creates the roles, a second run changes nothing, and migrate runs as nm_owner', async () => {
-    await northmes(['db', 'bootstrap']);
     await northmes(['db', 'bootstrap']);
     const migrated = await northmes(['migrate']);
 
