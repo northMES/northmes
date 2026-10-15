@@ -1,0 +1,14 @@
+# Runs NorthMES against a Postgres server of your own instead of the db service (ADR 0080).
+# Select it in .env with COMPOSE_FILE=compose.yaml:compose.external-db.yaml, and set
+# NORTHMES_DATABASE_URL and NORTHMES_DB_ADMIN_USER there. README.md has the steps.
+
+services:
+  # db starts only with the bundled-db profile, which nothing selects, so it never starts.
+  db:
+    profiles: [bundled-db]
+
+  bootstrap:
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false

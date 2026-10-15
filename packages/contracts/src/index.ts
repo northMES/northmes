@@ -8,6 +8,7 @@ export {
   timestamp,
   version,
 } from './define-command-contract.ts';
+export { defineEventContract, type EventContract } from './define-event-contract.ts';
 export {
   defineListDeclaration,
   defineListQueryContract,

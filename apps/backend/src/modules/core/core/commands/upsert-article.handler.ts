@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { HttpStatus, NotFoundException } from '@nestjs/common';
 import type { Translation } from '@northmes/contracts';
-import { upsertArticle } from '@northmes/core-contracts';
+import { articleUpdated, upsertArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import { DomainError } from '@northmes/sdk/errors';
 import { type Selectable, sql, type Updateable } from 'kysely';
@@ -85,7 +85,8 @@ async function lockAt(
  * core.article:update at the article's edit scope, its source stays as it is, and other plants need
  * core.article:assign at the company, both checked with context.require; the change is one update
  * at the input's expectedVersion or the version found, and an input without plants keeps the
- * article's plants. An unchanged article writes nothing and keeps its version.
+ * article's plants, and it writes core.article.updated. An unchanged article writes nothing and
+ * keeps its version.
  */
 export const upsertArticleHandler = {
   scope: createArticleHandler.scope,
@@ -146,7 +147,15 @@ export const upsertArticleHandler = {
       await tx.updateTable('core.article').set(changes).where('id', '=', found.id).execute();
       if (plan && reassigns) await writePlants(tx, found.id, plan);
     }
-    return selectArticles(tx).where('id', '=', found.id).executeTakeFirstOrThrow();
+    const article = await selectArticles(tx).where('id', '=', found.id).executeTakeFirstOrThrow();
+    if (Object.keys(changes).length > 0) {
+      await context.publish(
+        articleUpdated,
+        { id: found.id, version: article.version, scopeId: found.edit_scope_id },
+        { code: article.code, name: article.name },
+      );
+    }
+    return article;
   },
 };
 

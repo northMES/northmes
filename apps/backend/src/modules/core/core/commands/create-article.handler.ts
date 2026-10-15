@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { NotFoundException } from '@nestjs/common';
 import { DEFAULT_STOCK_UNIT } from '@northmes/contracts';
-import { createArticle } from '@northmes/core-contracts';
+import { articleCreated, createArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import { noteCreated } from '@northmes/sdk/operations';
 import type { z } from 'zod';
@@ -55,8 +55,8 @@ function isDefault(plan: PlantsPlan, plantId: string | undefined): boolean {
  * (ADR 0073). Plants other than that default also need core.article:assign at the company. It
  * writes the article at its company's node under the client's id with its plants, in pieces
  * unless the input names a stock unit and from NorthMES unless an upsert names its source, notes
- * that it created a row, and returns it with version 1, or returns the article a first run with
- * that id created.
+ * that it created a row, writes core.article.created, and returns it with version 1, or returns
+ * the article a first run with that id created.
  */
 export const createArticleHandler = {
   async scope(input: CreateArticleInput, context: Pick<CoreContext, 'tx' | 'plantId'>) {
@@ -98,15 +98,20 @@ export const createArticleHandler = {
       .onConflict((conflict) => conflict.column('id').doNothing())
       .returning('id')
       .executeTakeFirst();
-    if (created) {
-      await writePlants(tx, input.id, plan);
-      noteCreated();
-    }
+    if (created) await writePlants(tx, input.id, plan);
     // A retry after a timeout or a restart finds the article the first run created (ADR 0012).
     const article = await selectArticles(tx).where('id', '=', input.id).executeTakeFirst();
     if (!article) {
       // The id is taken in a company the principal cannot read.
       throw new NotFoundException(`Article ${input.id} was not found`);
+    }
+    if (created) {
+      noteCreated();
+      await context.publish(
+        articleCreated,
+        { id: article.id, version: article.version, scopeId: plan.editScopeId },
+        { code: article.code, name: article.name },
+      );
     }
     return article;
   },

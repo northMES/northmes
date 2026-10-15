@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { HttpStatus, NotFoundException } from '@nestjs/common';
+import type { EventContract } from '@northmes/contracts';
 import type {
   Command,
   CommandBus,
+  PublishedEntity,
   TargetRow,
   Validator,
   ValidatorVerdict,
 } from '@northmes/sdk/commands';
 import type { ScopedDatabase } from '@northmes/sdk/data';
 import { DomainError, toDomainError } from '@northmes/sdk/errors';
-import type { Transaction } from 'kysely';
+import { sql, type Transaction } from 'kysely';
 import { can, inCompanies } from '../modules/core/core/access/access.ts';
 import { currentPrincipal, type Principal, runAs } from '../principal.ts';
 
@@ -234,6 +236,29 @@ function checkVersion<Input, Result, Target extends TargetRow | undefined>(
 }
 
 /**
+ * Writes one event to core.event in the command's transaction, with the acting user and the
+ * command's name as its context (ADR 0014). The data must match the event's contract; a mismatch
+ * is a bug in the handler and rolls the command back. The sequencer gives it its position after
+ * the command commits.
+ */
+async function publishEvent(
+  tx: Transaction<unknown>,
+  command: string,
+  principal: Principal | null,
+  event: EventContract,
+  entity: PublishedEntity,
+  data: unknown,
+): Promise<void> {
+  const parsed = event.data.parse(data);
+  const context = { actor: principal?.userId ?? null, command };
+  await sql`insert into core.event
+      (id, event, schema_version, entity_type, entity_id, entity_version, scope_id, data, context)
+    values (uuidv7(), ${event.name}, ${event.version}, ${event.entity}, ${entity.id},
+      ${entity.version}, ${entity.scopeId}, ${JSON.stringify(parsed)}::jsonb,
+      ${JSON.stringify(context)}::jsonb)`.execute(tx);
+}
+
+/**
  * Compares validator names by character code. localeCompare would follow the machine's locale, and
  * the order of validators must be the same on every machine.
  */
@@ -335,6 +360,8 @@ export class CommandBusImpl implements CommandBus {
             throw forbidden(`You need ${permission} at scope ${scopeId}`);
           }
         },
+        publish: (event: EventContract, entity: PublishedEntity, data: unknown) =>
+          publishEvent(tx, name, principal, event, entity, data),
       };
       if (validators.length > 0) {
         const payload = await command.buildPayload?.(input, context);

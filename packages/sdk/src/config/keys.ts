@@ -37,6 +37,16 @@ export const databaseUrl = z
   .string(rule(DATABASE_URL_RULE))
   .refine(isDatabaseUrl, rule(DATABASE_URL_RULE));
 
+const ROLE_NAME_RULE = 'a Postgres role name: a letter or _, then letters, digits, _, $, ., @ or -';
+
+/**
+ * A Postgres role that logs in, such as the admin a managed server hands over (ADR 0080). The rule
+ * keeps the name to what the URL's user part carries and quoting never needs.
+ */
+export const roleName = z
+  .string(rule(ROLE_NAME_RULE))
+  .regex(/^[A-Za-z_][A-Za-z0-9_$.@-]{0,62}$/, rule(ROLE_NAME_RULE));
+
 /** The path of a secret file. The value is read from the file, never from the environment. */
 export const secretFile = z.string(rule('the path of a secret file'));
 

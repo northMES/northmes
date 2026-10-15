@@ -6,7 +6,8 @@ interface Service {
   image?: string;
   command?: string | string[];
   restart?: string;
-  depends_on?: Record<string, { condition: string }>;
+  depends_on?: Record<string, { condition: string; required?: boolean }>;
+  profiles?: string[];
   secrets?: (string | { source: string })[];
   environment?: Record<string, string>;
   ports?: string[];
@@ -93,6 +94,33 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.app?.environment?.NORTHMES_PUBLIC_ORIGIN).toMatch(/^https:\/\//);
     // app listens on the Compose network, which only caddy publishes.
     expect(services.app?.environment?.NORTHMES_LISTEN_HOST).toBe('0.0.0.0');
+  });
+
+  it('bootstrap, migrate and app reach the bundled db unless NORTHMES_DATABASE_URL names another server', () => {
+    for (const name of ['bootstrap', 'migrate', 'app']) {
+      expect(services[name]?.environment?.DATABASE_URL, name).toBe(
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+        '${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}',
+      );
+    }
+    expect(services.bootstrap?.environment?.NORTHMES_DB_ADMIN_USER).toBe(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      '${NORTHMES_DB_ADMIN_USER:-postgres}',
+    );
+  });
+
+  it('compose.external-db.yaml keeps db from starting and lets bootstrap start without it', () => {
+    const external = parse(read('deploy/compose.external-db.yaml')) as Compose;
+
+    expect(Object.keys(external.services).sort()).toEqual(['bootstrap', 'db']);
+    expect(external.services.db?.profiles).toEqual(['bundled-db']);
+    expect(external.services.bootstrap?.depends_on?.db).toEqual({
+      condition: 'service_healthy',
+      required: false,
+    });
+    expect(read('deploy/northmes.env.example')).toContain(
+      '# COMPOSE_FILE=compose.yaml:compose.external-db.yaml',
+    );
   });
 
   it('the example .env holds the version line and no secret', () => {

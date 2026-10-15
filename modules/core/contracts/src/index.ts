@@ -16,6 +16,12 @@ export {
   upsertArticle,
 } from './article.ts';
 export {
+  articleArchived,
+  articleCreated,
+  articleRestored,
+  articleUpdated,
+} from './article-events.ts';
+export {
   archiveArticleGroup,
   articleGroupFields,
   createArticleGroup,
