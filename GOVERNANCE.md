@@ -4,7 +4,7 @@ This file describes how NorthMES is run today: who decides, how decisions are re
 
 ## The maintainer decides
 
-Krister Johansson is the only maintainer of NorthMES. He decides the scope, the plan and the architecture, accepts the architecture decisions, and decides what merges to `main`.
+Krister Johansson is the only maintainer of NorthMES and decides the scope, the plan and the architecture, accepts the architecture decisions, and decides what merges to `main`.
 
 The maintainer works with coding agents and bots. They write code, review it and run checks, but they act under the rules below and never decide on their own.
 
@@ -12,7 +12,7 @@ The maintainer works with coding agents and bots. They write code, review it and
 
 | Role | Who | Responsibilities |
 |---|---|---|
-| Maintainer | Krister Johansson | Decides scope, plan and architecture. Sets an ADR's status to `accepted`. Moves planned tasks to Ready. Approves the pull requests that CodeRabbit skips (Renovate's and the release pull request) and merges the release pull request. Asks an agent to merge, or merges himself. Triages issues and security reports, and enforces the [code of conduct](CODE_OF_CONDUCT.md). Grants elevated access under the policy below |
+| Maintainer | Krister Johansson | Decides scope, plan and architecture. Sets an ADR's status to `accepted`. Moves planned tasks to Ready. Approves the pull requests that CodeRabbit skips (Renovate's and the release pull request) and merges the release pull request. Asks an agent to merge, or merges directly. Triages issues and security reports, and enforces the [code of conduct](CODE_OF_CONDUCT.md). Grants elevated access under the policy below |
 | Contributor | Anyone who opens an issue or sends a pull request | Opens an issue with the issue forms before a change. Sends a pull request that links the issue, passes the required checks and fills in the pull request template, including its Security section. Follows [AGENTS.md](AGENTS.md) and the [code of conduct](CODE_OF_CONDUCT.md). Reports vulnerabilities privately as [SECURITY.md](SECURITY.md) describes |
 | Coding agents | Interactive Claude Code sessions run by the maintainer, and the agents of a handoff run | Plan, write tests and code, review and open pull requests under [AGENTS.md](AGENTS.md) and the rules in [docs/plan/13-delivery-and-github.md](docs/plan/13-delivery-and-github.md#who-does-what). Bring every question, permission request and merge decision to the maintainer. Merge only when the maintainer asks. A run agent does not push, run `gh`, open issues or resolve review threads |
 | Bots | CI on GitHub Actions, CodeQL, CodeRabbit, release-please, Renovate, Codecov, Socket, OpenSSF Scorecard | Run checks, review pull requests, open dependency update and release pull requests. No bot merges |
