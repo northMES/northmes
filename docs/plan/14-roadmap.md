@@ -4932,7 +4932,7 @@ Notes: labelled `human`.
 
 #### E18-S07 platform: Record the installed release and refuse an unsupported upgrade path
 
-Issue: not created yet.
+Issue: northMES/northmes#550.
 
 As a plant admin, I want the upgrade check to tell me which version to install first when I skip too far, so that I never start an upgrade that cannot work.
 
@@ -4957,7 +4957,7 @@ Tests first:
 
 #### E18-S08 ops: Upgrade by editing .env and running docker compose
 
-Issue: not created yet.
+Issue: northMES/northmes#551.
 
 As a plant admin, I want to upgrade by changing one line in `.env` and running `docker compose pull`, `down` and `up -d`, as with any self-hosted Compose application, with the checks available before the window, so that an upgrade needs no script and a failed one can always go back.
 
@@ -4981,7 +4981,7 @@ Tests first:
 
 #### E18-S09 ops: Test every supported upgrade path on each release
 
-Issue: not created yet.
+Issue: northMES/northmes#552.
 
 As a maintainer, I want CI to upgrade a seeded database of every supported release to the candidate, so that a broken upgrade path blocks the release instead of a plant.
 
@@ -5003,7 +5003,7 @@ Tests first:
 
 #### E18-S10 ops: Name incompatible plugins in the upgrade check and warn early
 
-Issue: not created yet.
+Issue: northMES/northmes#553.
 
 As a plant admin, I want the upgrade check to name each plugin that does not support the new release, and System health to warn before the window, so that I can get new plugin versions in time.
 
@@ -5022,7 +5022,7 @@ Tests first:
 
 #### E18-S11 ops: Publish a release candidate of each minor for plugin providers and partners
 
-Issue: not created yet.
+Issue: northMES/northmes#554.
 
 As a plugin provider, I want a release candidate of the next minor with its SDK and a list of what changed for plugins, so that my plugin's new version is ready when plants upgrade.
 
@@ -5043,7 +5043,7 @@ Tests first:
 
 #### E18-S12 platform: Compute the rollback class and keep contract steps a release later
 
-Issue: not created yet.
+Issue: northMES/northmes#555.
 
 As a plant admin, I want almost every release to roll back by starting the previous image, and the rollback class to be computed rather than written by hand, so that a failed upgrade rarely costs data.
 
@@ -5064,7 +5064,7 @@ Tests first:
 
 #### E18-S13 platform: Run long backfills as background migrations after start
 
-Issue: not created yet.
+Issue: northMES/northmes#556.
 
 As a plant admin, I want large data changes to run after NorthMES is back up, so that the upgrade window holds only the schema change.
 
@@ -5083,7 +5083,7 @@ Tests first:
 
 #### E18-S14 ops: Make the upgrade resumable and audited
 
-Issue: not created yet.
+Issue: northMES/northmes#557.
 
 As a plant admin, I want an upgrade that finishes when I run it again after my connection drops, refuses an older image that cannot run on the schema, and is recorded in the audit trail, so that a failure is caught and recoverable.
 
@@ -5105,7 +5105,7 @@ Tests first:
 
 #### E18-S15 ops: Time migrations on a large snapshot nightly
 
-Issue: not created yet.
+Issue: northMES/northmes#558.
 
 As a maintainer, I want each release's migrations timed on a database five times the pilot's size, so that a slow migration shows up before a plant runs it.
 
@@ -5124,7 +5124,7 @@ Tests first:
 
 #### E18-S16 core: Show releases and plugins on one Updates page
 
-Issue: not created yet.
+Issue: northMES/northmes#559.
 
 As a plant admin, I want one page that shows the installed release, the next release, whether I can reach it and which plugins are ready for it, beside the plugins themselves, so that I plan an upgrade and its plugin updates in one place.
 
@@ -5146,7 +5146,7 @@ Tests first:
 
 #### E18-S17 core: Show maintenance and other notices to users
 
-Issue: not created yet.
+Issue: northMES/northmes#562.
 
 As a plant admin, I want to tell users about a planned maintenance window or other news in a banner at the top of every page, so that nobody is surprised when NorthMES stops for an upgrade.
 
@@ -5166,7 +5166,7 @@ Tests first:
 
 #### E18-S18 ops: Publish the web build and upgrade a split installation
 
-Issue: not created yet.
+Issue: northMES/northmes#560.
 
 As an operator who hosts the backend, the web and the database on separate services, I want a published web build and an upgrade guide for my setup, so that I can upgrade without the appliance's Compose file and without users losing work while the web catches up.
 
@@ -5188,7 +5188,7 @@ Tests first:
 
 #### E18-S19 core: Set up an installation from the customer file on every start
 
-Issue: not created yet.
+Issue: northMES/northmes#561.
 
 As a plant admin, I want companies, plants, first admins, notices and installation settings in one file that `docker compose up -d` applies, so that I set up and change an installation without CLI commands.
 

@@ -1,0 +1,3 @@
+#!/bin/sh
+# The northmes command in the image: the backend's CLI (ADR 0011).
+exec node /app/apps/backend/dist/main.js "$@"

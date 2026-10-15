@@ -1,0 +1,102 @@
+# NorthMES on Docker Compose (ADR 0044, ADR 0080). Install, upgrade and go back are in README.md.
+#
+# Every NorthMES service runs the image that NORTHMES_VERSION in .env names. db and caddy stay
+# pinned here by digest. bootstrap and migrate run once on every `docker compose up -d`, and app
+# starts only after migrate exits 0.
+
+name: northmes
+
+services:
+  db:
+    image: postgres:18@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: northmes
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets: [postgres_password]
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "--username=postgres", "--dbname=northmes"]
+      interval: 5s
+      retries: 12
+
+  # Creates the database roles as the superuser; a second run changes nothing (ADR 0006).
+  bootstrap:
+    image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
+    command: ["db", "bootstrap"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://db:5432/northmes
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      NORTHMES_DB_OWNER_PASSWORD_FILE: /run/secrets/db_owner_password
+      NORTHMES_DB_APP_PASSWORD_FILE: /run/secrets/db_app_password
+      NORTHMES_DB_AUTH_PASSWORD_FILE: /run/secrets/db_auth_password
+    secrets: [postgres_password, db_owner_password, db_app_password, db_auth_password]
+
+  # Applies the pending migrations as nm_owner and exits (ADR 0006).
+  migrate:
+    image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://db:5432/northmes
+      NORTHMES_DB_OWNER_PASSWORD_FILE: /run/secrets/db_owner_password
+    secrets: [db_owner_password]
+
+  app:
+    image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
+    command: ["serve"]
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 45s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      NORTHMES_ROLE: all
+      PORT: "3000"
+      NORTHMES_LISTEN_HOST: 0.0.0.0
+      NORTHMES_PUBLIC_ORIGIN: https://${NORTHMES_HOST:-localhost}
+      DATABASE_URL: postgres://db:5432/northmes
+      NORTHMES_DB_APP_PASSWORD_FILE: /run/secrets/db_app_password
+      NORTHMES_DB_AUTH_PASSWORD_FILE: /run/secrets/db_auth_password
+      NORTHMES_AUTH_SECRET_FILE: /run/secrets/auth_secret
+    secrets: [db_app_password, db_auth_password, auth_secret]
+
+  # HTTPS only: Caddy's internal CA until the site's own certificate is set up (ADR 0044).
+  caddy:
+    image: caddy:2@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      NORTHMES_HOST: ${NORTHMES_HOST:-localhost}
+    ports:
+      - ${NORTHMES_BIND_IP:-0.0.0.0}:80:80
+      - ${NORTHMES_BIND_IP:-0.0.0.0}:443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  db_owner_password:
+    file: ./secrets/db_owner_password
+  db_app_password:
+    file: ./secrets/db_app_password
+  db_auth_password:
+    file: ./secrets/db_auth_password
+  auth_secret:
+    file: ./secrets/auth_secret
+
+volumes:
+  db-data:
+  caddy-data:
