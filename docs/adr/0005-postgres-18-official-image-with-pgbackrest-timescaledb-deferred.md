@@ -48,7 +48,7 @@ Chosen option: "The official Debian-based `postgres:18` image plus pgBackRest fr
 
 ### Superuser bootstrap
 
-* An init script in the image's `/docker-entrypoint-initdb.d` creates `nm_owner`, `nm_app`, `nm_auth` and `nm_ext` on first init and reads their passwords from `_FILE` secrets. On a database server that already exists, `northmes db bootstrap` does the same once as the superuser. The roles and their rights are in [ADR 0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+* An init script in the image's `/docker-entrypoint-initdb.d` creates `nm_owner`, `nm_app`, `nm_auth` and `nm_ext` on first init and reads their passwords from `_FILE` secrets. On a database server that already exists, `northmes db bootstrap` does the same once as the superuser, or, on a managed or shared server, as the role with `CREATEROLE` that `NORTHMES_DB_ADMIN_USER` names ([ADR 0060](0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)). The roles and their rights are in [ADR 0006](0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 * The superuser password is its own secret, `POSTGRES_PASSWORD_FILE`. No NorthMES process uses the superuser.
 * `install.sh` writes secret files with `install -m 0440`, owned by root and by the group of the uid that the `db` and `app` processes run as. The image test records that uid.
 * `install.sh` runs in this order: chown the backup and spool directories to the db uid, start `db`, `pgbackrest stanza-create`, `pgbackrest check`, a full backup, then migrate and start `app`.

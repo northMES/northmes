@@ -50,7 +50,15 @@ async function northmes(args: string[]): Promise<string[]> {
 }
 
 beforeAll(async () => {
-  server = await startPostgres();
+  // The server logs every statement, and an admin that is not a superuser cannot turn that off for
+  // its session, so a role statement that carries a password puts it in the log.
+  server = await startPostgres({
+    settings: {
+      log_statement: 'all',
+      log_min_duration_statement: '0',
+      log_min_error_statement: 'debug5',
+    },
+  });
   secretsDir = mkdtempSync(join(tmpdir(), 'northmes-bootstrap-admin-'));
   const { host, port, user, password } = server.connection;
   superuserUrl = `postgres://${user}:${encodeURIComponent(password)}@${host}:${port}/postgres`;
@@ -104,5 +112,24 @@ describe('an external Postgres with an admin that is not a superuser (ADR 0080)'
     expect(await query(urlFor('nm_app', passwords.app), 'select current_user')).toEqual([
       { current_user: 'nm_app' },
     ]);
+  });
+
+  it('ADR0080 db bootstrap as an admin that is not a superuser writes no role password to the server log', async () => {
+    const probe = `nm_log_probe_${randomBytes(4).toString('hex')}`;
+    // The probe runs after bootstrap, so once it is in the log, every line bootstrap caused is too.
+    await query(superuserUrl, `select '${probe}'`);
+    await vi.waitFor(
+      async () => {
+        expect(await server.logs()).toContain(probe);
+      },
+      { timeout: 5_000 },
+    );
+
+    const log = await server.logs();
+    const logged = Object.entries(passwords)
+      .filter(([, password]) => log.includes(password))
+      .map(([role]) => role);
+
+    expect(logged).toEqual([]);
   });
 });
