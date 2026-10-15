@@ -33,7 +33,7 @@ Create or edit an article, and the server log shows a line such as:
 [ExampleArticleLog] core.article.updated BR-140 Wall bracket, left (version 2)
 ```
 
-The Docker install gets plugins from a plugin volume, which [ADR 0075](../../docs/adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md) describes. This example will install that way once the volume is in place.
+A Docker Compose installation gets plugins through the `plugins` volume and npm, as the [plugin guide](../../apps/docs/plugins.mdx) describes. That route arrives in a release after 0.0.1. Once it is in place, this example installs the same way from its packed file.
 
 ## Test
 
