@@ -30,19 +30,12 @@
     "@biomejs/biome": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
-    "@nestjs/platform-express": "catalog:",
-    "@northmes/backend": "workspace:*",
     "@northmes/sdk": "workspace:*",
-    "@northmes/testing": "workspace:*",
     "@types/node": "catalog:",
-    "@types/pg": "catalog:",
-    "graphql": "catalog:",
     "kysely": "catalog:",
-    "pg": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
     "zod": "catalog:"
   }
 }

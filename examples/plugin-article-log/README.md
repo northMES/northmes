@@ -38,7 +38,7 @@ A Docker Compose installation gets plugins through the `plugins` volume and npm,
 ## Test
 
 ```sh
-pnpm exec vitest run --project integration examples/plugin-article-log
+pnpm exec vitest run --project integration apps/backend/test/plugins/article-log-example.int.test.ts
 ```
 
 The test loads the plugin from source next to core and runs its migration. It then creates, updates, archives and restores an article, and reads the four entries back.

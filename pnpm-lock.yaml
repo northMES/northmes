@@ -616,30 +616,12 @@ importers:
       '@nestjs/core':
         specifier: 'catalog:'
         version: 12.1.0(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@12.1.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/platform-express':
-        specifier: 'catalog:'
-        version: 12.1.0(@nestjs/common@12.1.0(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.1.0)
-      '@northmes/backend':
-        specifier: workspace:*
-        version: link:../../apps/backend
       '@northmes/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
-      '@northmes/testing':
-        specifier: workspace:*
-        version: link:../../packages/testing
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
-      '@types/pg':
-        specifier: 'catalog:'
-        version: 8.23.1
-      graphql:
-        specifier: 16.14.2
-        version: 16.14.2
-      pg:
-        specifier: 'catalog:'
-        version: 8.23.0
       reflect-metadata:
         specifier: 'catalog:'
         version: 0.2.2
@@ -649,9 +631,6 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
       zod:
         specifier: 'catalog:'
         version: 4.6.5

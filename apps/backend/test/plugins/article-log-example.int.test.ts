@@ -1,23 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { createTestApp, given, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
+import { Client } from 'pg';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import manifest from '../../../../examples/plugin-article-log/src/manifest.ts';
 import {
   hostFactoryWithPlugins,
   migratePlugins,
   type SourcePlugin,
   signInAt,
-} from '@northmes/backend/testing';
-import { createTestApp, given, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import manifest from '../src/manifest.ts';
+} from '../../src/testing.ts';
 
 const articleLog: SourcePlugin = {
   manifest,
-  migrationsDir: fileURLToPath(new URL('../migrations', import.meta.url)),
+  migrationsDir: fileURLToPath(
+    new URL('../../../../examples/plugin-article-log/migrations', import.meta.url),
+  ),
 };
 
-/** The example plugin logs every create, update, archive and restore of an article (ADR 0014). */
+/**
+ * The article log example under examples/ logs every create, update, archive and restore of an article
+ * (ADR 0014). The test lives here because example plugins import no AGPL package, the host included.
+ */
 describe('the example article log plugin', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
