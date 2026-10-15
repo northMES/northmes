@@ -90,7 +90,7 @@ The workflow `.github/workflows/release.yml` signs both on a GitHub-hosted runne
 
 The release page also holds the SBOM as `northmes-<version>-image.cdx.json`, and the two attestation bundles as `northmes-<version>-image.intoto.jsonl` and `northmes-<version>-image.cdx.json.intoto.jsonl`.
 
-You need the GitHub CLI (`gh`), signed in with `gh auth login`. The digest is the part after `@` in the `NORTHMES_VERSION` line of the release notes.
+You need the GitHub CLI (`gh`) on a machine with internet, signed in with `gh auth login`; a host without internet needs `gh` but no sign-in, because it verifies the bundles you copy to it. The digest is the part after `@` in the `NORTHMES_VERSION` line of the release notes.
 
 <Steps>
   <Step title="Check where the image was built">

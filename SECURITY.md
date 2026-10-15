@@ -29,7 +29,7 @@ NorthMES has no 1.0 release yet. Until 1.0, only the latest 0.x minor release ge
 
 ## Verify a release
 
-Releases after 0.0.1 carry GitHub artifact attestations for the image: its build provenance and its CycloneDX SBOM, signed by `.github/workflows/release.yml` on `refs/heads/main` through GitHub Actions OIDC, on a GitHub-hosted runner (ADR 0050). Release 0.0.1 has none. Each release also attaches the SBOM and the attestation bundles. The install guide, `apps/docs/install.mdx`, gives the `gh attestation verify` commands, also for a host without internet.
+Releases after 0.0.1 carry GitHub artifact attestations for the image: its build provenance and its CycloneDX SBOM, signed by `.github/workflows/release.yml` on `refs/heads/main` through GitHub Actions OIDC, on a GitHub-hosted runner (ADR 0050). Release 0.0.1 has none. Each later release also attaches the SBOM and the attestation bundles. The install guide, `apps/docs/install.mdx`, gives the `gh attestation verify` commands, also for a host without internet.
 
 ## Plugins run with full trust
 
