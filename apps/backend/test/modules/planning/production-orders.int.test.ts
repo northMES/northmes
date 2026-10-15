@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { givenArticle, hostFactory, signInAt, statementsDuring } from '@northmes/backend/testing';
+import {
+  givenArticle,
+  givenCompany,
+  hostFactory,
+  signIn,
+  signInAt,
+  statementsDuring,
+} from '@northmes/backend/testing';
 import {
   type CommandContext,
   createTestApp,
@@ -124,6 +131,34 @@ describe('planningProductionOrders', () => {
     expect(answer).toEqual({
       status: 200,
       data: { planningProductionOrders: [{ number: '6301' }] },
+    });
+  });
+
+  it('E02-S04 a user whose roles at the plant lack planning.productionOrder:read gets core.forbidden', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    await writeOrder(plant, '6351', await writeArticle(plant, 'SH-106', 'Shelf board'), '40');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['core.article:read'] },
+    ]);
+    const outsider = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': slug },
+    });
+
+    const answer = await outsider.send('{ planningProductionOrders { number } }');
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: null,
+      errors: [
+        {
+          message: `You need planning.productionOrder:read at plant ${plant}`,
+          path: ['planningProductionOrders'],
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+        },
+      ],
     });
   });
 

@@ -20,11 +20,14 @@ export function signInSearch(search: Readonly<Record<string, unknown>>): SignInS
 }
 
 /**
- * Where sign-in leads: the return path when it is a path on this origin other than the sign-in
- * page, else the root. A full URL or a protocol-relative one never leaves the web.
+ * Where sign-in leads: the return path when it is a path on `origin` other than the sign-in page,
+ * else the root. The path is resolved as a URL, so a full URL, a protocol-relative one, or one that
+ * the parser turns into one (a backslash, or a tab or newline after the slash) never leaves the
+ * web.
  */
-export function returnPathOf({ redirect }: SignInSearch): string {
-  if (redirect === undefined || !redirect.startsWith('/') || redirect.startsWith('//')) return '/';
-  if (redirect.startsWith('/\\') || redirect.split(/[?#]/)[0] === signInPath) return '/';
-  return redirect;
+export function returnPathOf({ redirect }: SignInSearch, origin: string): string {
+  if (redirect === undefined || !redirect.startsWith('/')) return '/';
+  const url = URL.parse(redirect, origin);
+  if (url === null || url.origin !== origin || url.pathname === signInPath) return '/';
+  return `${url.pathname}${url.search}${url.hash}`;
 }

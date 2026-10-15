@@ -28,7 +28,7 @@ function secretFile(name: string, content: string, mode = 0o440): string {
 
 describe('readSecrets', () => {
   it('E02-S01 a 0440 secret file passes and its value stays out of process.env', async () => {
-    const value = 'auth-secret-5f2c9a71';
+    const value = 'auth-secret-5f2c9a71d04e8b36a19c7f2e05d8b4c1';
 
     const secrets = readSecrets(
       { NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', value) },
@@ -121,7 +121,7 @@ describe('readSecrets', () => {
   );
 
   it('E02-S01 a dev-marked secret fails with NODE_ENV production', () => {
-    const devSecret = `${DEV_SECRET_MARKER}9c1f07e2`;
+    const devSecret = `${DEV_SECRET_MARKER}9c1f07e2b5a4d8316e0f72c9a4b1d5e8`;
     // The stack script writes the dev secret files with mode 0600 (ADR 0058).
     const files = {
       NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-4a90', 0o600),
@@ -135,5 +135,26 @@ describe('readSecrets', () => {
     expect(error.code).toBe('CONFIG_DEV_SECRET_IN_PRODUCTION');
     expect(keysOf(error)).toEqual(['NORTHMES_AUTH_SECRET_FILE']);
     expect(error.message).not.toContain('9c1f07e2');
+  });
+
+  it('E02-S01 a 16-byte auth secret is refused', () => {
+    // Better Auth signs cookies and encrypts the JWT keys with it, and only warns about a short one
+    // (audit B12). 32 bytes and more pass, also for other secrets.
+    const files = {
+      NORTHMES_AUTH_SECRET_FILE: secretFile('auth_secret', '0123456789abcdef'),
+      NORTHMES_DB_APP_PASSWORD_FILE: secretFile('db_app_password', 'app-pw-4a90'),
+    };
+
+    const error = configErrorOf(() => readSecrets(files, { nodeEnv: 'development' }));
+    const secrets = readSecrets(
+      { ...files, NORTHMES_AUTH_SECRET_FILE: secretFile('long_secret', 'a'.repeat(32)) },
+      { nodeEnv: 'production' },
+    );
+
+    expect(error.problems).toEqual([
+      'NORTHMES_AUTH_SECRET_FILE: must hold at least 32 bytes, such as the output of openssl rand -hex 32',
+    ]);
+    expect(error.message).not.toContain('0123456789abcdef');
+    expect(secrets.NORTHMES_AUTH_SECRET).toBe('a'.repeat(32));
   });
 });

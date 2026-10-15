@@ -28,4 +28,14 @@ describe('SECURITY.md', () => {
     expect(text()).toMatch(/within 5 working days/);
     expect(text()).toMatch(/within 10 working days/);
   });
+
+  it("ADR0075 SECURITY.md spells out a plugin's blast radius: the database through nm_app, sessions, configuration and the browser", () => {
+    const section = text().split('## Plugins run with full trust')[1]?.split('\n## ')[0] ?? '';
+
+    expect(section).toContain('`nm_app`');
+    expect(section).toMatch(/session/);
+    expect(section).toMatch(/configuration/);
+    expect(section).toMatch(/browser/);
+    expect(section).toContain('(docs/security/risks.md)');
+  });
 });
