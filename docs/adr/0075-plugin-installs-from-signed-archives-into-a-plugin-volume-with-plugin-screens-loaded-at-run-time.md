@@ -80,6 +80,23 @@ A plugin version ships as one signed archive. File names are proposed.
 * A version never changes: the install check refuses an id and version that an earlier request or a plugin set in the volume recorded with another archive digest.
 * An earlier version that lacks a migration which the installed version applied is refused at install, because boot step 5 of [ADR 0002][adr-0002] would refuse the database as newer than the plugin.
 
+### Release 1: plugins installed with npm into the plugin volume
+
+On 2026-10-15 Krister Johansson chose a plainer install path for release 1: the plugin volume holds an ordinary npm project, and a host operator installs a plugin with npm. The archive, its signature, plugin sets, `plugins.sh` and the Plugins page wait (see [What is release 1 and what waits](#what-is-release-1-and-what-waits)); the rest of this ADR describes that later path.
+
+```text
+docker compose run --rm plugins npm install --omit=peer --ignore-scripts @acme/my-plugin
+docker compose run --rm migrate
+docker compose restart app
+```
+
+* The plugin volume is mounted at `/app/plugins` and holds `package.json`, `package-lock.json` and `node_modules/`. Boot loads each package that `dependencies` in that `package.json` names, in addition to the plugins `northmes.config.json` lists by path; `npm install` and `npm uninstall` keep the list current, so there is no second list to edit.
+* npm runs in the one-off `plugins` service, never in `app`: `app` keeps `read_only: true` and mounts the volume read-only, as above. The official image ships npm for that service.
+* `--ignore-scripts` keeps a package from running install scripts, and `--omit=peer` leaves out the packages the host provides (Nest, GraphQL, the SDK), which the resolve hook of [ADR 0037][adr-0037] supplies at boot.
+* A published plugin is the output of `pnpm plugin:build`, which bundles its own dependencies, so npm unpacks one package. A plant without internet access installs a packed file the same way: `npm install ./my-plugin-1.0.0.tgz`.
+* Trust comes from the registry or the file the operator chose, and installing needs shell access to the host. There is no signature check on this path; the signature checks above apply when archives arrive.
+* A plugin's screens load through the import map below, served from `<package>/web/` in the volume. Upgrading NorthMES means installing plugin versions whose NorthMES range covers the new version first; boot refuses a plugin outside its range ([ADR 0038][adr-0038]).
+
 ### Where plugins come from
 
 * A plugin index: a JSON document at a URL that lists plugins, their versions, each version's NorthMES range, the archive's URL and its digest. NorthMES's own marketplace is one index; a partner or a customer may publish another. The installation reads the indexes listed in the installation setting `plugins.indexes`.
@@ -287,10 +304,11 @@ The trigger: the first hosting partner that hosts a customer installation runnin
 | Part | Release | Reason or trigger |
 |---|---|---|
 | Plugin screens at run time: the import map, the shared files, the plugin list and file routes, the CSP hash, the loader and its placeholders, the full page load after sign-in | 1 | Krister Johansson's decision of 2026-10-10; read by `example-widget` in the `plugin-outside` job and in the Playwright plugins spec |
-| The plugin archive with its file list and signature, `@northmes/plugin-build`, `pnpm plugin:build` packing and `pnpm plugin:sign` | 1, proposed | read by the `plugin-outside` job and the nightly Compose test, which install the example archives |
-| The plugin volume, plugin sets, the `plugins` service, `northmes plugin`, `plugins.sh` with its timer, apply window and host lock | 1, proposed | read by the nightly Compose test, which installs `example-validator` with `plugins.sh` |
-| The Plugins page, the staging route, `core.requestPluginInstall`, `core.requestPluginRemoval`, `core.cancelPluginRequest`, `core.plugin_request` and `core.plugin:manage` | 1, proposed | read by the Playwright step that installs `example-widget` through the page; Krister Johansson's answer "yes the admin" named who installs, not the release |
-| The plugin compatibility check in `upgrade.sh`, the plugin set in `rollback.sh`, and `plugins.sh rollback` | 1, proposed | read by the upgrade fixture test and the nightly Compose test; no third-party plugin runs on the pilot ([ADR 0037][adr-0037]) |
+| Plugins installed with npm into the plugin volume, run in the `plugins` service, and boot loading the volume's `dependencies` | 1 | Krister Johansson's decision of 2026-10-15; read by the nightly Compose test, which installs the example plugins with npm |
+| The plugin archive with its file list and signature, `@northmes/plugin-build`, `pnpm plugin:build` packing and `pnpm plugin:sign` | later | an install by an admin without shell access, or a plugin published for more than one customer |
+| Plugin sets, `northmes plugin`, `plugins.sh` with its timer, apply window and host lock | later | with the plugin archive |
+| The Plugins page, the staging route, `core.requestPluginInstall`, `core.requestPluginRemoval`, `core.cancelPluginRequest`, `core.plugin_request` and `core.plugin:manage` | later | with the plugin archive; Krister Johansson's answer "yes the admin" named who installs, not the release |
+| The plugin compatibility check in `upgrade.sh`, the plugin set in `rollback.sh`, and `plugins.sh rollback` | later, with plugin sets | read by the upgrade fixture test and the nightly Compose test; no third-party plugin runs on the pilot ([ADR 0037][adr-0037]) |
 | NorthMES's own plugin index, the project's publisher key and its release signing | later | the first plugin published for more than one customer |
 | A hosting partner's control over installs | open | [Open: how a hosting partner controls installs](#open-how-a-hosting-partner-controls-installs) |
 | Import map integrity in the browser | later | the browser floor reaches Chrome 127, Firefox 138 and Safari 18 |
