@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useCallback, useRef } from 'react';
 
 /** The room between the sticky block and a control the page scrolls to, so the ring clears it. */

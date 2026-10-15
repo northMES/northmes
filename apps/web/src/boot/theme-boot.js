@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 /*
  * Sets the theme the viewer chose before on the html element before the first paint (design
  * shell-306, BO2). index.html's head loads it as a classic script, which the content security
