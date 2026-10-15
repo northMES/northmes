@@ -3,21 +3,31 @@
 // per process, and bundles everything else. The installable package (package.json, dist/ and
 // migrations/) is then copied to plugins/<id>/, where the host loads it from.
 //
-// The script imports isHostProvided from @northmes/sdk. Under plain node that resolves to the
-// SDK's build output, so the root script pnpm plugin:build builds the SDK with turbo first.
+// A plugin with screens also has src/web.tsx (or src/web.ts). Rolldown bundles it for the browser
+// into web/entry.js and keeps the specifiers the web build shares through its import map external
+// (HOST_PROVIDED_WEB, ADR 0075). A bare import of any other package left in the output fails the
+// build, because the browser could not resolve it.
+//
+// The script imports isHostProvided from @northmes/sdk and isHostProvidedWeb from
+// @northmes/web-sdk. Under plain node those resolve to the packages' build output, so the root
+// script pnpm plugin:build builds both with turbo first.
 
 import { existsSync, realpathSync } from 'node:fs';
 import { cp, readdir, readFile, rm } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isHostProvided } from '@northmes/sdk';
+import { HOST_PROVIDED_WEB, isHostProvidedWeb } from '@northmes/web-sdk/host-provided-web';
 import { rolldown } from 'rolldown';
 import { parseSync } from 'rolldown/utils';
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
 
 /** The parts of a plugin folder that make up the installable package. */
-const packageParts = ['package.json', 'dist', 'migrations'];
+const packageParts = ['package.json', 'dist', 'web', 'migrations'];
+
+/** A plugin that cannot be built, with the reason pnpm plugin:build prints. */
+export class PluginBuildError extends Error {}
 
 /**
  * The package specifiers a built file imports, read from its code. Relative specifiers point at
@@ -42,8 +52,56 @@ function packageImports(fileName, code) {
 }
 
 /**
- * Builds the plugin package in `dir` into its dist/ folder and copies the installable package to
- * `outDir`, which it empties first.
+ * Bundles the web part `entry` into the plugin's web/ folder for the browser and returns its
+ * files. A bare import that is not a shared web specifier fails the build.
+ * @param {string} dir
+ * @param {string} entry
+ */
+async function buildWebPart(dir, entry) {
+  const web = join(dir, 'web');
+  await rm(web, { recursive: true, force: true });
+  const bundle = await rolldown({
+    input: { entry },
+    platform: 'browser',
+    external: (id) => isHostProvidedWeb(id),
+    transform: { jsx: { runtime: 'automatic' } },
+    // An unresolved bare import stays an import, which the check below refuses by name.
+    onLog: (level, log, defaultHandler) => {
+      if (log.code !== 'UNRESOLVED_IMPORT') defaultHandler(level, log);
+    },
+  });
+  let output;
+  try {
+    ({ output } = await bundle.write({ dir: web, format: 'esm', entryFileNames: '[name].js' }));
+  } finally {
+    await bundle.close();
+  }
+  for (const file of output) {
+    if (file.type !== 'chunk') continue;
+    const refused = packageImports(file.fileName, file.code).find((s) => !isHostProvidedWeb(s));
+    if (refused !== undefined) {
+      await rm(web, { recursive: true, force: true });
+      throw new PluginBuildError(
+        `web/${file.fileName} imports ${refused}, which the host does not share. Import only ${sharedList()}, or bundle the package`,
+      );
+    }
+  }
+  return output.map((file) => `web/${file.fileName}`);
+}
+
+/** The shared web specifiers as a sentence: a, b or c. */
+function sharedList() {
+  return `${HOST_PROVIDED_WEB.slice(0, -1).join(', ')} or ${HOST_PROVIDED_WEB.at(-1)}`;
+}
+
+/** The plugin's web part, src/web.tsx or src/web.ts, or undefined when it has no screens. */
+function webEntryOf(dir) {
+  return ['src/web.tsx', 'src/web.ts'].map((file) => join(dir, file)).find(existsSync);
+}
+
+/**
+ * Builds the plugin package in `dir` into its dist/ folder, and its web part into web/, and copies
+ * the installable package to `outDir`, which it empties first.
  * @param {string} dir
  * @param {string} outDir
  * @returns {Promise<import('./plugin-build.d.mts').BuiltPlugin>}
@@ -69,13 +127,18 @@ export async function buildPlugin(dir, outDir) {
       imports[`dist/${file.fileName}`] = packageImports(file.fileName, file.code);
     }
   }
+  const webEntry = webEntryOf(dir);
+  const webFiles = webEntry ? await buildWebPart(dir, webEntry) : [];
   await rm(outDir, { recursive: true, force: true });
   for (const part of packageParts) {
     if (existsSync(join(dir, part))) {
       await cp(join(dir, part), join(outDir, part), { recursive: true });
     }
   }
-  return { files: output.map((file) => `dist/${file.fileName}`).sort(), imports };
+  return {
+    files: [...output.map((file) => `dist/${file.fileName}`), ...webFiles].sort(),
+    imports,
+  };
 }
 
 /**
@@ -114,7 +177,13 @@ export async function main(argv, io) {
     return 1;
   }
   const outDir = join(io.root, 'plugins', id);
-  await buildPlugin(dir, outDir);
+  try {
+    await buildPlugin(dir, outDir);
+  } catch (error) {
+    if (!(error instanceof PluginBuildError)) throw error;
+    io.error(error.message);
+    return 1;
+  }
   io.log(`Built ${relative(io.root, dir)} into ${relative(io.root, outDir)}`);
   return 0;
 }

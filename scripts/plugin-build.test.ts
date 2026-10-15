@@ -133,6 +133,66 @@ describe('pnpm plugin:build', () => {
     expect(errors).toEqual([]);
   });
 
+  /** A plugin with a server part and the web part `web`, as pnpm plugin:build finds it. */
+  function pluginWithWebPart(web: Record<string, string>): string {
+    const plugin = join(root, 'examples/plugin-hello');
+    write(
+      join(plugin, 'package.json'),
+      `${JSON.stringify({ name: '@northmes/example-hello', version: '0.0.0', type: 'module' })}\n`,
+    );
+    write(
+      join(plugin, 'src/manifest.ts'),
+      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <0.1.0-0', server: () => import('./server.ts') });\n",
+    );
+    write(join(plugin, 'src/server.ts'), 'export default class ExampleHelloModule {}\n');
+    for (const [file, text] of Object.entries(web)) write(join(plugin, 'src', file), text);
+    return plugin;
+  }
+
+  it('ADR 0075 plugin:build builds src/web.tsx into web/entry.js, leaving only the shared web specifiers as imports', async () => {
+    pluginWithWebPart({
+      'web.tsx': [
+        "import { defineWebModule } from '@northmes/web-sdk';",
+        "import { useState } from 'react';",
+        "import { greeting } from './greeting.ts';",
+        'function Hello() {',
+        '  const [count] = useState(0);',
+        '  return <p>{greeting} {count}</p>;',
+        '}',
+        "export default defineWebModule({ id: 'example-hello', version: '0.0.0', routes: () => Hello as never });",
+        '',
+      ].join('\n'),
+      'greeting.ts': "export const greeting = 'Hello from a plugin';\n",
+    });
+
+    const exitCode = await main(['example-hello'], io());
+
+    const installed = join(root, 'plugins/example-hello');
+    expect(errors).toEqual([]);
+    expect(exitCode).toBe(0);
+    expect(readdirSync(join(installed, 'web'))).toEqual(['entry.js']);
+    const entry = readFileSync(join(installed, 'web/entry.js'), 'utf8');
+    // The local module is bundled, and JSX compiles to the automatic runtime the host shares.
+    expect(entry).toContain('Hello from a plugin');
+    expect(entry).toMatch(/from ["']react\/jsx-runtime["']/);
+    expect(entry).toMatch(/from ["']react["']/);
+    expect(entry).toMatch(/from ["']@northmes\/web-sdk["']/);
+  });
+
+  it('ADR 0075 plugin:build refuses a web part that imports a package the host does not share, and installs nothing', async () => {
+    pluginWithWebPart({
+      'web.tsx': "import { createRoot } from 'react-dom/client';\nexport default createRoot;\n",
+    });
+
+    const exitCode = await main(['example-hello'], io());
+
+    expect(exitCode).toBe(1);
+    expect(errors).toEqual([
+      'web/entry.js imports react-dom/client, which the host does not share. Import only react, react-dom, react/jsx-runtime, @tanstack/react-router, @apollo/client, @apollo/client/react or @northmes/web-sdk, or bundle the package',
+    ]);
+    expect(readdirSync(root)).toEqual(['examples']);
+  });
+
   it('E02-S04 pnpm plugin:build without an id or with an id no package under examples/ has exits 1 and writes nothing', async () => {
     write(
       join(root, 'examples/plugin-labels/package.json'),
