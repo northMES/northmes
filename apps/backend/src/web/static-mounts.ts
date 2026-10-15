@@ -11,7 +11,7 @@ import type { WebFiles } from './served-web.ts';
 export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
 
 /** The Cache-Control of a file with a content hash in its name. */
-const IMMUTABLE = 'public, max-age=31536000, immutable';
+export const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 /**
  * Serves the web app's hashed assets at /assets/. A file missing under the mount is a 404 with an
@@ -37,7 +37,7 @@ export function mountStatic(app: NestExpressApplication, { shellDir }: WebFiles)
  * Whether the file that requestPath names under dir exists and its real path lies outside the real
  * path of dir. A path that does not resolve is left to the static mount, which answers it.
  */
-function escapesThroughSymlink(dir: string, requestPath: string): boolean {
+export function escapesThroughSymlink(dir: string, requestPath: string): boolean {
   let root: string;
   let target: string;
   try {
@@ -55,7 +55,7 @@ function escapesThroughSymlink(dir: string, requestPath: string): boolean {
  * error's message, which names the file's absolute path, in the body and log it with a stack.
  * Express takes a handler with four parameters as an error handler.
  */
-function answerWithStatus(
+export function answerWithStatus(
   error: { status?: number },
   _request: Request,
   response: Response,

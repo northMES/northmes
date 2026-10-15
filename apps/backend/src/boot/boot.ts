@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -25,6 +26,7 @@ import { type InRepoModule, inRepoMigrationsDir, inRepoModules } from '../module
 import { pluginManifestUrl } from '../plugins/manifest-url.ts';
 import { installResolveHook } from '../plugins/resolve-hook.ts';
 import { imageVersion } from '../version.ts';
+import { type PluginWebPart, pluginWebParts } from '../web/plugin-web.ts';
 import { builtShellDir } from '../web/static-mounts.ts';
 import { serveWeb } from '../web/web.module.ts';
 import { BootError } from './boot-error.ts';
@@ -108,6 +110,10 @@ export interface Booted<Env> {
   readonly pending: readonly string[];
   /** The created app, which listens on nothing. */
   readonly app: NestExpressApplication;
+  /** The web parts of the plugins with screens, which the server serves (ADR 0075). */
+  readonly pluginWeb: readonly PluginWebPart[];
+  /** The origins of the web app, webOrigins in northmes.config.json. */
+  readonly webOrigins: readonly string[];
 }
 
 /**
@@ -274,11 +280,17 @@ async function bootSteps<
   installResolveHook(pluginRoots);
   // A plugin's manifest is a file of its own, so its URL is a specifier and a file of its package.
   const pluginManifests = pluginRoots.map(pluginManifestUrl);
-  const entries = [
-    ...inRepoEntries(modules),
-    ...(await importPluginManifests(pluginManifests, importManifest)),
-  ];
-  const catalog = checkCatalog(entries, { imageVersion: imageVersion() });
+  const pluginEntries = await importPluginManifests(pluginManifests, importManifest);
+  const catalog = checkCatalog([...inRepoEntries(modules), ...pluginEntries], {
+    imageVersion: imageVersion(),
+  });
+  // A plugin's web part is the web/ folder of its package, which pnpm plugin:build writes.
+  const pluginWeb = pluginWebParts(
+    pluginEntries.map(({ manifest }, index) => ({
+      manifest,
+      webDir: join(pluginRoots[index] ?? '', 'web'),
+    })),
+  );
   const pending = await checkPending(migrationCheckUrl(env.DATABASE_URL, mode, secrets), catalog, {
     mode,
   });
@@ -290,7 +302,7 @@ async function bootSteps<
   const root = AppModule.forRoot(config, servers, { webOrigins, ...appOptions });
   const app = await NestFactory.create<NestExpressApplication>(root, { logger: ['error', 'warn'] });
   log.info(`Modules in boot order: ${catalog.map((entry) => entry.manifest.id).join(', ')}`);
-  return { env, secrets, catalog, pending, app };
+  return { env, secrets, catalog, pending, app, pluginWeb, webOrigins };
 }
 
 /**
@@ -315,9 +327,12 @@ async function listen(
 
 async function serve(options: BootOptions): Promise<INestApplication> {
   const { log } = options;
-  const { env, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
+  const { env, app, pluginWeb, webOrigins } = await bootSteps(
+    loadEnv(serverEnvSchema)(options.env),
+    options,
+  );
   // The static mounts go in before listen initialises the app and adds the routes after them.
-  serveWeb(app, { shellDir: builtShellDir });
+  serveWeb(app, { shellDir: builtShellDir, plugins: pluginWeb }, { webOrigins });
   await listen(app, env.PORT, env.NORTHMES_LISTEN_HOST);
   log.info(`Listening on ${await app.getUrl()}`);
   return app;

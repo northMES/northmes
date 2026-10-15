@@ -8,6 +8,10 @@
     ".": {
       "@northmes/source": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "./host-provided-web": {
+      "@northmes/source": "./src/host-provided-web.ts",
+      "default": "./dist/host-provided-web.js"
     }
   },
   "scripts": {
