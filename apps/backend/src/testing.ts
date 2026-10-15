@@ -12,8 +12,8 @@ import { type CatalogEntry, checkCatalog } from './catalog/check-catalog.ts';
 import { migrate } from './migrate/runner.ts';
 import { AuthService } from './modules/core/core/access/auth.service.ts';
 import { PLANT_HEADER } from './principal.ts';
-import { builtShellDir } from './web/static-mounts.ts';
 import { imageVersion } from './version.ts';
+import { builtShellDir } from './web/static-mounts.ts';
 import { serveWeb } from './web/web.module.ts';
 
 /**
