@@ -1,6 +1,6 @@
 # Run NorthMES with Docker Compose
 
-This folder is everything a host needs: `compose.yaml`, `Caddyfile` and `.env.example`. It runs five services:
+This folder is everything a host needs: `compose.yaml`, `Caddyfile` and `northmes.env.example`. It runs five services:
 
 | Service | What it does |
 |---|---|
@@ -20,7 +20,7 @@ You need Docker Engine with Compose, and ports 80 and 443 free on the host.
 2. Create `.env` and set the host name browsers will use:
 
    ```sh
-   cp .env.example .env
+   cp northmes.env.example .env
    ```
 
    Set `NORTHMES_VERSION` to the line in the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.

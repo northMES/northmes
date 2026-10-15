@@ -96,7 +96,7 @@ describe('the Compose bundle (ADR 0080)', () => {
   });
 
   it('the example .env holds the version line and no secret', () => {
-    const lines = read('deploy/.env.example')
+    const lines = read('deploy/northmes.env.example')
       .split('\n')
       .filter((line) => line && !line.startsWith('#'));
 
