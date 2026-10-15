@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 import { API_MAJOR, apiPath } from '@northmes/contracts';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 describe('apiPath', () => {
@@ -22,5 +23,21 @@ describe('apiPath', () => {
         `apiPath segment ${JSON.stringify(segment)} is not a path segment`,
       );
     }
+  });
+
+  it('apiPath keeps any segments as the same segments under /api/v1, which URL parsing does not change', () => {
+    const segment = fc
+      .string({ unit: 'grapheme', minLength: 1 })
+      .filter((text) => text !== '.' && text !== '..');
+
+    fc.assert(
+      fc.property(fc.array(segment, { minLength: 1, maxLength: 5 }), (segments) => {
+        const path = apiPath(...segments);
+        const { pathname } = new URL(path, 'http://localhost');
+
+        expect(pathname).toBe(path);
+        expect(pathname.split('/').slice(3).map(decodeURIComponent)).toEqual(segments);
+      }),
+    );
   });
 });
