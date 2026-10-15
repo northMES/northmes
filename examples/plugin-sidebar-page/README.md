@@ -35,7 +35,7 @@ A Docker Compose installation gets plugins through the `plugins` volume and npm,
 ## Test
 
 ```sh
-pnpm exec playwright test e2e/plugins.spec.ts
+pnpm build && pnpm exec playwright test e2e/plugins.spec.ts
 ```
 
 The spec's server builds and loads the plugin. It then signs in, opens Hello from the sidebar, and presses Say hello. `pnpm e2e` runs it with the other specs.

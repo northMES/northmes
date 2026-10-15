@@ -29,9 +29,12 @@ export interface LoadPluginsOptions {
   readonly fetch: (url: string, init: RequestInit) => Promise<Response>;
   /** Imports a module script by its URL: import() in the browser. */
   readonly importModule: (url: string) => Promise<{ readonly default?: unknown }>;
-  /** How long an import may take before the plugin counts as unavailable: 10 s (ADR 0019). */
+  /** How long the list or an import may take before it counts as failed: 10 s (ADR 0019). */
   readonly timeoutMs?: number;
 }
+
+/** How long the list or an import may take: 10 s (ADR 0019). */
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** The path of the plugin list under the API's URL. */
 const PLUGIN_LIST_PATH = '/api/v1/web/plugins';
@@ -41,14 +44,26 @@ function apiPath(apiUrl: string, path: string): string {
   return `${apiUrl.replace(/\/+$/, '')}${path}`;
 }
 
-/** The plugin list, or none when nobody is signed in or the list does not load. */
-async function listPlugins({ apiUrl, token, fetch }: LoadPluginsOptions): Promise<PluginListing[]> {
-  const jwt = await token();
-  if (jwt === undefined) return [];
+/**
+ * The plugin list, or none when nobody is signed in or the list does not load, or does not load
+ * within the timeout.
+ */
+async function listPlugins({
+  apiUrl,
+  token,
+  fetch,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+}: LoadPluginsOptions): Promise<PluginListing[]> {
   try {
-    const response = await fetch(apiPath(apiUrl, PLUGIN_LIST_PATH), {
-      headers: { authorization: `Bearer ${jwt}` },
-    });
+    const jwt = await token();
+    if (jwt === undefined) return [];
+    const response = await within(
+      fetch(apiPath(apiUrl, PLUGIN_LIST_PATH), {
+        headers: { authorization: `Bearer ${jwt}` },
+        signal: AbortSignal.timeout(timeoutMs),
+      }),
+      timeoutMs,
+    );
     if (!response.ok) throw new Error(`the plugin list answered ${response.status}`);
     const { plugins } = (await response.json()) as { plugins: PluginListing[] };
     return plugins;
@@ -146,7 +161,7 @@ function shellModuleOf(listing: PluginListing, module: WebModule, entry: string)
  * starts.
  */
 export async function loadPlugins(options: LoadPluginsOptions): Promise<ShellModule[]> {
-  const { apiUrl, importModule, timeoutMs = 10_000 } = options;
+  const { apiUrl, importModule, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
   const listings = await listPlugins(options);
   return Promise.all(
     listings.map(async (listing) => {
