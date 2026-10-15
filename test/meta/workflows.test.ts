@@ -844,6 +844,29 @@ describe('workflows', () => {
     expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
   });
 
+  // The docs images come from a run that a maintainer starts by hand on a branch. The job only reads
+  // the repository and hands the PNGs back as an artifact to commit: a push with the job's token
+  // would start no CI run on the new commit, so its required checks would never report
+  // (docs/adr/0048-documentation-on-docs7-at-docs-northmes-dev.md).
+  it('ADR0048 the docs screenshots workflow runs by hand, runs pnpm docs:screenshots and uploads apps/docs/images', () => {
+    const { workflow, job } = jobNamed('docs screenshots');
+    const steps = job.steps ?? [];
+
+    expect(workflow.path).toBe('.github/workflows/docs-screenshots.yml');
+    expect(workflow.on).toEqual({ workflow_dispatch: null });
+    expect(workflow.permissions).toEqual({});
+    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
+      'actions/checkout',
+      'pnpm/action-setup',
+      'actions/setup-node',
+      'pnpm install --frozen-lockfile',
+      'pnpm docs:screenshots',
+      'actions/upload-artifact',
+    ]);
+    expect(steps.at(-1)?.with?.path).toBe('apps/docs/images/');
+    expect(steps.at(-1)?.with?.['if-no-files-found']).toBe('error');
+  });
+
   // The Argos token reaches only the step that runs the e2e specs, as an environment variable, so
   // no other job or step reads it and a fork's pull request, which gets no secrets, uploads nothing
   // (docs/adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md).
