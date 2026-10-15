@@ -27,6 +27,10 @@ NorthMES has no 1.0 release yet. Until 1.0, only the latest 0.x minor release ge
 | Latest 0.x minor | Yes |
 | Older 0.x minors | No |
 
+## Verify a release
+
+Releases after 0.0.1 carry GitHub artifact attestations for the image: its build provenance and its CycloneDX SBOM, signed by `.github/workflows/release.yml` on `refs/heads/main` through GitHub Actions OIDC, on a GitHub-hosted runner (ADR 0050). Release 0.0.1 has none. Each release also attaches the SBOM and the attestation bundles. The install guide, `apps/docs/install.mdx`, gives the `gh attestation verify` commands, also for a host without internet.
+
 ## Plugins run with full trust
 
 A NorthMES plugin runs inside the server process and the web app with the same rights as NorthMES itself (ADR 0037, ADR 0068). NorthMES does not sandbox plugins. In release 1 the host operator installs a plugin with `npm install --ignore-scripts` into the plugin volume (ADR 0075), and the next restart loads it.

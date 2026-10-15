@@ -79,6 +79,65 @@ NorthMES runs its own Postgres in the `db` service by default. To use a Postgres
   </Step>
 </Steps>
 
+## Verify a release
+
+Each release after 0.0.1 carries two GitHub artifact attestations for its image: a build provenance attestation, which names the commit and the workflow run that built the image, and an SBOM attestation, which signs the CycloneDX SBOM of the image. Release 0.0.1 has none.
+
+The workflow `.github/workflows/release.yml` signs both on a GitHub-hosted runner, with a certificate that GitHub Actions OIDC issues for that workflow on `refs/heads/main`. A valid attestation names this signer:
+
+- Issuer: `https://token.actions.githubusercontent.com`
+- Identity: `https://github.com/northMES/northmes/.github/workflows/release.yml@refs/heads/main`
+
+The release page also holds the SBOM as `northmes-<version>-image.cdx.json`, and the two attestation bundles as `northmes-<version>-image.intoto.jsonl` and `northmes-<version>-image.cdx.json.intoto.jsonl`.
+
+You need the GitHub CLI (`gh`), signed in with `gh auth login`. The digest is the part after `@` in the `NORTHMES_VERSION` line of the release notes.
+
+<Steps>
+  <Step title="Check where the image was built">
+    ```sh
+    gh attestation verify oci://ghcr.io/northmes/northmes@<digest> \
+      --repo northMES/northmes \
+      --signer-workflow northMES/northmes/.github/workflows/release.yml@refs/heads/main \
+      --deny-self-hosted-runners
+    ```
+
+    The command fails unless an attestation for exactly this digest was signed by the release workflow on `main`, on a GitHub-hosted runner.
+  </Step>
+  <Step title="Check the SBOM">
+    ```sh
+    gh attestation verify oci://ghcr.io/northmes/northmes@<digest> \
+      --repo northMES/northmes \
+      --signer-workflow northMES/northmes/.github/workflows/release.yml@refs/heads/main \
+      --deny-self-hosted-runners \
+      --predicate-type https://cyclonedx.org/bom
+    ```
+
+    To print the SBOM that the attestation signs, add `--format json --jq '.[0].verificationResult.statement.predicate'`.
+  </Step>
+</Steps>
+
+### Verify on a host without internet
+
+On a machine with internet, download the attestations for the digest and GitHub's trusted root, then copy both files to the host:
+
+```sh
+gh attestation download oci://ghcr.io/northmes/northmes@<digest> --repo northMES/northmes
+gh attestation trusted-root > trusted_root.jsonl
+```
+
+`gh attestation download` writes one file, `sha256:<hex>.jsonl`, that holds both attestations. On the host, verify against those files:
+
+```sh
+gh attestation verify oci://<registry>/northmes/northmes@<digest> \
+  --repo northMES/northmes \
+  --signer-workflow northMES/northmes/.github/workflows/release.yml@refs/heads/main \
+  --deny-self-hosted-runners \
+  --bundle sha256:<hex>.jsonl \
+  --custom-trusted-root trusted_root.jsonl
+```
+
+Add `--predicate-type https://cyclonedx.org/bom` to check the SBOM attestation. `gh` reads the image's digest from the registry in the image reference, so `<registry>` is a registry the host can reach that holds the image with the same digest, such as a registry inside the plant. The trusted root changes a few times a year, so download a new one with each release you bring in.
+
 ## Use your own Postgres
 
 NorthMES can use a Postgres 18 server you already run, next to the other databases on it, in place of the `db` service. Set this up at install, before the first `docker compose up -d`.
