@@ -21,7 +21,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Row-level security on a user's own rows (own dashboard tabs), by the signed-in user's id set per transaction from a bound value | built | ADR 0078 (proposed); `apps/backend/src/db/scoped-database.ts`; `dashboard-tab-policies.int.test.ts`, `scoped-database.int.test.ts` |
 | Row-level security on writes to the scope tree and companies: `nm_app` adds a node or a company only at a company among its write scopes | built | ADR 0008; `20261014214627_scope_company_policies.sql`; `access-policies.int.test.ts` |
 | Row-level security on reads of the identity and company tables, and a closed `principal_grants` | gap | [#483](https://github.com/northMES/northmes/issues/483) |
-| Least privilege in containers (non-root, read-only, no capabilities) | decided | ADR 0044; no container files yet |
+| Least privilege in containers (non-root, read-only, no capabilities, a memory limit) | built | ADR 0044; `Dockerfile` (`USER node`), `deploy/compose.yaml`; `test/meta/compose.test.ts` |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
 | A minimum strength for the auth secret | gap | [#484](https://github.com/northMES/northmes/issues/484) |
 | Every input parsed by a Zod contract | built | ADR 0017; `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts` |
