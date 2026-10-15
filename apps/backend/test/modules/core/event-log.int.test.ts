@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { queryAsCore } from '../../../src/testing.ts';
 
 /**
- * core.event is the outbox and the event log, and core.sequence_events gives each committed event
- * its position, the cursor every reader pages by (ADR 0014).
+ * core.event is the outbox and the event log, and core.publish_events gives each committed event
+ * its position, the cursor every reader pages by, and returns the events it published (ADR 0014).
  */
 describe('the event log and its sequencer', () => {
   const db = useTestDatabase();
@@ -45,13 +45,13 @@ describe('the event log and its sequencer', () => {
     return client;
   }
 
-  /** Runs one batch of the sequencer as nm_app and returns the last position it reports. */
-  async function sequence(): Promise<string | null> {
-    const [row] = await query<{ last: string | null }>(
+  /** Runs one batch of the sequencer as nm_app and returns the events it published, by id. */
+  async function sequence(): Promise<Record<string, string>> {
+    const rows = await query<{ id: string; position: string }>(
       db.appUrl,
-      'select core.sequence_events(500)::text as last',
+      'select id, position::text from core.publish_events(500)',
     );
-    return row?.last ?? null;
+    return Object.fromEntries(rows.map(({ id, position }) => [id, position]));
   }
 
   /** The position of each event by id, read as the owner. */
@@ -70,11 +70,11 @@ describe('the event log and its sequencer', () => {
     const second = await publish(scope);
     expect(await positions([first, second])).toEqual({ [first]: null, [second]: null });
 
-    const last = await sequence();
+    const returned = await sequence();
 
     const published = await positions([first, second]);
     expect(Number(published[second])).toBe(Number(published[first]) + 1);
-    expect(last).toBe(published[second]);
+    expect(returned).toEqual(published);
   });
 
   it('E05-S09 an event that commits after a later one gets the higher position, so a reader paging by position misses neither', async () => {
@@ -84,25 +84,25 @@ describe('the event log and its sequencer', () => {
     await late.query(insertEvent, [lateId, randomUUIDv7(), scope]);
     const early = await publish(scope);
 
-    const cursor = await sequence();
+    const firstBatch = await sequence();
     await late.query('commit');
-    await sequence();
+    const secondBatch = await sequence();
 
-    const published = await positions([lateId, early]);
-    expect(published[early]).toBe(cursor);
-    expect(Number(published[lateId])).toBeGreaterThan(Number(cursor));
+    expect(Object.keys(firstBatch)).toEqual([early]);
+    expect(Object.keys(secondBatch)).toEqual([lateId]);
+    expect(Number(secondBatch[lateId])).toBeGreaterThan(Number(firstBatch[early]));
   });
 
-  it('E05-S09 a second sequencer while one runs publishes nothing and answers null', async () => {
+  it('E05-S09 a second sequencer while one runs publishes nothing and returns no events', async () => {
     const scope = given.company();
     const id = await publish(scope);
     const running = await openTransaction(scope);
-    await running.query('select core.sequence_events(500)');
+    await running.query('select * from core.publish_events(500)');
 
     const second = await sequence();
     await running.query('commit');
 
-    expect(second).toBeNull();
+    expect(second).toEqual({});
     expect((await positions([id]))[id]).not.toBeNull();
   });
 

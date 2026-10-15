@@ -5,7 +5,7 @@ import { DomainErrorFilter } from '@northmes/sdk/errors';
 import { BootError } from './boot/boot-error.ts';
 import { CommandsModule } from './commands/commands.module.ts';
 import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
-import { EventSequencer } from './events/event-sequencer.ts';
+import { EventsModule } from './events/events.module.ts';
 import { GraphqlModule } from './graphql/graphql.module.ts';
 import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
 import { WebOriginsModule } from './http/web-origins.module.ts';
@@ -45,8 +45,8 @@ export class AppModule {
    * Imports config first: the ConfigModule that boot created before it imported any plugin
    * manifest (ADR 0060). Then the web origins and the origin rule that runs before every route,
    * the database that `options.database` names (the nm_app pool and the
-   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the event sequencer of roles
-   * worker and all (ADR 0014), the command bus, the operation
+   * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the event
+   * sequencer and the event consumers of roles worker and all (ADR 0014), the operation
    * runner with the operations every module binds, the Nest module of
    * every in-repo module and plugin in boot order, and the GraphQL module that builds one schema from their resolvers and serves it on
    * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
@@ -71,16 +71,13 @@ export class AppModule {
         WebOriginsModule.forRoot(webOrigins),
         DatabaseModule.forRoot(database),
         CommandsModule.forRoot(servers),
+        EventsModule.forRoot(servers, database),
         OperationsModule.forRoot(servers),
         ...servers.map((server) => server.module),
         ...(declaresQuery ? [GraphqlModule] : []),
         WebModule,
       ],
-      providers: [
-        { provide: APP_FILTER, useClass: DomainErrorFilter },
-        // pnpm northmes migrate has no pool, so it publishes no events.
-        ...(database === 'app' ? [EventSequencer] : []),
-      ],
+      providers: [{ provide: APP_FILTER, useClass: DomainErrorFilter }],
     };
   }
 }

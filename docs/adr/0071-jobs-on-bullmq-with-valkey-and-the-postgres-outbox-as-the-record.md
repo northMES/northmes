@@ -1,14 +1,16 @@
 ---
-status: "proposed"
+status: "rejected"
 date: 2026-10-09
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
 consulted: Krister Johansson; the planning session's design study of main at 4cb2429
 informed: NorthMES contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the decision outcome)"
+needs-confirmation: ""
 ---
 
 # Jobs on BullMQ with Valkey and the Postgres outbox as the record
+
+Rejected on 2026-10-15: Krister Johansson chose pg-boss, as [ADR 0014](0014-outbox-event-log-and-pg-boss-jobs.md) decides, so the pilot host keeps one database and no broker.
 
 ## Context and problem statement
 

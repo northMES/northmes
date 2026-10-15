@@ -3,6 +3,7 @@ import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import { Client } from 'pg';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
 import { fileProblems, type MigrationFile, readMigrationFiles } from './files.ts';
+import { installJobQueue } from './job-queue.ts';
 import { MigrationError } from './migration-error.ts';
 
 export interface MigrateOptions {
@@ -41,7 +42,8 @@ interface ModuleFiles {
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
  * are recorded in northmes_meta.migration. A run holds the migration advisory lock of the
- * database throughout, so concurrent runs apply each file once.
+ * database throughout, so concurrent runs apply each file once. Last, it installs or migrates
+ * pg-boss's schema (installJobQueue).
  *
  * The run checks the files of every module before it applies any, and throws a MigrationError
  * that lists every problem when an applied file's sha256 changed, two files of a module share a
@@ -68,6 +70,7 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
       }
     }
     await syncPermissionCatalog(client, catalog);
+    await installJobQueue(client, ownerUrl);
     return { applied };
   } finally {
     await client.end();
