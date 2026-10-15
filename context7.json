@@ -1,5 +1,7 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/northmes/northmes",
+  "public_key": "pk_NUXwtMtT8WFxFpmxVHRO0",
   "projectTitle": "NorthMES",
   "description": "Open source manufacturing execution system: production planning, job orders on machines, plant calendars and an operator station, self-hosted with Docker Compose and extended with plugins built on MIT SDK packages.",
   "folders": ["apps/docs", "deploy"],
