@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 shell states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+          /* Part ST of shell-190-navigation.dc.html: the states the shell owns (spec section 3), ST1 to ST32 and ST34 to ST43
+             in light and dark, and their build notes ST33. Revised for the review of 2026-10-05: switcher at the sidebar top, user menu at
+             the sidebar foot, the bell in the top bar, icons on every nav entry, a plant in onboarding (ADR 0066). Every frame mounts
+             Shell.dc.html except the pages without a plant: the unknown plant page, the plant list at / and the pages for a plant
+             or a company in onboarding. UI colors are D1 tokens. Classes start with sx-, so they never meet a D1, sh- or stn- class. */
+          .sx-root{display:grid;grid-template-columns:repeat(2,1440px);gap:72px 80px;align-items:start;width:max-content;padding:80px}
+          .sx-root.one{display:block;padding:0}
+          .sx-f{display:flex;flex-direction:column;align-items:flex-start;width:1440px}
+          .sx-f.sx-nf{grid-column:1 / span 2;width:2960px}
+
+          /* Reload dialog frames: the title annotation, then the screen with the inert shell, the overlay and the dialog */
+          .sx-shot{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+          .sx-stage{position:relative;flex:none;width:1440px;height:900px}
+          .sx-inert{position:absolute;inset:0}
+          .sx-ov{position:absolute;inset:0;z-index:30;border-radius:var(--radius-xl);background:rgba(0,0,0,.5)}
+          .sx-dlg{position:absolute;z-index:31;left:50%;top:50%;display:grid;gap:12px;width:480px;padding:24px;transform:translate(-50%,-50%);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+          .sx-dlg-t{margin:0;padding:0;font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.01em}
+          .sx-dlg-d{display:grid;gap:8px}
+          .sx-dlg-f{display:flex;justify-content:flex-end;gap:8px;padding-top:8px}
+          .sx-note{z-index:32}
+
+          /* ErrorState and EmptyState panels in main */
+          .sx-state{display:grid;gap:16px;max-width:640px}
+          .sx-p{margin:0;max-width:72ch}
+          .sx-head{display:flex;align-items:flex-start;gap:12px}
+          .sx-lead{margin:0;font-size:16px;line-height:24px;font-weight:500}
+          .sx-err{color:var(--destructive)}
+          .sx-mut{color:var(--muted-foreground)}
+          .sx-data{font:500 13px/18px var(--font-mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+          .sx-dl{display:grid;margin:0;border-top:1px solid var(--border)}
+          .sx-dr{display:grid;grid-template-columns:140px minmax(0,1fr);align-items:center;gap:12px;min-height:40px;padding:4px 0;border-bottom:1px solid var(--border)}
+          .sx-dt{font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .sx-dd{display:flex;align-items:center;gap:4px;min-width:0;margin:0}
+          .sx-acts{display:flex;flex-wrap:wrap;gap:8px}
+          .sx-h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+          .sx-plants{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+          .sx-plants li{display:flex;align-items:center;gap:8px;min-height:32px}
+          .sx-plants .sx-data{margin-left:4px}
+          .sx-cos{display:grid;gap:16px}
+          .sx-co{display:grid;gap:4px}
+          .sx-co-h{margin:0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .sx-pl{display:inline-flex;align-items:center;min-height:var(--nm-target-min);color:var(--link)}
+          .sh-scr .sx-pl{text-decoration:underline;text-underline-offset:2px}
+          .sx-pl .sh-onboarding{margin-left:8px}
+          .sh-scr .sx-pl.sx-pb{text-decoration:none}
+          .sh-scr .sx-pb .sx-pn{text-decoration:underline;text-underline-offset:2px}
+
+          /* Minimal status route */
+          .sx-status{display:grid;gap:16px;max-width:1040px}
+          .sx-cols{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+          .sx-h2{margin:0 0 12px;font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.01em}
+          .sx-kv .gr{grid-template-columns:minmax(0,1fr) auto}
+          .sx-mods .gr{grid-template-columns:minmax(0,1.4fr) minmax(0,1.1fr) minmax(0,0.8fr) minmax(0,1.5fr)}
+          .sx-ok{--bb:var(--success-subtle);--bf:var(--success)}
+          .sx-bad{--bb:var(--destructive-subtle);--bf:var(--destructive)}
+
+          /* Planning board page as on PL1: toolbar, board grid placeholder (D3) and the planning/board/side/v1 slot */
+          .sx-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+          .sx-seg{display:inline-flex;gap:2px;padding:3px;border-radius:var(--radius);background:var(--muted)}
+          .sx-s{display:inline-flex;align-items:center;height:30px;padding:0 12px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--muted-foreground);font:500 14px/20px var(--font-sans);cursor:pointer}
+          .sx-s.on{background:var(--card);color:var(--foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+          .sx-w140{width:140px}
+          .sx-date{font-size:14px;line-height:20px}
+          .sx-bar-t{display:inline-flex;align-items:center;gap:8px;color:var(--muted-foreground)}
+          .sx-warn{color:var(--warning)}
+          .sx-bd{display:flex;gap:16px;flex:1;min-height:0}
+          .sx-side{display:flex;flex-direction:column;flex:none;width:280px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground)}
+          .sx-wf-h{display:grid;gap:2px;padding:12px 14px;border-bottom:1px solid var(--border)}
+          .sx-wf-t{margin:0;font-size:14px;line-height:20px;font-weight:600}
+          .sx-meta{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+          .sx-wf-b{display:grid;place-items:center;flex:1;margin:12px;border-radius:var(--radius);background:var(--muted)}
+          .sx-wf-b .sh-phl{max-width:92%}
+          .sx-nw{white-space:nowrap}
+          .sx-wf-err{display:grid;align-content:start;gap:10px;margin:12px;padding:12px;border-radius:var(--radius)}
+          .sx-wf-et{display:flex;align-items:flex-start;gap:8px;margin:0;font-weight:600}
+          .sx-wf-et .ic{margin-top:2px}
+          .sx-wf-p{margin:0;color:var(--muted-foreground)}
+          .sx-dl-s .sx-dr{grid-template-columns:56px minmax(0,1fr);min-height:32px}
+
+          /* Loading: Skeleton (LoadingState) of the populated layout in --accent through the D1 .sk class */
+          .sx-sk-tools{display:flex;gap:12px}
+          .sx-skc{display:block;height:var(--nm-control-height)}
+          .sx-skl{display:block;height:12px}
+          .sx-sk-tbl{display:grid;border:1px solid var(--border);border-radius:var(--radius);background:var(--card);overflow:hidden}
+          .sx-sk-r{display:grid;grid-template-columns:96px minmax(0,1fr) 96px 112px 132px;align-items:center;gap:12px;min-height:40px;padding:0 12px;border-top:1px solid var(--border)}
+          .sx-sk-r.h{min-height:36px;border-top:0;background:var(--muted)}
+          .sx-sk-board{flex:1;min-height:200px;border-radius:var(--radius-xl)}
+          .k48{width:48px}.k56{width:56px}.k64{width:64px}.k72{width:72px}.k80{width:80px}.k88{width:88px}.k96{width:96px}
+          .k104{width:104px}.k112{width:112px}.k120{width:120px}.k140{width:140px}.k144{width:144px}.k160{width:160px}.k200{width:200px}.k240{width:240px}
+          .sx-slow{display:flex;align-items:center;gap:16px;max-width:760px}
+          .sx-slow-t{display:grid;gap:4px;flex:1;min-width:0}
+
+          /* Build notes */
+          .sx-notes{width:2960px}
+          .sx-ncols{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:56px;align-items:start;margin-top:32px}
+          .sx-ncol{display:grid;gap:32px;align-content:start;min-width:0}
+          .sx-nsec{display:grid;gap:12px;align-content:start}
+          .sx-nt{display:grid;border-top:1px solid var(--border);margin-top:12px}
+          .sx-nr{display:grid;grid-template-columns:170px minmax(0,1.3fr) minmax(0,1.4fr) minmax(0,0.9fr) minmax(0,0.9fr) 100px;gap:16px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .sx-nr.h,.sx-kr.h{padding:6px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .sx-nr > span:first-child{display:grid;gap:2px;align-content:start}
+          .sx-nf-id{font:500 12px/16px var(--font-mono);color:var(--muted-foreground)}
+          .sx-nw2{font-family:var(--font-mono);font-size:12px}
+          .sx-tok{font-family:var(--font-mono);font-size:.92em;white-space:nowrap}
+          .sx-kr{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .sx-cpg{display:grid;gap:6px}
+          .sx-cps{display:flex;flex-wrap:wrap;gap:6px}
+          .sx-cp{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);font-size:12px;line-height:18px}
+          .sx-doc{font-size:10px;line-height:16px}
+        </style>
+      </helmet>
+      <div class="sx-root {{ rootCls }}">
+        <sc-if value="{{ show.ST1 }}">
+          <section class="sx-f" data-screen-label="ST1 Module unavailable, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST1</span>Module unavailable<span class="fth">Light, 1440 by 900. Pyramid connector failed at stage manifest; its sidebar group keeps its place with (unavailable) and no entries; placeholder route with the focused h1</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="none" title="Pyramid connector unavailable" unavailable="pyramid-connector" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">The Pyramid connector module did not load, so its pages cannot open. Planning and the other modules work as usual.</p></div>
+                <p class="sx-p">NorthMES recorded the error for your plant admin. Reload to try again. If Pyramid connector stays unavailable, tell your plant admin.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Module</dt><dd class="sx-dd sx-data">pyramid-connector</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">manifest</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.asset_missing</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST2 }}">
+          <section class="sx-f" data-screen-label="ST2 Module unavailable in the rail, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST2</span>Module unavailable in the rail<span class="fth">Dark, 1440 by 900. As ST1 on the rail: the Pyramid connector icon keeps its place, marked unavailable, with its tooltip in the hover state</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" sidebar="rail" nav="none" title="Pyramid connector unavailable" unavailable="pyramid-connector" tip="pyramid-connector" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">The Pyramid connector module did not load, so its pages cannot open. Planning and the other modules work as usual.</p></div>
+                <p class="sx-p">NorthMES recorded the error for your plant admin. Reload to try again. If Pyramid connector stays unavailable, tell your plant admin.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Module</dt><dd class="sx-dd sx-data">pyramid-connector</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">manifest</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.asset_missing</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST3 }}">
+          <section class="sx-f" data-screen-label="ST3 Reload dialog, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST3</span>Reload dialog<span class="fth">Light, 1440 by 900. Build mismatch on the Planning board; the dialog holds the only h1, the page is inert</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>NorthMES was updated · Plant A · NorthMES</span></div>
+              <div class="sx-stage">
+                <div class="sx-inert" inert="">
+                  <dc-import name="Shell" width="1440" theme="light" nav="planning.board" hint-size="1440px,900px">
+                    <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                    <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+                  </dc-import>
+                </div>
+                <div class="sx-ov"></div>
+                <span class="sh-lm sx-note" style="left:280px;bottom:4px">page: inert, its h1 is out of the accessibility tree</span>
+                <div class="sx-dlg" role="alertdialog" aria-modal="true" aria-labelledby="sx-st3-t" aria-describedby="sx-st3-d">
+                  <span class="sh-lm sx-note" style="left:16px;top:-10px">alertdialog: the only h1 while it is open</span>
+                  <h1 class="sx-dlg-t" id="sx-st3-t" tabIndex="-1">NorthMES was updated</h1>
+                  <div class="sx-dlg-d" id="sx-st3-d">
+                    <p class="sx-p">This tab runs the previous version, so saving is off until you reload.</p>
+                    <p class="sx-p">Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.</p>
+                  </div>
+                  <div class="sx-dlg-f"><button class="btn v-default is-focus" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST4 }}">
+          <section class="sx-f" data-screen-label="ST4 Reload dialog, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST4</span>Reload dialog<span class="fth">Dark, 1440 by 900. As ST3, without annotations</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>NorthMES was updated · Plant A · NorthMES</span></div>
+              <div class="sx-stage dark">
+                <div class="sx-inert" inert="">
+                  <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" hint-size="1440px,900px">
+                    <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                    <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+                  </dc-import>
+                </div>
+                <div class="sx-ov"></div>
+                <div class="sx-dlg" role="alertdialog" aria-modal="true" aria-labelledby="sx-st4-t" aria-describedby="sx-st4-d">
+                  <h1 class="sx-dlg-t" id="sx-st4-t" tabIndex="-1">NorthMES was updated</h1>
+                  <div class="sx-dlg-d" id="sx-st4-d">
+                    <p class="sx-p">This tab runs the previous version, so saving is off until you reload.</p>
+                    <p class="sx-p">Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.</p>
+                  </div>
+                  <div class="sx-dlg-f"><button class="btn v-default is-focus" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST5 }}">
+          <section class="sx-f" data-screen-label="ST5 Module page not found, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST5</span>Module page not found<span class="fth">Light, 1440 by 900. Planning's notFoundComponent with a link to its first nav entry; the h1 has focus</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="none" title="Page not found" crumbs="Planning|Page not found" doc-title="Page not found · Planning · Plant A · NorthMES" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="SearchX"></span><p class="sx-lead">Planning has no page at <span class="sx-data">/plant-a/planning/schedule</span>. The link may be out of date.</p></div>
+                <div class="sx-acts"><a class="btn v-default" href="#">Go to Planning board</a><a class="btn v-outline" href="#">See all pages</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST14 }}">
+          <section class="sx-f" data-screen-label="ST14 Module page not found, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST14</span>Module page not found<span class="fth">Dark, 1440 by 900. As ST5</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="none" title="Page not found" crumbs="Planning|Page not found" doc-title="Page not found · Planning · Plant A · NorthMES" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="SearchX"></span><p class="sx-lead">Planning has no page at <span class="sx-data">/plant-a/planning/schedule</span>. The link may be out of date.</p></div>
+                <div class="sx-acts"><a class="btn v-default" href="#">Go to Planning board</a><a class="btn v-outline" href="#">See all pages</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST6 }}">
+          <section class="sx-f" data-screen-label="ST6 Error panel, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST6</span>Error panel<span class="fth">Light, 1440 by 900. Production orders threw at stage render; sidebar and top bar stay, the route's page actions are gone; the h1 has focus</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" title="Production orders could not be shown" actions="none" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">This page stopped with an error while it was drawn. Saved data is not affected.</p></div>
+                <p class="sx-p">Try again. If the error comes back, give your plant admin the correlation id.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Correlation id</dt><dd class="sx-dd"><span class="sx-data">01a10b03-6208-7c3e-9a41-2f6d8b0e5c17</span><button class="btn icon v-ghost" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">render</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.render_error</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST15 }}">
+          <section class="sx-f" data-screen-label="ST15 Error panel, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST15</span>Error panel<span class="fth">Dark, 1440 by 900. As ST6</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" title="Production orders could not be shown" actions="none" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">This page stopped with an error while it was drawn. Saved data is not affected.</p></div>
+                <p class="sx-p">Try again. If the error comes back, give your plant admin the correlation id.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Correlation id</dt><dd class="sx-dd"><span class="sx-data">01a10b03-6208-7c3e-9a41-2f6d8b0e5c17</span><button class="btn icon v-ghost" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">render</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.render_error</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST7 }}">
+          <section class="sx-f" data-screen-label="ST7 Minimal status route, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST7</span>Minimal status route<span class="fth">Light, 1440 by 900, plant admin. Core failed at stage entry: Core and Administration show (unavailable); the shell's own status route still renders</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="none" title="System status" unavailable="core" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="sx-status">
+                <p class="sx-p">The Core module did not load. Master data and the Administration pages, System health among them, belong to Core, so they cannot open until it loads. This page is part of the shell and shows what the server reports.</p>
+                <div class="sx-cols">
+                  <section class="panel">
+                    <h2 class="sx-h2">Server</h2>
+                    <div class="gt sx-kv">
+                      <div class="gr"><span>Readiness</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Ready</span></div>
+                      <div class="gr"><span>Database</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Connected</span></div>
+                      <div class="gr"><span>Live updates</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Connected</span></div>
+                    </div>
+                  </section>
+                  <section class="panel">
+                    <h2 class="sx-h2">Modules</h2>
+                    <div class="gt sx-mods">
+                      <div class="gr gh"><span>Module</span><span>Status</span><span>Stage</span><span>Code</span></div>
+                      <div class="gr"><span>Core</span><span class="badge sx-bad"><span class="ic" data-icon="CircleAlert"></span>Unavailable</span><span class="sx-data">entry</span><span class="sx-data">web.entry_failed</span></div>
+                      <div class="gr"><span>Planning</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Production start</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Pyramid connector</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>AI</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Audit</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Acme tooling</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                    </div>
+                  </section>
+                </div>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST16 }}">
+          <section class="sx-f" data-screen-label="ST16 Minimal status route, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST16</span>Minimal status route<span class="fth">Dark, 1440 by 900, plant admin. As ST7</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="none" title="System status" unavailable="core" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="sx-status">
+                <p class="sx-p">The Core module did not load. Master data and the Administration pages, System health among them, belong to Core, so they cannot open until it loads. This page is part of the shell and shows what the server reports.</p>
+                <div class="sx-cols">
+                  <section class="panel">
+                    <h2 class="sx-h2">Server</h2>
+                    <div class="gt sx-kv">
+                      <div class="gr"><span>Readiness</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Ready</span></div>
+                      <div class="gr"><span>Database</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Connected</span></div>
+                      <div class="gr"><span>Live updates</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Connected</span></div>
+                    </div>
+                  </section>
+                  <section class="panel">
+                    <h2 class="sx-h2">Modules</h2>
+                    <div class="gt sx-mods">
+                      <div class="gr gh"><span>Module</span><span>Status</span><span>Stage</span><span>Code</span></div>
+                      <div class="gr"><span>Core</span><span class="badge sx-bad"><span class="ic" data-icon="CircleAlert"></span>Unavailable</span><span class="sx-data">entry</span><span class="sx-data">web.entry_failed</span></div>
+                      <div class="gr"><span>Planning</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Production start</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Pyramid connector</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>AI</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Audit</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                      <div class="gr"><span>Acme tooling</span><span class="badge sx-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span><span></span><span></span></div>
+                    </div>
+                  </section>
+                </div>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST8 }}">
+          <section class="sx-f" data-screen-label="ST8 Reconnecting, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST8</span>Reconnecting<span class="fth">Light, 1440 by 900. Socket closed: the chip in the top bar; the board's Resume control is disabled and moves are off</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.board" status="reconnecting" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <span class="sx-bar-t"><span>Moves are off until live updates are back.</span></span><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="Play"></span>Resume live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3. Blocks cannot be moved while the socket is down.</span></div>
+                <section class="sx-side" aria-labelledby="sx-st8-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st8-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST17 }}">
+          <section class="sx-f" data-screen-label="ST17 Reconnecting, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST17</span>Reconnecting<span class="fth">Dark, 1440 by 900. As ST8</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" status="reconnecting" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <span class="sx-bar-t"><span>Moves are off until live updates are back.</span></span><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="Play"></span>Resume live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3. Blocks cannot be moved while the socket is down.</span></div>
+                <section class="sx-side" aria-labelledby="sx-st17-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st17-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST9 }}">
+          <section class="sx-f" data-screen-label="ST9 Live updates paused, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST9</span>Live updates paused<span class="fth">Light, 1440 by 900. The planner paused live updates on the board; the shell adds no status</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.board" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <span class="sx-bar-t"><span class="ic sx-warn" data-icon="Pause"></span><span>Live updates paused. <span class="num">12</span> changes waiting.</span></span><button class="btn v-outline" type="button"><span class="ic" data-icon="Play"></span>Resume live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3. It shows the block model frozen at pause time plus this planner's own draft changes.</span></div>
+                <section class="sx-side" aria-labelledby="sx-st9-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st9-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST18 }}">
+          <section class="sx-f" data-screen-label="ST18 Live updates paused, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST18</span>Live updates paused<span class="fth">Dark, 1440 by 900. As ST9</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <span class="sx-bar-t"><span class="ic sx-warn" data-icon="Pause"></span><span>Live updates paused. <span class="num">12</span> changes waiting.</span></span><button class="btn v-outline" type="button"><span class="ic" data-icon="Play"></span>Resume live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3. It shows the block model frozen at pause time plus this planner's own draft changes.</span></div>
+                <section class="sx-side" aria-labelledby="sx-st18-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st18-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST10 }}">
+          <section class="sx-f" data-screen-label="ST10 Restore banner, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST10</span>Restore banner<span class="fth">Light, 1440 by 900, planner. Shown to planners and admins for 24 hours after a restore or rollback (E18-S04)</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.board" status="banner" banner-kind="info" banner="Data restored to 2026-10-04 22:00; changes after that were lost." show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST19 }}">
+          <section class="sx-f" data-screen-label="ST19 Restore banner, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST19</span>Restore banner<span class="fth">Dark, 1440 by 900, planner. As ST10</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" status="banner" banner-kind="info" banner="Data restored to 2026-10-04 22:00; changes after that were lost." show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST11 }}">
+          <section class="sx-f" data-screen-label="ST11 Readiness banner, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST11</span>Readiness banner<span class="fth">Light, 1440 by 900, plant admin, sidebar on the rail. Built from the degraded list in /health/ready (E16-S02)</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" sidebar="rail" nav="planning.orders" status="banner" banner-kind="warning" banner="NorthMES is running with degraded checks: Pyramid is unreachable, and the last successful backup is more than a day old." banner-action="Open System health" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Production orders list, the list page from D1 F8</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST20 }}">
+          <section class="sx-f" data-screen-label="ST20 Readiness banner, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST20</span>Readiness banner<span class="fth">Dark, 1440 by 900, plant admin. As ST11</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" sidebar="rail" nav="planning.orders" status="banner" banner-kind="warning" banner="NorthMES is running with degraded checks: Pyramid is unreachable, and the last successful backup is more than a day old." banner-action="Open System health" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Production orders list, the list page from D1 F8</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST12 }}">
+          <section class="sx-f" data-screen-label="ST12 AI budget banner, warning, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST12</span>AI budget banner, warning<span class="fth">Light, 1440 by 900, plant admin, sidebar on the rail. ai.budget_state is warning (E13-S05)</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" sidebar="rail" nav="planning.proposals" status="banner" banner-kind="warning" banner="The AI budget for October has passed its warning threshold. The assistant stops for all users when the monthly limit is reached." banner-action="Open AI usage" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Proposals list from the Planning remote</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST21 }}">
+          <section class="sx-f" data-screen-label="ST21 AI budget banner, warning, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST21</span>AI budget banner, warning<span class="fth">Dark, 1440 by 900, plant admin. As ST12</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" sidebar="rail" nav="planning.proposals" status="banner" banner-kind="warning" banner="The AI budget for October has passed its warning threshold. The assistant stops for all users when the monthly limit is reached." banner-action="Open AI usage" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Proposals list from the Planning remote</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST13 }}">
+          <section class="sx-f" data-screen-label="ST13 AI budget banner, exhausted, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST13</span>AI budget banner, exhausted<span class="fth">Light, 1440 by 900, plant admin. ai.budget_state is exhausted: the Assistant toggle stays in place, disabled (aria-disabled)</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" sidebar="rail" nav="planning.proposals" status="banner" banner-kind="error" banner="The AI budget for October is used up. The assistant is off for all users until 2026-11-01 or until the budget is raised." banner-action="Open AI usage" assistant="disabled" assistant-tip="The AI budget for October is used up" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Proposals list from the Planning remote</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST22 }}">
+          <section class="sx-f" data-screen-label="ST22 AI budget banner, exhausted, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST22</span>AI budget banner, exhausted<span class="fth">Dark, 1440 by 900, plant admin. Focus on the disabled Assistant toggle: its tooltip opens at once</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" sidebar="rail" nav="planning.proposals" status="banner" banner-kind="error" banner="The AI budget for October is used up. The assistant is off for all users until 2026-11-01 or until the budget is raised." banner-action="Open AI usage" assistant="disabled" assistant-tip="The AI budget for October is used up" focus="assistant" show-title="on" hint-size="1440px,936px">
+              <div class="sh-phbox"><span class="sh-phl">Proposals list from the Planning remote</span></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST23 }}">
+          <section class="sx-f" data-screen-label="ST23 Route loading, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST23</span>Route loading<span class="fth">Light, 1440 by 900. Production orders while its data loads: a skeleton of the list, main has aria-busy, the h1 is there and focused</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" actions="none" busy="true" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="sx-sk-tools"><span class="sk sx-skc k240"></span><span class="sk sx-skc k160"></span><span class="sk sx-skc k104"></span></div>
+              <div class="sx-sk-tbl">
+                <div class="sx-sk-r h"><span class="sk sx-skl k48"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k48"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k200"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k80"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k120"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k72"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k160"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k96"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k144"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k80"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k112"></span><span class="sk sx-skl k48"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k72"></span></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST24 }}">
+          <section class="sx-f" data-screen-label="ST24 Route loading, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST24</span>Route loading<span class="fth">Dark, 1440 by 900. As ST23</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" actions="none" busy="true" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="sx-sk-tools"><span class="sk sx-skc k240"></span><span class="sk sx-skc k160"></span><span class="sk sx-skc k104"></span></div>
+              <div class="sx-sk-tbl">
+                <div class="sx-sk-r h"><span class="sk sx-skl k48"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k48"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k200"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k80"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k120"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k72"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k160"></span><span class="sk sx-skl k56"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k96"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k144"></span><span class="sk sx-skl k64"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k80"></span></div>
+                  <div class="sx-sk-r"><span class="sk sx-skl k56"></span><span class="sk sx-skl k112"></span><span class="sk sx-skl k48"></span><span class="sk sx-skl k88"></span><span class="sk sx-skl k72"></span></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST25 }}">
+          <section class="sx-f" data-screen-label="ST25 Slow remote, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST25</span>Slow remote<span class="fth">Light, 1440 by 900. The Planning remote has not loaded after 2 s: the indicator with Try again; its sidebar group shows (loading)</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="none" title="Planning" loading="planning" busy="true" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-slow">
+                <span class="ic ic24 sx-mut" data-icon="LoaderCircle"></span>
+                <div class="sx-slow-t"><p class="sx-lead">Planning is taking longer than usual to load.</p><p class="sx-p sx-mut">If Planning does not load within <span class="num">10</span> seconds, this page shows what went wrong.</p></div>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button>
+              </div>
+              <div class="sx-sk-tools"><span class="sk sx-skc k240"></span><span class="sk sx-skc k140"></span><span class="sk sx-skc k104"></span></div>
+              <div class="sk sx-sk-board"></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST26 }}">
+          <section class="sx-f" data-screen-label="ST26 Slow remote, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST26</span>Slow remote<span class="fth">Dark, 1440 by 900. As ST25</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="none" title="Planning" loading="planning" busy="true" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-slow">
+                <span class="ic ic24 sx-mut" data-icon="LoaderCircle"></span>
+                <div class="sx-slow-t"><p class="sx-lead">Planning is taking longer than usual to load.</p><p class="sx-p sx-mut">If Planning does not load within <span class="num">10</span> seconds, this page shows what went wrong.</p></div>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button>
+              </div>
+              <div class="sx-sk-tools"><span class="sk sx-skc k240"></span><span class="sk sx-skc k140"></span><span class="sk sx-skc k104"></span></div>
+              <div class="sk sx-sk-board"></div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST27 }}">
+          <section class="sx-f" data-screen-label="ST27 Slot contribution failed, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST27</span>Slot contribution failed<span class="fth">Light, 1440 by 900. Large orders (planning/board/side/v1) threw at stage slot; the fallback stays inside its WidgetFrame</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.board" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="sx-side" aria-labelledby="sx-st27-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st27-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-err" role="group" aria-labelledby="sx-st27-lo-e" tabIndex="-1">
+                    <p class="sx-wf-et" id="sx-st27-lo-e"><span class="ic sx-err" data-icon="CircleAlert"></span><span>Large orders could not be shown.</span></p>
+                    <p class="sx-wf-p">The rest of the board works as usual.</p>
+                    <dl class="sx-dl sx-dl-s">
+                      <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">slot</dd></div>
+                      <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.slot_error</dd></div>
+                    </dl>
+                    <button class="btn v-outline" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button>
+                  </div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST28 }}">
+          <section class="sx-f" data-screen-label="ST28 Slot contribution failed, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST28</span>Slot contribution failed<span class="fth">Dark, 1440 by 900. Focus was inside the widget, so it moves to the fallback</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="sx-side" aria-labelledby="sx-st28-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st28-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-err is-focus" role="group" aria-labelledby="sx-st28-lo-e" tabIndex="-1">
+                    <p class="sx-wf-et" id="sx-st28-lo-e"><span class="ic sx-err" data-icon="CircleAlert"></span><span>Large orders could not be shown.</span></p>
+                    <p class="sx-wf-p">The rest of the board works as usual.</p>
+                    <dl class="sx-dl sx-dl-s">
+                      <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">slot</dd></div>
+                      <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.slot_error</dd></div>
+                    </dl>
+                    <button class="btn v-outline" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button>
+                  </div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST29 }}">
+          <section class="sx-f" data-screen-label="ST29 Unknown plant, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST29</span>Unknown plant<span class="fth">Light, 1440 by 900. /plant-d is no plant this user can open: NOT_FOUND without a plant, so no sidebar and no crumbs; the user's plants by company</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Page not found · NorthMES</span></div>
+              <div class="sh-scr w1440" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st29">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st29" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Page not found</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="SearchX"></span><p class="sx-lead">There is no plant at <span class="sx-data">/plant-d/planning/board</span> that you can open. The link may be out of date.</p></div>
+                      <h2 class="sx-h3">Your plants</h2>
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st29-c1">Acme AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st29-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st29-c2">Nordic Tools AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st29-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST30 }}">
+          <section class="sx-f" data-screen-label="ST30 Unknown plant, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST30</span>Unknown plant<span class="fth">Dark, 1440 by 900. As ST29</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Page not found · NorthMES</span></div>
+              <div class="sh-scr w1440 dark" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st30">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st30" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Page not found</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="SearchX"></span><p class="sx-lead">There is no plant at <span class="sx-data">/plant-d/planning/board</span> that you can open. The link may be out of date.</p></div>
+                      <h2 class="sx-h3">Your plants</h2>
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st30-c1">Acme AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st30-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st30-c2">Nordic Tools AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st30-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST31 }}">
+          <section class="sx-f" data-screen-label="ST31 No AI provider, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST31</span>No AI provider<span class="fth">Light, 1440 by 900. No provider is configured: no Assistant toggle and no aside; Help and the bell keep their places</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="planning.board" assistant="off" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="sx-side" aria-labelledby="sx-st31-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st31-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST32 }}">
+          <section class="sx-f" data-screen-label="ST32 No AI provider, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST32</span>No AI provider<span class="fth">Dark, 1440 by 900. As ST31</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="planning.board" assistant="off" show-title="on" hint-size="1440px,936px">
+              <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+              <div class="sx-tools">
+                <div class="sx-seg" role="group" aria-label="View"><button class="sx-s on" type="button" aria-pressed="true">Board</button><button class="sx-s" type="button" aria-pressed="false">Job table</button></div>
+                <span class="inp sx-w140"><span>Zoom: Day</span><span class="ic end" data-icon="ChevronDown"></span></span>
+                <button class="btn icon v-outline" type="button" aria-label="Previous day"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Today</button>
+                <button class="btn icon v-outline" type="button" aria-label="Next day"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="num sx-date">2026-10-05</span>
+                <span class="sh-grow"></span>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="sx-bd">
+                <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3: machine column, time axis in plant time, job order blocks</span></div>
+                <section class="sx-side" aria-labelledby="sx-st32-lo">
+                  <div class="sx-wf-h"><h2 class="sx-wf-t" id="sx-st32-lo">Large orders</h2><span class="sx-meta">example-widget</span></div>
+                  <div class="sx-wf-b"><span class="sh-phl">Contribution <span class="sx-nw">example-widget.large-orders</span></span></div>
+                </section>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST34 }}">
+          <section class="sx-f" data-screen-label="ST34 Module unavailable in the rail, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST34</span>Module unavailable in the rail<span class="fth">Light, 1440 by 900. As ST2: the Pyramid connector icon keeps its place, marked unavailable, with its tooltip in the hover state</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" sidebar="rail" nav="none" title="Pyramid connector unavailable" unavailable="pyramid-connector" tip="pyramid-connector" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">The Pyramid connector module did not load, so its pages cannot open. Planning and the other modules work as usual.</p></div>
+                <p class="sx-p">NorthMES recorded the error for your plant admin. Reload to try again. If Pyramid connector stays unavailable, tell your plant admin.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Module</dt><dd class="sx-dd sx-data">pyramid-connector</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">manifest</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.asset_missing</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST35 }}">
+          <section class="sx-f" data-screen-label="ST35 Module unavailable, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST35</span>Module unavailable<span class="fth">Dark, 1440 by 900. As ST1: the Pyramid connector group keeps its place with (unavailable) and no entries; placeholder route with the focused h1</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="none" title="Pyramid connector unavailable" unavailable="pyramid-connector" focus="h1" show-title="on" hint-size="1440px,936px">
+              <div class="panel sx-state">
+                <div class="sx-head"><span class="ic ic24 sx-err" data-icon="CircleAlert"></span><p class="sx-lead">The Pyramid connector module did not load, so its pages cannot open. Planning and the other modules work as usual.</p></div>
+                <p class="sx-p">NorthMES recorded the error for your plant admin. Reload to try again. If Pyramid connector stays unavailable, tell your plant admin.</p>
+                <dl class="sx-dl">
+                  <div class="sx-dr"><dt class="sx-dt">Module</dt><dd class="sx-dd sx-data">pyramid-connector</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Stage</dt><dd class="sx-dd sx-data">manifest</dd></div>
+                  <div class="sx-dr"><dt class="sx-dt">Code</dt><dd class="sx-dd sx-data">web.asset_missing</dd></div>
+                </dl>
+                <div class="sx-acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button><a class="btn v-outline" href="#">Go to Planning board</a></div>
+              </div>
+            </dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST36 }}">
+          <section class="sx-f" data-screen-label="ST36 Plant in onboarding, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST36</span>Plant in onboarding<span class="fth">Light, 1440 by 900, company admin. Plant D is in onboarding, so a holder of core.onboarding:manage uses it as usual under a banner that links to the plant wizard</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" plant="Plant D" nav="planning.board" status="banner" banner-kind="info" banner="Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it." banner-action="Continue onboarding" show-title="on" hint-size="1440px,936px"></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST37 }}">
+          <section class="sx-f" data-screen-label="ST37 Plant in onboarding, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST37</span>Plant in onboarding<span class="fth">Dark, 1440 by 900, company admin. As ST36</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" plant="Plant D" nav="planning.board" status="banner" banner-kind="info" banner="Plant D is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it." banner-action="Continue onboarding" show-title="on" hint-size="1440px,936px"></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST38 }}">
+          <section class="sx-f" data-screen-label="ST38 Plant list, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST38</span>Plant list<span class="fth">Light, 1440 by 900. / for a company admin with plants in two companies: no plant, so no sidebar and no crumbs; the plants by company, Plant D with Onboarding, and Admin in the top bar</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Your plants · NorthMES</span></div>
+              <div class="sh-scr w1440" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st38">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <a class="btn v-outline" href="#"><span class="ic" data-icon="Building2"></span>Admin</a>
+                    <span class="sh-vsep"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Jonas Holm, jonas.holm, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">JH</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st38" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Your plants</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h2 class="sx-h3" id="sx-st38-c1">Acme AB</h2>
+                          <ul class="sx-plants" aria-labelledby="sx-st38-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl sx-pb" href="#"><span class="sx-pn">Plant D</span><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></a><span class="sx-data sx-mut">/plant-d</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h2 class="sx-h3" id="sx-st38-c2">Nordic Tools AB</h2>
+                          <ul class="sx-plants" aria-labelledby="sx-st38-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST39 }}">
+          <section class="sx-f" data-screen-label="ST39 Plant list, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST39</span>Plant list<span class="fth">Dark, 1440 by 900. As ST38</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Your plants · NorthMES</span></div>
+              <div class="sh-scr w1440 dark" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st39">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <a class="btn v-outline" href="#"><span class="ic" data-icon="Building2"></span>Admin</a>
+                    <span class="sh-vsep"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Jonas Holm, jonas.holm, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">JH</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st39" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Your plants</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h2 class="sx-h3" id="sx-st39-c1">Acme AB</h2>
+                          <ul class="sx-plants" aria-labelledby="sx-st39-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl sx-pb" href="#"><span class="sx-pn">Plant D</span><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></a><span class="sx-data sx-mut">/plant-d</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h2 class="sx-h3" id="sx-st39-c2">Nordic Tools AB</h2>
+                          <ul class="sx-plants" aria-labelledby="sx-st39-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST40 }}">
+          <section class="sx-f" data-screen-label="ST40 Plant not open yet, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST40</span>Plant not open yet<span class="fth">Light, 1440 by 900. /plant-d for a planner with a role at Plant D, which is in onboarding: the plant does not open, and the planner's open plants are listed</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Plant D is not open yet · NorthMES</span></div>
+              <div class="sh-scr w1440" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st40">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st40" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Plant D is not open yet</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="Construction"></span><p class="sx-lead">Its onboarding is not complete. You can open it once an admin completes onboarding.</p></div>
+                      <h2 class="sx-h3">Your plants</h2>
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st40-c1">Acme AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st40-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st40-c2">Nordic Tools AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st40-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST41 }}">
+          <section class="sx-f" data-screen-label="ST41 Plant not open yet, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST41</span>Plant not open yet<span class="fth">Dark, 1440 by 900. As ST40</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Plant D is not open yet · NorthMES</span></div>
+              <div class="sh-scr w1440 dark" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st41">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st41" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Plant D is not open yet</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="Construction"></span><p class="sx-lead">Its onboarding is not complete. You can open it once an admin completes onboarding.</p></div>
+                      <h2 class="sx-h3">Your plants</h2>
+                      <div class="sx-cos">
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st41-c1">Acme AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st41-c1">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant A</a><span class="sx-data sx-mut">/plant-a</span></li>
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant B</a><span class="sx-data sx-mut">/plant-b</span></li>
+                          </ul>
+                        </div>
+                        <div class="sx-co">
+                          <h3 class="sx-co-h" id="sx-st41-c2">Nordic Tools AB</h3>
+                          <ul class="sx-plants" aria-labelledby="sx-st41-c2">
+                            <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="sx-pl" href="#">Plant C</a><span class="sx-data sx-mut">/plant-c</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST42 }}">
+          <section class="sx-f" data-screen-label="ST42 Company not open yet, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST42</span>Company not open yet<span class="fth">Light, 1440 by 900. / for a planner whose only plant, Plant D, is in onboarding: no open plant and no admin page</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Your company is not open yet · NorthMES</span></div>
+              <div class="sh-scr w1440" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st42">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Erik Lind, erik.lind, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">EL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st42" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Your company is not open yet</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="Construction"></span><p class="sx-lead">Its onboarding is not complete. You can open its plants once an admin completes onboarding.</p></div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST43 }}">
+          <section class="sx-f" data-screen-label="ST43 Company not open yet, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST43</span>Company not open yet<span class="fth">Dark, 1440 by 900. As ST42</span></div></sc-if>
+            <div class="sx-shot">
+              <div class="sh-doc"><span class="sh-doc-k">title</span><span>Your company is not open yet · NorthMES</span></div>
+              <div class="sh-scr w1440 dark" lang="en">
+                <a class="btn v-default sh-skip" href="#sx-np-st43">Skip to main content</a>
+                <div class="sh-col">
+                  <header class="sh-tb">
+                    <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    <span class="sh-grow"></span>
+                    <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                    <button class="sh-rmark" type="button" aria-label="Erik Lind, erik.lind, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">EL</span></button>
+                  </header>
+                  <main class="sh-main sx-np" id="sx-np-st43" tabIndex="-1">
+                    <div class="sh-ph"><h1 class="sh-h1 is-focus" tabIndex="-1">Your company is not open yet</h1></div>
+                    <div class="panel sx-state">
+                      <div class="sx-head"><span class="ic ic24 sx-mut" data-icon="Construction"></span><p class="sx-lead">Its onboarding is not complete. You can open its plants once an admin completes onboarding.</p></div>
+                    </div>
+                  </main>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST33 }}">
+          <section class="sx-f sx-nf" data-screen-label="ST33 States build notes, not part of the UI, light, 2960 wide">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">ST33</span>States build notes, not part of the UI<span class="fth">Light, 2960 wide. Components, roles, focus, announcements, titles, criteria and copy for ST1 to ST32 and ST34 to ST43</span></div></sc-if>
+            <div class="sheet sx-notes">
+              <p class="kick">Build notes, not part of the UI</p>
+              <h2 class="t1">States the shell owns</h2>
+              <p class="lede">Frames ST1 to ST32 and ST34 to ST43 in this row, each in light and dark; ST2 and ST34 show the rail. Every state renders inside Shell.dc.html, or in the shell's own page without a plant, so module pages never draw them again (spec 0.9). Rule numbers point into shell-190-spec.md. In the copy list, a line marked doc is verbatim from the docs; every other line is proposed and needs Krister's yes. Braces mark values the page fills in.</p>
+              <div class="sx-ncols">
+                <div class="sx-ncol">
+                  <h3 class="t2">State by state</h3>
+                  <div class="sx-nt">
+                    <div class="sx-nr h"><span>State and frames</span><span>shadcn components and D1 tokens</span><span>Roles, names and focus</span><span>Announcement</span><span>Title</span><span>WCAG 2.2</span></div>
+                    <sc-for list="{{ notes.rows }}" as="r">
+                      <div class="sx-nr"><span><span class="b6">{{ r.s }}</span><span class="sx-nf-id">{{ r.f }}</span></span><span><sc-for list="{{ r.c }}" as="p"><sc-if value="{{ p.tok }}"><span class="sx-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span><sc-for list="{{ r.r }}" as="p"><sc-if value="{{ p.tok }}"><span class="sx-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span><sc-for list="{{ r.a }}" as="p"><sc-if value="{{ p.tok }}"><span class="sx-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span><sc-for list="{{ r.t }}" as="p"><sc-if value="{{ p.tok }}"><span class="sx-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span class="sx-nw2">{{ r.w }}</span></div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div class="sx-ncol">
+                  <div class="sx-nsec">
+                    <h3 class="t2">Final English copy</h3>
+                    <sc-for list="{{ notes.copy }}" as="g">
+                      <div class="sx-cpg"><span class="sm mut b6">{{ g.s }}</span><span class="sx-cps"><sc-for list="{{ g.items }}" as="x"><span class="sx-cp">{{ x.t }}<sc-if value="{{ x.doc }}"><span class="tag ok sx-doc">doc</span></sc-if></span></sc-for></span></div>
+                    </sc-for>
+                  </div>
+                  <div class="sx-nsec">
+                    <h3 class="t2">Keys and where focus goes</h3>
+                    <div class="sx-nt">
+                      <div class="sx-kr h"><span>Control</span><span>Focus after</span></div>
+                      <sc-for list="{{ notes.keys }}" as="k"><div class="sx-kr"><span class="b6">{{ k.c }}</span><span>{{ k.a }}</span></div></sc-for>
+                    </div>
+                  </div>
+                  <div class="sx-nsec">
+                    <h3 class="t2">Rules for every state</h3>
+                    <ul class="ul"><sc-for list="{{ notes.rules }}" as="x"><li>{{ x }}</li></sc-for></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame": {"editor": "enum", "options": ["all", "ST1", "ST2", "ST3", "ST4", "ST5", "ST14", "ST6", "ST15", "ST7", "ST16", "ST8", "ST17", "ST9", "ST18", "ST10", "ST19", "ST11", "ST20", "ST12", "ST21", "ST13", "ST22", "ST23", "ST24", "ST25", "ST26", "ST27", "ST28", "ST29", "ST30", "ST31", "ST32", "ST34", "ST35", "ST36", "ST37", "ST38", "ST39", "ST40", "ST41", "ST42", "ST43", "ST33"], "default": "all", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html, behind the same flag, so it is installed once.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // frame="ST3" draws only that frame, so the integrator can place each frame on the canvas on its own.
+          // labels="off" drops the label chips when the integrator draws its own.
+          const P = this.props || {};
+          const ids = ["ST1", "ST2", "ST3", "ST4", "ST5", "ST14", "ST6", "ST15", "ST7", "ST16", "ST8", "ST17", "ST9", "ST18", "ST10", "ST19", "ST11", "ST20", "ST12", "ST21", "ST13", "ST22", "ST23", "ST24", "ST25", "ST26", "ST27", "ST28", "ST29", "ST30", "ST31", "ST32", "ST34", "ST35", "ST36", "ST37", "ST38", "ST39", "ST40", "ST41", "ST42", "ST43", "ST33"];
+          const want = String(P.frame === undefined || P.frame === null ? "all" : P.frame).trim().toUpperCase();
+          const one = ids.indexOf(want) >= 0;
+          const show = {};
+          ids.forEach((id) => { show[id] = !one || id === want; });
+          // Build notes for ST33. Lines marked doc in the copy list are verbatim from the docs.
+          const notes = {"rows": [{"s": "Module unavailable", "f": "ST1, ST2, ST34, ST35", "c": "Card with the ErrorState pattern: CircleAlert in --destructive, the text, the module, stage and code as a description list, and a way out. Button default Reload page, Button outline Go to Planning board. In the rail the module icon (ArrowLeftRight) has a dashed --muted-foreground border and a Tooltip (--primary).", "r": "Route /$plant/pyramid-connector/$. The h1 takes focus one frame after the route renders (7.2). The sidebar keeps the Pyramid connector header with (unavailable) as plain text and no entries, at its usual place (1.1.9, Q7). In the rail (ST2, ST34) the module keeps one icon at its place, a link named Pyramid connector (unavailable) to this route, and the tooltip with that name opens on hover and focus.", "a": "None: the focused h1 is read.", "t": "Pyramid connector unavailable · Plant A · NorthMES (pattern from 3.1)", "w": "1.3.1, 2.4.2, 2.4.3, 3.2.3, 4.1.2"}, {"s": "Reload dialog", "f": "ST3, ST4", "c": "Alert Dialog on the D1 Dialog surface (--background, --border), overlay black at 50 percent (D1 question). Button default Reload page with RotateCw.", "r": "alertdialog, aria-modal, aria-labelledby its heading, aria-describedby its text. The app root is inert, so the dialog heading is the only h1 (Q11). Opening moves focus to Reload page; Tab and Shift+Tab stay on it; Escape does nothing (question K8). While it is open the client refuses mutations (3.6).", "a": "None: the alertdialog is read when focus moves into it.", "t": "NorthMES was updated · Plant A · NorthMES (proposed)", "w": "2.1.2, 2.4.3, 4.1.2"}, {"s": "Module page not found", "f": "ST5, ST14", "c": "Card in the EmptyState shape: SearchX in --muted-foreground, the path in Plex Mono, Button default Go to Planning board (the module's first nav entry, 3.3) and Button outline See all pages.", "r": "Planning's notFoundComponent; sidebar, top bar and skip link stay. The h1 takes focus.", "a": "None.", "t": "Page not found · Planning · Plant A · NorthMES (doc, 2.5)", "w": "2.4.2, 2.4.3, 2.4.5"}, {"s": "Error panel", "f": "ST6, ST15", "c": "Card with the ErrorState pattern (3.4: text, the correlation id and a way out). IconButton Copy with the label Copy correlation id; Button default Try again; Button outline Go to Planning board. The route's page actions leave the top bar.", "r": "defaultErrorComponent with its own h1, focused on render. Copy correlation id keeps focus. Try again renders the route again and focus moves to its h1 (7.2).", "a": "Polite region, once: Correlation id copied (proposed).", "t": "Production orders could not be shown · Plant A · NorthMES (proposed)", "w": "2.4.3, 3.3.1, 4.1.3"}, {"s": "Minimal status route", "f": "ST7, ST16", "c": "Two Cards: Server as a key and value list, Modules as a Table. Badge with CircleCheck in --success on --success-subtle, or CircleAlert in --destructive on --destructive-subtle. Button default Reload page.", "r": "A shell route that renders when the core remote fails (3.5). The sidebar shows Core and Administration with (unavailable), each at its place. h1 System status, an h2 per card, column headers on the table. Reload page loads a fresh page with nothing focused.", "a": "None.", "t": "System status · Plant A · NorthMES (proposed, Q2, Q10)", "w": "1.3.1, 1.4.1, 2.4.6"}, {"s": "Reconnecting", "f": "ST8, ST17", "c": "The chip in the top bar: LoaderCircle, --warning on --warning-subtle, one line. In the board toolbar (D3) Resume live updates is disabled (aria-disabled, opacity 0.5) with the reason beside it; block moves are off.", "r": "The chip is not a focus stop and has no live role. The disabled Resume stays focusable with its name. At 320 the same text is a strip under the top bar.", "a": "Polite region, once: Live updates paused, reconnecting (doc). When the socket is back: Live updates resumed (proposed, K5).", "t": "Planning board · Plant A · NorthMES", "w": "1.4.1, 4.1.3"}, {"s": "Live updates paused by the planner", "f": "ST9, ST18", "c": "No shell status. Resume live updates and the count of waiting changes belong to the board toolbar (D3).", "r": "Resume is a button; the count is plain text.", "a": "None from the shell.", "t": "Planning board · Plant A · NorthMES", "w": "4.1.2"}, {"s": "Restore banner", "f": "ST10, ST19", "c": "Alert, info tone: Info icon, --info on --info-subtle, a strip under the top bar inside the sticky block.", "r": "Shown to planners and admins for 24 hours (E18-S04). The strip has no role; its text goes through the polite region.", "a": "Polite region, once per page load (proposed).", "t": "The route's own title", "w": "1.4.1, 2.4.11, 4.1.3"}, {"s": "Readiness banner", "f": "ST11, ST20", "c": "Alert, warning tone: TriangleAlert, --warning on --warning-subtle; the link Open System health with a 24 px target.", "r": "Admins only, built from the degraded list of /health/ready (A0046). The link opens System health in core.", "a": "Polite region, once per change of the degraded list.", "t": "The route's own title", "w": "2.4.4, 2.5.8, 4.1.3"}, {"s": "AI budget banner", "f": "ST12, ST21, ST13, ST22", "c": "Alert, warning tone for warning and destructive tone (CircleAlert, --destructive on --destructive-subtle) for exhausted; the link Open AI usage. When exhausted the Assistant toggle stays in place with aria-disabled and a Tooltip (--primary).", "r": "Admins see the banner (E13-S05). The disabled toggle stays focusable, so its tooltip opens at once on focus and after a delay on hover; aria-describedby points at the tooltip (ST22).", "a": "Polite region, once per change of ai.budget_state.", "t": "The route's own title", "w": "1.4.13, 2.5.8, 4.1.2, 4.1.3"}, {"s": "Route loading", "f": "ST23, ST24", "c": "Skeleton (LoadingState) in the shape of the populated list: the filter row, the table header and five rows in --accent.", "r": "main has aria-busy=\"true\" until the data renders (1.4.2). PageFrame renders the h1 outside the data Suspense, so it is there and focused from the start. The page actions arrive with the screen.", "a": "None.", "t": "Production orders · Plant A · NorthMES", "w": "1.3.1, 2.4.3, 4.1.2"}, {"s": "Slow remote", "f": "ST25, ST26", "c": "Card with LoaderCircle in --muted-foreground, the text and Button outline Try again; a Skeleton of the toolbar and the board below. The sidebar keeps the Planning header with (loading) and no list until the remote loads.", "r": "Shown after 2 s, inside main, which has aria-busy. Try again starts a new request and keeps focus; when the remote loads, focus moves to its h1. After 10 s in the planner layout, 30 s at a station, ST1's placeholder replaces it (3.2).", "a": "Polite region, once: Planning is taking longer than usual to load. (proposed)", "t": "Planning · Plant A · NorthMES (proposed: the route title is not known before the remote loads)", "w": "2.4.3, 4.1.3"}, {"s": "Slot contribution failed", "f": "ST27, ST28", "c": "WidgetFrame, a section with aria-labelledby from the contribution's label (Large orders). Inside it the fallback: CircleAlert, two lines, stage and code, Button outline Try again.", "r": "The fallback is a group named by its first line, with tabindex -1. When focus was inside the widget it moves to the fallback (ST28); otherwise focus stays. Selecting another entity, or Try again, mounts the contribution again (3.12).", "a": "Polite region, once, only when focus was elsewhere: Large orders could not be shown. (proposed)", "t": "Planning board · Plant A · NorthMES", "w": "1.3.1, 2.4.3, 4.1.3"}, {"s": "Unknown plant", "f": "ST29, ST30", "c": "The page renders without a plant, so there is no sidebar, no switcher and no crumbs. The top bar holds the NorthMES mark, Help and the account menu: the avatar as in the rail, opening the user menu of the sidebar foot. Card with SearchX, the path in Plex Mono, and the user's plants as links grouped by company, each with the switcher's Factory mark.", "r": "NOT_FOUND, never a default plant (1.3.5, 3.13). The h1 takes focus. h2 Your plants, an h3 per company, and a list per company named by its h3. Each plant link opens that plant's root (Q3). The list is the switcher's data, the companies and plants the user holds roles in (Q4). No Assistant and no bell, since both act inside a plant (proposed). With no sidebar, the account menu stays at the top bar end (question K15).", "a": "None.", "t": "Page not found · NorthMES (proposed, Q10)", "w": "2.4.2, 2.4.3, 2.4.4"}, {"s": "No AI provider", "f": "ST31, ST32", "c": "No Assistant toggle and no aside; Help and the bell keep their places.", "r": "With no provider configured the feature is off and nothing in the shell names it (1.5.3).", "a": "None.", "t": "Planning board · Plant A · NorthMES", "w": "3.2.3, 3.2.6"}, {"s": "Plant in onboarding", "f": "ST36, ST37", "c": "Alert in the info tone (Info, --info on --info-subtle) under the top bar, with the link Continue onboarding to the plant wizard at /$plant/core/onboarding. The rest of the shell is as usual.", "r": "Only a holder of core.onboarding:manage reaches a plant whose onboarding is in progress, and uses it as usual (ADR 0066). The strip has no live role, and its link is 24 px high. The banner stays until Open plant completes onboarding.", "a": "Polite region, once per page load (proposed).", "t": "Planning board · Plant D · NorthMES", "w": "2.4.4, 2.5.8, 4.1.3"}, {"s": "Plant list at /", "f": "ST38, ST39", "c": "The top bar of ST29 with Button outline Admin (Building2) before Help when the user has an admin page. A Card holds one h2 per company and its plants: the switcher's Factory mark, the plant link, the path in Plex Mono, and the Onboarding Badge after a plant in onboarding.", "r": "/ for every user that ADR 0066 does not send on: more than one plant, or a plant and an admin page. No plant, so no sidebar, no switcher and no crumbs; the h1 takes focus. Each list is named by its company h2. A plant in onboarding is listed only for a holder of core.onboarding:manage, and its link reads Plant D, Onboarding. Admin opens /admin. Companies and plants come in the server's order, by name.", "a": "None.", "t": "Your plants · NorthMES (proposed)", "w": "1.3.1, 1.4.1, 2.4.2, 2.4.4"}, {"s": "Plant not open yet", "f": "ST40, ST41", "c": "The layout of ST29 with Construction in --muted-foreground, the sentence, and the user's open plants grouped by company.", "r": "A link to a plant whose onboarding is in progress, opened by a user with a role there and without core.onboarding:manage. The module list returns the plant with no modules (ADR 0066), so the page has no sidebar and no crumbs. The h1 takes focus; each plant link opens that plant's root.", "a": "None.", "t": "Plant D is not open yet · NorthMES (proposed)", "w": "2.4.2, 2.4.3, 2.4.4"}, {"s": "Company not open yet", "f": "ST42, ST43", "c": "The layout of ST29 with Construction in --muted-foreground and two sentences. No plant links, since the user has no open plant.", "r": "/ for a user with no open plant and no admin page (ADR 0066). It says that the company's onboarding is not complete, or that no plant is assigned yet. The h1 takes focus; the account menu at the top bar end holds Sign out.", "a": "None.", "t": "Your company is not open yet · NorthMES (proposed)", "w": "2.4.2, 2.4.3"}], "copy": [{"s": "Module unavailable", "items": [{"t": "(unavailable)", "doc": true}, {"t": "{label} (unavailable)", "doc": false}, {"t": "The {label} module did not load, so its pages cannot open. Planning and the other modules work as usual.", "doc": false}, {"t": "NorthMES recorded the error for your plant admin. Reload to try again. If {label} stays unavailable, tell your plant admin.", "doc": false}, {"t": "Module", "doc": false}, {"t": "Stage", "doc": false}, {"t": "Code", "doc": false}, {"t": "Reload page", "doc": false}, {"t": "Go to Planning board", "doc": false}]}, {"s": "Reload dialog", "items": [{"t": "NorthMES was updated", "doc": false}, {"t": "This tab runs the previous version, so saving is off until you reload.", "doc": false}, {"t": "Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.", "doc": false}, {"t": "Reload page", "doc": false}]}, {"s": "Module page not found", "items": [{"t": "Page not found", "doc": true}, {"t": "{module} has no page at {path}. The link may be out of date.", "doc": false}, {"t": "Go to {first entry}", "doc": false}, {"t": "See all pages", "doc": false}]}, {"s": "Error panel", "items": [{"t": "{route title} could not be shown", "doc": false}, {"t": "This page stopped with an error while it was drawn. Saved data is not affected.", "doc": false}, {"t": "Try again. If the error comes back, give your plant admin the correlation id.", "doc": false}, {"t": "Correlation id", "doc": false}, {"t": "Copy correlation id", "doc": false}, {"t": "Correlation id copied", "doc": false}, {"t": "Try again", "doc": false}]}, {"s": "Minimal status route", "items": [{"t": "System status", "doc": false}, {"t": "The Core module did not load. Master data and the Administration pages, System health among them, belong to Core, so they cannot open until it loads. This page is part of the shell and shows what the server reports.", "doc": false}, {"t": "Server", "doc": false}, {"t": "Readiness", "doc": false}, {"t": "Database", "doc": false}, {"t": "Live updates", "doc": false}, {"t": "Modules", "doc": false}, {"t": "Ready", "doc": false}, {"t": "Connected", "doc": false}, {"t": "Loaded", "doc": false}, {"t": "Unavailable", "doc": false}]}, {"s": "Reconnecting and paused", "items": [{"t": "Live updates paused, reconnecting", "doc": true}, {"t": "Live updates resumed", "doc": false}, {"t": "Moves are off until live updates are back.", "doc": false}, {"t": "Resume live updates", "doc": false}, {"t": "Pause live updates", "doc": false}, {"t": "Live updates paused. {n} changes waiting.", "doc": false}]}, {"s": "Banners", "items": [{"t": "Data restored to {time}; changes after that were lost.", "doc": true}, {"t": "NorthMES is running with degraded checks: {checks}.", "doc": false}, {"t": "Open System health", "doc": false}, {"t": "The AI budget for {month} has passed its warning threshold. The assistant stops for all users when the monthly limit is reached.", "doc": false}, {"t": "The AI budget for {month} is used up. The assistant is off for all users until {date} or until the budget is raised.", "doc": false}, {"t": "Open AI usage", "doc": false}, {"t": "The AI budget for {month} is used up", "doc": false}]}, {"s": "Loading and slow remote", "items": [{"t": "Planning is taking longer than usual to load.", "doc": false}, {"t": "If {label} does not load within 10 seconds, this page shows what went wrong.", "doc": false}, {"t": "Try again", "doc": false}, {"t": "(loading)", "doc": false}]}, {"s": "Slot contribution failed", "items": [{"t": "{label} could not be shown.", "doc": false}, {"t": "The rest of the board works as usual.", "doc": false}, {"t": "Try again", "doc": false}]}, {"s": "Unknown plant", "items": [{"t": "Page not found", "doc": true}, {"t": "There is no plant at {path} that you can open. The link may be out of date.", "doc": false}, {"t": "Your plants", "doc": false}]}, {"s": "Plant in onboarding", "items": [{"t": "{plant} is in onboarding. Until onboarding is complete, only people who manage its onboarding can open it.", "doc": false}, {"t": "Continue onboarding", "doc": false}]}, {"s": "Plant list and pages in onboarding", "items": [{"t": "Your plants", "doc": false}, {"t": "Admin", "doc": false}, {"t": "Onboarding", "doc": false}, {"t": "{plant} is not open yet", "doc": false}, {"t": "Its onboarding is not complete. You can open it once an admin completes onboarding.", "doc": false}, {"t": "Your company is not open yet", "doc": false}, {"t": "Its onboarding is not complete. You can open its plants once an admin completes onboarding.", "doc": false}, {"t": "No plant is assigned to you yet.", "doc": false}]}], "keys": [{"c": "Reload page (placeholder, status route)", "a": "A fresh page loads with nothing focused; the first Tab reaches the skip link."}, {"c": "Try again (error panel)", "a": "The route renders again and focus moves to its h1 (7.2)."}, {"c": "Copy correlation id", "a": "Focus stays on the button; the polite region says Correlation id copied."}, {"c": "Try again (slow remote)", "a": "Focus stays on the button until the remote loads, then moves to the h1."}, {"c": "Try again (slot fallback)", "a": "The contribution mounts again; focus moves to its first focusable element, else to the WidgetFrame heading."}, {"c": "Go to Planning board, See all pages, plant links", "a": "The route changes and focus moves to the new h1."}, {"c": "Open System health, Open AI usage", "a": "As any link: the route changes and focus moves to the new h1."}, {"c": "Account menu (pages without a plant)", "a": "The user menu opens with focus on its first item, as from the sidebar foot; Escape closes it and focus returns to the avatar."}, {"c": "Continue onboarding", "a": "As any link: the plant wizard opens and focus moves to its h1."}, {"c": "Admin (plant list)", "a": "/admin opens in a full navigation, and focus moves to its h1."}], "rules": ["Every state keeps the skip link, the sidebar with the switcher at its top and the user menu at its foot, the top bar and Help in their places. The exceptions are the reload dialog, where the page behind is inert, and the pages without a plant: the unknown plant page, the plant list at / and the pages for a plant or a company in onboarding. They have no sidebar, so their account menu sits at the top bar end.", "Each state has one h1 and the title pattern of spec 2.4: specific part, plant, NorthMES. A page without a plant leaves the plant out.", "Strips under the top bar carry no live role. Their text goes once through the polite region in index.html, outside #root (1.6.2), so each message is read once.", "The planner top bars here end with the bell, which needs the notifications module. Release 1 ships without it (ADR 0055), so in release 1 they end with Help. The pages without a plant show no bell.", "Stage names come from the docs. The code web.asset_missing comes from the P06 failure table; web.entry_failed, web.render_error and web.slot_error are invented examples."]};
+          // Token names, paths and ARIA attributes stay on one line in Plex Mono.
+          const SPLIT = /(--[a-z][a-z0-9-]*|\/\$?[a-z][\w$\/.-]*|aria-[a-z]+(?:="[a-z]+")?|ai\.budget_state|#root)/;
+          const tp = (str) => String(str).split(SPLIT).filter((x) => x !== "").map((x) => {
+            const tok = SPLIT.test(x) && x.match(SPLIT)[0] === x;
+            return { t: x, tok: tok, txt: !tok };
+          });
+          notes.rows = notes.rows.map((r) => Object.assign({}, r, { c: tp(r.c), r: tp(r.r), a: tp(r.a), t: tp(r.t) }));
+          return {
+            show: show,
+            notes: notes,
+            labels: String(P.labels === undefined || P.labels === null ? "on" : P.labels).trim() !== "off",
+            rootCls: one ? "one" : ""
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

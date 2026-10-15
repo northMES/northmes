@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>List and form header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+        <style>
+          /* Header frame F0 of the spec page ui/ui-222-list-form.dc.html (issue northMES/northmes#222). A document frame
+             in the D1 page styles, not part of the UI. Classes start with lfh-. */
+          .lfh-sheet{width:1440px}
+          .lfh-p{margin:12px 0 0;max-width:96ch}
+          .lfh-p.mut{color:var(--muted-foreground)}
+          .lfh-map{display:grid;margin-top:14px;border-top:1px solid var(--border)}
+          .lfh-map-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .lfh-map-r.h{padding:8px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .lfh-ids{font-weight:600}
+          .lfh-rows{display:grid;margin-top:14px;border-top:1px solid var(--border)}
+          .lfh-row{display:grid;grid-template-columns:72px 280px 140px minmax(0,1fr);gap:16px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .lfh-row.h{padding:8px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .lfh-file{font-family:var(--font-mono);font-size:12px;overflow-wrap:anywhere}
+          .lfh-tick{position:relative;display:inline-block;width:16px;height:16px;margin:0 8px 0 0;vertical-align:-3px;border-radius:var(--radius-sm);background:var(--primary)}
+          .lfh-tick::after{content:"";position:absolute;left:6px;top:3px;width:4px;height:8px;border:solid var(--primary-foreground);border-width:0 2px 2px 0;transform:rotate(45deg)}
+        </style>
+      </helmet>
+      <div class="sheet lfh-sheet">
+        <p class="kick">NorthMES design page ui-222-list-form.dc.html, approved by Krister Johansson on 2026-10-08</p>
+        <h1 class="t1">Canonical list and form page</h1>
+        <p class="lede">The list, the detail, the create and edit forms and the settings page that every master data screen of release 1 builds on, drawn on the articles of Acme AB inside the approved D2 shell with the D1 tokens and components. The four rows below hold the frames issue #222 lists: the articles list and the same DataTable on production orders, tools and the audit log, the page states, the detail and the forms with their errors, the settings page, the 320 reflow, the long-strings frames, the keyboard and focus frames and the build notes. Every name, number and time on the page is invented.</p>
+        <div class="lf-cols2 sec">
+          <dl class="lf-facts">
+            <sc-for list="{{ facts }}" as="f">
+              <dt>{{ f.k }}</dt>
+              <dd>{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+          <div>
+            <h2 class="t2">Chosen direction</h2>
+            <p class="lfh-p">Krister Johansson chose option A, pages, on 2026-10-07. The list, the detail and the create and edit forms are their own routes (screenRoute for articles, masterDataRoutes for a register), the table keeps the full width of main, and the change reason is a field on the form. The page keeps option B's filter counts, which show in the filter menus and the chips, and option C's review step only for the commands plan 06 lists under WCAG 3.3.4 (saving a draft, breaking a lock, releasing an order), drawn here for Release order.</p>
+            <p class="lfh-p mut">Record: docs/design/ui/ui-222-list-form-variations.md, merged in #287. Variations page: ui-222-list-form-variations.dc.html.</p>
+            <h3 class="t3 sec">What option A costs</h3>
+            <ul class="lf-pts">
+              <sc-for list="{{ costs }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="lf-cols2 sec">
+          <div>
+            <h2 class="t2">Acceptance criteria of #222</h2>
+            <div class="lf-qgrid one">
+              <sc-for list="{{ acceptance }}" as="a">
+                <div class="lf-qrow"><span class="{{ a.tag }}">{{ a.id }}</span><span><sc-if value="{{ a.done }}"><span class="lfh-tick" aria-hidden="true"></span></sc-if>{{ a.t }}</span></div>
+              </sc-for>
+            </div>
+            <p class="lfh-p mut">AC3 is met, and the other four are open. For AC1, every frame the issue lists has a light and a dark frame. The keyboard frames NA12 to NA22 alternate between the themes, as D2's keyboard frames do, and NA23 draws every focus ring in both.</p>
+          </div>
+          <div>
+            <h2 class="t2">How to read the page</h2>
+            <ul class="lf-pts">
+              <sc-for list="{{ reading }}" as="r"><li>{{ r }}</li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Rows</h2>
+          <div class="lfh-rows">
+            <div class="lfh-row h"><span>Row</span><span>Content</span><span>Frames</span><span>Part file</span></div>
+            <sc-for list="{{ rows }}" as="r">
+              <div class="lfh-row"><span class="lfh-ids">{{ r.n }}</span><span>{{ r.t }}</span><span>{{ r.ids }}</span><span class="lfh-file">{{ r.file }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">The issue's frames and where they are drawn</h2>
+          <div class="lfh-map">
+            <div class="lfh-map-r h"><span>Frame in issue #222</span><span>Frames on this page</span></div>
+            <sc-for list="{{ map }}" as="m">
+              <div class="lfh-map-r"><span>{{ m.k }}</span><span class="lfh-ids">{{ m.v }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <p class="lede">Choices the frames draw that the docs do not settle. Each needs Krister's yes; a number in brackets is the open question it answers for now.</p>
+          <div class="lf-qgrid">
+            <sc-for list="{{ assumptions }}" as="a">
+              <div class="lf-qrow"><span class="tag">{{ a.id }}</span><span>{{ a.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">Numbers 1 to 25 follow the variations spec, so the frames and the build notes can cite them; the choice of 2026-10-07 settled 6, 7 and 23. N1 to N8 are new with this page and come from the keyboard frames (NA24).</p>
+          <div class="lf-qgrid">
+            <sc-for list="{{ questions }}" as="q">
+              <div class="lf-qrow"><span class="tag q">{{ q.id }}</span><span>{{ q.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Known gaps in the drawn frames</h2>
+          <p class="lede">What the frames do not show yet, because the shared parts cannot draw it or a frame is missing. The numbers G1, G5, G6, G7 and G9 belong to gaps the frames now close and are not reused.</p>
+          <div class="lf-qgrid">
+            <sc-for list="{{ gaps }}" as="g">
+              <div class="lf-qrow"><span class="tag fix">{{ g.id }}</span><span>{{ g.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            facts: [
+              { k: "Issue", v: "northMES/northmes#222, plan E04-S07-T01" },
+              { k: "Owning story", v: "E04-S07 (#45), PageFrame and forms" },
+              { k: "Waiting tasks", v: "E04-S07 (PageFrame and forms), E06-S03 (DataTable with URL state) and every list and form screen built on them: the core master data registers, users and roles, settings pages, the History tab and audit list, the production order list and detail, and the connector's settings and reports" },
+              { k: "Area", v: "ui, which maps to packages/ui" },
+              { k: "Routes", v: "/$plant/core/articles (list), /$plant/core/articles/$articleId (detail, with ?tab=history), /$plant/core/articles/new (create), /$plant/core/articles/$articleId/edit (edit) and /$plant/core/settings; for production orders /$plant/planning/orders/new and /$plant/planning/orders/$orderId" },
+              { k: "Personas", v: "Plant admin Jonas Holm for master data and settings, in most frames. Planner Alex Lund on the production orders, the order form, the Release order review step and the read-only articles list. Maria Nyberg, a second plant admin, in the version conflict. Anna Berg, an operator with no role that reads articles, in the forbidden states. Hannelore Wiesenthal-Brückner in the German long-strings frames." },
+              { k: "Direction", v: "Graphite: IBM Plex Sans and Mono, 6 px radius, 36 px controls, light by default and dark per user. The D1 tokens and components (approved 2026-10-05) inside the D2 shell (approved 2026-10-06), with the release 1 top bar, which has no bell." },
+              { k: "Content", v: "The articles of Acme AB seen from Plant A and Plant B, the production orders 1001 to 1037 with the details of 1001 and 1002, the tools register and the audit log. Article numbers, names, counts, people and times are invented." }
+            ],
+            costs: [
+              "Reading an article leaves the list. Comparing two articles takes Back or a second tab; Back returns to the same rows, because the URL keeps the filters.",
+              "The chips show the counts of the picked values only; the other counts are one click away in each filter menu.",
+              "A one-field fix is a page change: row menu, Edit, Save, then Back to the list.",
+              "Each row adds a Tab stop for its menu; arrow keys inside the table (D1 question 11) would remove them."
+            ],
+            // A ticked line is met: Krister Johansson approved the page on 2026-10-08.
+            acceptance: [
+              { id: "AC1", t: "Every frame in the list exists in light and dark", done: false },
+              { id: "AC2", t: "No comment thread on the page is open", done: false },
+              { id: "AC3", t: "Krister approved the page and the design project's README row holds the etag", done: true },
+              { id: "AC4", t: "The design pull request with PNGs and build notes is merged", done: false },
+              { id: "AC5", t: "The waiting UI tasks carry the Design section", done: false }
+            ].map((a) => ({ id: a.id, t: a.t, done: a.done, tag: a.done ? "tag ok" : "tag" })),
+            reading: [
+              "Each frame's label gives its id, title, theme, screen size and URL. The ids start with LI in row 1, ST in row 2, DE in row 3 and NA in row 4.",
+              "The line above each screen is the document title of its route. It is an annotation, as are the labels, the notes beside the keyboard frames, the Tab order badges and the tags.",
+              "Every screen mounts the approved D2 shell through ui/Shell.dc.html, the byte copy of shell/Shell.dc.html, and the shared parts of this page draw the content of main.",
+              "States the shell owns (module unavailable, the route error panel, the reload dialog, the route loading skeleton) are drawn in D2 and not again here.",
+              "The implementer takes layout, region order, states and transitions, the copy, the keyboard model and the slot placements, never markup, class names, inline styles or demo numbers. A value that is not a D1 token is a question.",
+              "Every label and message is the proposed final English copy. NA24 lists them and marks the strings that come from the docs."
+            ],
+            rows: [
+              { n: "Row 1", t: "Lists: articles, production orders, tools, audit log", ids: "LI1 to LI42", file: "ui-222-list-form-list.dc.html" },
+              { n: "Row 2", t: "Page states and the settings page", ids: "ST1 to ST26", file: "ui-222-list-form-states.dc.html" },
+              { n: "Row 3", t: "Detail, forms, dialogs and the review step", ids: "DE1 to DE44", file: "ui-222-list-form-detail-form.dc.html" },
+              { n: "Row 4", t: "Reflow at 320, long strings, keyboard and focus, build notes", ids: "NA1 to NA27", file: "ui-222-list-form-narrow-keyboard.dc.html" }
+            ],
+            map: [
+              { k: "A master data list in one DataTable: search, filters, sorting and paging kept in the URL, column choice, row selection and row actions, units and numbers per the plant's presentation settings, master data text with its lang attribute", v: "LI1 to LI18 and LI27 to LI34; the same DataTable on production orders (LI35 to LI38), tools (LI39, LI40) and the audit log (LI41, LI42); at 320 NA1 to NA4; keyboard NA17 to NA19 and NA22" },
+              { k: "PageFrame states: loading as a skeleton of the populated layout, empty with the action that creates the first item, error with a way out, and populated", v: "List: ST1 (dark LI2), loading ST2 and ST12, first run ST3 and ST10, error ST4 and ST11, filtered empty ST17 and ST18, forbidden ST19 and ST20, page out of date ST21 and ST22. Detail: ST5 (dark DE2), loading ST6 and ST13, not found ST7 and ST14, error ST8 and ST15, forbidden ST23 and ST24. The table refetch after a search in LI7 and LI8" },
+              { k: "The detail page and the create and edit form: field groups, required fields, units, a date and time field, the change reason, the History tab", v: "DE1 to DE10, the imported article and order DE39 to DE42, the open Select DE43 and DE44; at 320 NA5 to NA8" },
+              { k: "Form errors: inline field errors, the error summary that takes focus, a server error that keeps the typed values, a version conflict", v: "DE11 to DE20; code taken DE29, DE30, DE37 and DE38; archived meanwhile DE31 and DE32; a measured limit DE33 and DE34; a required reason DE35 and DE36; at 320 NA9 and NA10; focus NA14 and NA15" },
+              { k: "Confirmations and the review step (WCAG 3.3.4)", v: "Release order DE21 and DE22; ConfirmDialog for Archive DE23 and DE24, Archive 3 articles with a required reason DE25 and DE26, Restore DE27 and DE28" },
+              { k: "A settings page in the same pattern", v: "ST9 and ST16; saved ST25 and ST26" },
+              { k: "Widths 1280, 1440 and 1920, and a 320 reflow frame where the table scrolls on its own", v: "1280: LI19, LI20, LI23 and LI24; 1920: LI21, LI22, LI25 and LI26; 320: NA1 to NA10, NA21 and NA22; every other screen is 1440" },
+              { k: "Light and dark", v: "Every frame above in both themes, each dark frame beside its light one. The keyboard frames NA12 to NA22 alternate between the themes; NA23 draws every focus ring in both" },
+              { k: "One frame with long German or Finnish labels and data", v: "The list NA11 and NA25, the edit form with errors NA26 and NA27" },
+              { k: "Keyboard and focus frames", v: "NA12 to NA23" },
+              { k: "Build notes", v: "NA24" }
+            ],
+            assumptions: [
+              { id: "A1", t: "Jonas Holm holds a company-scope role at Acme AB, so he edits the company-level articles from /plant-a/core/articles. A person who may read but not change articles, such as the planner Alex Lund or a plant-only admin, sees the same list read-only (LI33, LI34) (1)." },
+              { id: "A2", t: "Article group is a fixed list, shown as a Select (3)." },
+              { id: "A3", t: "Bulk archive is one action for the selected rows (4)." },
+              { id: "A4", t: "The company data language of Acme AB is Swedish, so names carry lang=\"sv\" and each translation its own lang (22)." },
+              { id: "A5", t: "The list sorts by Last changed, newest first, by default. A default never shows in the URL, so option A's sort by article number appears as ?sort=code in LI5." },
+              { id: "A6", t: "The Article group counts add up to 125 of 248 articles, so the menu ends with No article group 123." },
+              { id: "A7", t: "Presentation settings are per plant. Plant A shows ISO dates (Default), the 24-hour clock (From Acme AB) and space and comma (Set for Plant A); Plant B sets day first with dots and the 12-hour clock and takes comma and point from Acme AB." },
+              { id: "A8", t: "Pyramid creates articles with number and description only, so the imported article AX-31007 carries no external data (DE39); external data shows on the imported order 1002 (DE41)." },
+              { id: "A9", t: "Order 1001 is planned and has no operations yet, so Release order on its detail leads to the review step. Order 1002 is released and active." },
+              { id: "A10", t: "A grouped list shows 6 groups, 248 articles in place of the row pager (LI29)." },
+              { id: "A11", t: "A detail page has no first-run state, so not found (ST7) is its empty state." },
+              { id: "A12", t: "While a detail loads, is not found or fails, the h1, the last crumb and the title read Article and no page actions show, because PageFrame renders the h1 from the route title before the data arrives (ST6 to ST8)." },
+              { id: "A13", t: "Maria Nyberg, a second plant admin, is signed in for the version conflict, because the conflict names Jonas Holm as the person who saved at 14:05 (DE19 and DE20)." },
+              { id: "A14", t: "The Release order review step opens with focus in its reason field, its first tabbable element, so Enter cannot release the order by accident (DE21 and DE22)." },
+              { id: "A15", t: "The production order form carries the date and time fields, because the article form has none; Quantity (pcs) puts the unit in the label (DE9)." },
+              { id: "A16", t: "German stands in for any long language in NA11, NA25, NA26 and NA27, although the UI ships in English only (21)." },
+              { id: "A17", t: "The bulk bar is a group with two Tab stops, not a toolbar with one stop and arrow keys as option A's notes named it: for two buttons a roving toolbar adds keys and gains nothing." },
+              { id: "A18", t: "The forbidden list shows no toolbar and no page actions, because search and the filter counts read the data the person may not see (ST19)." },
+              { id: "A19", t: "Each filter count is taken with the other fields' filters applied, so a filtered-empty list shows 0 on each picked value (ST17)." },
+              { id: "A20", t: "An input value longer than its field ends in an ellipsis while the field is not focused, and scrolls inside it when focused, so the field keeps the D1 control height (NA9, NA26)." }
+            ],
+            questions: [
+              { id: "1", t: "Who edits company-level articles from /$plant/core/articles: only holders of a company-scope role, with a read-only list for a plant-only admin, or only under /admin?" },
+              { id: "2", t: "Which register is the kit example: tools (company or plant, with Move to company) or equipment groups (with color)?" },
+              { id: "3", t: "Is article_group free text, a fixed list or a register with its own Lookup?" },
+              { id: "4", t: "Which bulk actions exist in release 1: one command per row or a batch command, one reason for all rows, how a partial failure shows, and what Select all means under keyset paging?" },
+              { id: "5", t: "Column choice: kept in the URL, per browser like the theme, or not kept? Is it in release 1?" },
+              { id: "8", t: "Change reason for master data: its label, its maximum length (500 as for breaking a lock?), and whether archive and restore require one." },
+              { id: "9", t: "Does leaving a form with unsaved edits ask first?" },
+              { id: "10", t: "Version conflict: only Reload article, or also the saved values next to the typed ones?" },
+              { id: "11", t: "Does the History tab list the creating command and import commands, how does it name a pseudonymized user and a system principal, and does it show totalCount?" },
+              { id: "12", t: "Page actions order (D2 question 13): New article in the top bar before the filters, or after them as in D1 F8?" },
+              { id: "13", t: "Toast placement, and does a successful save show a toast or only the announcement (D2 question 25)?" },
+              { id: "14", t: "Can a stock unit change after orders or stock exist for the article?" },
+              { id: "15", t: "Page size: fixed at 25, or a selector with 25, 50 and 100?" },
+              { id: "16", t: "Group by keys for articles: Article group and Stock unit only?" },
+              { id: "17", t: "Does a filter change announce the result count?" },
+              { id: "18", t: "Settings: where are company-scope values edited, does the page save per form or per field, and what does it show between a save and the next page load?" },
+              { id: "19", t: "Detail page actions: Edit and Archive in the top bar, as drawn, or inside the page?" },
+              { id: "20", t: "Does the row link cover the whole row, or only the identifier cell, as drawn?" },
+              { id: "21", t: "Long strings: German UI labels, although the UI ships in English only (D2 drew it the same way)?" },
+              { id: "22", t: "Is Swedish the company data language of Acme AB?" },
+              { id: "24", t: "Doc drift: ADR 0019 still shows /api/web/modules, and ADR 0061 and one bullet of ADR 0062 write the same path, while plan 06 uses /api/v1/web/modules. The page follows plan 06." },
+              { id: "25", t: "The review step for Release order: does it list the routing version and the operations it copies, and does a validator veto (core.command_rejected) show inside the dialog?" },
+              { id: "N1", t: "Focus after Back: the h1, as drawn in NA17, or the row link that opened the article?" },
+              { id: "N2", t: "Save leads to the detail with a replace navigation, so Back skips the saved form (NA16)?" },
+              { id: "N3", t: "When the focused control disappears with what it acts on (Clear selection, Clear filters), focus moves to Search articles?" },
+              { id: "N4", t: "Detail tabs with manual activation, so arrow keys do not push history entries?" },
+              { id: "N5", t: "ConfirmDialog opens with focus in Reason, or on Cancel as the Alert Dialog default?" },
+              { id: "N6", t: "Does a selection change announce 3 selected?" },
+              { id: "N7", t: "Enter in a single-line field submits the form?" },
+              { id: "N8", t: "A filter menu stays open while values are toggled?" }
+            ],
+            gaps: [
+              { id: "G2", t: "LI7 and LI8 draw the table loading after the search, not the rows that match fläns (AX-20405, AX-20410, AX-20411 and AX-20415): the table part has no search prop." },
+              { id: "G3", t: "LI9 and LI10 show focus on Next on page 1 and name the URL keys Next adds (page and after): the table part draws page 1 only." },
+              { id: "G4", t: "The Columns menu always shows every column checked, so LI11 and LI12 show it before the change, and LI13 and LI14 show the table after Source was hidden, with the menu closed." },
+              { id: "G8", t: "ST3 and ST10 show two default buttons named New article, one in the top bar and one in the empty state. Which one stays is open." },
+              { id: "G10", t: "LI41 and LI42 draw the audit log without its filters for entity, principal, surface and time, because the toolbar part has no audit preset." }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

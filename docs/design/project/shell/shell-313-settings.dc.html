@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings area</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+          /* Canvas of the spec page for issue northMES/northmes#313: the header F0, then one row per part, each with a
+             row header box. Annotation, not part of the UI. */
+          .set-row{display:flex;flex-direction:column;align-items:flex-start}
+          .set-rh{position:relative;z-index:30;display:grid;gap:6px;max-width:1440px;margin:0 0 32px;padding:14px 20px 16px;border-radius:8px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);cursor:grab;user-select:none}
+          .set-rh1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font:600 28px/36px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.01em}
+          .set-rn{padding:3px 10px;border-radius:5px;background:#1a1a1a;color:#ffffff;font:600 18px/26px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0}
+          .set-ids{font:500 18px/26px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;letter-spacing:0}
+          .set-rh2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;font:400 16px/24px "IBM Plex Sans",system-ui,sans-serif;color:#4f4c46}
+          .set-file{font:400 14px/20px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+        </style>
+      </helmet>
+      <div class="frame set-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, story, area, routes, persona, the chosen direction and its three remedies, what changes in D2, acceptance criteria, frames by row, assumptions and open questions</span></div>
+        <dc-import name="shell-313-settings-header" hint-size="1440px,6865px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:7153px;width:3280px" data-screen-label="Row 1 Way in, way back and scope">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 1</span><span>Way in, way back and scope</span><span class="set-ids">EN1 to EN38</span></div>
+          <div class="set-rh2"><span>How Jonas Holm reaches Settings from the planning board and gets back to work, with the main sidebar collapsing to the rail and returning, at 1280, 1440 and 1920 in light and dark; company settings for a company with several plants and with one; the plant list at / with each company's settings link; a user in two companies; Erik Lind, who administers Plant A only; Alex Lund, who has no settings; the empty landing when nothing is allowed.</span><span class="set-file">shell-313-settings-entry.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-entry" hint-size="3280px,21736px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:29249px;width:6000px" data-screen-label="Row 2 Company settings">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 2</span><span>Company settings</span><span class="set-ids">CO1 to CO40</span></div>
+          <div class="set-rh2"><span>The pages of Acme AB's settings at /settings/$companyId without the main sidebar: General, Formats, Plants with New plant and the slug clash, Plant D in onboarding, a company with no plant yet and its wizard link, Users, Roles, Integrations and Audit log, the way to Plant A settings, and the table width at 1280 and 1920 in light and dark.</span><span class="set-file">shell-313-settings-company.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-company" hint-size="6000px,12184px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:41769px;width:2960px" data-screen-label="Row 3 Plant settings">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 3</span><span>Plant settings</span><span class="set-ids">PL1 to PL29, PL31 to PL33</span></div>
+          <div class="set-rh2"><span>The pages of Plant A's settings under their module paths, each with the main sidebar collapsed to the rail: Plant, Machines, New machine with field errors, Equipment groups, Calendars, Stations, System health, Planning rules, Acme tooling; the AI assistant in company settings; the way to Acme AB settings; Erik Lind's narrower permission; the remedy at 1280 and the rail at 1920, in light and dark.</span><span class="set-file">shell-313-settings-plant.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-plant" frames="PL1,PL2,PL3,PL4,PL5,PL6,PL7,PL8,PL9,PL10,PL11,PL12,PL13,PL14,PL15,PL16,PL17,PL18,PL19,PL20,PL21,PL22,PL23,PL24,PL25,PL26,PL27,PL28,PL29,PL31,PL32,PL33" hint-size="2960px,18424px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:60553px;width:2960px" data-screen-label="Row 4 Page states">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 4</span><span>Page states</span><span class="set-ids">PS1 to PS16</span></div>
+          <div class="set-rh2"><span>The states plan 06 asks for, on settings pages: loading as a skeleton, could not load, a first run without an action, a server error that keeps values, no permission, a module that did not load, a plant in onboarding with its banner, and a filtered-empty list with Clear filters.</span><span class="set-file">shell-313-settings-states.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-states" hint-size="2960px,8544px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:69433px;width:1440px" data-screen-label="Row 5 Routes, titles and breadcrumbs">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 5</span><span>Routes, titles and breadcrumbs</span><span class="set-ids">PL30</span></div>
+          <div class="set-rh2"><span>Build notes, not part of the UI: route, document title and trail of every company and plant settings page, each marked as documented or proposed, and what replaces /admin.</span><span class="set-file">shell-313-settings-plant.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-plant" frames="PL30" hint-size="1440px,2092px"></dc-import>
+      </div>
+      <div class="frame set-row" style="left:80px;top:71837px;width:3200px" data-screen-label="Row 6 Reflow at 320, long strings, keyboard and focus, build notes">
+        <div class="set-rh" data-drags-parent="1">
+          <div class="set-rh1"><span class="set-rn">Row 6</span><span>Reflow at 320, long strings, keyboard and focus, build notes</span><span class="set-ids">RE1 to RE30</span></div>
+          <div class="set-rh2"><span>Both landings and their entries at 320, the navigation sheet on a settings page, German and Finnish labels at full length in plant and company settings, tab order with two navigation regions, the skip link past the settings navigation, where focus goes after each action, landmarks and names, the focus ring on every new control, and the build notes of the page in RE27.</span><span class="set-file">shell-313-settings-reflow-keyboard.dc.html</span></div>
+        </div>
+        <dc-import name="shell-313-settings-reflow-keyboard" hint-size="3200px,14852px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Spec page for issue northMES/northmes#313 (E04-S02-T03): the header F0, then one row per part file of this
+          // folder. Every screen frame mounts shell-313-settings-frame.dc.html, the copy of Shell.dc.html under #313; the
+          // approved Shell.dc.html, D1, D2, #222 and #306 files and the variations files are linked or left as they are.
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <article class="sheet pv-note">
+        <div class="pv-lead"><span class="pv-oid">{{ id }}</span><h2 class="t2">{{ name }}</h2></div>
+        <div class="pv-cols">
+          <section><h3 class="pv-h">What it optimizes</h3><ul class="pv-ul"><sc-for list="{{ gains }}" as="g"><li>{{ g }}</li></sc-for></ul></section>
+          <section><h3 class="pv-h">What it costs</h3><ul class="pv-ul"><sc-for list="{{ costs }}" as="c"><li>{{ c }}</li></sc-for></ul></section>
+          <section><h3 class="pv-h">How it keeps the fixed rules</h3><ul class="pv-ul"><sc-for list="{{ rules }}" as="r"><li>{{ r }}</li></sc-for></ul></section>
+        </div>
+      </article>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const notes = {
+            A: {
+              name: "Docked inspector",
+              gains: [
+                "The move fields sit in the same place every time, right after the tab list, so keyboard and pointer users find Machine, Start, the steps and Apply without searching.",
+                "My draft is one tab away while the whole board stays in view, so row statuses after a reconnect are quick to check.",
+                "One column holds the details, my draft and the side slot. With details open and the side slot hidden, the grid keeps 638 px at 1280, against 598 px beside C's 360 px drawer.",
+                "The grid keeps its full height: 9 machine rows and 5 group rows in view at 1440 by 900.",
+              ],
+              costs: [
+                "The column takes 336 px all the time, also when nothing is selected; the Details tab then needs an empty state.",
+                "The side slot moves from D2's place into a tab, so a contribution stays hidden until its tab opens. This needs a yes against D2.",
+                "With the assistant docked at 1280 the grid keeps about 278 px, so the column needs a rule, such as collapsing to its tab list.",
+                "Job orders without a place show only in the table view, behind a link in the status line.",
+                "Save in the top bar only opens the My draft tab; the commit is a second button in the tab, Save changes.",
+              ],
+              rules: [
+                "WCAG 2.4.11: the column docks and narrows the grid, so it never covers a focused block.",
+                "WCAG 2.5.7: the Details tab holds Machine, Start, both steps and Apply; the Move dialog and keyboard move stay.",
+                "WCAG 3.3.4: Save in the top bar opens the My draft tab, where every row shows its status before Save changes commits.",
+                "WCAG 2.2.1: the soft lock warning sits above the tabs, so it shows on every tab.",
+                "Escape closes the hover card, a popover, move mode, then clears the selection; at 320 the column becomes a sheet with the same tabs.",
+                "At 320 the sheet is a modal dialog named by its heading: opening it moves focus to Close details, and closing it returns focus to the block.",
+              ],
+            },
+            B: {
+              name: "Board over table",
+              gains: [
+                "The table is the strongest path without dragging: sortable columns, a Move button on every row, a row menu with Move, Lock and Open order at 320, and the move fields beside it.",
+                "The selected order, my draft and job orders without a place share one table pattern, which is also the table view and the fallback if SP3 fails.",
+                "The side slot stays where D2 put it, beside the grid in a 280 px WidgetFrame.",
+                "The grid stays widest while details are open: 838 px at 1440, because the details sit under it.",
+              ],
+              costs: [
+                "Height: 4 machine rows in view at 1440 by 900 and about 3 at 1280 by 800, against about 40 machines at the pilot.",
+                "Two regions with their own keyboard models, the grid and the table, plus a resize handle to learn.",
+                "The split header holds the tabs and the autoplan status, so a long result wraps to two lines.",
+                "At 320 the board is a second step, because the table opens first.",
+                "Save in the top bar only opens the My draft tab; the commit is a second button in the split, Save changes.",
+              ],
+              rules: [
+                "WCAG 2.4.11: the split sits under the grid and never covers it; the handle only trades rows for table.",
+                "WCAG 2.5.7: the move fields and a Move button per row; the handle also moves with the arrow keys.",
+                "WCAG 3.3.4: the My draft tab lists every row with its status and actions before Save.",
+                "WCAG 1.4.10: at 320 the table scrolls in its own region, and the width switch never rewrites view in the URL.",
+                "The handle is a separator with aria-valuenow, and the split keeps its size per planner in local state.",
+                "WCAG 1.4.1: the job order open in the move fields has aria-current and a 3 px foreground bar at its row's leading edge, besides the tint.",
+              ],
+            },
+            C: {
+              name: "Drawer and review dialog",
+              gains: [
+                "The board is full width while nothing is selected, 1134 px at 1440, so the most time and the longest names fit.",
+                "The review dialog makes Save a deliberate step, with every row and the conflict reason in one place.",
+                "Job orders without a place sit in a pinned grid row, one arrow key above the machines.",
+                "My draft and autoplan share one bar above the grid that shows in every state of the board.",
+              ],
+              costs: [
+                "The drawer is 360 px, the widest panel: the grid drops to 758 px when it opens, and the board reflows on every open and close.",
+                "The side slot hides behind a toggle, so a contribution is out of view by default. This needs a yes against D2.",
+                "The bar and the pinned row take about 100 px of height before the first machine, so 8 machine rows show at 1440 by 900 where A shows 9.",
+                "The review dialog is modal, so the board is out of reach while the planner resolves rows.",
+              ],
+              rules: [
+                "WCAG 2.4.11: the drawer pushes the grid at 1280 and up and never lies over it.",
+                "WCAG 2.5.7: the drawer holds the move fields; the Move dialog and keyboard move stay.",
+                "WCAG 3.3.4: Save opens the review dialog, which asks for the conflict reason before it saves.",
+                "WCAG 2.2.1: the soft lock warning shows in the drawer, and in the bar while the drawer is closed.",
+                "Escape closes the drawer and the dialog returns focus to Save; at 320 the drawer becomes a sheet and the bar shortens to a count and Review.",
+              ],
+            },
+          };
+          const id = ["A", "B", "C"].indexOf(this.props.option) >= 0 ? this.props.option : "A";
+          return Object.assign({ id }, notes[id]);
+        }
+      }
+    </script>
+  </body>
+</html>

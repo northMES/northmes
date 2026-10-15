@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access management: roles frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+        <style>
+          /* Roles frames (RO) of the spec page core/core-304-access.dc.html, issue northMES/northmes#304: the roles list at
+             company scope, New role with Start from, the role editor, the read-only Holders tab, the refusals without
+             core.role:manage and the list states. One template per kind of frame, repeated by sc-for over F in renderVals,
+             so twins and width variants share their markup; F also holds each frame's place on the canvas. Light frames
+             left, dark frames right; the 1920 frames sit left of their 1280 siblings. Every frame mounts ./Shell.dc.html
+             (the byte copy of shell/Shell.dc.html) and the shared parts of core/; the list, tabs, cards and states use the
+             canonical lf- classes and the access ca- classes. Each frame element has the frame's real size: the screen plus
+             the 36 px document title. Its chip sits 12 px above it in the D1 canvas label colors and is not part of the UI.
+             The 1920 and 1280 dark twins sit in the row under their light frames. Classes start with ro-. */
+          .ro-part{position:relative}
+          .ro-fr{position:absolute}
+          .flabel.ro-chip{position:absolute;left:0;bottom:calc(100% + 12px);flex-wrap:wrap;row-gap:4px;max-width:100%;box-sizing:border-box;margin:0;cursor:default}
+          .lf-td.ro-span{grid-column:1 / -1;justify-content:center;padding:0}
+          .fld.ro-name{max-width:480px}
+          .ro-cl{min-width:24px}
+        </style>
+      </helmet>
+      <div class="ro-part" style="{{ partStyle }}">
+        <sc-for list="{{ F.list }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>11 roles at Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tool">
+                <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button></span>
+              </div>
+              <section class="lf-card" aria-label="Roles" style="--cols:minmax(0,1.3fr) minmax(0,1fr) 120px 200px minmax(0,1fr) 52px">
+                <div class="lf-scroll">
+                  <div class="lf-grid" role="table" aria-label="Roles of Acme AB">
+                    <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Defined by</span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span><span class="lf-td" role="columnheader">Last changed</span><span class="lf-td" role="columnheader"><span class="lf-vh">Actions</span></span></div>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Custom roles of Acme AB</span><span class="c">5 roles</span></span></div>
+                    <sc-for list="{{ f.customRows }}" as="r"><div class="lf-tr {{ r.cls }}" role="row"><span class="lf-td" role="cell"><a class="lf-cl ro-cl" href="#">{{ r.name }}</a></span><span class="lf-td" role="cell">{{ r.by }}</span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasSub }}"><span class="lf-sub">{{ r.sub }}</span></sc-if></span><span class="lf-td" role="cell"><span class="{{ r.hcls }}">{{ r.holders }}</span></span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.when }}</span><span class="lf-sub">{{ r.byline }}</span></span><span class="lf-td end" role="cell"><sc-if value="{{ r.hasMenu }}"><span class="lf-wrap"><button class="btn icon v-ghost {{ r.btn }}" type="button" aria-label="{{ r.menu }}" aria-haspopup="menu" aria-expanded="{{ r.exp }}" aria-controls="{{ r.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button><sc-if value="{{ r.open }}"><div class="pop lf-pop below-r" id="{{ r.ctl }}" style="width:248px" role="menu" aria-label="{{ r.menu }}"><sc-for list="{{ r.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for></div></sc-if></span></sc-if></span></div></sc-for>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Default roles from modules</span><span class="c">6 roles</span></span></div>
+                    <sc-for list="{{ f.defaultRows }}" as="r"><div class="lf-tr {{ r.cls }}" role="row"><span class="lf-td" role="cell"><a class="lf-cl ro-cl" href="#">{{ r.name }}</a></span><span class="lf-td" role="cell">{{ r.by }}</span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasSub }}"><span class="lf-sub">{{ r.sub }}</span></sc-if></span><span class="lf-td" role="cell"><span class="{{ r.hcls }}">{{ r.holders }}</span></span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.when }}</span><span class="lf-sub">{{ r.byline }}</span></span><span class="lf-td end" role="cell"><sc-if value="{{ r.hasMenu }}"><span class="lf-wrap"><button class="btn icon v-ghost {{ r.btn }}" type="button" aria-label="{{ r.menu }}" aria-haspopup="menu" aria-expanded="{{ r.exp }}" aria-controls="{{ r.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button><sc-if value="{{ r.open }}"><div class="pop lf-pop below-r" id="{{ r.ctl }}" style="width:248px" role="menu" aria-label="{{ r.menu }}"><sc-for list="{{ r.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for></div></sc-if></span></sc-if></span></div></sc-for>
+                  </div>
+                </div>
+                <div class="lf-pager"><span>2 groups, 11 roles</span></div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.loading }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" busy="true" focus="h1" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div class="lf-page">
+              <div class="lf-tool">
+                <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button></span>
+              </div>
+              <section class="lf-card" aria-label="Roles" style="--cols:minmax(0,1.3fr) minmax(0,1fr) 120px 200px minmax(0,1fr) 52px">
+                <div class="lf-scroll">
+                  <div class="lf-grid" role="table" aria-label="Roles of Acme AB" aria-busy="true">
+                    <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Defined by</span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span><span class="lf-td" role="columnheader">Last changed</span><span class="lf-td" role="columnheader"><span class="lf-vh">Actions</span></span></div>
+                    <sc-for list="{{ skel }}" as="k"><div class="lf-tr" role="row"><span class="lf-td" role="cell"><span class="sk lf-skl" style="{{ k.a }}"></span></span><span class="lf-td" role="cell"><span class="sk lf-skl" style="{{ k.b }}"></span></span><span class="lf-td" role="cell"><span class="sk lf-skl" style="width:64px"></span></span><span class="lf-td" role="cell"><span class="sk lf-skl" style="{{ k.d }}"></span></span><span class="lf-td" role="cell"><span class="sk lf-skl" style="width:120px"></span></span><span class="lf-td" role="cell"></span></div></sc-for>
+                  </div>
+                </div>
+                <div class="lf-pager"><span class="sk lf-skl" style="width:120px"></span></div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.fresh }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>6 roles at Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tool">
+                <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button></span>
+              </div>
+              <section class="lf-card" aria-label="Roles" style="--cols:minmax(0,1.3fr) minmax(0,1fr) 120px 200px minmax(0,1fr) 52px">
+                <div class="lf-scroll">
+                  <div class="lf-grid" role="table" aria-label="Roles of Acme AB">
+                    <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Defined by</span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span><span class="lf-td" role="columnheader">Last changed</span><span class="lf-td" role="columnheader"><span class="lf-vh">Actions</span></span></div>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Custom roles of Acme AB</span><span class="c">0 roles</span></span></div>
+                    <div class="lf-tr" role="row"><div class="lf-td ro-span" role="cell"><div class="lf-state ca-st"><span class="big"><span class="ic" data-icon="ShieldPlus"></span></span><h2 class="lf-state-h">No custom roles yet</h2><p>Acme AB uses the default roles of its modules. Create a role when a job needs another set of permissions, starting from a default role or from none.</p></div></div></div>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Default roles from modules</span><span class="c">6 roles</span></span></div>
+                    <sc-for list="{{ freshRows }}" as="r"><div class="lf-tr {{ r.cls }}" role="row"><span class="lf-td" role="cell"><a class="lf-cl ro-cl" href="#">{{ r.name }}</a></span><span class="lf-td" role="cell">{{ r.by }}</span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasSub }}"><span class="lf-sub">{{ r.sub }}</span></sc-if></span><span class="lf-td" role="cell"><span class="{{ r.hcls }}">{{ r.holders }}</span></span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.when }}</span><span class="lf-sub">{{ r.byline }}</span></span><span class="lf-td end" role="cell"><sc-if value="{{ r.hasMenu }}"><span class="lf-wrap"><button class="btn icon v-ghost {{ r.btn }}" type="button" aria-label="{{ r.menu }}" aria-haspopup="menu" aria-expanded="{{ r.exp }}" aria-controls="{{ r.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button><sc-if value="{{ r.open }}"><div class="pop lf-pop below-r" id="{{ r.ctl }}" style="width:248px" role="menu" aria-label="{{ r.menu }}"><sc-for list="{{ r.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for></div></sc-if></span></sc-if></span></div></sc-for>
+                  </div>
+                </div>
+                <div class="lf-pager"><span>2 groups, 6 roles</span></div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.error }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div class="lf-page">
+              <div class="lf-tool">
+                <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button></span>
+              </div>
+              <section class="lf-card" aria-label="Roles">
+                <div class="lf-state" role="alert">
+                  <span class="big err"><span class="ic" data-icon="CircleAlert"></span></span>
+                  <h2 class="lf-state-h">Could not load roles</h2>
+                  <p>Check the connection, then try again. If it fails again, give your plant admin the correlation id.</p>
+                  <span class="lf-cid"><span>Correlation id</span><span class="v">01J9ZB7K4M2P6R8T1V3X5Z7C9E</span><button class="btn icon v-ghost" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></span>
+                  <div class="acts"><button class="btn v-default" type="button"><span class="ic" data-icon="RotateCw"></span>Try again</button></div>
+                </div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.newrole }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="New role" crumbs="Administration|Roles|New role" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div class="ca-page"><div class="ca-two">
+              <div class="ca-col scroll">
+                <div class="lf-g2">
+                  <div class="fld">
+                    <span class="lbl" id="{{ f.ids.sfl }}">Start from</span>
+                    <div class="ca-cbw">
+                      <span class="inp ca-sel {{ f.sfCls }}" role="combobox" tabindex="0" aria-haspopup="listbox" aria-expanded="{{ f.exp }}" aria-controls="{{ f.lb }}" aria-activedescendant="{{ f.act }}" aria-labelledby="{{ f.ids.sfl }}" aria-describedby="{{ f.ids.sfd }}"><span>{{ f.sf.name }}</span><span class="ca-k">{{ f.sf.kind }}</span><span class="ic ca-chev" data-icon="ChevronsUpDown"></span></span>
+                      <sc-if value="{{ f.open }}">
+                        <div class="pop ca-lb" role="listbox" id="{{ f.lb }}" aria-labelledby="{{ f.ids.sfl }}">
+                          <div class="ca-opt" role="option" id="{{ f.none }}" aria-selected="true"><span class="ic" data-icon="CircleDashed"></span><span class="t">No role</span><span class="ic ca-sc" data-icon="Check"></span><span class="d">Start with no permissions.</span></div>
+                          <div role="group" aria-labelledby="{{ f.ids.g1 }}"><div class="ca-lbh" id="{{ f.ids.g1 }}">Default roles</div><sc-for list="{{ f.opts.def }}" as="o"><div class="{{ o.cls }}" role="option" id="{{ o.id }}" aria-selected="false"><span class="ic" data-icon="Shield"></span><span class="t">{{ o.name }}</span><span class="d">{{ o.d }}</span></div></sc-for></div>
+                          <div role="group" aria-labelledby="{{ f.ids.g2 }}"><div class="ca-lbh" id="{{ f.ids.g2 }}">Custom roles of Acme AB</div><sc-for list="{{ f.opts.cus }}" as="o"><div class="{{ o.cls }}" role="option" id="{{ o.id }}" aria-selected="false"><span class="ic" data-icon="Shield"></span><span class="t">{{ o.name }}</span><span class="d">{{ o.d }}</span></div></sc-for></div>
+                        </div>
+                      </sc-if>
+                    </div>
+                    <span class="desc" id="{{ f.ids.sfd }}">{{ f.sf.desc }}</span>
+                  </div>
+                  <div class="fld"><span class="lbl">Role name</span><span class="inp {{ f.nameCls }}">{{ f.nameVal }}</span><span class="desc">Unique within Acme AB.</span></div>
+                </div>
+                <div class="lf-fit"><dc-import name="core-304-access-checklist" role="{{ f.ck.role }}" base="{{ f.ck.base }}" box="{{ f.ck.box }}" add="{{ f.ck.add }}" focus="{{ f.ck.focus }}" hint-size="100%,1200px"></dc-import></div>
+              </div>
+              <div class="ca-col">
+                <section class="lf-fs" aria-labelledby="{{ f.ids.wh }}"><h2 class="lf-fs-h" id="{{ f.ids.wh }}">{{ f.who }}</h2><p class="ca-p">Nobody yet. After you create the role, add it to people on their Access tab.</p></section>
+                <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you create this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+                <div class="ca-foot"><button class="btn v-default" type="button">Create role</button><button class="btn v-outline" type="button">Cancel</button></div>
+              </div>
+            </div></div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.editor }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="ca-page"><div class="ca-two">
+              <div class="ca-col scroll">
+                <div class="fld ro-name"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+                <div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" hint-size="100%,900px"></dc-import></div>
+              </div>
+              <div class="ca-col">
+                <section class="lf-fs" aria-labelledby="{{ f.ids.wh }}"><h2 class="lf-fs-h" id="{{ f.ids.wh }}">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+                  <ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li></ul></section>
+                <section class="lf-fs" aria-labelledby="{{ f.ids.ch }}"><h2 class="lf-fs-h" id="{{ f.ids.ch }}">Changes not saved</h2>
+                  <ul class="ca-kv"><li><span class="ic ca-ok" data-icon="Plus"></span><span class="ca-pt"><span>Added: Run autoplan</span><span class="ca-pid">planning.autoplan:run</span></span></li></ul></section>
+                <div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta">Shift leads run autoplan on night shifts from week 2026-W42.</span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+                <div class="ca-foot"><button class="btn v-default is-focus" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+              </div>
+            </div></div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.refused }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="admin" user="Petra Sund" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="ca-page"><div class="ca-two">
+              <div class="ca-col scroll">
+                <div class="lf-summary is-focus" tabindex="-1" role="group" aria-labelledby="{{ f.ids.sum }}"><h2 class="lf-summary-h" id="{{ f.ids.sum }}"><span class="ic" data-icon="CircleAlert"></span>Shift lead was not saved</h2><ul><li>Changing a role of Acme&nbsp;AB needs the permission to create and edit roles (core.role:manage) at Acme&nbsp;AB. A company admin of Acme&nbsp;AB has it and can make the change.</li></ul></div>
+                <div class="fld ro-name"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+                <div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" remove="planning.jobOrder:lock" editor="it" hint-size="100%,900px"></dc-import></div>
+              </div>
+              <div class="ca-col">
+                <section class="lf-fs" aria-labelledby="{{ f.ids.wh }}"><h2 class="lf-fs-h" id="{{ f.ids.wh }}">Where Shift lead applies</h2><p class="ca-p">Assigned to <span class="ca-mono">2</span> people at Acme&nbsp;AB and Plant&nbsp;A. A saved change applies to them from their next action.</p>
+                  <ul class="ca-hold"><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span>Sara Nyberg</span><span class="w">Plant&nbsp;A</span></span></li><li><span class="ic" data-icon="User"></span><span class="ca-pt"><span lang="de">Hannelore Wiesenthal-Brückner</span><span class="w">Plant&nbsp;A</span></span></li></ul></section>
+                <section class="lf-fs" aria-labelledby="{{ f.ids.ch }}"><h2 class="lf-fs-h" id="{{ f.ids.ch }}">Changes not saved</h2>
+                  <ul class="ca-kv"><li><span class="ic ca-no" data-icon="Minus"></span><span class="ca-pt"><span>Removed: Lock job orders</span><span class="ca-pid">planning.jobOrder:lock</span></span></li></ul></section>
+                <div class="fld"><span class="lbl">Reason for change<span class="lf-req">(optional)</span></span><span class="inp lf-ta">Shift leads stop locking job orders from week 2026-W43.</span><span class="desc">Shown in the role's history. Do not enter personal data. Up to 500 characters.</span></div>
+                <div class="ca-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+              </div>
+            </div></div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.saved }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Shift lead" actions="*Edit role" focus="h1" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tabs" role="tablist" aria-label="Shift lead"><button class="lf-tab on" type="button" role="tab" id="{{ f.ids.tab }}" aria-selected="true" aria-controls="{{ f.ids.panel }}">Permissions</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Holders</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">History</button></div>
+              <div class="lf-dscroll" role="tabpanel" id="{{ f.ids.panel }}" aria-labelledby="{{ f.ids.tab }}">
+                <div class="lf-note ok" role="status"><span class="ic" data-icon="CircleCheck"></span><span>Shift lead saved. It applies to 2 people from their next action.</span></div>
+                <div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" add="planning.autoplan:run" mode="read" note="off" hint-size="100%,900px"></dc-import></div>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.holders }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Shift lead" actions="*Edit role" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tabs" role="tablist" aria-label="Shift lead"><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Permissions</button><button class="lf-tab on" type="button" role="tab" id="{{ f.ids.tab }}" aria-selected="true" aria-controls="{{ f.ids.panel }}">Holders</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">History</button></div>
+              <div class="lf-dscroll" role="tabpanel" id="{{ f.ids.panel }}" aria-labelledby="{{ f.ids.tab }}">
+                <section class="lf-card auto" aria-labelledby="{{ f.ids.co }}">
+                  <div class="ca-card-h"><div class="ca-hgrp"><h2 class="ca-h2" id="{{ f.ids.co }}">At Acme AB, all plants</h2><p class="ca-desc">A role assigned here applies to every plant of Acme AB, also plants created later.</p></div></div>
+                  <div class="lf-state ca-st"><span class="big"><span class="ic" data-icon="Users"></span></span><h3 class="lf-state-h">Nobody holds Shift lead at Acme AB.</h3></div>
+                </section>
+                <section class="lf-card auto" aria-labelledby="{{ f.ids.pl }}" style="--cols:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr)">
+                  <div class="ca-card-h"><div class="ca-hgrp"><h2 class="ca-h2" id="{{ f.ids.pl }}">At Plant A</h2><p class="ca-desc"><span class="ca-mono">2</span> people hold Shift lead at Plant A.</p></div></div>
+                  <div class="lf-grid" role="table" aria-label="Holders of Shift lead at Plant A">
+                    <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader">Person</span><span class="lf-td" role="columnheader">Username</span><span class="lf-td" role="columnheader">Assigned</span></div>
+                    <sc-for list="{{ holderRows }}" as="h"><div class="lf-tr" role="row"><span class="lf-td" role="cell"><a class="lf-cl" href="#" lang="{{ h.lang }}">{{ h.name }}</a></span><span class="lf-td ca-mono" role="cell">{{ h.user }}</span><span class="lf-td two" role="cell"><span class="ca-mono">{{ h.on }}</span><span class="lf-sub">{{ h.by }}</span></span></div></sc-for>
+                  </div>
+                </section>
+                <div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>Holders at the other plants of Acme AB are listed in the Administration of each plant. To add or remove a role, open the person and use the Access tab.</span></div>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.hempty }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Planning admin" actions="New role from Planning admin" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Planning, default role</span></div>
+            <div class="lf-page">
+              <div class="lf-tabs" role="tablist" aria-label="Planning admin"><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Permissions</button><button class="lf-tab on" type="button" role="tab" id="{{ f.ids.tab }}" aria-selected="true" aria-controls="{{ f.ids.panel }}">Holders</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">History</button></div>
+              <div class="lf-dscroll" role="tabpanel" id="{{ f.ids.panel }}" aria-labelledby="{{ f.ids.tab }}">
+                <section class="lf-card auto" aria-labelledby="{{ f.ids.co }}">
+                  <div class="ca-card-h"><div class="ca-hgrp"><h2 class="ca-h2" id="{{ f.ids.co }}">At Acme AB, all plants</h2><p class="ca-desc">A role assigned here applies to every plant of Acme AB, also plants created later.</p></div></div>
+                  <div class="lf-state ca-st"><span class="big"><span class="ic" data-icon="Users"></span></span><h3 class="lf-state-h">Nobody holds Planning admin at Acme AB.</h3></div>
+                </section>
+                <section class="lf-card auto" aria-labelledby="{{ f.ids.pl }}">
+                  <div class="ca-card-h"><div class="ca-hgrp"><h2 class="ca-h2" id="{{ f.ids.pl }}">At Plant A</h2><p class="ca-desc">A role assigned here applies at Plant A only.</p></div></div>
+                  <div class="lf-state ca-st"><span class="big"><span class="ic" data-icon="Users"></span></span><h3 class="lf-state-h">Nobody holds Planning admin at Plant A.</h3></div>
+                </section>
+                <div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>Holders at the other plants of Acme AB are listed in the Administration of each plant. To add or remove a role, open the person and use the Access tab.</span></div>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.plist }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="admin" nav="core.roles" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>11 roles at Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tool">
+                <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button></span>
+              </div>
+              <div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>Creating or changing a role needs the permission to create and edit roles (core.role:manage) at Acme AB. A company admin of Acme AB has it.</span></div>
+              <section class="lf-card" aria-label="Roles" style="--cols:minmax(0,1.3fr) minmax(0,1fr) 120px 200px minmax(0,1fr)">
+                <div class="lf-scroll">
+                  <div class="lf-grid" role="table" aria-label="Roles of Acme AB">
+                    <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader">Defined by</span><span class="lf-td" role="columnheader">Permissions</span><span class="lf-td" role="columnheader">Held at Acme AB and Plant A</span><span class="lf-td" role="columnheader">Last changed</span></div>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Custom roles of Acme AB</span><span class="c">5 roles</span></span></div>
+                    <sc-for list="{{ customRows }}" as="r"><div class="lf-tr" role="row"><span class="lf-td" role="cell"><a class="lf-cl ro-cl" href="#">{{ r.name }}</a></span><span class="lf-td" role="cell">{{ r.by }}</span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasSub }}"><span class="lf-sub">{{ r.sub }}</span></sc-if></span><span class="lf-td" role="cell"><span class="{{ r.hcls }}">{{ r.holders }}</span></span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.when }}</span><span class="lf-sub">{{ r.byline }}</span></span></div></sc-for>
+                    <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>Default roles from modules</span><span class="c">6 roles</span></span></div>
+                    <sc-for list="{{ defaultRows }}" as="r"><div class="lf-tr" role="row"><span class="lf-td" role="cell"><a class="lf-cl ro-cl" href="#">{{ r.name }}</a></span><span class="lf-td" role="cell">{{ r.by }}</span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasSub }}"><span class="lf-sub">{{ r.sub }}</span></sc-if></span><span class="lf-td" role="cell"><span class="{{ r.hcls }}">{{ r.holders }}</span></span><span class="lf-td two" role="cell"><span class="lf-mono">{{ r.when }}</span><span class="lf-sub">{{ r.byline }}</span></span></div></sc-for>
+                  </div>
+                </div>
+                <div class="lf-pager"><span>2 groups, 11 roles</span></div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.readonly }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="admin" nav="core.roles" entity="Shift lead" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="lf-page">
+              <div class="lf-tabs" role="tablist" aria-label="Shift lead"><button class="lf-tab on" type="button" role="tab" id="{{ f.ids.tab }}" aria-selected="true" aria-controls="{{ f.ids.panel }}">Permissions</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">Holders</button><button class="lf-tab" type="button" role="tab" aria-selected="false" tabindex="-1">History</button></div>
+              <div class="lf-dscroll" role="tabpanel" id="{{ f.ids.panel }}" aria-labelledby="{{ f.ids.tab }}">
+                <div class="lf-fit"><dc-import name="core-304-access-checklist" role="shiftLead" mode="read" hint-size="100%,900px"></dc-import></div>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+        <sc-for list="{{ F.noedit }}" as="f">
+        <div class="ro-fr" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel ro-chip"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.fth }}</span><span class="ca-url">{{ f.url }}</span></div>
+          <dc-import name="Shell" width="{{ f.w }}" theme="{{ f.theme }}" role="admin" nav="core.roles" title="No access to Edit role" crumbs="Administration|Roles|Edit role" doc-title="No access to Edit role · Plant A · NorthMES" focus="h1" actions="none" bell="off" show-title="on" hint-size="{{ f.hint }}">
+            <div class="lf-page">
+              <section class="lf-card auto" aria-label="No access">
+                <div class="lf-state">
+                  <span class="big"><span class="ic" data-icon="Lock"></span></span>
+                  <p class="ca-lead">Editing a role needs the permission to create and edit roles (core.role:manage) at Acme AB.</p>
+                  <p>Ask a company admin of Acme AB for a role that includes it.</p>
+                  <div class="acts"><a class="btn v-default" href="#">Go to Roles</a></div>
+                </div>
+              </section>
+            </div>
+          </dc-import>
+        </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), installed once per document.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // F holds the frames of each kind: place on the canvas, label, chip and the values that differ between twins.
+          // The rows mirror core-304-access-data.js; the dates and the holder counts at Acme AB and Plant A are invented here.
+          const H = { 1440: 936, 1280: 836, 1920: 1116 };
+          const S = { 1440: "1440 by 900", 1280: "1280 by 800", 1920: "1920 by 1080" };
+          let y = 120;
+          const next = (tall) => { y += (tall ? H[1920] : H[1440]) + 176; };
+          const fr = (id, title, theme, w, x, detail, url, names, more) => {
+            const p = id.toLowerCase(), ids = {};
+            (names || []).forEach((n) => { ids[n] = p + "-" + n; });
+            return Object.assign({ id: id, title: title, theme: theme, w: String(w), hint: w + "px," + H[w] + "px", url: url, ids: ids,
+              style: "left:" + x + "px;top:" + y + "px;width:" + w + "px;height:" + H[w] + "px", label: id + " " + title + ", " + theme + ", " + S[w],
+              fth: (theme === "dark" ? "Dark, " : "Light, ") + w + ". " + detail }, more || {});
+          };
+          const people = (n) => (n === 0 ? "None" : n === 1 ? "1 person" : n + " people");
+          // Row menus: a custom role offers Edit role and New role from it; a default role only New role from it (question
+          // 32); Company admin has no menu (question 34). open names the row whose menu a frame draws open.
+          const row = (r, hold, open, pfx) => {
+            const isOpen = open === r[0], hasMenu = r[0] !== "Company admin";
+            const items = (r[1] === "Acme AB" ? [["Pencil", "Edit role"]] : []).concat([["CopyPlus", "New role from " + r[0]]]);
+            return { name: r[0], by: r[1], perms: r[2] + " of 36", hasSub: r[3] > 0, sub: r[3] + " not installed", holders: people(hold), hcls: hold ? "" : "lf-mut",
+              when: r[5], byline: r[6] ? "by " + r[6] : "by the permission sync", menu: "Actions for " + r[0], hasMenu: hasMenu,
+              open: isOpen, exp: isOpen ? "true" : "false", btn: isOpen ? "is-active" : "", cls: isOpen ? "hov" : "", ctl: isOpen ? pfx + "-menu" : null,
+              items: items.map((m, i) => ({ icon: m[0], t: m[1], cls: i === 0 ? "kfocus" : "" })) };
+          };
+          // name, defined by, installed permissions, permissions not installed, holders, last changed, by
+          const CUS = [["IT", "Acme AB", 5, 0, 1, "2026-10-01 09:25", "Karin Dahl"], ["Kanban reader", "Acme AB", 0, 1, 0, "2026-10-03 11:05", "Karin Dahl"],
+            ["Plant admin", "Acme AB", 9, 0, 1, "2026-10-01 09:20", "Karin Dahl"], ["Shift lead", "Acme AB", 5, 0, 2, "2026-10-02 08:30", "Karin Dahl"],
+            ["Upload ERP files", "Acme AB", 1, 0, 1, "2026-10-02 10:15", "Karin Dahl"]];
+          const DEF = [["Company admin", "Core", 36, 0, 1, "2026-10-01 09:05"], ["Operator", "Production start", 1, 0, 2, "2026-10-01 09:05"],
+            ["Planner", "Planning", 8, 0, 3, "2026-10-01 09:05"], ["Planning admin", "Planning", 11, 0, 0, "2026-10-01 09:05"],
+            ["Tool keeper", "Acme tooling, plugin", 2, 0, 0, "2026-10-04 07:30"], ["Viewer", "Planning", 2, 0, 3, "2026-10-01 09:05"]];
+          // Start from: the roles a new role can copy, with the option's description
+          const SF = { def: [["Company admin", "Core, default role. Every installed permission."], ["Operator", "Production start, default role. 1 permission."],
+            ["Planner", "Planning, default role. 8 permissions."], ["Planning admin", "Planning, default role. 11 permissions."],
+            ["Tool keeper", "Acme tooling, default role. 2 permissions."], ["Viewer", "Planning, default role. 2 permissions."]],
+            cus: [["IT", "Custom role. 5 permissions."], ["Kanban reader", "Custom role. 1 permission of a module that is not installed."], ["Plant admin", "Custom role. 9 permissions."],
+            ["Shift lead", "Custom role. 5 permissions."], ["Upload ERP files", "Custom role. 1 permission."]] };
+          const newrole = (id, title, theme, x, detail, url, base, name, open, ck) => {
+            const p = id.toLowerCase();
+            const opt = (o) => ({ id: p + "-o-" + o[0].toLowerCase().replace(/ /g, "-"), cls: o[0] === "Planner" ? "ca-opt kfocus" : "ca-opt", name: o[0], d: o[1] });
+            return fr(id, title, theme, 1440, x, detail, url, ["sfl", "sfd", "g1", "g2", "wh"], {
+              open: open, exp: open ? "true" : "false", sfCls: open ? "is-focus" : "", lb: open ? p + "-sflb" : null, act: open ? p + "-o-planner" : null, none: p + "-o-none",
+              sf: base ? { name: base, kind: "Planning, default role", desc: "The new role copies its permissions once. It does not follow later changes to " + base + "." }
+                : { name: "No role", kind: "Start with no permissions", desc: "The new role starts with no permissions. Tick the ones it needs below." },
+              nameVal: name, nameCls: base ? "is-focus" : "", who: name ? "Who holds " + name : "Who holds the new role",
+              ck: Object.assign({ role: "none", base: "", box: "", add: "", focus: "" }, ck),
+              opts: open ? { def: SF.def.map(opt), cus: SF.cus.map(opt) } : { def: [], cus: [] } });
+          };
+          const L = "/plant-a/core/roles", N = L + "/new", E = L + "/$roleId/edit", R = L + "/$roleId", RH = R + "?tab=holders";
+          const T = ["tab", "panel", "co", "pl"];
+          const F = { list: [], loading: [], fresh: [], error: [], newrole: [], editor: [], refused: [], saved: [], holders: [], hempty: [], plist: [], readonly: [], noedit: [] };
+          const list = (id, title, theme, w, x, detail, open) => fr(id, title, theme, w, x, detail, L, [], {
+            customRows: CUS.map((r) => row(r, r[4], open, id.toLowerCase())), defaultRows: DEF.map((r) => row(r, r[4], open, id.toLowerCase())) });
+          F.list.push(list("RO1", "Roles list", "light", 1440, 0, "Karin Dahl, company admin. Custom roles, then default roles by name; New role in the top bar. Held at Acme AB and Plant A counts the holders at those two places. The pager is the canonical grouped pager. Company admin has no row menu", ""));
+          F.list.push(list("RO2", "Roles list", "dark", 1440, 1520, "As RO1", "")); next();
+          F.list.push(list("RO4", "Roles list", "light", 1920, 0, "As RO1; the Role, Defined by and Last changed columns take the extra width", ""));
+          F.list.push(list("RO3", "Roles list", "light", 1280, 2000, "As RO1 beside the 256 px sidebar", "")); next(true);
+          F.list.push(list("RO33", "Roles list", "dark", 1920, 0, "As RO4", ""));
+          F.list.push(list("RO34", "Roles list", "dark", 1280, 2000, "As RO3", "")); next(true);
+          F.list.push(list("RO35", "Row menu of a custom role", "light", 1440, 0, "Actions for Shift lead open, keyboard focus on Edit role, the first item. Up and Down move, Enter chooses, Escape closes the menu and returns focus to its button", "Shift lead"));
+          F.list.push(list("RO36", "Row menu of a custom role", "dark", 1440, 1520, "As RO35", "Shift lead")); next();
+          F.list.push(list("RO37", "Row menu of a default role", "light", 1440, 0, "Actions for Planner open with one item, New role from Planner, which opens New role with Start from set to Planner. A default role cannot be edited here", "Planner"));
+          F.list.push(list("RO38", "Row menu of a default role", "dark", 1440, 1520, "As RO37", "Planner")); next();
+          F.loading.push(fr("RO5", "Roles list loading", "light", 1440, 0, "Toolbar and table header drawn, skeleton rows, main busy, focus on the h1", L));
+          F.loading.push(fr("RO6", "Roles list loading", "dark", 1440, 1520, "As RO5", L)); next();
+          F.fresh.push(fr("RO7", "No custom roles yet", "light", 1440, 0, "Acme AB right after onboarding: only the default roles, Karin Dahl the only holder", L));
+          F.fresh.push(fr("RO8", "No custom roles yet", "dark", 1440, 1520, "As RO7", L)); next();
+          F.error.push(fr("RO9", "Roles list failed", "light", 1440, 0, "ErrorState in the table's Card with the correlation id; toolbar and New role keep their places", L));
+          F.error.push(fr("RO10", "Roles list failed", "dark", 1440, 1520, "As RO9", L)); next();
+          F.newrole.push(newrole("RO11", "New role, Start from open", "light", 0, "No role is the default; keyboard focus on Planner in the listbox", N, "", "", true, {}));
+          F.newrole.push(newrole("RO12", "New role, Start from open", "dark", 1520, "As RO11", N, "", "", true, {})); next();
+          const ck13 = { role: "nightPlanner", base: "planner", box: "on" };
+          F.newrole.push(newrole("RO13", "New role from Planner", "light", 0, "Night planner: Lock job orders added, Release and Cancel removed; focus in Role name", N + "?from=$roleId", "Planner", "Night planner", false, ck13));
+          F.newrole.push(newrole("RO14", "New role from Planner", "dark", 1520, "As RO13", N + "?from=$roleId", "Planner", "Night planner", false, ck13)); next();
+          const ck15 = { add: "planning.jobOrder:read,productionStart.report:correct", focus: "perm:planning.jobOrder:read" };
+          F.newrole.push(newrole("RO15", "New role from no role", "light", 0, "Report checker with two permissions ticked; focus on Read job orders", N, "", "Report checker", false, ck15));
+          F.newrole.push(newrole("RO16", "New role from no role", "dark", 1520, "As RO15", N, "", "Report checker", false, ck15)); next();
+          F.editor.push(fr("RO17", "Edit Shift lead", "light", 1440, 0, "Run autoplan ticked, not saved; the reason typed; focus on Save role", E, ["wh", "ch"]));
+          F.editor.push(fr("RO18", "Edit Shift lead", "dark", 1440, 1520, "As RO17", E, ["wh", "ch"])); next();
+          F.editor.push(fr("RO20", "Edit Shift lead", "light", 1920, 0, "As RO17; the checklist column takes the extra width", E, ["wh", "ch"]));
+          F.editor.push(fr("RO19", "Edit Shift lead", "light", 1280, 2000, "As RO17; permission lines wrap beside their ids", E, ["wh", "ch"])); next(true);
+          F.refused.push(fr("RO39", "Edit Shift lead, refused on Save", "light", 1440, 0, "Petra Sund holds IT, with core.role:manage, at Plant A only (assumed). The client lets her open the edit route at Plant A; the server refuses the Save, because Shift lead is a role of Acme AB (rule 3.1). The error summary has focus; every tick, the reason and the change stay", E, ["sum", "wh", "ch"]));
+          F.refused.push(fr("RO40", "Edit Shift lead, refused on Save", "dark", 1440, 1520, "As RO39", E, ["sum", "wh", "ch"])); next();
+          F.saved.push(fr("RO41", "Shift lead after Save", "light", 1440, 0, "RO17 saved: the role detail replaces the form, its h1 has focus, and the note repeats the polite announcement. The Permissions tab lists the 6 permissions Shift lead now includes", R, ["tab", "panel"]));
+          F.saved.push(fr("RO42", "Shift lead after Save", "dark", 1440, 1520, "As RO41", R, ["tab", "panel"])); next();
+          F.holders.push(fr("RO21", "Holders of Shift lead", "light", 1440, 0, "Read only: nobody at Acme AB, 2 people at Plant A; no Assign or Remove", RH, T));
+          F.holders.push(fr("RO22", "Holders of Shift lead", "dark", 1440, 1520, "As RO21", RH, T)); next();
+          F.holders.push(fr("RO24", "Holders of Shift lead", "light", 1920, 0, "As RO21", RH, T));
+          F.holders.push(fr("RO23", "Holders of Shift lead", "light", 1280, 2000, "As RO21", RH, T)); next(true);
+          F.hempty.push(fr("RO25", "Nobody holds Planning admin", "light", 1440, 0, "A default role without holders: one empty line per place", RH, T));
+          F.hempty.push(fr("RO26", "Nobody holds Planning admin", "dark", 1440, 1520, "As RO25", RH, T)); next();
+          F.plist.push(fr("RO27", "Roles list for a plant admin", "light", 1440, 0, "Jonas Holm without core.role:manage: no New role, no row menus, a line says why", L));
+          F.plist.push(fr("RO28", "Roles list for a plant admin", "dark", 1440, 1520, "As RO27", L)); next();
+          F.readonly.push(fr("RO29", "Shift lead for a plant admin", "light", 1440, 0, "Jonas Holm reads the role: no Edit role; the read-only list shows only the permissions Shift lead includes, by module, with the reason it is read-only", R, ["tab", "panel"]));
+          F.readonly.push(fr("RO30", "Shift lead for a plant admin", "dark", 1440, 1520, "As RO29", R, ["tab", "panel"])); next();
+          F.noedit.push(fr("RO31", "Edit route without core.role:manage", "light", 1440, 0, "Jonas Holm opens an edit link: title and h1 No access to Edit role", E));
+          F.noedit.push(fr("RO32", "Edit route without core.role:manage", "dark", 1440, 1520, "As RO31", E));
+          const sk = [[96, 64, 56], [120, 72, 64], [84, 56, 48], [110, 80, 56], [96, 64, 56], [120, 72, 64], [84, 56, 48], [110, 80, 56], [96, 64, 56]];
+          return {
+            F: F, partStyle: "width:3280px;height:" + (y + H[1440]) + "px",
+            customRows: CUS.map((r) => row(r, r[4], "", "")),
+            defaultRows: DEF.map((r) => row(r, r[4], "", "")),
+            freshRows: DEF.map((r) => row(r, r[0] === "Company admin" ? 1 : 0, "", "")),
+            holderRows: [{ name: "Sara Nyberg", lang: null, user: "sara.nyberg", on: "2026-10-02", by: "by Karin Dahl" },
+              { name: "Hannelore Wiesenthal-Brückner", lang: "de", user: "h.wiesenthal", on: "2026-10-06", by: "by Karin Dahl" }],
+            skel: sk.map((k) => ({ a: "width:" + k[0] + "px", b: "width:" + k[1] + "px", d: "width:" + k[2] + "px" }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings area: company settings</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+/* Part CO of the settings spec page shell-313-settings.dc.html, issue northMES/northmes#313: the company settings pages of
+   option C. Every frame mounts the settings frame (shell-313-settings-frame, the D2 shell copied under #313), the settings
+   layout inside main and a content part; the Roles and Integrations pages draw the #222 list and detail patterns here,
+   because no shared part holds them. Bands of frames, left to right and row by row; labels are canvas annotations.
+   Classes start with set-co-. Every UI color is a D1 token. */
+.set-co-root{display:flex;flex-direction:column;gap:120px;width:max-content}
+.set-co-band{display:flex;align-items:flex-start;gap:80px}
+.set-co-root .frame{position:relative;flex:none}
+/* Content drawn in this part keeps its height in the page column, which scrolls (as .set-page > .sc-host does) */
+.lf-part.set-co-body{flex:1 0 auto}
+/* A short role name such as IT keeps a 24 px target (WCAG 2.5.8) */
+.set-co-body .lf-cl{min-width:var(--nm-target-min)}
+/* Integration cards (plan 08 section 13, ADR 0035): the #222 detail sections with a head row and actions */
+.set-co-ch{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.set-co-acts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px}
+.set-co-acts .set-co-link{display:inline-flex;align-items:center;min-height:var(--nm-target-min);color:var(--link);text-decoration:underline;text-underline-offset:3px}
+.badge.set-co-info{--bb:var(--info-subtle);--bf:var(--info)}
+        </style>
+      </helmet>
+      <div class="set-co-root" data-screen-label="Company settings frames">
+        <sc-for list="{{ bands }}" as="b" hint-placeholder-count="9">
+          <div class="set-co-band">
+            <sc-for list="{{ b.frames }}" as="f" hint-placeholder-count="4">
+              <div class="frame {{ f.wcls }}" data-screen-label="{{ f.label }}">
+                <div class="flabel" data-drags-parent="1"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><span class="set-url">{{ f.url }}</span></div>
+                <dc-import name="shell-313-settings-frame" width="{{ f.w }}" theme="{{ f.theme }}" area="{{ f.area }}" role="company-admin" companies="{{ f.companies }}" onboarding="Plant D" user="Jonas Holm" bell="off" company="{{ f.company }}" plant="{{ f.plant }}" title="{{ f.pageTitle }}" actions="{{ f.actions }}" crumbs="{{ f.crumbs }}" settings-current="{{ f.cur }}" skip-to="{{ f.pid }}" show-title="on" hint-size="{{ f.hint }}">
+                  <dc-import name="shell-313-settings-layout" width="{{ f.w }}" area="{{ f.area }}" company="{{ f.company }}" plant="{{ f.plant }}" page="{{ f.page }}" title="{{ f.h1 }}" meta="{{ f.meta }}" back="{{ f.back }}" others="{{ f.others }}" onboarding="{{ f.onboarding }}" focus="{{ f.lfocus }}" content-id="{{ f.pid }}" hint-size="100%,100%">
+                    <sc-if value="{{ f.isList }}"><dc-import name="shell-313-settings-list" list="{{ f.list }}" state="{{ f.state }}" company="{{ f.company }}" focus="{{ f.cfocus }}" hint-size="100%,400px"></dc-import></sc-if>
+                    <sc-if value="{{ f.isForm }}"><dc-import name="shell-313-settings-form" form="{{ f.form }}" state="{{ f.state }}" focus="{{ f.cfocus }}" hint-size="100%,400px"></dc-import></sc-if>
+                    <sc-if value="{{ f.isLanding }}"><dc-import name="shell-313-settings-landing" area="{{ f.area }}" plant="{{ f.plant }}" hint-size="100%,600px"></dc-import></sc-if>
+                    <sc-if value="{{ f.isRoles }}">
+                      <div class="lf-part set-co-body" data-screen-label="Roles list, the #304 content in company settings">
+                        <div class="lf-tool">
+                          <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search roles</span></span>
+                          <button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Defined by<span class="ic" data-icon="ChevronDown"></span></button>
+                        </div>
+                        <div class="lf-card auto" style="{{ rolesCols }}">
+                          <div class="lf-scroll">
+                            <div class="lf-grid" role="table" aria-label="Roles">
+                              <div class="lf-tr hd" role="row">
+                                <span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Role<span class="ic" data-icon="ArrowUp"></span></button></span>
+                                <span class="lf-td" role="columnheader">Defined by</span>
+                                <span class="lf-td" role="columnheader">Permissions</span>
+                                <span class="lf-td" role="columnheader">Held in Acme AB</span>
+                                <span class="lf-td" role="columnheader">Last changed</span>
+                                <span class="lf-td end" role="columnheader"><span class="lf-vh">Actions</span></span>
+                              </div>
+                              <sc-for list="{{ roleGroups }}" as="g" hint-placeholder-count="2">
+                                <div class="lf-grp" role="row"><span class="lf-grp-c" role="cell"><span>{{ g.label }}</span><span class="c">{{ g.count }}</span></span></div>
+                                <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="5">
+                                  <div class="lf-tr" role="row">
+                                    <span class="lf-td" role="cell"><a class="lf-cl" href="#">{{ r.name }}</a></span>
+                                    <span class="lf-td" role="cell">{{ r.by }}</span>
+                                    <span class="lf-td two" role="cell"><span class="lf-mono">{{ r.perms }}</span><sc-if value="{{ r.hasPermSub }}"><span class="lf-sub">{{ r.permSub }}</span></sc-if></span>
+                                    <span class="lf-td" role="cell"><span class="{{ r.heldCls }}">{{ r.held }}</span></span>
+                                    <span class="lf-td two" role="cell"><span class="lf-mono lf-nowrap">{{ r.when }}</span><span class="lf-sub">{{ r.who }}</span></span>
+                                    <span class="lf-td end" role="cell"><sc-if value="{{ r.hasMenu }}"><button class="btn icon v-ghost" type="button" aria-label="{{ r.menuName }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button></sc-if></span>
+                                  </div>
+                                </sc-for>
+                              </sc-for>
+                            </div>
+                          </div>
+                          <div class="lf-pager"><span>2 groups, 11 roles</span></div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ f.isInteg }}">
+                      <div class="lf-part set-co-body" data-screen-label="Integrations, ERP connection and AI provider cards">
+                        <div class="lf-sects">
+                          <section class="lf-sect" aria-labelledby="{{ f.ids.erp }}">
+                            <div class="set-co-ch"><h2 class="lf-sect-h" id="{{ f.ids.erp }}">ERP connection</h2><span class="badge set-co-info">Shadow mode</span></div>
+                            <p class="lf-sect-d">Pyramid connector. Imports orders and stock from Pyramid and writes planned times back.</p>
+                            <div class="lf-note"><span class="ic" data-icon="Info"></span><span>Write-back runs in shadow mode. NorthMES records what it would write to Pyramid and sends planners a daily write-back report, but sends nothing to Pyramid. Live write-back needs a verified write method.</span></div>
+                            <dl class="lf-dl">
+                              <dt>Endpoint</dt><dd><span class="lf-mono">https://erp.acme.example/api</span></dd>
+                              <dt>Import</dt><dd>Polling: orders every 5 minutes, stock every 15 minutes</dd>
+                              <dt>Last orders poll</dt><dd><span class="lf-mono">2026-10-08 06:40</span></dd>
+                              <dt>Last stock poll</dt><dd><span class="lf-mono">2026-10-08 06:30</span></dd>
+                              <dt>Last error</dt><dd>None</dd>
+                              <dt>Failed write-backs</dt><dd>None</dd>
+                            </dl>
+                            <div class="set-co-acts"><button class="btn v-outline" type="button"><span class="ic" data-icon="RefreshCw"></span>Sync now</button><a class="set-co-link" href="#">Pyramid connector settings</a></div>
+                          </section>
+                          <section class="lf-sect" aria-labelledby="{{ f.ids.ai }}">
+                            <div class="set-co-ch"><h2 class="lf-sect-h" id="{{ f.ids.ai }}">AI provider</h2><span class="badge set-st-ok">Connected</span></div>
+                            <p class="lf-sect-d">The provider the AI assistant calls, on Acme AB's own account.</p>
+                            <dl class="lf-dl">
+                              <dt>Provider</dt><dd>OpenRouter</dd>
+                              <dt>Last success</dt><dd><span class="lf-mono">2026-10-08 07:52</span></dd>
+                              <dt>Last error</dt><dd>None</dd>
+                              <dt>Calls today</dt><dd><span class="lf-mono">18</span></dd>
+                            </dl>
+                            <div class="set-co-acts"><button class="btn v-outline" type="button"><span class="ic" data-icon="PlugZap"></span>Test connection</button><a class="set-co-link" href="#">AI assistant settings</a></div>
+                          </section>
+                        </div>
+                      </div>
+                    </sc-if>
+                  </dc-import>
+                </dc-import>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Company settings of option C (rules 1.1, 1.3, 1.7): /settings/$companyId/..., no main sidebar, the settings
+          // navigation and the page column inside main, the account button at the top bar end. Jonas Holm, company admin
+          // of Acme AB and Nordic Tools AB, came from Plant A. Every name and value is fictional.
+          const CO = "Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C";
+          const S = "/settings/$companyId";
+          const PAGES = {
+            general: { pageTitle: "General", page: "general", actions: "none", kind: "form", form: "general", url: S + "/core/general" },
+            formats: { pageTitle: "Formats", page: "formats", actions: "none", kind: "form", form: "formats", url: S + "/core/formats" },
+            plants: { pageTitle: "Plants", page: "plants", actions: "*New plant", kind: "list", list: "plants", url: S + "/core/plants" },
+            newPlant: { pageTitle: "New plant", h1: "New plant", page: "plants", crumbs: "Plants|New plant", actions: "none", kind: "form", form: "new-plant", url: S + "/core/plants/new" },
+            slugTaken: { pageTitle: "New plant", h1: "New plant", page: "plants", crumbs: "Plants|New plant", actions: "none", kind: "form", form: "new-plant", state: "taken", cfocus: "summary", url: S + "/core/plants/new" },
+            onboarding: { pageTitle: "Plants", page: "plants", actions: "*New plant", kind: "list", list: "plants", cfocus: "continue", url: S + "/core/plants" },
+            // A company with no plant keeps its onboarding open (A0066): Continue onboarding heads its settings navigation.
+            noPlant: { pageTitle: "Plants", page: "plants", actions: "*New plant", kind: "list", list: "plants", state: "empty", company: "Nordic Tools AB", companies: "Acme AB: Plant A, Plant B, Plant D", back: "home", others: "none", onboarding: "Nordic Tools AB", url: S + "/core/plants" },
+            users: { pageTitle: "Users", page: "users", actions: "*New user", kind: "list", list: "users", url: S + "/core/users" },
+            roles: { pageTitle: "Roles", page: "roles", actions: "*New role", kind: "roles", meta: "11 roles at Acme AB", url: S + "/core/roles" },
+            integrations: { pageTitle: "Integrations", page: "integrations", actions: "none", kind: "integ", url: S + "/core/integrations" },
+            audit: { pageTitle: "Audit log", page: "audit", actions: "none", kind: "list", list: "audit", url: S + "/audit/log" },
+            toPlant: { pageTitle: "Formats", page: "formats", actions: "none", kind: "form", form: "formats", lfocus: "nav:other:Plant A", url: S + "/core/formats" },
+            landed: { area: "plant", plant: "Plant A", pageTitle: "Settings", cur: "page", page: "landing", kind: "landing", lfocus: "h1", url: "/plant-a/settings" }
+          };
+          // Frames: id, page, theme, width, short title, note. Every frame comes in light and dark twins (I313 acceptance);
+          // 1280 shows the width a company page keeps without a main sidebar (rules 3.3, 7.1); 1920 the extra width.
+          const W1280 = "No main sidebar on a company page, so the page column and the table are 986 px wide";
+          const FR = [
+            ["CO1", "general", "light", 1440, "General", "Company name and data language in the #222 form, Save company in the footer bar"],
+            ["CO2", "general", "dark", 1440, "General", "As CO1"],
+            ["CO3", "formats", "light", 1440, "Formats", "Date format from the default; Clock and Number format set for Acme AB, each with Clear company value"],
+            ["CO4", "formats", "dark", 1440, "Formats", "As CO3"],
+            ["CO5", "plants", "light", 1440, "Plants", "Plant D shows Onboarding with Continue onboarding; New plant in the top bar"],
+            ["CO6", "plants", "dark", 1440, "Plants", "As CO5"],
+            ["CO7", "newPlant", "light", 1440, "New plant", "Create plant, filled in for Plant E; the time zone and the day start have no default"],
+            ["CO8", "newPlant", "dark", 1440, "New plant", "As CO7"],
+            ["CO9", "slugTaken", "light", 1440, "New plant, slug in use", "plant-a is taken: the error summary has focus and the message names no company"],
+            ["CO10", "slugTaken", "dark", 1440, "New plant, slug in use", "As CO9"],
+            ["CO11", "onboarding", "light", 1440, "Plant D in onboarding", "Continue onboarding has focus and opens the plant wizard at /plant-d/core/onboarding (E06-S14)"],
+            ["CO12", "onboarding", "dark", 1440, "Plant D in onboarding", "As CO11"],
+            ["CO13", "noPlant", "light", 1440, "Company with no plant yet", "Nordic Tools AB: Plants first run with New plant, and Continue onboarding to the company wizard (E06-S14)"],
+            ["CO14", "noPlant", "dark", 1440, "Company with no plant yet", "As CO13"],
+            ["CO15", "users", "light", 1440, "Users", "The #222 list; a name opens the user, whose Access tab #304 draws"],
+            ["CO16", "users", "dark", 1440, "Users", "As CO15"],
+            ["CO17", "roles", "light", 1440, "Roles", "The roles list of #304 in company settings, New role in the top bar"],
+            ["CO18", "roles", "dark", 1440, "Roles", "As CO17"],
+            ["CO19", "integrations", "light", 1440, "Integrations", "The ERP connection card with write-back in shadow mode, and the AI provider card"],
+            ["CO20", "integrations", "dark", 1440, "Integrations", "As CO19"],
+            ["CO21", "audit", "light", 1440, "Audit log", "Read only, newest first, each change with who made it and why"],
+            ["CO22", "audit", "dark", 1440, "Audit log", "As CO21"],
+            ["CO23", "toPlant", "light", 1440, "To Plant A settings", "Focus on Plant A settings under Other settings, at the foot of the settings navigation"],
+            ["CO24", "toPlant", "dark", 1440, "To Plant A settings", "As CO23"],
+            ["CO25", "landed", "light", 1440, "Plant A settings, after the move", "A full navigation: the main sidebar opens as the rail, focus is on the h1, nothing is announced"],
+            ["CO26", "landed", "dark", 1440, "Plant A settings, after the move", "As CO25"],
+            ["CO27", "plants", "light", 1280, "Plants", W1280],
+            ["CO28", "users", "light", 1280, "Users", W1280],
+            ["CO29", "roles", "light", 1280, "Roles", W1280],
+            ["CO30", "audit", "light", 1280, "Audit log", W1280],
+            ["CO31", "plants", "light", 1920, "Plants", "The table takes the extra width; the page column is 1626 px"],
+            ["CO32", "roles", "light", 1920, "Roles", "The Role and Defined by columns take the extra width"],
+            ["CO33", "integrations", "light", 1920, "Integrations", "The two cards share the width"],
+            // Dark twins of the 1280 and 1920 frames (I313 acceptance: every frame in light and dark)
+            ["CO34", "plants", "dark", 1280, "Plants", "As CO27"],
+            ["CO35", "users", "dark", 1280, "Users", "As CO28"],
+            ["CO36", "roles", "dark", 1280, "Roles", "As CO29"],
+            ["CO37", "audit", "dark", 1280, "Audit log", "As CO30"],
+            ["CO38", "plants", "dark", 1920, "Plants", "As CO31"],
+            ["CO39", "roles", "dark", 1920, "Roles", "As CO32"],
+            ["CO40", "integrations", "dark", 1920, "Integrations", "As CO33"]
+          ];
+          const H = { 1440: 900, 1280: 800, 1920: 1080 };
+          const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+          const frames = FR.map((x) => {
+            const [id, key, theme, w, title, note] = x;
+            const p = PAGES[key];
+            const pid = id.toLowerCase() + "-page";
+            const kind = p.kind;
+            return {
+              id: id, title: title, url: p.url,
+              label: id + " " + title + ", " + theme + ", " + w + " by " + H[w],
+              detail: cap(theme) + ", " + w + " by " + H[w] + ". " + note,
+              wcls: "set-w" + w, w: String(w), theme: theme, hint: w + "px," + (H[w] + 36) + "px",
+              area: p.area || "company", companies: p.companies || CO,
+              company: p.area === "plant" ? null : p.company || "Acme AB", plant: p.plant || null,
+              pageTitle: p.pageTitle, actions: p.actions || null, crumbs: p.crumbs || null, cur: p.cur || null,
+              page: p.page, h1: p.h1 || null, meta: p.meta || null, back: p.back || null, others: p.others || null, onboarding: p.onboarding || null, lfocus: p.lfocus || null,
+              pid: pid, ids: { erp: id.toLowerCase() + "-erp", ai: id.toLowerCase() + "-ai" },
+              isList: kind === "list", isForm: kind === "form", isLanding: kind === "landing", isRoles: kind === "roles", isInteg: kind === "integ",
+              list: p.list || null, form: p.form || null, state: p.state || null, cfocus: p.cfocus || null
+            };
+          });
+          // Bands of four 1440 frames, then the 1280 bands and the 1920 bands, light above dark
+          const f1440 = frames.filter((f) => f.w === "1440");
+          const bands = [];
+          for (let i = 0; i < f1440.length; i += 4) bands.push({ frames: f1440.slice(i, i + 4) });
+          ["1280", "1920"].forEach((w) => ["light", "dark"].forEach((th) => bands.push({ frames: frames.filter((f) => f.w === w && f.theme === th) })));
+
+          // The roles list of #304 (RO1), with its columns, groups and copy. A company page has no plant, so the holder
+          // column counts the holders in Acme AB and its plants (proposed); holders and authors follow this page's people.
+          const R = (name, by, perms, held, when, who, o) => Object.assign({ name: name, by: by, perms: perms, permSub: "", held: held, when: when, who: who, menu: true }, o || {});
+          const groups = [
+            { label: "Custom roles of Acme AB", rows: [
+              R("IT", "Acme AB", "5 of 36", "None", "2026-10-01 09:25", "by Jonas Holm"),
+              R("Kanban reader", "Acme AB", "0 of 36", "None", "2026-10-03 11:05", "by Jonas Holm", { permSub: "1 not installed" }),
+              R("Plant admin", "Acme AB", "9 of 36", "1 person", "2026-10-01 09:20", "by Jonas Holm"),
+              R("Shift lead", "Acme AB", "5 of 36", "None", "2026-10-02 08:30", "by Jonas Holm"),
+              R("Upload ERP files", "Acme AB", "1 of 36", "None", "2026-10-02 10:15", "by Jonas Holm")
+            ] },
+            { label: "Default roles from modules", rows: [
+              R("Company admin", "Core", "36 of 36", "1 person", "2026-10-01 09:05", "by the permission sync", { menu: false }),
+              R("Operator", "Production start", "1 of 36", "1 person", "2026-10-01 09:05", "by the permission sync"),
+              R("Planner", "Planning", "8 of 36", "1 person", "2026-10-01 09:05", "by the permission sync"),
+              R("Planning admin", "Planning", "11 of 36", "None", "2026-10-01 09:05", "by the permission sync"),
+              R("Tool keeper", "Acme tooling, plugin", "2 of 36", "None", "2026-10-04 07:30", "by the permission sync"),
+              R("Viewer", "Planning", "2 of 36", "None", "2026-10-01 09:05", "by the permission sync")
+            ] }
+          ];
+          const roleGroups = groups.map((g) => ({
+            label: g.label, count: g.rows.length + " roles",
+            rows: g.rows.map((r) => Object.assign({}, r, { hasPermSub: !!r.permSub, heldCls: r.held === "None" ? "lf-mut" : "", hasMenu: r.menu, menuName: "Actions for " + r.name }))
+          }));
+          return {
+            bands: bands,
+            roleGroups: roleGroups,
+            rolesCols: "--cols:minmax(150px,1.3fr) minmax(150px,1fr) 120px 170px 200px 52px"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

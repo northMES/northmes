@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 station frame and states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+/* Part SF of the D2 page: station frame S1 at every size, its states, and the station build notes.
+   Canvas layout first, then the Switch operator content, which uses D1 tokens and the 48 px station controls. */
+.stp-root{display:flex;flex-direction:column;gap:120px;width:max-content}
+.stp-row{display:flex;align-items:flex-start;gap:80px}
+.stp-frame{display:flex;flex-direction:column;align-items:flex-start;flex:none}
+.stp-frame.w1280{width:1280px}
+.stp-frame.w1920{width:1920px}
+.stp-frame.w800{width:800px}
+.stp-frame.w1440{width:1440px}
+.stp-frame .flabel{cursor:default}
+.stp-body{display:grid;align-content:start;gap:16px;min-width:0}
+.stp-lead{margin:0;max-width:60ch;font-size:16px;line-height:24px;color:var(--muted-foreground)}
+.stp-card{display:grid;gap:20px;width:100%;max-width:600px;padding:24px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground)}
+.stp-fld{display:grid;gap:8px;min-width:0}
+.stp-lbl{font-size:16px;line-height:24px;font-weight:600}
+.stp-desc{margin:0;font-size:14px;line-height:20px;color:var(--muted-foreground)}
+.inp.stp-inp{height:48px;padding:0 14px;gap:10px;font-size:16px;line-height:24px}
+.inp.stp-inp .ic{width:20px;height:20px;color:var(--muted-foreground)}
+.stp-caret{flex:none;width:2px;height:24px;background:var(--foreground)}
+.stp-dots{letter-spacing:2px}
+.stp-pw{display:flex;align-items:center;gap:8px;min-width:0}
+.stp-or{display:flex;align-items:center;gap:12px;font-size:14px;line-height:20px;color:var(--muted-foreground)}
+.stp-rule{flex:1;height:1px;background:var(--border)}
+.stp-foot{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.stp-err{display:flex;align-items:flex-start;gap:8px;margin:0;font-size:14px;line-height:20px;color:var(--destructive)}
+.stp-err .ic{width:16px;height:16px;margin-top:2px}
+/* Build notes */
+.stp-notes{width:1440px}
+.stp-ncols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start;margin-top:32px}
+.stp-ncol{display:grid;gap:28px;align-content:start;min-width:0}
+.stp-nsec{display:grid;gap:10px;align-content:start;min-width:0}
+.stp-nt{display:grid;border-top:1px solid var(--border)}
+.stp-nr{display:grid;grid-template-columns:130px minmax(0,1fr) 100px;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.stp-ar{display:grid;grid-template-columns:150px minmax(0,1.2fr) minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.stp-wr{display:grid;grid-template-columns:56px minmax(0,1fr);gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.stp-nr.h,.stp-ar.h{padding:6px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.stp-ul{font-size:13px;line-height:18px}
+.stp-tok{font-family:var(--font-mono);font-size:.92em;white-space:nowrap}
+.stp-cpg{display:grid;gap:6px}
+.stp-cps{display:flex;flex-wrap:wrap;gap:6px}
+.stp-cp{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);font-size:12px;line-height:18px}
+.stp-doc{font-size:10px;line-height:16px}
+        </style>
+      </helmet>
+      <div class="stp-root">
+        <sc-if value="{{ rows.r0 }}">
+          <div class="stp-row">
+            <sc-if value="{{ show.SF1 }}">
+              <div class="stp-frame w1280" data-screen-label="SF1 Station frame, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF1</span>Station frame<span class="fth">Light, 1280 by 800, Anna Berg signed in, connected</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF2 }}">
+              <div class="stp-frame w1920" data-screen-label="SF2 Station frame, light, 1920 by 1080">
+                <div class="flabel"><span class="fid">SF2</span>Station frame<span class="fth">Light, 1920 by 1080, Anna Berg signed in, connected</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1920x1080" theme="light" connection="connected" hint-size="1920px,1080px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF3 }}">
+              <div class="stp-frame w800" data-screen-label="SF3 Station frame, light, 800 by 1280">
+                <div class="flabel"><span class="fid">SF3</span>Station frame<span class="fth">Light, 800 by 1280 portrait</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="800x1280" theme="light" connection="connected" hint-size="800px,1280px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF4 }}">
+              <div class="stp-frame w1280" data-screen-label="SF4 Station frame, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF4</span>Station frame<span class="fth">Dark, 1280 by 800, Anna Berg signed in, connected</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r1 }}">
+          <div class="stp-row">
+            <sc-if value="{{ show.SF5 }}">
+              <div class="stp-frame w1280" data-screen-label="SF5 Disconnected, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF5</span>Disconnected<span class="fth">Light, 1280 by 800, status strip under the top bar</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="offline" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF6 }}">
+              <div class="stp-frame w800" data-screen-label="SF6 Disconnected, dark, 800 by 1280">
+                <div class="flabel"><span class="fid">SF6</span>Disconnected<span class="fth">Dark, 800 by 1280 portrait</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="800x1280" theme="dark" connection="offline" hint-size="800px,1280px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF7 }}">
+              <div class="stp-frame w1280" data-screen-label="SF7 Idle sign-out warning, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF7</span>Idle sign-out warning<span class="fth">Light, 1280 by 800, focus on Stay signed in</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" dialog="idle" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF8 }}">
+              <div class="stp-frame w1280" data-screen-label="SF8 Idle sign-out warning, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF8</span>Idle sign-out warning<span class="fth">Dark, 1280 by 800, focus on Stay signed in</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" dialog="idle" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r2 }}">
+          <div class="stp-row">
+            <sc-if value="{{ show.SF9 }}">
+              <div class="stp-frame w1280" data-screen-label="SF9 Switch operator, badge, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF9</span>Switch operator, badge<span class="fth">Light, 1280 by 800, focus in the badge field; proposal for D4</span><span class="ftitle">Switch operator · Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" screen="switch" title="Switch operator" doc-title="Switch operator · Press 4 · Plant A · NorthMES" hint-size="1280px,800px">
+                  <div class="stp-body">
+                    <p class="stp-lead">Anna Berg stays signed in until the next operator signs in.</p>
+                    <div class="stp-card">
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Badge</span>
+                        <span class="inp stp-inp is-focus"><span class="ic" data-icon="IdCard"></span><span class="stp-caret"></span></span>
+                        <p class="stp-desc">Hold your badge to the reader.</p>
+                      </div>
+                      <div class="stp-or"><span class="stp-rule"></span><span>or</span><span class="stp-rule"></span></div>
+                      <div class="stp-foot">
+                        <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                        <span class="sh-grow"></span>
+                        <button class="btn lg v-ghost" type="button">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF10 }}">
+              <div class="stp-frame w1280" data-screen-label="SF10 Badge not recognized, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF10</span>Badge not recognized<span class="fth">Dark, 1280 by 800, the field is cleared and keeps focus; proposal for D4</span><span class="ftitle">Switch operator · Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" screen="switch" title="Switch operator" doc-title="Switch operator · Press 4 · Plant A · NorthMES" hint-size="1280px,800px">
+                  <div class="stp-body">
+                    <p class="stp-lead">Anna Berg stays signed in until the next operator signs in.</p>
+                    <div class="stp-card">
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Badge</span>
+                        <span class="inp stp-inp is-err is-focus"><span class="ic" data-icon="IdCard"></span><span class="stp-caret"></span></span>
+                        <p class="stp-desc">Hold your badge to the reader.</p>
+                        <p class="stp-err"><span class="ic" data-icon="CircleAlert"></span><span>Badge not recognized. Scan again or sign in with your user name</span></p>
+                      </div>
+                      <div class="stp-or"><span class="stp-rule"></span><span>or</span><span class="stp-rule"></span></div>
+                      <div class="stp-foot">
+                        <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                        <span class="sh-grow"></span>
+                        <button class="btn lg v-ghost" type="button">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF11 }}">
+              <div class="stp-frame w1280" data-screen-label="SF11 Switch operator, username, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF11</span>Switch operator, username<span class="fth">Light, 1280 by 800, focus in Password; proposal for D4</span><span class="ftitle">Switch operator · Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" screen="switch" title="Switch operator" doc-title="Switch operator · Press 4 · Plant A · NorthMES" hint-size="1280px,800px">
+                  <div class="stp-body">
+                    <p class="stp-lead">Anna Berg stays signed in until the next operator signs in.</p>
+                    <div class="stp-card">
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Username</span>
+                        <span class="inp stp-inp"><span>erik.lind</span></span>
+                      </div>
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Password</span>
+                        <div class="stp-pw">
+                          <span class="inp stp-inp is-focus"><span class="stp-dots">•••••••••</span><span class="stp-caret"></span></span>
+                          <button class="btn lg ib v-outline" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button>
+                        </div>
+                      </div>
+                      <div class="stp-foot">
+                        <button class="btn lg v-default" type="button">Sign in</button>
+                        <button class="btn lg v-outline" type="button"><span class="ic" data-icon="IdCard"></span>Scan a badge instead</button>
+                        <span class="sh-grow"></span>
+                        <button class="btn lg v-ghost" type="button">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF12 }}">
+              <div class="stp-frame w800" data-screen-label="SF12 Switch operator, username, dark, 800 by 1280">
+                <div class="flabel"><span class="fid">SF12</span>Switch operator, username<span class="fth">Dark, 800 by 1280</span><span class="ftitle">Switch operator · Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="800x1280" theme="dark" connection="connected" screen="switch" title="Switch operator" doc-title="Switch operator · Press 4 · Plant A · NorthMES" hint-size="800px,1280px">
+                  <div class="stp-body">
+                    <p class="stp-lead">Anna Berg stays signed in until the next operator signs in.</p>
+                    <div class="stp-card">
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Username</span>
+                        <span class="inp stp-inp"><span>erik.lind</span></span>
+                      </div>
+                      <div class="stp-fld">
+                        <span class="stp-lbl">Password</span>
+                        <div class="stp-pw">
+                          <span class="inp stp-inp is-focus"><span class="stp-dots">•••••••••</span><span class="stp-caret"></span></span>
+                          <button class="btn lg ib v-outline" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button>
+                        </div>
+                      </div>
+                      <div class="stp-foot">
+                        <button class="btn lg v-default" type="button">Sign in</button>
+                        <button class="btn lg v-outline" type="button"><span class="ic" data-icon="IdCard"></span>Scan a badge instead</button>
+                        <span class="sh-grow"></span>
+                        <button class="btn lg v-ghost" type="button">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                </dc-import>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r3 }}">
+          <div class="stp-row">
+            <sc-if value="{{ show.SF13 }}">
+              <div class="stp-frame w1920" data-screen-label="SF13 Station frame, dark, 1920 by 1080">
+                <div class="flabel"><span class="fid">SF13</span>Station frame<span class="fth">Dark, 1920 by 1080, Anna Berg signed in, connected</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1920x1080" theme="dark" connection="connected" hint-size="1920px,1080px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF14 }}">
+              <div class="stp-frame w1280" data-screen-label="SF14 Nobody signed in, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF14</span>Nobody signed in<span class="fth">Light, 1280 by 800, no operator: no Switch operator or Sign out; the D4 badge field takes focus through a ref</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" operator="none" hint-size="1280px,800px"></dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF15 }}">
+              <div class="stp-frame w1280" data-screen-label="SF15 Nobody signed in, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF15</span>Nobody signed in<span class="fth">Dark, 1280 by 800, as SF14</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" operator="none" hint-size="1280px,800px"></dc-import>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r4 }}">
+          <div class="stp-row">
+            <sc-if value="{{ show.SF16 }}">
+              <div class="stp-frame w1280" data-screen-label="SF16 More menu open, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF16</span>More menu open<span class="fth">Light, 1280 by 800, Help and Theme on this station; focus on Help, the first item</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" menu="more" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF17 }}">
+              <div class="stp-frame w1280" data-screen-label="SF17 More menu open, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF17</span>More menu open<span class="fth">Dark, 1280 by 800, as SF16; Dark is checked</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" menu="more" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF18 }}">
+              <div class="stp-frame w1280" data-screen-label="SF18 Landmarks, light, 1280 by 800">
+                <div class="flabel"><span class="fid">SF18</span>Landmarks<span class="fth">Light, 1280 by 800, skip link focused; header and main outlined</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" marks="landmarks" focus="skip" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.SF19 }}">
+              <div class="stp-frame w1280" data-screen-label="SF19 Landmarks, dark, 1280 by 800">
+                <div class="flabel"><span class="fid">SF19</span>Landmarks<span class="fth">Dark, 1280 by 800, as SF18</span><span class="ftitle">Press 4 · Plant A · NorthMES</span></div>
+                <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" marks="landmarks" focus="skip" hint-size="1280px,800px">
+                  <div class="sh-phbox"><span class="sh-phl">Station screen content, designed in D4 (E11)</span></div>
+                </dc-import>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.SF20 }}">
+          <div class="stp-row">
+            <div class="stp-frame w1440" data-screen-label="SF20 Station build notes, not part of the UI, light, 1440 wide">
+              <div class="flabel"><span class="fid">SF20</span>Station build notes, not part of the UI<span class="fth">Light, 1440 wide. Components, focus, the station sign-in rules, announcements, copy and criteria for SF1 to SF19</span></div>
+              <div class="sheet stp-notes">
+                <p class="kick">Build notes, not part of the UI</p>
+                <h2 class="t1">Station frame</h2>
+                <p class="lede">StationFrame.dc.html is the frame every station route mounts: /station/$stationId, full screen, no sidebar (spec 5.1). D2 draws the frame with nobody signed in and with an operator signed in; the screens inside it belong to D4 (E11). Rule numbers point into shell-190-spec.md. In the copy list a line marked doc is verbatim from the docs; every other line is proposed.</p>
+                <div class="stp-ncols">
+                  <div class="stp-ncol">
+                    <div class="stp-nsec">
+                      <h3 class="t3">shadcn components</h3>
+                      <div class="stp-nt">
+                        <div class="stp-nr h"><span>Component</span><span>Used for</span><span>Frames</span></div>
+                        <sc-for list="{{ notes.comp }}" as="r"><div class="stp-nr"><span class="b6">{{ r.c }}</span><span><sc-for list="{{ r.u }}" as="p"><sc-if value="{{ p.tok }}"><span class="stp-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span>{{ r.f }}</span></div></sc-for>
+                      </div>
+                    </div>
+                    <div class="stp-nsec">
+                      <h3 class="t3">Tokens from D1</h3>
+                      <ul class="ul stp-ul"><sc-for list="{{ notes.tokens }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="stp-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                    </div>
+                    <div class="stp-nsec">
+                      <h3 class="t3">Landmarks, focus and keys</h3>
+                      <ul class="ul stp-ul"><sc-for list="{{ notes.focus }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="stp-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                    </div>
+                    <div class="stp-nsec">
+                      <h3 class="t3">WCAG 2.2 criteria</h3>
+                      <div class="stp-nt">
+                        <sc-for list="{{ notes.wcag }}" as="w"><div class="stp-wr"><span class="b6">{{ w.k }}</span><span>{{ w.t }}</span></div></sc-for>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="stp-ncol">
+                    <div class="stp-nsec">
+                      <h3 class="t3">Station sign-in, proposals for D4</h3>
+                      <ul class="ul stp-ul"><sc-for list="{{ notes.signin }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="stp-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                    </div>
+                    <div class="stp-nsec">
+                      <h3 class="t3">Announcements</h3>
+                      <div class="stp-nt">
+                        <div class="stp-ar h"><span>When</span><span>How</span><span>Text</span></div>
+                        <sc-for list="{{ notes.announce }}" as="r"><div class="stp-ar"><span class="b6">{{ r.w }}</span><span><sc-for list="{{ r.h }}" as="p"><sc-if value="{{ p.tok }}"><span class="stp-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span>{{ r.t }}</span></div></sc-for>
+                      </div>
+                    </div>
+                    <div class="stp-nsec">
+                      <h3 class="t3">Final English copy</h3>
+                      <sc-for list="{{ notes.copy }}" as="g">
+                        <div class="stp-cpg"><span class="sm mut b6">{{ g.s }}</span><span class="stp-cps"><sc-for list="{{ g.items }}" as="x"><span class="stp-cp">{{ x.t }}<sc-if value="{{ x.doc }}"><span class="tag ok stp-doc">doc</span></sc-if></span></sc-for></span></div>
+                      </sc-for>
+                      <p class="sm mut" style="margin:0">The failed-scan message keeps the doc wording "user name"; the field and button say Username, as the sign-in page and spec 4.2 do. The doc drift is listed under Q26 in the header.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame": {"editor": "enum", "options": ["all", "SF1", "SF2", "SF3", "SF4", "SF5", "SF6", "SF7", "SF8", "SF9", "SF10", "SF11", "SF12", "SF13", "SF14", "SF15", "SF16", "SF17", "SF18", "SF19", "SF20"], "default": "all", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html and StationFrame.dc.html, guarded by the shared flag.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          // frame="all" draws every frame in rows; a frame id such as "SF7" draws only that frame,
+          // so the integrator can mount the part whole or one frame at a time.
+          const ids = ["SF1", "SF2", "SF3", "SF4", "SF5", "SF6", "SF7", "SF8", "SF9", "SF10", "SF11", "SF12", "SF13", "SF14", "SF15", "SF16", "SF17", "SF18", "SF19", "SF20"];
+          const rowMap = {"r0": ["SF1", "SF2", "SF3", "SF4"], "r1": ["SF5", "SF6", "SF7", "SF8"], "r2": ["SF9", "SF10", "SF11", "SF12"], "r3": ["SF13", "SF14", "SF15"], "r4": ["SF16", "SF17", "SF18", "SF19"], "r5": ["SF20"]};
+          const raw = this.props && this.props.frame !== undefined && this.props.frame !== null ? String(this.props.frame).trim() : "all";
+          const frame = ids.indexOf(raw) >= 0 ? raw : "all";
+          const show = {};
+          ids.forEach((id) => { show[id] = frame === "all" || frame === id; });
+          const rows = {};
+          Object.keys(rowMap).forEach((r) => { rows[r] = rowMap[r].some((id) => show[id]); });
+          // Token names, ARIA attributes and input attributes stay on one line in Plex Mono.
+          const SPLIT = /(--[a-z][a-z0-9-]*|[a-z-]+="[^"]*"|\/station\/\$stationId)/;
+          const tp = (str) => String(str).split(SPLIT).filter((x) => x !== "").map((x) => {
+            const m = x.match(SPLIT);
+            const tok = !!m && m[0] === x;
+            return { t: x, tok: tok, txt: !tok };
+          });
+          const notes = {"comp": [{"c": "Button, size lg", "u": "Switch operator (outline), Sign out (ghost), the Switch operator form buttons. 48 px high: not a D1 token yet (question K10); the layout's minimum is --nm-target-min-station, 44 px.", "f": "SF1 to SF19"}, {"c": "IconButton", "u": "More, with the label More; Sign out in portrait, with the label Sign out; Show password with aria-pressed. 48 by 48 px.", "f": "SF3, SF11, SF16"}, {"c": "Dropdown Menu", "u": "More: Help as a menuitem link, then a DropdownMenuRadioGroup Theme on this station with Light and Dark.", "f": "SF16, SF17"}, {"c": "Alert Dialog", "u": "The idle sign-out warning, on the D1 Dialog surface and overlay.", "f": "SF7, SF8"}, {"c": "Alert", "u": "The Disconnected strip, warning tone, with role=\"status\".", "f": "SF5, SF6"}, {"c": "Badge", "u": "The connection chip: Wifi with --success on --success-subtle, or LoaderCircle with --warning on --warning-subtle. One line, never a focus stop.", "f": "SF1, SF5"}, {"c": "Card, Field, Input", "u": "The Switch operator form: Badge, Username, Password; Input at 48 px.", "f": "SF9 to SF12"}, {"c": "SkipLink", "u": "Skip to main content, 48 px high in the station layout.", "f": "SF18, KE21"}], "tokens": ["Top bar --card with --border; screen --background; text --foreground and --muted-foreground for the plant name.", "The station layout sets --nm-target-min to --nm-target-min-station (44 px), so every @northmes/ui primitive in it, shell chrome and plugin panels included, follows (spec 5.3).", "Chip: --success on --success-subtle when connected, --warning on --warning-subtle while reconnecting; the strip uses the warning pair too.", "Station body text is 16/24 and the h1 28/36; the Station number role (32/40, 600 Mono) belongs to the D4 screens."], "focus": ["Tab order: Skip to main content, Switch operator, Sign out, More, then the first stop of the D4 screen (KE21). Nobody signed in: Skip to main content, More, then the badge field.", "After sign-in, and after every route change, focus moves to the station h1, for example Press 4, Anna Berg (doc, 5.9).", "Switch operator opens the Switch operator screen with focus in the badge field. That screen leaves Switch operator out of the top bar, the one exception to 5.8; Cancel returns to the previous screen with focus on Switch operator.", "More opens with focus on Help; Escape closes it and focus returns to More. Choosing Light or Dark stores the choice for this device and closes the menu (proposed, K7).", "Idle warning: opening moves focus to Stay signed in; closing returns focus to the element that had it (KE22). Escape: question K6.", "No global key listener anywhere in the station layout (2.1.4)."], "signin": ["These screens are proposals for D4, which owns the station sign-in screens (spec 5.13).", "Badge: the reader types into the focused badge field only. The field takes focus through a ref, never autofocus, on the sign-in screen and on the Switch operator screen. No global key listener (5.8).", "Username: input type=\"text\" autocomplete=\"username\" autocapitalize=\"none\" spellcheck=\"false\".", "Password: input type=\"password\" autocomplete=\"current-password\"; paste allowed; Show password is an IconButton with aria-pressed and a fixed label.", "A PIN, where a station uses badge plus PIN, is one input type=\"password\" inputmode=\"numeric\" autocomplete=\"current-password\" that accepts paste, never one box per digit (5.7).", "A failed scan clears the field, keeps focus in it, shows the message under it with aria-describedby, and says it once through the polite region (5.9).", "After sign-in focus moves to the station h1. The previous operator stays signed in until the next one signs in."], "announce": [{"w": "The connection drops", "h": "The role=\"status\" strip, once per change. The station sends nothing to the polite region for the drop, and the chip has no live role (Q15).", "t": "No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back."}, {"w": "The connection is back", "h": "The strip goes; the polite region says it once (proposed, K5).", "t": "Live updates resumed"}, {"w": "Badge not recognized", "h": "Text under the field and the polite region, once.", "t": "Badge not recognized. Scan again or sign in with your user name"}, {"w": "Idle warning opens", "h": "No live message: the alertdialog is read when focus moves into it.", "t": ""}], "copy": [{"s": "Top bar and menu", "items": [{"t": "Skip to main content", "doc": false}, {"t": "Press 4", "doc": true}, {"t": "Plant A", "doc": true}, {"t": "Connected", "doc": false}, {"t": "Live updates paused, reconnecting", "doc": true}, {"t": "Switch operator", "doc": true}, {"t": "Sign out", "doc": false}, {"t": "More", "doc": false}, {"t": "Help", "doc": false}, {"t": "Theme on this station", "doc": false}, {"t": "Light", "doc": false}, {"t": "Dark", "doc": false}]}, {"s": "Headings and titles", "items": [{"t": "Press 4, Anna Berg", "doc": true}, {"t": "Sign in at Press 4", "doc": false}, {"t": "Switch operator", "doc": false}, {"t": "Press 4 · Plant A · NorthMES", "doc": false}, {"t": "Switch operator · Press 4 · Plant A · NorthMES", "doc": false}]}, {"s": "Status and dialog", "items": [{"t": "No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back.", "doc": true}, {"t": "You will be signed out in 30 seconds", "doc": true}, {"t": "Your entries on this screen are kept.", "doc": false}, {"t": "Stay signed in", "doc": true}]}, {"s": "Switch operator (proposal for D4)", "items": [{"t": "Anna Berg stays signed in until the next operator signs in.", "doc": false}, {"t": "Badge", "doc": false}, {"t": "Hold your badge to the reader.", "doc": false}, {"t": "or", "doc": false}, {"t": "Sign in with username", "doc": false}, {"t": "Username", "doc": false}, {"t": "Password", "doc": false}, {"t": "Show password", "doc": false}, {"t": "Sign in", "doc": false}, {"t": "Scan a badge instead", "doc": false}, {"t": "Cancel", "doc": false}, {"t": "Badge not recognized. Scan again or sign in with your user name", "doc": true}]}], "wcag": [{"k": "1.3.5", "t": "Username and password autocomplete values"}, {"k": "2.1.1", "t": "Every control by keyboard"}, {"k": "2.1.4", "t": "No single-key shortcut, no global key listener"}, {"k": "2.2.1", "t": "Idle warning 30 s ahead with Stay signed in"}, {"k": "2.4.1", "t": "Skip link first (SF18, KE21)"}, {"k": "2.4.2", "t": "Unique titles per station route"}, {"k": "2.4.3", "t": "Focus to the h1 after sign-in and route changes; layers return focus"}, {"k": "2.5.8", "t": "48 px controls, above the 44 px station minimum"}, {"k": "3.3.1", "t": "Badge error text next to the field"}, {"k": "3.3.8", "t": "Paste, autofill and the show-password toggle; no cognitive test"}, {"k": "4.1.3", "t": "Disconnected strip and the badge error, each read once"}]};
+          notes.comp = notes.comp.map((r) => Object.assign({}, r, { u: tp(r.u) }));
+          notes.tokens = notes.tokens.map(tp);
+          notes.focus = notes.focus.map(tp);
+          notes.signin = notes.signin.map(tp);
+          notes.announce = notes.announce.map((r) => Object.assign({}, r, { h: tp(r.h) }));
+          return { show: show, rows: rows, notes: notes };
+        }
+      }
+    </script>
+  </body>
+</html>

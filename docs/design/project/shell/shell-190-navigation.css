@@ -1,0 +1,256 @@
+/* Shared styles for the D2 page shell-190-navigation.dc.html, issue northMES/northmes#190, and the shared frames
+   Shell.dc.html (planner shell) and StationFrame.dc.html (station frame) that later pages mount.
+   They sit on top of the approved D1 files ../ui/tokens.css and ../ui/ui-189-tokens-page.css and never change them.
+   Every UI color is a D1 token. Annotations (document title, slot pins, landmark tags) are not part of the UI:
+   the title chip uses the canvas label colors of the D1 page, the pins and tags use the info tokens.
+   Shell classes start with sh-, station classes with stn-, so they never meet a D1 class name. */
+
+/* Canvas frames for the D2 page */
+.frame.w1920{width:1920px}
+.frame.w1440{width:1440px}
+.frame.w1280{width:1280px}
+.frame.w800{width:800px}
+.frame.w720{width:720px}
+.frame.w320{width:320px}
+.ftitle{font:400 12px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.crop{overflow:hidden;border-radius:var(--radius-xl)}
+
+/* Shared pieces */
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sh-grow{flex:1 1 auto;min-width:0}
+.sh-vsep{flex:none;width:1px;height:16px;background:var(--border)}
+.sh-trunc{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* Product mark: a placeholder until the product has a logo (station frame and sign-in page) */
+.sh-mark{display:inline-flex;align-items:center;gap:8px;min-width:0;font-size:15px;line-height:20px;font-weight:700;letter-spacing:-0.01em;color:var(--foreground);white-space:nowrap}
+.sh-mark-sq{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:var(--radius-sm);background:var(--primary);color:var(--primary-foreground);font:700 13px/1 var(--font-mono)}
+
+/* Frame root and the document title annotation above the screen */
+.sh-root{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.sh-doc{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:5px 10px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 12px/16px "IBM Plex Mono",ui-monospace,monospace}
+.sh-doc-k{flex:none;padding:1px 6px;border-radius:4px;background:#1a1a1a;color:#ffffff;font-weight:600}
+
+/* Screen */
+.sh-scr{position:relative;display:flex;flex:none;overflow:hidden;background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);border:1px solid var(--border);border-radius:var(--radius-xl);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.sh-scr.w1920{width:1920px;height:1080px}
+.sh-scr.w1440{width:1440px;height:900px}
+.sh-scr.w1280{width:1280px;height:800px}
+.sh-scr.w320{width:320px;height:640px}
+.sh-scr a{text-decoration:none}
+.sh-scr [data-slot]{display:contents}
+.sh-col{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+.sh-body{display:flex;flex:1;min-width:0;min-height:0}
+
+/* Skip link (SkipLink): visually hidden until it has focus */
+.sh-skip{position:absolute;z-index:20;left:8px;top:10px;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sh-skip.on,.sh-skip:focus{width:auto;height:var(--nm-control-height);padding:0 16px;overflow:visible;clip:auto}
+
+/* Sidebar (shadcn Sidebar): labelled, collapses to the rail, a Sheet at 320. One nav landmark holds the head
+   (company and plant switcher), the entries and the footer (user menu). */
+.sh-sb{display:flex;flex-direction:column;flex:none;width:256px;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border)}
+.sh-sb.sh-sheet{position:absolute;z-index:12;top:0;bottom:0;left:0;width:288px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)}
+.sh-sb-nav{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.sh-sb-head{display:flex;align-items:center;gap:4px;flex:none;height:56px;padding:0 8px;border-bottom:1px solid var(--sidebar-border)}
+.sh-sb-body{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:12px 8px;overflow-x:hidden;overflow-y:auto}
+.sh-sb-foot{display:flex;align-items:center;gap:4px;flex:none;padding:8px;border-top:1px solid var(--sidebar-border)}
+.sh-sheet .sh-nu .sh-sw-i{display:none}
+.sh-sec{display:grid;gap:12px;flex:none}
+.sh-sec.div{padding-top:12px;border-top:1px solid var(--sidebar-border)}
+.sh-sec.adm{margin-top:auto}
+.sh-grp{display:grid;gap:1px}
+.sh-grp-h{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;min-height:28px;padding:4px 8px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground);hyphens:auto;overflow-wrap:break-word}
+.sh-unav{font-weight:400}
+.sh-list{display:grid;gap:1px;margin:0;padding:0;list-style:none}
+.sh-ni-row{display:flex;align-items:center;gap:2px}
+.sh-ni{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:32px;padding:6px 8px;border-radius:var(--radius-md);color:var(--sidebar-foreground);font-size:14px;line-height:20px;hyphens:auto;overflow-wrap:break-word}
+.sh-ni-l{min-width:0}
+.sh-ni:hover{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+.sh-ni.cur{background:var(--sidebar-primary);color:var(--sidebar-primary-foreground);font-weight:500}
+.sh-ni.is-focus{outline:2px solid var(--focus-outline);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-ring)}
+.sh-disc{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted-foreground);cursor:pointer}
+.sh-disc:hover{background:var(--sidebar-accent);color:var(--foreground)}
+.sh-disc.open .ic{transform:rotate(90deg)}
+.sh-sub{display:grid;gap:1px;margin:1px 0 1px 16px;padding:0 0 0 8px;border-left:1px solid var(--sidebar-border);list-style:none}
+
+/* Company and plant switcher (TeamSwitcher) and user button (NavUser): SidebarMenuButton size lg, 48 px.
+   With roles in one plant the head is the same row as static text: no button, no chevron. */
+.sh-sw{display:flex;align-items:center;gap:8px;flex:1;min-width:0;height:48px;padding:0 8px;border:0;border-radius:var(--radius-md);background:transparent;color:var(--sidebar-foreground);font:inherit;text-align:left;cursor:pointer}
+.sh-sw:hover,.sh-sw.open{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+.sh-sw.static{cursor:default}
+.sh-sw.static:hover{background:transparent;color:var(--sidebar-foreground)}
+.sh-sw-t{display:grid;flex:1;min-width:0}
+.sh-sw-a{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;line-height:20px;font-weight:600}
+.sh-sw-b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:16px}
+.sh-sw-i{color:var(--muted-foreground)}
+.sh-cm{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--radius-lg);background:var(--sidebar-primary);color:var(--sidebar-primary-foreground);font:600 15px/1 var(--font-sans)}
+.sh-av{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:var(--radius-lg);background:var(--secondary);color:var(--secondary-foreground);box-shadow:inset 0 0 0 1px var(--border);font:600 12px/1 var(--font-sans);letter-spacing:.02em}
+
+/* Collapsed rail: the company mark, one icon per top-level entry with a rule between module groups,
+   the avatar at the foot. Tooltips and flyouts sit beside the rail, outside its scroller. */
+.sh-rail{display:flex;flex-direction:column;flex:none;width:64px;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border)}
+.sh-rail-in{position:relative;display:flex;flex-direction:column;align-items:center;flex:1;min-height:0;width:100%}
+.sh-rail-top{display:flex;align-items:center;justify-content:center;flex:none;width:100%;height:56px;border-bottom:1px solid var(--sidebar-border)}
+.sh-rail-nav{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-height:0;width:100%;padding:8px 0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+.sh-rail-foot{display:flex;justify-content:center;flex:none;width:100%;padding:8px 0;border-top:1px solid var(--sidebar-border)}
+.sh-rmark{display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;border:0;border-radius:var(--radius-md);background:transparent;cursor:pointer}
+.sh-rmark:hover,.sh-rmark.open{background:var(--sidebar-accent)}
+.sh-rmark.static{cursor:default}
+.sh-rmark.static:hover{background:transparent}
+.sh-rb{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:0;border:1px solid transparent;border-radius:var(--radius-md);background:transparent;color:var(--sidebar-foreground);cursor:pointer}
+.sh-rb:hover,.sh-rb.hov,.sh-rb.open{background:var(--sidebar-accent);color:var(--sidebar-accent-foreground)}
+.sh-rb.cur{background:var(--sidebar-primary);color:var(--sidebar-primary-foreground)}
+.sh-rb.unav{border:1px dashed var(--muted-foreground);color:var(--muted-foreground)}
+.sh-rb.loading{border:1px dotted var(--muted-foreground);color:var(--muted-foreground)}
+.sh-rsep{flex:none;width:32px;height:1px;margin:3px 0;background:var(--sidebar-border)}
+.sh-rlist{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;width:100%;margin:0;padding:0;list-style:none}
+.sh-rlist li{display:flex;justify-content:center;width:100%}
+.sh-tip{position:absolute;z-index:14;padding:6px 10px;border-radius:var(--radius-md);background:var(--primary);color:var(--primary-foreground);font-size:12px;line-height:16px;font-weight:500;white-space:nowrap;pointer-events:none}
+
+/* Top bar (header landmark) */
+.sh-tb{display:flex;align-items:center;gap:8px;flex:none;min-height:56px;padding:0 16px;background:var(--background);border-bottom:1px solid var(--border)}
+.sh-tb.nar{gap:4px;padding:0 6px}
+.sh-crumbs{display:flex;flex:0 1 auto;min-width:0;overflow:hidden;padding:4px}
+.sh-crumbs ol{display:flex;align-items:center;gap:2px;min-width:0;margin:0;padding:0;list-style:none;font-size:14px;line-height:20px;white-space:nowrap}
+.sh-crumbs li{display:flex;align-items:center;gap:2px;min-width:0}
+.sh-crumbs li.ctx{flex:none}
+.sh-crumbs li.ell{flex:none}
+.sh-crumbs .sh-sep{width:14px;height:14px;color:var(--muted-foreground)}
+.sh-cr{display:block;min-width:0;min-height:24px;padding:2px 4px;border-radius:var(--radius-sm);color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis}
+.sh-cr:hover{color:var(--foreground);text-decoration:underline}
+.sh-here{display:block;min-width:0;max-width:320px;padding:2px 4px;color:var(--foreground);font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.sh-cx{display:block;max-width:240px;min-height:24px;padding:2px 4px;border-radius:var(--radius-sm);color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis}
+a.sh-cx:hover{color:var(--foreground);text-decoration:underline}
+.sh-trig{margin-left:-4px}
+.sh-tsep{flex:none;width:1px;height:16px;margin-right:4px;background:var(--border)}
+.sh-ell{display:grid;place-items:center;flex:none;width:24px;height:24px;padding:0;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--muted-foreground);cursor:pointer}
+.sh-ell:hover,.sh-ell.open{background:var(--accent);color:var(--accent-foreground)}
+.sh-tb.nar .sh-trig{margin-left:0}
+.sh-tb.nar .sh-cx{max-width:120px}
+.sh-tb.nar .sh-crumbs{padding:4px}
+.sh-actions{position:relative;display:flex;align-items:center;gap:8px;flex:none}
+.v-ghost.on{background:var(--accent);color:var(--accent-foreground)}
+.sh-tipw{position:relative;display:inline-flex;flex:none}
+.sh-tip.sh-tip-l{top:50%;right:calc(100% + 8px);transform:translateY(-50%)}
+/* Under a control at the top bar end, so it covers no other top bar control */
+.sh-tip.sh-tip-b{top:calc(100% + 8px);right:0}
+.btn.open{background:var(--accent);color:var(--accent-foreground)}
+
+/* Notifications (bell, top bar end): a count badge when unread, a Popover panel with an empty state */
+.sh-bell{position:relative}
+.sh-badge{position:absolute;top:4px;left:18px;display:grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--primary);color:var(--primary-foreground);box-shadow:0 0 0 2px var(--background);font:600 10px/1 var(--font-mono);font-variant-numeric:tabular-nums;pointer-events:none}
+.sh-sb .sh-badge{box-shadow:0 0 0 2px var(--sidebar)}
+.pop.sh-np{position:absolute;z-index:16;width:320px;max-width:calc(100% - 16px);padding:0}
+.sh-np-h{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;border-bottom:1px solid var(--border)}
+.sh-np-t{margin:0;font-size:14px;line-height:20px;font-weight:600}
+.sh-np-e{display:grid;justify-items:center;gap:10px;padding:32px 16px 36px;text-align:center}
+.sh-np-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:999px;background:var(--muted);color:var(--muted-foreground)}
+.sh-np-ic .ic{width:20px;height:20px}
+.sh-np-m{margin:0;font-size:14px;line-height:20px;font-weight:500;color:var(--popover-foreground)}
+.pop.sh-np.is-focus{box-shadow:0 0 0 2px var(--focus-ring),0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)}
+
+/* Live status: a chip in the top bar for reconnecting, a strip under the top bar for banners */
+.sh-chip{display:inline-flex;align-items:center;gap:6px;flex:none;min-height:28px;white-space:nowrap;padding:4px 10px;border-radius:14px;font-size:12px;line-height:16px;font-weight:600}
+.sh-chip .ic{width:14px;height:14px}
+.sh-chip.warn{background:var(--warning-subtle);color:var(--warning)}
+.sh-chip.ok{background:var(--success-subtle);color:var(--success)}
+.sh-strip{display:flex;align-items:flex-start;gap:10px;flex:none;min-height:40px;padding:10px 16px;border-bottom:1px solid var(--border);font-size:14px;line-height:20px}
+.sh-strip .ic{margin-top:2px}
+.sh-strip.info{background:var(--info-subtle);color:var(--info)}
+.sh-strip.warning{background:var(--warning-subtle);color:var(--warning)}
+.sh-strip.error{background:var(--destructive-subtle);color:var(--destructive)}
+.sh-strip-t{flex:1;min-width:0}
+.sh-strip .sh-strip-a{display:inline-flex;align-items:center;flex:none;min-height:var(--nm-target-min);margin:-2px 0;color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* Main and its page header */
+.sh-main{display:flex;flex-direction:column;gap:16px;flex:1;min-width:0;min-height:0;padding:20px 24px 24px;overflow:hidden;background:var(--background)}
+.sh-main.nar{gap:12px;padding:16px}
+.sh-main.is-focus{outline:2px solid var(--focus-outline);outline-offset:-4px;box-shadow:inset 0 0 0 6px var(--focus-ring)}
+.sh-ph{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px}
+.sh-h1{margin:0;padding:0 2px;border-radius:var(--radius-sm);font-size:28px;line-height:34px;font-weight:600;letter-spacing:-0.01em;overflow-wrap:break-word;hyphens:auto}
+.sh-main.nar .sh-h1{font-size:24px;line-height:30px}
+.sh-ph-slot{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.sh-content{display:flex;flex-direction:column;gap:16px;flex:1;min-width:0;min-height:0}
+.sh-phbox{display:grid;place-items:center;flex:1;min-height:120px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--muted)}
+.sh-phl{max-width:82%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);color:var(--muted-foreground);font:500 12px/16px var(--font-mono);text-align:center;text-wrap:balance}
+
+/* Shell aside slot with the docked chat panel (geometry and trigger only; the panel is designed under E14-S03) */
+.sh-aside{position:relative;display:flex;flex-direction:column;flex:none;width:360px;background:var(--card);border-left:1px solid var(--border)}
+.sh-aside.sh-modal{position:absolute;z-index:12;inset:0;width:auto;border-left:0}
+.sh-as-h{display:flex;align-items:center;gap:8px;flex:none;height:56px;padding:0 8px 0 16px;border-bottom:1px solid var(--border)}
+.sh-as-t{margin:0;font-size:16px;line-height:24px;font-weight:600}
+.sh-as-n{flex:none;margin:0;padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.sh-as-b{display:flex;flex-direction:column;flex:1;min-height:0;padding:16px;gap:12px}
+.sh-as-f{display:flex;gap:8px;flex:none;padding:0 16px 16px}
+
+/* Menus (shadcn Dropdown Menu on the D1 pop and mi styles) */
+.sh-menu{position:absolute;z-index:16;width:300px;max-width:calc(100% - 16px)}
+.sh-menu .mi{color:var(--popover-foreground)}
+.sh-menu.r{right:0;top:calc(100% + 6px)}
+.sh-mh{padding:6px 8px 4px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.sh-ck{visibility:hidden}
+.sh-ck.on{visibility:visible}
+.sh-mg{display:grid}
+.sh-menu,.sh-mg{grid-template-columns:minmax(0,1fr)}
+.sh-swm .sh-trunc{white-space:normal;overflow-wrap:anywhere}
+.sh-pi{min-height:36px}
+.sh-pi-m{display:grid;place-items:center;flex:none;width:24px;height:24px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--popover);color:var(--muted-foreground)}
+.sh-pi-m .ic{width:14px;height:14px}
+/* A plant in onboarding (ADR 0067): the D1 Badge in the warning tone after the plant name, moving under a long name;
+   its word is part of the link text */
+.sh-pn{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-width:0}
+.sh-onboarding{--bb:var(--warning-subtle);--bf:var(--warning);flex:none;padding:0 8px}
+/* A top bar item that failed (ADR 0067): its place holds an icon button with a dashed border, as an unavailable
+   module keeps its icon in the rail */
+.btn.sh-tfail{border:1px dashed var(--muted-foreground);color:var(--muted-foreground)}
+.sh-who{display:flex;align-items:center;gap:8px;padding:6px 8px;color:var(--popover-foreground)}
+
+/* Overlay behind a sheet or a dialog: black at 50 percent, the D1 Dialog value (question) */
+.sh-ov{position:absolute;inset:0;z-index:11;background:rgba(0,0,0,.5)}
+
+/* Annotations, not part of the UI: slot outline with a numbered pin, landmark tags */
+.sh-slot{position:relative}
+.sh-slot::after{content:"";position:absolute;inset:-4px;border:1.5px dashed var(--info);border-radius:var(--radius);pointer-events:none}
+.sh-pin{position:absolute;z-index:4;left:-12px;top:-12px;display:grid;place-items:center;width:18px;height:18px;border-radius:999px;background:var(--info);color:var(--background);font:600 11px/1 var(--font-mono);pointer-events:none}
+.sh-lmw{position:relative}
+.sh-lm{position:absolute;z-index:9;display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;background:var(--info);color:var(--background);font:600 11px/16px var(--font-mono);white-space:nowrap;pointer-events:none}
+.sh-lm.tl{left:4px;top:4px}
+.sh-lm.tr{right:4px;top:4px}
+.sh-lm.bl{left:4px;bottom:4px}
+.sh-lm.br{right:4px;bottom:4px}
+.sh-lmbox{position:absolute;inset:2px;z-index:8;border:2px solid var(--info);border-radius:var(--radius-sm);pointer-events:none}
+
+/* Station frame: no sidebar, 48 px targets; the layout sets --nm-target-min to the station value */
+.stn-root{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.stn-scr{--nm-target-min:var(--nm-target-min-station);position:relative;display:flex;flex-direction:column;flex:none;overflow:hidden;background:var(--background);color:var(--foreground);font:400 16px/24px var(--font-sans);border:1px solid var(--border);border-radius:var(--radius-xl);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.stn-scr.s1280{width:1280px;height:800px}
+.stn-scr.s1920{width:1920px;height:1080px}
+.stn-scr.s800{width:800px;height:1280px}
+.stn-scr a{text-decoration:none}
+.stn-scr [data-slot]{display:contents}
+.stn-tb{display:flex;align-items:center;gap:12px;flex:none;min-height:72px;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--border)}
+.stn-tb.por{gap:8px;padding:12px 16px}
+.stn-id{display:grid;min-width:0;font-size:16px;line-height:22px}
+.stn-id .k{font-size:14px;line-height:20px;color:var(--muted-foreground)}
+.btn.lg{height:48px;min-width:48px;padding:0 20px;font-size:16px;line-height:24px}
+.btn.lg .ic{width:20px;height:20px}
+.btn.lg.ib{width:48px;padding:0}
+.stn-chip{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:36px;white-space:nowrap;padding:6px 14px;border-radius:18px;font-size:14px;line-height:20px;font-weight:600}
+.stn-chip .ic{width:16px;height:16px}
+.stn-chip.ok{background:var(--success-subtle);color:var(--success)}
+.stn-chip.warn{background:var(--warning-subtle);color:var(--warning)}
+.stn-strip{display:flex;align-items:flex-start;gap:12px;flex:none;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--warning-subtle);color:var(--warning);font-size:16px;line-height:24px}
+.stn-strip .ic{width:20px;height:20px;margin-top:2px}
+.stn-main{display:flex;flex-direction:column;gap:20px;flex:1;min-height:0;padding:24px;overflow:hidden}
+.stn-main.is-focus{outline:2px solid var(--focus-outline);outline-offset:-4px;box-shadow:inset 0 0 0 6px var(--focus-ring)}
+.stn-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
+.stn-h1{margin:0;padding:0 2px;border-radius:var(--radius-sm);font-size:28px;line-height:36px;font-weight:600;letter-spacing:-0.01em}
+.stn-content{display:flex;flex-direction:column;gap:16px;flex:1;min-height:0}
+.stn-skip{position:absolute;z-index:20;left:12px;top:12px;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.stn-skip.on,.stn-skip:focus{width:auto;height:48px;padding:0 20px;font-size:16px;line-height:24px;overflow:visible;clip:auto}
+.stn-menu{position:absolute;z-index:16;width:280px}
+.stn-menu .mi{min-height:48px;color:var(--popover-foreground);font-size:16px;line-height:24px}
+.stn-dlg{position:absolute;z-index:13;left:50%;top:50%;display:grid;gap:16px;width:min(520px,calc(100% - 48px));padding:24px;transform:translate(-50%,-50%);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground)}
+.stn-dlg-t{margin:0;font-size:22px;line-height:28px;font-weight:600}
+.stn-dlg p{margin:0}
+.stn-dlg-f{display:flex;justify-content:flex-end;gap:12px}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 station frame options</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="scr vert s1280" data-screen-label="Station frame">
+        <sc-if value="{{ skip }}"><a class="btn lg v-default is-focus skipl" href="#main" style="left:226px;top:12px">Skip to main content</a></sc-if>
+        <sc-if value="{{ top }}">
+          <header class="st-tb">
+            <span class="mark"><span class="mark-sq">N</span>NorthMES</span>
+            <span class="vsep"></span>
+            <span class="st-id"><span class="b6">Press 4</span><span class="k">Plant A</span></span>
+            <span class="grow"></span>
+            <span class="chip ok big"><span class="ic" data-icon="Wifi"></span>Connected</span>
+            <button class="btn lg v-outline" type="button"><span class="ic" data-icon="ArrowLeftRight"></span>Switch operator</button>
+            <button class="btn lg v-ghost" type="button"><span class="ic" data-icon="LogOut"></span>Sign out</button>
+            <button class="btn lg v-ghost ib48" type="button" aria-label="More" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+          </header>
+        </sc-if>
+        <sc-if value="{{ tall }}">
+          <header class="st-hd">
+            <span class="mark-sq" aria-hidden="true">N</span>
+            <div class="col">
+              <h1 class="h1" tabindex="-1">Press 4, Anna Berg</h1>
+              <span class="meta">Plant A</span>
+            </div>
+            <span class="grow"></span>
+            <span class="chip ok big"><span class="ic" data-icon="Wifi"></span>Connected</span>
+            <button class="btn xl v-outline" type="button"><span class="ic" data-icon="ArrowLeftRight"></span>Switch operator</button>
+            <button class="btn xl v-ghost" type="button"><span class="ic" data-icon="LogOut"></span>Sign out</button>
+            <button class="btn xl v-ghost ib48" type="button" aria-label="More" aria-haspopup="menu"><span class="ic" data-icon="Ellipsis"></span></button>
+          </header>
+        </sc-if>
+        <main class="st-main" id="main">
+          <sc-if value="{{ headInMain }}">
+            <div class="st-head">
+              <div class="col">
+                <h1 class="h1" tabindex="-1">Press 4, Anna Berg</h1>
+                <sc-if value="{{ bottom }}"><span class="meta">Plant A</span></sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <div class="bd-grid phbox"><span class="phl">Station screen content, designed in D4 (E11): job list, report form, corrections</span></div>
+        </main>
+        <sc-if value="{{ bottom }}">
+          <footer class="st-bb">
+            <button class="btn xl v-outline" type="button"><span class="ic" data-icon="ArrowLeftRight"></span>Switch operator</button>
+            <span class="st-id"><span class="k">Signed in</span><span class="b6">Anna Berg</span></span>
+            <span class="grow"></span>
+            <span class="chip ok big"><span class="ic" data-icon="Wifi"></span>Connected</span>
+            <button class="btn xl v-ghost" type="button" aria-haspopup="menu"><span class="ic" data-icon="CircleHelp"></span>Help</button>
+            <button class="btn xl v-ghost" type="button" aria-pressed="false"><span class="ic" data-icon="Moon"></span>Dark theme</button>
+            <button class="btn xl v-ghost" type="button"><span class="ic" data-icon="LogOut"></span>Sign out</button>
+          </footer>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["s1","s2","s3"],"default":"s1","tsType":"string"},"focus":{"editor":"enum","options":["none","skip"],"default":"none","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const f = this.props.frame === "s2" || this.props.frame === "s3" ? this.props.frame : "s1";
+          // D4 designs the station screens (spec 5.13); this frame draws their area as a placeholder.
+          // Station "Press 4" and operator "Anna Berg" are the P09 values.
+          return {
+            top: f === "s1",
+            bottom: f === "s2",
+            tall: f === "s3",
+            headInMain: f !== "s3",
+            skip: this.props.focus === "skip"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

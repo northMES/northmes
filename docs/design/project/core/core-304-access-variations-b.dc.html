@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access option B, by plant</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="ac-o" data-screen-label="{{ label }}">
+        <sc-if value="{{ isRoles }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="{{ shRole }}" user="{{ shUser }}" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span><span class="ac-mono">11</span> roles at Acme AB</span></div>
+            <div class="ac-page">
+              <sc-if value="{{ roleErr }}">
+                <div class="ac-summary is-focus" tabindex="-1" role="group" aria-labelledby="ac-b4-sh">
+                  <h2 class="ac-summary-h" id="ac-b4-sh"><span class="ic" data-icon="CircleAlert"></span>1 change was not saved</h2>
+                  <ul><li><a href="#">You cannot add Break another planner's lock (planning.jobOrder:breakLock) to Shift lead. Shift lead is assigned at Plant A, and you do not hold that permission there.</a></li></ul>
+                </div>
+              </sc-if>
+              <div class="ac-tool">
+                <span class="inp ac-search"><span class="ic" data-icon="Search"></span><span class="ph">Search permissions</span></span>
+                <button class="btn v-outline ac-fb" type="button" aria-haspopup="menu" aria-expanded="false">Module<span class="ic" data-icon="ChevronDown"></span></button>
+                <span class="ac-grow"></span>
+                <span class="ac-mx-bar"><span class="i"><span class="ic" data-icon="Check"></span>Included in a default role, read only</span><span class="i"><span class="cb on"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>Custom role, select to change</span></span>
+              </div>
+              <div class="ac-mx" role="table" aria-label="Roles and their permissions" tabindex="0" data-ac-scrolly="{{ sy }}" data-ac-scrollx="{{ sx }}">
+                <div class="ac-mr hd ac-g11" role="row"><span class="ac-mrh" role="columnheader">Permission</span><sc-for list="{{ cols }}" as="c"><span class="ac-mh" role="columnheader"><span>{{ c.name }}</span><span class="k">{{ c.kind }}</span></span></sc-for></div>
+                <sc-for list="{{ mrows }}" as="r">
+                  <sc-if value="{{ r.isGroup }}">
+                    <div class="ac-mr grp ac-g11" role="row"><span class="ac-mrh" role="rowheader"><button class="ac-disc" type="button" aria-expanded="{{ r.open }}"><span class="ic" data-icon="{{ r.chev }}"></span><span>{{ r.label }}</span><span class="n">{{ r.count }}</span></button></span><sc-for list="{{ r.blank }}" as="b"><span class="ac-mc" role="cell"></span></sc-for></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isPerm }}">
+                    <div class="ac-mr ac-g11" role="row"><span class="ac-mrh" role="rowheader"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span></span><sc-for list="{{ r.cells }}" as="c"><span class="ac-mc {{ c.cls }}" role="cell"><sc-if value="{{ c.ro }}"><sc-if value="{{ c.on }}"><span class="ic" data-icon="Check"></span></sc-if><span class="ac-vh">{{ c.vh }}</span></sc-if><sc-if value="{{ c.edit }}"><span class="stk"><span class="cb {{ c.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="ac-vh">{{ c.vh }}</span></span><sc-if value="{{ c.isNew }}"><span class="new">{{ c.mark }}</span></sc-if></span></sc-if></span></sc-for></div>
+                  </sc-if>
+                </sc-for>
+              </div>
+              <div class="ac-savebar" role="region" aria-label="Changes not saved">
+                <span class="ac-b">1 change not saved</span><span class="ac-mut">{{ changeText }}</span><span class="ac-grow"></span>
+                <span class="ac-sb-r"><span class="lbl">Reason <span class="ac-req">(optional)</span></span><span class="inp"><span class="ph">Why you change these roles</span></span></span>
+                <button class="btn v-outline" type="button">Discard changes</button><button class="btn v-default" type="button">Save changes</button>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isPeople }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.users" actions="*New user" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span>Roles at Plant A and at Acme AB</span></div>
+            <div class="ac-page">
+              <div class="ac-summary is-focus" tabindex="-1" role="group" aria-labelledby="ac-b2-sh">
+                <h2 class="ac-summary-h" id="ac-b2-sh"><span class="ic" data-icon="CircleAlert"></span>1 change was not saved</h2>
+                <ul><li><a href="#">You cannot assign Shift lead at Plant A to Anna Berg. It includes 3 permissions you do not hold at Plant A: {{ missText }}. Ask a company admin of Acme AB to assign it.</a></li></ul>
+              </div>
+              <div class="ac-tool">
+                <span class="inp ac-search"><span class="ic" data-icon="Search"></span><span class="ph">Search people</span></span>
+                <button class="btn v-outline ac-fb" type="button" aria-haspopup="menu" aria-expanded="false">Role<span class="ic" data-icon="ChevronDown"></span></button>
+                <button class="btn v-outline ac-fb" type="button" aria-haspopup="menu" aria-expanded="false">Status<span class="ic" data-icon="ChevronDown"></span></button>
+                <span class="ac-grow"></span>
+                <span class="ac-mx-bar"><span class="i"><span class="cb on"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>Assigned at Plant A</span><span class="i"><span class="ic" data-icon="Building2"></span>Assigned at Acme AB, changed by a company admin</span></span>
+              </div>
+              <div class="ac-mx" role="table" aria-label="People and their roles at Plant A" tabindex="0">
+                <div class="ac-mr hd ac-g8" role="row"><span class="ac-mrh" role="columnheader">Person</span><sc-for list="{{ pcols }}" as="c"><span class="ac-mh" role="columnheader"><span>{{ c.name }}</span><span class="k">{{ c.kind }}</span></span></sc-for></div>
+                <sc-for list="{{ prows }}" as="r">
+                  <div class="ac-mr ac-g8" role="row">
+                    <span class="ac-mrh" role="rowheader"><span class="ac-pn"><a href="#" lang="{{ r.lang }}">{{ r.name }}</a><sc-if value="{{ r.blocked }}"><span class="badge ac-br"><span class="ic" data-icon="Ban"></span>Blocked</span></sc-if></span><span class="ac-pid">{{ r.user }}</span></span>
+                    <sc-for list="{{ r.cells }}" as="c"><span class="ac-mc {{ c.cls }}" role="cell"><sc-if value="{{ c.inh }}"><span class="inh"><span class="ic" data-icon="Building2"></span>Acme AB</span><span class="ac-vh">{{ c.vh }}</span></sc-if><sc-if value="{{ c.edit }}"><span class="stk"><span class="cb {{ c.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="ac-vh">{{ c.vh }}</span></span><sc-if value="{{ c.isNew }}"><span class="new">{{ c.mark }}</span></sc-if></span></sc-if></span></sc-for>
+                  </div>
+                </sc-for>
+              </div>
+              <div class="ac-savebar" role="region" aria-label="Changes not saved">
+                <span class="ac-b">1 change not saved</span><span class="ac-mut">Shift lead at Plant A for Anna Berg.</span><span class="ac-grow"></span>
+                <span class="ac-sb-r"><span class="lbl">Reason <span class="ac-req">(optional)</span></span><span class="inp"><span class="ph">Why you change these roles</span></span></span>
+                <button class="btn v-outline" type="button">Discard changes</button><button class="btn v-default" type="button">Save changes</button>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isAccess }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ac-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ac-mono">sara.nyberg</span></div>
+            <div class="ac-page">
+              <div class="ac-tabs" role="tablist" aria-label="Sara Nyberg"><button class="ac-tab" type="button" role="tab" aria-selected="false">General</button><button class="ac-tab on" type="button" role="tab" aria-selected="true">Access</button><button class="ac-tab" type="button" role="tab" aria-selected="false">History</button></div>
+              <div class="ac-tool">
+                <p class="ac-p ac-grow">Two roles apply at Plant A: Shift lead, assigned at Plant A, and Viewer, assigned at Acme AB for all plants. Roles are assigned on the <a href="#">Users</a> page.</p>
+                <span class="cb on"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>Show every permission</span>
+              </div>
+              <div class="ac-mx" role="table" aria-label="Sara Nyberg's permissions at Plant A" tabindex="0">
+                <div class="ac-mr hd ac-g3" role="row"><span class="ac-mrh" role="columnheader">Permission</span><span class="ac-mh" role="columnheader"><span>Shift lead</span><span class="k">Assigned at Plant A</span></span><span class="ac-mh" role="columnheader"><span>Viewer</span><span class="k">Assigned at Acme AB</span></span><span class="ac-mh" role="columnheader"><span>At Plant A</span><span class="k">What Sara Nyberg can do</span></span></div>
+                <sc-for list="{{ arows }}" as="r">
+                  <sc-if value="{{ r.isGroup }}">
+                    <div class="ac-mr grp ac-g3" role="row"><span class="ac-mrh" role="rowheader"><button class="ac-disc" type="button" aria-expanded="{{ r.open }}"><span class="ic" data-icon="{{ r.chev }}"></span><span>{{ r.label }}</span><span class="n">{{ r.count }}</span></button></span><span class="ac-mc" role="cell"></span><span class="ac-mc" role="cell"></span><span class="ac-mc" role="cell"></span></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isPerm }}">
+                    <div class="ac-mr ac-g3" role="row"><span class="ac-mrh" role="rowheader"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span></span>
+                      <sc-for list="{{ r.cells }}" as="c"><span class="ac-mc ro" role="cell"><sc-if value="{{ c.on }}"><span class="ic" data-icon="Check"></span></sc-if><span class="ac-vh">{{ c.vh }}</span></span></sc-for>
+                      <span class="ac-mc" role="cell"><sc-if value="{{ r.yes }}"><span class="yes"><span class="ic" data-icon="Check"></span>Yes</span></sc-if><sc-if value="{{ r.no }}"><span class="no">No</span></sc-if></span>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isNarrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" actions="*New role" bell="off" show-title="on" hint-size="320px,676px">
+            <div class="ac-page">
+              <span class="inp ac-search full"><span class="ic" data-icon="Search"></span><span class="ph">Search permissions</span></span>
+              <div class="ac-tool"><button class="btn v-outline ac-fb" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="ic" data-icon="ListFilter"></span>Filters</button><span class="ac-sm ac-mut">Scroll the table sideways for more roles.</span></div>
+              <div class="ac-mx is-focus" role="table" aria-label="Roles and their permissions, scrolls in two directions" tabindex="0" data-ac-scrollx="184">
+                <div class="ac-mr hd ac-gn" role="row"><span class="ac-mrh" role="columnheader">Permission</span><sc-for list="{{ cols }}" as="c"><span class="ac-mh" role="columnheader"><span>{{ c.name }}</span><span class="k">{{ c.kind }}</span></span></sc-for></div>
+                <sc-for list="{{ mrows }}" as="r">
+                  <sc-if value="{{ r.isGroup }}">
+                    <div class="ac-mr grp ac-gn" role="row"><span class="ac-mrh" role="rowheader"><button class="ac-disc" type="button" aria-expanded="{{ r.open }}"><span class="ic" data-icon="{{ r.chev }}"></span><span>{{ r.label }}</span></button></span><sc-for list="{{ r.blank }}" as="b"><span class="ac-mc" role="cell"></span></sc-for></div>
+                  </sc-if>
+                  <sc-if value="{{ r.isPerm }}">
+                    <div class="ac-mr ac-gn" role="row"><span class="ac-mrh" role="rowheader"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span></span><sc-for list="{{ r.cells }}" as="c"><span class="ac-mc {{ c.cls }}" role="cell"><sc-if value="{{ c.ro }}"><sc-if value="{{ c.on }}"><span class="ic" data-icon="Check"></span></sc-if><span class="ac-vh">{{ c.vh }}</span></sc-if><sc-if value="{{ c.edit }}"><span class="cb {{ c.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span class="ac-vh">{{ c.vh }}</span></span></sc-if></span></sc-for></div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["roles","people","access","roles-refused","narrow"],"default":"roles","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html (flag __nmIconFill2), for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.ACC ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.ACC) ready();
+          // The 320 sketch shows its matrix scrolled sideways, so the sticky permission column is visible; B1 and B4 scroll down to the changed cell, and B4 one column sideways, so its refused cell shows whole.
+          let tries = 0;
+          const scroll = () => {
+            document.querySelectorAll("[data-ac-scrollx]").forEach((el) => { const x = parseInt(el.getAttribute("data-ac-scrollx"), 10) || 0; if (el.scrollLeft !== x) el.scrollLeft = x; });
+            document.querySelectorAll("[data-ac-scrolly]").forEach((el) => { const y = parseInt(el.getAttribute("data-ac-scrolly"), 10) || 0; if (el.scrollTop !== y) el.scrollTop = y; });
+            if (tries++ < 40) setTimeout(scroll, 250);
+          };
+          scroll();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const STATES = ["roles", "people", "access", "roles-refused", "narrow"];
+          const state = STATES.indexOf(P.state) >= 0 ? P.state : "roles";
+          const theme = P.theme === "dark" ? "dark" : "light";
+          const NAMES = { roles: "B1 roles by permissions", people: "B2 people by roles at Plant A, refused on Save", access: "B3 a user's access as a matrix", "roles-refused": "B4 roles by permissions, refused on Save", narrow: "B5 roles by permissions at 320" };
+          const base = { label: "Option B, " + NAMES[state] + ", " + theme, theme: theme, isRoles: false, isPeople: false, isAccess: false, isNarrow: false };
+          const A = window.ACC;
+          if (!A) return base;
+          const refused = state === "roles-refused";
+          // Roles by permissions. Karin Dahl adds Run autoplan to Shift lead (B1); Oskar Wik, who holds IT at Acme AB,
+          // adds Break another planner's lock and is refused, because Shift lead is assigned at Plant A (B4).
+          const change = refused ? "planning.jobOrder:breakLock" : "planning.autoplan:run";
+          const cols = A.ROLES.map((r) => ({ name: r.name, kind: r.kindShort }));
+          const OPEN = { planning: true, productionStart: true };
+          const mrows = [];
+          A.MODULES.forEach((m) => {
+            const open = !!OPEN[m.id];
+            mrows.push({ isGroup: true, isPerm: false, label: m.label + (m.removed ? ", not installed" : ""), count: m.perms.length + (m.perms.length === 1 ? " permission" : " permissions"), open: open, chev: open ? "ChevronDown" : "ChevronRight", blank: A.ROLES.map(() => 0) });
+            if (!open) return;
+            m.perms.forEach((p) => {
+              const cells = A.ROLES.map((r) => {
+                const has = r.perms.indexOf(p.id) >= 0;
+                const isNew = r.key === "shiftLead" && p.id === change;
+                const on = has || isNew;
+                // A refused tick stays ticked (values kept) and reads Not saved in text, not only in red.
+                const vh = p.label + ", " + r.name + (isNew && refused ? ", not included, refused, not saved" : (on ? ", included" : ", not included") + (isNew ? ", changed" : ""));
+                if (!r.custom) return { ro: true, edit: false, on: has, vh: vh, cls: "ro" };
+                return { ro: false, edit: true, cb: on ? "on" + (isNew && refused ? " is-err" : "") : "", isNew: isNew, mark: refused ? "Not saved" : "New", vh: vh, cls: isNew ? (refused ? "err" : "chg") : "" };
+              });
+              mrows.push({ isGroup: false, isPerm: true, id: p.id, label: p.label, cells: cells });
+            });
+          });
+          // People by roles at Plant A (B2). Jonas Holm, Plant admin at Plant A, ticks Shift lead for Anna Berg.
+          const PCOLS = ["companyAdmin", "planner", "viewer", "operator", "plantAdmin", "shiftLead", "it", "upload"];
+          const pcols = PCOLS.map((k) => ({ name: A.ROLE[k].name, kind: A.ROLE[k].kindShort }));
+          const prows = A.PEOPLE.slice().sort((x, y) => x.name.localeCompare(y.name, "sv")).map((p) => ({
+            name: p.name, user: p.user, lang: p.lang || null, blocked: !!p.blocked,
+            cells: PCOLS.map((k) => {
+              const a = p.a.filter((x) => x[0] === k)[0];
+              const isNew = p.user === "anna.berg" && k === "shiftLead";
+              const rn = A.ROLE[k].name;
+              if (a && a[1] === "Acme AB") return { inh: true, edit: false, vh: rn + ", " + p.name + ", assigned at Acme AB, all plants", cls: "" };
+              const on = !!a || isNew;
+              return { inh: false, edit: true, cb: on ? "on" + (isNew ? " is-err" : "") : "", isNew: isNew, mark: "Not saved", cls: isNew ? "err" : "", vh: rn + " at Plant A, " + p.name + (isNew ? ", not assigned, refused, not saved" : on ? ", assigned" : ", not assigned") };
+            })
+          }));
+          const missText = A.named(A.missing("shiftLead", ["plantAdmin"])).join("; ");
+          // A user's access as a matrix (B3): Sara Nyberg, Shift lead at Plant A and Viewer at Acme AB.
+          const sl = A.ROLE.shiftLead.perms, vw = A.ROLE.viewer.perms;
+          const arows = [];
+          A.MODULES.filter((m) => !m.removed).forEach((m) => {
+            const open = m.id === "planning" || m.id === "productionStart";
+            const n = m.perms.filter((p) => sl.indexOf(p.id) >= 0 || vw.indexOf(p.id) >= 0).length;
+            arows.push({ isGroup: true, isPerm: false, label: m.label, count: n + " of " + m.perms.length + " at Plant A", open: open, chev: open ? "ChevronDown" : "ChevronRight" });
+            if (!open) return;
+            m.perms.forEach((p) => {
+              const a = sl.indexOf(p.id) >= 0, b = vw.indexOf(p.id) >= 0;
+              arows.push({ isGroup: false, isPerm: true, id: p.id, label: p.label, yes: a || b, no: !(a || b),
+                cells: [{ on: a, vh: a ? "Included in Shift lead" : "Not in Shift lead" }, { on: b, vh: b ? "Included in Viewer" : "Not in Viewer" }] });
+            });
+          });
+          return Object.assign(base, {
+            isRoles: state === "roles" || refused, isPeople: state === "people", isAccess: state === "access", isNarrow: state === "narrow",
+            roleErr: refused, sy: refused ? "250" : "102", sx: refused ? "108" : "0", shRole: refused ? "admin" : "company-admin", shUser: refused ? "Oskar Wik" : "Karin Dahl",
+            changeText: (refused ? "Shift lead: Break another planner's lock added." : "Shift lead: Run autoplan added.") + " Applies to 2 people at Acme AB and Plant A from their next action.",
+            cols: cols, mrows: mrows, pcols: pcols, prows: prows, missText: missText, arows: arows
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

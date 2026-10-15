@@ -19,7 +19,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Least privilege in the database: `nm_owner`, `nm_app`, `nm_auth` and `nm_ext`, none with SUPERUSER, CREATEDB, REPLICATION or BYPASSRLS | built | ADR 0006, ADR 0008; `apps/backend/src/db/bootstrap.ts`; `bootstrap.int.test.ts` |
 | Row-level security on module tables, with scopes set per transaction from bound values | built | ADR 0008; `apps/backend/src/db/scoped-database.ts`; `access-policies.int.test.ts`, `scoped-database.int.test.ts` |
 | Row-level security on a user's own rows (own dashboard tabs), by the signed-in user's id set per transaction from a bound value | built | ADR 0078 (proposed); `apps/backend/src/db/scoped-database.ts`; `dashboard-tab-policies.int.test.ts`, `scoped-database.int.test.ts` |
-| Row-level security on the identity and company tables | gap | [#483](https://github.com/northMES/northmes/issues/483) |
+| Row-level security on writes to the scope tree and companies: `nm_app` adds a node or a company only at a company among its write scopes | built | ADR 0008; `20261014214627_scope_company_policies.sql`; `access-policies.int.test.ts` |
+| Row-level security on reads of the identity and company tables, and a closed `principal_grants` | gap | [#483](https://github.com/northMES/northmes/issues/483) |
 | Least privilege in containers (non-root, read-only, no capabilities) | decided | ADR 0044; no container files yet |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
 | A minimum strength for the auth secret | gap | [#484](https://github.com/northMES/northmes/issues/484) |

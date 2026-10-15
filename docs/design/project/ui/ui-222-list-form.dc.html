@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Canonical list and form page</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+        <style>
+/* Spec page of issue #222: the header frame F0, then one row per part file. Row headers are canvas annotations in the
+   D1 label colors, not part of the UI. Classes start with lfp-. */
+.lfp-row{display:flex;flex-direction:column;align-items:flex-start}
+.lfp-rh{position:relative;z-index:30;display:grid;gap:6px;max-width:1440px;margin:0 0 32px;padding:14px 20px 16px;border-radius:8px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);cursor:grab;user-select:none}
+.lfp-rh1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font:600 28px/36px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.01em}
+.lfp-rn{padding:3px 10px;border-radius:5px;background:#1a1a1a;color:#ffffff;font:600 18px/26px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0}
+.lfp-ids{font:500 18px/26px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;letter-spacing:0}
+.lfp-rh2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;font:400 16px/24px "IBM Plex Sans",system-ui,sans-serif;color:#4f4c46}
+.lfp-file{font:400 14px/20px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.lfp-part{position:relative;z-index:1}
+        </style>
+      </helmet>
+      <div class="frame lf-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, direction of 2026-10-07, acceptance, rows, the issue's frames, assumptions, open questions and known gaps</span></div>
+        <dc-import name="ui-222-list-form-header" hint-size="1440px,3867px"></dc-import>
+      </div>
+      <div class="frame lfp-row" style="left:80px;top:4195px;width:3920px" data-screen-label="Row 1 Lists">
+        <div class="lfp-rh" data-drags-parent="1">
+          <div class="lfp-rh1"><span class="lfp-rn">Row 1</span><span>Lists</span><span class="lfp-ids">LI1 to LI42</span></div>
+          <div class="lfp-rh2"><span>The articles list at 1440 in light and dark: the default view, a filter menu with counts and its chip, sort by article number, search, the next page, column choice, selection with the bulk bar and the row menu, and Plant B's presentation; 1280 with the wrapped toolbar and the Columns menu, and 1920 with the zone label; then an ignored link setting, Group by, archived rows with Restore, the read-only list, production orders at Plant A and Plant B, the tools register and the audit log.</span><span class="lfp-file">ui-222-list-form-list.dc.html</span></div>
+        </div>
+        <div class="lfp-part"><dc-import name="ui-222-list-form-list" hint-size="3920px,23456px"></dc-import></div>
+      </div>
+      <div class="frame lfp-row" style="left:80px;top:28051px;width:2960px" data-screen-label="Row 2 Page states and the settings page">
+        <div class="lfp-rh" data-drags-parent="1">
+          <div class="lfp-rh1"><span class="lfp-rn">Row 2</span><span>Page states and the settings page</span><span class="lfp-ids">ST1 to ST26</span></div>
+          <div class="lfp-rh2"><span>Each light frame beside its dark twin: the articles list populated, loading, first-run empty, failed, filtered empty, forbidden and out of date; the article detail loading, not found, failed and forbidden; the settings page at /plant-a/core/settings, also after Save.</span><span class="lfp-file">ui-222-list-form-states.dc.html</span></div>
+        </div>
+        <div class="lfp-part"><dc-import name="ui-222-list-form-states" hint-size="2960px,13772px"></dc-import></div>
+      </div>
+      <div class="frame lfp-row" style="left:80px;top:42199px;width:2960px" data-screen-label="Row 3 Detail, forms, dialogs and the review step">
+        <div class="lfp-rh" data-drags-parent="1">
+          <div class="lfp-rh1"><span class="lfp-rn">Row 3</span><span>Detail, forms, dialogs and the review step</span><span class="lfp-ids">DE1 to DE44</span></div>
+          <div class="lfp-rh2"><span>Light frames left, dark frames right: the article detail with its General and History tabs, the create and edit forms, the production order form with its unit, date and time fields, field errors with the summary focused, a server error that keeps the typed values, a version conflict, the review step for Release order, ConfirmDialog for Archive, Archive 3 articles and Restore, a code taken, an archived article, a measured limit, a required reason, the tools create form, the imported article and order, and an open Select.</span><span class="lfp-file">ui-222-list-form-detail-form.dc.html</span></div>
+        </div>
+        <div class="lfp-part"><dc-import name="ui-222-list-form-detail-form" hint-size="2960px,22992px"></dc-import></div>
+      </div>
+      <div class="frame lfp-row" style="left:80px;top:65591px;width:4480px" data-screen-label="Row 4 Reflow at 320, long strings, keyboard and focus">
+        <div class="lfp-rh" data-drags-parent="1">
+          <div class="lfp-rh1"><span class="lfp-rn">Row 4</span><span>Reflow at 320, long strings, keyboard and focus</span><span class="lfp-ids">NA1 to NA27</span></div>
+          <div class="lfp-rh2"><span>The list, the Filters sheet, the detail, History and the edit form with errors at 320 by 640; German labels, and German and Finnish data at full length, on the list and the edit form; Tab order, focus after each action, focus not obscured by the Save bar or the sticky column, and the D1 focus ring on the stops of this page. NA24 holds the build notes of the whole page.</span><span class="lfp-file">ui-222-list-form-narrow-keyboard.dc.html</span></div>
+        </div>
+        <div class="lfp-part"><dc-import name="ui-222-list-form-narrow-keyboard" hint-size="4480px,13922px"></dc-import></div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 comparison and recommendation</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the layout axes and constraints in shell-190-spec.md (section 9) and issue #190. Widths are measured on the 1440 px frames. A check mark shows the strongest option on a row; rows without one are a tie or an estimate.</p>
+        <div class="sec">
+          <h3 class="t3">Planner shell</h3>
+          <div class="cmp">
+            <div class="cmp-r h"><span>Criterion</span><span>A. Labelled sidebar</span><span>B. Module bar</span><span>C. Rail with flyouts</span></div>
+            <sc-for list="{{ shell }}" as="r">
+              <div class="cmp-r">
+                <span class="k">{{ r.k }}<span class="src">{{ r.src }}</span></span>
+                <sc-for list="{{ r.cells }}" as="c">
+                  <span><sc-if value="{{ c.best }}"><span class="best"><span class="ic" data-icon="Check"></span>{{ c.t }}</span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">Station frame</h3>
+          <div class="cmp">
+            <div class="cmp-r h"><span>Criterion</span><span>S1. Top bar</span><span>S2. Bottom bar</span><span>S3. Tall header</span></div>
+            <sc-for list="{{ station }}" as="r">
+              <div class="cmp-r">
+                <span class="k">{{ r.k }}<span class="src">{{ r.src }}</span></span>
+                <sc-for list="{{ r.cells }}" as="c">
+                  <span><sc-if value="{{ c.best }}"><span class="best"><span class="ic" data-icon="Check"></span>{{ c.t }}</span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="rec">
+          <h3 class="t2">Recommendation: A with the plant crumb and status split from C, and S1</h3>
+          <p>A is the layout P06 describes and shadcn Sidebar already builds, every module's top-level entries are one click from the board, and long labels can wrap in the sidebar instead of overflowing a bar. Its weak points sit in the rail: the plant name disappears and the groups need monograms. Taking C's plant switcher as the first breadcrumb crumb keeps the plant visible in every sidebar state and at 320 px (the shell renders it in front of PageFrame's crumbs; V4). The switcher leaves A's sidebar head, which keeps the mark and the collapse button, so the page has one plant switcher. At 320 px the crumb needs the room C3 frees, so help, the account and the assistant move into the navigation sheet as in C4. C's split of the status (a chip for reconnecting, a strip under the top bar for the readiness, budget and restore banners) gives every message a place that never covers focus, as long as scroll-padding-top includes the strip. The monogram rail stays until the icon question (V1) is decided. B gives the board the most width, but it costs a second header row, a second click across modules, a tab order that reaches the account before the module entries and a change to the P06 text, and it has no collapsed rail for the frame list.</p>
+          <p>For the station, S1. The Windows touch keyboard opens at the bottom edge and would cover S2's bar, and so would the app keypad if D4 docks it there. P09 section 9 also gives the station a top bar for "Live updates paused, reconnecting", and S1 reuses the planner header. S3 gives the heading the most weight, but it puts the h1 outside main and takes 96 px. S2 deserves a second look if pilot IT chooses a portrait screen (IT-22).</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // A cell is [text, best]; best marks the strongest option on the row.
+          const row = (k, src, cells) => ({ k: k, src: src, cells: cells.map(([t, best]) => ({ t: t, best: !!best, plain: !best })) });
+          return {
+            shell: [
+              row("Main width at 1440", "9.5 board width", [["1184 px; 1376 px as a rail"], ["1216 px; 1440 px with the module menu hidden", true], ["1376 px"]]),
+              row("Header height", "9.5 sticky top bar", [["56 px", true], ["104 px in two rows; 56 px in B6"], ["56 px", true]]),
+              row("From the board to an entry in another module", "9.1 navigation container", [["1 click to a top-level entry; 2 for a Master data register or from the rail", true], ["2 clicks"], ["2 actions: open the flyout, follow the link"]]),
+              row("Section order and groups", "R1, R2", [["One sidebar, sections split by dividers"], ["Module bar, plugins after a divider"], ["Rail groups between dividers"]]),
+              row("Without an icon field", "R3, spec question 1", [["The rail needs monograms"], ["Text only", true], ["Monograms on every page"]]),
+              row("Collapsed rail and 320 px sheet", "Issue #190 frames", [["Rail is the collapsed state; sheet with the plant switcher (the recommendation moves it to the crumb)", true], ["No rail; the module menu hides instead"], ["Rail is the default; the sheet lists every entry"]]),
+              row("Where the plant stays visible", "9.2 plant switcher", [["Sidebar head; an icon in the rail; only in the sheet at 320 px"], ["Top bar start at every width", true], ["First crumb at every width", true]]),
+              row("Breadcrumb and page actions", "9.3, V4", [["Top bar, as P06 says", true], ["Second header row; B6 puts the breadcrumb above the h1"], ["Top bar, as P06 says", true]]),
+              row("Help at a fixed place", "R7, 3.2.6", [["Top bar end"], ["Top bar end"], ["Rail foot; inside the sheet at 320 px"]]),
+              row("Tab order", "9.6, D1 Keyboard and focus", [["Sidebar, then top bar", true], ["Account and page actions before the module entries"], ["Rail, then top bar", true]]),
+              row("Live status and banners", "9.4", [["Chip; banners need another place"], ["Strip under the header for both"], ["Chip for reconnecting, strip for banners", true]]),
+              row("Main width with the assistant docked", "9.7, R11", [["824 px expanded; 1016 px with the rail"], ["856 px with the module menu; 1080 px with it hidden", true], ["1016 px"]]),
+              row("Long German or Finnish labels (estimate, not drawn this round)", "6.7", [["Wrap inside the sidebar"], ["Overflow into a More menu at 1280 px"], ["Wrap inside the flyout; monograms do not change"]]),
+              row("Fit with P06 and shadcn", "1.1, 1.2.1, D1 components", [["P06 as written; shadcn Sidebar", true], ["P06 text changes; Navigation Menu plus Sidebar"], ["P06 Shell layout changes: help and account leave the top bar; Sidebar plus a custom Popover per group"]])
+            ],
+            station: [
+              row("Reach for Switch operator", "9.8, 5.8", [["Top right"], ["Bottom left", true], ["Top right, 56 px tall"]]),
+              row("App keypad and device keyboard", "Assumption: D4 docks the app keypad at the bottom edge", [["Clear of the bar", true], ["Covers the bar while the keypad or the System keyboard is open, if D4 docks the keypad at the bottom"], ["Clear of the header", true]]),
+              row("Top bar for the reconnecting status", "P09 section 9", [["The bar holds it", true], ["No top bar; the chip sits in the bottom bar"], ["The header holds it", true]]),
+              row("Same frame as the planner shell", "9.8", [["One header pattern", true], ["A frame of its own"], ["A taller header of its own"]]),
+              row("Height for content at 800", "5.4 sizes", [["728 px under the bar", true], ["712 px above the bar"], ["704 px under the header"]]),
+              row("Where the h1 sits", "2.8, 9.3", [["In main", true], ["In main", true], ["In the header, outside main"]]),
+              row("Tab order", "2.4.3", [["Bar first, then main", true], ["Main first; Switch operator last"], ["Header first, then main", true]]),
+              row("Help and theme", "3.2.6, 5.6", [["Inside the More menu"], ["Visible in the bar", true], ["Inside the More menu"]]),
+              row("Portrait, size still open (IT-22)", "5.4, spec question 16", [["Out of reach at the top of a tall screen; at 800 px wide Sign out moves into More"], ["Within reach at the bottom of a tall screen; at 800 px wide Help and Dark theme move into a menu", true], ["Out of reach at the top; at 800 px wide the header needs two rows"]])
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

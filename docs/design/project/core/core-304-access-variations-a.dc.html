@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access option A, by person</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="ac-o" data-screen-label="{{ label }}">
+        <sc-if value="{{ isEditor }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="company-admin" user="Karin Dahl" nav="core.roles" entity="Edit Shift lead" crumbs="Administration|Roles|Shift lead|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span>Custom role, Acme AB</span></div>
+            <div class="ac-page">
+              <div class="ac-two">
+                <div class="ac-scroll">
+                  <div class="fld" style="max-width:480px"><span class="lbl">Role name</span><span class="inp">Shift lead</span><span class="desc">Unique within Acme AB.</span></div>
+                  <div class="ac-tool"><div class="ac-grow"><h2 class="ac-h2">Permissions</h2><p class="ac-desc">Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support.</p></div><span class="ac-sm ac-mut">{{ total }}</span></div>
+                  <div class="ac-mgs">
+                    <sc-for list="{{ groups }}" as="g">
+                      <section class="ac-mg">
+                        <h3 class="ac-mg-h"><button class="ac-disc" type="button" aria-expanded="{{ g.open }}"><span class="ic" data-icon="{{ g.chev }}"></span><span>{{ g.label }}</span><sc-if value="{{ g.hasKind }}"><span class="badge ac-bo">{{ g.kind }}</span></sc-if><span class="n">{{ g.count }}</span></button></h3>
+                        <sc-if value="{{ g.open }}">
+                          <ul class="ac-perms">
+                            <sc-for list="{{ g.rows }}" as="r">
+                              <li class="ac-perm one {{ r.cls }}"><span class="cb {{ r.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span class="ac-pl1">{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span><span class="ac-mk"><sc-if value="{{ r.hasMark }}"><span class="badge {{ r.markCls }}">{{ r.mark }}</span></sc-if></span></li>
+                            </sc-for>
+                          </ul>
+                        </sc-if>
+                      </section>
+                    </sc-for>
+                  </div>
+                </div>
+                <div class="ac-col">
+                  <section class="ac-fs">
+                    <h2 class="ac-fs-h">Where Shift lead applies</h2>
+                    <p class="ac-p">Assigned to <span class="ac-mono">2</span> people at Acme AB and Plant A. A saved change applies to them from their next action.</p>
+                    <ul class="ac-kv">
+                      <sc-for list="{{ holders }}" as="h"><li><span class="ic" data-icon="User"></span><span lang="{{ h.lang }}">{{ h.name }}</span><span class="ac-grow"></span><span class="ac-mut">{{ h.scope }}</span></li></sc-for>
+                    </ul>
+                  </section>
+                  <section class="ac-fs">
+                    <h2 class="ac-fs-h">Changes not saved</h2>
+                    <ul class="ac-kv"><li><span class="ic ac-ok" data-icon="Plus"></span><span>Added: Run autoplan <span class="ac-pid">planning.autoplan:run</span></span></li></ul>
+                  </section>
+                  <div class="fld"><span class="lbl">Reason for change <span class="ac-req">(optional)</span></span><span class="inp ac-ta"><span class="ph">Why you change this role</span></span><span class="desc">Shown in the role's history. Do not enter personal data.</span></div>
+                  <div class="ac-foot"><button class="btn v-default" type="button">Save role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isAssign }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.users" entity="Add role for Anna Berg" crumbs="Administration|Users|Anna Berg|Add role" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ac-page">
+              <div class="ac-two">
+                <div class="ac-form">
+                  <section class="ac-fs">
+                    <h2 class="ac-fs-h">Role and place</h2>
+                    <div class="fld" role="radiogroup" aria-labelledby="ac-a2-wl">
+                      <span class="lbl" id="ac-a2-wl">Where</span>
+                      <div class="ac-rg">
+                        <div class="ac-rad" role="radio" aria-checked="true" tabindex="0"><span class="ac-rd on"></span><span>Plant A only</span><span class="d">Applies at Plant A.</span></div>
+                        <div class="ac-rad" role="radio" aria-checked="false" tabindex="-1"><span class="ac-rd"></span><span>Acme AB, all plants</span><span class="d">Applies to every plant of Acme AB, also plants created later.</span></div>
+                      </div>
+                    </div>
+                    <div class="fld ac-wrap">
+                      <span class="lbl" id="ac-a2-rl">Role</span>
+                      <span class="inp ac-sel is-focus" role="combobox" aria-expanded="true" aria-controls="ac-a2-lb" aria-labelledby="ac-a2-rl" aria-activedescendant="ac-a2-sl" tabindex="0"><span class="ph">Choose a role</span><span class="ic" data-icon="ChevronsUpDown"></span></span>
+                      <span class="desc">Roles that need permissions you do not hold at Plant A stay in the list, with what they need.</span>
+                      <div class="pop ac-lb" role="listbox" id="ac-a2-lb" aria-labelledby="ac-a2-rl">
+                        <div role="group" aria-labelledby="ac-a2-g1">
+                          <div class="ac-lbh" id="ac-a2-g1">You can assign these at Plant A</div>
+                          <sc-for list="{{ canOpts }}" as="o"><div class="ac-opt" role="option" aria-selected="false"><span class="ic" data-icon="ShieldCheck"></span><span class="t">{{ o.name }}</span><span class="d">{{ o.d }}</span></div></sc-for>
+                        </div>
+                        <div class="msep"></div>
+                        <div role="group" aria-labelledby="ac-a2-g2">
+                          <div class="ac-lbh" id="ac-a2-g2">Needs permissions you do not hold at Plant A</div>
+                          <sc-for list="{{ cantOpts }}" as="o"><div class="ac-opt dis {{ o.cls }}" role="option" aria-selected="false" aria-disabled="true" id="{{ o.id }}"><span class="ic" data-icon="Lock"></span><span class="t">{{ o.name }}</span><span class="d">{{ o.d }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                  <div class="fld"><span class="lbl">Reason <span class="ac-req">(optional)</span></span><span class="inp ac-ta"><span class="ph">Why Anna Berg gets this role</span></span><span class="desc">Shown in the history of Anna Berg's access. Do not enter personal data.</span></div>
+                  <div class="ac-foot"><button class="btn v-default" type="button">Add role</button><button class="btn v-outline" type="button">Cancel</button></div>
+                </div>
+                <div class="ac-col">
+                  <section class="ac-fs">
+                    <h2 class="ac-fs-h">Anna Berg</h2>
+                    <dl class="ac-facts ac-sm"><dt>Username</dt><dd class="ac-mono">anna.berg</dd><dt>Email</dt><dd>No email</dd><dt>Roles here</dt><dd>Operator at Plant A</dd></dl>
+                  </section>
+                  <section class="ac-fs" aria-labelledby="ac-a2-nh">
+                    <div><h2 class="ac-fs-h" id="ac-a2-nh">Shift lead at Plant A</h2><p class="ac-desc">The highlighted role. Each permission it includes, and whether you hold it at Plant A.</p></div>
+                    <ul class="ac-kv">
+                      <sc-for list="{{ need }}" as="n"><li><span class="ic {{ n.cls }}" data-icon="{{ n.icon }}"></span><span class="ac-pt"><span>{{ n.label }}</span><span class="ac-pid">{{ n.id }}</span><span class="ac-sm ac-mut">{{ n.state }}</span></span></li></sc-for>
+                    </ul>
+                  </section>
+                  <div class="ac-info"><span class="ic" data-icon="Info"></span><span>You can assign a role at Plant A when you hold every permission it includes there. A company admin of Acme AB can assign the others.</span></div>
+                </div>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isAccess }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ac-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ac-mono">sara.nyberg</span></div>
+            <div class="ac-page">
+              <div class="ac-tabs" role="tablist" aria-label="Sara Nyberg"><button class="ac-tab" type="button" role="tab" aria-selected="false">General</button><button class="ac-tab on" type="button" role="tab" aria-selected="true">Access</button><button class="ac-tab" type="button" role="tab" aria-selected="false">History</button></div>
+              <div class="ac-scroll" role="tabpanel" aria-label="Access">
+                <section class="ac-card">
+                  <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">Roles</h2><p class="ac-desc">Sara Nyberg's roles that apply at Plant A.</p></div><a class="btn v-outline" href="#"><span class="ic" data-icon="Plus"></span>Add role</a></div>
+                  <div class="ac-tbl-wrap" role="table" aria-label="Roles of Sara Nyberg">
+                    <div class="ac-tr hd ac-c-roles" role="row"><span class="ac-td" role="columnheader">Role</span><span class="ac-td" role="columnheader">Where</span><span class="ac-td" role="columnheader">Assigned</span><span class="ac-td" role="columnheader"><span class="ac-vh">Actions</span></span></div>
+                    <sc-for list="{{ roleRows }}" as="r">
+                      <div class="ac-tr ac-c-roles" role="row">
+                        <span class="ac-td two" role="cell"><a href="#">{{ r.name }}</a><span class="ac-sub">{{ r.kind }}</span></span>
+                        <span class="ac-td" role="cell"><span class="ic ac-mut" data-icon="{{ r.icon }}"></span>{{ r.where }}</span>
+                        <span class="ac-td two" role="cell"><span class="ac-mono">{{ r.on }}</span><span class="ac-sub">by {{ r.by }}</span></span>
+                        <span class="ac-td end" role="cell"><sc-if value="{{ r.canRemove }}"><button class="btn v-outline" type="button" aria-label="Remove {{ r.name }} at {{ r.scope }}">Remove</button></sc-if><sc-if value="{{ r.cannot }}"><span class="ac-sm ac-mut">A company admin of Acme AB can remove it.</span></sc-if></span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </section>
+                <section class="ac-card">
+                  <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">What Sara Nyberg can do at Plant A</h2><p class="ac-desc">Every permission of the roles above, by module. A change applies from Sara Nyberg's next action.</p></div></div>
+                  <div class="ac-tbl-wrap" role="table" aria-label="What Sara Nyberg can do at Plant A">
+                    <div class="ac-tr hd ac-c-eff" role="row"><span class="ac-td" role="columnheader">Permission</span><span class="ac-td" role="columnheader">Granted by</span></div>
+                    <sc-for list="{{ eff }}" as="g">
+                      <div class="ac-gh" role="row"><span role="rowheader">{{ g.label }}</span><span class="n">{{ g.n }}</span></div>
+                      <sc-for list="{{ g.rows }}" as="r">
+                        <div class="ac-tr ac-c-eff" role="row">
+                          <span class="ac-td two" role="cell"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span></span>
+                          <span class="ac-td" role="cell"><span class="ac-src-l"><sc-for list="{{ r.src }}" as="s"><span class="ac-src-i"><span class="ic" data-icon="{{ s.icon }}"></span>{{ s.t }}</span></sc-for></span></span>
+                        </div>
+                      </sc-for>
+                    </sc-for>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isRemove }}">
+          <div class="ac-shot">
+            <div class="sh-doc"><span class="sh-doc-k">title</span><span>Sara Nyberg · Plant A · NorthMES</span></div>
+            <div class="ac-stage {{ theme }}">
+              <div class="ac-inert" inert="">
+                <dc-import name="Shell" width="1440" theme="{{ theme }}" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" hint-size="1440px,900px">
+                  <div data-slot="header"><span class="badge ac-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ac-mono">sara.nyberg</span></div>
+                  <div class="ac-page">
+                    <div class="ac-tabs"><span class="ac-tab">General</span><span class="ac-tab on">Access</span><span class="ac-tab">History</span></div>
+                    <div class="ac-scroll">
+                      <section class="ac-card">
+                        <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">Roles</h2><p class="ac-desc">Sara Nyberg's roles that apply at Plant A.</p></div><span class="btn v-outline"><span class="ic" data-icon="Plus"></span>Add role</span></div>
+                        <div class="ac-tbl-wrap">
+                          <div class="ac-tr hd ac-c-roles"><span class="ac-td">Role</span><span class="ac-td">Where</span><span class="ac-td">Assigned</span><span class="ac-td"></span></div>
+                          <sc-for list="{{ roleRows }}" as="r">
+                            <div class="ac-tr ac-c-roles">
+                              <span class="ac-td two"><span>{{ r.name }}</span><span class="ac-sub">{{ r.kind }}</span></span>
+                              <span class="ac-td"><span class="ic ac-mut" data-icon="{{ r.icon }}"></span>{{ r.where }}</span>
+                              <span class="ac-td two"><span class="ac-mono">{{ r.on }}</span><span class="ac-sub">by {{ r.by }}</span></span>
+                              <span class="ac-td end"><sc-if value="{{ r.canRemove }}"><span class="btn v-outline">Remove</span></sc-if><sc-if value="{{ r.cannot }}"><span class="ac-sm ac-mut">A company admin of Acme AB can remove it.</span></sc-if></span>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </section>
+                      <section class="ac-card">
+                        <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">What Sara Nyberg can do at Plant A</h2><p class="ac-desc">Every permission of the roles above, by module. A change applies from Sara Nyberg's next action.</p></div></div>
+                        <div class="ac-tbl-wrap">
+                          <div class="ac-tr hd ac-c-eff"><span class="ac-td">Permission</span><span class="ac-td">Granted by</span></div>
+                          <sc-for list="{{ eff }}" as="g">
+                            <div class="ac-gh"><span>{{ g.label }}</span><span class="n">{{ g.n }}</span></div>
+                            <sc-for list="{{ g.rows }}" as="r">
+                              <div class="ac-tr ac-c-eff">
+                                <span class="ac-td two"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span></span>
+                                <span class="ac-td"><span class="ac-src-l"><sc-for list="{{ r.src }}" as="s"><span class="ac-src-i"><span class="ic" data-icon="{{ s.icon }}"></span>{{ s.t }}</span></sc-for></span></span>
+                              </div>
+                            </sc-for>
+                          </sc-for>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </dc-import>
+              </div>
+              <div class="ac-ov"></div>
+              <div class="ac-dlg" role="alertdialog" aria-modal="true" aria-labelledby="ac-a4-t" aria-describedby="ac-a4-d">
+                <h2 class="ac-dlg-t" id="ac-a4-t">Remove Shift lead at Plant A from Sara Nyberg?</h2>
+                <div class="ac-dlg-d" id="ac-a4-d">
+                  <p class="ac-p">From the next action, Sara Nyberg loses these permissions at Plant A:</p>
+                  <ul class="ac-pts" style="margin:0">
+                    <sc-for list="{{ lose }}" as="l"><li>{{ l }}</li></sc-for>
+                  </ul>
+                  <p class="ac-p ac-mut">Viewer at Acme AB still lets Sara Nyberg read production orders and job orders at Plant A.</p>
+                </div>
+                <div class="fld"><span class="lbl">Reason <span class="ac-req">(optional)</span></span><span class="inp ac-ta is-focus"><span class="ph">Why you remove this role</span></span><span class="desc">Shown in the history of Sara Nyberg's access. Do not enter personal data.</span></div>
+                <div class="ac-dlg-f"><button class="btn v-outline" type="button">Cancel</button><button class="btn v-destructive" type="button">Remove role</button></div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isNarrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="320px,676px">
+            <div data-slot="header"><span class="badge ac-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ac-mono">sara.nyberg</span></div>
+            <div class="ac-page">
+              <div class="ac-tabs nar" role="tablist" aria-label="Sara Nyberg"><button class="ac-tab" type="button" role="tab" aria-selected="false">General</button><button class="ac-tab on" type="button" role="tab" aria-selected="true">Access</button><button class="ac-tab" type="button" role="tab" aria-selected="false">History</button></div>
+              <div class="ac-scroll" role="tabpanel" aria-label="Access">
+                <div class="ac-tool"><h2 class="ac-h2 ac-grow">Roles</h2><a class="btn v-outline" href="#"><span class="ic" data-icon="Plus"></span>Add role</a></div>
+                <ul class="ac-cards">
+                  <sc-for list="{{ roleRows }}" as="r">
+                    <li class="ac-ci">
+                      <div class="ac-ci-h"><a class="ac-b" href="#">{{ r.name }}</a><span class="ac-sm ac-mut">{{ r.kindShort }}</span></div>
+                      <span class="ac-line"><span class="ic" data-icon="{{ r.icon }}"></span>{{ r.where }}</span>
+                      <span class="ac-sm ac-mut">Assigned <span class="ac-mono">{{ r.on }}</span> by {{ r.by }}</span>
+                      <sc-if value="{{ r.canRemove }}"><button class="btn v-outline" type="button" aria-label="Remove {{ r.name }} at {{ r.scope }}">Remove</button></sc-if>
+                      <sc-if value="{{ r.cannot }}"><span class="ac-sm ac-mut">A company admin of Acme AB can remove it.</span></sc-if>
+                    </li>
+                  </sc-for>
+                </ul>
+                <h2 class="ac-h2">What Sara Nyberg can do at Plant A</h2>
+                <sc-for list="{{ eff }}" as="g">
+                  <div class="ac-ci">
+                    <h3 class="ac-h3">{{ g.label }}</h3>
+                    <sc-for list="{{ g.rows }}" as="r">
+                      <div class="ac-pt" style="padding-top:6px;border-top:1px solid var(--border)"><span>{{ r.label }}</span><span class="ac-pid">{{ r.id }}</span><span class="ac-src-l" style="margin-top:4px"><sc-for list="{{ r.src }}" as="s"><span class="ac-src-i"><span class="ic" data-icon="{{ s.icon }}"></span>{{ s.t }}</span></sc-for></span></div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["editor","assign","access","remove","narrow"],"default":"editor","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html (flag __nmIconFill2), for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.ACC ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.ACC) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const STATES = ["editor", "assign", "access", "remove", "narrow"];
+          const state = STATES.indexOf(P.state) >= 0 ? P.state : "editor";
+          const theme = P.theme === "dark" ? "dark" : "light";
+          const NAMES = { editor: "A1 role editor", assign: "A2 adding a role, the picker", access: "A3 a user's access", remove: "A4 removing a role", narrow: "A5 a user's access at 320" };
+          const base = { label: "Option A, " + NAMES[state] + ", " + theme, theme: theme, isEditor: false, isAssign: false, isAccess: false, isRemove: false, isNarrow: false };
+          const A = window.ACC;
+          if (!A) return base;
+          // A1: Shift lead with Run autoplan ticked and not saved yet. Planning and Production start are open.
+          const added = "planning.autoplan:run";
+          const on = A.ROLE.shiftLead.perms.concat([added]);
+          const groups = A.groups(on).map((g) => {
+            const open = g.id === "planning" || g.id === "productionStart";
+            return Object.assign(g, {
+              open: open, chev: open ? "ChevronDown" : "ChevronRight", hasKind: g.kind === "Plugin",
+              rows: g.rows.map((r) => Object.assign(r, { cb: r.on ? "on" : "", cls: r.id === added ? "chg" : "", hasMark: r.id === added, mark: "Added", markCls: "ac-bg" }))
+            });
+          });
+          const total = on.length + " of " + A.INSTALLED.length + " selected.";
+          const holders = A.holdersOf("shiftLead").map((h) => ({ name: h.person.name, lang: h.person.lang || null, scope: h.scope }));
+          // A2: Jonas Holm holds Plant admin at Plant A. A role is offered when he holds every permission of it there.
+          // A locked role names what it needs with labels and ids, at most three, then "and n more"; Company admin says who can assign it.
+          const held = ["plantAdmin"];
+          const opt = (key) => {
+            const r = A.ROLE[key];
+            const miss = A.missing(key, held);
+            const names = A.named(miss);
+            const n = miss.length;
+            const list = n <= 3 ? A.joinAnd(names) : names.slice(0, 3).join(", ") + " and " + (n - 3) + " more";
+            const d = n === 0 ? r.kind + ". " + r.perms.length + " permissions." :
+              r.all ? r.kind + ". Every installed permission. Only a company admin of Acme AB can assign it." :
+              r.kind + ". Needs " + (n === 1 ? "1 permission" : n + " permissions") + " you do not hold at Plant A: " + list + ".";
+            return { key: key, name: r.name, d: d, n: n };
+          };
+          // The side card lists every permission of the highlighted role, Shift lead, with what Jonas Holm holds at Plant A (as C4 does).
+          const slMiss = A.missing("shiftLead", held);
+          const need = A.ROLE.shiftLead.perms.map((id) => {
+            const no = slMiss.indexOf(id) >= 0;
+            return { label: A.PERM[id].label, id: id, state: no ? "You do not hold it at Plant A" : "You hold it at Plant A", icon: no ? "CircleX" : "CircleCheck", cls: no ? "ac-no" : "ac-ok" };
+          });
+          const order = ["viewer", "plantAdmin", "shiftLead", "operator", "planner", "planningAdmin", "toolKeeper", "it", "upload", "kanbanReader", "companyAdmin"];
+          const all = order.map(opt);
+          const canOpts = all.filter((o) => o.n === 0);
+          const cantOpts = all.filter((o) => o.n > 0).map((o) => Object.assign(o, { cls: o.key === "shiftLead" ? "kfocus" : "", id: o.key === "shiftLead" ? "ac-a2-sl" : null }));
+          // A3 to A5: Sara Nyberg holds Shift lead at Plant A and Viewer at Acme AB.
+          const sara = A.PEOPLE.filter((p) => p.user === "sara.nyberg")[0];
+          const roleRows = sara.a.map((x) => {
+            const r = A.ROLE[x[0]];
+            const company = x[1] === "Acme AB";
+            return { name: r.name, kind: r.kind, kindShort: r.kindShort, scope: x[1], where: company ? "Acme AB, all plants" : "Plant A", icon: company ? "Building2" : "Factory", on: x[2], by: x[3], canRemove: !company, cannot: company };
+          });
+          const src = {};
+          sara.a.forEach((x) => A.ROLE[x[0]].perms.forEach((id) => { (src[id] = src[id] || []).push({ t: A.ROLE[x[0]].name + " at " + x[1], icon: x[1] === "Acme AB" ? "Building2" : "Factory" }); }));
+          const eff = A.MODULES.map((m) => {
+            const rows = m.perms.filter((p) => src[p.id]).map((p) => ({ id: p.id, label: p.label, src: src[p.id] }));
+            return { label: m.label, rows: rows, n: String(rows.length) };
+          }).filter((g) => g.rows.length);
+          const lose = A.ROLE.shiftLead.perms.filter((id) => A.ROLE.viewer.perms.indexOf(id) < 0).map((id) => A.PERM[id].label);
+          return Object.assign(base, {
+            isEditor: state === "editor", isAssign: state === "assign", isAccess: state === "access", isRemove: state === "remove", isNarrow: state === "narrow",
+            groups: groups, total: total, holders: holders, canOpts: canOpts, cantOpts: cantOpts, need: need, roleRows: roleRows, eff: eff, lose: lose
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

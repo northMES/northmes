@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 planning board: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <div class="frame w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, what is decided, how to compare, the rules every option keeps, proposals and open questions</span></div>
+        <dc-import name="planning-221-board-variations-header" hint-size="1440px,2164px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the criteria, and the recommended option</span></div>
+        <dc-import name="planning-221-board-variations-compare" hint-size="1440px,1692px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:2360px" data-screen-label="A1 Docked inspector, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A1</span>Docked inspector<span class="fth">Light, 1440 by 900. 1003.20 selected and focused, Details tab, soft lock warning, autoplan applied</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="planning-221-board-variations-a" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:1600px;top:2360px" data-screen-label="A2 Docked inspector, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A2</span>Docked inspector<span class="fth">Dark, 1440 by 900. My draft tab with Rebase 1015.10 focused, autoplan running, live updates paused</span></div>
+        <dc-import name="planning-221-board-variations-a" theme="dark" state="draft" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:2360px" data-screen-label="A3 Docked inspector, light, 320">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A3</span>Docked inspector<span class="fth">Light, 320 by 640. Details as a sheet</span></div>
+        <dc-import name="planning-221-board-variations-a" size="narrow" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:3368px" data-screen-label="A Docked inspector, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A</span>Docked inspector<span class="fth">What it optimizes, what it costs, how it keeps the fixed rules</span></div>
+        <dc-import name="planning-221-board-variations-notes" option="A" hint-size="1440px,424px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:4048px" data-screen-label="B1 Board over table, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B1</span>Board over table<span class="fth">Light, 1440 by 900. Scrolled to Turning, Order 1003 tab with the move fields, autoplan applied</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="planning-221-board-variations-b" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:1600px;top:4048px" data-screen-label="B2 Board over table, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B2</span>Board over table<span class="fth">Dark, 1440 by 900. Split dragged up, My draft tab with Rebase 1015.10 focused, autoplan failed</span></div>
+        <dc-import name="planning-221-board-variations-b" theme="dark" state="draft" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:4048px" data-screen-label="B3 Board over table, light, 320">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B3</span>Board over table<span class="fth">Light, 320 by 640. Table first</span></div>
+        <dc-import name="planning-221-board-variations-b" size="narrow" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:5056px" data-screen-label="B Board over table, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>Board over table<span class="fth">What it optimizes, what it costs, how it keeps the fixed rules</span></div>
+        <dc-import name="planning-221-board-variations-notes" option="B" hint-size="1440px,404px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:5716px" data-screen-label="C1 Drawer and review dialog, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C1</span>Drawer and review dialog<span class="fth">Light, 1440 by 900. Drawer open on 1003.20, Not placed row, autoplan already queued</span><span class="ftitle">Planning board · Plant A · NorthMES</span></div>
+        <dc-import name="planning-221-board-variations-c" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:1600px;top:5716px" data-screen-label="C2 Drawer and review dialog, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C2</span>Drawer and review dialog<span class="fth">Dark, 1440 by 900. Save opened the review dialog, Large orders toggled on, autoplan applied</span></div>
+        <dc-import name="planning-221-board-variations-c" theme="dark" state="review" hint-size="1440px,900px"></dc-import>
+      </div>
+      <div class="frame w320" style="left:3120px;top:5716px" data-screen-label="C3 Drawer and review dialog, light, 320">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C3</span>Drawer and review dialog<span class="fth">Light, 320 by 640. Board with the draft bar</span></div>
+        <dc-import name="planning-221-board-variations-c" size="narrow" hint-size="320px,640px"></dc-import>
+      </div>
+      <div class="frame w1440" style="left:80px;top:6724px" data-screen-label="C Drawer and review dialog, notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C</span>Drawer and review dialog<span class="fth">What it optimizes, what it costs, how it keeps the fixed rules</span></div>
+        <dc-import name="planning-221-board-variations-notes" option="C" hint-size="1440px,424px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

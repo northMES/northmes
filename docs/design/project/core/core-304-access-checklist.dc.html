@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Role editor checklist</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+      </helmet>
+      <div class="lf-part fit {{ rootCls }}" style="{{ rootStyle }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ hasDiff }}">
+          <section class="lf-fs" aria-labelledby="{{ ids.dh }}">
+            <div><h2 class="lf-fs-h" id="{{ ids.dh }}" lang="{{ diff.lang }}">{{ diff.title }}</h2><p class="ca-desc">{{ diff.text }}</p></div>
+            <div class="ca-diff">
+              <div class="ca-dcol">
+                <h3 class="ca-h3">{{ diff.addedH }}</h3>
+                <sc-if value="{{ diff.hasAdded }}"><ul class="ca-dl"><sc-for list="{{ diff.added }}" as="x"><li><span lang="{{ x.lang }}">{{ x.label }}</span><span class="ca-pid">{{ x.id }}</span></li></sc-for></ul></sc-if>
+                <sc-if value="{{ diff.noAdded }}"><p class="ca-p ca-sm ca-mut">{{ diff.none }}</p></sc-if>
+              </div>
+              <div class="ca-dcol">
+                <h3 class="ca-h3">{{ diff.removedH }}</h3>
+                <sc-if value="{{ diff.hasRemoved }}"><ul class="ca-dl"><sc-for list="{{ diff.removed }}" as="x"><li><span lang="{{ x.lang }}">{{ x.label }}</span><span class="ca-pid">{{ x.id }}</span></li></sc-for></ul></sc-if>
+                <sc-if value="{{ diff.noRemoved }}"><p class="ca-p ca-sm ca-mut">{{ diff.none }}</p></sc-if>
+              </div>
+            </div>
+          </section>
+        </sc-if>
+        <section class="{{ boxCls }}" aria-labelledby="{{ phRef }}" aria-label="{{ phName }}">
+          <sc-if value="{{ hasHead }}">
+            <div class="ca-ph">
+              <div class="lf-grow"><h2 class="ca-h2" id="{{ ids.ph }}">{{ tx.perms }}</h2><p class="ca-desc">{{ tx.permsDesc }}</p></div>
+              <sc-if value="{{ isEdit }}"><span class="ca-count" role="status">{{ total }}</span></sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hasNote }}">
+            <div class="lf-note" role="note"><span class="ic" data-icon="Info"></span><span>{{ note }}</span></div>
+          </sc-if>
+          <div class="ca-mgs">
+            <sc-for list="{{ groups }}" as="g">
+              <section class="ca-mg" aria-labelledby="{{ g.hid }}">
+                <h3 class="ca-mg-h" id="{{ g.hid }}"><button class="ca-disc {{ g.fcls }}" type="button" aria-expanded="{{ g.open }}" aria-controls="{{ g.lid }}"><span class="ic" data-icon="{{ g.chev }}"></span><span lang="{{ g.lang }}">{{ g.label }}</span><sc-if value="{{ g.hasKind }}"><span class="badge {{ g.kindCls }}">{{ g.kind }}</span></sc-if><span class="n">{{ g.count }}</span></button></h3>
+                <ul class="ca-perms" id="{{ g.lid }}" hidden="{{ g.closed }}">
+                  <sc-if value="{{ g.open }}">
+                    <sc-for list="{{ g.rows }}" as="r">
+                      <li class="ca-perm {{ r.cls }}">
+                        <sc-if value="{{ r.isCb }}"><span class="cb {{ r.cb }}" role="checkbox" aria-checked="{{ r.checked }}" aria-labelledby="{{ r.lid }}" aria-describedby="{{ r.desc }}" aria-invalid="{{ r.inv }}" tabindex="0"><span class="cb-hit"><span class="cb-box {{ r.fcls }}"><span class="ic" data-icon="Check"></span></span></span></span></sc-if>
+                        <sc-if value="{{ r.isLock }}"><span class="ca-box" role="checkbox" aria-checked="false" aria-disabled="true" aria-labelledby="{{ r.lid }}" aria-describedby="{{ r.desc }}"><span class="ic" data-icon="Lock"></span></span></sc-if>
+                        <sc-if value="{{ r.isRead }}"><span class="ca-box {{ r.boxCls }}"><span class="ic" data-icon="{{ r.readIcon }}"></span><span class="lf-vh">{{ r.readText }}</span></span></sc-if>
+                        <span class="ca-pt"><span class="ca-pl" id="{{ r.lid }}" lang="{{ r.lang }}">{{ r.label }}</span><sc-if value="{{ r.hasWhy }}"><span class="ca-why {{ r.whyCls }}" id="{{ r.wid }}"><sc-if value="{{ r.whyErr }}"><span class="ic" data-icon="CircleAlert"></span></sc-if><span>{{ r.why }}</span></span></sc-if></span>
+                        <span class="ca-pid" id="{{ r.did }}">{{ r.id }}</span>
+                        <span class="ca-mk"><sc-if value="{{ r.hasMark }}"><span class="badge {{ r.markCls }}">{{ r.mark }}</span></sc-if></span>
+                      </li>
+                    </sc-for>
+                  </sc-if>
+                </ul>
+              </section>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"role":{"editor":"enum","options":["shiftLead","planner","viewer","planningAdmin","operator","toolKeeper","plantAdmin","it","upload","kanbanReader","companyAdmin","nightPlanner","none"],"default":"shiftLead","tsType":"string"},"base":{"editor":"text","default":"","tsType":"string"},"add":{"editor":"text","default":"","tsType":"string"},"remove":{"editor":"text","default":"","tsType":"string"},"mode":{"editor":"enum","options":["edit","read"],"default":"edit","tsType":"string"},"editor":{"editor":"text","default":"companyAdmin","tsType":"string"},"err":{"editor":"text","default":"","tsType":"string"},"errplace":{"editor":"enum","options":["plB","pl","co"],"default":"plB","tsType":"string"},"open":{"editor":"text","default":"","tsType":"string"},"diff":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"head":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"note":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"box":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons alone.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.CA ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.CA) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__caSeq = (window.__caSeq || 0) + 1;
+            this.uid = "ca-k" + window.__caSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const narrow = P.size === "narrow";
+          const lang = P.strings === "long" ? "de" : "en";
+          const base = { label: "Role editor checklist", lang: lang === "de" ? "de" : "en", rootCls: "", rootStyle: "", ids: { dh: uid + "-dh", ph: uid + "-ph" }, tx: {}, groups: [], hasDiff: false, hasHead: false, hasNote: false, isEdit: false, boxCls: "ca-mgs" };
+          const C = window.CA;
+          if (!C) return base;
+          const t = (k, v) => C.t(lang, k, v);
+          const list = (s) => String(s || "").split(",").map((x) => x.trim()).filter((x) => x && C.PERM[x]);
+          const roleKey = P.role === "none" ? "none" : (C.ROLE[P.role] ? P.role : "shiftLead");
+          const baseKey = C.ROLE[P.base] ? P.base : "";
+          const mode = pick(P.mode, ["edit", "read"], "edit");
+          const read = mode === "read";
+          const add = list(P.add), rem = list(P.remove), errIds = list(P.err);
+          const rolePerms = roleKey === "none" ? [] : C.ROLE[roleKey].perms;
+          // The checked set, and the set the marks compare with: the role a new role starts from, else the saved role.
+          const on = rolePerms.filter((id) => rem.indexOf(id) < 0).concat(add.filter((id) => rolePerms.indexOf(id) < 0));
+          const ref = baseKey ? C.ROLE[baseKey].perms : roleKey === "none" ? on : rolePerms;
+          const plant = C.place("pl", lang), company = C.place("co", lang);
+          const roleLabel = roleKey === "none" ? "" : C.roleName(roleKey, lang);
+          // Locks: a permission the editor does not hold at the plant, while the role is assigned there (rule 3.3 amended).
+          const editorKeys = String(P.editor || "companyAdmin").split(",").map((x) => x.trim()).filter((x) => C.ROLE[x]);
+          const held = C.heldBy(editorKeys.length ? editorKeys : ["companyAdmin"]);
+          const errPlace = C.place(pick(P.errplace, ["plB", "pl", "co"], "plB"), lang);
+          const focus = String(P.focus || "none");
+          const openArg = String(P.open || "").trim();
+          const openSet = openArg === "all" || openArg === "none" ? null : openArg.split(",").map((x) => x.trim()).filter(Boolean);
+          const anyNi = on.some((id) => C.PERM[id].ni);
+          let firstCb = null, anyLocked = false;
+          // Read mode (rule 18.8) lists only the permissions the role includes, so a module without one is left out.
+          const groups = C.MODULES.filter((m) => (read ? m.perms.some((p) => on.indexOf(p.id) >= 0) : !m.removed || m.perms.some((p) => on.indexOf(p.id) >= 0))).map((m, gi) => {
+            const n = m.perms.filter((p) => on.indexOf(p.id) >= 0).length;
+            const marked = m.perms.some((p) => (on.indexOf(p.id) >= 0) !== (ref.indexOf(p.id) >= 0) || errIds.indexOf(p.id) >= 0);
+            const open = openArg === "all" ? true : openArg === "none" ? false : openSet && openSet.length ? openSet.indexOf(m.id) >= 0 : (read ? n > 0 && !C.ROLE[roleKey === "none" ? "planner" : roleKey].all : n > 0 || marked);
+            const rows = m.perms.filter((p) => !read || on.indexOf(p.id) >= 0).map((p) => {
+              const isOn = on.indexOf(p.id) >= 0, inRef = ref.indexOf(p.id) >= 0;
+              const isErr = errIds.indexOf(p.id) >= 0;
+              const locked = !read && !isOn && !held[p.id];
+              const markKind = isErr ? "err" : p.ni ? "ni" : isOn && !inRef ? "add" : !isOn && inRef ? "rem" : "";
+              const lid = uid + "-l-" + p.id.replace(/[^A-Za-z0-9]/g, "-"), did = lid + "-id", wid = lid + "-w";
+              const why = isErr ? t("refused", { place: errPlace, role: roleLabel }) : locked ? t("locked", { plant: plant }) : "";
+              if (locked) anyLocked = true;
+              const isCb = !read && !locked;
+              if (isCb && open && !firstCb) firstCb = p.id;
+              return {
+                id: p.id, label: C.permLabel(p.id, lang), lang: C.permLang(p.id, lang), lid: lid, did: did, wid: wid,
+                isCb: isCb, isLock: locked, isRead: read,
+                cb: isOn ? "on" + (isErr ? " is-err" : "") : "", checked: isOn ? "true" : "false", inv: isErr ? "true" : null,
+                desc: why ? did + " " + wid : did,
+                boxCls: isOn ? "on" : "", readIcon: isOn ? "Check" : "Minus", readText: isOn ? t("included") : t("notIncluded"),
+                hasWhy: !!why, why: why, whyCls: isErr ? "err" : "", whyErr: isErr,
+                cls: read ? "" : (markKind === "add" ? "chg" : markKind === "rem" ? "chg rem" : markKind === "err" ? "rf" : ""),
+                // Not installed stays marked in read mode too (rule 3.9); Added and Removed belong to an edit only.
+                hasMark: !!markKind && markKind !== "err" && (!read || markKind === "ni"), mark: markKind === "add" ? t("added") : markKind === "rem" ? t("removed") : markKind === "ni" ? t("notInstalled") : t("refusedMk"),
+                markCls: markKind === "add" ? "ca-bg" : markKind === "rem" || markKind === "err" ? "ca-br" : "ca-bo",
+                fcls: ""
+              };
+            });
+            const kind = m.kind === "plugin" ? t("plugin") : m.kind === "removed" ? t("notInstalled") : "";
+            return {
+              id: m.id, label: C.modLabel(m.id, lang), lang: C.modLang(m.id, lang), hid: uid + "-g-" + m.id, lid: uid + "-gl-" + m.id,
+              open: open, closed: !open, chev: open ? "ChevronDown" : "ChevronRight", count: t("ofN", { n: n, m: m.perms.length }),
+              hasKind: !!kind, kind: kind, kindCls: m.kind === "removed" ? "ca-bo" : "ca-bd", rows: rows, fcls: focus === "group:" + m.id ? "is-focus" : ""
+            };
+          });
+          // Focus ring on one stop: a module's disclosure button or a permission's checkbox.
+          const fid = focus === "first" ? firstCb : focus.indexOf("perm:") === 0 ? focus.slice(5) : null;
+          if (fid) groups.forEach((g) => g.rows.forEach((r) => { if (r.id === fid && r.isCb) r.fcls = "is-focus"; }));
+          const roleObj = roleKey === "none" ? null : C.ROLE[roleKey];
+          const note = P.note === "off" ? "" : !read ? (anyLocked ? t("lockedNote", { plant: plant, role: roleLabel }) : "") : roleObj && roleObj.all ? t("roAll") : roleObj && roleObj.def ? t("roDefault") : t("roCustom", { company: company });
+          // Difference from the role a new role starts from (C's Start from).
+          const diffOn = baseKey && P.diff !== "off" || P.diff === "on" && baseKey;
+          let diff = {};
+          if (diffOn) {
+            const addedIds = on.filter((id) => ref.indexOf(id) < 0), removedIds = ref.filter((id) => on.indexOf(id) < 0);
+            const lab = (id) => ({ id: id, label: C.permLabel(id, lang), lang: C.permLang(id, lang) });
+            const baseName = C.roleName(baseKey, lang);
+            diff = {
+              title: t("diffH", { base: baseName }), lang: C.roleLang(baseKey, lang),
+              text: t("diffD", { name: roleLabel || "", n: on.length, base: baseName, m: ref.length, a: addedIds.length, r: removedIds.length }),
+              addedH: t("addedN", { n: addedIds.length }), removedH: t("removedN", { n: removedIds.length }),
+              added: addedIds.map(lab), removed: removedIds.map(lab), hasAdded: addedIds.length > 0, noAdded: addedIds.length === 0,
+              hasRemoved: removedIds.length > 0, noRemoved: removedIds.length === 0, none: t("noneYet")
+            };
+          }
+          const mk = lang === "de" || anyNi ? 112 : 72;
+          return Object.assign(base, {
+            label: "Role editor checklist, " + (roleKey === "none" ? "new role" : roleObj.en) + (baseKey ? " from " + C.ROLE[baseKey].en : "") + ", " + mode,
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            rootStyle: "--mk:" + mk + "px",
+            tx: { perms: t("perms"), permsDesc: t("permsDesc") },
+            hasHead: P.head !== "off", phRef: P.head !== "off" ? uid + "-ph" : null, phName: P.head !== "off" ? null : t("perms"), isEdit: !read, total: t("selected", { n: on.filter((id) => !C.PERM[id].ni).length, m: C.INSTALLED.length }),
+            hasNote: !!note, note: note,
+            boxCls: P.box === "on" ? "lf-fs" : "ca-mgs",
+            groups: groups, hasDiff: !!diffOn, diff: diff
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

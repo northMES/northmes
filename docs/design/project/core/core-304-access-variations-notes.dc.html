@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Option notes">
+        <h2 class="t2">{{ o.title }}</h2>
+        <p class="lede">{{ o.lede }}</p>
+        <div class="ac-cols3">
+          <div>
+            <h3 class="t3">What it optimizes</h3>
+            <ul class="ac-pts"><sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for></ul>
+          </div>
+          <div>
+            <h3 class="t3">What it costs</h3>
+            <ul class="ac-pts"><sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for></ul>
+          </div>
+          <div>
+            <h3 class="t3">How it meets the fixed rules</h3>
+            <div class="ac-rk"><sc-for list="{{ o.rules }}" as="r"><div class="ac-rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const R = (k, v) => ({ k: k, v: v });
+          const O = {
+            A: {
+              title: "A. By person",
+              lede: "The user is the center. Add role sits on the user's Access tab, with a picker that shows which roles the assigner can give at Plant A; the role editor is a checklist grouped by module; what the user can do is a list with the role and scope behind each permission. Access lost after close code 4403 shows an error banner.",
+              gains: [
+                "Starts the common task, giving one person one role, from the person: Users, the person, Access, Add role, choose, Add. The Access tab shows the roles and what they allow together.",
+                "The checklist stays usable at 36 permissions and grows with plugins by rows only: a closed module is one row with its count.",
+                "The picker stops a doomed submit, so an honest mistake writes no permission.denied event. Each locked role names up to three of the permissions it needs, with their ids, and how many more, and the side card lists every permission of the highlighted role, so the admin knows what to ask a company admin for.",
+                "The sources \"Shift lead at Plant A\" and \"Viewer at Acme AB\" explain an inherited permission in text; the remove dialog says what the person loses and what they keep.",
+                "Every form is its own route with the reason on the form, as the canonical list and form page decides."
+              ],
+              costs: [
+                "No overview of a plant: the role editor lists who holds the role by name and place, and a person's access is on their own user page.",
+                "The picker can check only Plant A. On a plant route the client knows the assigner's permissions at Plant A, not what they hold at Acme AB alone. With Acme AB, all plants chosen, every role is selectable under the line \"Checked when you add it: you need every permission of the role at Acme AB.\" A refusal then appears in the error summary.",
+                "The list of what a user can do needs a new core read field for another user's permissions (question 16).",
+                "The banner leaves a page on screen that cannot work: every control that saves needs a disabled state, and a polite announcement under-signals an event that stops all work at Plant B."
+              ],
+              rules: [
+                R("Places offered", "Plant A only and Acme AB, all plants; the company line says it also covers plants created later."),
+                R("Inherited roles", "The row reads \"Acme AB, all plants\", and for a plant admin \"A company admin of Acme AB can remove it.\" takes the place of Remove."),
+                R("Refusal", "Where comes before Role, so the listbox splits roles by a place already chosen. Locked roles stay in it with aria-disabled and a description that names up to three missing permissions at Plant A with their ids, then how many more; the side card lists all of them for the highlighted role (A2)."),
+                R("Role editor", "Who holds the role at Acme AB and Plant A and the change not saved sit beside the list; Save role carries the optional reason (A1)."),
+                R("Removal", "ConfirmDialog with the reason, the permissions lost and the role that still applies (A4)."),
+                R("No access", "N1 A keeps the title \"Roles\" with an EmptyState naming core.role:read; N2 A keeps the region heading; ST29 unchanged; N4 A is an error banner with Your plants."),
+                R("320", "Roles stack as cards, the permission list by module below; no table scrolls (A5).")
+              ]
+            },
+            B: {
+              title: "B. By plant",
+              lede: "Plant A is the center. Users is a people by roles matrix for Plant A, Roles a roles by permissions matrix, and a user's access a matrix of their roles with an At Plant A column. Changes collect in a save bar and are refused on Save. Access lost replaces the screen with a page.",
+              gains: [
+                "One screen shows who holds what at Plant A, roles from Acme AB included, which suits a review of access.",
+                "Roles side by side show overlap, such as Plant admin and Viewer sharing the two read permissions.",
+                "Several changes save together with one reason.",
+                "The access-lost page cannot be mistaken for a working page: one h1 and the plants left."
+              ],
+              costs: [
+                "Eleven roles already overflow 1440 (B1 scrolls sideways); one-permission custom roles and plugins add columns, and 1280 shows fewer. At 320 the matrix is a region that scrolls in two directions (B5).",
+                "A save with changes in several roles or for several people is several commands, or a batch command that no document defines.",
+                "Refused on Save, a doomed change reaches the server and writes permission.denied events for honest mistakes.",
+                "Screen reader users meet a grid of 407 cells, 185 of them checkboxes (11 roles by 37 permissions), each named by its row and column.",
+                "Two pages for 404 and 403 tell a user that some company has a plant at that path, and change an approved shell state.",
+                "The access-lost page drops what was on screen and any typed values."
+              ],
+              rules: [
+                R("Inherited roles", "An Acme AB pill in the cell instead of a checkbox; only a company admin changes it."),
+                R("Refusal", "The error summary takes focus, names the missing permissions at Plant A, keeps the tick and marks the cell Not saved in text (B2, B4)."),
+                R("Default roles", "Their columns show a check mark, read only; custom role columns hold checkboxes; the legend says so in text."),
+                R("Title", "\"No access to Roles · Plant A · NorthMES\" for a page opened by URL, as D2 names its unavailable module state."),
+                R("Cells", "\"No access\" with a lock icon; the column header's tooltip names core.customer:read (N2 B)."),
+                R("320", "The permission column stays sticky at 40 percent; the matrix scrolls in its own focusable region.")
+              ]
+            },
+            C: {
+              title: "C. By role",
+              lede: "The role is the center. A new role starts from a default role and shows its difference; the role's Holders tab lists who holds it at Acme AB and at Plant A; assigning starts from the role and is checked as soon as the place is chosen; a user's access is a yes or no check. Access lost is a dialog like the reload dialog.",
+              gains: [
+                "\"Start from\" turns a custom role into a small, readable change against a known default role such as Planner.",
+                "The Holders tab answers who holds a role at each place, which removal and review need.",
+                "The check on choice explains a refusal before Save, beside a list of what the role needs and what the assigner holds.",
+                "The yes or no check answers a support question such as why Sara Nyberg cannot break a lock in one step.",
+                "The 4403 dialog reuses the reload dialog's rules: inert page, one h1, focus on Go to Plant A, saves refused."
+              ],
+              costs: [
+                "Giving one person a role means finding the role first, and a person's roles are spread over role pages.",
+                "core.role stores no base role, so the difference shows only while creating, and the new role does not follow later changes to Planner (question 5).",
+                "The check shows one permission at a time; an overview still needs the full list.",
+                "Naming the roles that include a missing permission shows role names to people who cannot open Roles (question 3).",
+                "ST29 with one more line changes an approved shell state, which needs a new shell page version.",
+                "The dialog hides the page behind it, and Escape does nothing, which repeats question K8."
+              ],
+              rules: [
+                R("Places", "The Holders tab has one section per place, Acme AB first, with the line that a company assignment also covers plants created later (C2)."),
+                R("Refusal", "A field message under Where names the missing permissions at Plant A; the side card says \"You hold it\" or \"You do not hold it\" for each permission (C4)."),
+                R("Role editor", "Added and Removed as text badges, a removed line struck through; Create role carries the optional reason (C1)."),
+                R("Region", "One line under the heading names core.audit:read; nothing else of the region shows (N2 C)."),
+                R("Dialog", "alertdialog, the only h1, title \"You no longer have access to Plant B · NorthMES\" (N4 C)."),
+                R("320", "The roles and the check stack as cards; no table (C5).")
+              ]
+            }
+          };
+          const key = O[P.option] ? P.option : "A";
+          return { o: O[key] };
+        }
+      }
+    </script>
+  </body>
+</html>

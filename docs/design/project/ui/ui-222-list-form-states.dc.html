@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>List and form states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+        <style>
+          /* Part ST of ui/ui-222-list-form.dc.html (issue #222): the PageFrame states of the articles list and the
+             article detail (populated, loading, first-run empty, filtered empty, forbidden, out-of-date page, not found,
+             error) and the settings page in the same pattern, saved included. Every frame mounts ./Shell.dc.html (the
+             byte copy of shell/Shell.dc.html) and the shared parts of the page with dc-import. Frames sit in two
+             columns, each light frame beside its dark twin; ST1 and ST5 sit side by side, because their dark twins are
+             LI2 and DE2. Classes start with lfst-, so they never meet a D1, sh- or lf- class. The frame prop draws one
+             frame alone; labels="off" drops the chips. */
+          .lfst-root{display:grid;grid-template-columns:repeat(2,1440px);gap:80px;align-items:start;width:max-content}
+          .lfst-one{display:block;width:max-content}
+          .lfst-f{display:flex;flex-direction:column;align-items:flex-start;width:1440px}
+        </style>
+      </helmet>
+      <div class="{{ rootCls }}">
+        <sc-if value="{{ show.ST1 }}">
+          <section class="lfst-f" data-screen-label="ST1 List populated, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST1</span>List populated<span class="fth">Light, 1440 by 900. Articles, rows 1 to 25 of 248, newest change first. Dark: LI2</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST5 }}">
+          <section class="lfst-f" data-screen-label="ST5 Detail populated, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST5</span>Detail populated<span class="fth">Light, 1440 by 900. Article AX-20410, General tab. Dark: DE2</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Article AX-20410" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px"><div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Company article, Acme AB</span></div><div class="lf-fill"><dc-import name="ui-222-list-form-detail" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST2 }}">
+          <section class="lfst-f" data-screen-label="ST2 List loading, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST2</span>List loading<span class="fth">Light, 1440 by 900. Toolbar and table header drawn, skeleton rows, main busy, focus on the h1</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" busy="true" focus="h1" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="loading" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST12 }}">
+          <section class="lfst-f" data-screen-label="ST12 List loading, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST12</span>List loading<span class="fth">Dark, 1440 by 900. ST2 in dark</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" busy="true" focus="h1" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="loading" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST3 }}">
+          <section class="lfst-f" data-screen-label="ST3 List empty, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST3</span>List empty<span class="fth">Light, 1440 by 900. First run: No articles yet, with New article</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="empty" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST10 }}">
+          <section class="lfst-f" data-screen-label="ST10 List empty, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST10</span>List empty<span class="fth">Dark, 1440 by 900. ST3 in dark</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="empty" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST4 }}">
+          <section class="lfst-f" data-screen-label="ST4 List error, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST4</span>List error<span class="fth">Light, 1440 by 900. Could not load articles, with the correlation id and Try again</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="error" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST11 }}">
+          <section class="lfst-f" data-screen-label="ST11 List error, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST11</span>List error<span class="fth">Dark, 1440 by 900. ST4 in dark</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="error" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST17 }}">
+          <section class="lfst-f" data-screen-label="ST17 List filtered empty, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST17</span>List filtered empty<span class="fth">Light, 1440 by 900. Article group Housings and Source NorthMES match no article: each chip counts 0, and the EmptyState offers Clear filters</span><span class="lf-url">/plant-a/core/articles?articleGroup=Housings&amp;source=NorthMES</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="empty" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="filtered-empty" filtered="on" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST18 }}">
+          <section class="lfst-f" data-screen-label="ST18 List filtered empty, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST18</span>List filtered empty<span class="fth">Dark, 1440 by 900. ST17 in dark</span><span class="lf-url">/plant-a/core/articles?articleGroup=Housings&amp;source=NorthMES</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" filtered="empty" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="filtered-empty" filtered="on" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST19 }}">
+          <section class="lfst-f" data-screen-label="ST19 List forbidden, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST19</span>List forbidden<span class="fth">Light, 1440 by 900. Anna Berg holds no role that reads articles: the page names the missing permission and shows no toolbar and no data</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="core.articles" user="Anna Berg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="forbidden" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST20 }}">
+          <section class="lfst-f" data-screen-label="ST20 List forbidden, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST20</span>List forbidden<span class="fth">Dark, 1440 by 900. ST19 in dark</span><span class="lf-url">/plant-a/core/articles</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="core.articles" user="Anna Berg" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="forbidden" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST21 }}">
+          <section class="lfst-f" data-screen-label="ST21 List page out of date, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST21</span>List page out of date<span class="fth">Light, 1440 by 900. The cursor of page 3 no longer exists: Go to the first page keeps the sort and drops page and after</span><span class="lf-url">/plant-a/core/articles?sort=name&amp;page=3&amp;after=$cursor</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="cursor" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST22 }}">
+          <section class="lfst-f" data-screen-label="ST22 List page out of date, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST22</span>List page out of date<span class="fth">Dark, 1440 by 900. ST21 in dark</span><span class="lf-url">/plant-a/core/articles?sort=name&amp;page=3&amp;after=$cursor</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" state="cursor" hint-size="100%,600px"></dc-import></div></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST6 }}">
+          <section class="lfst-f" data-screen-label="ST6 Detail loading, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST6</span>Detail loading<span class="fth">Light, 1440 by 900. The h1 shows the route title until the article loads; tabs and skeleton Cards</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" busy="true" focus="h1" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="loading" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST13 }}">
+          <section class="lfst-f" data-screen-label="ST13 Detail loading, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST13</span>Detail loading<span class="fth">Dark, 1440 by 900. ST6 in dark</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" busy="true" focus="h1" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="loading" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST7 }}">
+          <section class="lfst-f" data-screen-label="ST7 Detail not found, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST7</span>Detail not found<span class="fth">Light, 1440 by 900. EmptyState with Back to Articles</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="not-found" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST14 }}">
+          <section class="lfst-f" data-screen-label="ST14 Detail not found, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST14</span>Detail not found<span class="fth">Dark, 1440 by 900. ST7 in dark</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="not-found" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST8 }}">
+          <section class="lfst-f" data-screen-label="ST8 Detail error, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST8</span>Detail error<span class="fth">Light, 1440 by 900. Could not load the article, with the correlation id and Try again</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="error" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST15 }}">
+          <section class="lfst-f" data-screen-label="ST15 Detail error, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST15</span>Detail error<span class="fth">Dark, 1440 by 900. ST8 in dark</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="error" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST23 }}">
+          <section class="lfst-f" data-screen-label="ST23 Detail forbidden, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST23</span>Detail forbidden<span class="fth">Light, 1440 by 900. Anna Berg follows a link to an article without a role that reads articles: no tabs and no data</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" nav="core.articles" user="Anna Berg" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="forbidden" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST24 }}">
+          <section class="lfst-f" data-screen-label="ST24 Detail forbidden, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST24</span>Detail forbidden<span class="fth">Dark, 1440 by 900. ST23 in dark</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" nav="core.articles" user="Anna Berg" title="Article" crumbs="Core|Master data|Articles|Article" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-detail" state="forbidden" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST9 }}">
+          <section class="lfst-f" data-screen-label="ST9 Settings page, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST9</span>Settings page<span class="fth">Light, 1440 by 900. Plant A presentation settings with their sources, the reason and Save settings</span><span class="lf-url">/plant-a/core/settings</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.settings" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-form" form="settings" plant="a" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST16 }}">
+          <section class="lfst-f" data-screen-label="ST16 Settings page, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST16</span>Settings page<span class="fth">Dark, 1440 by 900. ST9 in dark</span><span class="lf-url">/plant-a/core/settings</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.settings" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-form" form="settings" plant="a" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST25 }}">
+          <section class="lfst-f" data-screen-label="ST25 Settings saved, light, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST25</span>Settings saved<span class="fth">Light, 1440 by 900. After Save settings: the saved note in a status region, the formats change after the next page load, focus stays on Save settings</span><span class="lf-url">/plant-a/core/settings</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.settings" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-form" form="settings" plant="a" state="saved" focus="save" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+        <sc-if value="{{ show.ST26 }}">
+          <section class="lfst-f" data-screen-label="ST26 Settings saved, dark, 1440 by 900">
+            <sc-if value="{{ labels }}"><div class="flabel" data-drags-parent="1"><span class="fid">ST26</span>Settings saved<span class="fth">Dark, 1440 by 900. ST25 in dark</span><span class="lf-url">/plant-a/core/settings</span></div></sc-if>
+            <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.settings" actions="none" bell="off" show-title="on" hint-size="1440px,936px"><div class="lf-fill"><dc-import name="ui-222-list-form-form" form="settings" plant="a" state="saved" focus="save" hint-size="100%,700px"></dc-import></div></dc-import>
+          </section>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame": {"editor": "enum", "options": ["all", "ST1", "ST2", "ST3", "ST4", "ST5", "ST6", "ST7", "ST8", "ST9", "ST10", "ST11", "ST12", "ST13", "ST14", "ST15", "ST16", "ST17", "ST18", "ST19", "ST20", "ST21", "ST22", "ST23", "ST24", "ST25", "ST26"], "default": "all", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html, behind the same flag, so it is installed once.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // frame="ST3" draws only that frame, so the page can place each frame on the canvas on its own.
+          // labels="off" drops the label chips when the page draws its own.
+          const P = this.props || {};
+          const ids = ["ST1", "ST2", "ST3", "ST4", "ST5", "ST6", "ST7", "ST8", "ST9", "ST10", "ST11", "ST12", "ST13", "ST14", "ST15", "ST16", "ST17", "ST18", "ST19", "ST20", "ST21", "ST22", "ST23", "ST24", "ST25", "ST26"];
+          const want = String(P.frame === undefined || P.frame === null ? "all" : P.frame).trim().toUpperCase();
+          const one = ids.indexOf(want) >= 0;
+          const show = {};
+          ids.forEach((id) => { show[id] = !one || id === want; });
+          return { show: show, labels: P.labels !== "off", rootCls: one ? "lfst-one" : "lfst-root" };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings variations comparison</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Comparison and recommendation">
+        <p class="kick">Frame R</p>
+        <h2 class="t1">Comparison and recommendation</h2>
+        <p class="lede">The criteria come from the rules and axes of the spec for this round (sections 1 to 7) and from issue #313; the build cost row is derived. A check mark shows the strongest option on a row; a row may have two, or none when no option is clearly stronger.</p>
+        <div class="set-tbl">
+          <div class="set-tbl-r set-cmp-r h"><span>Criterion</span><span>A. Own sidebar</span><span>B. Rail and scope picker</span><span>C. In the page</span></div>
+          <sc-for list="{{ rows }}" as="r">
+            <div class="set-tbl-r set-cmp-r">
+              <span class="k">{{ r.k }}<span class="set-src">{{ r.src }}</span></span>
+              <sc-for list="{{ r.cells }}" as="c"><span><sc-if value="{{ c.best }}"><span class="set-best"><span class="ic" data-icon="Check"></span><span>{{ c.t }}</span></span></sc-if><sc-if value="{{ c.plain }}">{{ c.t }}</sc-if></span></sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <div class="set-rec">
+          <h3 class="t2">Recommendation: A, its own sidebar, with B's scope picker and B's routes</h3>
+          <p>A is the decision of 2026-10-08 as written: one Settings area with its own sidebar, reached from the sidebar foot where admins already found Administration, left through a Back control that names the plant, with the table at the width #222 chose and one navigation landmark at a time; at 320 it reuses the D2 navigation sheet, as the issue asks. Two parts of A do not hold up, and B answers both better. A's one tree moves plant pages out of /$plant, which breaks the rule of ADR 0007 that the plant rides in the route and with it the plant gate, the per-plant client and the Assistant; B keeps plant settings at /$plant/settings/... and puts company settings at /settings/$companyId/..., the mount that replaces /admin. A's grouped list grows with every company and plant and leaves module settings without a scope; B's picker shows one scope's entries, module settings included, and turns into a static head for a user with one scope. The recommendation is therefore A's sidebar, way in and sheet, with B's scope picker at the sidebar head, the Back control moved to the sidebar foot where the Settings link sits in the main sidebar, and B's route pattern, at the cost of a possible full page load when the picker moves between company and plant scope. C is the cheapest to build but splits Settings into two areas and leaves the table at about 730 px at 1280.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Each row: criterion, source, the three cells, and the options marked strongest ("" for none).
+          const Rw = (k, src, a, b, c, best) => ({ k: k, src: src, cells: [a, b, c].map((t, i) => { const on = best.indexOf("ABC"[i]) >= 0; return { t: t, best: on, plain: !on }; }) });
+          return {
+            rows: [
+              Rw("Fits the decision", "K1008", "One area with its own sidebar, grouped by scope", "One area; its sidebar sits beside the rail", "Two areas inside the page", "A"),
+              Rw("Way in", "Spec 7.1; WCAG 3.2.4, 2.5.3", "Sidebar foot: one activation, always visible, where Administration was", "User menu: two activations, hidden until opened", "Top bar button: one activation, a new control before Help", "A"),
+              Rw("Back to work", "Spec 4.1.4", "Back control names the plant; the switcher is gone until Back", "The rail stays: switcher mark and module icons", "The main sidebar stays on plant pages; Back link on company pages", "B"),
+              Rw("Table width at 1280", "Spec 4.4.1; #222", "About 974 px, as #222 decided", "About 926 px", "About 730 px, near the 750 px #222 rejected", "A"),
+              Rw("Many companies and plants", "Spec 7.3", "Grows with every scope; groups collapse and hide entries", "One scope at a time; the picker lists them all", "Short per area; a plant's settings open from inside that plant", "B"),
+              Rw("A narrower permission, one scope", "Spec 2.6; I313", "Plant A, Modules and Plugins only (A3)", "Static head with Plant A (B3)", "Plant A settings without the company link (C3)", ""),
+              Rw("A user with no admin permission (Alex Lund)", "Spec 2.9, 7.1; I313; question 11. Proposed, not drawn", "No Settings link at the sidebar foot; Profile stays in the user menu, so his sidebar is D2's", "No Settings item in the user menu; Profile stays there", "No Settings button in the top bar; Profile stays in the user menu, and Help keeps its place", ""),
+              Rw("Module settings at two levels", "Spec 3.4, 7.6.2", "One Modules group; the page picks the scope", "Under each scope, at the module's levels", "In both areas", "B"),
+              Rw("One plant per request", "ADR 0007; spec 4.3.1", "Broken: plant pages leave /$plant", "Kept: /$plant/settings", "Kept: module paths", "BC"),
+              Rw("Moving between company and plant scope", "Spec 7.4, 4.3.6", "One tree", "May be a full navigation from the picker", "May be a full navigation", "A"),
+              Rw("Contract and ADR changes", "Spec 4.3.9, 4.3.10, section 6", "New tree with a scope segment, plant handling outside /$plant, nav contract, module subtrees", "The /settings mount, settings reserved under /$plant, nav contract, module subtrees", "The /settings mount with module subtrees for company settings, and a settings flag on nav entries", ""),
+              Rw("Landmarks and focus order", "Spec 4.2.1; WCAG 2.4.1, 2.4.3", "One nav at a time", "Two navs before main", "Main nav, then the Settings nav inside main; the skip link does not pass it", "A"),
+              Rw("Reflow at 320", "Spec 4.6; I313", "N1: the D2 sheet, as the issue asks", "N3: two sheets, two triggers", "N2: a landing page, no sheet", "A"),
+              Rw("Assistant and plant crumb on plant pages", "Question 14", "Only with shell work for the R1 tree", "As on any plant page", "As on any plant page", "BC"),
+              Rw("Build cost", "Derived", "A second Sidebar layout and plant handling outside /$plant", "A second Sidebar beside the rail, the picker and a second sheet", "A navigation column in main; two layouts for two areas", "C")
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

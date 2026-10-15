@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F4 state markers and focus ring</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.mk{display:grid;grid-template-columns:200px 200px minmax(0,1fr);gap:16px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.mk.h{padding:0 0 8px;font-size:12px;font-weight:600;color:var(--muted-foreground)}
+.mk .lane{height:52px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.mk .blk{left:8px;right:8px;top:6px;bottom:6px}
+.mk .d3{display:grid;place-items:center;height:52px;border:1px dashed var(--input);border-radius:var(--radius-sm);font-size:12px;color:var(--muted-foreground)}
+.mt{display:grid;gap:2px}
+.dens{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin-top:20px}
+.dens .lane{height:40px;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.dens .blk{top:15px;bottom:15px;padding:0}
+.geo{display:grid;grid-template-columns:360px minmax(0,1fr);gap:40px;align-items:center}
+.zoom{position:relative;height:200px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);overflow:hidden}
+.zoom .z{position:absolute;left:44px;top:46px;transform:scale(3);transform-origin:0 0}
+.surf{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.sf{display:grid;gap:12px;align-content:start;padding:14px 16px 16px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--s);color:var(--foreground)}
+.sf.hatch{background-image:repeating-linear-gradient(135deg,var(--off-time) 0 5px,transparent 5px 10px)}
+.sf .row{display:flex;align-items:center;gap:12px;min-height:44px}
+.edges{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.edge{display:grid;gap:12px;justify-items:start;align-content:start;padding:16px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+.fills .lane{height:56px;border:1px solid var(--border);border-radius:var(--radius);overflow:visible}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="State markers and focus ring">
+        <h2 class="t2">State markers and the two-tone focus ring</h2>
+        <p class="lede">Each state has an icon or line style drawn in the block's text color, text in the accessible name, and a line in the hover card. No state maps to a hue, so the fill stays the order color. Markers are shown on palette-6 and on palette-20, the fill where black text contrasts least ({{ low }}:1 in {{ themeName }}). In forced-colors mode the borders, icons and line styles keep each state readable.</p>
+        <div class="sec">
+          <div class="mk h"><span>On palette-6</span><span>On palette-20</span><span>State, cue and accessible name text</span></div>
+          <sc-for list="{{ states }}" as="s">
+            <div class="mk">
+              <sc-if value="{{ s.d3 }}"><span class="d3">Cue set in D3</span><span class="d3">Cue set in D3</span></sc-if>
+              <sc-if value="{{ !s.d3 }}">
+                <div class="lane"><div class="blk {{ s.cls }}" style="--fill:var(--palette-6);--ink:#000000;--prog:33%"><div class="b1"><span class="num">5006.10</span><sc-if value="{{ s.icon }}"><span class="ic" data-icon="{{ s.icon }}"></span></sc-if><sc-if value="{{ s.ini }}"><span class="ini">PB</span></sc-if></div><div class="b2">Housing P &#183; 120 pcs</div><sc-if value="{{ s.prog }}"><span class="prog"></span></sc-if></div></div>
+                <div class="lane"><div class="blk {{ s.cls }}" style="--fill:var(--palette-20);--ink:#000000;--prog:33%"><div class="b1"><span class="num">5020.10</span><sc-if value="{{ s.icon }}"><span class="ic" data-icon="{{ s.icon }}"></span></sc-if><sc-if value="{{ s.ini }}"><span class="ini">PB</span></sc-if></div><div class="b2">Spacer U &#183; 24 pcs</div><sc-if value="{{ s.prog }}"><span class="prog"></span></sc-if></div></div>
+              </sc-if>
+              <div class="mt"><span class="b6">{{ s.name }}</span><span class="sm">{{ s.cue }}</span><span class="sm mut">Accessible name adds: "{{ s.aria }}"</span></div>
+            </div>
+          </sc-for>
+          <div class="dens">
+            <div>
+              <div class="lane"><div class="blk" style="left:40px;width:28px;--fill:var(--palette-3);--ink:#000000"></div><div class="blk" style="left:69px;width:40px;--fill:var(--palette-9);--ink:#000000"></div><div class="blk" style="left:110px;width:24px;--fill:var(--palette-17);--ink:#000000"></div><div class="blk" style="left:135px;width:36px;--fill:var(--palette-6);--ink:#000000"></div></div>
+              <p class="sm mut" style="margin:8px 0 0">Bar density: icons do not fit. The state lives in the accessible name, the cluster popover rows and the hover card.</p>
+            </div>
+            <div class="panel" style="padding:12px 16px"><div class="sm mut">Cluster target accessible name, example</div><div class="b6">"4 jobs, 07:00 to 09:10, 2 late, 1 being edited by Planner B"</div></div>
+          </div>
+        </div>
+        <div class="sec geo">
+          <div class="zoom"><div class="z"><button class="btn v-outline is-focus" type="button">Save</button></div></div>
+          <div>
+            <h3 class="t3">Focus ring geometry (06 Color and contrast, Q2)</h3>
+            <ul class="ul">
+              <li>Inner band, 2 px, against the control edge: <span class="mono">focus-ring</span>, the background value ({{ ringHex }}). Drawn with <span class="mono">box-shadow: 0 0 0 2px var(--focus-ring)</span>.</li>
+              <li>Outer band, 2 px, against the surface: <span class="mono">focus-outline</span>, the foreground value ({{ outlineHex }}). Drawn with <span class="mono">outline: 2px solid var(--focus-outline); outline-offset: 2px</span>, so forced-colors mode keeps it.</li>
+              <li>The halves are {{ apart }}:1 apart, more than the 9:1 of WCAG technique C40, so one half reaches 3:1 on any color. Over all 16,777,216 sRGB colors the weakest result is {{ worst }}:1 (fill {{ worstHex }}).</li>
+              <li>It replaces shadcn's outline-ring/50 (1.54:1 light, 1.87:1 dark). shadcn components take the ring from @northmes/ui, never the /50 opacity.</li>
+              <li>Focus only shows the ring and scrolls the element into view. Selection is separate (aria-selected).</li>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">The ring on every surface, outer half against the surface</h3>
+          <div class="surf">
+            <sc-for list="{{ surfaces }}" as="s">
+              <div class="sf {{ s.cls }}" style="{{ s.st }}">
+                <div class="sm b6">{{ s.name }} <span class="mono">{{ s.ratio }}:1</span></div>
+                <div class="row"><button class="btn v-outline is-focus" type="button">{{ s.label }}</button></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h3 class="t3">The ring on every control edge, inner half against the edge</h3>
+          <div class="edges">
+            <div class="edge"><button class="btn v-default is-focus" type="button">Save draft</button><span class="sm">primary <span class="mono b6">{{ inner.primary }}:1</span></span></div>
+            <div class="edge"><button class="btn v-default is-hover is-focus" type="button">Save draft</button><span class="sm">primary-hover <span class="mono b6">{{ inner.ph }}:1</span></span></div>
+            <div class="edge"><button class="btn v-destructive is-focus" type="button">Break lock</button><span class="sm">destructive <span class="mono b6">{{ inner.destructive }}:1</span></span></div>
+            <div class="edge"><button class="btn v-outline is-focus" type="button">Export</button><span class="sm">input (outline button, unchecked checkbox) <span class="mono b6">{{ inner.input }}:1</span></span></div>
+            <div class="edge"><span class="cb on"><span class="cb-hit"><span class="cb-box is-focus"><span class="ic" data-icon="Check"></span></span></span>Include archived</span><span class="sm">checked checkbox (primary) <span class="mono b6">{{ inner.primary }}:1</span></span></div>
+            <div class="edge" style="background:var(--lane)"><div class="lane" style="width:140px;height:44px"><div class="blk is-focus" style="left:0;right:0;top:4px;bottom:4px;--fill:var(--palette-4);--ink:#000000"><div class="b1"><span class="num">5004.10</span></div></div></div><span class="sm">block-border <span class="mono b6">{{ inner.bb }}:1</span></span></div>
+          </div>
+        </div>
+        <div class="sec fills">
+          <h3 class="t3">The ring over order fills: a focused block between its neighbors</h3>
+          <div class="lane">
+            <sc-for list="{{ fills }}" as="f">
+              <div class="blk {{ f.cls }}" style="{{ f.st }}"><div class="b1"><span class="num">{{ f.num }}</span><sc-if value="{{ f.icon }}"><span class="ic" data-icon="{{ f.icon }}"></span></sc-if></div><div class="b2">{{ f.note }}</div></div>
+            </sc-for>
+          </div>
+          <p class="sm mut" style="margin:10px 0 0">The ring overlaps the neighboring blocks. The better half against each fill: {{ fillNote }} The hard-locked block keeps its solid inner border while it has focus, because state markers are drawn with ::before and never use outline or box-shadow.</p>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          const RING = {"l":{"outer":{"background":"16.56","card":"17.30","popover":"17.30","muted":"15.16","secondary":"15.16","accent":"15.16","sidebar":"17.30","sidebar-accent":"15.16","info-subtle":"15.20","lane":"17.30","lane-alt":"16.24","off-time":"14.49"},"inner":{"primary":"14.40","primary-hover":"10.36","destructive":"6.23","input":"3.76","block-border":"16.56"},"apart":"16.56","worst":["#b86350","4.06"]},"d":{"outer":{"background":"15.94","card":"14.59","popover":"14.59","muted":"12.98","secondary":"12.98","accent":"12.98","sidebar":"14.59","sidebar-accent":"12.98","info-subtle":"12.53","lane":"15.22","lane-alt":"14.42","off-time":"16.59"},"inner":{"primary":"15.02","primary-hover":"11.70","destructive":"7.31","input":"4.54","block-border":"10.26"},"apart":"15.94","worst":["#7b6ac2","3.99"]}};
+          const r = RING[dark ? "d" : "l"];
+          const SURF = [
+            ["background", "Page", "background"], ["card", "Card", "card"], ["popover", "Popover", "popover"], ["muted", "Muted", "muted"],
+            ["secondary", "Secondary", "secondary"], ["accent", "Hover surface", "accent"], ["sidebar", "Sidebar", "sidebar"], ["sidebar-accent", "Sidebar hover", "sidebar-accent"],
+            ["info-subtle", "Selected row", "info-subtle"], ["lane", "Lane", "lane"], ["lane-alt", "Alternate lane", "lane-alt"], ["off-time", "Non-working time", "off-time"]
+          ];
+          const surfaces = SURF.map((s) => ({
+            name: s[0], label: s[1], ratio: r.outer[s[0]],
+            cls: s[0] === "off-time" ? "hatch" : "",
+            st: "--s:var(--" + (s[0] === "off-time" ? "lane" : s[2]) + ")"
+          }));
+          const fillRows = [
+            ["palette-8", dark ? "6.41" : "8.30"], ["palette-20", dark ? "4.68" : "6.19"], ["palette-6", dark ? "6.71" : "8.63"], ["group-2", dark ? "6.00" : "4.58"]
+          ];
+          const worst = r.worst[0];
+          const fills = [
+            { num: "5008.10", note: "Neighbor", st: "left:12px;width:130px;--fill:var(--palette-8);--ink:#000000", cls: "" },
+            { num: "5020.10", note: "Focused", st: "left:143px;width:130px;--fill:var(--palette-20);--ink:#000000", cls: "is-focus" },
+            { num: "5011.10", note: "Neighbor", st: "left:274px;width:130px;--fill:var(--palette-11);--ink:#000000", cls: "" },
+            { num: "5090.10", note: "Worst sRGB fill", st: "left:436px;width:130px;--fill:" + worst + ";--ink:#000000", cls: "is-focus" },
+            { num: "5091.10", note: "Neighbor", st: "left:567px;width:130px;--fill:var(--palette-15);--ink:#000000", cls: "" },
+            { num: "5002.10", note: "Neighbor", st: "left:729px;width:130px;--fill:var(--palette-2);--ink:#000000", cls: "" },
+            { num: "5006.10", note: "Hard-locked", st: "left:860px;width:130px;--fill:var(--palette-6);--ink:#000000", cls: "m-lock is-focus", icon: "Lock" },
+            { num: "5013.10", note: "Neighbor", st: "left:991px;width:130px;--fill:var(--palette-13);--ink:#000000", cls: "" }
+          ];
+          return {
+            themeName: dark ? "dark" : "light",
+            low: dark ? "5.49" : "7.52",
+            apart: r.apart,
+            worst: r.worst[1],
+            worstHex: worst,
+            ringHex: dark ? "#151719" : "#f9fafb",
+            outlineHex: dark ? "#f0f2f4" : "#171b1f",
+            surfaces: surfaces,
+            inner: { primary: r.inner.primary, ph: r.inner["primary-hover"], destructive: r.inner.destructive, input: r.inner.input, bb: r.inner["block-border"] },
+            fills: fills,
+            fillNote: fillRows.map((f) => f[0] + " " + f[1] + ":1").join(", ") + ", the worst sRGB fill " + worst + " " + r.worst[1] + ":1. Every palette and group fill is in F2.",
+            states: [
+              { name: "Committed", cue: "No marker", aria: "5006.10, Housing P, 120 pcs, Tue 06:00 to Tue 14:00, Mill 1", cls: "", icon: "", ini: false },
+              { name: "Mine in draft", cue: "Pencil icon (Pencil) and a double border", aria: "changed in your draft, not saved", cls: "m-draft", icon: "Pencil", ini: false },
+              { name: "Held by another planner", cue: "That planner's initials badge and a dashed border", aria: "being edited by Planner B", cls: "m-held", icon: "", ini: true },
+              { name: "Hard-locked", cue: "Padlock icon (Lock) and a solid 2 px inner border", aria: "locked", cls: "m-lock", icon: "Lock", ini: false },
+              { name: "Started", cue: "Play icon (Play) and a progress bar along the bottom", aria: "started, 40 of 120 pcs", cls: "", icon: "Play", ini: false, prog: true },
+              { name: "Proposed by the assistant", cue: "Spark icon (Sparkles) in the text color and a dotted border", aria: "proposed by assistant, not reviewed", cls: "m-prop", icon: "Sparkles", ini: false },
+              { name: "Conflict", cue: "Striped edge", aria: "overlaps 5008.10", cls: "m-conf", icon: "", ini: false },
+              { name: "Late", cue: "Clock icon (Clock)", aria: "late by 2 days", cls: "", icon: "Clock", ini: false },
+              { name: "Material warning", cue: "Warning triangle (TriangleAlert)", aria: "material short", cls: "", icon: "TriangleAlert", ini: false },
+              { name: "Overdue", cue: "Set in the board design task D3 under the same rule (Q14)", aria: "overdue", d3: true },
+              { name: "Finish pending", cue: "Set in the board design task D3 under the same rule (Q14)", aria: "finish pending", d3: true }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

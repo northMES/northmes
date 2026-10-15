@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board grid</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+      </helmet>
+      <div class="{{ rootCls }}" data-pbu="{{ uid }}" style="{{ rootStyle }}">
+        <div class="pb-grid {{ gridCls }}" role="grid" tabIndex="{{ gridTi }}" aria-label="{{ gridLabel }}" aria-rowcount="{{ rowCount }}" aria-busy="{{ busy }}" aria-readonly="{{ ro }}" lang="{{ lang }}" style="{{ gridStyle }}">
+          <div class="pb-gh" role="row" aria-rowindex="1">
+            <div class="pb-corner" role="columnheader"><b>{{ t.machines }}</b><sc-if value="{{ wide }}"><span class="pb-muted">{{ t.inGroups }}</span></sc-if></div>
+            <div class="pb-ticks" role="columnheader" aria-label="{{ timeLabel }}">
+              <div class="pb-tier"><sc-for list="{{ tops }}" as="d"><span class="pb-day {{ d.cls }}" style="{{ d.style }}">{{ d.label }}</span></sc-for></div>
+              <sc-for list="{{ ticks }}" as="k" hint-placeholder-count="12"><span class="pb-tick {{ k.cls }}" style="{{ k.style }}" aria-hidden="true">{{ k.label }}</span></sc-for>
+              <sc-if value="{{ hasNow }}"><span class="pb-nowl {{ nowCls }}" style="{{ nowLStyle }}" aria-hidden="true">{{ nowText }}</span></sc-if>
+              <sc-if value="{{ hasFrzLabel }}"><span class="pb-frzl" style="{{ frzStyle }}">{{ frzLabel }}</span></sc-if>
+            </div>
+            <div class="pb-sbg"></div>
+          </div>
+          <div class="pb-body">
+            <div class="pb-rows">
+              <sc-if value="{{ pinned }}"><dc-import name="planning-221-board-notplaced" nested="on" size="{{ size }}" state="{{ npState }}" focus="{{ npFocus }}" stop="{{ npStop }}" selected="{{ npSel }}" strings="{{ strings }}" idp="{{ npIdp }}" ri="2" busy="{{ npBusy }}" hint-size="100%,46px"></dc-import></sc-if>
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+                <sc-if value="{{ r.isBand }}">
+                  <div class="pb-row band" role="row" aria-rowindex="{{ r.ri }}" style="{{ r.gcs }}">
+                    <div class="pb-gr" role="rowheader" aria-label="{{ r.label }}"><button class="pb-disc {{ r.focusCls }}" type="button" tabIndex="{{ r.ti }}" aria-expanded="{{ r.expanded }}" aria-label="{{ r.discLabel }}"><span class="ic" data-icon="{{ r.discIcon }}"></span></button><span class="pb-dot"></span><span class="pb-gn" lang="{{ r.lang }}">{{ r.name }}</span><span class="pb-gc">{{ r.count }}</span></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.isSkBand }}">
+                  <div class="pb-row band" role="row" aria-rowindex="{{ r.ri }}"><div class="pb-gr" role="rowheader" aria-label="{{ r.label }}"><span class="pb-skr" style="width:120px"></span></div></div>
+                </sc-if>
+                <sc-if value="{{ r.isSkel }}">
+                  <div class="pb-row {{ r.cls }}" role="row" aria-rowindex="{{ r.ri }}">
+                    <div class="pb-rh" role="rowheader" aria-label="{{ r.label }}" style="padding-left:12px"><span class="pb-skr" style="{{ r.skW }}"></span></div>
+                    <div class="pb-lane"><sc-for list="{{ r.sk }}" as="s"><span class="pb-skb" style="{{ s.style }}"></span></sc-for></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ r.isMachine }}">
+                  <div class="pb-row {{ r.cls }}" role="row" aria-rowindex="{{ r.ri }}">
+                    <div class="pb-rh" role="rowheader" aria-label="{{ r.name }}"><span class="pb-stripe" style="{{ r.gcs }}"></span><span class="pb-mn" lang="{{ r.lang }}">{{ r.name }}</span><button class="pb-jb {{ r.jbCls }}" type="button" tabIndex="{{ r.jbTi }}" aria-label="{{ r.jobsLabel }}"><span class="ic" data-icon="List"></span></button></div>
+                    <div class="pb-lane">
+                      <sc-for list="{{ r.off }}" as="o"><span class="pb-off hatch" style="{{ o.style }}"></span></sc-for>
+                      <sc-for list="{{ r.ghosts }}" as="g"><span class="pb-ghost {{ g.cls }}" style="{{ g.style }}" aria-hidden="true"></span></sc-for>
+                      <sc-for list="{{ r.sels }}" as="s"><span class="pb-selb {{ s.cls }}" style="{{ s.style }}"></span></sc-for>
+                      <sc-for list="{{ r.cells }}" as="b">
+                        <sc-if value="{{ b.isBlock }}">
+                          <div class="pb-bk {{ b.cls }}" role="gridcell" tabIndex="{{ b.ti }}" aria-selected="{{ b.sel }}" aria-labelledby="{{ b.lby }}" style="{{ b.style }}">
+                            <div class="pb-b1"><span class="{{ b.jCls }}" id="{{ b.idj }}">{{ b.j }}</span><span class="{{ b.aCls }}" id="{{ b.ida }}" lang="{{ b.lang }}">{{ b.a }}<span style="font-size:0;line-height:0">,</span></span><sc-if value="{{ b.showMk }}"><span class="pb-mk"><sc-for list="{{ b.icons }}" as="i"><span class="ic" data-icon="{{ i.n }}"></span></sc-for><sc-if value="{{ b.hasIni }}"><span class="ini">{{ b.ini }}</span></sc-if><sc-if value="{{ b.hasBf }}"><span class="pb-bf" aria-hidden="true"><span class="ic" data-icon="{{ b.bfIcon }}"></span><sc-if value="{{ b.bfShowText }}"><span>{{ b.bfText }}</span></sc-if></span></sc-if></span></sc-if></div>
+                            <sc-if value="{{ b.two }}"><div class="pb-b2"><sc-for list="{{ b.l2 }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div></sc-if>
+                            <span class="pb-vh" id="{{ b.idh }}">{{ b.hid }}</span>
+                            <sc-if value="{{ b.hasProg }}"><span class="prog" style="{{ b.progStyle }}"></span></sc-if>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ b.isCluster }}"><div class="pb-cl {{ b.cls }}" role="gridcell" tabIndex="{{ b.ti }}" aria-haspopup="dialog" aria-expanded="{{ b.exp }}" aria-controls="{{ b.ctl }}" aria-label="{{ b.label }}" style="{{ b.style }}"><span>{{ b.n }}</span><sc-if value="{{ b.icon }}"><span class="ic" data-icon="Layers"></span></sc-if></div></sc-if>
+                      </sc-for>
+                      <sc-if value="{{ r.empty }}"><span class="pb-emp {{ r.empCls }}" role="gridcell" tabIndex="{{ r.empTi }}">{{ t.noJobs }}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+              </sc-for>
+              <div class="pb-layer pb-nowlayer" style="{{ layerStyle }}" aria-hidden="true">
+                <sc-if value="{{ hasNow }}"><span class="pb-now" style="{{ nowStyle }}"></span></sc-if>
+                <sc-if value="{{ hasFrz }}"><span class="pb-frz" style="{{ frzStyle }}"></span></sc-if>
+              </div>
+              <div class="pb-layer pb-ovl" aria-hidden="true">
+                <sc-for list="{{ lines }}" as="l"><span class="{{ l.cls }}" style="{{ l.style }}"></span></sc-for>
+                <sc-for list="{{ pills }}" as="l"><span class="pb-lt" style="{{ l.style }}">{{ l.t }}</span></sc-for>
+                <sc-if value="{{ hasPrev }}">
+                  <span class="pb-snap" style="{{ prev.snapStyle }}"></span>
+                  <div class="pb-prev {{ prev.cls }}" style="{{ prev.style }}"><div class="pb-b1"><span class="pb-j">{{ prev.j }}</span><span class="pb-a" lang="{{ prev.lang }}">{{ prev.a }}</span><span class="pb-mk"><span class="ic" data-icon="{{ prev.icon }}"></span></span></div><div class="pb-b2">{{ prev.l2 }}</div></div>
+                  <div class="pb-tip {{ prev.tipCls }}" style="{{ prev.tipStyle }}"><span class="pb-tl"><span class="ic" data-icon="{{ prev.tipIcon }}"></span><span>{{ prev.tip1 }}</span></span><sc-if value="{{ prev.hasTip2 }}"><span>{{ prev.tip2 }}</span></sc-if></div>
+                  <span class="pb-ptr" style="{{ prev.ptrStyle }}"><span class="ic" data-icon="MousePointer2" style="width:20px;height:20px"></span></span>
+                </sc-if>
+                <sc-if value="{{ hasHint }}"><div class="pb-hint" style="{{ hintStyle }}"><span class="ic" data-icon="Move"></span><span>{{ t.mv.hint }}</span></div></sc-if>
+              </div>
+              <div class="pb-layer pb-pop">
+                <sc-if value="{{ hasHc }}">
+                  <div class="pb-hc" style="{{ hc.style }}">
+                    <p class="pb-hct"><span class="pb-j">{{ hc.j }}</span><span lang="{{ hc.lang }}">{{ hc.a }}</span></p>
+                    <sc-if value="{{ hc.hasBadges }}"><div class="pb-badges"><sc-for list="{{ hc.badges }}" as="x"><span class="badge {{ x.c }}"><sc-if value="{{ x.hasIcon }}"><span class="ic" data-icon="{{ x.icon }}"></span></sc-if><span><sc-for list="{{ x.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span></span></sc-for></div></sc-if>
+                    <dl><sc-for list="{{ hc.rows }}" as="f"><dt>{{ f.k }}</dt><dd lang="{{ f.lang }}"><sc-for list="{{ f.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></dd></sc-for></dl>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ hasMenu }}">
+                  <div class="pop pb-menu" role="menu" aria-label="{{ menu.label }}" style="{{ menu.style }}">
+                    <sc-for list="{{ menu.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem" tabIndex="-1" aria-disabled="{{ m.dis }}"><span class="ic" data-icon="{{ m.icon }}"></span><span>{{ m.t }}</span><sc-if value="{{ m.hasKbd }}"><span class="end kbd">{{ m.kbd }}</span></sc-if></div></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ hasClp }}">
+                  <div class="pop pb-clp" role="dialog" id="{{ clp.id }}" aria-labelledby="{{ clp.hid }}" style="{{ clp.style }}">
+                    <h3 class="pb-clh" id="{{ clp.hid }}">{{ clp.title }}</h3>
+                    <sc-for list="{{ clp.rows }}" as="x"><div class="pb-clr"><span><span class="pb-j">{{ x.j }}</span><span lang="{{ x.lang }}">{{ x.a }}</span><span class="pb-crt" style="display:block">{{ x.d }}</span></span><button class="btn v-outline {{ x.mvCls }}" type="button" aria-label="{{ x.mvLabel }}">{{ t.cl.move }}</button><button class="btn icon v-ghost" type="button" aria-haspopup="menu" aria-label="{{ x.acLabel }}"><span class="ic" data-icon="Ellipsis"></span></button></div></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div class="pb-vs" aria-hidden="true"><span class="pb-th" style="{{ vthStyle }}"></span></div>
+          </div>
+          <div class="pb-hs" aria-hidden="true"><span class="pb-hsp"></span><span class="pb-htr"><span class="pb-th" style="{{ hthStyle }}"></span></span><span class="pb-sbg"></span></div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"zoom":{"editor":"enum","options":["hours","day","week","weeks"],"default":"hours","tsType":"string"},"r0":{"editor":"int","default":6,"tsType":"number"},"r1":{"editor":"int","default":18,"tsType":"number"},"dst":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"state":{"editor":"enum","options":["populated","loading","empty-range","readonly"],"default":"populated","tsType":"string"},"saved":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"fields":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"pinned":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"np":{"editor":"enum","options":["default","many","empty"],"default":"default","tsType":"string"},"collapsed":{"editor":"text","default":"finishing","tsType":"string"},"skip":{"editor":"int","default":0,"tsType":"number"},"selected":{"editor":"text","default":"1003.20","tsType":"string"},"focus":{"editor":"text","default":"none","tsType":"string"},"hover":{"editor":"text","default":"none","tsType":"string"},"menu":{"editor":"text","default":"none","tsType":"string"},"pop":{"editor":"text","default":"none","tsType":"string"},"move":{"editor":"enum","options":["none","pointer","refused","keyboard"],"default":"none","tsType":"string"},"frozen":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"reconnect":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"height":{"editor":"int","default":0,"tsType":"number"},"idp":{"editor":"text","default":"g","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the Shell's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PB ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PB) ready();
+          // Measure the lane width, the rows height and the floating layers, so clusters, tick labels, virtual rows and
+          // the placement of the hover card, the menu, the cluster popover, the tooltip and the move hint follow the real size.
+          this.__measure = () => {
+            const root = document.querySelector('[data-pbu="' + this.__uid + '"]');
+            const rows = root && root.querySelector(".pb-rows");
+            if (!rows) return;
+            const q = (sel, prop) => { const e = root.querySelector(sel); return e ? Math.round(e[prop]) : 0; };
+            const next = { rw: Math.round(rows.clientWidth), h: Math.round(rows.clientHeight), hcH: q(".pb-hc", "offsetHeight"), hintW: q(".pb-hint", "offsetWidth"), clpH: q(".pb-clp", "offsetHeight"), menuH: q(".pb-menu", "offsetHeight"), tipW: q(".pb-tip", "offsetWidth") };
+            const s = this.state || {};
+            if (Object.keys(next).some((k) => Math.abs((s[k] || 0) - next[k]) > 1)) this.setState(next);
+          };
+          setTimeout(this.__measure, 30);
+          if (window.ResizeObserver) {
+            this.__ro = new ResizeObserver(() => this.__measure());
+            setTimeout(() => { const root = document.querySelector('[data-pbu="' + this.__uid + '"]'); if (root && this.__ro) this.__ro.observe(root); }, 0);
+          }
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__measure && this.__measure());
+        }
+        componentDidUpdate() {
+          if (this.__measure) setTimeout(this.__measure, 0);
+        }
+        componentWillUnmount() {
+          if (this.__ro) this.__ro.disconnect();
+          this.__ro = null;
+        }
+        renderVals() {
+          const p = this.props;
+          this.__uid = this.__uid || "pbg" + Math.random().toString(36).slice(2, 9);
+          const st0 = this.state || {};
+          const narrow = p.size === "narrow";
+          const theme = p.theme === "dark" ? " dark" : "";
+          const H = Number(p.height || 0);
+          const base = {
+            uid: this.__uid, rootCls: "ps-box" + theme, rootStyle: "flex:1;min-width:0;min-height:0" + (H ? ";height:" + H + "px;flex:none" : ""),
+            gridCls: narrow ? "nar" : "", gridTi: "-1", t: { machines: "", inGroups: "", noJobs: "", mv: { hint: "" }, cl: { move: "" } }, tops: [], ticks: [], rows: [], lines: [], pills: [], prev: {}, hc: {}, menu: {}, clp: {},
+          };
+          const PB = window.PB;
+          if (!PB) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const T = PB.tr(strings);
+          const L = strings === "long";
+          const dst = p.dst === "on" && !!PB.DST;
+          const D = PB.DST;
+          const zoomId = dst ? "hours" : PB.ZOOM[p.zoom] ? p.zoom : "hours";
+          const Z = PB.ZOOM[zoomId];
+          const hours = zoomId === "hours";
+          const a = dst ? D.a : hours ? 24 + Number(p.r0 ?? 6) : Z.a;
+          const b = dst ? D.b : hours ? 24 + Number(p.r1 ?? 18) : Z.b;
+          const span = b - a;
+          // The time area starts a 4 px gutter after the machine column (--g in the CSS), so a block at the range start
+          // keeps its whole focus ring inside the lane.
+          const G = 4;
+          // Machine column: fits the longest name, from 168 px up to 272 px, and never more than 40 percent of the grid (3.5).
+          const longest = PB.MACHINES.reduce((mx, mm) => Math.max(mx, PB.mName(mm.id, strings).length), 0);
+          const rw = st0.rw || (narrow ? 286 : 800);
+          const mcPx = narrow ? 96 : Math.min(Math.max(168, Math.min(272, Math.round(longest * 7.1 + 74))), Math.round(rw * 0.4));
+          const full = rw - mcPx;
+          const laneW = full - G;
+          const maxH = st0.h || (H ? H - 60 : 700);
+          const idp = String(p.idp || "g");
+          const state = p.state || "populated";
+          const loading = state === "loading";
+          const move = hours && !dst ? p.move || "none" : "none";
+          const f = (n) => Math.round(n * 1000) / 1000;
+          const f5 = (n) => Math.round(n * 100000) / 100000;
+          const pct = (t) => ((t - a) / span) * 100;
+          const px = (t) => (pct(t) / 100) * laneW;
+          // Positions inside the lane: the gutter, then the share of the time area.
+          const Lc = (q) => "calc(" + G + "px + (100% - " + G + "px) * " + f5(q / 100) + ")";
+          const Wc = (q, minus) => "calc((100% - " + G + "px) * " + f5(q / 100) + (minus ? " - " + minus + "px" : "") + ")";
+          const pos = (s, e) => "left:" + Lc(pct(Math.max(s, a))) + ";width:" + Wc(pct(Math.min(e, b)) - pct(Math.max(s, a)), 1);
+          const { dayLabel, num, segs } = PB;
+          // Plant wall clock. Outside the DST night it is the CET numbering of t; on the night of Sun 25 Oct the zone name
+          // joins a time whose offset differs from the hour before or after it (2.4).
+          const wall = (t) => (dst ? D.wall(t) : { t, hm: PB.hm(t), day: PB.dayOf(t), zone: "" });
+          const hm = (t) => wall(t).hm + (dst && D.amb(t) ? " " + wall(t).zone : "");
+          const dayOf = (t) => wall(t).day;
+          const at = (t) => dayLabel(dayOf(t)) + " " + hm(t);
+          const sameDay = (s, e) => dayOf(s) === dayOf(e - 1e-6);
+          const sel = p.selected === undefined || p.selected === "" ? "1003.20" : String(p.selected);
+          const focus = String(p.focus || "none");
+          const selJob = sel !== "none" ? PB.job(sel) : null;
+          const selOrder = selJob ? selJob.order : null;
+          const pinned = p.pinned !== "off";
+          const fieldsOn = p.fields === "on";
+
+          // Time header: the top tier and the tick tier per zoom preset (proposal 19.1).
+          const tops = [], tickDefs = [];
+          if (dst) {
+            // Hour ticks from exact instants: 02:00 shows twice, as 02:00 CEST and 02:00 CET.
+            for (let t = a; t < b - 1e-9; t += 1) {
+              tickDefs.push({ t, label: hm(t), mono: true });
+              const last = tops[tops.length - 1];
+              if (!last || last.day !== dayOf(t)) { if (last) last.e = t; tops.push({ s: t, e: b, day: dayOf(t), label: dayLabel(dayOf(t)) + (narrow ? "" : " 2026, W" + PB.isoWeek(dayOf(t))) }); }
+            }
+          } else if (hours) {
+            tops.push({ s: a, e: b, label: dayLabel(dayOf(a)) + (narrow ? "" : " 2026, W" + PB.isoWeek(dayOf(a))) });
+            for (let h = Math.ceil(a); h < b; h++) tickDefs.push({ t: h, label: hm(h), mono: true });
+          } else if (zoomId === "day") {
+            for (let s = a; s < b; s += 24) tops.push({ s, e: s + 24, label: dayLabel(dayOf(s)) });
+            for (let t = a; t < b; t += 6) tickDefs.push({ t, label: hm(t), mono: true });
+          } else if (zoomId === "week") {
+            tops.push({ s: a, e: b, label: "W" + PB.isoWeek(dayOf(a)) + ", 2026", short: "W" + PB.isoWeek(dayOf(a)) });
+            for (let t = a; t < b; t += 24) tickDefs.push({ t, label: dayLabel(dayOf(t)), mono: false });
+          } else {
+            for (let s = a; s < b; s += 168) tops.push({ s, e: s + 168, label: "W" + PB.isoWeek(dayOf(s)) + (s === a ? ", 2026" : ""), short: "W" + PB.isoWeek(dayOf(s)) });
+            for (let t = a; t < b; t += 24) tickDefs.push({ t, label: (dayOf(t) % 7 === 0 ? dayLabel(dayOf(t)) : ""), mono: false, minor: dayOf(t) % 7 !== 0 });
+          }
+          const hasNow = PB.NOW > a && PB.NOW < b;
+          const xNow = px(PB.NOW);
+          // The now label: on the tick tier it replaces the hour labels it would touch (20.9). At Week and 4 weeks the tick
+          // labels are days, so the label moves to the top tier, names the day and starts at the now line.
+          const nowTop = zoomId === "week" || zoomId === "weeks";
+          const nowText = nowTop ? PB.dayLabel(PB.dayOf(PB.NOW)).split(" ")[0] + " " + PB.hm(PB.NOW) : PB.hm(PB.NOW);
+          const nowW = nowText.length * 7.25 + 12;
+          const nowL = Math.max(0, Math.min(laneW - nowW, xNow - 1));
+          const frozenOn = p.frozen === "on" || ((p.frozen || "auto") === "auto" && (move === "pointer" || move === "keyboard"));
+          const hasFrz = frozenOn && PB.FROZEN_END > a && PB.FROZEN_END < b;
+          const frzLabel = T.mv.frozenUntil ? T.mv.frozenUntil(PB.hm(PB.FROZEN_END)) : "";
+          const topW = tops.length ? tops[0].label.length * 6.8 + 24 : 0;
+          const hasFrzLabel = hasFrz && px(PB.FROZEN_END) - frzLabel.length * 6.8 - 16 > topW;
+          let lastEnd = -99;
+          const ticks = tickDefs.map((k) => {
+            const x = px(k.t), w = k.label.length * (k.mono ? 7.25 : 6.7) + 9;
+            let show = !!k.label && x >= lastEnd + 2 && x + w <= laneW + 1;
+            if (show && hasNow && !nowTop && k.mono && x < xNow + 30 && x + w > xNow - 30) show = false;
+            if (show) lastEnd = x + w;
+            // A tick without a label draws short, so its line never crosses a shown label.
+            return { label: show ? k.label : "", cls: (k.mono ? "" : "sans") + (k.minor || !show ? " minor" : ""), style: "left:" + Lc(pct(k.t)) };
+          });
+          const topsOut = tops.map((d, i) => {
+            const l = pct(Math.max(d.s, a)), r = pct(Math.min(d.e, b));
+            let label = d.label, pad = "";
+            if (hasNow && nowTop) {
+              // A top tier label whose text the now label would cover starts after it, without the year if it must.
+              const x0 = (l / 100) * laneW, x1 = (r / 100) * laneW, tx = x0 + 8;
+              if (nowL < tx + label.length * 6.8 && nowL + nowW > tx && nowL + nowW + 6 > tx) {
+                const start = nowL + nowW + 6;
+                if (start + label.length * 6.8 + 8 > x1 && d.short) label = d.short;
+                pad = ";padding-left:" + Math.round(start - x0) + "px";
+              }
+            }
+            return { label, cls: i === 0 ? "first" : "", style: "left:" + Lc(l) + ";width:" + Wc(r - l) + pad };
+          });
+
+          // Rows: one band per equipment group, one row per machine; collapsed groups hide their machines.
+          const collapsed = String(p.collapsed ?? "finishing").split(",").map((s) => s.trim()).filter(Boolean);
+          const all = [];
+          let ri = pinned ? 3 : 2, nMachine = 0;
+          const ICON = { started: "Play", finpend: "CircleCheckBig", draft: "Pencil", lock: "Lock", prop: "Sparkles", late: "Clock", overdue: "ClockAlert", mat: "TriangleAlert", erp: "FileDiff", lost: "LockOpen", stale: "RefreshCw" };
+          const noteOf = (bk, s) => {
+            const q = T.ofPcs(bk.done || 0, bk.q);
+            if (s === "started") return T.st.started(q);
+            if (s === "finpend") return T.st.finpend(q);
+            if (s === "held") { const pp = PB.person(bk.holder, strings); return T.st.held(pp ? pp.name : "", bk.since); }
+            if (s === "conf") return T.st.conf(bk.over);
+            if (s === "late") return T.st.late(bk.lateBy || 1);
+            if (s === "overdue") return T.st.overdue(PB.hm(bk.s));
+            return T.st[s];
+          };
+          // Moves (hours preset only): the subject leaves its place and an origin slot shows (proposal 19.10). The pointer
+          // move ends at 14:15, because Mill 2's break from 11:00 to 11:30 falls inside it (5.1).
+          const MV = {
+            pointer: { key: "1013.10", to: "Mill 2", s: 24 + 10.5, e: 24 + 14.25 },
+            refused: { key: "1013.10", to: "Lathe 3", s: 24 + 13.75, e: 24 + 17 },
+            keyboard: { key: "1003.20", to: "Lathe 2", s: 24 + 11.75, e: 24 + 15 },
+          }[move];
+          const placed = {};
+          const rowTop = {};
+          const ROWH = 52, TALLH = 68;
+          PB.GROUPS.forEach((g) => {
+            const col = collapsed.indexOf(g.id) >= 0;
+            const gname = PB.gName(g, strings);
+            const count = T.machinesN(g.machines.length) + (col ? T.collapsed : "");
+            const gFocus = focus === "group:" + g.id;
+            all.push({ isBand: !loading, isSkBand: loading, h: 28, ri: ri++, name: gname, lang: L ? "de" : "en", count, gcs: "--gc:" + g.gc, expanded: String(!col), discIcon: col ? "ChevronRight" : "ChevronDown", discLabel: col ? T.expand(gname) : T.collapse(gname), label: gname + ", " + count, focusCls: gFocus ? "is-focus" : "", ti: gFocus ? "0" : "-1" });
+            if (col) return;
+            g.machines.forEach((m) => {
+              const mName = PB.mName(m.id, strings);
+              const alt = nMachine++ % 2 ? "alt" : "";
+              if (loading) {
+                const k = nMachine % 3;
+                all.push({ isSkel: true, h: ROWH, ri: ri++, cls: alt, label: mName, skW: "width:" + [64, 88, 72][k] + "px", sk: [[0.04, 0.3], [0.36, 0.62], [0.7, 0.9]].slice(0, 2 + (k % 2)).map((x) => ({ style: "left:" + Lc(x[0] * 100) + ";width:" + Wc((x[1] - x[0]) * 100) })) });
+                return;
+              }
+              const source = dst ? D.jobs.filter((bk) => bk.m === m.id) : PB.jobsOn(m.id);
+              let list = state === "empty-range" ? [] : source.filter((bk) => bk.e > a && bk.s < b).map((bk) => Object.assign({}, bk, { st: bk.st.filter((k) => !(p.saved === "on" && k === "draft")) }));
+              const ghosts = [];
+              list = list.filter((bk) => {
+                if (MV && bk.key === MV.key && move !== "keyboard") { ghosts.push({ cls: "", style: pos(bk.s, bk.e) }); return false; }
+                return true;
+              });
+              list.forEach((bk) => {
+                if (p.reconnect === "on" && bk.reconnect) bk.st.push(bk.reconnect);
+                if (move === "keyboard" && (bk.key === "1003.20" || bk.key === "1021.10")) {
+                  bk.st = bk.st.filter((s) => s !== "conf");
+                  if (bk.key === "1003.20") { ghosts.push({ cls: "s0", style: pos(bk.s, bk.e) }); bk.s = MV.s; bk.e = MV.e; bk.moving = true; }
+                }
+              });
+              const tall = list.some((bk) => bk.sub !== undefined);
+              const rowH = tall ? TALLH : ROWH;
+              const blocks = [], narrowOnes = [];
+              // A block joins a cluster when its drawn part is under 24 px, also when the range edge cuts it (2.5.8).
+              list.forEach((bk) => { const w = px(Math.min(bk.e, b)) - px(Math.max(bk.s, a)) - 1; (w < 24 ? narrowOnes : blocks).push(Object.assign(bk, { w })); });
+              // Clusters: neighbouring blocks under 24 px merge when the gap between them is under 24 px (proposal 19.3).
+              narrowOnes.sort((x, y) => x.s - y.s);
+              const groups = [];
+              narrowOnes.forEach((bk) => { const last = groups[groups.length - 1]; if (last && px(bk.s) - px(last.e) < 24) { last.items.push(bk); last.e = Math.max(last.e, bk.e); } else groups.push({ s: bk.s, e: bk.e, items: [bk] }); });
+              // A cluster's target is at least 24 px wide. When that target reaches a wider block, the block joins the cluster,
+              // so the target never covers it.
+              const reach = (gr) => Math.max(px(Math.min(gr.e, b)), px(Math.max(gr.s, a)) + 24);
+              for (let again = true; again;) {
+                again = false;
+                groups.forEach((gr) => {
+                  const hit = blocks.filter((bk) => bk.s >= gr.s && px(Math.max(bk.s, a)) < reach(gr) - 0.5);
+                  hit.forEach((bk) => { blocks.splice(blocks.indexOf(bk), 1); gr.items.push(bk); gr.e = Math.max(gr.e, bk.e); again = true; });
+                });
+                groups.sort((x, y) => x.s - y.s);
+                for (let i = 0; i + 1 < groups.length; i++) if (px(Math.max(groups[i + 1].s, a)) < reach(groups[i]) - 0.5) { const nx = groups.splice(i + 1, 1)[0]; groups[i].items = groups[i].items.concat(nx.items); groups[i].e = Math.max(groups[i].e, nx.e); again = true; i--; }
+              }
+              const clpId = idp + "-clp";
+              const clusters = groups.map((gr, gi) => {
+                const n = gr.items.length;
+                gr.items.sort((x, y) => x.s - y.s);
+                const cnt = (k) => gr.items.filter((x) => x.st.indexOf(k) >= 0).length;
+                const parts = [T.cl.jobs(n), (sameDay(gr.s, gr.e) ? hm(gr.s) + " " + T.to + " " + hm(gr.e) : at(gr.s) + " " + T.to + " " + at(gr.e))];
+                ["draft", "conf", "lock", "late", "overdue", "mat", "prop"].forEach((k) => { const c = cnt(k); if (c) parts.push(T.cl[k](c)); });
+                const holders = {};
+                gr.items.forEach((x) => { if (x.st.indexOf("held") >= 0) holders[x.holder] = (holders[x.holder] || 0) + 1; });
+                Object.keys(holders).forEach((h) => parts.push(T.cl.held(holders[h], PB.person(h, strings).name)));
+                const cid = "cluster:" + m.id + (gi ? ":" + gi : "");
+                const isF = focus === cid || (focus === "cluster" && !placed.cluster);
+                const isOpen = !placed.clusterPop && (p.pop === cid || p.pop === "cluster");
+                if (focus === "cluster" && isF) placed.cluster = true;
+                const w = px(gr.e) - px(gr.s);
+                const c = { isCluster: true, n, label: parts.join(", "), icon: w >= 40, style: "left:" + Lc(pct(Math.max(gr.s, a))) + ";width:max(24px, " + Wc(pct(Math.min(gr.e, b)) - pct(Math.max(gr.s, a)), 1) + ")", ti: isF ? "0" : "-1", cls: (isF ? "is-focus " : "") + (isOpen ? "open" : ""), open: isOpen, exp: isOpen ? "true" : "false", ctl: isOpen ? clpId : undefined, items: gr.items, s: gr.s, e: gr.e, mId: m.id, mName };
+                if (isOpen) placed.clusterPop = c;
+                return c;
+              });
+              const outBlocks = blocks.map((bk) => {
+                const stt = bk.st;
+                // Density by drawn width (19.2, amended): full from 120 px, compact from 66 px, and under 66 px a bar
+                // with no text, because a whole job number needs 66 px. The name keeps every word at every density.
+                const dens = bk.w >= 120 ? "full" : bk.w >= 66 ? "compact" : "bar";
+                const border = ["lock", "held", "draft", "prop"].find((k) => stt.indexOf(k) >= 0);
+                const cls = [];
+                if (border) cls.push("m-" + border);
+                if (stt.indexOf("conf") >= 0) cls.push("m-conf");
+                if (bk.sub === 0) cls.push("s0");
+                if (bk.sub === 1) cls.push("s1");
+                if (dens !== "full") cls.push("d-" + dens);
+                if (bk.moving) cls.push("moving");
+                const isF = focus === bk.key || focus === bk.j && !placed["f" + bk.j] || (move === "keyboard" && bk.moving);
+                if (isF) { cls.push("is-focus"); placed["f" + bk.j] = true; }
+                let icons = stt.filter((k) => ICON[k]).map((k) => ({ n: ICON[k] }));
+                const held = stt.indexOf("held") >= 0;
+                const pp = held ? PB.person(bk.holder, strings) : null;
+                // A block-fields contribution (10.2): its icon, and its text when the block has room for it.
+                const bf = fieldsOn && PB.FIELDS ? PB.FIELDS[bk.key] : null;
+                const bfW = bf ? bf.text.length * 6.2 + 17 : 0;
+                if (dens === "compact") {
+                  const room = bk.w - 16 - 61 - (held ? 26 : 0) - (bf ? 17 : 0);
+                  icons = icons.slice(0, Math.max(0, Math.floor((room + 3) / 17)));
+                }
+                const bfShowText = !!bf && dens === "full" && bk.w - 16 - 64 - 32 - icons.length * 17 - bfW >= 0;
+                const an = PB.aName(bk.a, strings);
+                const started = stt.indexOf("started") >= 0 || stt.indexOf("finpend") >= 0;
+                const qtxt = started ? T.ofPcs(bk.done || 0, bk.q) : num(bk.q) + " " + T.pcs;
+                const bid = idp + "-" + bk.key.replace(/[^\w]/g, "-");
+                const hid = [num(bk.q) + " " + T.pcs, mName, dayLabel(dayOf(bk.s)) + " " + hm(bk.s) + " " + T.to + " " + (sameDay(bk.s, bk.e) ? hm(bk.e) : at(bk.e))].concat(stt.map((k) => noteOf(bk, k))).concat(bf ? [bf.acc] : []).join(", ");
+                placed.blocks = placed.blocks || {};
+                placed.blocks[bk.key] = { bk, m: m.id };
+                return {
+                  isBlock: true, key: bk.key, j: bk.j, a: an.t, lang: an.lang, jCls: dens === "bar" ? "pb-j pb-vh" : "pb-j", aCls: dens === "full" ? "pb-a" : "pb-a pb-vh",
+                  cls: cls.join(" "), icons, showMk: dens !== "bar" && (icons.length > 0 || held || !!bf), hasIni: held && dens !== "bar", ini: pp ? pp.ini : "",
+                  hasBf: !!bf && dens !== "bar", bfIcon: bf ? bf.icon : "", bfText: bf ? bf.text : "", bfShowText,
+                  two: bk.sub === undefined && dens !== "bar", l2: segs(dens === "full" ? qtxt + ", " + T.ends + " " + hm(bk.e) : qtxt),
+                  hasProg: started, progStyle: "--prog:" + Math.round(((bk.done || 0) / bk.q) * 100) + "%",
+                  sel: bk.key === sel ? "true" : "false", isSel: bk.key === sel, isF,
+                  style: "--fill:var(--palette-" + bk.f + ");" + pos(bk.s, bk.e),
+                  idj: bid + "-j", ida: bid + "-a", idh: bid + "-h", lby: bid + "-j " + bid + "-a " + bid + "-h", hid,
+                  s: bk.s, e: bk.e, sub: bk.sub, order: bk.order, raw: bk,
+                };
+              });
+              // Gridcells in time order, the stack slot second, so DOM order follows the row from left to right (13.1).
+              const cells = outBlocks.concat(clusters).sort((x, y) => (Math.max(x.s, a) - Math.max(y.s, a)) || ((x.sub || 0) - (y.sub || 0)));
+              const sels = selOrder ? outBlocks.filter((x) => x.order === selOrder).map((x) => ({ cls: x.sub === 1 ? "s1" : "", style: pos(x.s, x.e) })) : [];
+              const empty = !cells.length;
+              const eFocus = focus === "empty:" + m.id;
+              const jFocus = focus === "jobs:" + m.id;
+              const off = dst ? (D.off[m.id] || [[a, b]]) : PB.offSpans(m.cal, a, b);
+              all.push({
+                isMachine: true, h: rowH, ri: ri++, id: m.id, name: mName, lang: L ? "de" : "en", cls: (tall ? "tall " : "") + alt, gcs: "--gc:" + g.gc,
+                jobsLabel: T.jobsOn(mName), jbCls: jFocus ? "is-focus" : "", jbTi: jFocus ? "0" : "-1",
+                off: off.map((o) => ({ style: "left:" + Lc(pct(Math.max(o[0], a))) + ";width:" + Wc(pct(Math.min(o[1], b)) - pct(Math.max(o[0], a))) })),
+                ghosts, sels, blocks: outBlocks, cells, empty, empCls: eFocus ? "is-focus" : "", empTi: eFocus ? "0" : "-1", tall,
+              });
+            });
+          });
+          // Virtual rows: draw the rows from skip that fit in the rows height, plus one.
+          const skip = Number(p.skip || 0);
+          const rows = [];
+          let y = pinned ? 46 : 0;
+          for (let i = skip; i < all.length; i++) {
+            if (y > maxH + 46) break;
+            const r = all[i];
+            if (r.isMachine) rowTop[r.id] = { top: y, h: r.h, tall: r.tall, row: r };
+            rows.push(r);
+            y += r.h;
+          }
+          // Roving tabindex: one stop in the grid, the focused cell, else the selected block, else the first cell in view.
+          const flat = [];
+          rows.forEach((r) => (r.cells || []).forEach((x) => flat.push(x)));
+          const anyFocus = focus !== "none";
+          const chipSel = PB.NOTPLACED.concat(PB.MORE).some((u) => u.j === sel);
+          const stop = anyFocus || chipSel ? null : flat.find((x) => x.isSel) || flat[0];
+          flat.forEach((x) => { if (x.isCluster) { if (!anyFocus) x.ti = x === stop ? "0" : "-1"; } else x.ti = x.isF || x === stop ? "0" : "-1"; });
+          // With no block or cluster drawn, the first empty cell holds the stop: the Not placed row's "No job orders without
+          // a place" when it is empty, else the first "No jobs in this range". While loading, the grid itself does.
+          let gridTi = "-1", npStop = "none";
+          if (!anyFocus && !chipSel && !stop) {
+            const er = rows.find((r) => r.isMachine && r.empty);
+            if (pinned && p.np === "empty" && !loading) npStop = "none-cell";
+            else if (er) er.empTi = "0";
+            else gridTi = "0";
+          }
+          const yOf = (mId, sub) => { const rt = rowTop[mId]; if (!rt) return null; return rt.top + (rt.tall ? (sub === 1 ? 51 : sub === 0 ? 17 : 34) : Math.round(rt.h / 2)); };
+          // Block boxes of the drawn rows, in layer pixels, for placing the lead time pill clear of them.
+          const boxesAt = (yy) => {
+            const id = Object.keys(rowTop).find((k) => yy >= rowTop[k].top && yy < rowTop[k].top + rowTop[k].h);
+            if (!id) return [];
+            const rt = rowTop[id];
+            return rt.row.cells.map((c) => { const top = rt.tall && c.sub !== undefined ? rt.top + (c.sub === 1 ? 38 : 4) : rt.top + 4; const hh = rt.tall && c.sub !== undefined ? 26 : rt.h - 9; const x1 = G + px(Math.max(c.s, a)); return { x1, x2: Math.max(x1 + 24, G + px(Math.min(c.e, b))), y1: top, y2: top + hh }; });
+          };
+          const clear = (cx, cy, w, hh) => !boxesAt(cy).some((q) => cx + w / 2 > q.x1 && cx - w / 2 < q.x2 && cy + hh / 2 > q.y1 && cy - hh / 2 < q.y2);
+
+          // Links of the selected order, with the lead time (proposal: lines only between consecutive operations).
+          const lines = [], pills = [];
+          if (selOrder && !loading) {
+            const mine = [];
+            Object.keys(rowTop).forEach((mId) => rowTop[mId].row.blocks.forEach((x) => { if (x.order === selOrder) mine.push({ x, mId }); }));
+            const ops = [...new Set(mine.map((o) => Number(o.x.j.split(".")[1])))].sort((u, v) => u - v);
+            for (let i = 0; i + 1 < ops.length; i++) {
+              mine.filter((o) => Number(o.x.j.split(".")[1]) === ops[i]).forEach((pr) => mine.filter((o) => Number(o.x.j.split(".")[1]) === ops[i + 1]).forEach((su) => {
+                const t1 = pr.x.e, t2 = su.x.s;
+                if (!(t1 > a && t2 < b && t2 > t1)) return;
+                const y1 = yOf(pr.mId, pr.x.sub), y2 = yOf(su.mId, su.x.sub);
+                if (y1 === null || y2 === null) return;
+                const tm = t1 + Math.min(0.25, (t2 - t1) / 2);
+                lines.push({ cls: "pb-ln h", style: "left:" + Lc(pct(t1)) + ";top:" + y1 + "px;width:" + Wc(pct(tm) - pct(t1)) });
+                lines.push({ cls: "pb-ln v", style: "left:" + Lc(pct(tm)) + ";top:" + (Math.min(y1, y2) - 1) + "px;height:" + (Math.abs(y2 - y1) + 2) + "px" });
+                lines.push({ cls: "pb-ln h", style: "left:" + Lc(pct(tm)) + ";top:" + y2 + "px;width:" + Wc(pct(t2) - pct(tm), 6) });
+                lines.push({ cls: "pb-arr", style: "left:" + Lc(pct(t2)) + ";top:" + y2 + "px" });
+                const lt = su.x.raw.lead;
+                if (!lt || pills.some((q) => q.key === su.x.key)) return;
+                // The pill sits on the successor's row left of the link, else on the predecessor's row right of its end,
+                // wherever it covers no block; it never leaves the time area (it would cover the machine column).
+                const text = lt + " min", pw = text.length * 7.25 + 12, ph = 18;
+                const inX = (cx) => Math.max(G + pw / 2 + 2, Math.min(full - pw / 2 - 2, cx));
+                const cand = [[inX(G + px(tm) - 28), y2], [inX(G + px(t1) + 6 + pw / 2), y1]];
+                const seen = (c) => c[1] - ph / 2 >= (pinned ? 46 : 0) && c[1] + ph / 2 <= maxH - 2;
+                const pick = cand.find((c) => seen(c) && clear(c[0], c[1], pw, ph)) || cand.find(seen) || cand[0];
+                pills.push({ key: su.x.key, t: text, style: "left:" + Math.round(pick[0]) + "px;top:" + pick[1] + "px" });
+              }));
+            }
+          }
+
+          // Pointer and refused previews, keyboard move hint; all stay inside the time area (19.23).
+          const inLane = (x, w) => Math.round(Math.max(G, Math.min(full - w - 2, x)));
+          let hasPrev = false, prev = {}, hasHint = false, hintStyle = "";
+          if (MV && move !== "keyboard" && rowTop[MV.to]) {
+            const subj = PB.job(MV.key), an = PB.aName(subj.a, strings);
+            const yT = rowTop[MV.to].top;
+            const no = move === "refused";
+            const mN = PB.mName(MV.to, strings);
+            hasPrev = true;
+            prev = {
+              j: subj.j, a: an.t, lang: an.lang, icon: no ? "Ban" : "TriangleAlert", cls: no ? "no" : "",
+              l2: num(subj.q) + " " + T.pcs + ", " + T.ends + " " + hm(MV.e),
+              style: "--fill:var(--palette-" + subj.f + ");top:" + (yT + 4) + "px;" + pos(MV.s, MV.e),
+              snapStyle: "left:" + Lc(pct(MV.s)) + ";top:" + yT + "px;height:" + rowTop[MV.to].h + "px",
+              tipCls: no ? "no" : "", tipIcon: no ? "Ban" : "Move",
+              tip1: no ? T.mv.refused(mN) : mN + ", " + hm(MV.s) + " " + T.to + " " + hm(MV.e),
+              hasTip2: !no && MV.s < PB.FROZEN_END, tip2: T.mv.frozen,
+              tipStyle: "left:" + inLane(G + px(MV.s), st0.tipW || 300) + "px;top:" + (yT - 4) + "px",
+              ptrStyle: "left:" + Math.round(G + px(MV.s) + 36) + "px;top:" + (yT + 20) + "px",
+            };
+          }
+          if (move === "keyboard" && rowTop[MV.to]) { hasHint = true; hintStyle = "left:" + inLane(G + px(MV.s), st0.hintW || 400) + "px;top:" + (rowTop[MV.to].top - 2) + "px"; }
+
+          // Hover card, block menu and cluster popover, anchored to their block or cluster. Below, else above, else beside
+          // the anchor, and always inside the time area of the grid (19.23).
+          const anchor = (key) => { const pl = placed.blocks && placed.blocks[key]; if (!pl || !rowTop[pl.m]) return null; const x = pl.bk; const rt = rowTop[pl.m]; const top = rt.tall && x.sub !== undefined ? rt.top + (x.sub === 1 ? 38 : 4) : rt.top + 4; const hgt = rt.tall && x.sub !== undefined ? 26 : rt.h - 9; return { s: x.s, e: x.e, top, bottom: top + hgt, bk: x, m: pl.m }; };
+          const place = (an, w, hEst) => {
+            const lx = G + px(Math.max(an.s, a)), rx = G + px(Math.min(an.e, b));
+            const room = maxH;
+            const clampX = (x) => Math.round(Math.max(G, Math.min(full - w - 2, x)));
+            const xv = clampX(lx > full * 0.55 ? rx - w : lx);
+            if (an.bottom + 6 + hEst <= room - 2) return "left:" + xv + "px;top:" + (an.bottom + 6) + "px";
+            if (an.top - 6 - hEst >= 2) return "left:" + xv + "px;top:" + (an.top - 6) + "px;transform:translateY(-100%)";
+            // Neither fits: beside the anchor, kept inside the rows.
+            const top = Math.max(2, Math.min(room - hEst - 2, an.top - hEst / 2));
+            const leftSide = lx - 8 - w, rightSide = rx + 8;
+            const x = lx > full / 2 ? (leftSide >= G ? leftSide : rightSide) : (rightSide + w <= full - 2 ? rightSide : leftSide);
+            return "left:" + clampX(x) + "px;top:" + Math.round(top) + "px";
+          };
+          let hasHc = false, hc = {};
+          const hcA = p.hover && p.hover !== "none" ? anchor(p.hover) : null;
+          if (hcA) {
+            const an = PB.aName(hcA.bk.a, strings);
+            const bf = fieldsOn && PB.FIELDS ? PB.FIELDS[hcA.bk.key] : null;
+            const rowsF = PB.facts(hcA.bk, strings).concat(bf ? bf.hover.map((x) => ({ k: x[0], segs: segs(x[1]), lang: "" })) : []);
+            const badges = PB.badges(hcA.bk, strings);
+            hasHc = true;
+            hc = { j: hcA.bk.j, a: an.t, lang: an.lang, rows: rowsF, badges, hasBadges: badges.length > 0, style: place(hcA, 300, st0.hcH || 64 + rowsF.length * 19 + (badges.length ? 30 : 0)) };
+          }
+          let hasMenu = false, menu = {};
+          const mA = p.menu && p.menu !== "none" ? anchor(p.menu) : null;
+          if (mA) {
+            const stt = mA.bk.st;
+            const heldM = stt.indexOf("held") >= 0;
+            // On another planner's order Move and Lock are off until the soft lock ends; Break soft lock takes their place.
+            const items = [{ t: T.menu.move, icon: "Move", kbd: "M", dis: heldM }, stt.indexOf("lock") >= 0 ? { t: T.menu.unlock, icon: "LockOpen", dis: heldM } : { t: T.menu.lock, icon: "Lock", dis: heldM }];
+            if (heldM) items.push({ t: T.menu.breakLock, icon: "UserX" });
+            items.push({ t: T.menu.open, icon: "ExternalLink" });
+            const first = items.findIndex((x) => !x.dis);
+            hasMenu = true;
+            menu = { label: T.menu.label(mA.bk.j), items: items.map((x, i) => ({ t: x.t, icon: x.icon, hasKbd: !!x.kbd, kbd: x.kbd, dis: x.dis ? "true" : undefined, cls: (x.dis ? "is-dis " : "") + (i === first ? "kfocus" : "") })), style: place(mA, 200, st0.menuH || 8 + items.length * 32) };
+          }
+          let hasClp = false, clp = {};
+          const pc = placed.clusterPop;
+          if (pc && rowTop[pc.mId]) {
+            const rt = rowTop[pc.mId];
+            const an0 = { s: pc.s, e: pc.e, top: rt.top + 4, bottom: rt.top + rt.h - 5 };
+            hasClp = true;
+            clp = {
+              id: idp + "-clp", hid: idp + "-clp-h", title: T.cl.popTitle(pc.n, pc.mName, hm(pc.s) + " " + T.to + " " + hm(pc.e)),
+              rows: pc.items.map((x, i) => { const an = PB.aName(x.a, strings); return { j: x.j, a: " " + an.t, lang: an.lang, d: [hm(x.s) + " " + T.to + " " + hm(x.e)].concat(x.st.map((k) => noteOf(x, k))).join(", "), mvLabel: T.cl.move + " " + x.j, acLabel: T.cl.actions(x.j), mvCls: i === 0 ? "is-focus" : "" }; }),
+              style: place(an0, 360, st0.clpH || 46 + pc.items.length * 49),
+            };
+          }
+
+          const nMachines = all.filter((r) => r.isMachine || r.isSkel).length;
+          const nBands = all.filter((r) => r.isBand || r.isSkBand).length;
+          const total = 1 + (pinned ? 1 : 0) + nBands + nMachines;
+          const shown = rows.length;
+          const vTop = f((skip / Math.max(1, all.length)) * 100), vH = f(Math.max(10, (shown / Math.max(1, all.length)) * 100));
+          const hPos = hours && !dst ? { l: 20 + ((a - 30) / 12) * 60, w: (span / 12) * 60 } : dst ? { l: 30, w: 40 } : { l: 8, w: 44 };
+          const npSel = selJob ? "none" : sel;
+          const edge = (t) => hm(t) + (dst && !D.amb(t) ? " " + wall(t).zone : "");
+          return Object.assign(base, {
+            t: T, strings, size: narrow ? "narrow" : "wide", wide: !narrow, lang: T.lang,
+            gridCls: (narrow ? "nar" : "") + (pinned ? " pinned" : "") + (!narrow && mcPx < 120 ? " mcn" : ""),
+            gridStyle: "--span:" + f(span / (dst ? 1 : Z.step)) + ";--mc:" + mcPx + "px",
+            gridLabel: T.board + ", " + dayLabel(dayOf(a)) + " " + edge(a) + " " + T.to + " " + (sameDay(a, b) ? edge(b) : dayLabel(dayOf(b - 1e-6)) + " " + edge(b)),
+            gridTi, rowCount: String(total), busy: loading ? "true" : "false", ro: state === "readonly" ? "true" : "false",
+            timeLabel: (L ? "Werkszeit, " : "Plant time, ") + (hours && sameDay(a, b) ? dayLabel(dayOf(a)) : dayLabel(dayOf(a)) + " " + T.to + " " + dayLabel(dayOf(b - 1e-6))),
+            tops: topsOut, ticks, hasNow, nowStyle: "left:" + Lc(pct(PB.NOW)), nowText,
+            nowCls: nowTop ? "top" : "", nowLStyle: nowTop ? "left:" + Math.round(G + nowL) + "px" : "left:" + Lc(pct(PB.NOW)),
+            hasFrz, hasFrzLabel, frzLabel, frzStyle: "left:" + Lc(pct(PB.FROZEN_END)),
+            layerStyle: pinned ? "top:46px" : "",
+            pinned, npState: p.np || "default", npFocus: focus.indexOf("np:") === 0 ? focus.slice(3) : "none", npStop, npSel, npIdp: idp + "-np", npBusy: loading ? "true" : "false",
+            rows, lines, pills, hasPrev, prev, hasHint, hintStyle, hasHc, hc, hasMenu, menu, hasClp, clp,
+            vthStyle: "top:" + vTop + "%;height:" + vH + "%",
+            hthStyle: "left:" + f(hPos.l) + "%;width:" + f(hPos.w) + "%",
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

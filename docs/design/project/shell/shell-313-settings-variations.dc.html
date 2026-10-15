@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings area: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="frame set-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, story, routes per option, personas, what is decided, how to compare, the rules the options are judged against and the open questions</span></div>
+        <dc-import name="shell-313-settings-variations-header" hint-size="1440px,3558px"></dc-import>
+      </div>
+      <div class="frame set-w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the criteria of the spec</span></div>
+        <dc-import name="shell-313-settings-variations-compare" hint-size="1440px,1333px"></dc-import>
+      </div>
+      <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3">
+        <div class="frame set-w1440" style="{{ n.style }}" data-screen-label="{{ n.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ n.id }}</span>{{ n.title }}<span class="fth">What it optimizes, what it costs, how it meets the rules</span></div>
+          <dc-import name="shell-313-settings-variations-notes" option="{{ n.id }}" hint-size="1440px,788px"></dc-import>
+        </div>
+      </sc-for>
+      <sc-for list="{{ frames }}" as="f" hint-placeholder-count="17">
+        <div class="frame {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><sc-if value="{{ f.url }}"><span class="set-url">{{ f.url }}</span></sc-if></div>
+          <dc-import name="shell-313-settings-variations-frame" option="{{ f.option }}" view="{{ f.view }}" page="{{ f.page }}" theme="{{ f.theme }}" width="{{ f.width }}" persona="{{ f.persona }}" menu="{{ f.menu }}" sheet="{{ f.sheet }}" focus="{{ f.focus }}" hint-size="{{ f.hint }}"></dc-import>
+        </div>
+      </sc-for>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so every part gets its icons.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Layout: the header F0 and the comparison R on top, then two rows per option. Row 1: the company page (1), the
+          // plant page (2) and the plant admin (3, dark); row 2: the notes, the way in (4, dark), 320 (5) and, for B and
+          // C, a second 320 frame (6). Frame numbers follow the canvas, left to right and row by row. Heights are the
+          // measured parts.
+          const X = [80, 1600, 3120, 3920];
+          const TOP = 3800;
+          const ROW1 = 1080, ROW2 = 1120;
+          const NAMES = { A: "Own sidebar", B: "Rail and scope picker", C: "In the page" };
+          const URL = {
+            A: { users: "/settings/company/$companyId/core/users", machines: "/settings/plant/plant-a/core/machines", calendars: "/settings/plant/plant-a/core/calendars" },
+            B: { users: "/settings/$companyId/core/users", machines: "/plant-a/settings/core/machines", calendars: "/plant-a/settings/core/calendars" },
+            C: { users: "/settings/$companyId/core/users", machines: "/plant-a/core/machines", calendars: "/plant-a/core/calendars" }
+          };
+          const DETAIL = {
+            A: {
+              users: "Light, 1440. Jonas Holm, company admin of Acme AB and Nordic Tools AB, came from Plant A",
+              machines: "Light, 1440. Plant A's group open, Acme AB collapsed",
+              admin: "Dark, 1440. Erik Lind administers Plant A only: Plant A, Modules and Plugins",
+              reach: "Dark, 1440. Settings at the sidebar foot of Plant A's board, focused",
+              narrow: "Navigation sheet"
+            },
+            B: {
+              users: "Light, 1440. Company scope: the rail has no plant to draw",
+              machines: "Light, 1440. The scope picker open, focus on Company settings",
+              admin: "Dark, 1440. Erik Lind: one scope, a static head",
+              reach: "Dark, 1440. The user menu open from the sidebar foot, focus on Settings",
+              narrow: "Second sheet",
+              extra: "Settings menu closed"
+            },
+            C: {
+              users: "Light, 1440. The company area: no plant, so no sidebar",
+              machines: "Light, 1440. Plant A settings beside the page, in the planner shell",
+              admin: "Dark, 1440. Erik Lind: Plant A settings without the company link",
+              reach: "Dark, 1440. The Settings button in the top bar, focused, with its tooltip",
+              narrow: "Landing page",
+              extra: "Users, drilled in"
+            }
+          };
+          // The 320 frames: the page each one draws and its route
+          const NARROW = {
+            A: { page: "users", sheet: "open", url: URL.A.users },
+            B: { page: "machines", sheet: "open", url: URL.B.machines },
+            C: { page: "landing", sheet: "none", url: "/settings/$companyId" }
+          };
+          const EXTRA = {
+            B: { page: "machines", url: URL.B.machines },
+            C: { page: "users", url: URL.C.users }
+          };
+          const frames = [];
+          const notes = [];
+          ["A", "B", "C"].forEach((o, i) => {
+            const y1 = TOP + i * (ROW1 + ROW2), y2 = y1 + ROW1;
+            const nm = NAMES[o];
+            const F = (n, x, y, title, label, d, o2) => frames.push(Object.assign({
+              id: o + n, option: o, view: "settings", page: "users", theme: "light", width: "1440", persona: "company-admin", menu: "none", sheet: "none", focus: "none",
+              cls: "set-w1440", hint: "1440px,936px", style: "left:" + x + "px;top:" + y + "px", title: nm + ": " + title, label: o + n + " " + label, detail: d, url: ""
+            }, o2 || {}));
+            F(1, X[0], y1, "Users at Acme AB", "Users at Acme AB, light, 1440 by 900", DETAIL[o].users, { url: URL[o].users });
+            F(2, X[1], y1, "Machines at Plant A", "Machines at Plant A, light, 1440 by 900", DETAIL[o].machines, { page: "machines", menu: o === "B" ? "scope" : "none", url: URL[o].machines });
+            F(3, X[2], y1, "a plant admin of Plant A", "Plant admin of Plant A, Calendars, dark, 1440 by 900", DETAIL[o].admin, { page: "calendars", persona: "plant-admin", theme: "dark", url: URL[o].calendars });
+            notes.push({ id: o, title: o + ". " + nm, label: o + " notes", style: "left:" + X[0] + "px;top:" + y2 + "px" });
+            F(4, X[1], y2, "the way in", "The way in from Plant A's board, dark, 1440 by 900", DETAIL[o].reach, { view: "reach", theme: "dark", focus: "entry", menu: o === "B" ? "user" : "none", url: "/plant-a/planning/board" });
+            const nw = { title: nm + ": 320 by 640", width: "320", cls: "set-w320", hint: "320px,676px" };
+            F(5, X[2], y2, "", DETAIL[o].narrow + ", light, 320 by 640", DETAIL[o].narrow, Object.assign({}, nw, NARROW[o]));
+            if (EXTRA[o]) F(6, X[3], y2, "", DETAIL[o].extra + ", light, 320 by 640", DETAIL[o].extra, Object.assign({}, nw, EXTRA[o]));
+          });
+          frames.sort((a, b) => (a.id < b.id ? -1 : 1));
+          return { frames: frames, notes: notes };
+        }
+      }
+    </script>
+  </body>
+</html>

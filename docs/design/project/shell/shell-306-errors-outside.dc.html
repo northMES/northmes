@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pages outside the shell with tokens</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <div class="er-lines {{ partCls }}">
+        <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="1">
+          <div class="er-line">
+            <sc-for list="{{ ln.frames }}" as="f" hint-placeholder-count="2">
+              <section class="er-f {{ f.wcls }}" data-screen-label="{{ f.label }}">
+                <sc-if value="{{ f.chip }}"><div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span></div></sc-if>
+                <sc-if value="{{ f.hasUrl }}"><div class="sh-doc er-url"><span class="sh-doc-k">url</span><span>{{ f.url }}</span></div></sc-if>
+                <sc-if value="{{ f.titles }}"><div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ f.docTitle }}</span></div></sc-if>
+                <div class="sh-scr {{ f.scrCls }}" lang="en">
+                  <a class="btn v-default sh-skip {{ f.skipCls }}" href="#{{ f.mainId }}">Skip to main content</a>
+                  <div class="sh-col">
+                    <header class="sh-tb er-tb">
+                      <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                    </header>
+                    <main class="er-om {{ f.n }}" id="{{ f.mainId }}" tabIndex="-1" aria-busy="{{ f.busy }}">
+                      <div class="er-card {{ f.cardCls }}">
+                        <h1 class="er-h1 {{ f.h1Cls }}" tabIndex="-1">{{ f.h1 }}</h1>
+                        <sc-if value="{{ f.isBoot }}">
+                          <p class="er-load"><span class="ic" data-icon="LoaderCircle"></span><span>Starting NorthMES in this browser.</span></p>
+                        </sc-if>
+                        <sc-if value="{{ f.isSignin }}">
+                          <div class="er-box" role="group" aria-labelledby="{{ f.boxId }}">
+                            <h2 class="er-box-t" id="{{ f.boxId }}"><span class="ic" data-icon="Info"></span><span>Your session ended</span></h2>
+                            <p class="er-box-b">Sign in again to go back to the page you were on.</p>
+                          </div>
+                          <form class="er-form" onSubmit="{{ stop }}">
+                            <div class="fld">
+                              <span class="lbl">Username or email</span>
+                              <span class="inp" data-stop="1"></span>
+                            </div>
+                            <div class="fld">
+                              <span class="lbl">Password</span>
+                              <span class="inp er-pw" data-stop="1"><button class="er-eye" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button></span>
+                            </div>
+                            <button class="btn v-default er-submit" type="button">Sign in</button>
+                          </form>
+                          <p class="er-help">Forgot your password? Ask a plant admin to reset it.</p>
+                        </sc-if>
+                        <sc-if value="{{ f.isState }}">
+                          <div class="er-head"><span class="ic ic24 {{ f.p.tone }}" data-icon="{{ f.p.icon }}"></span><p class="er-lead">{{ f.p.lead }}</p></div>
+                          <sc-for list="{{ f.p.ps }}" as="q"><p class="er-p">{{ q }}</p></sc-for>
+                          <sc-if value="{{ f.p.hasDl }}">
+                            <dl class="er-dl {{ f.n }}">
+                              <sc-for list="{{ f.p.dl }}" as="r">
+                                <div class="er-dr"><dt class="er-dt">{{ r.k }}</dt><dd class="er-dd"><span class="er-data">{{ r.v }}</span><sc-if value="{{ r.hasCopy }}"><button class="btn icon v-ghost er-b44" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></sc-if></dd></div>
+                              </sc-for>
+                            </dl>
+                          </sc-if>
+                          <div class="er-acts {{ f.n }}">
+                            <sc-if value="{{ f.p.isLink }}"><a class="btn v-default er-b44" href="#">{{ f.p.act }}</a></sc-if>
+                            <sc-if value="{{ f.p.isBtn }}"><button class="btn v-default er-b44" type="button"><span class="ic" data-icon="RotateCw"></span>{{ f.p.act }}</button></sc-if>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </main>
+                  </div>
+                </div>
+                <sc-if value="{{ f.hasNote }}"><div class="er-leg er-leg-out"><span>{{ f.note }}</span></div></sc-if>
+              </section>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"row": {"editor": "enum", "options": ["all", "SO", "BO", "HS"], "default": "all", "tsType": "string"}, "frame": {"editor": "text", "default": "", "tsType": "string"}, "labels": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}, "titles": {"editor": "enum", "options": ["on", "off"], "default": "on", "tsType": "string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html, behind the same flag, for frames that mount no Shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Part of shell-306-errors.dc.html: the pages outside the shell that load the shell stylesheet, so D1 tokens and the
+          // bundled Plex fonts apply: session ended (D2 sign-in layout), boot and boot failure, HTTPS required.
+          // frame="BO3" draws one frame without chip and label, for the keyboard part.
+          const P = this.props || {};
+          const pick = (v, d) => (v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim());
+          const row = pick(P.row, "all").toUpperCase();
+          const only = pick(P.frame, "").toUpperCase();
+          const labels = pick(P.labels, "on") !== "off";
+          const titles = pick(P.titles, "on") !== "off";
+          const SIGNIN = "/sign-in?redirect=%2Fplant-a%2Fplanning%2Fproduction-orders%3Fstatus%3Dplanned";
+          const fail = { icon: "CircleAlert", tone: "er-err", lead: "The server sent an error when this browser asked which modules to load, so no page can open.",
+            ps: ["Reload to try again. If NorthMES still does not start, give your plant admin the correlation id."],
+            dl: [{ k: "Correlation id", v: "0199c4f0-12aa-7e03-b6d1-94c2e8a7f310", copy: true }, { k: "Code", v: "core.internal" }], act: "Reload page", link: false };
+          const noAnswer = { icon: "WifiOff", tone: "er-warn", lead: "NorthMES did not answer. It may be restarting, or this browser cannot reach the server.",
+            ps: ["This page tries again every 10 seconds and opens NorthMES when it answers."], act: "Reload page", link: false };
+          const https = { icon: "ShieldAlert", tone: "er-warn", lead: "This page was opened over HTTP, which is not secure. NorthMES checks every module it loads, and browsers allow that check only over HTTPS.",
+            ps: ["Open NorthMES at its HTTPS address. If that does not work, ask your IT department."],
+            dl: [{ k: "Address", v: "http://mes.acme.example/plant-a/planning/board" }], act: "Open with HTTPS", link: true };
+          const T_SIGN = "Sign in · NorthMES";
+          const T_BOOT = "Loading · NorthMES";
+          const T_FAIL = "NorthMES could not start · NorthMES";
+          const T_HTTPS = "NorthMES needs HTTPS · NorthMES";
+          // [row, id, name, theme, width, chip text, config]; config.note is the note under the screen. A 320 chip holds only the theme
+          // and the size, as D2 draws it.
+          const L = [
+            ["SO", "SO1", "Session ended", "light", 1440, "A 4401 close on Production orders sent the tab to sign-in with the return URL. D2's sign-in layout with the info box; empty fields; the h1 has focus", { kind: "signin", h1: "Sign in to NorthMES", t: T_SIGN, url: SIGNIN, focus: "h1" }],
+            ["SO", "SO2", "Session ended", "dark", 1440, "As SO1", { kind: "signin", h1: "Sign in to NorthMES", t: T_SIGN, url: SIGNIN, focus: "h1" }],
+            ["SO", "SO3", "Session ended", "light", 320, "", { kind: "signin", h1: "Sign in to NorthMES", t: T_SIGN, url: SIGNIN, focus: "h1" }],
+            ["BO", "BO1", "Loading NorthMES", "light", 1440, "The static main of index.html before the shell renders: main has aria-busy, nothing is focused, the skip link is hidden until focused", { kind: "boot", h1: "Loading NorthMES", t: T_BOOT }],
+            ["BO", "BO2", "Loading NorthMES", "dark", 1440, "As BO1 with the stored dark theme", { kind: "boot", h1: "Loading NorthMES", t: T_BOOT }],
+            ["BO", "BO3", "NorthMES could not start", "light", 1440, "GET /api/v1/web/modules answered 500. No sidebar, Help or account menu: nothing is known about the user or the modules; nothing is focused", { kind: "state", h1: "NorthMES could not start", t: T_FAIL, p: fail }],
+            ["BO", "BO4", "NorthMES could not start", "dark", 1440, "As BO3", { kind: "state", h1: "NorthMES could not start", t: T_FAIL, p: fail }],
+            ["BO", "BO5", "Could not start", "light", 320, "", { kind: "state", h1: "NorthMES could not start", t: T_FAIL, p: fail }],
+            ["BO", "BO6", "No answer at boot", "light", 1280, "The modules request got no response, or 502, 503 or 504. 1280 by 800 is also the station landscape size", { kind: "state", h1: "NorthMES could not start", t: T_FAIL, p: noAnswer }],
+            ["BO", "BO7", "No answer at boot", "dark", 1280, "As BO6", { kind: "state", h1: "NorthMES could not start", t: T_FAIL, p: noAnswer }],
+            ["HS", "HS1", "HTTPS required", "light", 1440, "Boot stopped at the secure context check. Open with HTTPS is a link to the same host, path and search with https", { kind: "state", h1: "NorthMES needs HTTPS", t: T_HTTPS, url: "http://mes.acme.example/plant-a/planning/board", p: https }],
+            ["HS", "HS2", "HTTPS required", "dark", 1440, "As HS1", { kind: "state", h1: "NorthMES needs HTTPS", t: T_HTTPS, url: "http://mes.acme.example/plant-a/planning/board", p: https }],
+            ["HS", "HS3", "HTTPS required", "light", 320, "", { kind: "state", h1: "NorthMES needs HTTPS", t: T_HTTPS, url: "http://mes.acme.example/plant-a/planning/board", p: https, note: "As HS1; the address wraps." }]
+          ];
+          const HGT = { 1440: 900, 1280: 800, 320: 640 };
+          const frames = L.filter((r) => (only ? r[1] === only : row === "ALL" || r[0] === row)).map((r) => {
+            const c = r[6];
+            const w = r[4];
+            const n = w === 320;
+            const theme = r[3];
+            const wh = w + " by " + HGT[w];
+            const pre = (only ? "er-k" : "er-") + r[1].toLowerCase();
+            const th = (theme === "dark" ? "Dark, " : "Light, ") + wh + (n || !r[5] ? "" : ". " + r[5]);
+            const p = c.p ? {
+              icon: c.p.icon,
+              tone: c.p.tone,
+              lead: c.p.lead,
+              ps: c.p.ps,
+              hasDl: !!c.p.dl,
+              dl: (c.p.dl || []).map((d) => ({ k: d.k, v: d.v, hasCopy: !!d.copy })),
+              act: c.p.act,
+              isLink: c.p.link,
+              isBtn: !c.p.link
+            } : null;
+            return {
+              id: r[1],
+              name: r[2],
+              th: th,
+              w: w,
+              hasNote: labels && !only && !!c.note,
+              note: c.note || "",
+              label: only ? null : r[1] + " " + r[2] + ", " + theme + ", " + wh,
+              chip: labels && !only,
+              titles: titles,
+              hasUrl: titles && !!c.url,
+              url: c.url || "",
+              docTitle: c.t,
+              wcls: "w" + w,
+              scrCls: "w" + w + (theme === "dark" ? " dark" : ""),
+              n: n ? "n" : "",
+              mainId: pre + "-main",
+              boxId: pre + "-box",
+              skipCls: "",
+              busy: c.kind === "boot" ? "true" : null,
+              cardCls: (c.kind === "state" || c.kind === "boot" ? "wide " : "") + (n ? "n" : ""),
+              h1: c.h1,
+              h1Cls: (n ? "n " : "") + (c.focus === "h1" ? "is-focus" : ""),
+              isBoot: c.kind === "boot",
+              isSignin: c.kind === "signin",
+              isState: c.kind === "state",
+              p: p
+            };
+          });
+          // One size of screen per line, so every screen in a line starts at one y; a pair of 1440 frames sits two across.
+          const lines = [];
+          frames.forEach((f) => {
+            const cur = lines[lines.length - 1];
+            const used = cur ? cur.frames.reduce((t, g) => t + g.w + 80, -80) : 0;
+            if (cur && (cur.w === f.w || f.join) && used + 80 + f.w <= 2960) cur.frames.push(f);
+            else lines.push({ w: f.w, frames: [f] });
+          });
+          return { lines: lines, partCls: only ? "one" : "", stop: (e) => e.preventDefault() };
+        }
+      }
+    </script>
+  </body>
+</html>

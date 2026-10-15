@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 lost connection, idle sign-off, reload, long strings and keyboard</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+        <style>
+/* Part of the D4 spec page production-start-303-station.dc.html (issue northMES/northmes#303): lost connection, kept
+   entries, the idle warning, the reload after an update, long strings, keyboard, touch and focus, and their build notes
+   (OF1 to OF27, OF26 holds the build notes). Every frame mounts the folder's StationFrame copy and the shared parts; the
+   sign-in cards, the notices and the notes are page markup. Classes start with of-. Every UI color is a D1 token. Badges,
+   boxes, legends and notes columns are annotations, not UI. */
+.of-part{display:flex;flex-direction:column;gap:140px;width:max-content;padding:60px 0 0}
+.of-row{display:flex;align-items:flex-start;gap:80px}
+.of-fr{position:relative;flex:none;display:flex;align-items:flex-start;gap:16px}
+.of-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+.of-stage{position:relative;flex:none}
+.of-stage.crop{overflow:hidden;border-radius:var(--radius-xl)}
+.of-shift{position:absolute}
+.of-ovl{position:absolute;inset:0;z-index:30;pointer-events:none}
+.of-b{position:absolute;display:grid;place-items:center;min-width:22px;height:22px;box-sizing:border-box;padding:0 6px;border-radius:999px;background:#2f5fb3;color:#ffffff;box-shadow:0 0 0 2px #ffffff;font:600 12px/1 "IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+.of-box{position:absolute;box-sizing:border-box;border:2px dashed #2f5fb3;border-radius:8px}
+/* Notes column beside a frame: annotation, not UI */
+.of-notes{flex:none;box-sizing:border-box;width:400px;display:grid;align-content:start;gap:12px;padding:16px 18px 18px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 13px/18px "IBM Plex Sans",system-ui,sans-serif;text-wrap:pretty}
+.of-notes h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+.of-notes p{margin:0}
+.of-notes ol,.of-notes ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px}
+.of-notes code{font:500 12px/16px "IBM Plex Mono",ui-monospace,monospace}
+.of-say{display:grid;gap:2px;padding:8px 10px;border-radius:6px;background:#eef2f8}
+.of-say-k{font:600 11px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.of-nk{color:#4f4c46}
+.of-lst{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.of-lst li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:start}
+.of-lb{display:inline-grid;place-items:center;justify-self:start;min-width:22px;height:22px;box-sizing:border-box;padding:0 5px;border-radius:999px;background:#2f5fb3;color:#ffffff;font:600 12px/1 "IBM Plex Mono",ui-monospace,monospace}
+.of-lst .of-v{font:500 12px/18px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;white-space:nowrap}
+/* Page markup inside the station frame: the info Alert, the sign-in and Switch operator cards, a scrolled job column */
+.ps-alert.of-info{border-color:var(--info);background:var(--info-subtle)}
+.ps-alert.of-info > .ic{color:var(--info)}
+.ps-alert.of-slim{padding:8px 12px}
+.of-at{display:grid;gap:4px;min-width:0}
+.of-att{font-weight:600}
+.of-lead{margin:0;width:100%;max-width:640px;color:var(--muted-foreground)}
+.of-colw{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.of-colw > .ps-col{flex:1}
+/* Build notes frame */
+.sheet.of-bn{box-sizing:border-box;width:1440px;min-height:5400px}
+.of-bn .lede{max-width:120ch}
+.of-bt{display:grid;border-top:1px solid var(--border);font-size:13px;line-height:18px}
+.of-btr{display:grid;grid-template-columns:var(--bc);gap:16px;padding:8px 12px;border-bottom:1px solid var(--border);text-wrap:pretty}
+.of-btr.h{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+.of-btr > span:first-child{font-weight:600}
+.of-bl{display:grid;gap:6px;margin:0;padding:0 0 0 18px;max-width:130ch;font-size:13px;line-height:18px}
+        </style>
+      </helmet>
+      <div class="of-part" data-ofu="{{ uid }}">
+        <sc-if value="{{ rows.r1 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF1 }}">
+              <div class="of-fr" data-of="OF1" data-screen-label="OF1 Send while disconnected, light, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF1</span>Send while disconnected<span class="fth">Light, 1280 by 800, touch station</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="offline" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}1l"></dc-import>
+                      <div class="of-colw" data-col="OF1">
+                        <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}1j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" input="touch" state="offline" idp="{{ p }}1r"></dc-import>
+                          <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}1t"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF1 }}" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF2 }}">
+              <div class="of-fr" data-of="OF2" data-screen-label="OF2 Pause while disconnected, dark, 1920 by 1080">
+                <div class="flabel of-chip"><span class="fid">OF2</span>Pause while disconnected<span class="fth">Dark, 1920 by 1080, entries kept in the form</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1920x1080" theme="dark" connection="offline" hint-size="1920px,1080px">
+                    <div class="ps-a s1920">
+                      <dc-import name="production-start-303-station-joblist" size="1920x1080" idp="{{ p }}2l"></dc-import>
+                      <div class="ps-col">
+                        <dc-import name="production-start-303-station-job" size="1920x1080" cmd="pause" cmdstate="offline" focus="pause" idp="{{ p }}2j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1920x1080" focus="none" idp="{{ p }}2r"></dc-import>
+                      </div>
+                      <dc-import name="production-start-303-station-reports" size="1920x1080" idp="{{ p }}2t"></dc-import>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r2 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF3 }}">
+              <div class="of-fr" data-of="OF3" data-screen-label="OF3 Start while disconnected, light, 800 by 1280">
+                <div class="flabel of-chip"><span class="fid">OF3</span>Start while disconnected<span class="fth">Light, 800 by 1280</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="800x1280" theme="light" connection="offline" hint-size="800px,1280px">
+                    <div class="ps-a s800">
+                      <dc-import name="production-start-303-station-joblist" size="800x1280" selected="5002.10" idp="{{ p }}3l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="800x1280" job="5002.10" cmd="start" cmdstate="offline" focus="start" idp="{{ p }}3j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="800x1280" job="5002.10" good="80" scrap="" reason="none" focus="none" idp="{{ p }}3r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="800x1280" job="5002.10" idp="{{ p }}3t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF4 }}">
+              <div class="of-fr" data-of="OF4" data-screen-label="OF4 Finish while disconnected, dark, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF4</span>Finish while disconnected<span class="fth">Dark, 1280 by 800, keyboard station</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" connection="offline" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}4l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="1280x800" cmd="finish" cmdstate="offline" focus="finish" idp="{{ p }}4j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1280x800" input="keyboard" focus="none" idp="{{ p }}4r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}4t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF5 }}">
+              <div class="of-fr" data-of="OF5" data-screen-label="OF5 Connection back, nothing sent by itself, light, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF5</span>Connection back, nothing sent by itself<span class="fth">Light, 1280 by 800</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" scroll="200" idp="{{ p }}5l"></dc-import>
+                      <div class="of-colw" data-col="OF5">
+                        <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}5j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" state="offline" focus="send" idp="{{ p }}5r"></dc-import>
+                          <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}5t"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF5 }}" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r3 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF6 }}">
+              <div class="of-fr" data-of="OF6" data-screen-label="OF6 Session ended on Send, light, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF6</span>Session ended on Send<span class="fth">Light, 1280 by 800, the report waits for the same badge</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" operator="none" hint-size="1280px,800px">
+                    <div class="ps-si">
+                      <div class="ps-si-card">
+                        <div class="ps-alert of-info" id="{{ p }}-6n">
+                          <span class="ic" data-icon="Info"></span>
+                          <div class="of-at">
+                            <p class="of-att">Report not sent</p>
+                            <p>The session of Anna Berg ended before her report was sent: 96 good, 2 scrap on 5001.20.</p>
+                            <p>Anna Berg, scan your badge to send it. No other operator can send it.</p>
+                          </div>
+                        </div>
+                        <div class="ps-fld">
+                          <span class="ps-lbl" id="{{ p }}-6l">Badge</span>
+                          <span class="inp ps-inp is-focus" role="textbox" aria-labelledby="{{ p }}-6l" aria-describedby="{{ p }}-6d {{ p }}-6n"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                          <p class="ps-desc" id="{{ p }}-6d">Hold your badge to the reader.</p>
+                        </div>
+                        <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+                        <div class="ps-foot">
+                          <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF7 }}">
+              <div class="of-fr" data-of="OF7" data-screen-label="OF7 Same badge, report sent, dark, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF7</span>Same badge, report sent<span class="fth">Dark, 1280 by 800, focus on the h1, totals after the report</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" focus="h1" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" after="sent" idp="{{ p }}7l"></dc-import>
+                      <div class="of-colw" data-col="OF7">
+                        <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                          <dc-import name="production-start-303-station-job" size="1280x800" after="sent" idp="{{ p }}7j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" state="sent" focus="none" idp="{{ p }}7r"></dc-import>
+                          <dc-import name="production-start-303-station-reports" size="1280x800" after="sent" idp="{{ p }}7t"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF7 }}" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF8 }}">
+              <div class="of-fr" data-of="OF8" data-screen-label="OF8 Another badge, nothing sent, light, 800 by 1280">
+                <div class="flabel of-chip"><span class="fid">OF8</span>Another badge, nothing sent<span class="fth">Light, 800 by 1280</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="800x1280" theme="light" connection="connected" operator="Omar Haddad" focus="h1" hint-size="800px,1280px">
+                    <div class="ps-a s800">
+                      <dc-import name="production-start-303-station-joblist" size="800x1280" unsent="none" idp="{{ p }}8l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="800x1280" idp="{{ p }}8j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="800x1280" good="" scrap="" reason="none" focus="none" idp="{{ p }}8r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="800x1280" idp="{{ p }}8t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r4 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF9 }}">
+              <div class="of-fr" data-of="OF9" data-screen-label="OF9 Idle warning, light, 1920 by 1080">
+                <div class="flabel of-chip"><span class="fid">OF9</span>Idle warning<span class="fth">Light, 1920 by 1080, 30 seconds before sign-off, entries typed</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1920x1080" theme="light" connection="connected" dialog="idle" hint-size="1920px,1080px">
+                    <div class="ps-a s1920">
+                      <dc-import name="production-start-303-station-joblist" size="1920x1080" idp="{{ p }}9l"></dc-import>
+                      <div class="ps-col">
+                        <dc-import name="production-start-303-station-job" size="1920x1080" idp="{{ p }}9j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1920x1080" focus="none" idp="{{ p }}9r"></dc-import>
+                      </div>
+                      <dc-import name="production-start-303-station-reports" size="1920x1080" idp="{{ p }}9t"></dc-import>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF10 }}">
+              <div class="of-fr" data-of="OF10" data-screen-label="OF10 Idle warning while disconnected, dark, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF10</span>Idle warning while disconnected<span class="fth">Dark, 1280 by 800</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" connection="offline" dialog="idle" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}10l"></dc-import>
+                      <div class="of-colw" data-col="OF10">
+                        <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}10j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" state="offline" focus="none" idp="{{ p }}10r"></dc-import>
+                          <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}10t"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF10 }}" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r5 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF11 }}">
+              <div class="of-fr" data-of="OF11" data-screen-label="OF11 Signed out when idle, dark, 800 by 1280">
+                <div class="flabel of-chip"><span class="fid">OF11</span>Signed out when idle<span class="fth">Dark, 800 by 1280</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="800x1280" theme="dark" connection="connected" operator="none" hint-size="800px,1280px">
+                    <div class="ps-si">
+                      <div class="ps-si-card">
+                        <div class="ps-alert of-info" id="{{ p }}-11n">
+                          <span class="ic" data-icon="Info"></span>
+                          <div class="of-at">
+                            <p class="of-att">Entries kept</p>
+                            <p>Anna Berg was signed out after 2 minutes without activity. Her entries on 5001.20 stay on this station and come back when she signs in again.</p>
+                          </div>
+                        </div>
+                        <div class="ps-fld">
+                          <span class="ps-lbl" id="{{ p }}-11l">Badge</span>
+                          <span class="inp ps-inp is-focus" role="textbox" aria-labelledby="{{ p }}-11l" aria-describedby="{{ p }}-11d {{ p }}-11n"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                          <p class="ps-desc" id="{{ p }}-11d">Hold your badge to the reader.</p>
+                        </div>
+                        <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+                        <div class="ps-foot">
+                          <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF12 }}">
+              <div class="of-fr" data-of="OF12" data-screen-label="OF12 Send after an update, light, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF12</span>Send after an update<span class="fth">Light, 1280 by 800, core.client_outdated</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}12l"></dc-import>
+                      <div class="of-colw" data-col="OF12">
+                        <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}12j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" state="outdated" idp="{{ p }}12r"></dc-import>
+                          <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}12t"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF12 }}" aria-hidden="true"></span>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF13 }}">
+              <div class="of-fr" data-of="OF13" data-screen-label="OF13 After Reload, entries back, dark, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF13</span>After Reload, entries back<span class="fth">Dark, 1280 by 800, focus on the h1</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" focus="h1" hint-size="1280px,800px">
+                    <div data-slot="header">
+                      <div class="ps-alert of-info of-slim"><span class="ic" data-icon="Info"></span><p>Your entries are back after the reload. They are not sent yet.</p></div>
+                    </div>
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}13l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}13j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1280x800" focus="none" idp="{{ p }}13r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}13t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r6 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF14 }}">
+              <div class="of-fr" data-of="OF14" data-screen-label="OF14 Reload when idle, light, 1696 by 800">
+                <div class="flabel of-chip"><span class="fid">OF14</span>Reload when idle<span class="fth">Light, 1280 by 800 with notes</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" operator="none" hint-size="1280px,800px">
+                    <div class="ps-si">
+                      <div class="ps-si-card">
+                        <div class="ps-fld">
+                          <span class="ps-lbl" id="{{ p }}-14l">Badge</span>
+                          <span class="inp ps-inp is-focus" role="textbox" aria-labelledby="{{ p }}-14l" aria-describedby="{{ p }}-14d"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                          <p class="ps-desc" id="{{ p }}-14d">Hold your badge to the reader.</p>
+                        </div>
+                        <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+                        <div class="ps-foot">
+                          <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+                <div class="of-notes">
+                  <h3>Reload when idle</h3>
+                  <p>After an update, the station reloads by itself only when all three hold:</p>
+                  <ol>
+                    <li>Nobody uses it: no input and no command in flight.</li>
+                    <li>No form holds unsent input: no typed entries and no entries kept for an operator who was signed out.</li>
+                    <li>The module versions changed: the build in the response header, or the module list after a reconnect, differs from the station's.</li>
+                  </ol>
+                  <p>Here nobody is signed in and nothing is kept, so the station reloaded and shows its sign-in screen again. The Badge field takes focus through its ref, as on every load. Nothing is announced.</p>
+                  <h3>When it waits</h3>
+                  <ul>
+                    <li>Typed entries: no reload. Send is refused with <code>core.client_outdated</code> and offers Reload; the entries stay (OF12, OF13).</li>
+                    <li>Entries kept for a signed-out operator: no reload until that operator sends them (OF6, OF11, question OFQ2).</li>
+                    <li>Queries still pass on the old build; only mutations are refused.</li>
+                  </ul>
+                  <p class="of-nk">What counts as idle, and whether a signed-in operator stays signed in across the reload, is question OFQ3.</p>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF15 }}">
+              <div class="of-fr" data-of="OF15" data-screen-label="OF15 Long strings, light, 1920 by 1080">
+                <div class="flabel of-chip"><span class="fid">OF15</span>Long strings<span class="fth">Light, 1920 by 1080, German labels, German and Finnish data, Pause while disconnected</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1920x1080" theme="light" connection="offline" station="Umformpresse 4 Halle Süd" operator="Hannelore Wiesenthal-Brückner" hint-size="1920px,1080px">
+                    <div class="ps-a s1920">
+                      <dc-import name="production-start-303-station-joblist" size="1920x1080" strings="long" idp="{{ p }}15l"></dc-import>
+                      <div class="of-colw" data-col="OF15">
+                        <div class="ps-col scroll">
+                          <dc-import name="production-start-303-station-job" size="1920x1080" strings="long" cmd="pause" cmdstate="offline" focus="pause" idp="{{ p }}15j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1920x1080" strings="long" focus="none" idp="{{ p }}15r"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF15 }}" aria-hidden="true"></span>
+                      </div>
+                      <dc-import name="production-start-303-station-reports" size="1920x1080" strings="long" idp="{{ p }}15t"></dc-import>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF27 }}">
+              <div class="of-fr" data-of="OF27" data-screen-label="OF27 Long strings, dark, 1920 by 1080">
+                <div class="flabel of-chip"><span class="fid">OF27</span>Long strings<span class="fth">Dark, 1920 by 1080, as OF15</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1920x1080" theme="dark" connection="offline" station="Umformpresse 4 Halle Süd" operator="Hannelore Wiesenthal-Brückner" hint-size="1920px,1080px">
+                    <div class="ps-a s1920">
+                      <dc-import name="production-start-303-station-joblist" size="1920x1080" strings="long" idp="{{ p }}27l"></dc-import>
+                      <div class="of-colw" data-col="OF27">
+                        <div class="ps-col scroll">
+                          <dc-import name="production-start-303-station-job" size="1920x1080" strings="long" cmd="pause" cmdstate="offline" focus="pause" idp="{{ p }}27j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1920x1080" strings="long" focus="none" idp="{{ p }}27r"></dc-import>
+                        </div>
+                        <span class="ps-sb" style="{{ sb.OF27 }}" aria-hidden="true"></span>
+                      </div>
+                      <dc-import name="production-start-303-station-reports" size="1920x1080" strings="long" idp="{{ p }}27t"></dc-import>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r7 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF16 }}">
+              <div class="of-fr" data-of="OF16" data-screen-label="OF16 Tab order, light, 1696 by 800">
+                <div class="flabel of-chip"><span class="fid">OF16</span>Tab order<span class="fth">Light, 1280 by 800 with notes, touch station</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" focus="skip" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}16l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}16j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1280x800" focus="none" idp="{{ p }}16r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}16t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="of-ovl" aria-hidden="true"><sc-for list="{{ ov.OF16.b }}" as="b"><span class="of-b" style="{{ b.s }}">{{ b.t }}</span></sc-for></div>
+                </div>
+                <div class="of-notes">
+                  <h3>Tab stops in order</h3>
+                  <ul class="of-lst"><sc-for list="{{ ov.OF16.list }}" as="s"><li><span class="of-lb">{{ s.n }}</span><span>{{ s.t }}</span><span class="of-v">{{ s.k }}</span></li></sc-for></ul>
+                  <p>Keypad keys stay outside the tab order (tabindex -1). The scrap reasons are one stop; arrow keys move the choice. The h1 and the headings take focus only from code.</p>
+                  <p>The toggle follows the fields on both kinds of station, although the report part's markup puts the keypad after Send.</p>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF17 }}">
+              <div class="of-fr" data-of="OF17" data-screen-label="OF17 Focus after Start, light, 1344 by 420">
+                <div class="flabel of-chip"><span class="fid">OF17</span>Focus after Start<span class="fth">Light, a crop of 1280 by 800 with notes</span></div>
+                <div class="of-stage crop" style="width:928px;height:420px">
+                  <div class="of-shift" style="left:-352px;top:-140px">
+                    <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                      <div class="ps-a s1280">
+                        <dc-import name="production-start-303-station-joblist" size="1280x800" selected="5006.10" idp="{{ p }}17l"></dc-import>
+                        <div class="ps-col scroll">
+                          <dc-import name="production-start-303-station-job" size="1280x800" job="5006.10" focus="heading" idp="{{ p }}17j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" job="5006.10" good="" scrap="" reason="none" focus="none" idp="{{ p }}17r"></dc-import>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>Start on 5006.10, paused since 13:55</h3>
+                  <ol>
+                    <li>Start reads Sending, aria-disabled and aria-busy, and Send is aria-disabled too (ADR 0033); a visually hidden status says Sending. Focus stays on Start.</li>
+                    <li>The server confirms: 5006.10 is active. Start leaves its slot and Pause and Finish show in their own slots, so the second tap of a gloved double press lands on the empty Start slot.</li>
+                    <li>Focus moves to the job heading 5006.10 (tabindex -1) with the D1 ring.</li>
+                  </ol>
+                  <div class="of-say"><span class="of-say-k">Polite region</span><span>5006.10 started</span></div>
+                  <p>Pause and Finish work the same way: "5001.20 paused", "5001.20 finished". When a command fails, the button stays in its slot and keeps focus, described by the error under it (OF2 to OF4).</p>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r8 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF18 }}">
+              <div class="of-fr" data-of="OF18" data-screen-label="OF18 Focus after Send, dark, 1344 by 520">
+                <div class="flabel of-chip"><span class="fid">OF18</span>Focus after Send<span class="fth">Dark, a crop of 1280 by 800 with notes</span></div>
+                <div class="of-stage crop" style="width:928px;height:520px">
+                  <div class="of-shift" style="left:-352px;top:-270px">
+                    <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" hint-size="1280px,800px">
+                      <div class="ps-a s1280">
+                        <dc-import name="production-start-303-station-joblist" size="1280x800" after="sent" idp="{{ p }}18l"></dc-import>
+                        <div class="of-colw" data-col="OF18">
+                          <div class="ps-col scroll" data-reveal=".ps-msgrow">
+                            <dc-import name="production-start-303-station-job" size="1280x800" after="sent" idp="{{ p }}18j"></dc-import>
+                            <dc-import name="production-start-303-station-report" size="1280x800" state="sent" idp="{{ p }}18r"></dc-import>
+                            <dc-import name="production-start-303-station-reports" size="1280x800" after="sent" idp="{{ p }}18t"></dc-import>
+                          </div>
+                          <span class="ps-sb" style="{{ sb.OF18 }}" aria-hidden="true"></span>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>Focus after Send</h3>
+                  <ol>
+                    <li>Send reads Sending and is aria-disabled; focus stays on it.</li>
+                    <li>The server confirms the report. The line under Send reads "Reported 96 good, 2 scrap on 5001.20 at 14:06."; the fields clear and Burr stays chosen (question 21.11). The job's figures read Good 736, Scrap 14, Remaining 450 pcs, and the report of 14:06 leads the last reports.</li>
+                    <li>Focus stays on Send. The column scrolls so the line under Send is in view (19.23).</li>
+                  </ol>
+                  <div class="of-say"><span class="of-say-k">Polite region</span><span>Reported 96 good, 2 scrap on 5001.20</span></div>
+                  <p>A repeat that the server already took (replayed: true) shows the same line: the client_report_id makes it count once.</p>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF19 }}">
+              <div class="of-fr" data-of="OF19" data-screen-label="OF19 Focus after an error, light, 1344 by 500">
+                <div class="flabel of-chip"><span class="fid">OF19</span>Focus after an error<span class="fth">Light, a crop of 1280 by 800 with notes</span></div>
+                <div class="of-stage crop" style="width:928px;height:500px">
+                  <div class="of-shift" style="left:-352px;top:-300px">
+                    <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                      <div class="ps-a s1280">
+                        <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}19l"></dc-import>
+                        <div class="ps-col scroll">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}19j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" state="invalid" idp="{{ p }}19r"></dc-import>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>Focus after an error</h3>
+                  <ol>
+                    <li>Send with field errors: focus moves to the error summary "2 fields need attention" (tabindex -1). Its links move focus to Good quantity and to the Scrap reason group. Each field keeps its value, has aria-invalid and is described by its error.</li>
+                    <li>A failed Send, Start, Pause or Finish (no connection, no answer within 15 seconds, a server error, an update): focus stays on the pressed button, whose aria-describedby names the error under it (OF1 to OF4, OF12).</li>
+                  </ol>
+                  <div class="of-say"><span class="of-say-k">Polite region, failed command only</span><span>Not sent. There is no connection to NorthMES. Your entries are kept. Press Send again when the connection is back.</span></div>
+                  <p>Field errors are not announced: the focused summary is read.</p>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r9 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF20 }}">
+              <div class="of-fr" data-of="OF20" data-screen-label="OF20 Switch operator, dark, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF20</span>Switch operator<span class="fth">Dark, 1280 by 800, focus in the Badge field</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" screen="switch" title="Switch operator" hint-size="1280px,800px">
+                    <div class="ps-si">
+                      <p class="of-lead">Anna Berg stays signed in until the next operator signs in. Her unsent entries stay on this station for her.</p>
+                      <div class="ps-si-card">
+                        <div class="ps-fld">
+                          <span class="ps-lbl" id="{{ p }}-20l">Badge</span>
+                          <span class="inp ps-inp is-focus" role="textbox" aria-labelledby="{{ p }}-20l" aria-describedby="{{ p }}-20d"><span class="ic" data-icon="IdCard"></span><span class="ps-caret"></span></span>
+                          <p class="ps-desc" id="{{ p }}-20d">Hold your badge to the reader.</p>
+                        </div>
+                        <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+                        <div class="ps-foot">
+                          <button class="btn lg v-outline" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                          <span class="sh-grow"></span>
+                          <button class="btn lg v-ghost" type="button">Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF21 }}">
+              <div class="of-fr" data-of="OF21" data-screen-label="OF21 After Switch operator, light, 1280 by 800">
+                <div class="flabel of-chip"><span class="fid">OF21</span>After Switch operator<span class="fth">Light, 1280 by 800, Omar Haddad signed in, focus on the h1</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" operator="Omar Haddad" focus="h1" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" unsent="none" idp="{{ p }}21l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}21j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1280x800" good="" scrap="" reason="none" focus="none" idp="{{ p }}21r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}21t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r10 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF22 }}">
+              <div class="of-fr" data-of="OF22" data-screen-label="OF22 Badge scanned into Good quantity, dark, 1344 by 460">
+                <div class="flabel of-chip"><span class="fid">OF22</span>Badge scanned into Good quantity<span class="fth">Dark, a crop of 1280 by 800 with notes</span></div>
+                <div class="of-stage crop" style="width:928px;height:460px">
+                  <div class="of-shift" style="left:-352px;top:-300px">
+                    <dc-import name="StationFrame" size="1280x800" theme="dark" connection="connected" hint-size="1280px,800px">
+                      <div class="ps-a s1280">
+                        <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}22l"></dc-import>
+                        <div class="ps-col scroll">
+                          <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}22j"></dc-import>
+                          <dc-import name="production-start-303-station-report" size="1280x800" good="0004512345" scrap="" reason="none" focus="good" idp="{{ p }}22r"></dc-import>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>A badge scanned into Good quantity</h3>
+                  <p>The reader is a keyboard wedge. With focus in Good quantity, a scan types 0004512345 and Enter like any keyboard.</p>
+                  <ol>
+                    <li>The digits land in the field. The reader types even while the keypad keeps the device keyboard closed (inputmode none).</li>
+                    <li>Enter in a number field never submits, so nothing is sent (e2e: 0004512345 and Enter with a 5 ms delay sends nothing).</li>
+                    <li>Send would open the large-quantity dialog, since the value is far above 1.5 times the remaining 548 pcs.</li>
+                    <li>The station reads badges only in the focused Badge field of the sign-in and Switch operator screens. No global key listener (WCAG 2.1.4).</li>
+                  </ol>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF23 }}">
+              <div class="of-fr" data-of="OF23" data-screen-label="OF23 Targets for gloved hands, light, 1696 by 800">
+                <div class="flabel of-chip"><span class="fid">OF23</span>Targets for gloved hands<span class="fth">Light, 1280 by 800 with notes, touch station</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" connection="connected" hint-size="1280px,800px">
+                    <div class="ps-a s1280">
+                      <dc-import name="production-start-303-station-joblist" size="1280x800" idp="{{ p }}23l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="1280x800" idp="{{ p }}23j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1280x800" focus="none" idp="{{ p }}23r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="1280x800" idp="{{ p }}23t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="of-ovl" aria-hidden="true">
+                    <sc-for list="{{ ov.OF23.x }}" as="x"><span class="of-box" style="{{ x.s }}"></span></sc-for>
+                    <sc-for list="{{ ov.OF23.b }}" as="b"><span class="of-b" style="{{ b.s }}">{{ b.t }}</span></sc-for>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>Measured targets</h3>
+                  <ul class="of-lst"><sc-for list="{{ ov.OF23.list }}" as="s"><li><span class="of-lb">{{ s.n }}</span><span>{{ s.t }}</span><span class="of-v">{{ s.k }}</span></li></sc-for></ul>
+                  <p>Station minimum: 44 by 44 px, <code>--nm-target-min-station</code> (WCAG 2.5.8). Proposals: 48 px buttons, 56 px fields, 48 px reason rows, 64 px keys at 1280 and in portrait, 72 px at 1920, 96 px job rows, at least 8 px between targets.</p>
+                  <p>Every command and Send keeps its place, so a gloved hand finds it again; a command that is not allowed leaves its slot empty.</p>
+                  <p class="of-nk">The final sizes wait for the glove test (IT-22, question 21.9).</p>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r11 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF24 }}">
+              <div class="of-fr" data-of="OF24" data-screen-label="OF24 D1 focus ring on station surfaces, light, 2336 by 1080">
+                <div class="flabel of-chip"><span class="fid">OF24</span>D1 focus ring on station surfaces<span class="fth">Light, 1920 by 1080 with notes</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="1920x1080" theme="light" connection="connected" focus="switch" hint-size="1920px,1080px">
+                    <div class="ps-a s1920">
+                      <dc-import name="production-start-303-station-joblist" size="1920x1080" focus="5003.30" idp="{{ p }}24l"></dc-import>
+                      <div class="ps-col">
+                        <dc-import name="production-start-303-station-job" size="1920x1080" focus="pause" idp="{{ p }}24j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="1920x1080" focus="reason" idp="{{ p }}24r"></dc-import>
+                      </div>
+                      <dc-import name="production-start-303-station-reports" size="1920x1080" focus="13:20" idp="{{ p }}24t"></dc-import>
+                    </div>
+                  </dc-import>
+                  <div class="of-ovl" aria-hidden="true"><sc-for list="{{ ov.OF24.b }}" as="b"><span class="of-b" style="{{ b.s }}">{{ b.t }}</span></sc-for></div>
+                </div>
+                <div class="of-notes">
+                  <h3>The ring on each kind of control</h3>
+                  <ul class="of-lst"><sc-for list="{{ ov.OF24.list }}" as="s"><li><span class="of-lb">{{ s.n }}</span><span>{{ s.t }}</span><span class="of-v">{{ s.k }}</span></li></sc-for></ul>
+                  <p>The D1 ring: a 2 px <code>--focus-outline</code> outline 2 px outside the control, with a 2 px <code>--focus-ring</code> halo. A focused field also turns its border <code>--foreground</code> (OF22). The skip link, the h1 and the job heading take the same ring (OF7, OF16, OF17).</p>
+                  <p>This frame shows five rings to compare them. A real screen has one.</p>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.OF25 }}">
+              <div class="of-fr" data-of="OF25" data-screen-label="OF25 Targets for gloved hands, dark, 1216 by 1280">
+                <div class="flabel of-chip"><span class="fid">OF25</span>Targets for gloved hands<span class="fth">Dark, 800 by 1280 with notes</span></div>
+                <div class="of-stage">
+                  <dc-import name="StationFrame" size="800x1280" theme="dark" connection="connected" hint-size="800px,1280px">
+                    <div class="ps-a s800">
+                      <dc-import name="production-start-303-station-joblist" size="800x1280" idp="{{ p }}25l"></dc-import>
+                      <div class="ps-col scroll">
+                        <dc-import name="production-start-303-station-job" size="800x1280" idp="{{ p }}25j"></dc-import>
+                        <dc-import name="production-start-303-station-report" size="800x1280" focus="none" idp="{{ p }}25r"></dc-import>
+                        <dc-import name="production-start-303-station-reports" size="800x1280" idp="{{ p }}25t"></dc-import>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="of-ovl" aria-hidden="true">
+                    <sc-for list="{{ ov.OF25.x }}" as="x"><span class="of-box" style="{{ x.s }}"></span></sc-for>
+                    <sc-for list="{{ ov.OF25.b }}" as="b"><span class="of-b" style="{{ b.s }}">{{ b.t }}</span></sc-for>
+                  </div>
+                </div>
+                <div class="of-notes">
+                  <h3>Measured targets in portrait</h3>
+                  <ul class="of-lst"><sc-for list="{{ ov.OF25.list }}" as="s"><li><span class="of-lb">{{ s.n }}</span><span>{{ s.t }}</span><span class="of-v">{{ s.k }}</span></li></sc-for></ul>
+                  <p>In portrait the list is the Change job bar and the keypad docks beside the scrap reasons, so the reasons take one column of 48 px rows.</p>
+                  <p>Sign out is a 48 px IconButton here, so the top bar keeps one line (D2).</p>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ rows.r12 }}">
+          <div class="of-row">
+            <sc-if value="{{ show.OF26 }}">
+              <div class="of-fr" data-of="OF26" data-screen-label="OF26 Build notes, not part of the UI, light, 1440 by 5400">
+                <div class="flabel of-chip"><span class="fid">OF26</span>Build notes, not part of the UI<span class="fth">Light, 1440 wide</span></div>
+                <article class="sheet of-bn">
+                  <p class="kick">Build notes, not part of the UI</p>
+                  <h2 class="t2">Lost connection, kept entries, idle sign-off, reload, long strings, keyboard and focus at the station</h2>
+                  <p class="lede">{{ bn.lede }}</p>
+                  <sc-for list="{{ bn.sections }}" as="s">
+                    <section class="sec">
+                      <h3 class="t3">{{ s.h }}</h3>
+                      <sc-if value="{{ s.hasRows }}">
+                        <div class="of-bt" role="table" aria-label="{{ s.h }}" style="{{ s.cols }}">
+                          <div class="of-btr h" role="row"><sc-for list="{{ s.head }}" as="h"><span role="columnheader">{{ h.t }}</span></sc-for></div>
+                          <sc-for list="{{ s.rows }}" as="r"><div class="of-btr" role="row"><sc-for list="{{ r.c }}" as="c"><span role="cell">{{ c.t }}</span></sc-for></div></sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.hasList }}"><ul class="of-bl"><sc-for list="{{ s.list }}" as="li"><li>{{ li.t }}</li></sc-for></ul></sc-if>
+                    </section>
+                  </sc-for>
+                </article>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","OF1","OF2","OF3","OF4","OF5","OF6","OF7","OF8","OF9","OF10","OF11","OF12","OF13","OF14","OF15","OF16","OF17","OF18","OF19","OF20","OF21","OF22","OF23","OF24","OF25","OF26","OF27"],"default":"all","tsType":"string"},"idp":{"editor":"text","default":"of","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the frame's lucide filler, same flag, so only one filler runs per document.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // Annotations and scrolled columns are measured from the mounted frames, so they follow the real layout.
+          this.__alive = true;
+          const root = document.querySelector('[data-ofu="' + this.__uid + '"]');
+          if (root) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true, characterData: true });
+          }
+          [300, 800, 1600, 3000, 5000, 8000, 12000].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 120);
+        }
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.querySelector('[data-ofu="' + this.__uid + '"]');
+          if (!root) return;
+          const px = (v) => Math.round(v) + "px";
+          const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+          const txt = (e) => (e ? e.textContent.replace(/\s+/g, " ").trim() : "");
+          const lbl = (e) => { const l = (e.getAttribute("aria-labelledby") || "").split(" ")[0]; const t = l ? document.getElementById(l) : null; return t ? txt(t) : txt(e); };
+          // Scrolled job columns (19.23): a message under Send is scrolled into view, and the Scroll Area thumb is drawn.
+          const sb = {};
+          root.querySelectorAll(".of-colw[data-col]").forEach((w) => {
+            const col = w.querySelector(".ps-col");
+            if (!col) return;
+            const sel = col.getAttribute("data-reveal");
+            const el = sel ? col.querySelector(sel) : null;
+            if (el) {
+              const k = col.offsetWidth ? col.getBoundingClientRect().width / col.offsetWidth : 1;
+              const below = (el.getBoundingClientRect().bottom - col.getBoundingClientRect().bottom) / k + 12;
+              if (below > 1) col.scrollTop = Math.ceil(col.scrollTop + below);
+            }
+            if (col.scrollHeight > col.clientHeight + 1) {
+              const track = col.clientHeight - 8;
+              const h = Math.max(24, Math.round(track * col.clientHeight / col.scrollHeight));
+              const top = Math.round(4 + track * col.scrollTop / col.scrollHeight);
+              sb[w.getAttribute("data-col")] = "top:" + top + "px;height:" + h + "px";
+            }
+          });
+          const SPEC = { OF16: "stops", OF23: "marks", OF24: "rings", OF25: "marks" };
+          const ov = {};
+          Object.keys(SPEC).forEach((id) => {
+            const o = { b: [], list: [], x: [] };
+            ov[id] = o;
+            const fr = root.querySelector('[data-of="' + id + '"]');
+            const st = fr && fr.querySelector(".of-stage");
+            if (!st || !st.offsetWidth) return;
+            const sr = st.getBoundingClientRect();
+            const k = sr.width / st.offsetWidth || 1;
+            const SW = st.offsetWidth, SH = st.offsetHeight;
+            const R = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k }; };
+            // A control counts as shown when a point near its top left lies inside the stage and every clipping ancestor.
+            const shown = (el) => {
+              const cs = getComputedStyle(el);
+              if (cs.visibility === "hidden" || cs.display === "none") return false;
+              const r = R(el);
+              if (r.w < 1 || r.h < 1) return false;
+              const cx = r.x + Math.min(r.w / 2, 16), cy = r.y + Math.min(r.h / 2, 16);
+              if (cx < 0 || cy < 0 || cx > SW || cy > SH) return false;
+              let a = el.parentElement;
+              while (a && a !== st) {
+                const c = getComputedStyle(a);
+                if (c.overflow !== "visible" || c.overflowX !== "visible" || c.overflowY !== "visible") {
+                  const q = R(a);
+                  if (cx < q.x || cy < q.y || cx > q.x + q.w || cy > q.y + q.h) return false;
+                }
+                a = a.parentElement;
+              }
+              return true;
+            };
+            const badge = (t, x, y) => o.b.push({ t: t, s: "left:" + px(clamp(x, 2, SW - 30)) + ";top:" + px(clamp(y, 2, SH - 24)) });
+            if (SPEC[id] === "stops") {
+              // Tab order per rule 12.1: frame stops, job rows, commands, fields, the toggle, the reasons (one stop), Send, Correct.
+              const groups = [
+                [".stn-skip", () => "Skip to main content"],
+                [".stn-tb button", (e) => e.getAttribute("aria-label") || txt(e)],
+                [".ps-jr", (e) => "Job " + txt(e.querySelector(".ps-jr-n"))],
+                [".ps-slot button", (e) => txt(e)],
+                ['.ps-nf[role="textbox"]', lbl],
+                [".ps-tog", (e) => txt(e) + " toggle"],
+                [".ps-rad.on", (e) => "Scrap reason group, on " + txt(e)],
+                [".ps-send", (e) => txt(e)],
+                [".ps-tr .btn", (e) => e.getAttribute("aria-label") || txt(e)]
+              ];
+              let n = 0;
+              groups.forEach((g) => st.querySelectorAll(g[0]).forEach((e) => {
+                if (getComputedStyle(e).visibility === "hidden") return;
+                n += 1;
+                const on = shown(e);
+                const r = R(e);
+                if (on) badge(String(n), r.x - 11, r.y - 11);
+                o.list.push({ n: String(n), t: g[1](e), k: on ? "" : "out of view" });
+              }));
+            } else if (SPEC[id] === "rings") {
+              const L = "ABCDEFGHIJ";
+              const name = (e) => {
+                if (e.matches(".stn-tb button")) return "Top bar Button, " + (e.getAttribute("aria-label") || txt(e));
+                if (e.matches(".ps-jr")) return "Job row " + txt(e.querySelector(".ps-jr-n"));
+                if (e.matches(".ps-slot button")) return "Command Button, " + txt(e);
+                if (e.matches(".ps-rad")) return "Scrap reason radio, " + txt(e);
+                if (e.matches(".ps-tr .btn")) return "Row Button, " + (e.getAttribute("aria-label") || txt(e));
+                if (e.matches(".ps-nf")) return "Field, " + lbl(e);
+                return txt(e);
+              };
+              [...st.querySelectorAll(".is-focus")].filter(shown).forEach((e, i) => {
+                const r = R(e);
+                badge(L[i] || "?", r.x - 14, r.y - 14);
+                o.list.push({ n: L[i] || "?", t: name(e), k: "" });
+              });
+            } else {
+              const T = [
+                ["Switch operator", ".stn-tb .btn.v-outline"], ["Sign out", '.stn-tb [aria-label="Sign out"]'], ["More", '.stn-tb [aria-label="More"]'], ["Job row", ".ps-jr.sel"],
+                ["Change job", ".ps-pick .btn"], ["Command", ".ps-slot .btn"], ["Quantity field", '.ps-nf[role="textbox"]'],
+                ["Keypad toggle", ".ps-tog"], ["Scrap reason row", ".ps-rad"], ["Keypad key", ".ps-key"], ["Send", ".ps-send"], ["Correct", ".ps-tr .btn"]
+              ];
+              let n = 0;
+              T.forEach((t) => {
+                const e = [...st.querySelectorAll(t[1])].find(shown);
+                if (!e) return;
+                n += 1;
+                const r = R(e);
+                o.x.push({ s: "left:" + px(r.x - 4) + ";top:" + px(r.y - 4) + ";width:" + px(r.w + 8) + ";height:" + px(r.h + 8) });
+                // A field, the keypad toggle and a reason row sit right under a label, so their pin goes on the left edge, centred.
+                if (t[0] === "Quantity field" || t[0] === "Keypad toggle" || t[0] === "Scrap reason row") badge(String(n), r.x - 11, r.y + r.h / 2 - 11);
+                else badge(String(n), r.x - 15, r.y - 15);
+                const what = t[0] === "Command" || t[0] === "Keypad key" || t[0] === "Keypad toggle" ? t[0] + ", " + (e.getAttribute("aria-label") || txt(e)) : t[0];
+                o.list.push({ n: String(n), t: what, k: Math.round(r.w) + " × " + Math.round(r.h) });
+              });
+            }
+          });
+          const prev = this.state || {};
+          if (JSON.stringify(prev.ov || null) !== JSON.stringify(ov) || JSON.stringify(prev.sb || null) !== JSON.stringify(sb)) this.setState({ ov: ov, sb: sb });
+        }
+        renderVals() {
+          const P = this.props || {};
+          this.__uid = this.__uid || "ofk" + Math.random().toString(36).slice(2, 9);
+          const IDS = [];
+          for (let i = 1; i <= 27; i += 1) IDS.push("OF" + i);
+          const fr = String(P.frame || "all").trim();
+          const one = IDS.indexOf(fr) >= 0 ? fr : "all";
+          const show = {};
+          IDS.forEach((i) => { show[i] = one === "all" || one === i; });
+          const ROWS = { r1: [1, 2], r2: [3, 4, 5], r3: [6, 7, 8], r4: [9, 10], r5: [11, 12, 13], r6: [14, 15, 27], r7: [16, 17], r8: [18, 19], r9: [20, 21], r10: [22, 23], r11: [24, 25], r12: [26] };
+          const rows = {};
+          Object.keys(ROWS).forEach((r) => { rows[r] = ROWS[r].some((n) => show["OF" + n]); });
+          const st = this.state || {};
+          const E = { b: [], list: [], x: [] };
+          const ov = Object.assign({ OF16: E, OF23: E, OF24: E, OF25: E }, st.ov || {});
+          const sb = {};
+          ["OF1", "OF5", "OF7", "OF10", "OF12", "OF15", "OF18", "OF27"].forEach((k) => { sb[k] = (st.sb && st.sb[k]) || "display:none"; });
+          const cell = (a) => ({ c: a.map((t) => ({ t: t })) });
+          const head = (a) => a.map((t) => ({ t: t }));
+          const sec = (s) => Object.assign({ hasRows: !!s.rows, hasList: !!s.list, rows: [], list: [], head: [], cols: "" }, s);
+          const li = (a) => a.map((t) => ({ t: t }));
+          const bn = {
+            lede: "OF1 to OF25 and OF27 draw what the station does when the connection drops, when a session ends with entries on the screen, before an idle sign-off and after an update, then the long-strings frames in light and dark (OF15, OF27) and the keyboard, touch and focus frames. Every frame mounts the folder's StationFrame copy and the shared parts; the sign-in cards, the notices and the notes are page markup. A value that no source fixes is a proposal and needs Krister Johansson's yes. All data is fictional.",
+            sections: [
+              sec({ h: "Components by shadcn name", cols: "--bc:220px minmax(0,1fr) 200px", head: head(["Component", "Use in these frames", "Frames"]), rows: [
+                cell(["Alert", "The Disconnected strip is the frame's (warning pair, role status). This part adds the notices Report not sent and Entries kept on the sign-in card and the line Your entries are back beside the h1, in the info pair with the Info icon (proposal).", "OF1 to OF6, OF11, OF13"]),
+                cell(["Alert Dialog", "The idle warning is the frame's (dialog idle): its title, the line about kept entries and Stay signed in.", "OF9, OF10"]),
+                cell(["Button", "Send (default, Send icon); Start, Pause and Finish (outline, fixed slots); Reload (outline, RefreshCw); Sign in with username (outline, KeyRound); Cancel (ghost). All 48 px high.", "OF1 to OF25"]),
+                cell(["Badge", "StatusBadge (icon and word) and Unsent entries (outlined, Upload icon). In a scrolled list the header shows Unsent entries on 5002.10 as a Button that scrolls the row into view.", "OF1, OF3, OF5, OF15"]),
+                cell(["Card", "The report card and the sign-in card.", "OF1 to OF25"]),
+                cell(["Field, Label, Input", "The Badge field: Input at 48 px with the IdCard icon, described by its hint and, when there is one, by the notice above it.", "OF6, OF11, OF14, OF20"]),
+                cell(["NumberField (QuantityInput)", "Good quantity and Scrap quantity, 56 px, with the unit in the label.", "OF1 to OF25"]),
+                cell(["Radio Group", "Scrap reason, one Tab stop.", "OF1 to OF25"]),
+                cell(["Toggle", "System keyboard and Keypad, with aria-pressed.", "OF1, OF4, OF16"]),
+                cell(["Scroll Area", "The job list, and the job column at 1280, in portrait and at 1920 when long strings make it taller than the screen; the thumb shows while the content is taller than the column.", "OF1, OF5, OF15, OF16, OF27"]),
+                cell(["Keypad (new part)", "A group of Buttons outside the tab order, named by its caption.", "OF1, OF16, OF22, OF23"])
+              ] }),
+              sec({ h: "Tokens", list: li([
+                "Strip and connection chip: --warning on --warning-subtle, from the frame.",
+                "Inline errors, the error summary and invalid fields: --destructive, with --destructive-subtle behind the summary.",
+                "Notices (Report not sent, Entries kept, Your entries are back): an --info border and Info icon on --info-subtle, text in --foreground. A proposal; D2 uses the info pair for its restore strip.",
+                "Sent line: CircleCheck in --success, text in --foreground.",
+                "Unsent entries badge: --card fill, --foreground text and a 1 px --foreground border, so it meets no status, flag or late pair.",
+                "Focus: the D1 ring, a 2 px --focus-outline outline 2 px outside the control with a 2 px --focus-ring halo; a focused field also turns its border --foreground.",
+                "Targets: --nm-target-min is --nm-target-min-station (44 px) in the station layout. 48 px buttons, 56 px fields, 48 px reason rows, 64 px keys at 1280 and in portrait, 72 px at 1920 and 96 px job rows are proposals (question 21.9).",
+                "Dialog overlay: the frame's overlay; the dialog surface is --background with --border."
+              ]) }),
+              sec({ h: "ARIA roles, names and announcements", cols: "--bc:220px minmax(0,1fr) minmax(0,1fr)", head: head(["What", "Role and name", "Announcement"]), rows: [
+                cell(["Disconnected strip", "role status, from the frame.", "\"No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back.\" Once per change; nothing else is announced for the drop."]),
+                cell(["Connection chip", "Text in the top bar, no live role.", "None."]),
+                cell(["Connection back", "The strip goes; the chip reads Connected.", "Polite, once: \"Live updates resumed\" (D2 proposal K5)."]),
+                cell(["A command or Send waits", "The pressed button: aria-disabled and aria-busy true, label Sending; a visually hidden role status.", "\"Sending\"."]),
+                cell(["A command or Send fails", "The pressed button keeps focus; aria-describedby names the error under it.", "Polite through announce(), once: the error text."]),
+                cell(["A command is confirmed", "Focus moves to the job heading (h2, tabindex -1).", "Polite: \"5006.10 started\", \"5001.20 paused\", \"5001.20 finished\"."]),
+                cell(["A report is confirmed", "Focus stays on Send; the line under Send.", "Polite: \"Reported 96 good, 2 scrap on 5001.20\"."]),
+                cell(["Unsent entries", "Badge text inside the job row's button name; in portrait Change job is aria-describedby the bar's badge; in a scrolled list a Button \"Unsent entries on 5002.10\".", "None."]),
+                cell(["Report not sent, Entries kept", "Alert without a live role. The Badge field is aria-describedby its hint and the notice, so the focused field reads both.", "None beyond the focused field."]),
+                cell(["Idle warning", "alertdialog, aria-modal, labelled by its title and described by \"Your entries on this screen are kept.\"", "None: it is read when focus moves to Stay signed in."]),
+                cell(["Update refused", "The error under Send, which Send is aria-describedby; Reload is a Button.", "Polite, once: \"NorthMES was updated. Reload the station to send. Your entries stay on this screen.\""]),
+                cell(["Entries back", "Alert without a live role beside the h1, read right after the focused h1.", "None."]),
+                cell(["Keypad", "role group named by its caption \"Keypad for Good quantity\"; keys are Buttons named by their digit, \"Clear Good quantity\", \"Delete last digit\" and \"Decimal comma\".", "None."]),
+                cell(["Toggles", "Buttons with aria-pressed: System keyboard is false while the keypad shows, Keypad is false while it is hidden.", "None."])
+              ] }),
+              sec({ h: "Badge and keypad input model", list: li([
+                "The badge reader is a keyboard wedge: it types the badge number and Enter. Only a focused Badge field reads a badge: on the sign-in screen, with or without a notice, and on the Switch operator screen. Each takes focus through a ref when it opens, never through autofocus. The station has no global key listener (WCAG 2.1.4).",
+                "Anywhere else a scan types like a keyboard. In Good quantity it leaves 0004512345 in the field, and Enter in a number field never submits (OF22). Send would then open the large-quantity dialog.",
+                "Session ended on Send (OPERATOR_SESSION_ENDED, OF6): the station goes to its sign-in screen and keeps the report. The same operator's scan signs in and sends it under the new session with its client_report_id, so it counts once (OF7). Another operator's scan signs that operator in; the kept entries stay on the station, hidden, with no Send for them (OF8).",
+                "Kept entries without a pressed Send (an idle sign-off, OF11, or Switch operator, OF20) come back into the form when the same operator signs in again, with the line Your entries are back beside the h1, and wait for Send.",
+                "Entries are written to localStorage inside try/catch on every change: operator, job, good, scrap, scrap reason and client_report_id. A confirmed response, a replay included, clears them. A reload, a lost connection and a sign-off keep them.",
+                "The keypad shows by default on a station without a keyboard, with System keyboard; on a station with a keyboard it starts hidden behind Keypad (D.2, question Q3). The choice is kept per station in localStorage, inside try/catch.",
+                "While the keypad shows, the quantity fields use inputmode none, so the device keyboard stays closed; a hardware keyboard and the badge reader still type into the focused field. System keyboard hides the keypad, gives the field inputmode numeric (decimal for a unit with decimals) and returns focus to it.",
+                "Keys are Buttons outside the tab order whose pointerdown is prevented, so the field keeps focus and caret. A key types at the caret of the last focused quantity field; Clear empties that field; Delete last digit removes the digit before the caret; the decimal key exists only for a unit with display decimals."
+              ]) }),
+              sec({ h: "Focus after each action", cols: "--bc:300px minmax(0,1fr) 200px", head: head(["Action", "Focus", "Frames"]), rows: [
+                cell(["Send, Start, Pause or Finish fails", "Stays on the pressed button.", "OF1 to OF4, OF12"]),
+                cell(["Send with field errors", "The error summary.", "OF19"]),
+                cell(["Send is confirmed", "Stays on Send; the column scrolls the line under Send into view.", "OF18"]),
+                cell(["Start, Pause or Finish is confirmed", "The job heading, because the pressed button leaves its slot.", "OF17"]),
+                cell(["The session ends on Send", "The Badge field of the sign-in screen, through its ref.", "OF6"]),
+                cell(["Sign-in, the same or another operator", "The station h1.", "OF7, OF8, OF21"]),
+                cell(["Switch operator", "The Badge field of the Switch operator screen; Cancel returns focus to Switch operator.", "OF20"]),
+                cell(["The idle warning opens and closes", "Stay signed in; closing returns focus to the element that had it.", "OF9, OF10"]),
+                cell(["Signed out when idle", "The Badge field of the sign-in screen.", "OF11"]),
+                cell(["Reload after an update", "The station h1 after the load.", "OF13"]),
+                cell(["Automatic reload", "The Badge field of the sign-in screen.", "OF14"]),
+                cell(["The strip or a message pushes the focused control or its message out of view", "The job column scrolls it into view (19.23, WCAG 2.4.11).", "OF1, OF5, OF7, OF12"])
+              ] }),
+              sec({ h: "Final English copy", cols: "--bc:minmax(0,1fr) 260px 160px", head: head(["Copy", "Where", "Source"]), rows: [
+                cell(["No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back.", "Strip", "Doc"]),
+                cell(["Live updates paused, reconnecting", "Chip", "Doc"]),
+                cell(["Connected", "Chip", "D2"]),
+                cell(["Live updates resumed", "Polite region", "D2 proposal"]),
+                cell(["Not sent. There is no connection to NorthMES. Your entries are kept. Press Send again when the connection is back.", "Under Send", "Proposed, 19.9"]),
+                cell(["Not started. There is no connection to NorthMES. Press Start again when the connection is back.", "Under the commands", "Proposed, 19.9"]),
+                cell(["Not paused. There is no connection to NorthMES. Press Pause again when the connection is back.", "Under the commands", "Proposed, 19.9"]),
+                cell(["Not finished. There is no connection to NorthMES. Press Finish again when the connection is back.", "Under the commands", "Proposed, 19.9"]),
+                cell(["Unsent entries; Unsent entries on 5002.10", "Job row; list header; portrait bar", "Proposed"]),
+                cell(["Report not sent", "Notice title, sign-in screen", "Proposed"]),
+                cell(["The session of Anna Berg ended before her report was sent: 96 good, 2 scrap on 5001.20.", "Notice, sign-in screen", "Proposed"]),
+                cell(["Anna Berg, scan your badge to send it. No other operator can send it.", "Notice, sign-in screen", "Proposed"]),
+                cell(["Entries kept", "Notice title, sign-in screen", "Proposed"]),
+                cell(["Anna Berg was signed out after 2 minutes without activity. Her entries on 5001.20 stay on this station and come back when she signs in again.", "Notice, sign-in screen", "Proposed"]),
+                cell(["Reported 96 good, 2 scrap on 5001.20 at 14:06.", "Under Send", "Proposed, 19.11"]),
+                cell(["Reported 96 good, 2 scrap on 5001.20", "Polite region", "Doc pattern"]),
+                cell(["5006.10 started; 5001.20 paused; 5001.20 finished", "Polite region", "Proposed, 19.8"]),
+                cell(["You will be signed out in 30 seconds", "Idle warning title", "Doc"]),
+                cell(["Your entries on this screen are kept.", "Idle warning", "D2"]),
+                cell(["Stay signed in", "Idle warning", "Doc"]),
+                cell(["NorthMES was updated. Reload the station to send. Your entries stay on this screen.", "Under Send", "Proposed, 19.9"]),
+                cell(["Reload", "Button under Send", "Proposed"]),
+                cell(["Your entries are back after the reload. They are not sent yet.", "Beside the h1", "Proposed"]),
+                cell(["Your entries are back. They are not sent yet.", "Beside the h1, after the same operator signs in again", "Proposed"]),
+                cell(["Anna Berg stays signed in until the next operator signs in. Her unsent entries stay on this station for her.", "Switch operator", "D2, second sentence proposed"]),
+                cell(["Badge; Hold your badge to the reader.; or; Sign in with username; Cancel", "Sign-in and Switch operator", "D2 proposal"]),
+                cell(["Sending", "Pressed button and status", "Doc"])
+              ] }),
+              sec({ h: "Units and allowed ranges", list: li([
+                "Good quantity (pcs) and Scrap quantity (pcs): whole pieces, 0 or more. A unit with display decimals takes them, for example Good quantity (kg) with one decimal, 12,5.",
+                "A report needs good or scrap above 0 (question 21.23); scrap above 0 needs a scrap reason.",
+                "Large quantity: good plus scrap above 1.5 times the remaining quantity (a plant setting) asks first; on 5001.20 that is above 822 pcs.",
+                "Report again: the same job and quantities within 10 minutes under a new client_report_id asks first.",
+                "Commands time out after 15 seconds and never show an optimistic result.",
+                "Idle limit: a station setting of at least 120 seconds; the warning opens 30 seconds before sign-off. Drawn with 120 seconds.",
+                "Badge sign-in locks for 5 minutes after 5 unknown badges within 60 seconds.",
+                "Numbers: a no-break space between thousands and a decimal comma (1 200, 12,5); times in plant time on a 24-hour clock."
+              ]) }),
+              sec({ h: "WCAG 2.2 criteria", cols: "--bc:280px minmax(0,1fr)", head: head(["Criterion", "Where it applies"]), rows: [
+                cell(["1.3.1 Info and relationships", "Notices, the error summary and the reason fieldset in markup; the keypad as a named group."]),
+                cell(["1.4.1 Use of color", "Errors, statuses and the Unsent entries badge carry text and an icon."]),
+                cell(["1.4.3 Contrast (minimum)", "Text on the info, warning and destructive pairs, in light and dark."]),
+                cell(["1.4.11 Non-text contrast", "The ring, field borders and the outlined badge."]),
+                cell(["2.1.1 Keyboard", "Every control works by keyboard; the keypad only adds a way to type."]),
+                cell(["2.1.2 No keyboard trap", "Only the modal idle warning holds focus, and Stay signed in releases it."]),
+                cell(["2.1.4 Character key shortcuts", "No global key listener; badges are read only in the focused Badge field."]),
+                cell(["2.2.1 Timing adjustable", "The idle warning opens 30 seconds ahead with Stay signed in; the limit is a station setting."]),
+                cell(["2.4.3 Focus order", "The order in OF16 and the focus after each action above."]),
+                cell(["2.4.7 Focus visible", "The D1 ring on every focusable surface (OF24)."]),
+                cell(["2.4.11 Focus not obscured (minimum)", "The strip and the docked keypad never cover the focused control; the job column scrolls it into view."]),
+                cell(["2.5.8 Target size (minimum)", "44 px station minimum; 48 to 96 px drawn (OF23, OF25)."]),
+                cell(["3.2.2 On input", "Enter never submits; nothing is sent when the connection returns or entries come back."]),
+                cell(["3.3.1 Error identification", "Every error is text next to its control."]),
+                cell(["3.3.3 Error suggestion", "Each error says what to do next."]),
+                cell(["3.3.4 Error prevention", "Large quantity and Report again ask first; a correction adds a row."]),
+                cell(["3.3.7 Redundant entry", "Kept entries come back after a lost connection, a reload and a sign-off."]),
+                cell(["3.3.8 Accessible authentication (minimum)", "The badge needs no cognitive test; username and password allow paste."]),
+                cell(["4.1.2 Name, role, value", "aria-pressed, aria-disabled, aria-busy, aria-invalid and aria-current on the controls that change."]),
+                cell(["4.1.3 Status messages", "The strip, Sending, results and failures, each once."])
+              ] }),
+              sec({ h: "Proposals and open questions in these frames", list: li([
+                "OFQ1 Does a username sign-in by the same operator send a kept report too? Drawn: the notice asks for the badge, as plan 09 names the scan; proposed yes.",
+                "OFQ2 When are kept entries discarded when their operator does not come back (21.15)? Drawn: kept, and hidden from other operators.",
+                "OFQ3 What counts as idle for the automatic reload, and does a signed-in operator stay signed in across it? Drawn: the station at its sign-in screen.",
+                "OFQ4 Does the error under Send stay after the connection is back? Drawn: it stays until the next press, since it says to press Send again (OF5).",
+                "OFQ5 After a session ends on Send, the same operator's scan sends the report without a second press, as plan 09 section 8 reads. Any later sign-in only brings the entries back for Send. Is that the rule?",
+                "OFQ6 The selected job's own unsent entries are in its fields, so its row has no badge; the badge marks jobs the operator left, as in option A.",
+                "OFQ7 The line Your entries are back sits beside the h1 in the frame's header slot, so Send stays in view at 1280 by 800. At a station with several machines it wraps under the machine switch.",
+                "OFQ8 At 1280 by 800 the strip takes 53 px, so Send and the error under it need the job column scrolled by about 105 px, which hides the job number (OF1). Is that acceptable, or does the job header shrink further while the strip shows?",
+                "OFQ9 At 1920 by 1080 the German long strings make the job column taller than the screen, so it scrolls there too and Send ends just below the fold (OF15, OF27); option A drew no scroll at 1920.",
+                "The report part's markup puts the keypad region after Send; the tab order follows OF16 (fields, toggle, reasons, Send).",
+                "After a confirmed report the job's figures, its list row and the last reports show the new totals (OF7, OF18): Good 736, Scrap 14, Remaining 450 pcs, with the report of 14:06 first.",
+                "Still open from the rules: 21.26 reconnecting against offline, 21.32 aria-busy on main, 21.33 the English top bar in the long-strings frames (OF15, OF27), 21.34 the correction reason on a touch-only station."
+              ]) })
+            ]
+          };
+          return { uid: this.__uid, show: show, rows: rows, p: String(P.idp || "of").trim() || "of", ov: ov, sb: sb, bn: bn };
+        }
+      }
+    </script>
+  </body>
+</html>

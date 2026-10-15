@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 report form with the docked keypad</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+      </helmet>
+      <div class="ps-part {{ rootCls }}" lang="{{ lang }}" data-psu="{{ uid }}" style="{{ rootStyle }}">
+        <section class="ps-card ps-repc {{ cardCls }}" aria-labelledby="{{ ids.h }}">
+          <h3 class="{{ hCls }}" id="{{ ids.h }}">{{ t.report }}</h3>
+          <sc-if value="{{ hasSummary }}">
+            <div class="ps-esum {{ f.summary }}" tabIndex="-1" role="group" aria-labelledby="{{ ids.sum }}">
+              <p class="ps-esum-t" id="{{ ids.sum }}"><span class="ic" data-icon="CircleAlert"></span>{{ summaryT }}</p>
+              <ul>
+                <sc-for list="{{ errors }}" as="e"><li><a href="{{ e.href }}">{{ e.text }}</a></li></sc-for>
+              </ul>
+            </div>
+          </sc-if>
+          <div class="ps-rep {{ repCls }}">
+            <div class="f">
+              <div class="ps-fields {{ fieldsCls }}">
+                <sc-for list="{{ fields }}" as="q">
+                  <div class="ps-fld">
+                    <span class="ps-lbl" id="{{ q.lid }}">{{ q.label }}</span>
+                    <span class="ps-nf {{ q.cls }}" id="{{ q.id }}" role="textbox" aria-labelledby="{{ q.lid }}" aria-invalid="{{ q.inv }}" aria-describedby="{{ q.desc }}">{{ q.v }}<sc-if value="{{ q.caret }}"><span class="ps-caret"></span></sc-if></span>
+                    <sc-if value="{{ q.hasErr }}"><p class="ps-fe" id="{{ q.eid }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ q.err }}</span></p></sc-if>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ toggleInRow }}">
+                  <button class="btn lg v-outline ps-tog {{ f.toggle }}" type="button" aria-pressed="{{ tog.pressed }}">{{ tog.label }}</button>
+                </sc-if>
+              </div>
+            </div>
+            <div class="r">
+              <sc-if value="{{ radios }}">
+                <fieldset class="ps-fs" aria-describedby="{{ reasonDesc }}">
+                  <legend>{{ t.reason }}</legend>
+                  <div class="ps-rads {{ radCls }}">
+                    <sc-for list="{{ reasons }}" as="r">
+                      <span class="ps-rad {{ r.cls }}" role="radio" aria-checked="{{ r.on }}" lang="{{ r.lang }}"><span class="ps-rdot"></span>{{ r.t }}</span>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ reasonErr }}"><p class="ps-fe" id="{{ ids.re }}" style="margin-top:8px"><span class="ic" data-icon="CircleAlert"></span><span>{{ t.errReason }}</span></p></sc-if>
+                </fieldset>
+              </sc-if>
+              <sc-if value="{{ searchable }}">
+                <fieldset class="ps-fs">
+                  <legend id="{{ ids.rl }}">{{ t.reason }}</legend>
+                  <div class="ps-cmd">
+                    <span class="ps-nf srch {{ f.search }}" role="combobox" aria-expanded="true" aria-controls="{{ ids.lb }}" aria-label="{{ t.searchReasons }}"><span class="ic" data-icon="Search"></span><span>{{ query }}</span><sc-if value="{{ searchCaret }}"><span class="ps-caret"></span></sc-if></span>
+                    <p class="ps-desc">{{ found }}</p>
+                    <div class="ps-cmd-w">
+                      <ul class="ps-opts" id="{{ ids.lb }}" role="listbox" aria-labelledby="{{ ids.rl }}">
+                        <sc-for list="{{ options }}" as="o">
+                          <li class="ps-opt {{ o.cls }}" role="option" aria-selected="{{ o.sel }}"><span class="ic" data-icon="Check"></span>{{ o.t }}</li>
+                        </sc-for>
+                      </ul>
+                      <sc-if value="{{ sb.show }}"><span class="ps-sb" style="{{ sb.style }}" aria-hidden="true"></span></sc-if>
+                    </div>
+                  </div>
+                </fieldset>
+              </sc-if>
+            </div>
+            <div class="s">
+              <div class="ps-sendcol">
+                <button class="btn lg v-default ps-send {{ send.cls }}" type="button" aria-disabled="{{ send.dis }}" aria-busy="{{ send.busy }}" aria-describedby="{{ send.desc }}"><span class="ic" data-icon="{{ send.icon }}"></span>{{ send.label }}</button>
+                <sc-if value="{{ sending }}"><p class="ps-vh" role="status">{{ t.sending }}</p></sc-if>
+                <sc-if value="{{ hasMsg }}">
+                  <div class="ps-msgrow">
+                    <p class="ps-msg {{ msg.cls }}" id="{{ ids.msg }}"><span class="ic" data-icon="{{ msg.icon }}"></span><span>{{ msg.text }}</span></p>
+                    <sc-if value="{{ msg.reload }}"><button class="btn lg v-outline {{ f.reload }}" type="button"><span class="ic" data-icon="RefreshCw"></span>{{ t.reload }}</button></sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ kpShown }}">
+              <div class="k">
+                <div class="ps-kp {{ kpCls }}" role="group" aria-labelledby="{{ ids.kc }}">
+                  <div class="ps-kp-h">
+                    <span id="{{ ids.kc }}">{{ kpCaption }}</span>
+                    <div class="ps-kp-tools">
+                      <sc-if value="{{ clearTop }}"><button class="btn lg v-secondary {{ clearKey.cls }}" type="button" tabIndex="-1" aria-label="{{ clearKey.aria }}">{{ clearKey.t }}</button></sc-if>
+                      <button class="btn lg v-outline ps-tog {{ f.toggle }}" type="button" aria-pressed="{{ tog.pressed }}">{{ tog.label }}</button>
+                    </div>
+                  </div>
+                  <div class="ps-keys">
+                    <sc-for list="{{ keys }}" as="k">
+                      <button class="ps-key {{ k.cls }}" type="button" tabIndex="-1" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1920x1080","tsType":"string"},"job":{"editor":"text","default":"5001.20","tsType":"string"},"input":{"editor":"enum","options":["touch","keyboard"],"default":"touch","tsType":"string"},"keypad":{"editor":"enum","options":["auto","shown","hidden"],"default":"auto","tsType":"string"},"good":{"editor":"text","default":"96","tsType":"string"},"scrap":{"editor":"text","default":"2","tsType":"string"},"reason":{"editor":"text","default":"Burr","tsType":"string"},"reasons":{"editor":"enum","options":["8","14"],"default":"8","tsType":"string"},"query":{"editor":"text","default":"","tsType":"string"},"state":{"editor":"enum","options":["default","sending","offline","timeout","outdated","server","invalid","sent"],"default":"default","tsType":"string"},"send":{"editor":"enum","options":["auto","blocked"],"default":"auto","tsType":"string"},"focus":{"editor":"text","default":"auto","tsType":"string"},"target":{"editor":"enum","options":["auto","good","scrap"],"default":"auto","tsType":"string"},"key":{"editor":"text","default":"","tsType":"string"},"press":{"editor":"text","default":"","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"solo":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"idp":{"editor":"text","default":"rp","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the frame's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PS ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PS) ready();
+          // The searchable reason list draws its Scroll Area thumb at the visible share.
+          this.__measure = () => {
+            const root = document.querySelector('[data-psu="' + this.__uid + '"]');
+            const sc = root && root.querySelector(".ps-opts");
+            const prev = this.state || {};
+            let sb = null;
+            if (sc && sc.scrollHeight > sc.clientHeight + 1) {
+              const track = sc.clientHeight - 8;
+              sb = { h: Math.max(24, Math.round(track * sc.clientHeight / sc.scrollHeight)), top: Math.round(4 + track * sc.scrollTop / sc.scrollHeight) };
+            }
+            if (JSON.stringify(prev.sb || null) !== JSON.stringify(sb)) this.setState({ sb: sb });
+          };
+          setTimeout(this.__measure, 40);
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__measure && this.__measure());
+        }
+        componentDidUpdate() {
+          if (this.__measure) setTimeout(this.__measure, 0);
+        }
+        renderVals() {
+          const p = this.props || {};
+          const PS = window.PS;
+          this.__uid = this.__uid || "psr" + Math.random().toString(36).slice(2, 9);
+          const st0 = this.state || {};
+          const idp = String(p.idp || "rp");
+          const pick = (v, d, opts) => { const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim(); return opts.indexOf(s) < 0 ? d : s; };
+          const size = pick(p.size, "1920x1080", ["1920x1080", "1280x800", "800x1280"]);
+          const portrait = size === "800x1280";
+          // Rendered as the page root, the part draws the station's main area itself; mounted in a frame it inherits.
+          const solo = p.solo === "on" || (p.solo !== "off" && !!window.__dcRootName && window.__dcRootName() === "production-start-303-station-report");
+          const colW = size === "1920x1080" ? 810 : size === "1280x800" ? 890 : 750;
+          const ids = { h: idp + "-h", sum: idp + "-sum", g: idp + "-good", gl: idp + "-good-l", ge: idp + "-good-e", s: idp + "-scrap", sl: idp + "-scrap-l", se: idp + "-scrap-e", re: idp + "-reason-e", rl: idp + "-reason-l", lb: idp + "-reasons", msg: idp + "-msg", kc: idp + "-kp" };
+          const base = { uid: this.__uid, rootCls: (solo ? "solo" : "") + (p.theme === "dark" ? " dark" : ""), rootStyle: solo ? "width:" + (colW + 48) + "px" : "", lang: "en", ids: ids, t: {}, f: {}, fields: [], reasons: [], options: [], errors: [], keys: [], send: {}, msg: {}, tog: {}, sb: {} };
+          if (!PS) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const L = strings === "long";
+          const T = PS.tr(strings);
+          const j = PS.job(String(p.job || "5001.20").trim());
+          const u = PS.unit(j, strings);
+          const state = pick(p.state, "default", ["default", "sending", "offline", "timeout", "outdated", "server", "invalid", "sent"]);
+          const input = pick(p.input, "touch", ["touch", "keyboard"]);
+          const kpMode = pick(p.keypad, "auto", ["auto", "shown", "hidden"]);
+          // D.2: the keypad shows by default on a station without a keyboard, and starts hidden on a station with one.
+          const kpShown = kpMode === "shown" || (kpMode === "auto" && input === "touch");
+          let focus = String(p.focus || "auto").trim();
+          if (focus === "auto") focus = state === "invalid" ? "summary" : state === "default" ? "good" : "send";
+          const F = (k) => (focus === k ? "is-focus" : "");
+          const target = pick(p.target, "auto", ["auto", "good", "scrap"]) === "auto" ? (focus === "scrap" ? "scrap" : "good") : p.target;
+          // Values. invalid: 12,5 in pcs and no reason with scrap above 0 (rule 19.10); sent: the fields are cleared (19.11).
+          const has = (v) => v !== undefined && v !== null;
+          let good = has(p.good) ? String(p.good) : "96";
+          let scrap = has(p.scrap) ? String(p.scrap) : "2";
+          let reason = has(p.reason) ? String(p.reason).trim() : "Burr";
+          // invalid draws 12,5 in pcs and no reason unless the page passes other values than the defaults.
+          if (state === "invalid") { if (good === "96") good = j.dec ? "12,55" : "12,5"; if (reason === "Burr") reason = "none"; }
+          const sentGood = good, sentScrap = scrap;
+          if (state === "sent") { good = ""; scrap = ""; }
+          const scrapNum = parseFloat(String(scrap).replace(",", ".")) || 0;
+          const goodErr = state === "invalid" && !j.dec && /,/.test(good) ? T.errWhole : "";
+          const reasonErr = state === "invalid" && scrapNum > 0 && (reason === "none" || reason === "");
+          const fields = [
+            { key: "good", lid: ids.gl, id: ids.g, eid: ids.ge, label: T.goodQty(u), v: good, err: goodErr },
+            { key: "scrap", lid: ids.sl, id: ids.s, eid: ids.se, label: T.scrapQty(u), v: scrap, err: "" }
+          ].map((q) => Object.assign(q, {
+            cls: (q.err ? "is-err " : "") + F(q.key),
+            caret: focus === q.key,
+            hasErr: !!q.err,
+            inv: q.err ? "true" : undefined,
+            desc: q.err ? q.eid : undefined
+          }));
+          const errors = [];
+          if (goodErr) errors.push({ href: "#" + ids.g, text: T.goodQty(u) + ": " + goodErr });
+          if (reasonErr) errors.push({ href: "#" + ids.rl, text: T.reason + ": " + T.errReason });
+          // Reasons: eight radio rows, or the register of 14 as a searchable list (spec 6.7).
+          const list = String(p.reasons) === "14" ? PS.REASONS14 : PS.REASONS;
+          const name = (r) => (L ? r.de : r.en);
+          const isSel = (r) => r.en === reason || r.de === reason;
+          const query = has(p.query) ? String(p.query) : "";
+          const opts = list.filter((r) => !query || name(r).toLowerCase().indexOf(query.toLowerCase()) >= 0);
+          // Toggle (rule 19.6): System keyboard on a station without a keyboard, Keypad on a station with one.
+          const tog = input === "touch"
+            ? { label: T.systemKeyboard, pressed: kpShown ? "false" : "true" }
+            : { label: T.keypad, pressed: kpShown ? "true" : "false" };
+          const fieldName = target === "scrap" ? T.scrapName : T.goodName;
+          // press: the key drawn pressed. React keeps a prop named key for itself, so a mounted part receives press instead.
+          const keyAct = String(p.press || p.key || "");
+          const digit = (d) => ({ t: d, aria: undefined, icon: "", cls: keyAct === d ? "is-act" : "" });
+          const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3"].map(digit);
+          const clearKey = { t: T.clear, aria: T.clearName(fieldName), icon: "", cls: "fn" + (keyAct === "clear" ? " is-act" : "") };
+          const delKey = { t: "", aria: T.del, icon: "Delete", cls: "fn" + (keyAct === "delete" ? " is-act" : "") };
+          // A unit with display decimals: the fourth row becomes the decimal key, 0 and Delete, and Clear moves to the top row (19.5).
+          if (j.dec) keys.push({ t: ",", aria: T.decimal, icon: "", cls: keyAct === "," ? "is-act" : "" }, digit("0"), delKey);
+          else keys.push(clearKey, digit("0"), delKey);
+          // Send and its line (rules 5.3, 16.21, 19.9, 19.11). send="blocked": Start, Pause or Finish is in flight, so Send is
+          // aria-disabled in the D1 disabled look and stays focusable (ADR 0033, rule 5.3); its label stays Send.
+          const waiting = state === "sending";
+          const blocked = !waiting && pick(p.send, "auto", ["auto", "blocked"]) === "blocked";
+          const MSG = {
+            offline: { cls: "err", icon: "CircleAlert", text: T.sendOffline },
+            timeout: { cls: "err", icon: "CircleAlert", text: T.sendTimeout },
+            server: { cls: "err", icon: "CircleAlert", text: T.sendServer },
+            outdated: { cls: "", icon: "Info", text: T.sendOutdated, reload: true },
+            sent: { cls: "ok", icon: "CircleCheck", text: T.sent(sentGood, sentScrap, j.num) }
+          };
+          const msg = MSG[state] || null;
+          const radCls = kpShown ? (portrait ? "c1" : "") : size === "1280x800" ? "c4" : "";
+          return Object.assign(base, {
+            lang: T.lang,
+            t: T,
+            f: { summary: F("summary"), toggle: F("toggle"), search: F("search"), reload: F("reload") },
+            hasSummary: errors.length > 0,
+            summaryT: T.summary(errors.length),
+            errors: errors,
+            cardCls: size === "1280x800" ? "cmp" : "",
+            hCls: size === "1280x800" ? "ps-vh" : "ps-h3",
+            repCls: kpShown ? (portrait ? "kpp" : "kpl" + (size === "1280x800" ? " k280" : "")) : "",
+            fieldsCls: kpShown ? "" : "wt",
+            fields: fields,
+            toggleInRow: !kpShown,
+            tog: tog,
+            radios: list.length <= 8,
+            radCls: radCls + (reasonErr ? " err" : ""),
+            reasons: list.map((r) => ({ t: name(r), on: isSel(r) ? "true" : "false", cls: (isSel(r) ? "on" : "") + (focus === "reason" && isSel(r) ? " is-focus" : ""), lang: undefined })),
+            reasonErr: reasonErr,
+            reasonDesc: reasonErr ? ids.re : undefined,
+            searchable: list.length > 8,
+            query: query,
+            searchCaret: focus === "search",
+            found: T.reasonsFound(opts.length),
+            options: opts.map((r) => ({ t: name(r), sel: isSel(r) ? "true" : "false", cls: (isSel(r) ? "on" : "") + (focus === "reason" && isSel(r) ? " act" : "") })),
+            sb: st0.sb && list.length > 8 ? { show: true, style: "top:" + st0.sb.top + "px;height:" + st0.sb.h + "px" } : { show: false },
+            send: {
+              cls: (waiting ? "is-busy " : "") + (blocked ? "is-dis " : "") + F("send"),
+              icon: waiting ? "LoaderCircle" : "Send",
+              label: waiting ? T.sending : T.send,
+              dis: waiting || blocked ? "true" : undefined,
+              busy: waiting ? "true" : undefined,
+              desc: msg && msg.cls === "err" ? ids.msg : msg && msg.reload ? ids.msg : undefined
+            },
+            sending: waiting,
+            hasMsg: !!msg,
+            msg: msg || {},
+            kpShown: kpShown,
+            kpCls: size === "1920x1080" ? "" : "k64",
+            kpCaption: T.keypadFor(fieldName),
+            clearTop: !!j.dec,
+            clearKey: { t: clearKey.t, aria: clearKey.aria, cls: keyAct === "clear" ? "is-act" : "" },
+            keys: keys
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

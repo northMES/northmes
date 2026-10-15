@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings: plant settings pages</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+          /* Part of the spec page shell-313-settings.dc.html, issue northMES/northmes#313: the plant settings pages, the
+             module and plugin settings, the way to company settings, a narrower permission and the routes. Classes start
+             with set-pl-. Every UI color is a D1 token; the chips are canvas labels, not part of the UI. */
+          .set-pl{display:flex;flex-direction:column;align-items:flex-start;gap:96px;width:max-content;padding:0;background:transparent}
+          .set-pl-line{display:flex;align-items:flex-start;gap:80px}
+          .set-pl-f{display:flex;flex-direction:column;align-items:flex-start;flex:none}
+          .set-pl-f.w1920{width:1920px}
+          .set-pl-f.w1440{width:1440px}
+          .set-pl-f.w1280{width:1280px}
+          .set-pl-f > .flabel{max-width:100%;flex-wrap:wrap;row-gap:4px;cursor:default}
+          .set-pl-f > .sc-host{display:block;width:100%}
+          /* Page content that this part draws itself, inside the layout's page column */
+          .set-page > .set-pl-c{display:flex;flex-direction:column;gap:16px;min-width:0}
+          .set-page > .lf-part.set-pl-fill{flex:1 1 0;min-height:0}
+          .set-pl-c a.btn{text-decoration:none}
+          .set-pl-hs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.75fr);gap:16px;align-items:start}
+          .set-pl-c .lf-dl dd{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+          .set-pl-tb{display:grid;border-top:1px solid var(--border)}
+          .set-pl-tr{display:grid;grid-template-columns:var(--cols);align-items:center;gap:12px;min-height:40px;padding:5px 0;border-bottom:1px solid var(--border)}
+          .set-pl-tr.hd{min-height:32px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .set-pl-tr > span{display:flex;flex-direction:column;justify-content:center;min-width:0;overflow-wrap:anywhere}
+          .set-pl-tr .lf-mono{font-size:13px}
+          .set-pl-c .lf-state{min-height:0;padding:32px 24px}
+          .set-pl-off{display:inline-flex;align-items:center;gap:6px}
+          .set-pl-off .ic{width:14px;height:14px;color:var(--muted-foreground)}
+          /* The routes frame: a document, not part of the UI */
+          .set-pl-doc{width:1440px}
+          .set-pl-doc .t2{margin-top:36px}
+          .set-pl-doc .lede{max-width:120ch}
+          .set-pl-rt{display:grid;margin-top:12px;border-top:1px solid var(--border)}
+          .set-pl-rr{display:grid;grid-template-columns:150px minmax(0,1.25fr) minmax(0,1.2fr) minmax(0,1.35fr) 112px;gap:16px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+          .set-pl-rr.rp{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 112px}
+          .set-pl-rr.h{padding:8px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .set-pl-rr > span{min-width:0;overflow-wrap:anywhere}
+          .set-pl-rr .k{font-weight:600}
+          .set-pl-rr .mono{font-size:12px}
+          .set-pl-doc .ul{margin-top:12px;font-size:13px;line-height:18px}
+        </style>
+      </helmet>
+      <div class="set-pl" data-screen-label="{{ label }}">
+        <sc-for list="{{ lines }}" as="ln" hint-placeholder-count="2">
+          <div class="set-pl-line">
+            <sc-for list="{{ ln.frames }}" as="f" hint-placeholder-count="2">
+              <section class="set-pl-f {{ f.wcls }}" data-screen-label="{{ f.label }}">
+                <div class="flabel"><span class="fid">{{ f.id }}</span>{{ f.name }}<span class="fth">{{ f.th }}</span><sc-if value="{{ f.hasUrl }}"><span class="set-url">{{ f.url }}</span></sc-if></div>
+                <sc-if value="{{ f.isScreen }}">
+                  <dc-import name="shell-313-settings-frame" dc-props="{{ f.fp }}" hint-size="{{ f.hint }}">
+                    <dc-import name="shell-313-settings-layout" dc-props="{{ f.lp }}" hint-size="100%,100%">
+                      <sc-if value="{{ f.isList }}"><dc-import name="shell-313-settings-list" dc-props="{{ f.cp }}" hint-size="100%,400px"></dc-import></sc-if>
+                      <sc-if value="{{ f.isForm }}"><dc-import name="shell-313-settings-form" dc-props="{{ f.cp }}" hint-size="100%,400px"></dc-import></sc-if>
+                      <sc-if value="{{ f.isLanding }}"><dc-import name="shell-313-settings-landing" dc-props="{{ f.cp }}" hint-size="100%,600px"></dc-import></sc-if>
+                      <sc-if value="{{ f.isHealth }}">
+                        <div class="set-pl-c">
+                          <div class="set-pl-hs">
+                            <section class="lf-sect" aria-labelledby="{{ f.ids.a }}">
+                              <h2 class="lf-sect-h" id="{{ f.ids.a }}">Server</h2>
+                              <dl class="lf-dl">
+                                <sc-for list="{{ health.server }}" as="r">
+                                  <dt>{{ r.k }}</dt>
+                                  <dd><sc-if value="{{ r.isBadge }}"><span class="badge set-st-ok"><span class="ic" data-icon="CircleCheck"></span>{{ r.v }}</span></sc-if><sc-if value="{{ r.isText }}"><span class="lf-mono">{{ r.v }}</span></sc-if></dd>
+                                </sc-for>
+                              </dl>
+                            </section>
+                            <section class="lf-sect" aria-labelledby="{{ f.ids.b }}">
+                              <h2 class="lf-sect-h" id="{{ f.ids.b }}">Modules and plugins</h2>
+                              <div class="set-pl-tb" role="table" aria-labelledby="{{ f.ids.b }}" style="--cols:minmax(0,1.4fr) 88px 88px 120px minmax(0,1fr)">
+                                <div class="set-pl-tr hd" role="row"><span role="columnheader">Module</span><span role="columnheader">Version</span><span role="columnheader">Range</span><span role="columnheader">Status</span><span role="columnheader">Reason</span></div>
+                                <sc-for list="{{ health.mods }}" as="m">
+                                  <div class="set-pl-tr" role="row">
+                                    <span role="cell"><span>{{ m.name }}</span><span class="lf-sub lf-mono">{{ m.id }}</span></span>
+                                    <span role="cell"><span class="lf-mono">{{ m.ver }}</span></span>
+                                    <span role="cell"><span class="lf-mono">{{ m.range }}</span></span>
+                                    <span role="cell"><span class="badge set-st-ok"><span class="ic" data-icon="CircleCheck"></span>Loaded</span></span>
+                                    <span role="cell"></span>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </section>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ f.isAi }}">
+                        <div class="set-pl-c">
+                          <div class="lf-card auto">
+                            <div class="lf-state">
+                              <span class="big"><span class="ic" data-icon="Sparkles"></span></span>
+                              <h2 class="lf-state-h">No AI provider yet</h2>
+                              <p>Every AI feature of Nordic Tools AB stays off, and nobody sees the Assistant, until a provider is set up and its connection test passes. Providers are set up in Integrations.</p>
+                              <div class="acts"><a class="btn v-default" href="#"><span class="ic" data-icon="Plug"></span>Go to Integrations</a></div>
+                            </div>
+                          </div>
+                          <section class="lf-sect" aria-labelledby="{{ f.ids.a }}">
+                            <h2 class="lf-sect-h" id="{{ f.ids.a }}">Features</h2>
+                            <p class="lf-sect-d">Modules declare these features. Each one stays off until a company admin turns it on, which needs a provider for its alias and a passing connection test.</p>
+                            <div class="set-pl-tb" role="table" aria-labelledby="{{ f.ids.a }}" style="--cols:minmax(0,1.4fr) minmax(0,1fr) 120px minmax(0,1.6fr)">
+                              <div class="set-pl-tr hd" role="row"><span role="columnheader">Feature</span><span role="columnheader">Module</span><span role="columnheader">Alias</span><span role="columnheader">State</span></div>
+                              <div class="set-pl-tr" role="row">
+                                <span role="cell">Planning assistant</span>
+                                <span role="cell">Planning</span>
+                                <span role="cell"><span class="lf-mono">fast</span></span>
+                                <span role="cell"><span class="set-pl-off"><span class="ic" data-icon="CircleOff"></span>Off, no provider for fast</span></span>
+                              </div>
+                            </div>
+                          </section>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ f.isAcme }}">
+                        <div class="lf-part set-pl-fill">
+                          <div class="lf-fscroll">
+                            <div class="lf-form">
+                              <section class="lf-fs" aria-labelledby="{{ f.ids.a }}">
+                                <h2 class="lf-fs-h" id="{{ f.ids.a }}">Tool life</h2>
+                                <p class="lf-fs-d">Tool life limits for everyone at Plant A. A limit without a plant value uses the Acme AB value. Saved changes apply from the next tool change.</p>
+                                <div class="lf-g1 lf-pair">
+                                  <div class="fld"><span class="lbl">Warn at</span><span class="lf-src-row"><span class="lf-srcm set"><span class="ic" data-icon="Factory"></span>Set for Plant A</span><button class="btn v-link" type="button">Clear plant value</button></span></div>
+                                  <div class="fld"><span class="inp"><span class="lf-iv lf-mono">90</span><span class="lf-unit">% of tool life</span></span><span class="desc">The tool life list marks a tool once it has used this share of its life. Clearing uses the Acme AB value, 85 %.</span></div>
+                                </div>
+                                <div class="lf-g1 lf-pair">
+                                  <div class="fld"><span class="lbl">Count tool life in</span><span class="lf-src-row"><span class="lf-srcm"><span class="ic" data-icon="Building2"></span>From Acme AB</span></span></div>
+                                  <div class="fld"><span class="lf-selw"><span class="inp lf-sel" role="combobox" aria-expanded="false" aria-label="Count tool life in"><span class="lf-iv">Strokes</span><span class="ic lf-chev" data-icon="ChevronDown"></span></span></span><span class="desc">How the life of a new tool is counted.</span></div>
+                                </div>
+                              </section>
+                              <section class="lf-fs" aria-labelledby="{{ f.ids.b }}">
+                                <h2 class="lf-fs-h" id="{{ f.ids.b }}">Reason for change</h2>
+                                <div class="lf-g1">
+                                  <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><span class="lf-ph">Why you made this change</span></span><span class="desc">Shown in the settings history. Do not enter personal data. Up to 500 characters.</span></div>
+                                </div>
+                              </section>
+                              <div class="lf-foot">
+                                <button class="btn v-default" type="button">Save settings</button>
+                                <button class="btn v-outline" type="button">Cancel</button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </dc-import>
+                  </dc-import>
+                </sc-if>
+                <sc-if value="{{ f.isDoc }}">
+                  <div class="sheet set-pl-doc">
+                    <p class="kick">Issue #313, story E04-S02 (#40). Build notes, not part of the UI</p>
+                    <h2 class="t1">Routes, titles and breadcrumbs</h2>
+                    <p class="lede">Every page of company settings and plant settings, drawn for Jonas Holm, company admin of Acme AB and Nordic Tools AB, so plant trails start with the company. Titles put the specific part first, then the scope, then NorthMES (ADR 0021, ADR 0066). Doc marks what ADR 0066 and plan 06 name; Path proposed marks a route whose title and trail follow the documented pattern; Proposed needs Krister's yes.</p>
+                    <h3 class="t2">Company settings, Acme AB</h3>
+                    <div class="set-pl-rt">
+                      <div class="set-pl-rr h"><span>Page</span><span>Route</span><span>Title</span><span>Trail</span><span>Source</span></div>
+                      <sc-for list="{{ doc.company }}" as="r">
+                        <div class="set-pl-rr"><span class="k">{{ r.page }}</span><span class="mono">{{ r.route }}</span><span>{{ r.title }}</span><span>{{ r.trail }}</span><span><span class="tag {{ r.tag }}">{{ r.src }}</span></span></div>
+                      </sc-for>
+                    </div>
+                    <ul class="ul">
+                      <sc-for list="{{ doc.companyNotes }}" as="n"><li>{{ n }}</li></sc-for>
+                    </ul>
+                    <h3 class="t2">Plant settings, Plant A</h3>
+                    <div class="set-pl-rt">
+                      <div class="set-pl-rr h"><span>Page</span><span>Route</span><span>Title</span><span>Trail</span><span>Source</span></div>
+                      <sc-for list="{{ doc.plant }}" as="r">
+                        <div class="set-pl-rr"><span class="k">{{ r.page }}</span><span class="mono">{{ r.route }}</span><span>{{ r.title }}</span><span>{{ r.trail }}</span><span><span class="tag {{ r.tag }}">{{ r.src }}</span></span></div>
+                      </sc-for>
+                    </div>
+                    <ul class="ul">
+                      <sc-for list="{{ doc.plantNotes }}" as="n"><li>{{ n }}</li></sc-for>
+                    </ul>
+                    <h3 class="t2">What replaces /admin</h3>
+                    <div class="set-pl-rt">
+                      <div class="set-pl-rr rp h"><span>Before (D2 and ADR 0066 until 2026-10-08)</span><span>Now</span><span>Source</span></div>
+                      <sc-for list="{{ doc.admin }}" as="r">
+                        <div class="set-pl-rr rp"><span>{{ r.before }}</span><span>{{ r.now }}</span><span><span class="tag {{ r.tag }}">{{ r.src }}</span></span></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </section>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frames":{"editor":"text","default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Part of shell-313-settings.dc.html (issue #313): the plant settings pages of Plant A under their module paths,
+          // with the main sidebar collapsed to D2's rail (K1008r, rules 1.6, 7.1), the module and plugin settings, the way
+          // to company settings, a narrower permission and the routes frame. Each frame mounts the settings frame (the #313
+          // copy of Shell.dc.html, rules 2.3a), the layout part inside main, and a list, form or landing part; System
+          // health, the AI assistant and Acme tooling have no shared part, so this part draws them with the #222 classes.
+          // Prop frames: "all" or a comma list of frame ids (PL1,PL3) to draw only those.
+          const P = this.props || {};
+          const only = String(P.frames || "all").trim();
+          const pickIds = only === "all" || only === "" ? null : only.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+          const CO = "Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C";
+          const JH = { role: "company-admin", companies: CO, onboarding: "Plant D", user: "Jonas Holm", bell: "off" };
+          const EL = { role: "admin", access: "one-plant", user: "Erik Lind", bell: "off" };
+          const HGT = { 1920: 1080, 1440: 900, 1280: 800 };
+
+          // The pages. url is the route in the chip; page the current entry of the settings navigation (rules 4.2, 5.2).
+          const PG = {
+            plant: { page: "plant", title: "Plant", url: "/plant-a/core/plant", kind: "form", cp: { form: "plant", plant: "a" } },
+            machines: { page: "machines", title: "Machines", url: "/plant-a/core/machines", kind: "list", cp: { list: "machines" }, actions: "*New machine" },
+            newMachine: { page: "machines", title: "New machine", crumbs: "Settings|Machines|New machine", lt: "New machine", url: "/plant-a/core/machines/new", kind: "form", cp: { form: "machine", mode: "create", state: "errors", focus: "summary" } },
+            groups: { page: "equipment-groups", title: "Equipment groups", url: "/plant-a/core/equipment-groups", kind: "list", cp: { list: "equipment-groups" }, actions: "*New equipment group" },
+            calendars: { page: "calendars", title: "Calendars", url: "/plant-a/core/calendars", kind: "list", cp: { list: "calendars" }, actions: "*New calendar" },
+            stations: { page: "stations", title: "Stations", url: "/plant-a/core/stations", kind: "list", cp: { list: "stations" } },
+            health: { page: "system-health", title: "System health", url: "/plant-a/core/system-health", kind: "health", meta: "Checked at 06:40" },
+            planning: { page: "planning", title: "Planning rules", url: "/plant-a/planning/settings", kind: "form", cp: { form: "planning", scope: "plant" } },
+            ai: { area: "company", scope: "Nordic Tools AB", page: "ai", title: "AI assistant", url: "/settings/$companyId/ai/settings", kind: "ai" },
+            acme: { page: "acme", title: "Acme tooling", url: "/plant-a/acme/settings", kind: "acme" },
+            landing: { area: "company", scope: "Acme AB", page: "landing", title: "Company settings", landing: true, url: "/settings/$companyId", kind: "landing", cp: { area: "company", company: "Acme AB" } }
+          };
+          // id, chip name, theme, width, page, chip detail, overrides (who, fx frame props, lx layout props)
+          const L = [
+            ["PL1", "Plant at Plant A", "light", 1440, "plant", "The plant record with its formats override (E06-S05, E06-S13)"],
+            ["PL2", "Plant at Plant A", "dark", 1440, "plant", "As PL1"],
+            ["PL3", "Machines at Plant A", "light", 1440, "machines", "C2 with the main sidebar collapsed to the rail; the table is 1082 px"],
+            ["PL4", "Machines at Plant A", "dark", 1440, "machines", "As PL3"],
+            ["PL5", "New machine, field errors", "light", 1440, "newMachine", "Create machine refused: the error summary has focus, two fields name their error"],
+            ["PL6", "New machine, field errors", "dark", 1440, "newMachine", "As PL5"],
+            ["PL7", "Equipment groups at Plant A", "light", 1440, "groups", "Plant groups, and Acme AB's Assembly read only"],
+            ["PL8", "Equipment groups at Plant A", "dark", 1440, "groups", "As PL7"],
+            ["PL9", "Calendars at Plant A", "light", 1440, "calendars", "Calendars and their shift patterns; the calendar page itself is E06-S09's design task"],
+            ["PL10", "Calendars at Plant A", "dark", 1440, "calendars", "As PL9"],
+            ["PL11", "Stations at Plant A", "light", 1440, "stations", "Press 4 paired, Mill 1 waiting for approval"],
+            ["PL12", "Stations at Plant A", "dark", 1440, "stations", "As PL11"],
+            ["PL13", "System health at Plant A", "light", 1440, "health", "Server and the modules and plugins table; the full page is E16-S03's design task"],
+            ["PL14", "System health at Plant A", "dark", 1440, "health", "As PL13"],
+            ["PL15", "Planning rules at Plant A", "light", 1440, "planning", "Module settings: the plan 07 names, Acme AB's values and two plant values"],
+            ["PL16", "Planning rules at Plant A", "dark", 1440, "planning", "As PL15"],
+            ["PL17", "AI assistant, no provider", "light", 1440, "ai", "Company settings of Nordic Tools AB, where providers bind (ADR 0035): every feature off"],
+            ["PL18", "AI assistant, no provider", "dark", 1440, "ai", "As PL17"],
+            ["PL19", "Acme tooling at Plant A", "light", 1440, "acme", "The plugin's settings after Modules, rendered by SettingsForm"],
+            ["PL20", "Acme tooling at Plant A", "dark", 1440, "acme", "As PL19"],
+            ["PL21", "Way to Acme AB settings", "light", 1440, "planning", "Focus on Acme AB settings at the foot of the plant settings navigation", { lx: { focus: "nav:other" } }],
+            ["PL22", "Way to Acme AB settings", "dark", 1440, "planning", "As PL21", { lx: { focus: "nav:other" } }],
+            ["PL23", "Acme AB settings, after the way", "light", 1440, "landing", "A full navigation to the company landing; focus on the h1, Back to Plant A heads the navigation", { lx: { focus: "h1", from: "Plant A" } }],
+            ["PL24", "Acme AB settings, after the way", "dark", 1440, "landing", "As PL23", { lx: { focus: "h1", from: "Plant A" } }],
+            ["PL25", "Erik Lind, a narrower permission", "light", 1440, "calendars", "Plant admin of Plant A only: his four entries, no company link, the static rail mark", { who: EL, lx: { entries: "calendars,stations,planning,acme", others: "none" } }],
+            ["PL26", "Erik Lind, a narrower permission", "dark", 1440, "calendars", "As PL25", { who: EL, lx: { entries: "calendars,stations,planning,acme", others: "none" } }],
+            ["PL27", "Machines at 1280, the remedy", "light", 1280, "machines", "The rail gives the table 922 px at 1280, where C had about 730 px"],
+            ["PL28", "Machines at 1280, sidebar opened", "light", 1280, "machines", "Jonas Holm opened the main sidebar on this visit: 730 px, his own choice (proposed)", { fx: { sidebar: "expanded", focus: "toggle" } }],
+            // Dark twins of the 1280 and 1920 frames (I313 acceptance: every frame in light and dark), drawn below them
+            ["PL31", "Machines at 1280, the remedy", "dark", 1280, "machines", "As PL27"],
+            ["PL32", "Machines at 1280, sidebar opened", "dark", 1280, "machines", "As PL28", { fx: { sidebar: "expanded", focus: "toggle" } }],
+            ["PL29", "Calendars at 1920", "light", 1920, "calendars", "The rail at 1920; the table is 1562 px"],
+            ["PL33", "Calendars at 1920", "dark", 1920, "calendars", "As PL29"],
+            ["PL30", "Routes, titles and breadcrumbs", "light", 1440, "doc", "Every company and plant settings page, and what replaces /admin"]
+          ];
+
+          const frames = L.filter((r) => !pickIds || pickIds.indexOf(r[0]) >= 0).map((r) => {
+            const id = r[0], theme = r[2], W = r[3], o = r[6] || {};
+            const idp = id.toLowerCase();
+            const wh = W + " by " + (r[4] === "doc" ? "2008" : HGT[W]);
+            const base = { id: id, name: r[1], th: (theme === "dark" ? "Dark, " : "Light, ") + wh + ". " + r[5], label: id + " " + r[1] + ", " + theme + ", " + wh, wcls: "w" + W };
+            if (r[4] === "doc") return Object.assign(base, { isDoc: true, isScreen: false, hasUrl: false, url: "" });
+            const p = PG[r[4]];
+            const area = p.area || "plant";
+            const scope = p.scope || "Plant A";
+            const sc = area === "plant" ? { plant: scope } : { company: scope };
+            const fp = Object.assign({ width: String(W), theme: theme, area: area, title: p.title, actions: p.actions || "none", skipTo: idp + "-page", showTitle: "on" }, o.who || JH, sc,
+              p.crumbs ? { crumbs: p.crumbs } : {}, p.landing ? { settingsCurrent: "page" } : {}, o.fx || {});
+            const lp = Object.assign({ area: area, width: String(W), page: p.page, contentId: idp + "-page" }, sc, p.lt ? { title: p.lt } : {}, p.meta ? { meta: p.meta } : {}, o.lx || {});
+            return Object.assign(base, {
+              isDoc: false, isScreen: true, hasUrl: true, url: p.url,
+              hint: W + "px," + (HGT[W] + 36) + "px",
+              fp: fp, lp: lp, cp: p.cp || {},
+              isList: p.kind === "list", isForm: p.kind === "form", isLanding: p.kind === "landing",
+              isHealth: p.kind === "health", isAi: p.kind === "ai", isAcme: p.kind === "acme",
+              ids: { a: idp + "-a", b: idp + "-b" }
+            });
+          });
+          // Light and dark of one page side by side; a line holds frames of one width.
+          const lines = [];
+          frames.forEach((f) => {
+            const cur = lines[lines.length - 1];
+            const w = parseInt(f.wcls.slice(1), 10);
+            const used = cur ? cur.frames.reduce((t, g) => t + parseInt(g.wcls.slice(1), 10) + 80, -80) : 0;
+            if (cur && cur.w === w && !f.isDoc && !cur.doc && used + 80 + w <= 2960) cur.frames.push(f);
+            else lines.push({ w: w, doc: f.isDoc, frames: [f] });
+          });
+
+          // System health (E16-S03, ADR 0043), drawn with the two cards of D2's status route (ST7). Values are fictional.
+          const health = {
+            server: [
+              { k: "Readiness", v: "Ready", isBadge: true, isText: false },
+              { k: "Database", v: "Connected", isBadge: true, isText: false },
+              { k: "Live updates", v: "Connected", isBadge: true, isText: false },
+              { k: "Last successful backup", v: "2026-10-08 02:00", isBadge: false, isText: true },
+              { k: "Last Pyramid poll", v: "2026-10-08 06:35", isBadge: false, isText: true },
+              { k: "Certificate expires", v: "2026-12-14", isBadge: false, isText: true }
+            ],
+            mods: [
+              { name: "Core", id: "core", ver: "0.4.0", range: "0.4.x" },
+              { name: "Planning", id: "planning", ver: "0.4.0", range: "0.4.x" },
+              { name: "Production start", id: "production-start", ver: "0.4.0", range: "0.4.x" },
+              { name: "Pyramid connector", id: "pyramid-connector", ver: "0.4.0", range: "0.4.x" },
+              { name: "AI", id: "ai", ver: "0.4.0", range: "0.4.x" },
+              { name: "Audit", id: "audit", ver: "0.4.0", range: "0.4.x" },
+              { name: "Acme tooling", id: "acme", ver: "1.2.0", range: "0.4.x" }
+            ]
+          };
+
+          // The routes frame (PL30). Rules 4.1 to 4.6; ADR 0066 The settings area; plan 06 Shell routes; the variations record.
+          const DOC = { tag: "ok", src: "Doc" }, PP = { tag: "fix", src: "Path proposed" }, PR = { tag: "q", src: "Proposed" };
+          const R = (page, route, title, trail, s) => Object.assign({ page: page, route: route, title: title, trail: trail }, s);
+          const C = "/settings/$companyId";
+          const doc = {
+            company: [
+              R("Company landing", C, "Company settings · Acme AB · NorthMES", "Settings > Acme AB", DOC),
+              R("General", C + "/core/general", "General · Acme AB · NorthMES", "Settings > Acme AB > General", PP),
+              R("Formats", C + "/core/formats", "Formats · Acme AB · NorthMES", "Settings > Acme AB > Formats", PP),
+              R("Plants", C + "/core/plants", "Plants · Acme AB · NorthMES", "Settings > Acme AB > Plants", DOC),
+              R("New plant", C + "/core/plants/new", "New plant · Acme AB · NorthMES", "Settings > Acme AB > Plants > New plant", PR),
+              R("Users", C + "/core/users", "Users · Acme AB · NorthMES", "Settings > Acme AB > Users", PP),
+              R("Roles", C + "/core/roles", "Roles · Acme AB · NorthMES", "Settings > Acme AB > Roles", PP),
+              R("Integrations", C + "/core/integrations", "Integrations · Acme AB · NorthMES", "Settings > Acme AB > Integrations", PP),
+              R("Audit log", C + "/audit/log", "Audit log · Acme AB · NorthMES", "Settings > Acme AB > Audit log", PP),
+              R("Planning rules", C + "/planning/settings", "Planning rules · Acme AB · NorthMES", "Settings > Acme AB > Planning rules", PP),
+              R("AI assistant", C + "/ai/settings", "AI assistant · Acme AB · NorthMES", "Settings > Acme AB > AI assistant", PP),
+              R("Pyramid connector", C + "/pyramid-connector/settings", "Pyramid connector · Acme AB · NorthMES", "Settings > Acme AB > Pyramid connector", PP),
+              R("Company wizard", C + "/core/onboarding", "One title per step (E06-S14)", "Settings > Acme AB > Onboarding", PR)
+            ],
+            companyNotes: [
+              "Settings is text in a company trail, because no /settings route exists; Acme AB links to the company landing, and on the landing it is the current page.",
+              "$companyId is the company's uuidv7, because companies have no slug (question 2). Company pages carry no x-northmes-plant and draw no main sidebar and no Assistant."
+            ],
+            plant: [
+              R("Plant landing", "/plant-a/settings", "Settings · Plant A · NorthMES", "Acme AB > Plant A > Settings", PR),
+              R("Plant", "/plant-a/core/plant", "Plant · Plant A · NorthMES", "Acme AB > Plant A > Settings > Plant", PP),
+              R("Machines", "/plant-a/core/machines", "Machines · Plant A · NorthMES", "Acme AB > Plant A > Settings > Machines", DOC),
+              R("New machine", "/plant-a/core/machines/new", "New machine · Plant A · NorthMES", "Acme AB > Plant A > Settings > Machines > New machine", PR),
+              R("A machine", "/plant-a/core/machines/$machineId", "Press 4 · Plant A · NorthMES", "Acme AB > Plant A > Settings > Machines > Press 4", PR),
+              R("Equipment groups", "/plant-a/core/equipment-groups", "Equipment groups · Plant A · NorthMES", "Acme AB > Plant A > Settings > Equipment groups", PP),
+              R("Calendars", "/plant-a/core/calendars", "Calendars · Plant A · NorthMES", "Acme AB > Plant A > Settings > Calendars", DOC),
+              R("Stations", "/plant-a/core/stations", "Stations · Plant A · NorthMES", "Acme AB > Plant A > Settings > Stations", PP),
+              R("System health", "/plant-a/core/system-health", "System health · Plant A · NorthMES", "Acme AB > Plant A > Settings > System health", PP),
+              R("Planning rules", "/plant-a/planning/settings", "Planning rules · Plant A · NorthMES", "Acme AB > Plant A > Settings > Planning rules", DOC),
+              R("Acme tooling", "/plant-a/acme/settings", "Acme tooling · Plant A · NorthMES", "Acme AB > Plant A > Settings > Acme tooling", PP),
+              R("Plant wizard", "/plant-d/core/onboarding", "One title per step (E06-S14)", "Acme AB > Plant D > Settings > Onboarding", PR)
+            ],
+            plantNotes: [
+              "The company crumb is text and shows only when the user's plants span two or more companies; with one company the trail starts at the plant, as for Erik Lind: Plant A > Settings > Calendars.",
+              "Settings in a plant trail links to the plant landing /plant-a/settings, which makes settings a reserved module id (question 22). The plant switcher keeps the route: Plant B on /plant-a/core/machines opens /plant-b/core/machines.",
+              "Planning rules is the label of both areas; the scope in each title keeps the page names distinct (WCAG 2.4.2)."
+            ],
+            admin: [
+              { before: "/admin, the admin frame without a plant (D2 C9, PL44 to PL47)", now: "/settings/$companyId, the company landing: no main sidebar, the company settings navigation inside main", tag: "ok", src: "Doc" },
+              { before: "/admin/core, the user's companies and their onboarding state", now: "The list at /, with a link to each company's settings where the user holds an admin permission (EN37, EN38; question 4)", tag: "ok", src: "Doc" },
+              { before: "/admin/core/plants", now: "/settings/$companyId/core/plants", tag: "ok", src: "Doc" },
+              { before: "/admin/core/onboarding/$companyId", now: "/settings/$companyId/core/onboarding", tag: "ok", src: "Doc" },
+              { before: "/admin/<id>/... from adminRoutes", now: "/settings/$companyId/<id>/... from settingsRoutes", tag: "fix", src: "Name proposed" },
+              { before: "Admin in the switcher menu (PL32) and in the user menu (PL42); the Admin button on / (ST38)", now: "The Settings button in the top bar, before Help, on plant and company pages; on / the company settings links and no Settings button (EN37, EN38)", tag: "ok", src: "Doc" },
+              { before: "Administration at the foot of the plant sidebar: Users, Roles, Stations, Integrations, Settings, System health (C7, PL30)", now: "Users, Roles and Integrations in company settings; Stations and System health in plant settings; core's Settings as Formats in company settings and the Formats section of the Plant entry", tag: "ok", src: "Doc" },
+              { before: "Core > Master data: Machines, Equipment groups, Calendars", now: "Plant settings; Tools, Articles, Routings, Warehouses and Customers stay in the main sidebar (EN11, EN12; question 6)", tag: "ok", src: "Doc" },
+              { before: "Planning > Settings, Pyramid connector > Settings, Audit > Audit log", now: "Planning rules in both areas; Pyramid connector and Audit log in company settings (question 19); the import inbox and AI usage stay (question 9)", tag: "ok", src: "Doc" },
+              { before: "Reserved plant slugs api, graphql, mcp, health, modules, assets, station, admin", now: "The same plus settings; admin stays reserved while question 3 is open", tag: "ok", src: "Doc" },
+              { before: "#306 NF3, an unknown path under /admin", now: "An unknown path under /settings/$companyId; which issue carries the change is question 16", tag: "q", src: "Open" }
+            ]
+          };
+          return { label: "Settings, plant settings part", lines: lines, health: health, doc: doc };
+        }
+      }
+    </script>
+  </body>
+</html>

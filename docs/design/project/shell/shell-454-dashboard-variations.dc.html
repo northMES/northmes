@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="frame db-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, route, personas, what is decided, how to compare, the rules the options are judged against and the open questions</span></div>
+        <dc-import name="shell-454-dashboard-variations-header" hint-size="1440px,3189px"></dc-import>
+      </div>
+      <div class="frame db-w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the rules and the issue</span></div>
+        <dc-import name="shell-454-dashboard-variations-compare" hint-size="1440px,1246px"></dc-import>
+      </div>
+      <div class="frame db-w1440" style="left:3120px;top:80px" data-screen-label="G Grid library, sizes and build notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">G</span>Grid library, sizes and build notes<span class="fth">react-grid-layout 2.2.4, the widget sizes in grid units, draft build notes and copy</span></div>
+        <dc-import name="shell-454-dashboard-variations-notes" option="G" hint-size="1440px,3722px"></dc-import>
+      </div>
+      <sc-for list="{{ notes }}" as="n" hint-placeholder-count="3">
+        <div class="frame db-w1440" style="{{ n.style }}" data-screen-label="{{ n.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ n.id }}</span>{{ n.title }}<span class="fth">What it optimizes, what it costs, how it meets the rules</span></div>
+          <dc-import name="shell-454-dashboard-variations-notes" option="{{ n.id }}" hint-size="1440px,806px"></dc-import>
+        </div>
+      </sc-for>
+      <sc-for list="{{ fa }}" as="f" hint-placeholder-count="9">
+        <div class="frame {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><span class="db-url">{{ f.url }}</span></div>
+          <dc-import name="shell-454-dashboard-variations-a" state="{{ f.state }}" hint-size="{{ f.hint }}"></dc-import>
+        </div>
+      </sc-for>
+      <sc-for list="{{ fb }}" as="f" hint-placeholder-count="9">
+        <div class="frame {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><span class="db-url">{{ f.url }}</span></div>
+          <dc-import name="shell-454-dashboard-variations-b" state="{{ f.state }}" hint-size="{{ f.hint }}"></dc-import>
+        </div>
+      </sc-for>
+      <sc-for list="{{ fc }}" as="f" hint-placeholder-count="9">
+        <div class="frame {{ f.cls }}" style="{{ f.style }}" data-screen-label="{{ f.label }}">
+          <div class="flabel" data-drags-parent="1"><span class="fid">{{ f.id }}</span>{{ f.title }}<span class="fth">{{ f.detail }}</span><span class="db-url">{{ f.url }}</span></div>
+          <dc-import name="shell-454-dashboard-variations-c" state="{{ f.state }}" hint-size="{{ f.hint }}"></dc-import>
+        </div>
+      </sc-for>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so every part gets its icons.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // Layout: F0, R and G on top, then three rows per option. Row 1: the shared tab (1), the catalog (2) and the
+          // settings (3); row 2: the notes, the shared tab for someone who may change it (4, dark) and the own tab at
+          // Plant B (5, dark); row 3: the empty own tab at 1280 (6), the move without dragging (7, dark) and two 320
+          // frames (8, 9). Frame numbers follow the canvas, left to right and row by row.
+          const X = [80, 1600, 3120, 3920];
+          const TOP = 4000;
+          const ROW1 = 1080, ROW2 = 1120, ROW3 = 1080;
+          const NAMES = { A: "Tabs and edit mode", B: "Side column", C: "Tab picker and tiles" };
+          const D = {
+            A: {
+              1: ["Shift overview, shared", "Light, 1440. Alex Lund, a planner, cannot change it; the tab's actions menu offers Copy to my tabs and Hide for me"],
+              2: ["My shift in edit mode, the catalog", "Light, 1440. Two Lists filtered to Pressing and Milling; Add widget opened the catalog Sheet"],
+              3: ["The settings of one widget", "Light, 1440. The settings Sheet of Production orders, Milling; the Pressing copy beside it"],
+              4: ["Shift overview for someone who may change it", "Dark, 1440. Jonas Holm: Edit layout, and New tab with My tab or Shared tab"],
+              5: ["Press line at Plant B, the widget states", "Dark, 1440. Alex Lund's own tab followed him to Plant B"],
+              6: ["A new, empty own tab", "Light, 1280. Night shift, with the action that adds the first widget"],
+              7: ["A move without dragging", "Dark, 1440. The move button picked up Production orders, Milling; arrow keys took it to column 7, row 5"],
+              8: ["320 by 640", "My shift in one column; the tabs as a Select"],
+              9: ["320 by 640", "Edit mode: Move up, Move down and Size in Widget actions"]
+            },
+            B: {
+              1: ["Shift overview, shared", "Light, 1440. Alex Lund; the row menu of Quality offers Hide for me and Copy to my tabs; 6 columns"],
+              2: ["My shift, the catalog in the side column", "Light, 1440. Add widget turned the side column into the catalog"],
+              3: ["The settings of one widget", "Light, 1440. Production orders, Milling selected and previewed live; the Pressing copy beside it"],
+              4: ["Shift overview for someone who may change it", "Dark, 1440. Jonas Holm deletes Quality for everyone at Plant A: ConfirmDialog"],
+              5: ["Press line at Plant B, the widget states", "Dark, 1440. Alex Lund's own tab followed him to Plant B; 6 columns"],
+              6: ["A new, empty own tab", "Light, 1280. Night shift, with the action that adds the first widget"],
+              7: ["A move without dragging", "Dark, 1440. Move down in the settings took Production orders, Milling to column 4, row 5"],
+              8: ["320 by 640", "My shift in one column; Tabs opens the list as a sheet"],
+              9: ["320 by 640", "Settings as a full-screen sheet with Move up, Move down and Size"]
+            },
+            C: {
+              1: ["Shift overview, shared", "Light, 1440. Alex Lund; Switch tab open, the tabs grouped by scope"],
+              2: ["My shift, the Add widget tile", "Light, 1440. The tile at the first free place opened the catalog popover"],
+              3: ["The settings of one widget", "Light, 1440. Production orders, Milling turned over into its form; the Pressing copy beside it"],
+              4: ["Shift overview for someone who may change it", "Dark, 1440. Jonas Holm in Manage tabs: order, rename, hide, delete"],
+              5: ["Press line at Plant B, the widget states", "Dark, 1440. Alex Lund's own tab followed him to Plant B"],
+              6: ["A new, empty own tab", "Light, 1280. Night shift: the tile is the whole tab"],
+              7: ["A move without dragging", "Dark, 1440. Move in Widget actions picked up Production orders, Milling; arrow keys took it to column 7, row 5"],
+              8: ["320 by 640", "My shift in one column, the tile after the last widget"],
+              9: ["320 by 640", "Widget actions: Move up, Move down and Size"]
+            }
+          };
+          const out = { A: [], B: [], C: [] };
+          const notes = [];
+          ["A", "B", "C"].forEach((o, i) => {
+            const y1 = TOP + i * (ROW1 + ROW2 + ROW3), y2 = y1 + ROW1, y3 = y2 + ROW2;
+            const pos = { 1: [X[0], y1], 2: [X[1], y1], 3: [X[2], y1], 4: [X[1], y2], 5: [X[2], y2], 6: [X[0], y3], 7: [X[1], y3], 8: [X[2], y3], 9: [X[3], y3] };
+            notes.push({ id: o, title: o + ". " + NAMES[o], label: o + " notes", style: "left:" + X[0] + "px;top:" + y2 + "px" });
+            for (let n = 1; n <= 9; n++) {
+              const w = n === 6 ? "1280" : n >= 8 ? "320" : "1440";
+              const d = D[o][n];
+              const plant = n === 5 ? "plant-b" : "plant-a";
+              out[o].push({
+                id: o + n, state: String(n),
+                cls: "db-w" + w,
+                hint: w === "320" ? "320px,676px" : w === "1280" ? "1280px,836px" : "1440px,936px",
+                style: "left:" + pos[n][0] + "px;top:" + pos[n][1] + "px",
+                title: (w === "320" ? NAMES[o] + ": " : NAMES[o] + ": ") + d[0],
+                detail: d[1],
+                url: "/" + plant + "?tab=$tabId",
+                label: o + n + " " + d[0] + ", " + (d[1].indexOf("Dark") === 0 ? "dark" : "light") + ", " + (w === "320" ? "320 by 640" : w === "1280" ? "1280 by 800" : "1440 by 900")
+              });
+            }
+          });
+          return { fa: out.A, fb: out.B, fc: out.C, notes: notes };
+        }
+      }
+    </script>
+  </body>
+</html>

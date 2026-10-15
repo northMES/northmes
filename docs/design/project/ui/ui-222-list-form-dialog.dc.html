@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirm dialog</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+      </helmet>
+      <div class="lf-part fit {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <div class="lf-ov"></div>
+        <div class="lf-dlg {{ dlgCls }}" role="alertdialog" aria-modal="true" aria-labelledby="{{ ids.t }}" aria-describedby="{{ ids.d }}">
+          <div class="lf-dlg-h"><h2 class="lf-dlg-t" id="{{ ids.t }}">{{ title }}</h2></div>
+          <div class="lf-dlg-b">
+            <p id="{{ ids.d }}">{{ text }}</p>
+            <sc-if value="{{ hasDl }}">
+              <dl class="lf-dl">
+                <sc-for list="{{ dl }}" as="it"><dt class="{{ it.kcls }}">{{ it.k }}</dt><dd><span class="{{ it.cls }}" lang="{{ it.lang }}">{{ it.v }}</span></dd></sc-for>
+              </dl>
+            </sc-if>
+            <div class="fld">
+              <span class="lbl">{{ reasonLabel }}<sc-if value="{{ reasonOpt }}"><span class="lf-req">{{ t.optional }}</span></sc-if></span>
+              <span class="inp lf-ta {{ reasonCls }}"><sc-if value="{{ hasReasonV }}"><span>{{ reasonV }}</span></sc-if></span>
+              <sc-if value="{{ hasErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span>{{ err }}</span></sc-if>
+              <span class="desc">{{ reasonDesc }}</span>
+            </div>
+          </div>
+          <div class="lf-dlg-f">
+            <button class="btn v-outline {{ f.cancel }}" type="button">{{ t.cancel }}</button>
+            <button class="btn {{ confirmCls }}" type="button">{{ confirm }}</button>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["archive","restore","archive-bulk","release"],"default":"archive","tsType":"string"},"reason":{"editor":"enum","options":["optional","required","required-error"],"default":"optional","tsType":"string"},"focus":{"editor":"enum","options":["none","reason","confirm","cancel"],"default":"none","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"presentation":{"editor":"enum","options":["default","plant-b"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons when it is
+          // rendered on its own, without a shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-g" + window.__lfSeq;
+          }
+          const uid = this.uid;
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const kind = pick(P.kind, ["archive", "restore", "archive-bulk", "release"], "archive");
+          const reason = pick(P.reason, ["optional", "required", "required-error"], "optional");
+          const focus = pick(P.focus, ["none", "reason", "confirm", "cancel"], "none");
+          const narrow = P.size === "narrow";
+          const long = P.strings === "long" && (kind === "archive" || kind === "restore");
+          const plantB = P.presentation === "plant-b";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          const fc = (k) => (focus === k ? "is-focus" : "");
+          const t = long ? { optional: "(optional)", cancel: "Abbrechen", reason: "Grund", desc: "Erscheint im Verlauf des Artikels. Geben Sie keine personenbezogenen Daten ein. Bis zu 500 Zeichen.", err: "Geben Sie einen Grund mit 3 bis 500 Zeichen ein. Sie haben 2 eingegeben." }
+            : { optional: "(optional)", cancel: "Cancel", reason: "Reason", desc: "Shown in the article's history. Do not enter personal data. Up to 500 characters.", err: "Enter a reason of 3 to 500 characters. You entered 2." };
+          const I = (k, v, o) => Object.assign({ k: k, v: v, cls: "", kcls: "", lang: null }, o || {});
+          let title, text, confirm, dl = [], desc = t.desc;
+          if (kind === "archive") {
+            title = long ? "Artikel AX-80112 archivieren?" : "Archive article AX-20410?";
+            text = long ? "Archivierte Artikel werden in Listen ausgeblendet und können erst nach der Wiederherstellung geändert werden. Aufträge, die den Artikel verwenden, behalten ihn." : "Archived articles are hidden from lists and cannot be changed until restored. Orders that use it keep it.";
+            confirm = long ? "Artikel archivieren" : "Archive article";
+          } else if (kind === "restore") {
+            title = long ? "Artikel AX-80101 wiederherstellen?" : "Restore article AX-20417?";
+            text = long ? "Der Artikel erscheint wieder in Listen und kann wieder geändert werden." : "The article shows in lists again and can be changed again.";
+            confirm = long ? "Artikel wiederherstellen" : "Restore article";
+          } else if (kind === "archive-bulk") {
+            title = "Archive 3 articles?";
+            text = "Archived articles are hidden from lists and cannot be changed until restored. Orders that use them keep them.";
+            dl = [I("AX-31007", "Hydraulslang 12 mm", { lang: "sv", kcls: "lf-mono" }), I("AX-31008", "Hydraulslang 16 mm", { lang: "sv", kcls: "lf-mono" }), I("AX-31012", "Hydraulslang 20 mm", { lang: "sv", kcls: "lf-mono" })];
+            confirm = "Archive 3 articles";
+            desc = "Saved in the history of each of the 3 articles. Do not enter personal data. Up to 500 characters.";
+          } else {
+            // Review step before Release order (plan 06, WCAG 3.3.4): what the command does and the values it uses.
+            const qty = plantB ? "1,200 pcs" : "1 200 pcs";
+            title = "Release order 1001?";
+            text = "Check the order, then release it. Releasing copies the routing of AX-20410 into the order and creates one job order per operation. The job orders start unplaced, ready for planning.";
+            dl = [I("Order", "1001", { cls: "lf-mono" }), I("Article", "AX-20410 Fläns DN50 rostfri", { lang: "sv" }), I("Quantity", qty, { cls: "lf-mono" }), I("Deadline", plantB ? "12.10.2026" : "2026-10-12", { cls: "lf-mono" }), I("Routing", "AX-20410, version 3, 4 operations")];
+            confirm = "Release order";
+            desc = "Shown in the order's history. Do not enter personal data. Up to 500 characters.";
+          }
+          const req = reason !== "optional";
+          const NAMES = { archive: "archive", restore: "restore", "archive-bulk": "archive 3 articles", release: "release order review" };
+          return {
+            label: "Confirm dialog, " + NAMES[kind] + (req ? ", reason required" : "") + (narrow ? ", 320" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t,
+            ids: { t: uid + "-t", d: uid + "-d" },
+            dlgCls: narrow ? "nar" : "",
+            title: title, text: text, confirm: confirm,
+            hasDl: dl.length > 0, dl: dl,
+            reasonLabel: t.reason, reasonOpt: !req,
+            hasReasonV: reason === "required-error", reasonV: "ok",
+            reasonCls: (reason === "required-error" ? "is-err " : "") + fc("reason"),
+            hasErr: reason === "required-error", err: t.err,
+            reasonDesc: desc,
+            confirmCls: "v-default " + fc("confirm"),
+            f: { cancel: fc("cancel") }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 spec page header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+/* Header frame F0 of the D2 spec page: issue, direction, the review changes, acceptance, frames by row, assumptions and questions.
+   Layout only; every color is a D1 token through the D1 page classes. Ids, issue numbers and paths are set in Plex Mono. */
+.hd{width:1440px}
+.hd-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+.hd-facts{display:grid;grid-template-columns:176px minmax(0,1fr);gap:10px 20px;margin:16px 0 0}
+.hd-facts dt{font-weight:600}
+.hd-facts dd{margin:0}
+.hd-dir{display:grid;gap:12px;margin-top:12px}
+.hd-dir p{margin:0;font-size:16px;line-height:24px}
+.hd-by{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.hd-rev{margin-top:20px}
+.hd-cl{display:grid;gap:6px}
+.hd-c{display:grid;grid-template-columns:32px minmax(0,1fr);gap:8px;align-items:start}
+.hd-read{margin-top:24px}
+.hd-ac{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.hd-ac li{display:flex;align-items:flex-start;gap:10px}
+.hd-box{flex:none;width:16px;height:16px;margin-top:2px;border:1.5px solid var(--input);border-radius:var(--radius-sm);background:var(--card)}
+.hd-box.on{display:grid;place-items:center;border-color:var(--primary);background:var(--primary)}
+.hd-box.on::after{content:"";width:4px;height:8px;margin-top:-2px;border:solid var(--primary-foreground);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.hd-tbl{margin-top:12px}
+.hd-tbl .gr{align-items:start;padding:8px 0}
+.hd-cov{grid-template-columns:minmax(0,1fr) 280px;gap:16px}
+.hd-rows{grid-template-columns:64px 360px 160px minmax(0,1fr);gap:16px}
+.hd-id{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;line-height:20px}
+.hd-file{display:block;font-family:var(--font-mono);font-size:12px;line-height:18px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.hd-ql{display:grid;gap:10px;margin-top:12px}
+.hd-q{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:start}
+.hd-q .tag{justify-self:stretch;justify-content:center;font-family:var(--font-mono)}
+.hd-d{display:block;margin-top:2px;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.hd-res{display:grid;gap:10px;margin-top:16px}
+.hd-as{display:block;margin-top:12px;columns:2;column-gap:48px}
+.hd-as li{break-inside:avoid;margin-bottom:6px}
+.hd-m{font-family:var(--font-mono);font-size:.92em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hd-nl{display:grid;gap:8px;margin-top:12px}
+.hd-n{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:start}
+        </style>
+      </helmet>
+      <div class="sheet hd" data-screen-label="F0 Header">
+        <p class="kick">NorthMES design page shell-190-navigation.dc.html, approved by Krister Johansson on 2026-10-06</p>
+        <h1 class="t1">Shell, navigation and station frame (D2)</h1>
+        <p class="lede"><sc-for list="{{ lede }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p>
+
+        <div class="hd-cols sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="hd-facts">
+              <sc-for list="{{ facts }}" as="f">
+                <dt>{{ f.k }}</dt>
+                <dd><sc-for list="{{ f.v }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></dd>
+              </sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Chosen direction</h2>
+            <div class="hd-dir">
+              <sc-for list="{{ direction }}" as="d"><p><sc-for list="{{ d }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-for>
+              <span class="hd-by">Chosen by Krister Johansson on <span class="hd-m">2026-10-05</span> from <span class="hd-m">shell-190-variations.dc.html</span>, recorded in <span class="hd-m">docs/design/shell/shell-190-variations.md</span>. Krister Johansson changed it after review on <span class="hd-m">2026-10-05</span> and decided how companies and plants are created, recorded in the proposed ADR 0066 and ADR 0067.</span>
+            </div>
+            <div class="hd-rev">
+              <h3 class="t3">Changed after review on <span class="hd-m">2026-10-05</span></h3>
+              <div class="hd-cl">
+                <sc-for list="{{ changes }}" as="c">
+                  <div class="hd-c"><span class="hd-id b6">{{ c.k }}</span><span><sc-for list="{{ c.t }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div class="hd-read">
+              <h3 class="t3">How to read this page</h3>
+              <ul class="ul">
+                <sc-for list="{{ reading }}" as="r"><li>{{ r }}</li></sc-for>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Frames by row</h2>
+          <p class="lede">Each row below is one part file in this folder. The chips above its screens carry the frame ids.</p>
+          <div class="gt hd-tbl">
+            <div class="gr hd-rows gh"><span>Row</span><span>Content and part file</span><span>Frames</span><span>What it shows</span></div>
+            <sc-for list="{{ rows }}" as="r">
+              <div class="gr hd-rows"><span class="hd-id">{{ r.n }}</span><span><span class="b6">{{ r.name }}</span><span class="hd-file">{{ r.file }}</span></span><span class="hd-id">{{ r.ids }}</span><span><sc-for list="{{ r.t }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="hd-cols sec">
+          <div>
+            <h2 class="t2">Where each frame of the issue is drawn</h2>
+            <p class="lede">The Frames list of issue <span class="hd-m">#190</span>, item by item, with the light and the dark frames of each. The last six lines cover what the review of <span class="hd-m">2026-10-05</span> added.</p>
+            <div class="gt hd-tbl">
+              <div class="gr hd-cov gh"><span>Issue frame</span><span>Frames</span></div>
+              <sc-for list="{{ coverage }}" as="c">
+                <div class="gr hd-cov"><span>{{ c.t }}</span><span class="hd-id">{{ c.f }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <h2 class="t2">Acceptance criteria</h2>
+            <p class="lede">From issue <span class="hd-m">#190</span>.</p>
+            <ul class="hd-ac">
+              <sc-for list="{{ acceptance }}" as="a"><li><span class="{{ a.box }}" aria-hidden="true"></span><span>{{ a.t }}</span></li></sc-for>
+            </ul>
+            <h2 class="t2" style="margin-top:40px">Build notes</h2>
+            <p class="lede">Four frames hold the build notes. They are not part of the UI, and they mark which copy comes from the docs.</p>
+            <div class="hd-nl">
+              <sc-for list="{{ notes }}" as="n">
+                <div class="hd-n"><span class="hd-id b6">{{ n.k }}</span><span>{{ n.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <ol class="ul hd-as">
+            <sc-for list="{{ assumptions }}" as="a"><li><sc-for list="{{ a }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></li></sc-for>
+          </ol>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">The open questions of shell-190-spec.md that remain, by their number there, then those raised in the build notes: K1 to K17 in KE23 and S1 to S4 in SI22. Where a frame draws a proposed answer, the line under the question names it. The answered questions, Q1, Q12 and K16, close the list.</p>
+          <div class="hd-cols" style="margin-top:4px">
+            <div class="hd-ql">
+              <sc-for list="{{ questionsA }}" as="q">
+                <div class="hd-q"><span class="tag q">{{ q.id }}</span><span><sc-for list="{{ q.t }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for><sc-if value="{{ q.hasD }}"><span class="hd-d"><sc-for list="{{ q.d }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></sc-if></span></div>
+              </sc-for>
+            </div>
+            <div class="hd-ql">
+              <sc-for list="{{ questionsB }}" as="q">
+                <div class="hd-q"><span class="tag q">{{ q.id }}</span><span><sc-for list="{{ q.t }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for><sc-if value="{{ q.hasD }}"><span class="hd-d"><sc-for list="{{ q.d }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></sc-if></span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div class="hd-res">
+            <sc-for list="{{ answered }}" as="q">
+              <div class="hd-q"><span class="tag ok">{{ q.id }}</span><span><sc-for list="{{ q.t }}" as="p"><sc-if value="{{ p.m }}"><span class="hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Ids, issue numbers, plan ids, dates, paths and permission names go in Plex Mono and never break inside.
+          const SPLIT = /(#\d+|\bcore\.[a-z]+:[a-z]+\b|\bE\d{2}-S\d{2}(?:-T\d{2})?\b|\b(?:PL|NA|ST|SI|SF|KE)\d+\b|\b[QKSC]\d+\b|\b\d{4}-\d{2}-\d{2}\b|[\w.-]*\/[\w$.\/-]*[\w$]|\b[\w-]+(?:\.[\w-]+)*\.(?:dc\.html|md|css)\b)/;
+          const mp = (str) => String(str || "").split(SPLIT).filter((x) => x !== undefined && x !== "").map((x) => {
+            const m = x.match(SPLIT);
+            const mono = !!m && m[0] === x;
+            return { t: x, m: mono, x: !mono };
+          });
+          const Q = (id, t, d) => ({ id: id, t: mp(t), d: mp(d || ""), hasD: !!d, w: 1 + (String(t).length + 0.8 * String(d || "").length) / 64 });
+          const questions = [
+            Q("Q2", "What are the paths of the sign-in route, the minimal status route and the All pages index? A path at the root joins the reserved plant slugs (ADR 0064).", "Drawn: /sign-in (row 4), / (ST38, ST42) and /admin (PL44 to PL47), the admin mount that ADR 0066 proposes. The status route and All pages have no path yet."),
+            Q("Q3", "What does / show for a user with plants in one or more companies: a redirect to the only plant, a chooser grouped by company, or a dashboard (P16 M-32)?", "ADR 0066 proposes the answer: an admin of a company in onboarding goes to its wizard, a user with one open plant and no admin page goes to that plant, a user with no open plant reads that the company is not open yet, and every other user gets a page at / that lists their plants grouped by company. Drawn: the plant list (ST38, ST39) and the company that is not open yet (ST42, ST43); All plants in the switcher menu opens / (PL7, PL11, PL36, PL37, PL46, PL48, NA5, NA6)."),
+            Q("Q4", "Where does the switcher get the companies and plants the user holds roles in? /api/v1/web/modules returns only the current plant, so the shell needs that list from the server. ADR 0066 proposes two new fields in that response: companies, with each plant's onboardingState, and admin.", "PL7, PL11, PL20 to PL23, PL32, PL33, PL36 to PL39, PL42 to PL49, NA5, NA6, NA19 to NA23, ST29, ST36 to ST43 and KE7 need the answer."),
+            Q("Q5", "What is core's web.label, and does core group its registers under one parent entry, Master data?", "Drawn: Core, with eight registers under Master data (PL5). Core's admin routes in a plant sit in the Administration section (PL30, PL31), so the nav contract needs a way to place them there; its pages under /admin come from adminRoutes (PL44, ADR 0066)."),
+            Q("Q6", "Does Production start, which has no planner nav entry in release 1, show a sidebar group, and does its failure show an \"(unavailable)\" header in the planner layout?", "Drawn: no group, loaded or failed, so a failure never adds a group (1.1.9, 3.2.3). The shell then has to learn from /api/v1/web/modules which modules have planner entries for the user, a contract change. ST1, ST2, ST34 and ST35 draw the placeholder for Pyramid connector, whose group keeps its place."),
+            Q("Q7", "Is the \"(unavailable)\" header a link to the placeholder route, or plain text?", "Drawn: plain text in the sidebar (ST1, ST35, ST7). In the rail the module icon keeps its place with a dashed border and links to the placeholder (ST2, ST34)."),
+            Q("Q8", "Release 1 may have no plugin with nav entries. Does the Plugins section hide when it is empty?", "Drawn: the invented plugin Acme tooling fills it."),
+            Q("Q9", "Which remotes own the Pyramid connector, AI and audit screens (P16 M-31)? This decides their sidebar groups."),
+            Q("Q10", "What is the title pattern for routes outside /$plant: sign-in, the status route, the All pages index, an unknown plant and the station routes?", "Drawn: Sign in · NorthMES, System status · Plant A · NorthMES, Page not found · NorthMES, Your plants · NorthMES, Plant D is not open yet · NorthMES, Your company is not open yet · NorthMES, Press 4 · Plant A · NorthMES, Switch operator · Press 4 · Plant A · NorthMES. Under /admin ADR 0066 leaves the plant out: Plants · Admin · NorthMES (PL44)."),
+            Q("Q11", "The reload dialog has a title and an h1, and the route suite allows one h1 per route. Does the dialog use an h2, or does the page become inert while it is open?", "Drawn: the page behind is inert, so the dialog h1 is the only one (ST3, ST4, KE10, KE14)."),
+            Q("Q13", "Page actions sit in the top bar, so New order comes after the crumbs and before main in the tab order. D1 F8 placed it after the filters. Which order holds?", "Drawn: the top bar order (KE1)."),
+            Q("Q14", "Station: does the station frame have a help menu, where does the per-device theme switch sit, and does it show the plant name?", "Drawn: a More menu with Help and Theme on this station (SF16, SF17); the plant shows in the top bar (SF1)."),
+            Q("Q15", "Station: the top bar chip and the Disconnected strip change together on a drop. Which one speaks, so the operator hears one message?", "Drawn: only the strip is a live region (role=status); the chip is not, and the station sends nothing to the polite region for the drop (SF5, SF6)."),
+            Q("Q16", "Station portrait size: pilot IT question IT-22 is due before the station design.", "Drawn: 800 by 1280 (SF3, SF6, SF12)."),
+            Q("Q17", "Sign-in: the copy for a wrong password, the rate limit and a blocked account; the new password step after a temporary password; and where the user lands after sign-in, a new password or a 4401.", "Drawn: SI4 to SI18. The landing is not drawn."),
+            Q("Q18", "What does the user menu, now at the foot of the sidebar, hold besides the name, the theme switch and Sign out?", "Drawn in the footer user menu (PL9, PL13, PL34, PL35, NA16, NA17, KE24, KE31): Profile and Presentation settings, the entries the top bar menu held (C2). GLOSSARY.md makes presentation settings company and plant settings, so that entry needs a route and a permission."),
+            Q("Q19", "Does the collapsed or expanded sidebar state persist per browser like the theme, or reset on reload?"),
+            Q("Q20", "Banners for readiness, the AI budget and a restore: where do they sit, can a user dismiss them, and in which order do they stack?", "Drawn: one strip per frame (ST10 to ST13, ST19 to ST22). When the AI budget is used up, the Assistant toggle stays in place, disabled, with a tooltip (ST13, ST22)."),
+            Q("Q21", "Server restarting: D2 owes the final English copy.", "Proposed in KE19 and KE20: NorthMES is restarting. Changes are paused until it is back; you do not need to reload."),
+            Q("Q22", "Close code 4403: is the access message a page, a dialog or a banner?"),
+            Q("Q23", "Does D2 draw the boot state (Loading NorthMES, 2.7), the unsupported browser page (3.10), the HTTPS required page (3.11), the 4401 and 4403 states (3.9), Caddy's maintenance page (3.15) and the All pages index (1.6.3)? None of them is drawn here.", "Drawn from spec 0.7 and section 3: route loading (ST23, ST24), a slow remote (ST25, ST26), a failed slot contribution (ST27, ST28), an unknown plant (ST29, ST30), no AI provider (ST31, ST32) and the assistant sheet at 320 (NA9, NA10)."),
+            Q("Q24", "shadcn Sidebar and Breadcrumb are not in D1's component table. Their current, focus and collapsed states and the rail tooltip on hover (PL16, PL17) are drawn here; is hover on the entries needed too?"),
+            Q("Q25", "Where do toasts sit, so they stay away from the board and form areas? No frame draws a toast."),
+            Q("Q26", "Doc drift: ADR 0019 still shows nav in defineWebModule and the path /api/web/modules; this page follows ADR 0062 and ADR 0064. Plan 09's failed-scan message says user name, while the sign-in page and spec 4.2 say username.", "Drawn: Username on the station form; the failed-scan message keeps the doc wording (SF10, SF20)."),
+            Q("K1", "Switcher menu: focus on the first plant other than the current one, or on the first item, the current plant (the library default)?", "Drawn: the first other plant (KE7, KE30)."),
+            Q("K2", "Does the navigation sheet open with focus on Close navigation, as in the D1 Sheet state, or on the current entry?", "Drawn: Close navigation (NA3, KE11)."),
+            Q("K3", "scroll-padding-top as the sticky block's height plus 8 px, so the 4 px ring clears the strip?", "Drawn: KE19, KE20."),
+            Q("K4", "Do the banner strips stay sticky at 320 px? Two strips take about a third of the screen.", "Drawn: sticky (KE20)."),
+            Q("K5", "Announce Live updates resumed after a reconnect?", "Proposed in the KE23 announcements."),
+            Q("K6", "Station idle warning: does Escape count as activity and close it like Stay signed in?", "Not drawn: SF7 and SF8 show the open warning."),
+            Q("K7", "User menu: does choosing Light or Dark close the menu?", "Not drawn."),
+            Q("K8", "Reload dialog: spec 3.6 makes it blocking, while spec 7.5 and the D1 Dialog row say Escape closes a dialog.", "Drawn: Escape does nothing (KE10). If Escape closes it, the dialog goes, mutations stay refused, and a strip under the top bar offers Reload page."),
+            Q("K9", "Core's settings now sit in Administration with the title Settings, beside Planning settings and Pyramid connector settings, so the three titles stay unique. Is Settings the right title for core's page?"),
+            Q("K10", "Station buttons draw 48 px, above the 44 px of --nm-target-min-station, and no D1 token holds 48. Add a station control-height token, or draw them at 44 px?", "Drawn: 48 px (SF1, KE21)."),
+            Q("K11", "Notifications panel: with nothing focusable inside, focus goes to the panel itself, and Tab closes it and moves on to main. Or should the bell keep focus while the panel is open?", "Drawn: focus on the panel (KE26)."),
+            Q("K12", "shadcn Sidebar toggles on Ctrl+B and Cmd+B, which Firefox uses for its bookmarks sidebar. Keep the shortcut off?", "Drawn: no shortcut."),
+            Q("K13", "When the rail flyout closes, focus returns to the parent icon and its tooltip opens, as on any focus. Or should the tooltip stay closed after a flyout?", "Drawn: the tooltip opens (KE29)."),
+            Q("K14", "At 320, does Open navigation carry an unread marker when the bell has unread notifications? The bell sits in the sheet footer, so nothing shows the count while the sheet is closed.", "Not drawn. Proposed in KE23: Enter on the bell in the sheet closes the sheet and opens the panel as a sheet; Escape returns focus to Open navigation."),
+            Q("K15", "The pages without a plant have no sidebar. Does their account menu stay at the top bar end, or do they get a sidebar footer with the user button?", "Drawn: the account avatar at the top bar end (ST29, ST30, ST38 to ST43)."),
+            Q("K17", "The admin pages and the link to them read Admin, after the title Plants · Admin · NorthMES in ADR 0066, while the plant's own section stays Administration. Is that pair clear, or should the link read Company admin?", "Drawn: Admin (PL32, PL42, PL44, ST38)."),
+            Q("S1", "New password step: Better Auth's changePassword takes the current password, so E05-S08 needs a server step that keeps the temporary one.", "Drawn: no current-password field (SI16 to SI18)."),
+            Q("S2", "\"Use at least 8 characters\" is Better Auth's default minimum. The password policy of the regulated profile (plan 15) can change it.", "Drawn: SI16 to SI18."),
+            Q("S3", "Word for a banned account: blocked, proposed, and the same word on the user list (E05-S08).", "Drawn: SI13 to SI15."),
+            Q("S4", "Copy for a 4401 close: \"Your session ended. Sign in again to continue.\" in the status box, info tone.", "Not drawn; proposed in SI22.")
+          ];
+          // Two columns that read down the left one first: split where the estimated height reaches half.
+          const total = questions.reduce((s, q) => s + q.w, 0);
+          let acc = 0, cut = questions.length;
+          for (let i = 0; i < questions.length; i++) { acc += questions[i].w; if (acc >= total / 2) { cut = i + 1; break; } }
+          return {
+            lede: mp("Every frame that issue #190 lists, in light and dark, built on the direction chosen in the variations round and revised after Krister Johansson's review on 2026-10-05. Each planner and station screen mounts one of the two shared frames, Shell.dc.html or StationFrame.dc.html, so the states the shell owns are drawn once and module pages reuse them; the sign-in page renders outside the shell with the same top bar classes. Rows 1 to 6 below hold the frames. The build notes, which are not part of the UI, are KE23 (rows 1, 2 and 6), ST33 (row 3), SI22 (row 4) and SF20 (row 5)."),
+            facts: [
+              { k: "Issue", v: mp("northMES/northmes#190, plan E04-S02-T01") },
+              { k: "Owning story", v: mp("E04-S02 (#40)") },
+              { k: "Waiting tasks", v: mp("The UI tasks of E04-S02 to E04-S05, the sign-in task of E05-S05 (#53) and the admin frame task of E05-S15") },
+              { k: "Area", v: mp("shell, which maps to apps/web") },
+              { k: "Routes", v: mp("/$plant/... in the planner layout, /admin/... in the admin layout without a plant (proposed, ADR 0066), / for the plant list, /station/$stationId in the station layout, and the sign-in route") },
+              { k: "Personas", v: mp("Planner (primary) for the planner shell, Operator for the station frame. A Plant admin, and a company admin who also sees plants in onboarding and reaches the admin pages, appear where navigation depends on permissions.") },
+              { k: "Tokens and components", v: mp("D1, approved on 2026-10-05 (#189): Graphite, IBM Plex Sans and Mono, shadcn components, lucide 1.45.0 icons") },
+              { k: "Shared files", v: mp("Shell.dc.html, StationFrame.dc.html and shell-190-navigation.css in this folder. Module pages mount the frames; this page draws the states they own.") },
+              { k: "Spec", v: mp("shell-190-spec.md in this folder lists every rule with its source. Rule numbers such as 1.1.9 and question numbers such as Q11 point into it.") },
+              { k: "Record", v: mp("docs/design/shell/shell-190-navigation.md in the repository, with PNGs of the frames") }
+            ],
+            direction: [
+              mp("The planner shell is option A: a labelled sidebar with core, module and plugin sections, the company and plant switcher at its top, the user menu at its foot and an icon on every entry. It collapses to a 64 px rail of icons and becomes a sheet at 320 px. From option C it keeps the status split: a top bar chip for reconnecting and a strip under the top bar for banners. The breadcrumb starts with the plant as a link, and the bell for notifications ends the top bar."),
+              mp("Companies come from the command line on the host, so no role sits above a company and no page creates one. Company admins create plants on the admin pages under /admin, which they reach from Admin in the switcher menu, or in the user menu when the switcher is hidden; D2 draws the admin frame around those pages and the plant list at /. A new plant stays closed until its onboarding wizard is complete. Until then the switcher lists it only for holders of core.onboarding:manage, with Onboarding in its link text, they work under a banner that links to the wizard, and anyone else with a role there reads that the plant is not open yet. The onboarding wizard is its own design task, E06-S14, and not part of D2."),
+              mp("The station frame is S1, a top bar with the station, the connection chip, Switch operator, Sign out and More, in the same header pattern as the planner shell. The review left the station frame and the sign-in page unchanged (C8).")
+            ],
+            changes: [
+              { k: "C1", t: mp("The company and plant switcher sits at the top of the sidebar, with plants grouped by company; with plants of one company the menu has no company label. A user with roles in one plant sees the company and plant as static text, with no switcher. A plant in onboarding, which the switcher lists only for a holder of core.onboarding:manage, carries Onboarding in its link text (ADR 0067).") },
+              { k: "C2", t: mp("The user menu sits at the foot of the sidebar with Profile, Theme, Presentation settings and Sign out. The rail shows the avatar only.") },
+              { k: "C3", t: mp("The bell for notifications follows Assistant and Help in the top bar, as a contribution to a top bar slot; when it fails, a fallback keeps its place (ADR 0067). Release 1 has no bell, because it ships without the notifications module (ADR 0055).") },
+              { k: "C4", t: mp("Every nav entry has a lucide icon. The rail shows one icon per top-level entry, with a tooltip, and opens nested entries in a flyout. Monograms are gone.") },
+              { k: "C5", t: mp("The breadcrumb starts with the plant as a plain link, after the company when the user has plants in more than one company.") },
+              { k: "C6", t: mp("The sidebar trigger moves from the sidebar head to the start of the top bar.") },
+              { k: "C7", t: mp("An Administration section above the user footer, for admins only: Users, Roles, Stations, Integrations, Settings and System health. Plants and the company pages live under /admin, outside any plant, and companies come from the command line, so Administration has neither a Plants nor a Companies entry (ADR 0066).") },
+              { k: "C8", t: mp("The station frame S1 and the sign-in page do not change.") },
+              { k: "C9", t: mp("The admin pages at /admin get the admin frame: no plant, so no plant crumb and no Assistant, with the switcher at the top of the sidebar as the way back to the plants. Admin, in the switcher menu or in the user menu when the switcher is hidden, opens it. The plant list at / and the pages for a plant or a company in onboarding render without a sidebar (ADR 0066, ADR 0067).") }
+            ],
+            reading: [
+              "The chip above each screen gives the frame id, the theme and the size, and the document title where it matters.",
+              "Copy from the docs is used verbatim: Plant A, Plant B, Alex Lund, Anna Berg at Press 4, Order 1001, the labels Planning and Planning board, Live updates paused, reconnecting, the restore banner sentence, the station Disconnected strip, the idle sign-out dialog and the failed badge message. Every other label and line of copy is a proposal, the company names, Plant C, Plant D, the Onboarding badge, Admin and the Administration entries among them. The build notes mark which is which: KE23 for rows 1, 2 and 6, ST33 for row 3, SI22 for row 4 and SF20 for row 5.",
+              "Dashed blue outlines, numbered badges and blue tags are annotations, not UI.",
+              "In the frames, numbers, times, ids and paths are set in IBM Plex Mono; this header sets ids and paths in it too."
+            ],
+            // A ticked line is met: Krister Johansson approved the page on 2026-10-06.
+            acceptance: [
+              ["Every frame in the list exists in light and dark", false],
+              ["No comment thread on the page is open", false],
+              ["Krister approved the page and the design project's README row holds the etag", true],
+              ["The design pull request with PNGs and build notes is merged", false],
+              ["The waiting UI tasks carry the Design section", false]
+            ].map((a) => ({ t: a[0], box: a[1] ? "hd-box on" : "hd-box" })),
+            notes: [
+              { k: "KE23", t: "Rows 1, 2 and 6: the decisions of 2026-10-05 with the plant in onboarding and the admin frame, components, tokens, the proposed icon for every entry and the fallback icon, keyboard and focus, landmarks, roles and names, announcements, slots, copy and criteria for the planner shell." },
+              { k: "ST33", t: "Row 3: each state the shell owns, the plant list at / and the pages for a plant or a company in onboarding, with their components, roles, focus, announcement, title, criteria and copy." },
+              { k: "SI22", t: "Row 4: the sign-in page, its fields, errors and accessible authentication." },
+              { k: "SF20", t: "Row 5: the station frame, the station sign-in rules for D4, announcements and copy." }
+            ],
+            rows: [
+              { n: "1", name: "Planner shell", file: "shell-190-navigation-planner.dc.html", ids: "PL1 to PL49", t: mp("The planning board at 1440, 1280 and 1920 in light and dark; the expanded sidebar with its icons; the rail with a tooltip, a flyout, the user and switcher menus and the static head of one plant; the switcher, help and user menus; one plant with a static head, plants in two companies and the switcher menu of one company; the bell with unread notifications, with its panel open and failed, and the release 1 top bar without it; the plant admin sidebar with Administration; a company admin's switcher menu with Plant D in onboarding and Admin, and the user menu with Admin; the admin frame at /admin and its switcher menu; the skip link with the landmarks outlined.") },
+              { n: "2", name: "Reflow at 320 and long strings", file: "shell-190-navigation-narrow.dc.html", ids: "NA1 to NA23", t: mp("Production orders at 320 by 640 with the menu button, the navigation sheet with the switcher and with the static head of one plant, an admin's Administration section, the user menu, the switcher menu with short and with long names and a company admin's with a plant in onboarding, the assistant sheet and a deep trail with Show the full path; German labels and a Finnish plugin page at 1440 in light and dark.") },
+              { n: "3", name: "States the shell owns", file: "shell-190-navigation-states.dc.html", ids: "ST1 to ST43", t: mp("Module unavailable in the sidebar and in the rail, the reload dialog, page not found, the error panel, the minimal status route, reconnecting, paused, the banners, route loading, a slow remote, a failed slot, an unknown plant, no AI provider, a plant in onboarding with its banner, the plant list at /, and the pages for a plant and a company in onboarding, each in light and dark. ST33 holds their build notes.") },
+              { n: "4", name: "Sign-in page", file: "shell-190-navigation-signin.dc.html", ids: "SI1 to SI22", t: mp("Default, field errors, wrong password, rate limited, blocked, the new password step and signed out, in light and dark at 1440 and light at 320. SI22 holds the sign-in build notes.") },
+              { n: "5", name: "Station frame", file: "shell-190-navigation-station.dc.html", ids: "SF1 to SF20", t: mp("Station frame S1 at 1280 by 800, 1920 by 1080 and 800 by 1280, disconnected, the idle warning, the Switch operator screens, nobody signed in, the More menu and the landmarks. SF20 holds the station build notes.") },
+              { n: "6", name: "Keyboard and focus", file: "shell-190-navigation-keyboard.dc.html", ids: "KE1 to KE32", t: mp("Tab order with the sidebar, the rail and Administration; route change; the switcher, user and help menus, the notifications panel and the rail flyout; the sheet with its menus; the reload dialog; the focus ring on every shell surface; focus not obscured and the station. KE23 holds the build notes of rows 1, 2 and 6.") }
+            ],
+            coverage: [
+              { t: "Sidebar with core, module and plugin sections in a stable order, one group per module, entries nested one level", f: "PL1, PL2, PL5, PL30, PL31, NA7, NA13" },
+              { t: "The collapsed rail", f: "PL6, PL16 to PL19, PL34 to PL39, ST2, ST34, ST11 to ST13, ST20 to ST22, KE2, KE5, KE28, KE29" },
+              { t: "The 320 px sheet", f: "NA3 to NA6, NA15 to NA23, KE11 to KE13, KE30, KE31" },
+              { t: "Top bar with breadcrumb and page actions slot", f: "PL1 to PL4, PL10, NA8, NA11, NA12" },
+              { t: "Help menu with entries grouped by module", f: "PL8, PL12, KE15, KE16" },
+              { t: "User menu, at the foot of the sidebar (C2)", f: "PL9, PL13, PL34, PL35, NA17, NA16, KE24, KE25, KE31" },
+              { t: "Plant switcher as a menu of links, at the top of the sidebar and grouped by company, with a plant in onboarding marked Onboarding; the company and plant crumbs (C1, C5)", f: "PL7, PL11, PL36, PL37, NA5, NA6, NA19, NA20, KE7 to KE9, KE30; one company: PL48, PL49; one plant: PL20, PL21, PL38, PL39, NA21, NA22; a plant in onboarding: PL32, PL33, PL46, PL47, NA23; crumbs: PL1, PL22, PL23" },
+              { t: "The admin frame at /admin without a plant, and Admin, the link to it", f: "PL44 to PL47; PL32, PL33, PL42, PL43, NA23" },
+              { t: "The plant list at /", f: "ST38, ST39" },
+              { t: "The pages \"Your company is not open yet\" and \"{plant} is not open yet\"", f: "ST42, ST43; ST40, ST41" },
+              { t: "Skip link, landmarks and the title pattern", f: "PL14, PL15, SF18, SF19, KE1; titles on the chips" },
+              { t: "Module unavailable placeholder with its \"(unavailable)\" menu entry", f: "ST1, ST35; ST34, ST2" },
+              { t: "Module not-found page, error panel and minimal status route", f: "ST5, ST14; ST6, ST15; ST7, ST16" },
+              { t: "Blocking reload dialog", f: "ST3, ST4; KE10, KE14" },
+              { t: "\"Live updates paused, reconnecting\"", f: "ST8, ST17; NA8, NA14; KE17, KE18, KE20" },
+              { t: "Restore, readiness and AI budget banners (spec 1.6.4)", f: "ST10 to ST13, ST19 to ST22" },
+              { t: "Other shell states of spec 0.7 and section 3", f: "ST23 to ST32, NA9, NA10" },
+              { t: "Sign-in page, with a wrong password that keeps the username", f: "SI1 to SI21; SI7 to SI9" },
+              { t: "Station frame", f: "SF1 to SF19; KE21, KE22" },
+              { t: "Planner widths 1280, 1440, 1920 and the 320 reflow", f: "PL3, KE4; PL1, PL2; PL4, PL10; NA1 to NA6, NA9 to NA12, NA15 to NA23" },
+              { t: "Station at 1280 by 800, 1920 by 1080 and portrait", f: "SF1, SF4; SF2, SF13; SF3, SF6, SF12" },
+              { t: "One frame with long German or Finnish labels", f: "NA7, NA8, NA13, NA14, NA19, NA20" },
+              { t: "Keyboard and focus frames", f: "KE1 to KE22, KE24 to KE32" },
+              { t: "Breadcrumb from the plant, or from the company when the user has plants in several companies (C5)", f: "PL1, PL22, PL23, NA11, NA12, KE9" },
+              { t: "Bell for notifications: unread, the panel open, a failed top bar item, and the release 1 top bar without it (C3)", f: "PL24 to PL29, PL40, PL41; KE15, KE16, KE26, KE27" },
+              { t: "Administration section for admins (C7)", f: "PL30, PL31, NA15, NA18, KE32" },
+              { t: "A plant in onboarding: the banner that links to the wizard (ADR 0066)", f: "ST36, ST37" },
+              { t: "Icons on every entry, the rail tooltip and flyout (C4)", f: "PL5, PL6, PL16 to PL19, KE2, KE28, KE29" },
+              { t: "Sidebar trigger at the top bar start (C6)", f: "PL1, KE5, KE17" }
+            ],
+            assumptions: [
+              mp("Most frames show the Planner permission set. PL30, PL31, NA11, NA12, NA15, NA18, ST7, ST11 to ST13, ST16, ST20 to ST22, KE17, KE18 and KE32 show a Plant admin, whose sidebar adds the admin entries of each module and the Administration section: Users, Roles, Stations, Integrations, Settings and System health. PL32, PL33, PL42 to PL47, NA23 and ST36 to ST39 show a company admin, who holds core's company admin role with core.plant:create and core.onboarding:manage: the switcher also lists Plant D, a plant in onboarding, and Admin opens the admin pages."),
+              mp("A permission narrower than admin, such as one that only manages users, would show only its own Administration entries. No frame draws that case."),
+              mp("The people who install and run NorthMES create companies and each company's first company admin with the command line tool on the host (ADR 0066). No role sits above a company, and no page creates one. A company admin creates the company's plants on the admin pages under /admin. D2 draws the admin frame around them, with core's release 1 entries Overview and Plants; the pages themselves come from the canonical list and form page (E05-S15). Plant slugs are unique per installation, so planner URLs stay /$plant."),
+              mp("The admin pages live outside /$plant, at the proposed /admin, which joins the reserved plant slugs (ADR 0064, ADR 0066)."),
+              mp("A new plant stays closed until its onboarding wizard is complete. Until then only a holder of core.onboarding:manage can open it, under a banner that links to the wizard (ST36, ST37), and the switcher lists it only for such a holder, with Onboarding in its link text (ADR 0066, ADR 0067). Anyone else with a role there reads that the plant is not open yet (ST40, ST41). The onboarding wizard is its own design task, E06-S14, and not part of D2."),
+              mp("On /admin no plant is current, so the switcher shows whenever the user can open a plant and reads Admin, Choose a plant. The assistant acts inside a plant, so /admin has none (proposed). The top bar slot renders there with plantId null (ADR 0067), so the bell stays."),
+              mp("The switcher and the company crumb need the companies and plants the user holds roles in. That list comes from the server; ADR 0066 proposes the fields companies and admin in /api/v1/web/modules (Q4)."),
+              mp("Rail monograms are gone (C4). The rail shows the entry icons, and a module that failed keeps its module icon in its place. Every icon is a lucide 1.45.0 proposal, listed per entry in KE23."),
+              mp("The bell is hidden in release 1, which ships without the notifications module (ADR 0055). PL26, PL29, KE15 and KE16 draw the release 1 top bar; every other planner frame shows the bell, except the pages without a plant (ST29, ST30, ST38 to ST43), which have no sidebar, so their top bar ends with Help and the account avatar (K15). At 320 the bell sits in the navigation sheet footer (NA3, NA4)."),
+              mp("A module with no planner nav entry, as Production start in release 1, never gets a sidebar group, loaded or failed (Q6)."),
+              mp("Acme tooling is an invented plugin with routes, so the Plugins section has entries to show."),
+              mp("The board grid (D3), the chat panel (E14-S03, #136), the station screens (D4) and the content of the admin pages (E05-S15) are placeholders that name their owner. The board toolbar comes from option A and is context, not a D3 decision."),
+              mp("The company mark is a square with the company initial. The product mark on the sign-in page, the station frame and the pages without a plant is a placeholder square with an N."),
+              mp("The overlay (black at 50 percent) and the menu shadow are not D1 tokens and stay questions, as on the D1 page."),
+              mp("The failure stages come from the docs. The code web.asset_missing comes from the P06 failure table; web.entry_failed, web.render_error and web.slot_error are invented examples."),
+              mp("German and Finnish strings, the companies Acme AB and Nordic Tools AB, Plant C and Plant D, the article, machine and tool names, the user names alex.lund, jonas.holm and erik.lind, the plant slugs plant-a to plant-d and the times are invented for the drawing."),
+              mp("Lucide icons beyond the D1 list are proposals for the build notes.")
+            ],
+            questionsA: questions.slice(0, cut),
+            questionsB: questions.slice(cut),
+            answered: [
+              { id: "Q1", t: mp("Answered by C4: every nav entry has an icon, so the nav contract and the module manifests gain an icon field, recorded in the proposed ADR 0067. KE23 lists the proposed icon of every entry and the fallback icon.") },
+              { id: "Q12", t: mp("Answered by the chosen direction: the breadcrumb sits in the top bar, and the h1 stays in main.") },
+              { id: "K16", t: mp("Answered by ADR 0066 and ADR 0067: a holder of core.plant:create, which core's company admin role holds, creates plants on the admin pages under /admin. Plants left the plant's Administration section, and a company admin reaches /admin through Admin in the switcher menu, or in the user menu when the switcher is hidden (PL32, PL42).") }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

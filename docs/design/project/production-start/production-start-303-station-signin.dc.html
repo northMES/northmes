@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 pairing and sign-in frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+        <style>
+          /* Part SI of production-start-303-station.dc.html (issue northMES/northmes#303): pairing, the plant admin's approval,
+             badge sign-in with the PIN, an unknown badge, the sign-in lock, sign-in with username, Switch operator and a plant in
+             onboarding, then the error states (an expired code, a wrong username or password, a wrong PIN, the PIN lock) and
+             the admin frames at 1280, 1920 and 320. Station frames mount StationFrame.dc.html (the folder's byte copy of
+             shell/StationFrame.dc.html); the
+             admin frames mount Shell.dc.html (the folder's byte copy of shell/Shell.dc.html) with the canonical list classes of
+             ui-222-list-form.css, as the Stations page follows the canonical list (rule 2.6). The sign-in card is A5's
+             (ps-si classes), the PIN keypad B's docked keypad (ps-kp classes). UI colors are D1 tokens. Classes start with si-,
+             so they never meet a D1, sh-, stn-, lf- or ps- class. Canvas labels are not part of the UI. */
+          body{margin:0}
+          .si-root{display:flex;flex-direction:column;gap:96px;width:max-content;padding:80px}
+          .si-root.one{gap:0;padding:0}
+          .si-row{display:flex;align-items:flex-start;gap:80px}
+          .si-f{display:flex;flex-direction:column;align-items:flex-start;flex:none}
+          .si-f .flabel{cursor:default}
+          .si-s{position:relative;flex:none}
+
+          /* Station content */
+          .si-lead{width:100%;max-width:640px;margin:0;font-size:16px;line-height:24px;color:var(--muted-foreground)}
+          .ps-alert.si-ok{border-color:var(--success);background:var(--success-subtle)}
+          .ps-alert.si-ok > .ic{color:var(--success)}
+          .ps-alert.si-info{border-color:var(--info);background:var(--info-subtle)}
+          .ps-alert.si-info > .ic{color:var(--info)}
+          .inp.ps-inp.si-off{background:var(--muted)}
+          .si-codeb{display:grid;gap:6px}
+          .si-code{margin:0;font:600 48px/56px var(--font-mono);letter-spacing:.06em;font-variant-numeric:tabular-nums}
+          .si-wait{display:flex;align-items:center;gap:10px;margin:0;font-size:16px;line-height:24px;font-weight:600}
+          .si-wait .ic{width:20px;height:20px}
+          .si-steps{display:grid;gap:8px}
+          .si-steps p{margin:0;font-weight:600}
+          .si-steps ol{display:grid;gap:6px;margin:0;padding:0 0 0 24px}
+          .si-done{display:flex;align-items:center;gap:8px;margin:0;font-size:16px;line-height:24px;font-weight:600}
+          .si-done .ic{width:20px;height:20px;color:var(--success)}
+          .si-pinw{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start;width:min(960px,100%)}
+          .si-pinw.k280{grid-template-columns:minmax(0,1fr) 280px;width:min(900px,100%)}
+          .si-np{margin:0;font-size:18px;line-height:26px;font-weight:600}
+
+          /* Admin frames: the Stations page in the shell */
+          .si-rqbox{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+          .si-rqbox .lf-tr.hd{position:static}
+          .si-b{font-weight:600}
+          .si-none{margin:0;color:var(--muted-foreground)}
+          .lf-dl .si-b{font-size:16px;line-height:24px}
+          .si-err{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid var(--destructive);border-radius:var(--radius);background:var(--destructive-subtle);color:var(--foreground);font-size:13px;line-height:18px}
+          .si-err .ic{flex:none;margin-top:1px;color:var(--destructive)}
+          .si-err p{margin:0}
+        </style>
+      </helmet>
+      <div class="si-root {{ rootCls }}">
+        <sc-for list="{{ rows }}" as="row" hint-placeholder-count="2">
+          <div class="si-row">
+            <sc-for list="{{ row.frames }}" as="fr" hint-placeholder-count="4">
+              <div class="si-f">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">{{ fr.id }}</span>{{ fr.title }}<span class="fth">{{ fr.fth }}</span></div></sc-if>
+                <section class="si-s" data-screen-label="{{ fr.label }}" style="{{ fr.style }}">
+                  <sc-if value="{{ fr.isStation }}">
+                    <dc-import name="StationFrame" size="{{ fr.size }}" theme="{{ fr.theme }}" connection="connected" station="{{ fr.station }}" plant="{{ fr.plant }}" operator="{{ fr.operator }}" title="{{ fr.h1 }}" doc-title="{{ fr.doc }}" screen="{{ fr.screen }}" focus="{{ fr.ffocus }}" hint-size="{{ fr.hint }}">
+                      <div class="ps-part" lang="en">
+                        <sc-if value="{{ fr.kPair }}">
+                          <div class="ps-si">
+                            <div class="ps-si-card">
+                              <sc-if value="{{ fr.pairNote }}"><div class="ps-alert si-info" role="status"><span class="ic" data-icon="Info"></span><p><b>New code.</b> {{ fr.pairNote }}</p></div></sc-if>
+                              <div class="si-codeb">
+                                <span class="ps-lbl" id="{{ fr.ids.cl }}">Pairing code</span>
+                                <p class="si-code" aria-labelledby="{{ fr.ids.cl }}">{{ fr.code }}</p>
+                                <p class="ps-desc">Valid until {{ fr.until }}. A new code shows when this one runs out.</p>
+                              </div>
+                              <p class="si-wait"><span class="ic" data-icon="LoaderCircle"></span><span>Waiting for a plant admin to approve this station.</span></p>
+                              <div class="si-steps">
+                                <p id="{{ fr.ids.sh }}">A plant admin approves it from their own computer:</p>
+                                <ol aria-labelledby="{{ fr.ids.sh }}">
+                                  <li>Open NorthMES and go to Administration, then Stations.</li>
+                                  <li>Under Pairing requests, choose Approve next to {{ fr.code }}.</li>
+                                  <li>Pick the station record for this computer.</li>
+                                </ol>
+                              </div>
+                              <p class="ps-desc">No password is entered on this computer.</p>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ fr.kBadge }}">
+                          <div class="ps-si">
+                            <sc-if value="{{ fr.lead }}"><p class="si-lead">{{ fr.lead }}</p></sc-if>
+                            <div class="ps-si-card">
+                              <sc-if value="{{ fr.alert }}"><div class="ps-alert {{ fr.alert.cls }}" id="{{ fr.ids.al }}"><span class="ic" data-icon="{{ fr.alert.icon }}"></span><p><b>{{ fr.alert.head }}</b> {{ fr.alert.text }}</p></div></sc-if>
+                              <div class="ps-fld">
+                                <span class="ps-lbl" id="{{ fr.ids.bl }}">Badge</span>
+                                <span class="inp ps-inp {{ fr.badge.cls }}" role="textbox" tabIndex="0" aria-labelledby="{{ fr.ids.bl }}" aria-describedby="{{ fr.badge.desc }}" aria-invalid="{{ fr.badge.inv }}" aria-disabled="{{ fr.badge.dis }}"><span class="ic" data-icon="IdCard"></span><sc-if value="{{ fr.badge.caret }}"><span class="ps-caret"></span></sc-if><sc-if value="{{ fr.badge.ph }}"><span class="ph">{{ fr.badge.ph }}</span></sc-if></span>
+                                <sc-if value="{{ fr.badge.showDesc }}"><p class="ps-desc" id="{{ fr.ids.bd }}">Hold your badge to the reader.</p></sc-if>
+                                <sc-if value="{{ fr.badge.err }}"><p class="ps-fe" id="{{ fr.ids.be }}"><span class="ic" data-icon="CircleAlert"></span><span>Badge not recognized. Scan again or sign in with your user name</span></p></sc-if>
+                              </div>
+                              <div class="ps-or"><span class="ps-rule"></span><span>or</span><span class="ps-rule"></span></div>
+                              <div class="ps-foot">
+                                <button class="btn lg {{ fr.userBtn }}" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                                <sc-if value="{{ fr.cancel }}"><span class="sh-grow"></span><button class="btn lg v-ghost" type="button">Cancel</button></sc-if>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ fr.kPin }}">
+                          <div class="ps-si">
+                            <div class="si-pinw {{ fr.pinCls }}">
+                              <div class="ps-si-card">
+                                <p class="si-done"><span class="ic" data-icon="CircleCheck"></span><span>Badge read. Enter your PIN.</span></p>
+                                <div class="ps-fld">
+                                  <span class="ps-lbl" id="{{ fr.ids.pl }}">PIN</span>
+                                  <span class="inp ps-inp is-focus {{ fr.pin.cls }}" role="textbox" tabIndex="0" aria-labelledby="{{ fr.ids.pl }}" aria-describedby="{{ fr.pin.desc }}" aria-invalid="{{ fr.pin.inv }}"><sc-if value="{{ fr.pin.dots }}"><span class="ps-dots">••••</span></sc-if><span class="ps-caret"></span></span>
+                                  <p class="ps-desc" id="{{ fr.ids.pd }}">Type or paste your PIN, or use the keypad.</p>
+                                  <sc-if value="{{ fr.pin.err }}"><p class="ps-fe" id="{{ fr.ids.pe }}"><span class="ic" data-icon="CircleAlert"></span><span>PIN not correct. Enter it again, or scan your badge again.</span></p></sc-if>
+                                </div>
+                                <div class="ps-foot">
+                                  <button class="btn lg v-default" type="button">Sign in</button>
+                                  <button class="btn lg v-outline" type="button"><span class="ic" data-icon="IdCard"></span>Scan again</button>
+                                </div>
+                              </div>
+                              <div class="ps-kp {{ fr.kpCls }}" role="group" aria-labelledby="{{ fr.ids.kc }}">
+                                <div class="ps-kp-h">
+                                  <span id="{{ fr.ids.kc }}">Keypad for PIN</span>
+                                  <div class="ps-kp-tools"><button class="btn lg v-outline ps-tog" type="button" aria-pressed="false">System keyboard</button></div>
+                                </div>
+                                <div class="ps-keys">
+                                  <sc-for list="{{ keys }}" as="k">
+                                    <button class="ps-key {{ k.cls }}" type="button" tabIndex="-1" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                                  </sc-for>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ fr.kPinLock }}">
+                          <div class="ps-si">
+                            <div class="ps-si-card">
+                              <p class="si-done"><span class="ic" data-icon="CircleCheck"></span><span>Badge read. Enter your PIN.</span></p>
+                              <div class="ps-alert warn" id="{{ fr.ids.al }}"><span class="ic" data-icon="CircleAlert"></span><p><b>PIN sign-in for this badge is paused until 14:11.</b> Five wrong PINs were entered. Sign in with your username, or scan your badge again after 14:11.</p></div>
+                              <div class="ps-fld">
+                                <span class="ps-lbl" id="{{ fr.ids.pl }}">PIN</span>
+                                <span class="inp ps-inp si-off is-focus" role="textbox" tabIndex="0" aria-labelledby="{{ fr.ids.pl }}" aria-describedby="{{ fr.ids.al }}" aria-disabled="true"><span class="ph">Paused until 14:11</span></span>
+                              </div>
+                              <div class="ps-foot">
+                                <button class="btn lg v-default" type="button"><span class="ic" data-icon="KeyRound"></span>Sign in with username</button>
+                                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="IdCard"></span>Scan again</button>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ fr.kUser }}">
+                          <div class="ps-si">
+                            <div class="ps-si-card">
+                              <div class="ps-fld">
+                                <span class="ps-lbl" id="{{ fr.ids.ul }}">Username</span>
+                                <span class="inp ps-inp" role="textbox" tabIndex="0" aria-labelledby="{{ fr.ids.ul }}"><span>liisa.korhonen</span></span>
+                              </div>
+                              <div class="ps-fld">
+                                <span class="ps-lbl" id="{{ fr.ids.wl }}">Password</span>
+                                <div class="ps-pw">
+                                  <span class="inp ps-inp is-focus" role="textbox" tabIndex="0" aria-labelledby="{{ fr.ids.wl }}" aria-describedby="{{ fr.pw.desc }}"><sc-if value="{{ fr.pw.dots }}"><span class="ps-dots">•••••••••••</span></sc-if><span class="ps-caret"></span></span>
+                                  <button class="btn lg ib v-outline" type="button" aria-label="Show password" aria-pressed="false"><span class="ic" data-icon="Eye"></span></button>
+                                </div>
+                              </div>
+                              <sc-if value="{{ fr.pw.err }}"><p class="ps-fe" id="{{ fr.ids.ue }}"><span class="ic" data-icon="CircleAlert"></span><span>Username or password not correct. Check both and sign in again.</span></p></sc-if>
+                              <div class="ps-foot">
+                                <button class="btn lg v-default" type="button">Sign in</button>
+                                <button class="btn lg v-outline" type="button"><span class="ic" data-icon="IdCard"></span>Scan a badge instead</button>
+                              </div>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ fr.kNotOpen }}">
+                          <div class="ps-si">
+                            <div class="ps-si-card">
+                              <p class="si-np">Onboarding of Plant D is not complete.</p>
+                              <p class="ps-desc">This station is paired with Plant D. Sign-in opens on this screen once an admin completes onboarding.</p>
+                            </div>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </dc-import>
+                  </sc-if>
+                  <sc-if value="{{ fr.isAdmin }}">
+                    <dc-import name="Shell" width="{{ fr.width }}" theme="{{ fr.theme }}" role="admin" nav="core.stations" actions="*New station" bell="off" hint-size="{{ fr.hint }}">
+                      <div class="lf-page {{ fr.narCls }}">
+                        <sc-if value="{{ fr.approved }}"><div class="lf-note ok" role="status"><span class="ic" data-icon="CircleCheck"></span><span>Press cell 1 is paired. The station shows its sign-in screen now.</span></div></sc-if>
+                        <section class="lf-sect" aria-labelledby="{{ fr.ids.rq }}">
+                          <h2 class="lf-sect-h" id="{{ fr.ids.rq }}" tabIndex="-1">Pairing requests</h2>
+                          <p class="lf-sect-d">Approve the request whose code the station screen shows. A code is valid for 10 minutes.</p>
+                          <sc-if value="{{ fr.hasReq }}">
+                            <div class="{{ fr.rqBox }}" role="{{ fr.boxRole }}" tabIndex="{{ fr.boxTab }}" aria-label="{{ fr.rqRegion }}">
+                              <div class="lf-grid" role="table" aria-labelledby="{{ fr.ids.rq }}" style="{{ fr.rqCols }}">
+                                <div class="lf-tr hd" role="row">
+                                  <span class="lf-td {{ fr.stk }}" role="columnheader">Pairing code</span>
+                                  <span class="lf-td" role="columnheader">Requested</span>
+                                  <span class="lf-td" role="columnheader">From address</span>
+                                  <span class="lf-td" role="columnheader">Valid until</span>
+                                  <span class="lf-td end" role="columnheader"><span class="lf-vh">Action</span></span>
+                                </div>
+                                <sc-for list="{{ fr.requests }}" as="q">
+                                  <div class="lf-tr" role="row">
+                                    <span class="lf-td {{ fr.stk }}" role="cell"><span class="lf-mono si-b">{{ q.code }}</span></span>
+                                    <span class="lf-td" role="cell"><span class="lf-mono">{{ q.at }}</span></span>
+                                    <span class="lf-td" role="cell"><span class="lf-mono">10.20.4.31</span></span>
+                                    <span class="lf-td" role="cell"><span class="lf-mono">{{ q.until }}</span></span>
+                                    <span class="lf-td end" role="cell"><button class="btn v-outline" type="button" aria-label="{{ q.aria }}" aria-haspopup="dialog">Approve</button></span>
+                                  </div>
+                                </sc-for>
+                              </div>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ fr.approved }}"><p class="si-none">No pairing requests. When a new station computer shows a pairing code, its request appears here.</p></sc-if>
+                        </section>
+                        <div class="lf-tool"><span class="inp lf-search {{ fr.searchCls }}" role="searchbox" tabIndex="0" aria-label="Search stations"><span class="ic" data-icon="Search"></span><span class="ph">Search stations</span></span></div>
+                        <div class="{{ fr.stBox }}">
+                          <div class="{{ fr.stScr }}" role="{{ fr.boxRole }}" tabIndex="{{ fr.boxTab }}" aria-label="{{ fr.stRegion }}">
+                            <div class="lf-grid" role="table" aria-label="Stations" style="{{ fr.stCols }}">
+                              <div class="lf-tr hd" role="row">
+                                <span class="lf-td {{ fr.stk }}" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Name<span class="ic" data-icon="ArrowUp"></span></button></span>
+                                <span class="lf-td" role="columnheader">Machines</span>
+                                <span class="lf-td" role="columnheader">Pairing</span>
+                                <span class="lf-td" role="columnheader">Last seen</span>
+                                <span class="lf-td end" role="columnheader"><span class="lf-vh">Actions</span></span>
+                              </div>
+                              <sc-for list="{{ fr.stations }}" as="r">
+                                <div class="lf-tr" role="row">
+                                  <span class="lf-td {{ fr.stk }}" role="cell"><a class="lf-cl {{ r.fcls }}" href="#">{{ r.name }}</a></span>
+                                  <span class="lf-td" role="cell">{{ r.machines }}</span>
+                                  <span class="lf-td" role="cell">{{ r.pairing }}</span>
+                                  <span class="lf-td" role="cell"><span class="{{ r.seenCls }}">{{ r.seen }}</span></span>
+                                  <span class="lf-td end" role="cell"><button class="btn icon v-ghost" type="button" aria-label="{{ r.menu }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button></span>
+                                </div>
+                              </sc-for>
+                            </div>
+                          </div>
+                          <div class="{{ fr.pagerCls }}"><span>Rows <span class="lf-mono">1</span> to <span class="lf-mono">3</span> of <span class="lf-mono">3</span></span></div>
+                        </div>
+                      </div>
+                      <sc-if value="{{ fr.dlg }}">
+                        <div class="lf-ov"></div>
+                        <div class="lf-dlg {{ fr.dlgCls }}" role="dialog" aria-modal="true" aria-labelledby="{{ fr.ids.dt }}" aria-describedby="{{ fr.dlgDesc }}">
+                          <div class="lf-dlg-h"><h2 class="lf-dlg-t" id="{{ fr.ids.dt }}">Approve pairing request</h2></div>
+                          <div class="lf-dlg-b">
+                            <sc-if value="{{ fr.expired }}"><div class="si-err" id="{{ fr.ids.de }}"><span class="ic" data-icon="CircleAlert"></span><p>This request ran out at 14:16 and can no longer be approved. The station shows a new code now. Close this dialog and approve the request with that code.</p></div></sc-if>
+                            <sc-if value="{{ fr.pick }}"><p id="{{ fr.ids.dd }}">Check that the station screen shows this code before you approve.</p></sc-if>
+                            <dl class="lf-dl">
+                              <dt>Pairing code</dt><dd><span class="lf-mono si-b">HX7K-29PQ</span></dd>
+                              <dt>Requested</dt><dd><span class="lf-mono">2026-11-03 14:06</span></dd>
+                              <dt>From address</dt><dd><span class="lf-mono">10.20.4.31</span></dd>
+                              <dt>Valid until</dt><dd><span class="lf-mono">14:16</span></dd>
+                            </dl>
+                            <sc-if value="{{ fr.pick }}">
+                              <div class="fld">
+                                <span class="lbl" id="{{ fr.ids.sl }}">Station</span>
+                                <span class="inp lf-sel is-focus" role="combobox" tabIndex="0" aria-expanded="false" aria-labelledby="{{ fr.ids.sl }}" aria-describedby="{{ fr.ids.sd }}"><span>Press cell 1</span><span class="ic lf-chev" data-icon="ChevronDown"></span></span>
+                                <span class="desc" id="{{ fr.ids.sd }}">Only stations without a paired computer are listed.</span>
+                              </div>
+                            </sc-if>
+                          </div>
+                          <div class="lf-dlg-f">
+                            <sc-if value="{{ fr.pick }}">
+                              <button class="btn v-outline" type="button">Cancel</button>
+                              <button class="btn v-default" type="button">Approve pairing</button>
+                            </sc-if>
+                            <sc-if value="{{ fr.expired }}"><button class="btn v-default is-focus" type="button">Close</button></sc-if>
+                          </div>
+                        </div>
+                      </sc-if>
+                    </dc-import>
+                  </sc-if>
+                </section>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","SI1","SI2","SI3","SI4","SI5","SI6","SI7","SI8","SI9","SI10","SI11","SI12","SI13","SI14","SI15","SI16","SI17","SI18","SI19","SI20","SI21","SI22","SI23","SI24","SI25","SI26","SI27","SI28","SI29","SI30","SI31","SI32","SI33","SI34","SI35","SI36","SI37","SI38","SI39","SI40","SI41","SI42","SI43","SI44","SI45","SI46","SI47","SI48","SI49","SI50","SI51","SI52","SI53"],"default":"all","tsType":"string"},"labels":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the frames' lucide filler (flag __nmIconFill2), so one filler runs per document even before a frame mounts.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // frame="SI17" draws only that frame, so the spec page can place each frame on its own; labels="off" drops the chips.
+          const P = this.props || {};
+          const raw = P.frame === undefined || P.frame === null ? "" : String(P.frame).trim();
+          const want = raw === "" ? "ALL" : raw.toUpperCase();
+          const labels = String(P.labels === undefined || P.labels === null ? "on" : P.labels).trim() !== "off";
+          if (!this.uid) {
+            window.__psSiSeq = (window.__psSiSeq || 0) + 1;
+            this.uid = "psi" + window.__psSiSeq;
+          }
+          const u = this.uid;
+          const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+          const SZ = {
+            1920: { size: "1920x1080", w: 1920, h: 1080, words: "1920 by 1080" },
+            1280: { size: "1280x800", w: 1280, h: 800, words: "1280 by 800" },
+            800: { size: "800x1280", w: 800, h: 1280, words: "800 by 1280" },
+            1440: { w: 1440, h: 900, words: "1440 by 900" },
+            320: { w: 320, h: 640, words: "320 by 640" }
+          };
+          // Station screens. All data is fictional: Acme AB, Plant A, Plant D, Press 4, Press cell 1, Press 1, Anna Berg,
+          // Liisa Korhonen, Jonas Holm, the code HX7K-29PQ and the address 10.20.4.31. Now is Tue 2026-11-03 14:06.
+          const ST = {
+            pair: { title: "Pairing code", note: "A new station, nobody signed in: the code HX7K-29PQ, valid until 14:16, waits for a plant admin's approval", kPair: true, station: "New station", plant: "Not paired", h1: "Pair this station" },
+            paired: { title: "Paired", note: "After approval the station is Press cell 1: the paired message over the badge card, focus in Badge", kBadge: true, station: "Press cell 1",
+              alert: { cls: "si-ok", icon: "CircleCheck", head: "Paired.", text: "This station is Press cell 1 at Plant A. Operators can sign in now." } },
+            badge: { title: "Badge sign-in", note: "Press 4, nobody signed in: focus in Badge through a ref, Sign in with username below it (A5)", kBadge: true },
+            pin: { title: "PIN after the badge", note: "The station's PIN option is on and it has no keyboard: four digits in the PIN field, which takes paste, and the docked keypad", kPin: true },
+            unknown: { title: "Unknown badge", note: "The field is cleared and keeps focus; the error sits under it and is said once in the polite region", kBadge: true, err: true },
+            locked: { title: "Badge sign-in locked", note: "Five unknown badges by 14:03 pause badge sign-in until 14:08; focus stays in Badge, Sign in with username stays", kBadge: true, locked: true,
+              alert: { cls: "warn", icon: "CircleAlert", head: "Badge sign-in is paused until 14:08.", text: "Five unknown badges were scanned at this station. Sign in with your username, or scan your badge again after 14:08." } },
+            user: { title: "Sign in with username", note: "Username and Password with Show password; focus in Password", kUser: true },
+            sw: { title: "Switch operator", note: "Anna Berg is signed in; the Switch operator screen with focus in Badge, Sign in with username and Cancel", kBadge: true, operator: "Anna Berg", screen: "switch", h1: "Switch operator",
+              doc: "Switch operator · Press 4 · Plant A · NorthMES", lead: "Anna Berg stays signed in until the next operator signs in.", cancel: true },
+            notopen: { title: "Plant not open yet", note: "Press 1 at Plant D, which is in onboarding (core.plant_not_ready): no sign-in, focus on the h1", kNotOpen: true, station: "Press 1", plant: "Plant D", h1: "Plant D is not open yet", ffocus: "h1" },
+            pairExp: { title: "Code ran out, new code", note: "14:17: HX7K-29PQ ran out at 14:16, so the station shows M4RT-8WNE by itself", kPair: true, station: "New station", plant: "Not paired", h1: "Pair this station",
+              code: "M4RT-8WNE", until: "14:26", pairNote: "HX7K-29PQ ran out at 14:16, so this station shows a new code." },
+            userErr: { title: "Wrong username or password", note: "Username kept, Password cleared with focus, the error under the form", kUser: true, pwErr: true },
+            pinWrong: { title: "Wrong PIN", note: "The PIN field is cleared and keeps focus; the error under it", kPin: true, pinErr: true },
+            pinLock: { title: "PIN sign-in paused", note: "Five wrong PINs for this badge pause PIN sign-in until 14:11", kPinLock: true }
+          };
+          const VAR = [[1920, "light"], [1920, "dark"], [1280, "light"], [800, "light"]];
+          const V2 = [[1920, "light"], [1920, "dark"]];
+          // The first frame of a state gives its note; later frames of that state say "As SIn".
+          const firsts = {};
+          let n = 0;
+          const nextId = () => "SI" + (++n);
+          const ids = (id, keys) => {
+            const o = {};
+            keys.forEach((k) => { o[k] = u + "-" + id.toLowerCase() + "-" + k; });
+            return o;
+          };
+          const stationRow = (key, vars) => {
+            const s = ST[key];
+            return (vars || VAR).map(([w, theme]) => {
+              const id = nextId();
+              const z = SZ[w];
+              const I = ids(id, ["cl", "sh", "al", "bl", "bd", "be", "pl", "pd", "pe", "kc", "ul", "wl", "ue"]);
+              const note = firsts[key] ? "As " + firsts[key] : s.note;
+              if (!firsts[key]) firsts[key] = id;
+              const badge = s.kBadge ? {
+                cls: (s.err ? "is-err " : "") + (s.locked ? "si-off " : "") + "is-focus",
+                desc: s.locked ? I.al : s.err ? I.bd + " " + I.be : I.bd,
+                inv: s.err ? "true" : undefined,
+                dis: s.locked ? "true" : undefined,
+                caret: !s.locked,
+                ph: s.locked ? "Paused until 14:08" : "",
+                showDesc: !s.locked,
+                err: !!s.err
+              } : null;
+              return {
+                id: id,
+                title: s.title,
+                fth: cap(theme) + ", " + z.words + ". " + note,
+                label: id + " " + s.title + ", " + theme + ", " + z.words,
+                style: "width:" + z.w + "px;height:" + z.h + "px",
+                isStation: true,
+                isAdmin: false,
+                size: z.size,
+                hint: z.w + "px," + z.h + "px",
+                theme: theme,
+                station: s.station || "Press 4",
+                plant: s.plant || "Plant A",
+                operator: s.operator || "none",
+                h1: s.h1 || "",
+                doc: s.doc || "",
+                screen: s.screen || "default",
+                ffocus: s.ffocus || "none",
+                kPair: !!s.kPair,
+                kBadge: !!s.kBadge,
+                kPin: !!s.kPin,
+                kPinLock: !!s.kPinLock,
+                kUser: !!s.kUser,
+                code: s.code || "HX7K-29PQ",
+                until: s.until || "14:16",
+                pairNote: s.pairNote || "",
+                pin: s.pinErr ? { cls: "is-err", desc: I.pd + " " + I.pe, inv: "true", dots: false, err: true } : { cls: "", desc: I.pd, inv: undefined, dots: true, err: false },
+                pw: s.pwErr ? { desc: I.ue, dots: false, err: true } : { desc: undefined, dots: true, err: false },
+                kNotOpen: !!s.kNotOpen,
+                lead: s.lead || "",
+                alert: s.alert || null,
+                badge: badge,
+                userBtn: s.locked ? "v-default" : "v-outline",
+                cancel: !!s.cancel,
+                pinCls: w === 1920 ? "" : "k280",
+                kpCls: w === 1920 ? "" : "k64",
+                ids: I
+              };
+            });
+          };
+          // The Stations page under Administration, Jonas Holm (plant admin) on his own computer.
+          const stations = (approved) => [
+            { name: "Lathe 2", machines: "Lathe 2", pairing: "Paired", seen: "2026-10-27 15:40", seenCls: "lf-mono", fcls: "", menu: "Actions for Lathe 2" },
+            { name: "Press 4", machines: "Press 4", pairing: "Paired", seen: "2026-11-03 14:05", seenCls: "lf-mono", fcls: "", menu: "Actions for Press 4" },
+            approved
+              ? { name: "Press cell 1", machines: "Press 3, Press 4", pairing: "Paired", seen: "2026-11-03 14:07", seenCls: "lf-mono", fcls: "is-focus", menu: "Actions for Press cell 1" }
+              : { name: "Press cell 1", machines: "Press 3, Press 4", pairing: "Not paired", seen: "Never", seenCls: "lf-mut", fcls: "", menu: "Actions for Press cell 1" }
+          ];
+          const AD = {
+            approve: { title: "Approve pairing", note: "Jonas Holm, Administration, Stations: Approve on HX7K-29PQ opened the dialog; focus on Station, set to Press cell 1" },
+            approved: { title: "Pairing approved", note: "Press cell 1 is paired: the confirmation, no request left, focus on Press cell 1 in the list" },
+            list: { title: "Pairing requests", note: "The Stations page with the request HX7K-29PQ, before Approve" },
+            expired: { title: "Request ran out", note: "14:17: Approve pairing came too late; the request list shows the new code M4RT-8WNE, focus on Close" },
+            narrow: { title: "Reflow", note: "" }
+          };
+          const REQ = {
+            HX: { code: "HX7K-29PQ", at: "2026-11-03 14:06", until: "14:16", aria: "Approve pairing request HX7K-29PQ" },
+            M4: { code: "M4RT-8WNE", at: "2026-11-03 14:16", until: "14:26", aria: "Approve pairing request M4RT-8WNE" }
+          };
+          const RQCOLS = "170px 190px 170px minmax(0,1fr) 140px";
+          const STCOLS = "minmax(0,1.2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) 64px";
+          const adminFrames = (key, vars) => vars.map(([w, theme]) => {
+            const id = nextId();
+            const a = AD[key];
+            const z = SZ[w];
+            const note = firsts["ad-" + key] ? "As " + firsts["ad-" + key] : a.note;
+            if (!firsts["ad-" + key]) firsts["ad-" + key] = id;
+            const nar = w === 320;
+            const I = ids(id, ["rq", "dt", "dd", "de", "sl", "sd"]);
+            const dlg = key === "approve" || key === "expired" || key === "narrow";
+            return {
+              id: id,
+              title: a.title,
+              fth: cap(theme) + ", " + z.words + (note ? ". " + note : ""),
+              label: id + " " + a.title + ", " + theme + ", " + z.words,
+              style: "width:" + z.w + "px;height:" + z.h + "px",
+              isStation: false,
+              isAdmin: true,
+              theme: theme,
+              width: String(w),
+              hint: z.w + "px," + z.h + "px",
+              narCls: nar ? "lf-nar" : "",
+              approved: key === "approved",
+              hasReq: key !== "approved",
+              requests: key === "expired" ? [REQ.M4] : [REQ.HX],
+              rqBox: nar ? "lf-xs lf-xstk" : "si-rqbox",
+              stBox: nar ? "lf-nbox" : "lf-card auto",
+              stScr: nar ? "lf-xs lf-xstk" : "",
+              boxRole: nar ? "region" : undefined,
+              boxTab: nar ? "0" : undefined,
+              rqRegion: nar ? "Pairing requests table, scrolls sideways" : undefined,
+              stRegion: nar ? "Stations table, scrolls sideways" : undefined,
+              rqCols: "--cols:" + RQCOLS + (nar ? ";--minw:740px;--stkw:170px" : ""),
+              stCols: "--cols:" + STCOLS + (nar ? ";--minw:640px;--stkw:150px" : ""),
+              stk: nar ? "lf-stk" : "",
+              searchCls: nar ? "full" : "",
+              pagerCls: nar ? "lf-pager out" : "lf-pager",
+              stations: stations(key === "approved"),
+              dlg: dlg,
+              dlgCls: nar ? "nar lf-nar" : "",
+              dlgDesc: key === "expired" ? I.de : I.dd,
+              pick: key !== "expired",
+              expired: key === "expired",
+              ids: I
+            };
+          });
+          const all = [
+            { frames: stationRow("pair") },
+            { frames: adminFrames("approve", [[1440, "light"], [1440, "dark"]]).concat(adminFrames("approved", [[1440, "light"], [1440, "dark"]])) },
+            { frames: stationRow("paired") },
+            { frames: stationRow("badge") },
+            { frames: stationRow("pin") },
+            { frames: stationRow("unknown") },
+            { frames: stationRow("locked") },
+            { frames: stationRow("user") },
+            { frames: stationRow("sw") },
+            { frames: stationRow("notopen") },
+            // The error states and the admin page at more widths come last, so SI1 to SI40 keep their ids.
+            { frames: stationRow("pairExp", V2).concat(adminFrames("list", [[1920, "light"]])) },
+            { frames: adminFrames("list", [[1280, "light"]]).concat(adminFrames("expired", [[1440, "light"], [1440, "dark"]])).concat(adminFrames("narrow", [[320, "light"]])) },
+            { frames: stationRow("userErr", V2).concat(stationRow("pinWrong", [[1920, "light"]])) },
+            { frames: stationRow("pinWrong", [[1920, "dark"]]).concat(stationRow("pinLock", V2)) }
+          ];
+          let rows = all;
+          if (want !== "ALL") {
+            const hit = [];
+            all.forEach((r) => r.frames.forEach((f) => { if (f.id === want) hit.push(f); }));
+            rows = hit.length ? [{ frames: hit }] : all;
+          }
+          const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => ({ t: d, cls: "", aria: undefined, icon: "" })).concat([
+            { t: "Clear", cls: "fn", aria: "Clear PIN", icon: "" },
+            { t: "0", cls: "", aria: undefined, icon: "" },
+            { t: "", cls: "fn", aria: "Delete last digit", icon: "Delete" }
+          ]);
+          return { rows: rows, labels: labels, keys: keys, rootCls: want === "ALL" ? "" : "one" };
+        }
+      }
+    </script>
+  </body>
+</html>

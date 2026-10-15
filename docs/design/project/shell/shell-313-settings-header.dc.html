@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings area header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <style>
+          /* Header frame F0 of the spec page shell-313-settings.dc.html (issue northMES/northmes#313). A document, not part
+             of the UI; it uses the D1 page classes (sheet, kick, t1, t2, lede, sec, gt, gr, gh, ul, tag) and the rules
+             below, which start with set-hd-. Text in backticks in the data is set in Plex Mono. */
+          .set-hd{width:1440px}
+          .set-hd-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start}
+          .set-hd-facts{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px 20px;margin:16px 0 0}
+          .set-hd-facts dt{font-weight:600}
+          .set-hd-facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
+          .set-hd-m{font-family:var(--font-mono);font-size:.92em;font-variant-numeric:tabular-nums}
+          .set-hd-nw{white-space:nowrap}
+          .set-hd-p{margin:12px 0 0;max-width:80ch}
+          .set-hd-ac{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+          .set-hd-ac li{display:flex;align-items:flex-start;gap:10px}
+          .set-hd-cb{flex:none;width:16px;height:16px;margin-top:2px;border:1.5px solid var(--input);border-radius:var(--radius-sm);background:var(--card)}
+          .set-hd-rems{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}
+          .set-hd-rem{display:grid;align-content:start;gap:8px;padding:16px 18px 18px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card)}
+          .set-hd-rem h3{margin:0;font-size:16px;line-height:22px;font-weight:600}
+          .set-hd-rem p{margin:0}
+          .set-hd-k{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+          .set-hd-tbl{margin-top:12px}
+          .set-hd-tbl .gr{align-items:start;padding:8px 0}
+          .set-hd-tbl .gr > span{min-width:0;overflow-wrap:anywhere}
+          .set-hd-d2{grid-template-columns:150px minmax(0,1fr) minmax(0,1.35fr) 170px}
+          .set-hd-rows{grid-template-columns:64px 300px 130px minmax(0,1fr)}
+          .set-hd-cov{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+          .set-hd-sub{display:block;margin-top:2px;color:var(--muted-foreground)}
+          .set-hd-al{display:grid;gap:10px;margin:12px 0 0;padding:0;list-style:none}
+          .set-hd-al li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:start}
+          .set-hd-al .tag{justify-self:stretch;justify-content:center;font-family:var(--font-mono)}
+          .set-hd-qs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:start;margin-top:12px}
+          .set-hd-ql{display:grid;gap:14px}
+          .set-hd-q{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:start}
+          .set-hd-q .tag{justify-self:stretch;justify-content:center;font-family:var(--font-mono)}
+          .set-hd-ans{display:block;margin-top:2px;color:var(--muted-foreground)}
+        </style>
+      </helmet>
+      <div class="sheet set-hd">
+        <p class="kick">NorthMES design page shell/shell-313-settings.dc.html · spec, in review</p>
+        <h1 class="t1">Settings area (E04-S02-T03)</h1>
+        <p class="lede"><sc-for list="{{ lede }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p>
+
+        <div class="set-hd-cols sec">
+          <div>
+            <h2 class="t2">Facts</h2>
+            <dl class="set-hd-facts">
+              <sc-for list="{{ facts }}" as="f">
+                <dt>{{ f.k }}</dt>
+                <dd><sc-for list="{{ f.v }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.w }}"><span class="set-hd-nw">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></dd>
+              </sc-for>
+            </dl>
+          </div>
+          <div>
+            <h2 class="t2">Chosen direction</h2>
+            <sc-for list="{{ direction }}" as="d"><p class="set-hd-p"><sc-for list="{{ d }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p></sc-for>
+            <h2 class="t2 sec">Acceptance criteria</h2>
+            <p class="lede">From issue #313.</p>
+            <ul class="set-hd-ac">
+              <sc-for list="{{ acceptance }}" as="a"><li><span class="set-hd-cb" aria-hidden="true"></span><span>{{ a }}</span></li></sc-for>
+            </ul>
+            <p class="set-hd-p"><sc-for list="{{ acNote }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">The three costs of C and their remedies</h2>
+          <p class="lede">The comparison frame of the variations round recorded three costs of option C. This page resolves them instead of carrying them over.</p>
+          <div class="set-hd-rems">
+            <sc-for list="{{ remedies }}" as="r">
+              <div class="set-hd-rem">
+                <span><span class="tag {{ r.cls }}">{{ r.tag }}</span></span>
+                <h3>{{ r.n }}</h3>
+                <span class="set-hd-k">Cost</span>
+                <p><sc-for list="{{ r.cost }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p>
+                <span class="set-hd-k">Remedy</span>
+                <p><sc-for list="{{ r.fix }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></p>
+                <span class="set-hd-k">Frames</span>
+                <p class="set-hd-m">{{ r.f }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">What this page changes in the approved D2 page</h2>
+          <p class="lede">The D2 page and its record stay frozen; this page records each change. A D2 frame that the table does not name stays as approved, apart from the Settings button that the top bar gains for a user with a settings entry: the station frame, sign-in and the states other than ST7, ST16, ST38 and ST39 are unchanged.</p>
+          <div class="gt set-hd-tbl">
+            <div class="gr gh set-hd-d2"><span>D2 frames</span><span>D2 draws</span><span>On this page</span><span>Frames here</span></div>
+            <sc-for list="{{ d2 }}" as="c">
+              <div class="gr set-hd-d2">
+                <span class="set-hd-m">{{ c.ids }}</span>
+                <span><sc-for list="{{ c.was }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span>
+                <span><sc-for list="{{ c.now }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span>
+                <span class="set-hd-m">{{ c.f }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Frames by row</h2>
+          <p class="lede">Each row mounts a part file of <span class="set-hd-m">shell/</span>. Every screen frame mounts <span class="set-hd-m">shell-313-settings-frame.dc.html</span>, the copy of <span class="set-hd-m">Shell.dc.html</span> under #313, and a settings page mounts the settings layout inside <span class="set-hd-m">main</span> with a list, form or landing part. A chip above each frame names its id, the state, the theme and the size, and the route; the line under the chip is the document title.</p>
+          <div class="gt set-hd-tbl">
+            <div class="gr gh set-hd-rows"><span>Row</span><span>Content and part file</span><span>Frames</span><span>What it shows</span></div>
+            <sc-for list="{{ rows }}" as="r">
+              <div class="gr set-hd-rows"><span class="set-hd-m">{{ r.n }}</span><span><span class="b6">{{ r.name }}</span><span class="set-hd-sub set-hd-m">{{ r.file }}</span></span><span class="set-hd-m">{{ r.ids }}</span><span>{{ r.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="set-hd-cols sec">
+          <div>
+            <h2 class="t2">Where each frame of the issue is drawn</h2>
+            <p class="lede">The Frames list of issue #313, line by line. "Secondary sidebar" reads as the settings navigation of option C.</p>
+            <div class="gt set-hd-tbl">
+              <div class="gr gh set-hd-cov"><span>Issue frame</span><span>Frames</span></div>
+              <sc-for list="{{ coverage }}" as="c">
+                <div class="gr set-hd-cov"><span>{{ c.t }}</span><span class="set-hd-m">{{ c.f }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <h2 class="t2">Page states of plan 06</h2>
+            <p class="lede">Plan 06 asks every design page for these states. The list and form states use the patterns and copy of #222.</p>
+            <div class="gt set-hd-tbl">
+              <div class="gr gh set-hd-cov"><span>State</span><span>Frames</span></div>
+              <sc-for list="{{ states }}" as="c">
+                <div class="gr set-hd-cov"><span>{{ c.t }}</span><span class="set-hd-m">{{ c.f }}</span></div>
+              </sc-for>
+            </div>
+            <h2 class="t2 sec">Drawn elsewhere</h2>
+            <ul class="ul set-hd-p">
+              <sc-for list="{{ elsewhere }}" as="e"><li><sc-for list="{{ e }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></li></sc-for>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Assumptions</h2>
+          <p class="lede">Each one is proposed and needs Krister's yes. The frames draw them.</p>
+          <ol class="set-hd-al">
+            <sc-for list="{{ assumptions }}" as="a"><li><span class="tag fix">{{ a.id }}</span><span><sc-for list="{{ a.t }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for><span class="set-hd-ans set-hd-m">{{ a.f }}</span></span></li></sc-for>
+          </ol>
+        </div>
+
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">Questions 1 to 19 come from the variations spec and keep its numbers, question 20 from the variations page; 21 to 26 arose on this page. A question that the choice of C or this page answers says so. Each open question names what the frames draw until it is answered.</p>
+          <div class="set-hd-qs">
+            <sc-for list="{{ qcols }}" as="qc">
+              <div class="set-hd-ql">
+                <sc-for list="{{ qc }}" as="q">
+                  <div class="set-hd-q"><span class="tag {{ q.cls }}">{{ q.n }}</span><span><sc-for list="{{ q.t }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for><span class="set-hd-ans"><sc-for list="{{ q.a }}" as="p"><sc-if value="{{ p.m }}"><span class="set-hd-m">{{ p.t }}</span></sc-if><sc-if value="{{ p.x }}">{{ p.t }}</sc-if></sc-for></span></span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Header frame F0 of shell-313-settings.dc.html (issue #313). Text in backticks is set in Plex Mono.
+          const tp = (s) => String(s || "").split("`").map((t, i) => ({ t: t, m: i % 2 === 1, x: i % 2 === 0, w: false })).filter((p) => p.t !== "");
+          // In the facts, plan ids such as E05-S06 stay on one line, so they never break at the hyphen.
+          const tpf = (s) => [].concat.apply([], tp(s).map((p) => (p.m ? [p] : p.t.split(/(E\d\d-S\d\d(?:-T\d\d)?)/).filter((t) => t !== "").map((t) => ({ t: t, m: false, w: /^E\d\d-S\d\d/.test(t), x: !/^E\d\d-S\d\d/.test(t) })))));
+          const facts = [
+            ["Issue", "`#313` web: Design the settings area with a secondary sidebar"],
+            ["Story", "E04-S02 (`#40`)"],
+            ["Plan id", "`E04-S02-T03`"],
+            ["Area", "`shell`, which maps to `apps/web`"],
+            ["Waiting UI tasks", "The admin pages of E05-S15; the role and user pages of E05-S06 (`#54`) and E05-S08 (`#56`), designed in `#304`; the settings pages of E06-S08 (`#70`) and E06-S13 (`#75`); the registers that move into plant settings, E06-S05 (`#67`) and E06-S09 (`#71`)"],
+            ["Routes", "Company settings at `/settings/$companyId`, the company landing, and `/settings/$companyId/<module id>/...`, for example `/settings/$companyId/core/users`. Plant settings keep their module paths under `/$plant`, for example `/plant-a/core/machines` and `/plant-a/planning/settings`; the plant landing is `/plant-a/settings` (proposed). PL30 lists every route, title and trail"],
+            ["Persona", "Plant admin, from the persona list in the plan README. Jonas Holm (`jonas.holm`) holds core's company admin role at Acme AB and at Nordic Tools AB; Erik Lind (`erik.lind`) is plant admin at Plant A only; the planner Alex Lund (`alex.lund`) holds no settings entry"],
+            ["Companies", "Acme AB with Plant A, Plant B and Plant D, which is in onboarding; Nordic Tools AB with Plant C"],
+            ["Files", "This page with the parts `-header`, `-entry`, `-company`, `-plant`, `-states` and `-reflow-keyboard`. They share `-frame` (the copy of `Shell.dc.html` under #313), `-layout`, `-nav`, `-landing`, `-list`, `-form`, `-data.js` and `shell-313-settings.css`, and link the D1, D2 and #222 styles read only"],
+            ["Direction", "Graphite (D1): IBM Plex Sans for text and IBM Plex Mono for numbers, ids and paths, 6 px radius, 36 px controls, light by default and dark per user"],
+            ["Data", "Fictional: companies, plants, people, machines, ids, dates and values"]
+          ].map((f) => ({ k: f[0], v: tpf(f[1]) }));
+          const direction = [
+            "Krister Johansson chose option C, settings in the page, on 2026-10-08, from frame C2 of `shell-313-settings-variations.dc.html`. A Settings button in the top bar opens the settings of the plant on screen. Company settings at `/settings/$companyId/...` and the settings of each plant under `/$plant` each have their own settings navigation inside `main`, beside the page, and at 320 a landing lists the entries and an entry drills in.",
+            "The same day he decided the remedy for the table width: when a page with a settings navigation opens, the main sidebar collapses on its own to D2's collapsed state, the 64 px rail. Every plant settings page on this page is drawn that way at 1280, 1440 and 1920, except PL28 and PL32, where the user opened the sidebar again. Company settings have no main sidebar, so nothing collapses there."
+          ].map(tp);
+          const acceptance = [
+            "Every frame in the list exists in light and dark",
+            "No comment thread on the page is open",
+            "Krister approved the page and the design project's README row holds the etag",
+            "The design pull request with PNGs and build notes is merged",
+            "ADR 0066 and plan 06 name the settings area routes",
+            "The waiting UI tasks carry the Design section"
+          ];
+          const acNote = tp("Every page and state of rows 1 to 4 is drawn in light and in dark at each width it shows: at 1440, and at 1280 and 1920, where EN31 to EN36, CO34 to CO40 and PL31 to PL33 are the dark twins. The 320, long-strings and keyboard frames of row 6 alternate between light and dark. ADR 0066 and plan 06 have named the company and plant settings routes since pull request `#326`; the plant landing `/$plant/settings` (question 22) and the skip target are new on this page.");
+          const remedies = [
+            { tag: "Decided by Krister, 2026-10-08", cls: "ok", n: "1. Table width at 1280",
+              cost: tp("Beside the 256 px main sidebar and the 220 px settings navigation, C left the table about 730 px wide at 1280, close to the 750 px at which the #222 round rejected a layout because dates wrapped."),
+              fix: tp("Every plant settings page opens with the main sidebar collapsed to D2's rail: the page column is 922 px at 1280, 1082 px at 1440 and 1562 px at 1920. Company settings have no main sidebar: 986, 1146 and 1626 px. A user who opens the sidebar on a settings page gets 730 px at 1280 for that visit (A2)."),
+              f: "EN5 to EN8, EN33, EN34, PL3, PL27 to PL29, PL31 to PL33, CO27 to CO30, CO34 to CO37" },
+            { tag: "Proposed", cls: "fix", n: "2. The skip link passes the settings navigation",
+              cost: tp("In C, Skip to main content landed on `main`, before the settings navigation, so it passed only the main navigation (WCAG 2.4.1)."),
+              fix: tp("On a page with a settings navigation the skip link targets the page column inside `main`, which holds the h1 and has `tabindex=\"-1\"`. One activation passes the rail, the top bar and the settings navigation, and the navigation stays inside `main` as ADR 0066 and plan 06 say. The link keeps its D2 name and place; pages without a settings navigation keep D2's target."),
+              f: "RE12, RE13, RE15, RE16, RE23, RE24" },
+            { tag: "Proposed", cls: "fix", n: "3. One way between two areas",
+              cost: tp("The decision of 2026-10-08 asked for one Settings area. C splits it into company settings, without the main sidebar, and plant settings, in the planner shell, and the two look different."),
+              fix: tp("Both areas draw the same settings layout, landing and Settings button. Each settings navigation ends with Other settings: Acme AB settings in plant settings; Plant A settings, Plant B settings and Plant D settings in company settings, where Back to Plant A heads the navigation. A plant admin with no company permission sees no Other settings, and the plant switcher keeps the route between plants. The plant list at `/` links each company's settings, the way into another company's area."),
+              f: "EN13, EN17, EN19 to EN26, EN37, CO23 to CO26, PL21 to PL24, RE2, RE7" }
+          ];
+          const D2 = (ids, was, now, f) => ({ ids: ids, was: tp(was), now: tp(now), f: f });
+          const d2 = [
+            D2("C7, PL30, PL31, NA15, NA18, KE32", "Administration above the user footer, for admins: Users, Roles, Stations, Integrations, Settings, System health", "Gone. Users, Roles and Integrations are company settings; Stations and System health are plant settings; core's Settings page becomes Formats in company settings, with the plant override in the Plant entry", "CO3, CO15 to CO20, PL1, PL11, PL13"),
+            D2("PL30", "Planning settings, Pyramid connector settings and Audit log in the main sidebar for admins", "Planning rules and Pyramid connector are module settings in the settings navigations; Audit log is a company settings page. Import inbox and AI usage stay in the main sidebar (question 9)", "PL15, CO21, EN13"),
+            D2("PL5", "Eight registers under Core > Master data", "Machines, Equipment groups and Calendars move to plant settings. Articles, Routings and Customers stay, and Tools and Warehouses stay while question 6 is open: Master data keeps Tools, Articles, Routings, Warehouses and Customers in D2's order", "EN11, EN12, PL3, PL7, PL9"),
+            D2("C9, PL44 to PL47", "The admin frame at `/admin`: no plant, Overview and Plants, the switcher reads Admin, choose a plant", "Replaced by company settings at `/settings/$companyId`: no main sidebar and no Assistant, Back to Plant A, the account button at the top bar end; Plants is a company settings entry. Overview stays open (question 4)", "EN13 to EN16, CO5, CO27"),
+            D2("PL32, PL33, PL46, NA23", "Admin after All plants in the switcher menu", "Gone. The Settings button in the top bar is the way in; All plants opens `/`", "EN1, EN19"),
+            D2("PL42, PL43", "Admin in the user menu when the switcher is hidden", "Gone. The Settings button", "EN25, EN27"),
+            D2("ST38, ST39", "Admin (Building2) in the top bar of the plant list at `/`", "Gone, and no Settings button, because no plant is on screen. Each company group of the list ends with its settings link, Acme AB settings (Building2), for a user who holds an admin permission there", "EN37, EN38"),
+            D2("PL1, PL26", "Top bar: sidebar trigger, breadcrumb, page actions, Assistant, Help", "The Settings button (lucide Settings) between the Assistant and Help, for a user with a settings entry; it marks the area on a settings page", "EN1, EN5, EN27"),
+            D2("PL6, KE2, KE5", "The rail, the collapsed state the user chooses", "Also the state every plant settings page opens in; the user's own choice returns after settings (A1)", "EN5, EN11, PL27"),
+            D2("PL14, KE1", "Skip to main content targets `main`", "On a settings page it targets the page column inside `main`", "RE15, RE16"),
+            D2("Titles and trails", "Plants · Admin · NorthMES with a trail starting at Admin; Users · Plant A · NorthMES", "Plants · Acme AB · NorthMES with Settings > Acme AB > Plants; plant settings keep Machines · Plant A · NorthMES with Acme AB > Plant A > Settings > Machines", "PL30"),
+            D2("ST7, ST16", "Copy: Master data and the Administration pages belong to Core", "Administration becomes Settings in the copy", "none"),
+            D2("Shell.dc.html", "Props `role` and `mount=\"admin\"`", "The frame copy `shell-313-settings-frame.dc.html` adds `area` (work, plant, company, or home for the list at `/`), `settings-button`, `settings-current` and `skip-to`, and drops `mount`", "every screen frame")
+          ];
+          const rows = [
+            { n: "1", name: "Way in, way back and scope", file: "shell-313-settings-entry.dc.html", ids: "EN1 to EN38", t: "The Settings button on the planning board at 1440, 1280 and 1920; Plant A settings with the rail at three widths; back to work from plant and company settings, with Master data's remaining entries; Acme AB settings; the plant list at / with each company's settings link; a user in two companies with Plant C and Nordic Tools AB; Erik Lind; Alex Lund with no Settings button; the empty company landing. EN31 to EN36 are the dark 1280 and 1920 frames." },
+            { n: "2", name: "Company settings", file: "shell-313-settings-company.dc.html", ids: "CO1 to CO40", t: "General, Formats, Plants, New plant and its slug clash, Plant D in onboarding, a company with no plant and its wizard link, Users, Roles, Integrations, Audit log, and the way to Plant A settings, at 1440, 1280 and 1920 in light and dark." },
+            { n: "3", name: "Plant settings", file: "shell-313-settings-plant.dc.html", ids: "PL1 to PL29, PL31 to PL33", t: "Plant, Machines, New machine with field errors, Equipment groups, Calendars, Stations, System health, Planning rules, the AI assistant, Acme tooling, the way to Acme AB settings, Erik Lind's narrower permission, and the rail at 1280 and 1920 in light and dark." },
+            { n: "4", name: "Page states", file: "shell-313-settings-states.dc.html", ids: "PS1 to PS16", t: "Loading, could not load, Stations with none yet, a server error that keeps values, no permission, a module that did not load, a plant in onboarding and a filtered-empty list." },
+            { n: "5", name: "Routes, titles and breadcrumbs", file: "shell-313-settings-plant.dc.html", ids: "PL30", t: "Route, document title and trail of every company and plant settings page, and what replaces /admin. Build notes, not part of the UI." },
+            { n: "6", name: "Reflow, long strings, keyboard and focus, build notes", file: "shell-313-settings-reflow-keyboard.dc.html", ids: "RE1 to RE30", t: "Both landings and entries drilled in at 320, the navigation sheet, German and Finnish labels at 1440 and 320 in plant settings (RE5, RE11) and company settings (RE28 to RE30), tab order, the skip link, where focus goes, landmarks, the focus ring on every new control, and the build notes RE27." }
+          ];
+          const C = (t, f) => ({ t: t, f: f });
+          const coverage = [
+            C("How a user reaches Settings and gets back to work", "EN1 to EN12, EN17, EN18, CO23 to CO26, PL21 to PL24, RE17, RE18"),
+            C("The settings navigation by scope: the company (general and formats, plants with New plant, users, roles, integrations, audit log)", "EN13 to EN16, CO1 to CO22"),
+            C("Each plant the user administers (plant, machines, equipment groups, calendars, stations, system health)", "EN5 to EN8, PL1 to PL14"),
+            C("Module settings that modules contribute (planning rules, the AI assistant, a connector, a plugin)", "PL15 to PL20, CO19, CO20"),
+            C("Scope: a company with several plants", "EN13 to EN16, EN35, EN36, CO5, CO6"),
+            C("Scope: several companies", "EN19 to EN24, EN37, EN38"),
+            C("Scope: one plant", "EN23, EN24"),
+            C("Scope: a user who administers only one plant", "EN25, EN26, PL25, PL26"),
+            C("Scope: a user with no admin permission", "EN27, EN28"),
+            C("A company with no plant yet, and its onboarding wizard link", "CO13, CO14"),
+            C("A plant in onboarding and the onboarding wizard link", "CO11, CO12, PS13, PS14"),
+            C("A narrower permission sees only its own entries", "PL25, PL26, PS9, PS10"),
+            C("The empty state when nothing is allowed", "EN29, EN30"),
+            C("One settings page in each scope with the #222 list and form patterns", "CO1 to CO10, CO15, CO16, CO21, CO22, PL1 to PL12"),
+            C("Routes, titles and breadcrumbs for both scopes; what replaces /admin", "PL30; the route in every chip and the title over every screen"),
+            C("1280, 1440, 1920 and a 320 reflow frame", "1280: EN3, EN7, EN15, EN31, EN33, EN35, CO27 to CO30, CO34 to CO37, PL27, PL28, PL31, PL32, RE13, RE15, RE16. 1920: EN4, EN8, EN16, EN32, EN34, EN36, CO31 to CO33, CO38 to CO40, PL29, PL33. 320: RE1 to RE4, RE6 to RE11, RE14, RE29, RE30"),
+            C("Light and dark", "Every page and state of rows 1 to 4 in both, at 1440, 1280 and 1920. Dark at 1280: EN31, EN33, EN35, CO34 to CO37, PL31, PL32. Dark at 1920: EN32, EN34, EN36, CO38 to CO40, PL33. RE1 to RE26 and RE28 to RE30 alternate"),
+            C("Long German or Finnish labels", "Plant settings RE5, RE11; company settings RE28 to RE30"),
+            C("Keyboard and focus", "RE12 to RE26"),
+            C("Build notes", "RE27, PL30")
+          ];
+          const states = [
+            C("Populated", "Most frames, for example PL3, CO15"),
+            C("First run with the action that creates the first item", "CO13, CO14"),
+            C("First run without an action", "PS5, PS6"),
+            C("Filtered empty with Clear filters", "PS15, PS16"),
+            C("Loading as a skeleton of the populated layout", "PS1, PS2"),
+            C("Error with a way out", "PS3, PS4"),
+            C("Form with field errors and the error summary", "PL5, PL6, CO9, CO10"),
+            C("Server error that keeps values", "PS7, PS8"),
+            C("No permission", "PS9, PS10"),
+            C("Saved", "RE22"),
+            C("Domain: a plant in onboarding", "CO11, CO12, PS13, PS14, EN13"),
+            C("Domain: a module that did not load", "PS11, PS12"),
+            C("Domain: a company group read only at a plant", "PL7, PL8"),
+            C("Domain: a station waiting for approval", "PL11, PL12"),
+            C("Domain: no AI provider yet", "PL17, PL18")
+          ];
+          const elsewhere = [
+            "The company and plant onboarding wizards: E06-S14's design task. The calendar page itself: E06-S09's. System health in full: E16-S03's.",
+            "A user's page with its Access tab, the role editor and the no-access states of users and roles: #304.",
+            "States the shell owns (the module unavailable placeholder, the error panel, reconnecting, the reload dialog): D2. The error pages: #306."
+          ].map(tp);
+          const A = (t, f) => ({ t: tp(t), f: f });
+          const assumptions = [
+            A("When the user leaves settings, the main sidebar returns to the user's own choice. The automatic collapse does not change the stored preference (D2 question 19).", "EN11, EN12"),
+            A("A user who opens the main sidebar on a settings page keeps it open for that visit; moving between plant settings pages does not collapse it again until the user leaves settings.", "PL28, PL32"),
+            A("The collapse is announced to no one and moves no focus. The route change focuses the new h1, and the trigger reads Expand sidebar with `aria-expanded=\"false\"`, as after a manual collapse.", "EN5, RE18"),
+            A("At 320 the main sidebar is the navigation sheet anyway, so the collapse changes nothing there. The sheet gains the Settings button in its footer row, and each landing lists Other settings after its entries, so the way between the two areas stays.", "RE2, RE7, RE10"),
+            A("The landing exists at every width at its one URL: in two columns with a line per entry at 1280 and wider, as one column of 44 px rows at 320.", "EN5, EN13, RE1, RE6"),
+            A("The frames mount `shell-313-settings-frame.dc.html`, a copy of the frozen `Shell.dc.html` with the #313 changes only: the Settings button, the skip target past the settings navigation, company pages without a sidebar, the plant list at `/` without Admin (`area=\"home\"`), and no Administration section or Admin links. This answers question 20.", "every screen frame"),
+            A("Company settings draw no Assistant, because the assistant acts inside a plant; plant settings pages draw it as any plant page does, unless the company has no AI provider (D2 ST31), as at Plant C.", "EN13, PL3, EN21"),
+            A("Erik Lind holds a custom plant admin role at Plant A only. In EN25 and EN26 it holds every plant entry; in PL25, PL26, PS9 and PS10 a narrower version holds Calendars, Stations, Planning rules and Acme tooling, as the example of a narrower permission.", "EN25, PL25, PS9"),
+            A("The AI assistant is a company settings page, because providers bind per company (ADR 0035). It is drawn for Nordic Tools AB, which has no provider yet, so Acme AB's plant pages keep their Assistant.", "PL17, PL18"),
+            A("Roles in company settings is #304's roles list; its column reads Held in Acme AB and counts holders at Acme AB and its plants. Integrations draws the connector card from plan 08 section 13 and the provider card from ADR 0035.", "CO17 to CO20"),
+            A("Acme AB holds its own values for three planning rules, equal to plan 07's defaults, so Plant A's Planning rules mark them From Acme AB. No frame draws Acme AB's planning rules.", "PL15, PL16"),
+            A("After Save on a settings form, focus stays on Save settings and the saved note shows, as #222 ST25.", "RE21, RE22"),
+            A("The build notes name the settings navigation a shell component, `SettingsNav`, not a second shadcn Sidebar.", "RE27"),
+            A("While the rail's flyout is open it covers the head of the settings navigation, as D2's flyout covers the page.", "EN9, EN10"),
+            A("Labels of entries, groups and landings other than C's, their icons, the landing lines, the titles and crumbs marked proposed in PL30, and the copy marked proposed in RE27 need Krister's yes. The company's name labels the company area.", "PL30, RE27"),
+            A("The plant list at `/` keeps D2's layout without Admin and draws no Settings button, because no plant is on screen. Each company group ends with `{company} settings` (Building2) to `/settings/$companyId` for a user who holds an admin permission there (ADR 0066 Where a signed-in user starts).", "EN37, EN38"),
+            A("A company with no plant yet keeps its onboarding open, so Continue onboarding (ListTodo) heads its company settings navigation and opens the company wizard at `/settings/$companyId/core/onboarding`. It is E06-S14 behaviour: until E06-S14 ships, no wizard exists and New plant is the way to the first plant (rules 9.3.6).", "CO13, CO14"),
+            A("Roles are assigned in company settings, so a settings page that the user may not read sends them to a company admin of the company: Ask a company admin of Acme AB for a role that can read machines.", "PS9, PS10")
+          ].map((a, i) => Object.assign(a, { id: "A" + (i + 1) }));
+          const Q = (n, t, a, cls) => ({ n: String(n), t: tp(t), a: tp(a), cls: cls || "q" });
+          const questions = [
+            Q(1, "Is the company group labelled Organization, Company or the company's name?", "Answered by C: the company's name heads the area, Acme AB over Company settings.", "ok"),
+            Q(2, "The company segment holds the company's uuidv7, because companies have no slug. Keep the id, add a company slug, or keep the company out of the URL?", "Drawn: `$companyId`."),
+            Q(3, "Does `admin` stay a reserved plant slug now that `/admin` goes?", "Drawn: reserved, beside `settings`."),
+            Q(4, "Where does `/` send a company admin of several companies, and do company settings keep an overview of the companies like `/admin/core`?", "Working default: the list at `/` with each company's settings link (EN37, EN38)."),
+            Q(5, "Does Settings appear in the document title of settings pages?", "Drawn: no, Machines · Plant A · NorthMES."),
+            Q(6, "Tools and Warehouses: main sidebar or Settings?", "Drawn: they stay under Core > Master data."),
+            Q(7, "The ERP connection: an Integrations card, a module settings entry, or both? And does core render the cards or do modules contribute them?", "Drawn: both, CO19 and Pyramid connector under Modules."),
+            Q(8, "System health under each plant, once at company level, or a group of its own?", "Drawn: under each plant, PL13."),
+            Q(9, "Import inbox and AI usage: main sidebar or Settings?", "Drawn: in the main sidebar, where D2 put them."),
+            Q(10, "Does the company scope keep an overview page like `/admin/core`?", "Merged into question 4.", "ok"),
+            Q(11, "Does Presentation settings stay in the user menu once Formats live in Settings, and what does Profile hold?", "Drawn: D2's user menu, EN27."),
+            Q(12, "Which icons mark Settings and Formats?", "Drawn: Settings and SlidersHorizontal."),
+            Q(13, "Company pages of users, roles, assignments, audit, the connector, planning and AI need plant-free fields beyond release 1's list. And where does a plant admin with no company permission manage the people at their plant?", "Not drawn: Erik Lind has no people entry."),
+            Q(14, "On company pages, does `PresentationProvider` use the company's Formats or `DEFAULT_PRESENTATION`, as ADR 0066 says?", "The first half is answered by C: plant settings pages show the Assistant and the plant crumb."),
+            Q(15, "Which names do #304 and #313 share for the company admin: Jonas Holm here, Karin Dahl in #304?", "Drawn: Jonas Holm, also in CO17."),
+            Q(16, "Which issue carries the change of #306's pages under `/admin` (NF3, NF4) to the settings routes?", "Not drawn here."),
+            Q(17, "Company equipment groups are read only on a plant's page. Where does a company admin edit them?", "Drawn: Assembly read only in PL7."),
+            Q(18, "Does a module settings entry carry its company and plant views on one page, or appear once per area?", "Answered by C: once per area, the company value and the plant override.", "ok"),
+            Q(19, "Does Audit log also appear under each plant for a plant admin who holds `core.audit:read` there?", "Drawn: company settings only."),
+            Q(20, "Does the settings layout come from a new Shell prop or a separate frame part?", "Answered here: the frame copy under #313 and the layout part (A6).", "ok"),
+            Q(21, "With the Assistant docked on a plant settings page at 1280, the page column holds 562 px. Does docking hide the settings navigation, or does the table scroll in its card?", "Working answer: the table scrolls in its card; not drawn."),
+            Q(22, "The plant landing `/$plant/settings` makes `settings` a reserved module id under `/$plant`, which ADR 0066 counted against option B. Is the shell its owner? And does #222's example path `/plant-a/core/settings` give way to the Formats section of the Plant entry at `/plant-a/core/plant`?", "Drawn: the landing, EN5."),
+            Q(23, "A user with no settings entry who opens a settings URL: keep the settings navigation with its head and back link, or leave it out?", "Drawn: kept, EN29."),
+            Q(24, "On a child route such as New machine, the navigation marks Machines with `aria-current=\"page\"` while the last crumb also does. Mark the section entry `aria-current=\"true\"` instead?", "Drawn: page, PL5. The navigation part has no prop for true yet."),
+            Q(25, "Which page draws the plant list at `/` with each company's settings link, and the change to D2's ST38 and ST39?", "Answered here: EN37 and EN38 draw it with the frame's `area=\"home\"` (A16).", "ok"),
+            Q(26, "On company pages and on `/` the account button follows Help, as D2 drew the pages without a plant (K15). Does it move before the Settings button, so that Help ends the top bar in every area (WCAG 3.2.6)?", "Drawn: after Help, RE13, EN37.")
+          ];
+          return {
+            lede: tp("Option C of the variations round, settings in the page, with Krister's remedy: company settings and the settings of each plant, each with its own settings navigation inside `main`, the Settings button that leads there and the way back to work. The list and form patterns are those of the canonical page #222. The approved D2 page stays frozen, and this page records what changes in it."),
+            facts: facts, direction: direction, acceptance: acceptance, acNote: acNote, remedies: remedies, d2: d2, rows: rows,
+            coverage: coverage, states: states, elsewhere: elsewhere, assumptions: assumptions, qcols: [questions.slice(0, 13), questions.slice(13)]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070, 0075 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
@@ -175,5 +175,6 @@ On 2026-10-11 the index holds 77 ADRs: 48 accepted and 29 proposed, 74 for relea
 | 0076 | [Secure development lifecycle with a security note per change, a controls index and an internal audit each release](0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) | proposed | 1 | |
 | 0077 | [Visual regression snapshots with Argos from the Playwright specs](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) | proposed | 1 | maintainer (the Argos plan and its cost; when the Argos check becomes required; which screenshots leave the repository for Argos) |
 | 0078 | [Dashboard tabs in core, with a user's own tabs guarded by the user id in row-level security](0078-dashboard-tabs-in-core-with-a-users-own-tabs-guarded-by-the-user-id-in-row-level-security.md) | proposed | 1 | maintainer (northmes.user_id as a third transaction setting; a user's own tabs at the company node, so they follow the user across the plants of one company; reading the dashboard with no permission beyond opening the plant; core.dashboardTab:manage for shared tabs outside companyPermissions; the layout as one jsonb column per tab; the command bus skipping the permission for a row its target names as the principal's own; the layout sent as a JSON string until inputFromZod) |
+| 0079 | [Design pages as artifacts on the NorthMES design system, with the approved source in the repository](0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | 1 | maintainer (the artifact version as the approval record; the approved page source in docs/design/project; no etag checks for pages approved in standalone Claude Design) |
 
-Next free number: 0079. Only Krister Johansson sets a status to accepted.
+Next free number: 0080. Only Krister Johansson sets a status to accepted.

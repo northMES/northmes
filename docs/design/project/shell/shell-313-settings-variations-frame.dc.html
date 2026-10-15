@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings frame</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings-variations.css" />
+      </helmet>
+      <div class="sh-root {{ rootCls }}" data-screen-label="{{ screenLabel }}">
+        <sc-if value="{{ showTitle }}">
+          <div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ docTitle }}</span></div>
+        </sc-if>
+        <div class="sh-scr {{ scrCls }}">
+          <a class="btn v-default sh-skip" href="#{{ ids.main }}">Skip to main content</a>
+          <sc-if value="{{ showMain }}">
+            <div class="sh-sb" id="{{ ids.sidebar }}">
+              <nav class="sh-sb-nav" aria-label="Main">
+                <div class="sh-sb-head">
+                  <sc-if value="{{ switcher }}">
+                    <button class="sh-sw" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Acme AB, Plant A, switch plant"><span class="sh-cm" aria-hidden="true">A</span><span class="sh-sw-t"><span class="sh-sw-a">Acme AB</span><span class="sh-sw-b">Plant A</span></span><span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span></button>
+                  </sc-if>
+                  <sc-if value="{{ noSwitcher }}">
+                    <div class="sh-sw static"><span class="sh-cm" aria-hidden="true">A</span><span class="sh-sw-t"><span class="sh-sw-a">Acme AB</span><span class="sh-sw-b">Plant A</span></span></div>
+                  </sc-if>
+                </div>
+                <div class="sh-sb-body">
+                  <sc-for list="{{ mainSecs }}" as="s">
+                    <div class="sh-sec {{ s.cls }}">
+                      <sc-for list="{{ s.groups }}" as="g">
+                        <div class="sh-grp">
+                          <div class="sh-grp-h" id="{{ g.hid }}"><span>{{ g.label }}</span></div>
+                          <ul class="sh-list" role="list" aria-labelledby="{{ g.hid }}">
+                            <sc-for list="{{ g.entries }}" as="e">
+                              <li>
+                                <div class="sh-ni-row">
+                                  <a class="sh-ni {{ e.cls }}" href="#" aria-current="{{ e.cur }}"><span class="ic" data-icon="{{ e.icon }}"></span><span class="sh-ni-l">{{ e.label }}</span></a>
+                                  <sc-if value="{{ e.hasKids }}"><button class="sh-disc {{ e.dcls }}" type="button" aria-label="{{ e.dname }}" aria-expanded="{{ e.open }}"><span class="ic" data-icon="ChevronRight"></span></button></sc-if>
+                                </div>
+                                <sc-if value="{{ e.open }}">
+                                  <ul class="sh-sub" role="list"><sc-for list="{{ e.kids }}" as="k"><li><a class="sh-ni {{ k.cls }}" href="#" aria-current="{{ k.cur }}"><span class="ic" data-icon="{{ k.icon }}"></span><span class="sh-ni-l">{{ k.label }}</span></a></li></sc-for></ul>
+                                </sc-if>
+                              </li>
+                            </sc-for>
+                          </ul>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="sh-sb-foot {{ footCls }}">
+                  <sc-if value="{{ footEntry }}">
+                    <ul class="sh-list" role="list"><li><a class="sh-ni {{ footEntryCls }}" href="#"><span class="ic" data-icon="Settings"></span><span class="sh-ni-l">Settings</span></a></li></ul>
+                  </sc-if>
+                  <button class="sh-sw sh-nu {{ userCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ userOpen }}" aria-controls="{{ userCtl }}" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span><span class="sh-sw-t"><span class="sh-sw-a">{{ user }}</span><span class="sh-sw-b">{{ username }}</span></span><span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span></button>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showASb }}">
+            <div class="{{ aSbCls }}" id="{{ ids.sidebar }}" role="{{ sheetRole }}" aria-modal="{{ sheetModal }}" aria-label="{{ aSheetLabel }}">
+              <nav class="sh-sb-nav" aria-label="Settings">
+                <div class="sh-sb-head">
+                  <a class="sh-sw" href="#" aria-label="{{ backName }}"><span class="set-mk" aria-hidden="true"><span class="ic" data-icon="ArrowLeft"></span></span><span class="sh-sw-t"><span class="sh-sw-a">Settings</span><span class="sh-sw-b">{{ backB }}</span></span></a>
+                  <sc-if value="{{ sheetOpen }}"><button class="btn icon v-ghost" type="button" aria-label="Close navigation"><span class="ic" data-icon="X"></span></button></sc-if>
+                </div>
+                <div class="sh-sb-body">
+                  <sc-for list="{{ aGroups }}" as="g">
+                    <sc-if value="{{ g.rule }}"><div class="set-rule" role="presentation"></div></sc-if>
+                    <div class="sh-grp">
+                      <button class="set-gh" type="button" id="{{ g.hid }}" aria-expanded="{{ g.open }}" aria-controls="{{ g.ctl }}"><span class="set-ghl"><span>{{ g.label }}</span><sc-if value="{{ g.onb }}"><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></sc-if></span><span class="ic set-ghc" data-icon="{{ g.chev }}"></span></button>
+                      <sc-if value="{{ g.open }}">
+                        <ul class="sh-list" role="list" id="{{ g.lid }}" aria-labelledby="{{ g.hid }}">
+                          <sc-for list="{{ g.entries }}" as="e"><li><a class="sh-ni {{ e.cls }}" href="#" aria-current="{{ e.cur }}"><span class="ic" data-icon="{{ e.icon }}"></span><span class="sh-ni-l">{{ e.label }}</span></a></li></sc-for>
+                        </ul>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <div class="sh-sb-foot">
+                  <button class="sh-sw sh-nu" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span><span class="sh-sw-t"><span class="sh-sw-a">{{ user }}</span><span class="sh-sw-b">{{ username }}</span></span><span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span></button>
+                  <sc-if value="{{ sheetOpen }}"><button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button></sc-if>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showRail }}">
+            <div class="sh-rail" id="{{ ids.sidebar }}">
+              <nav class="sh-rail-in" aria-label="Main">
+                <div class="sh-rail-top">
+                  <sc-if value="{{ railMarkBtn }}"><button class="sh-rmark" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{ railMarkName }}"><span class="sh-cm" aria-hidden="true"><sc-if value="{{ railMarkText }}">A</sc-if><sc-if value="{{ railMarkIcon }}"><span class="ic" data-icon="Factory"></span></sc-if></span></button></sc-if>
+                  <sc-if value="{{ railMarkStatic }}"><span class="sh-rmark static"><span class="sh-cm" aria-hidden="true">A</span><span class="sh-vh">Acme AB, Plant A</span></span></sc-if>
+                </div>
+                <div class="sh-rail-nav">
+                  <sc-for list="{{ railGroups }}" as="rg">
+                    <sc-if value="{{ rg.sep }}"><span class="sh-rsep" aria-hidden="true"></span></sc-if>
+                    <ul class="sh-rlist" role="list" aria-label="{{ rg.label }}">
+                      <sc-for list="{{ rg.items }}" as="r">
+                        <li>
+                          <sc-if value="{{ r.link }}"><a class="sh-rb" href="#" aria-label="{{ r.name }}"><span class="ic" data-icon="{{ r.icon }}"></span></a></sc-if>
+                          <sc-if value="{{ r.btn }}"><button class="sh-rb" type="button" aria-label="{{ r.name }}" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="{{ r.icon }}"></span></button></sc-if>
+                        </li>
+                      </sc-for>
+                    </ul>
+                  </sc-for>
+                </div>
+                <div class="sh-rail-foot">
+                  <button class="sh-rmark" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span></button>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showSnav }}">
+            <div class="{{ snavCls }}" role="{{ sheetRole }}" aria-modal="{{ sheetModal }}" aria-label="{{ bSheetLabel }}">
+              <nav aria-label="Settings">
+                <div class="sh-sb-head">
+                  <sc-if value="{{ pickerBtn }}">
+                    <button class="sh-sw {{ pickCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ pickOpen }}" aria-controls="{{ pickCtl }}" aria-label="{{ pickName }}"><span class="set-mk" aria-hidden="true"><span class="ic" data-icon="{{ pickIcon }}"></span></span><span class="sh-sw-t"><span class="sh-sw-a">Acme AB</span><span class="sh-sw-b">{{ pickB }}</span></span><span class="ic sh-sw-i" data-icon="ChevronsUpDown"></span></button>
+                  </sc-if>
+                  <sc-if value="{{ pickerStatic }}">
+                    <div class="sh-sw static"><span class="set-mk" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><span class="sh-sw-t"><span class="sh-sw-a">Acme AB</span><span class="sh-sw-b">Plant A</span></span></div>
+                  </sc-if>
+                  <sc-if value="{{ sheetOpen }}"><button class="btn icon v-ghost" type="button" aria-label="Close settings menu"><span class="ic" data-icon="X"></span></button></sc-if>
+                </div>
+                <div class="sh-sb-body">
+                  <sc-for list="{{ bGroups }}" as="g">
+                    <div class="sh-grp">
+                      <div class="sh-grp-h" id="{{ g.hid }}"><span>{{ g.label }}</span></div>
+                      <ul class="sh-list" role="list" aria-labelledby="{{ g.hid }}">
+                        <sc-for list="{{ g.entries }}" as="e"><li><a class="sh-ni {{ e.cls }}" href="#" aria-current="{{ e.cur }}"><span class="ic" data-icon="{{ e.icon }}"></span><span class="sh-ni-l">{{ e.label }}</span></a></li></sc-for>
+                      </ul>
+                    </div>
+                  </sc-for>
+                </div>
+              </nav>
+            </div>
+          </sc-if>
+          <div class="sh-col">
+            <header class="sh-tb {{ tbCls }}" id="{{ ids.tb }}">
+              <sc-if value="{{ hasTrigger }}">
+                <button class="btn icon v-ghost sh-trig" type="button" aria-label="{{ trigLabel }}" aria-expanded="{{ trigExp }}" aria-controls="{{ ids.sidebar }}"><span class="ic" data-icon="PanelLeft"></span></button>
+                <span class="sh-tsep" aria-hidden="true"></span>
+              </sc-if>
+              <sc-if value="{{ hasMenuBtn }}">
+                <button class="btn icon v-ghost sh-trig" type="button" aria-label="Open navigation" aria-haspopup="dialog" aria-expanded="{{ navSheetOpen }}"><span class="ic" data-icon="Menu"></span></button>
+              </sc-if>
+              <nav class="sh-crumbs" aria-label="Breadcrumb">
+                <ol>
+                  <sc-for list="{{ crumbs }}" as="c">
+                    <li class="{{ c.li }}">
+                      <sc-if value="{{ c.sep }}"><span class="ic sh-sep" data-icon="ChevronRight"></span></sc-if>
+                      <sc-if value="{{ c.ell }}"><button class="sh-ell" type="button" aria-label="Show the full path" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button></sc-if>
+                      <sc-if value="{{ c.text }}"><span class="sh-cx">{{ c.label }}</span></sc-if>
+                      <sc-if value="{{ c.ctx }}"><a class="sh-cx sh-cxl" href="#">{{ c.label }}</a></sc-if>
+                      <sc-if value="{{ c.link }}"><a class="sh-cr" href="#">{{ c.label }}</a></sc-if>
+                      <sc-if value="{{ c.here }}"><span class="sh-here" aria-current="page">{{ c.label }}</span></sc-if>
+                    </li>
+                  </sc-for>
+                </ol>
+              </nav>
+              <span class="sh-grow"></span>
+              <sc-if value="{{ wide }}">
+                <sc-if value="{{ hasActions }}">
+                  <div class="sh-actions"><sc-for list="{{ actions }}" as="a"><button class="btn {{ a.cls }}" type="button">{{ a.label }}</button></sc-for></div>
+                  <span class="sh-vsep"></span>
+                </sc-if>
+                <sc-if value="{{ assistant }}"><button class="btn v-ghost" type="button" aria-expanded="false"><span class="ic" data-icon="Sparkles"></span>Assistant</button></sc-if>
+              </sc-if>
+              <sc-if value="{{ settingsBtn }}">
+                <span class="sh-tipw"><a class="btn icon v-ghost {{ setBtnCls }}" href="#" aria-label="Settings" aria-current="{{ setBtnCur }}"><span class="ic" data-icon="Settings"></span></a><sc-if value="{{ setTip }}"><span class="sh-tip sh-tip-b" role="tooltip">Settings</span></sc-if></span>
+              </sc-if>
+              <sc-if value="{{ helpInBar }}"><button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button></sc-if>
+              <sc-if value="{{ avatarEnd }}"><button class="set-avb" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="{{ accountLabel }}"><span class="sh-av" aria-hidden="true">{{ initials }}</span></button></sc-if>
+              <sc-if value="{{ narrowActions }}"><button class="btn icon v-ghost" type="button" aria-label="Page actions" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Ellipsis"></span></button></sc-if>
+            </header>
+            <div class="sh-body">
+              <main class="sh-main {{ mainCls }}" id="{{ ids.main }}" tabIndex="-1">
+                <sc-if value="{{ inpage }}">
+                  <div class="set-inpage">
+                    <nav class="set-cnav" aria-label="Settings">
+                      <sc-if value="{{ cBack }}"><a class="set-backl" href="#"><span class="ic" data-icon="ArrowLeft"></span>Back to Plant A</a></sc-if>
+                      <div class="set-chead"><span class="set-ckick">Acme AB</span><span class="set-ctitle" id="{{ ids.ctitle }}">{{ cTitle }}</span></div>
+                      <sc-for list="{{ cGroups }}" as="g">
+                        <div class="set-cgrp">
+                          <sc-if value="{{ g.hasLabel }}"><div class="set-clab" id="{{ g.hid }}">{{ g.label }}</div></sc-if>
+                          <ul class="set-clist" role="list" aria-labelledby="{{ g.lby }}">
+                            <sc-for list="{{ g.entries }}" as="e"><li><a class="set-ci {{ e.cls }}" href="#" aria-current="{{ e.cur }}"><span class="ic" data-icon="{{ e.icon }}"></span><span>{{ e.label }}</span></a></li></sc-for>
+                          </ul>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ cCompanyLink }}">
+                        <div class="set-crule" role="presentation"></div>
+                        <a class="set-ci" href="#"><span class="ic" data-icon="Building2"></span><span>Acme AB settings</span></a>
+                      </sc-if>
+                    </nav>
+                    <div class="set-pcol">
+                      <div class="sh-ph"><h1 class="sh-h1" tabIndex="-1">{{ h1 }}</h1></div>
+                      <div class="set-fill"><dc-import name="shell-313-settings-variations-body" page="{{ page }}" size="{{ size }}" uid="{{ bodyUid }}" hint-size="100%,560px"></dc-import></div>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ plainMain }}">
+                  <sc-if value="{{ backAbove }}"><a class="set-backl" href="#"><span class="ic" data-icon="ArrowLeft"></span>{{ backAboveLabel }}</a></sc-if>
+                  <div class="sh-ph {{ phCls }}">
+                    <h1 class="sh-h1" tabIndex="-1">{{ h1 }}</h1>
+                    <sc-if value="{{ headerSlot }}"><div class="sh-ph-slot"><span>Pyramid data as of <span class="num">06:40</span></span></div></sc-if>
+                    <sc-if value="{{ smenuBtn }}"><button class="btn v-outline" type="button" aria-haspopup="dialog" aria-expanded="{{ navSheetOpenB }}"><span class="ic" data-icon="PanelLeftOpen"></span>Settings menu</button></sc-if>
+                  </div>
+                  <div class="sh-content">
+                    <sc-if value="{{ isBoard }}"><div class="sh-phbox"><span class="sh-phl">Planning board, designed in #221</span></div></sc-if>
+                    <sc-if value="{{ hasBody }}"><div class="set-fill"><dc-import name="shell-313-settings-variations-body" page="{{ page }}" size="{{ size }}" uid="{{ bodyUid }}" hint-size="100%,560px"></dc-import></div></sc-if>
+                  </div>
+                </sc-if>
+              </main>
+            </div>
+          </div>
+          <sc-if value="{{ overlay }}"><div class="sh-ov"></div></sc-if>
+          <sc-if value="{{ scopeOpen }}">
+            <div class="pop sh-menu sh-swm set-scm" id="{{ ids.scm }}" style="left:72px" role="menu" aria-label="Choose a scope">
+              <sc-for list="{{ scopeGroups }}" as="g">
+                <sc-if value="{{ g.sep }}"><div class="msep" role="separator"></div></sc-if>
+                <div class="sh-mg" role="group" aria-labelledby="{{ g.hid }}">
+                  <div class="sh-mh" id="{{ g.hid }}" role="presentation">{{ g.label }}</div>
+                  <sc-for list="{{ g.items }}" as="m">
+                    <a class="mi sh-pi {{ m.cls }}" href="#" role="menuitem" aria-current="{{ m.cur }}" aria-label="{{ m.aname }}"><span class="sh-pi-m"><span class="ic" data-icon="{{ m.icon }}"></span></span><span class="sh-pn"><span class="sh-trunc">{{ m.name }}</span><sc-if value="{{ m.onb }}"><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></sc-if></span><span class="ic end sh-ck {{ m.ck }}" data-icon="Check"></span></a>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ userOpen }}">
+            <div class="pop sh-menu sh-um set-um" id="{{ ids.um }}" role="menu" aria-label="{{ accountLabel }}">
+              <div class="sh-who" role="presentation"><span class="sh-av" aria-hidden="true">{{ initials }}</span><span class="sh-sw-t"><span class="sh-sw-a">{{ user }}</span><span class="sh-sw-b">{{ username }}</span></span></div>
+              <div class="msep" role="separator"></div>
+              <a class="mi" href="#" role="menuitem"><span class="ic" data-icon="User"></span>Profile</a>
+              <a class="mi kfocus" href="#" role="menuitem"><span class="ic" data-icon="Settings"></span>Settings</a>
+              <div class="msep" role="separator"></div>
+              <div role="group" aria-labelledby="{{ ids.th }}">
+                <div class="sh-mh" id="{{ ids.th }}" role="presentation">Theme</div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isLight }}"><span class="ic" data-icon="Sun"></span>Light<span class="ic end sh-ck {{ lightCk }}" data-icon="Check"></span></div>
+                <div class="mi" role="menuitemradio" aria-checked="{{ isDark }}"><span class="ic" data-icon="Moon"></span>Dark<span class="ic end sh-ck {{ darkCk }}" data-icon="Check"></span></div>
+              </div>
+              <div class="msep" role="separator"></div>
+              <div class="mi" role="menuitem"><span class="ic" data-icon="LogOut"></span>Sign out</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C"],"default":"A","tsType":"string"},"view":{"editor":"enum","options":["settings","reach"],"default":"settings","tsType":"string"},"page":{"editor":"enum","options":["users","machines","calendars","landing","board"],"default":"users","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"width":{"editor":"enum","options":["1440","320"],"default":"1440","tsType":"string"},"persona":{"editor":"enum","options":["company-admin","plant-admin"],"default":"company-admin","tsType":"string"},"menu":{"editor":"enum","options":["none","scope","user"],"default":"none","tsType":"string"},"sheet":{"editor":"enum","options":["none","open"],"default":"none","tsType":"string"},"focus":{"editor":"enum","options":["none","entry"],"default":"none","tsType":"string"},"showTitle":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the frame draws its icons on its own.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const pick = (v, opts, d) => { const s = v === undefined || v === null ? "" : String(v).trim(); return opts.indexOf(s) >= 0 ? s : d; };
+          if (!this.uid) { window.__nmSetSeq = (window.__nmSetSeq || 0) + 1; this.uid = "setf" + window.__nmSetSeq; }
+          const u = this.uid;
+          const option = pick(P.option, ["A", "B", "C"], "A");
+          const view = pick(P.view, ["settings", "reach"], "settings");
+          const reach = view === "reach";
+          const page = reach ? "board" : pick(P.page, ["users", "machines", "calendars", "landing"], "users");
+          const dark = pick(P.theme, ["light", "dark"], "light") === "dark";
+          const narrow = pick(P.width, ["1440", "320"], "1440") === "320";
+          const wide = !narrow;
+          const companyAdmin = pick(P.persona, ["company-admin", "plant-admin"], "company-admin") === "company-admin";
+          const menu = pick(P.menu, ["none", "scope", "user"], "none");
+          const sheetOpen = narrow && pick(P.sheet, ["none", "open"], "none") === "open";
+          const focusEntry = pick(P.focus, ["none", "entry"], "none") === "entry";
+          const A = option === "A", B = option === "B", C = option === "C";
+          const companyScope = page === "users" || page === "landing";
+          const plantScope = !companyScope;
+          const user = companyAdmin ? "Jonas Holm" : "Erik Lind";
+          const username = companyAdmin ? "jonas.holm" : "erik.lind";
+          const ids = { main: u + "-main", sidebar: u + "-sb", tb: u + "-tb", ctitle: u + "-ct", scm: u + "-scm", um: u + "-um", th: u + "-th" };
+
+          // Settings entries per scope (labels and icons proposed, spec 3.1 to 3.3 and Q12)
+          const E = (id, label, icon) => ({ id: id, label: label, icon: icon });
+          const CO = [E("general", "General", "Building2"), E("formats", "Formats", "SlidersHorizontal"), E("plants", "Plants", "LayoutGrid"), E("users", "Users", "Users"), E("roles", "Roles", "Shield"), E("integrations", "Integrations", "Plug"), E("audit", "Audit log", "ScrollText")];
+          const PL = [E("plant", "Plant", "Factory"), E("machines", "Machines", "Drill"), E("equipment-groups", "Equipment groups", "Layers"), E("calendars", "Calendars", "CalendarDays"), E("stations", "Stations", "Monitor"), E("system-health", "System health", "Activity")];
+          const MOD_CO = [E("planning", "Planning rules", "CalendarCog"), E("ai", "AI assistant", "Sparkles"), E("connector", "Pyramid connector", "ServerCog")];
+          const MOD_PL = [E("planning", "Planning rules", "CalendarCog")];
+          // Plugins keep a section of their own after the modules, as in the main sidebar (plan 06, ADR 0062)
+          const PLUG = [E("acme", "Acme tooling", "Wrench")];
+          const ent = (list, here) => list.map((e) => { const cur = here && e.id === page; return { label: e.label, icon: e.icon, cls: cur ? "cur" : "", cur: cur ? "page" : null }; });
+          let gi = 0;
+          const nextId = () => { gi += 1; return gi; };
+
+          // Option A: one grouped list, a collapsible group per company, per plant, for the modules and for the plugins (S1)
+          const AG = (label, entries, open, extra) => { const n = nextId(); return Object.assign({ label: label, entries: entries, open: open, chev: open ? "ChevronDown" : "ChevronRight", hid: u + "-ag" + n, lid: u + "-al" + n, ctl: open ? u + "-al" + n : null, rule: false, onb: false }, extra || {}); };
+          const aGroups = companyAdmin
+            ? [AG("Acme AB", ent(CO, companyScope), companyScope), AG("Plant A", ent(PL, plantScope), plantScope), AG("Plant B", ent(PL, false), false),
+               AG("Plant D", [{ label: "Continue onboarding", icon: "ListTodo", cls: "", cur: null }], false, { onb: true }),
+               AG("Nordic Tools AB", ent(CO, false), false, { rule: true }), AG("Plant C", ent(PL, false), false), AG("Modules", ent(MOD_CO, false), true, { rule: true }),
+               AG("Plugins", ent(PLUG, false), true, { rule: true })]
+            : [AG("Plant A", ent(PL, true), true), AG("Modules", ent(MOD_PL, false), true, { rule: true }), AG("Plugins", ent(PLUG, false), true, { rule: true })];
+
+          // Option B: the entries of the chosen scope (S2)
+          const BG = (label, entries) => ({ label: label, entries: entries, hid: u + "-bg" + nextId() });
+          const bGroups = companyAdmin && companyScope ? [BG("Acme AB", ent(CO, true)), BG("Modules", ent(MOD_CO, false))] : [BG("Plant A", ent(PL, true)), BG("Modules", ent(MOD_PL, false)), BG("Plugins", ent(PLUG, false))];
+          const scopeOpen = B && wide && menu === "scope" && companyAdmin;
+          const SI = (name, icon, cur, extra) => Object.assign({ name: name, icon: icon, cur: cur ? "page" : null, ck: cur ? "on" : "", cls: "", onb: false, aname: null }, extra || {});
+          const scopeGroups = [
+            { label: "Acme AB", sep: false, hid: u + "-sg1", items: [SI("Company settings", "Building2", companyScope, { cls: plantScope ? "kfocus" : "", aname: "Company settings, Acme AB" }), SI("Plant A", "Factory", plantScope, { cls: companyScope ? "kfocus" : "" }), SI("Plant B", "Factory", false), SI("Plant D", "Factory", false, { onb: true })] },
+            { label: "Nordic Tools AB", sep: true, hid: u + "-sg2", items: [SI("Company settings", "Building2", false, { aname: "Company settings, Nordic Tools AB" }), SI("Plant C", "Factory", false)] }
+          ];
+
+          // Option C: a short list per area inside main (S3)
+          const cGroups = [
+            { hasLabel: false, label: "", hid: null, lby: ids.ctitle, entries: ent(companyScope ? CO : PL, true) },
+            { hasLabel: true, label: "Modules", hid: u + "-cm", lby: u + "-cm", entries: ent(companyScope ? MOD_CO : MOD_PL, false) }
+          ].concat(plantScope ? [{ hasLabel: true, label: "Plugins", hid: u + "-cp", lby: u + "-cp", entries: ent(PLUG, false) }] : []);
+
+          // Main sidebar after the move (spec 1.5, 1.6): Machines, Equipment groups and Calendars left Master data, and
+          // the entries that stay keep D2's manifest order (PLANT_G in Shell.dc.html; spec 4.2.3, WCAG 3.2.3);
+          // Planning settings, connector settings, AI usage, Audit log and Administration moved to Settings.
+          const K = (label, icon) => ({ label: label, icon: icon, cls: "", cur: null });
+          const M = (label, icon, o) => Object.assign({ label: label, icon: icon, cls: "", cur: null, hasKids: false, open: false, kids: [], dcls: "", dname: null }, o || {});
+          const parent = (label, icon, kids, open, cur) => M(label, icon, { kids: kids, hasKids: true, open: open, dcls: open ? "open" : "", dname: "Entries under " + label, cls: cur ? "cur" : "", cur: cur ? "page" : null });
+          const mainSecs = [
+            { cls: "", groups: [{ label: "Core", hid: u + "-mg1", entries: [parent("Master data", "Database", [K("Tools", "Hammer"), K("Articles", "Package"), K("Routings", "Route"), K("Warehouses", "Warehouse"), K("Customers", "Handshake")], reach, false)] }] },
+            { cls: "div", groups: [
+              { label: "Planning", hid: u + "-mg2", entries: [parent("Board", "ChartGantt", [K("Job table", "Table")], reach, reach), M("Production orders", "ClipboardList"), M("Proposals", "ListChecks")] },
+              { label: "Pyramid connector", hid: u + "-mg3", entries: [M("Pending changes", "FileDiff"), M("Import log", "Logs"), M("Import inbox", "Inbox")] }
+            ] },
+            { cls: "div", groups: [{ label: "Acme tooling", hid: u + "-mg4", entries: [M("Tool life", "Hourglass"), M("Tool changes", "Repeat")] }] }
+          ];
+          const R = (name, icon, btn) => ({ name: name, icon: icon, btn: !!btn, link: !btn });
+          const railGroups = plantScope ? [
+            { label: "Core", sep: false, items: [R("Master data", "Database", true)] },
+            { label: "Planning", sep: true, items: [R("Planning board", "ChartGantt", true), R("Production orders", "ClipboardList"), R("Proposals", "ListChecks")] },
+            { label: "Pyramid connector", sep: true, items: [R("Pending changes", "FileDiff"), R("Import log", "Logs"), R("Import inbox", "Inbox")] },
+            { label: "Acme tooling", sep: true, items: [R("Tool life", "Hourglass"), R("Tool changes", "Repeat")] }
+          ] : [];
+
+          // Regions
+          const showMain = wide && (reach || (C && plantScope));
+          const showASb = A && !reach && (wide || sheetOpen);
+          const showRail = B && !reach && wide;
+          const showSnav = B && !reach && (wide || sheetOpen);
+          const inpage = C && !reach && wide;
+          const noSidebar = C && !reach && companyScope;
+          const userOpen = B && reach && menu === "user";
+
+          // Page: title, h1, crumbs and actions (spec section 9, proposed)
+          const PG = {
+            users: { h1: "Users", title: "Users · Acme AB · NorthMES", acts: [["New user", "v-default"]] },
+            machines: { h1: "Machines", title: "Machines · Plant A · NorthMES", acts: [["New machine", "v-default"]] },
+            calendars: { h1: "Calendars", title: "Calendars · Plant A · NorthMES", acts: [["New calendar", "v-default"]] },
+            landing: { h1: "Company settings", title: "Company settings · Acme AB · NorthMES", acts: [] },
+            board: { h1: "Planning board", title: "Planning board · Plant A · NorthMES", acts: [["Run autoplan", "v-outline"], ["Save", "v-default"]] }
+          }[page];
+          const T = (label, kind) => ({ label: label, kind: kind });
+          let cr;
+          if (page === "board") cr = [T("Acme AB", "text"), T("Plant A", "ctx"), T("Planning", "link"), T("Planning board", "here")];
+          else if (companyScope) cr = page === "landing" ? [T("Settings", "link"), T("Acme AB", "here")] : [T("Settings", "link"), T("Acme AB", "link"), T(PG.h1, "here")];
+          else if (A) cr = companyAdmin ? [T("Settings", "link"), T("Acme AB", "link"), T("Plant A", "link"), T(PG.h1, "here")] : [T("Settings", "link"), T("Plant A", "link"), T(PG.h1, "here")];
+          else cr = companyAdmin ? [T("Acme AB", "text"), T("Plant A", "ctx"), T("Settings", "link"), T(PG.h1, "here")] : [T("Plant A", "ctx"), T("Settings", "link"), T(PG.h1, "here")];
+          if (narrow && cr.length > 2) cr = [T("", "ell")].concat(cr.slice(-2));
+          const crumbs = cr.map((c, i) => ({ label: c.label, sep: i > 0, ell: c.kind === "ell", text: c.kind === "text", ctx: c.kind === "ctx", link: c.kind === "link", here: c.kind === "here", li: c.kind === "text" || c.kind === "ctx" ? "ctx" : c.kind === "ell" ? "ell" : "" }));
+          const actions = PG.acts.map((a) => ({ label: a[0], cls: a[1] }));
+
+          // Back control: the plant the user came from (spec 7.1; the shell never guesses a plant)
+          const backB = "Back to Plant A";
+          return {
+            ids: ids, page: page, size: narrow ? "narrow" : "wide", bodyUid: u + "b",
+            rootCls: dark ? "dark" : "", screenLabel: "Settings frame, option " + option + (reach ? ", reach" : ", " + page),
+            showTitle: pick(P.showTitle, ["on", "off"], "on") === "on", docTitle: PG.title,
+            scrCls: narrow ? "w320" : "w1440",
+            user: user, username: username, initials: companyAdmin ? "JH" : "EL", accountLabel: user + ", " + username + ", account",
+            showMain: showMain, switcher: companyAdmin, noSwitcher: !companyAdmin, mainSecs: mainSecs,
+            footEntry: A && reach, footCls: A && reach ? "set-foot" : "", footEntryCls: focusEntry ? "is-focus" : "",
+            userOpen: userOpen, userCls: userOpen ? "open" : "", userCtl: userOpen ? ids.um : null,
+            isLight: !dark, isDark: dark, lightCk: dark ? "" : "on", darkCk: dark ? "on" : "",
+            showASb: showASb, aSbCls: sheetOpen ? "sh-sb sh-sheet" : "sh-sb", sheetOpen: sheetOpen,
+            sheetRole: sheetOpen ? "dialog" : null, sheetModal: sheetOpen ? "true" : null,
+            aSheetLabel: sheetOpen ? "Navigation" : null, bSheetLabel: sheetOpen ? "Settings menu" : null,
+            backName: "Settings, back to Plant A", backB: backB, aGroups: aGroups,
+            showRail: showRail, railMarkBtn: companyAdmin, railMarkStatic: !companyAdmin, railMarkText: plantScope, railMarkIcon: companyScope,
+            railMarkName: companyScope ? "Choose a plant" : "Acme AB, Plant A, switch plant", railGroups: railGroups,
+            showSnav: showSnav, snavCls: sheetOpen ? "set-ssheet" : "set-snav",
+            pickerBtn: companyAdmin, pickerStatic: !companyAdmin, pickOpen: scopeOpen, pickCls: scopeOpen ? "open" : "", pickCtl: scopeOpen ? ids.scm : null,
+            pickIcon: companyScope ? "Building2" : "Factory", pickB: companyScope ? "Company settings" : "Plant A",
+            pickName: companyScope ? "Acme AB, company settings, choose a scope" : "Acme AB, Plant A, choose a scope",
+            bGroups: bGroups, scopeOpen: scopeOpen, scopeGroups: scopeGroups,
+            wide: wide, tbCls: narrow ? "nar" : "",
+            hasTrigger: wide && !noSidebar, trigLabel: showRail ? "Expand sidebar" : "Collapse sidebar", trigExp: showRail ? "false" : "true",
+            hasMenuBtn: narrow && !noSidebar, navSheetOpen: A && sheetOpen ? "true" : "false",
+            crumbs: crumbs, actions: actions, hasActions: actions.length > 0, narrowActions: narrow && actions.length > 0,
+            assistant: wide && plantScope && (reach || !A),
+            settingsBtn: C && (wide || !noSidebar), setBtnCls: (reach ? "" : "set-on") + (focusEntry ? " is-focus" : ""), setBtnCur: reach ? null : "true", setTip: reach && focusEntry,
+            helpInBar: wide || noSidebar, avatarEnd: noSidebar,
+            mainCls: narrow ? "nar" : "", inpage: inpage, plainMain: !inpage,
+            cBack: companyScope, cTitle: companyScope ? "Company settings" : "Plant A settings", cGroups: cGroups, cCompanyLink: plantScope && companyAdmin,
+            h1: PG.h1, backAbove: C && narrow && !reach, backAboveLabel: page === "landing" ? "Back to Plant A" : companyScope ? "Company settings" : "Plant A settings", headerSlot: page === "board",
+            phCls: B && narrow && !reach ? "set-phc" : "", smenuBtn: B && narrow && !reach, navSheetOpenB: B && sheetOpen ? "true" : "false",
+            isBoard: page === "board", hasBody: page !== "board",
+            overlay: sheetOpen
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

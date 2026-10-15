@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F0 header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.hd-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;margin-top:28px}
+.facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:8px 20px;margin:0}
+.facts dt{color:var(--muted-foreground)}
+.facts dd{margin:0}
+.crit{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.crit li{display:flex;gap:10px;align-items:flex-start}
+.crit .ic{margin-top:2px;color:var(--muted-foreground)}
+.hd-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px}
+.hd-cols .t2{margin-bottom:12px}
+.qgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 48px;margin-top:14px}
+.qrow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:start}
+.qrow .tag{justify-self:stretch;justify-content:center}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">NorthMES design page ui-189-tokens.dc.html, status in review, {{ themeNote }}</p>
+        <h1 class="t1">Tokens, contrast and component states (D1)</h1>
+        <p class="lede">The token base, the contrast table, the 20-color order palette, the state markers, the two-tone focus ring, fonts, icons and the shadcn components of @northmes/ui, in light and dark. It builds on the Graphite direction (Direction A) that Krister chose. Where the repository docs and Graphite disagree, the docs win, and the differences are listed below.</p>
+        <div class="hd-top">
+          <dl class="facts">
+            <sc-for list="{{ facts }}" as="f">
+              <dt>{{ f.k }}</dt>
+              <dd><sc-if value="{{ f.href }}"><a href="{{ f.href }}">{{ f.v }}</a></sc-if><sc-if value="{{ !f.href }}">{{ f.v }}</sc-if></dd>
+            </sc-for>
+          </dl>
+          <div>
+            <h2 class="t3">Acceptance criteria from issue #189</h2>
+            <ul class="crit">
+              <sc-for list="{{ criteria }}" as="c">
+                <li><span class="ic" data-icon="Square"></span><span>{{ c }}</span></li>
+              </sc-for>
+            </ul>
+            <h2 class="t3" style="margin-top:20px">Approval</h2>
+            <p class="mut" style="margin:0">No comment thread open, Krister approves, the README rows of this page's 13 files hold the approved etags, and the design pull request with the PNGs (docs/design/ui/ui-189-tokens-&lt;frame&gt;-&lt;theme&gt;.png) and docs/design/ui/ui-189-tokens.md is merged. An approved page is frozen; a later change copies it under a new issue number.</p>
+          </div>
+        </div>
+        <div class="sec hd-cols">
+          <div>
+            <h2 class="t2">Assumptions</h2>
+            <ol class="ul">
+              <sc-for list="{{ assumptions }}" as="a"><li>{{ a }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">Differences from Graphite, where the docs win</h2>
+            <ol class="ul">
+              <sc-for list="{{ differences }}" as="d"><li>{{ d }}</li></sc-for>
+            </ol>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Open questions</h2>
+          <p class="lede">Q1 to Q21 come from the D1 spec (the rules the repository sets). P1 to P5 come from building this page.</p>
+          <div class="qgrid">
+            <sc-for list="{{ questions }}" as="q">
+              <div class="qrow"><span class="tag q">{{ q.id }}</span><span>{{ q.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          return {
+            themeNote: dark ? "dark theme (chosen per user or station)" : "light theme (the default on every screen, stations included)",
+            facts: [
+              { k: "Issue", v: "northMES/northmes#189, plan E04-S01-T01", href: "https://github.com/northMES/northmes/issues/189" },
+              { k: "Owning story", v: "E04-S01 (#39), ui: Ship design tokens that pass contrast in light and dark", href: "https://github.com/northMES/northmes/issues/39" },
+              { k: "Blocks", v: "#190 and the UI tasks of E04-S01" },
+              { k: "Area", v: "ui, the package packages/ui (@northmes/ui)" },
+              { k: "Route", v: "None. D1 draws no screen." },
+              { k: "Primary persona", v: "Planner. E04-S01 is written as a planner story. The tokens and components also serve the Plugin developer and the Maintainer." },
+              { k: "Direction", v: "Graphite (Direction A), page ui-d1-direction-a.dc.html" },
+              { k: "Themes", v: "Light by default on every screen, stations included. Dark is chosen per user or per station." },
+              { k: "Token file", v: "tokens.css in this project: 84 color tokens in light and dark, plus 6 shared values" },
+              { k: "Contrast", v: "275 required pairs and 14 rule checks across both themes, 0 failures" },
+              { k: "Design system", v: "None bound. Krister removes the Broadsheet binding in the Claude Design app; this page uses none of its styles." }
+            ],
+            criteria: [
+              "Every frame in the list exists in light and dark",
+              "The design project's bound design system is settled: the binding is removed, or the work moves to a new project",
+              "No comment thread on the page is open",
+              "Krister approved the page and the design project's README row holds the etag",
+              "The design pull request with PNGs and build notes is merged"
+            ],
+            assumptions: [
+              "Token values come from Graphite unchanged, except the order palette, which grows from 8 to 20 colors.",
+              "The ratios are pre-test values from the repository method (culori: toGamut(\"rgb\", \"oklch\"), then wcagContrast), rounded down. packages/ui/test/tokens.contrast.test.ts replaces them once it exists (Q4).",
+              "The build notes file docs/design/ui/ui-189-tokens.md is the source of the values E04-S01 implements, not the canvas (Q3).",
+              "The page draws the eight frames of issue #189. Widths, long strings and page states belong to the pages that draw screens (Q1).",
+              "The grays keep Graphite's slight blue tint (hue 250, chroma 0.002 to 0.012) instead of pure shadcn neutral (Q5).",
+              "The focus ring draws its foreground half with outline and its background half with box-shadow, so forced-colors mode keeps the outline (Q2).",
+              "Keys for Tabs, Menu, Select, Combobox and Checkbox follow the WAI-ARIA Authoring Practices and the Base UI defaults (Q11).",
+              "Disabled controls use shadcn's 50 percent opacity; Graphite used 45 percent (Q8).",
+              "This page loads IBM Plex from Google Fonts and Lucide from unpkg for the preview. The product self-hosts the fonts and imports lucide-react.",
+              "Order numbers, articles, machines and names on this page are invented."
+            ],
+            differences: [
+              "Focus ring: the docs set a 2 px outline in the foreground token plus a 2 px ring in the background token. Graphite drew both bands with box-shadow, which forced-colors mode removes.",
+              "State markers: Graphite drew six states. The page adds Started, Proposed by the assistant and Material warning from 07 Block states.",
+              "Block spacing: the docs set a 1 px gap between blocks. Graphite shortened each block by 2 px.",
+              "Order palette: the docs require 20 colors. Graphite showed 8.",
+              "Token names: shadcn names replace Graphite's roles (surface to card and popover, muted to secondary and accent, danger to destructive, ok to success, warn to warning).",
+              "Dark block border: Graphite's note still named the background token. The docs now name the block-border token, which this page uses.",
+              "Fonts: Graphite rendered Plex Mono at 700 without loading it. This page loads Plex Mono 700.",
+              "Persona: the brief named Plugin developer and Maintainer. The docs win: E04-S01 is a planner story, so the primary persona is Planner."
+            ],
+            questions: [
+              { id: "Q1", t: "Does D1 draw the widths (1280, 1440, 1920, 320), a long-strings frame and the page states, or only the issue's frames?" },
+              { id: "Q2", t: "Focus ring geometry: inner and outer half, offset, outline or box-shadow, and the list of surfaces that make up every surface." },
+              { id: "Q3", t: "Are the build notes, not the canvas, the source of the token values E04-S01 implements?" },
+              { id: "Q4", t: "May the contrast table show pre-test ratios until tokens.contrast.test.ts exists?" },
+              { id: "Q5", t: "Does choosing Graphite confirm the token base in ADR 0020, including the blue-tinted grays?" },
+              { id: "Q6", t: "Success, warning and info tokens and destructive-foreground. Proposed here: the -subtle pairs and destructive-foreground in the background value, because white on the dark destructive measures 2.44:1." },
+              { id: "Q7", t: "Dark rule for muted-foreground on muted, and how the test treats alpha tokens. This page uses opaque values only." },
+              { id: "Q8", t: "Disabled appearance, the button loading state and the indeterminate checkbox. Drawn here as proposals." },
+              { id: "Q9", t: "Palette: distinctness measure (closest pair 0.0689 in OKLab), color-vision checks, the order of the 20, the default color, and how the board draws one ERP hex in dark." },
+              { id: "Q10", t: "Equipment group colors: the 20 palette colors or a separate set, and how the board draws them (likely D3)." },
+              { id: "Q11", t: "Keys for the standard composites: WAI-ARIA Authoring Practices and Base UI defaults, or set in D1?" },
+              { id: "Q12", t: "How the build notes name NumberField, SkipLink, VisuallyHidden, ColorSwatchPicker, QuantityInput and Lookup." },
+              { id: "Q13", t: "Do Radio Group, Textarea, the date picker, the password toggle and the error summary belong in D1, or in D2, D4 and the list and form page?" },
+              { id: "Q14", t: "Overdue and finish pending markers: proposed in D1 or set in D3?" },
+              { id: "Q15", t: "Precedence when several block borders combine, and a selection outline that differs from focus and the state borders." },
+              { id: "Q16", t: "Which board tokens belong to D1 and which to D3 (lane, block-border, shading, sticky header, selection)?" },
+              { id: "Q17", t: "Does D1 show the 44 px station variants of the components, or do D2 and D4 cover them?" },
+              { id: "Q18", t: "Plex weights, the type scale, line heights and tabular figures. Graphite's scale is drawn in F5." },
+              { id: "Q19", t: "chart-1 to chart-5 are not defined. The sidebar tokens reuse the card, primary and accent values." },
+              { id: "Q20", t: "Does D1 need a forced-colors frame for markers, the focus ring and swatches?" },
+              { id: "Q21", t: "shadcn derives radius steps from 6 px as 3.6, 4.8 and 8.4 px, not Graphite's 3, 4 and 10 px. Keep the derived steps?" },
+              { id: "P1", t: "Status badge colors are a proposal. Registered, delivered and cancelled have no Graphite badge." },
+              { id: "P2", t: "Secondary buttons hover with shadcn's 80 percent opacity, which is not a token. Keep it or add a hover token? The destructive button keeps Graphite's outline and hovers with destructive-subtle." },
+              { id: "P3", t: "Popovers and menus use shadcn's shadow-md. Graphite draws no shadows." },
+              { id: "P4", t: "A focused menu item needs a 2 px inset outline, because the accent highlight alone measures about 1.1:1 against the popover." },
+              { id: "P5", t: "Not defined yet: chart colors, the board selection outline and a disabled color." }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

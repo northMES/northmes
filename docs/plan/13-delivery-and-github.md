@@ -1,6 +1,6 @@
 # Delivery and GitHub
 
-This document says how NorthMES work moves from the plan to a released version. Work is shaped as GitHub issues (epics, stories and tasks) with the handoff plugin, and each task is one thin vertical slice that handoff builds test first in its own git worktree. The operating session picks the graph per run: the guided graph with human gates for the foundation, and the standard or lean graph for routine tasks once the measurable switch criteria in [docs/agents/handoff/README.md](../agents/handoff/README.md#switching-graphs) hold. handoff is the maintainer's workflow; contributors open issues with the GitHub issue forms and send pull requests. UI tasks start from a design approved in the Claude Design project and committed to `docs/design/`. GitHub checks every pull request with one CI gate, CodeQL, the supply chain jobs and CodeRabbit, and release-please turns squashed pull request titles into the changelog. The document covers the handoff configuration, the issue formats, labels and Project fields, the definitions of ready and done, the design workflow, the installed agent skills, the GitHub organization and repository setup, CI and its runners, the release process, the docs site at docs.northmes.dev and the community files with their contact addresses. A later session uses it to create the issues, and coding agents use it to know what a finished task looks like. When this document and an ADR disagree, the ADR holds and this document gets fixed.
+This document says how NorthMES work moves from the plan to a released version. Work is shaped as GitHub issues (epics, stories and tasks) with the handoff plugin, and each task is one thin vertical slice that handoff builds test first in its own git worktree. The operating session picks the graph per run: the guided graph with human gates for the foundation, and the standard or lean graph for routine tasks once the measurable switch criteria in [docs/agents/handoff/README.md](../agents/handoff/README.md#switching-graphs) hold. handoff is the maintainer's workflow; contributors open issues with the GitHub issue forms and send pull requests. UI tasks start from a design page approved as an artifact on the NorthMES design system and committed to `docs/design/`. GitHub checks every pull request with one CI gate, CodeQL, the supply chain jobs and CodeRabbit, and release-please turns squashed pull request titles into the changelog. The document covers the handoff configuration, the issue formats, labels and Project fields, the definitions of ready and done, the design workflow, the installed agent skills, the GitHub organization and repository setup, CI and its runners, the release process, the docs site at docs.northmes.dev and the community files with their contact addresses. A later session uses it to create the issues, and coding agents use it to know what a finished task looks like. When this document and an ADR disagree, the ADR holds and this document gets fixed.
 
 ## Decisions
 
@@ -8,6 +8,7 @@ This document says how NorthMES work moves from the plan to a released version. 
 |---|---|---|
 | [0001](../adr/0001-record-architecture-decisions-in-madr.md) | accepted | ADRs in MADR, numbered by a script, and the rule that a task moves to Ready only when every linked ADR is accepted |
 | [0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) | accepted | handoff on GitHub issues, thin vertical slices, Claude Design per task, the installed skills, the persona list, gate time measurement |
+| [0079](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | Design pages as artifacts on the NorthMES design system, approval by artifact version, the approved page source in `docs/design/project/` |
 | [0063](../adr/0063-agent-skills-from-library-authors-pinned-in-the-repository.md) | accepted | Agent skills from library authors, pinned in the repository |
 | [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md) | accepted | The `northMES` organization, rulesets, CI runners, supply chain, agents on GitHub, the offline image bundle |
 | [0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md) | proposed | CodeRabbit's check run, and 1 required approval on `main` that CodeRabbit gives on Krister's pull requests |
@@ -26,10 +27,10 @@ This document says how NorthMES work moves from the plan to a released version. 
 
 | Actor | Does | Does not |
 |---|---|---|
-| Krister (the maintainer) | Accepts ADRs and scope; relays product owner answers; approves every shaping write (handoff shows an approval card); reviews and approves designs in Claude Design; moves tasks to Ready; answers the plan gate, question gates, permission requests, the code gate and Try it; decides repairs, loop resolutions and cancels; decides the disputed review comments the pull request step asks about, and resolves the review threads handoff leaves open; approves the pull requests that CodeRabbit skips (Renovate's and the release pull request); requests merges on the guided graph; decides each graph switch; merges the release pull request; runs the manual NVDA passes (on the board core, and before the pilot install) | Edit code inside a run's worktree |
+| Krister (the maintainer) | Accepts ADRs and scope; relays product owner answers; approves every shaping write (handoff shows an approval card); reviews and approves design artifacts with artifact comments; moves tasks to Ready; answers the plan gate, question gates, permission requests, the code gate and Try it; decides repairs, loop resolutions and cancels; decides the disputed review comments the pull request step asks about, and resolves the review threads handoff leaves open; approves the pull requests that CodeRabbit skips (Renovate's and the release pull request); requests merges on the guided graph; decides each graph switch; merges the release pull request; runs the manual NVDA passes (on the board core, and before the pilot install) | Edit code inside a run's worktree |
 | Planning session (interactive Claude Code in this repository) | Writes plan files and ADRs; creates issues with handoff's tools; adds story context and Design sections with `gh issue edit`; runs spikes; opens each epic's "docs: record the Enn plan and ADRs" pull request | Answer a gate for Krister |
-| Design session (interactive Claude Code with the claude-design MCP) | Builds design pages, runs the verify and comment loops, opens the design pull request with PNGs and build notes | Work inside a handoff run |
-| Operating session (interactive Claude Code with handoff's MCP tools) | Paces the work: picks the next Ready task without open blockers, starts its run with `start_run` and the chosen graph, follows run events, brings questions, permission requests, failures and merge decisions to Krister, checks that CodeRabbit reviewed each new commit (the pull request step asks for the review by itself through `reviewRequest`), checks the design etag before a UI task's run and at its plan gate | Answer a question, a permission request or a gate without Krister's decision |
+| Design session (interactive Claude Code with the Artifact tool) | Builds design pages as artifacts on the NorthMES design system, runs the verify and comment loops, opens the design pull request with the exported page, PNGs and build notes, republishes the design system's tokens after a token pull request | Work inside a handoff run |
+| Operating session (interactive Claude Code with handoff's MCP tools) | Paces the work: picks the next Ready task without open blockers, starts its run with `start_run` and the chosen graph, follows run events, brings questions, permission requests, failures and merge decisions to Krister, checks that CodeRabbit reviewed each new commit (the pull request step asks for the review by itself through `reviewRequest`), checks the approved artifact version before a UI task's run and at its plan gate | Answer a question, a permission request or a gate without Krister's decision |
 | handoff agents (planner, plan reviewer, coder, code review, demo) | Run `claude -p` in a fresh worktree; read the task, its story and epic, the issue comments, `CLAUDE.md` with the `AGENTS.md` it imports, `.claude/rules`, the project's agent notes, their node instructions and the library skills; plan, write tests and code, review, demo | Run hooks, use the maintainer's MCP servers, fetch URLs, push, run `gh`, open issues, resolve review threads |
 | handoff nodes without a model (Tester, pull request, merge) | Run the gate command; push and open the pull request with `Closes #N`; wait for CI and CodeRabbit; send failures and findings back to the coder; post the coder's answers to review comments, resolve their threads after the reviewer's next review and ask Krister about the disputed ones; merge through handoff's queue | Merge a guided run without Krister's request |
 | Bots | CI on GitHub Actions, CodeQL, CodeRabbit, release-please, Renovate, Codecov, Socket, Scorecard | Merge |
@@ -40,8 +41,8 @@ This document says how NorthMES work moves from the plan to a released version. 
 flowchart TD
   A["Plan file and ADRs<br/>planning session"] --> B["create_epic, create_story, create_task<br/>approval card per write"]
   B --> C{"Task has UI?"}
-  C -->|yes| D["Design task<br/>Claude Design session"]
-  D --> E["Design PR: PNGs and build notes<br/>in docs/design/{area}/"]
+  C -->|yes| D["Design task<br/>design artifact session"]
+  D --> E["Design PR: page source, PNGs<br/>and build notes in docs/design/"]
   E --> F["Design section added to the UI tasks"]
   C -->|no| G["Definition of ready checked"]
   F --> G
@@ -151,7 +152,7 @@ The guided graph, step by step:
 | Plan | `planner` | Plans one behaviour at a time: one step writes the failing test (file, test name, why it fails), the next makes it pass, a last step may refactor. Takes the tests from the issue's Tests first section and keeps the seam the issue names. Names the test for each acceptance criterion. Puts tests, migrations, generated files and the lockfile in the owned paths. Returns a question when neither the issue nor an ADR decides, or when readings of the issue differ materially; leaves the size proposal out |
 | Answer the planner | `human_gate`, question | Krister's answer goes back to the planner |
 | Review the plan | `reviewer` | Blocks code before its test, a step with two behaviours, a criterion without a test, a test at the wrong seam, a database test outside `packages/testing`, a conflict with a linked ADR, owned paths that miss a changed file, a step for behaviour the issue does not ask for, and a plan over budget that does not split |
-| Approve the plan | `human_gate`, approval | Krister checks the test list, the seam, the owned paths and any proposed split. For a UI task the operating session first compares the approved etag in the Design section with the design project's current one |
+| Approve the plan | `human_gate`, approval | Krister checks the test list, the seam, the owned paths and any proposed split. For a UI task the operating session first compares the approved artifact version in the Design section with the artifact's current version |
 | Code test first | `coder` | Commits each failing test with a `test:` subject, then the code, then refactors with the tests green. Contract checks after every attempt: `diff_within_paths` and `node scripts/handoff/tests-changed.mjs` |
 | Answer the coder | `human_gate`, question | Krister answers the coder |
 | Test | `tester` | `pnpm check`, 20 minute timeout, one retry for a flaky run |
@@ -393,8 +394,8 @@ docs/design/planning/planning-38-board.md and its PNGs; Design section on #43 an
 ## Acceptance criteria
 - [ ] Every frame in the list exists in light and dark
 - [ ] No comment thread on the page is open
-- [ ] Krister approved the page and the design project's README row holds the etag
-- [ ] The design pull request with PNGs and build notes is merged
+- [ ] Krister approved the page and its row in `docs/design/project/README.md` holds the artifact URL and version id
+- [ ] The design pull request with the exported page, PNGs and build notes is merged
 - [ ] #43 and #44 carry the Design section
 ```
 
@@ -501,7 +502,7 @@ A task moves to Ready when all of these hold:
 3. Every linked ADR is on `main` with status `accepted` and no open needs-confirmation ([ADR 0001](../adr/0001-record-architecture-decisions-in-madr.md)).
 4. Every file the task refers to is in the repository. Code a task ports from a spike is first copied to `docs/sources/` by a session.
 5. Blockers are closed, or set as `blocked_by`.
-6. For a UI task: its design task is closed, the PNGs and build notes are in `docs/design/<area>/` on `main`, the Design section names the approved etag, and the etag still matches the design project.
+6. For a UI task: its design task is closed, the exported page is in `docs/design/project/<area>/` and the PNGs and build notes are in `docs/design/<area>/` on `main`, the Design section names the approved artifact version, and the artifact's current version still matches it (for a page approved in standalone Claude Design, the Design section names its etag).
 7. The plan fits the budget of 15 files and 12 steps, or the task is split before it moves.
 8. A task that changes a hot file is ordered with `blocked_by` against other tasks that change it.
 9. Answers the task needs from the product owner or from legal review are recorded in the issue, or the task carries `human`.
@@ -520,17 +521,17 @@ Task, checked at the code gate, at Try it and on the pull request:
 8. Docs updated as the slice rules say.
 9. The pull request title is the changelog line, the description states the validation impact (none, UI only, records, security, calculation, data migration), and the pull request is squash-merged through handoff's queue; the issue is closed and Done.
 
-Story: every task is Done; Krister has checked the story's criteria on `main`; the design project's README marks its pages implemented.
+Story: every task is Done; Krister has checked the story's criteria on `main`; `docs/design/project/README.md` marks its pages implemented.
 
 Epic: every story is closed; the epic's docs task is merged (user guides, upgrade notes for any breaking change); ADR statuses are current; issue numbers are written into the shaping file.
 
 ## Claude Design per task
 
-UI work starts from a design in the NorthMES project in Claude Design. Mockups are made one task at a time, between `create_task` and `move_to_ready`, in design sessions outside handoff runs; run agents have no access to Claude Design ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md)). The page contents and the design order are specified in [06-web-and-ux.md](06-web-and-ux.md#claude-design-per-task); this section covers the delivery side.
+UI work starts from a design page. Claude Design moved into Claude Artifacts on 2026-09-16 and standalone Claude Design closes on 2026-12-14, so a page is a Design artifact built on the [NorthMES design system](https://claude.ai/artifact/65vYss7WbTHUytBjyWEJHy), and the NorthMES project from standalone Claude Design is kept in `docs/design/project/` with the etags of its approved pages. Mockups are made one task at a time, between `create_task` and `move_to_ready`, in design sessions outside handoff runs; run agents have no access to Artifacts and read the approved page from the repository ([ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [ADR 0079](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md)). The page contents and the design order are specified in [06-web-and-ux.md](06-web-and-ux.md#claude-design-per-task); this section covers the delivery side.
 
 ### Order
 
-1. D1 tokens and contrast: the token base (shadcn neutral with the contrast fixes in 06), the order palette, state markers, the focus ring, fonts and icons, the components in every state. The design project uses no bound design system.
+1. D1 tokens and contrast: the token base (shadcn neutral with the contrast fixes in 06), the order palette, state markers, the focus ring, fonts and icons, the components in every state. The NorthMES design system artifact was created from the approved D1 tokens on 2026-10-14.
 2. D2 shell and navigation, including the station frame.
 3. D3 planning board and D4 operator station, in either order once D2 is approved. New kinds of screens get a variations page first.
 4. The canonical list and form page for core master data.
@@ -539,18 +540,18 @@ After these, a design is made only when the next task needs it. Design sessions 
 
 ### Steps for one page
 
-1. The design session reads the issue and the design project's `README.md` (the rules and the index of pages), then builds the page `<area>-<issue>-<slug>.dc.html` in its area folder and adds the page's row to the README index. The area folder is `ui/`, `shell/` or the module id's folder, which the module's first page creates ([06, What every design page contains](06-web-and-ux.md#what-every-design-page-contains)). The page has a header frame first, then the states, widths, themes, long-strings frame, keyboard and focus frames and the build notes. It runs the verify loop: rendered, console clean, no failed requests, screenshots looked at.
-2. Krister reviews in the Claude Design app with pin comments and sends the ones to act on to Claude. The session reads the queued comments, edits with the file's etag, re-renders and acknowledges them.
+1. The design session reads the issue, `docs/design/project/README.md` (the rules and the index of pages) and the design system's README, then builds the page `<area>-<issue>-<slug>` as a Design artifact on the NorthMES design system and adds the page's row to the README index. The area folder is `ui/`, `shell/` or the module id's folder, which the module's first page creates ([06, What every design page contains](06-web-and-ux.md#what-every-design-page-contains)). The page has a header frame first, then the states, widths, themes, long-strings frame, keyboard and focus frames and the build notes. It runs the verify loop: rendered, console clean, no failed requests, screenshots looked at.
+2. Krister reviews the artifact with comments and sends the ones to act on to Claude. The session reads the comments, republishes the artifact, re-renders and answers them.
 3. A page is ready for approval when no comment thread is open. Krister approves it.
-4. The session records the approval: the etag in the design project's README row; PNGs of each frame in light and dark at the frame's width; the build notes. A design pull request adds `docs/design/<area>/<page-slug>.md` (page name, approved etag, frames, build notes) and the PNGs as `docs/design/<area>/<page-slug>-<frame>-<theme>.png`, and closes the design task.
-5. The session adds a Design section to each UI task with `gh issue edit`: the page, the approved etag, the frames the task implements, the repository paths of the PNGs and build notes, and the two to five build notes that matter for that task. The section embeds the PNGs of those frames as images, from their raw GitHub URLs on `main`, so the issue shows what the task builds. The story that owns the screen embeds its main frames the same way, and the epic does when the screen is its main one. A chosen direction from a variations round is recorded the same way: its frames go into `docs/design/<area>/` next to a short decision record, and the design task embeds them. Frames of an approved page or a chosen direction are embedded from their files in `docs/design/<area>/` on `main`, so the issue and the repository record show the same images. A screenshot that has no record, such as a work-in-progress frame, can be attached with `gh issue edit --attach`.
+4. The session records the approval: it publishes the approved state with the label "approved #<issue>" and writes the artifact URL and that version id in the page's README row; PNGs of each frame in light and dark at the frame's width; the build notes. A design pull request adds the page source of the approved version as `docs/design/project/<area>/<area>-<issue>-<slug>.html`, `docs/design/<area>/<page-slug>.md` (page name, artifact URL, approved version id, frames, build notes) and the PNGs as `docs/design/<area>/<page-slug>-<frame>-<theme>.png`, and closes the design task.
+5. The session adds a Design section to each UI task with `gh issue edit`: the page, the artifact URL and approved version id, the frames the task implements, the repository paths of the PNGs and build notes, and the two to five build notes that matter for that task. The section embeds the PNGs of those frames as images, from their raw GitHub URLs on `main`, so the issue shows what the task builds. The story that owns the screen embeds its main frames the same way, and the epic does when the screen is its main one. A chosen direction from a variations round is recorded the same way: its frames go into `docs/design/<area>/` next to a short decision record, and the design task embeds them. Frames of an approved page or a chosen direction are embedded from their files in `docs/design/<area>/` on `main`, so the issue and the repository record show the same images. A screenshot that has no record, such as a work-in-progress frame, can be attached with `gh issue edit --attach`.
 6. After the implementing pull request merges, the README row says "implemented in PR #n".
 
-An approved page is frozen. A later change copies it under a new issue number, and the README marks the old page superseded.
+An approved page is frozen. A later change is a new page under a new issue number, and the README marks the old page superseded.
 
 ### What the implementing agent does with a design
 
-- Reads the Design section, the PNGs and `docs/design/<area>/<page-slug>.md` from the worktree.
+- Reads the Design section, the PNGs, `docs/design/<area>/<page-slug>.md` and the exported page in `docs/design/project/<area>/` from the worktree.
 - Takes the layout, region order, states and their transitions (one test per state), copy text verbatim, the keyboard model and slot placements.
 - Rebuilds everything with `@northmes/ui` components and token utilities; takes no markup, class names, inline styles, token values, canvas icons or demo numbers. A value on the page that is not a token is a question at the question gate.
 - Leaves out controls that lead nowhere in this task and names them in the pull request.
@@ -560,9 +561,9 @@ An approved page is frozen. A later change copies it under a new issue number, a
 
 | Drift | Check | When |
 |---|---|---|
-| The design changed after approval | The operating session compares the approved etag with the design project's current etag; on a mismatch Krister decides whether the new version is approved | Before `move_to_ready`, before `start_run` and at the plan gate |
+| The design changed after approval | The operating session reads the artifact and compares its current version with the approved version id; on a mismatch Krister decides whether the new version is approved. A page approved in standalone Claude Design is final in its repository copy and has nothing to compare | Before `move_to_ready`, before `start_run` and at the plan gate |
 | Code against design | A criterion "matches `<page>` frames in light and dark at the frame widths"; demo screenshots per criterion; Try it with the PNGs side by side | Demo and Try it |
-| Tokens in the design against `packages/ui` | The design project's `ui/tokens.css` names its source commit; a pull request that changes tokens is not done until a design session copies the new token blocks | Every token pull request |
+| Tokens in the design system against `apps/web/src/styles/tokens.css` | The design system's change note names its source commit; a pull request that changes tokens is not done until a design session republishes the design system's tokens and component styles. The approved D1 `docs/design/project/ui/tokens.css` stays as approved | Every token pull request |
 
 ## Agent skills in the repository
 
