@@ -31,7 +31,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Errors masked: GraphQL `maskedErrors`, only HTTP exceptions pass the filter, static file errors hide paths | built | `apps/backend/src/graphql/server.ts`; `packages/sdk/src/errors/exception-filter.ts`; `apps/backend/src/web/static-mounts.ts` |
 | Request size, depth and cost limits on GraphQL | built | ADR 0070; `apps/backend/src/graphql/limits.ts`, `apps/backend/src/graphql/cost.ts`; `limits.test.ts`, `limits.int.test.ts`, `web-operations.test.ts`. A rate limit per principal, or per client address without one, answers 429 with Retry-After (`rate-limit.test.ts`); its counters live in each replica's memory |
 | Cryptography: AES-256-GCM with a keyring for stored secrets, TLS at the proxy | decided | ADR 0047, ADR 0044 |
-| Pinned dependencies: exact catalog versions, 14-day release age, install scripts denied | built | `pnpm-workspace.yaml` |
+| Pinned dependencies: exact catalog versions, 14-day release age, install scripts denied; the image installs pnpm with `npm ci` from a lockfile | built | `pnpm-workspace.yaml`, `Dockerfile`, `deploy/pnpm/package-lock.json`; `test/meta/image.test.ts` |
 
 ### 2. Authentication, authorization and access control
 

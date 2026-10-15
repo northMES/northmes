@@ -1,0 +1,8 @@
+{
+  "name": "northmes-image-pnpm",
+  "private": true,
+  "description": "The pnpm that the image build runs, installed with npm ci so the lockfile pins its integrity.",
+  "dependencies": {
+    "pnpm": "12.6.0"
+  }
+}
