@@ -11,6 +11,12 @@ interface Service {
   secrets?: (string | { source: string })[];
   environment?: Record<string, string>;
   ports?: string[];
+  read_only?: boolean;
+  tmpfs?: string[];
+  cap_drop?: string[];
+  security_opt?: string[];
+  mem_limit?: string;
+  healthcheck?: { test: string[] };
 }
 
 interface Compose {
@@ -96,6 +102,23 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.app?.environment?.NORTHMES_LISTEN_HOST).toBe('0.0.0.0');
     // caddy is the one proxy in front of app, so sign-in is throttled per client it reports (#476).
     expect(services.app?.environment?.NORTHMES_TRUSTED_PROXY_HOPS).toBe('1');
+  });
+
+  it('runs bootstrap, migrate and app read-only, with no capabilities and no new privileges (ADR 0044)', () => {
+    for (const name of ['bootstrap', 'migrate', 'app']) {
+      const service = services[name];
+      expect(service?.read_only, name).toBe(true);
+      expect(service?.tmpfs, name).toEqual(['/tmp']);
+      expect(service?.cap_drop, name).toEqual(['ALL']);
+      expect(service?.security_opt, name).toEqual(['no-new-privileges:true']);
+    }
+  });
+
+  it('caps app memory from .env and checks app health with node, which the image has', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+    expect(services.app?.mem_limit).toBe('${NORTHMES_APP_MEM_LIMIT:-2g}');
+    expect(services.app?.healthcheck?.test.slice(0, 2)).toEqual(['CMD', 'node']);
+    expect(read('deploy/northmes.env.example')).toContain('# NORTHMES_APP_MEM_LIMIT=2g');
   });
 
   it('bootstrap, migrate and app reach the bundled db unless NORTHMES_DATABASE_URL names another server', () => {

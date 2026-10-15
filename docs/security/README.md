@@ -21,7 +21,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Row-level security on a user's own rows (own dashboard tabs), by the signed-in user's id set per transaction from a bound value | built | ADR 0078 (proposed); `apps/backend/src/db/scoped-database.ts`; `dashboard-tab-policies.int.test.ts`, `scoped-database.int.test.ts` |
 | Row-level security on writes to the scope tree and companies: `nm_app` adds a node or a company only at a company among its write scopes | built | ADR 0008; `20261014214627_scope_company_policies.sql`; `access-policies.int.test.ts` |
 | Row-level security on reads of the identity and company tables, and a closed `principal_grants` | gap | [#483](https://github.com/northMES/northmes/issues/483) |
-| Least privilege in containers (non-root, read-only, no capabilities) | decided | ADR 0044; no container files yet |
+| Least privilege in containers (non-root, read-only, no capabilities, a memory limit) | built | ADR 0044; `Dockerfile` (`USER node`), `deploy/compose.yaml`; `test/meta/compose.test.ts` |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
 | A minimum strength for the auth secret | gap | [#484](https://github.com/northMES/northmes/issues/484) |
 | Every input parsed by a Zod contract | built | ADR 0017; `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts` |
@@ -43,7 +43,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | No one grants a permission they lack; the last Company admin is protected | built | `role-rules.ts`, `user-rules.ts`; `last-admin` tests |
 | No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
-| Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
+| Only the auth routes the web uses are open: sign-in, the JWT and sign-out | built | ADR 0011 (proposed); `auth-options.ts` (`openPaths`); `auth-routes.int.test.ts` |
 | Sign-in throttling and account lockout | built | [#476](https://github.com/northMES/northmes/issues/476); `auth-options.ts` (Better Auth's rate limit on every `NODE_ENV`, per client address), `sign-in-lockout.ts`, `trusted-proxy.module.ts`; `sign-in.int.test.ts`. The lockout is logged once the audit trail lands ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Session absolute lifetime, and JWTs ended with their session | gap | [#479](https://github.com/northMES/northmes/issues/479) |
 | The auth design (ADR 0011) matches the code | gap | [#485](https://github.com/northMES/northmes/issues/485) |

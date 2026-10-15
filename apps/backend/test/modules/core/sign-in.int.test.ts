@@ -150,15 +150,12 @@ describe('sign-in with Better Auth', () => {
     return signedIn.headers.get('set-auth-token') ?? '';
   }
 
-  /** The session and user that /api/auth/get-session answers for a session token. */
+  /** The session and user of a session token, read on the server: /get-session is closed over HTTP. */
   async function sessionOf(sessionToken: string) {
-    const response = await fetch(`${url}/api/auth/get-session`, {
-      headers: { authorization: `Bearer ${sessionToken}` },
+    const answer = await testApp.app.get(BetterAuth).auth.api.getSession({
+      headers: new Headers({ authorization: `Bearer ${sessionToken}` }),
     });
-    return (await response.json()) as {
-      session: { expiresAt: string };
-      user: { username: string };
-    };
+    return answer as { session: { expiresAt: Date }; user: { username: string } };
   }
 
   it('E05-S05 a signed-in user cannot change their username, so a username is never reassigned', async () => {

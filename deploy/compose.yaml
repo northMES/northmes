@@ -27,6 +27,10 @@ services:
     image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
     command: ["db", "bootstrap"]
     restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +48,10 @@ services:
     image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
     command: ["migrate"]
     restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -58,6 +66,20 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 45s
+    # Least privilege (ADR 0044): the image's files cannot change and only /tmp is writable. A
+    # volume mounted read-only, such as the plugin volume of ADR 0075, still works.
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: ${NORTHMES_APP_MEM_LIMIT:-2g}
+    # The image has node and no curl. The shell answers 200 once the server is up.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     depends_on:
       migrate:
         condition: service_completed_successfully
