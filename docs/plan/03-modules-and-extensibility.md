@@ -339,6 +339,27 @@ Both examples are built through the plugin path, never imported as workspace sou
 - Tests that load built plugins boot the built server in a child process. `createTestApp` from `@northmes/testing` takes in-repo modules only, because Vitest's module runner does not apply the resolve hook.
 - The validator plugin is part of the walking skeleton's exit (target 2026-11-13). The widget plugin, `plugin check` and building a remote from outside the workspace move to milestone M2 (2027-01-22) ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md), [14 roadmap](14-roadmap.md)).
 
+### The release 1 example plugins
+
+On 2026-10-15 Krister Johansson set three more examples for release 1. They exist to be installed into a running installation when its install path is tested. Each one needs an extension point that is not built yet. An example is built in the task that builds its point, as the scope rule asks, and never against an API that does not exist.
+
+| | `example-article-count` | `example-article-log` | `example-page` |
+|---|---|---|---|
+| Folder | `examples/plugin-article-count` | `examples/plugin-article-log` | `examples/plugin-page` |
+| Parts | manifest and web part | manifest and server part | manifest and web part |
+| `dependsOn` | `core` | `core` | `core` |
+| Shows that a plugin can | add a dashboard widget that shows how many articles the plant has, from `articles { totalCount }` | log each article that is created, changed, archived or restored, through an event consumer listed in its manifest's `consumes` | add its own group to the sidebar and its own page under `/$plant/example-page` |
+| Point it needs | a dashboard widget slot, `core/dashboard/widgets/v1` (kind `region`), and plugin screens loaded at run time ([ADR 0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md)) | article events in the event log and consumers in plugins ([ADR 0014](../adr/0014-outbox-event-log-and-pg-boss-jobs.md), [ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)) | plugin routes and a sidebar group from the manifest's `web` entry, with plugin screens loaded at run time ([ADR 0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md)) |
+| On main on 2026-10-15 | the dashboard's widget catalog offers only its built-in demo types, and the slot is open as M-32 | core writes no events, and no consumer runs | the shell builds its sidebar from the modules it is built with (`apps/web/src/modules.ts`) |
+
+The smallest addition for each point:
+
+- Article events: core's article commands write `core.article.created`, `core.article.updated`, `core.article.archived` and `core.article.restored`, version 1, to the event log in the command transaction, with the article's id, code and scope. A consumer listed under `consumes` runs after commit. The log example only writes a log line, so it needs no system principal and no `ctx.run`. Articles are archived and never deleted, so the example logs archive and restore where the request said delete. This point needs only the server plugin loader that runs today.
+- Plugin screens: the shell reads the plugin list, imports each plugin's `web/entry.js` through the import map of [ADR 0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), mounts its routes under `/$plant/<id>` and draws its sidebar group from the manifest's `web.label`, `web.order` and `web.permission`, which the manifest already holds. The page example and the widget example both wait for this.
+- The dashboard widget slot: the catalog lists the contributions to `core/dashboard/widgets/v1` beside its own types, and a placed widget renders the contribution in its `WidgetFrame` with props `{ plantId }`. It waits for plugin screens and for the answer to M-32.
+
+Each example's folder has a short README that says how to build it and how to install it into a running installation.
+
 ## Versions and compatibility checks
 
 Every `@northmes/*` package, every module package, the example plugins and the image carry one version, bumped together, and stay on 0.x through the pilot. A breaking change bumps the minor. Releases use release-please with one root component ([ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [13 delivery and GitHub](13-delivery-and-github.md)).
