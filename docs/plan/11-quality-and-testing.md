@@ -396,12 +396,13 @@ The matrix runs one job per "from" version in parallel, each with its own contai
 
 ### Failures the tests inject
 
-- A migration that fails halfway: the database stays at the backup label after `rollback.sh` (existing ops test).
-- The upgrade killed after the backup, during migrate and after the start: `upgrade.sh --resume` or `rollback.sh` ends with a working installation and no lost rows.
+- A migration that fails halfway: the old backends stay paused, and the guide's restore to the restore point brings back every row written before it.
+- `migrate` killed after each side effect and during a file: `docker compose up -d` again, or the previous image lines, end with a working installation and no lost rows.
 - A migration over its time budget: it fails on `statement_timeout`, and `northmes_meta.migration` does not record it.
-- A bundle with a wrong digest, and an older bundle: refused before the stop.
-- An installed plugin whose range excludes the release: the upgrade stops before the maintenance page and names it.
+- An older image that cannot run on the schema: refused before the pause, naming the restore guide.
+- An installed plugin whose range excludes the release: `migrate` exits 1 before the pause and names it.
 - A snapshot below `minimumUpgradeFrom`: `migrate --check` exits 1 with the path, and nothing changes.
+- A backend that does not pause within 60 seconds: `migrate` removes the `upgrade` row, exits 1, and the old version serves on.
 - A gateway posting during the stop: it gets `503` with `Retry-After`, and its resent batch is stored once afterwards.
 
 ### Running the tests locally
@@ -415,7 +416,7 @@ Every command runs from the repository root through pnpm ([ADR 0058](../adr/0058
 | `pnpm upgrade:test --large` | Uses the large snapshot and prints each migration's time against the budget. |
 | `pnpm upgrade:seed --ref v0.6.0` | Builds a snapshot from a tag, a branch or the working tree. |
 | `pnpm upgrade:path 0.3.2 0.7.0` | Prints the supported path. |
-| `pnpm upgrade:stack --from 0.6.1` | Starts the real Compose stack with the 0.6.1 images and its snapshot, builds the working tree's image, and runs `upgrade.sh` and then `rollback.sh` against it, as the nightly ops test does. |
+| `pnpm upgrade:stack --from 0.6.1` | Starts the real Compose stack with the 0.6.1 images and its snapshot, builds the working tree's image, puts its lines in `.env` and runs `docker compose up -d`, then goes back with the previous lines, as the nightly ops test does. |
 
 A failing local run leaves the containers up with `--keep`, and prints the connection string and the schema diff, so the contributor can inspect the database.
 

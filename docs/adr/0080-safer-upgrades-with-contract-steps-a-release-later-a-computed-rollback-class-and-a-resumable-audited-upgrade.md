@@ -5,7 +5,7 @@ decision-makers: proposed by a planning session, to be confirmed by Krister Joha
 consulted: Krister Johansson
 informed: contributors, coding agents, pilot IT and hosting partners
 release: "1"
-needs-confirmation: "maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; the restore-class rollback deadline; backfills as background jobs after start; the migration time budget; the resumable upgrade unit; the read-only smoke check and the watch period; the 503 with Retry-After during the stop; a late window of at least 24 hours; the gateway requirements in the install guide; polling adapters outside app)"
+needs-confirmation: "maintainer (contract steps one release after the code stops using the old shape; the computed rollback class; backfills as background jobs after start; the migration time budget; resuming by running docker compose up -d again; the read-only smoke check in CI, with the watch period and the restore-class deadline in a script later; the 503 with Retry-After during the stop; a late window of at least 24 hours; the gateway requirements in the install guide; polling adapters outside app)"
 ---
 
 # Safer upgrades with contract steps a release later, a computed rollback class and a resumable, audited upgrade
@@ -22,7 +22,7 @@ On 2026-10-14 Krister Johansson asked for a thorough review of the upgrade plan,
 * Nobody records who upgraded what, the smoke check is undefined, and nothing watches the installation after it starts.
 * No test kills an upgrade halfway, and no test measures migration time on a large database.
 
-The upgrade path, the rehearsal and release candidates stay in proposed [ADR 0079][adr-0079]. This ADR covers the migration runner and lint of [ADR 0006][adr-0006], `upgrade.sh` and `rollback.sh` of [ADR 0045][adr-0045], the release manifest and the nightly tests.
+The upgrade path, the rehearsal and release candidates stay in proposed [ADR 0079][adr-0079], which also moves `upgrade.sh` and `rollback.sh` of [ADR 0045][adr-0045] to later: in release 1 an upgrade is an edit of `.env` and `docker compose up -d`, and the `migrate` service checks, pauses the running backends, sets a restore point and migrates. This ADR covers the migration runner and lint of [ADR 0006][adr-0006], that `migrate` service, the release manifest and the nightly tests.
 
 ## Decision drivers
 
@@ -30,6 +30,7 @@ The upgrade path, the rehearsal and release candidates stay in proposed [ADR 007
 * A failed upgrade returns to the previous version, and losing writes is the rare case.
 * The window is as short as the schema change, not as long as the data.
 * An upgrade survives the operator's connection dropping, and each step can run twice.
+* Krister Johansson's choice of 2026-10-15: no upgrade script in release 1 ([ADR 0079][adr-0079]).
 * Every guarantee is a lint, a computed value or a test, because one developer supports the pilot.
 
 ## Considered options
@@ -52,53 +53,53 @@ Chosen option: "Keep the stop, and add contract steps a release later, a compute
 
 ### A computed rollback class
 
-CI computes each release's rollback class and schema compatibility number from the markers of every migration file since the previous release, the migrations of the example plugins and the recorded third-party schema changes, and writes both into the release manifest. The release workflow fails when a hand-written value disagrees. `upgrade.sh` reads the class from the verified manifest only.
+CI computes each release's rollback class and schema compatibility number from the markers of every migration file since the previous release, the migrations of the example plugins and the recorded third-party schema changes, and writes both into the release manifest. The release workflow fails when a hand-written value disagrees. `migrate`, the release notes and the Updates page read the class from the manifest in the image only.
 
 ### A short window
 
-* A backfill over more than a fixed row count is not a migration file. A migration file registers it as a batched, idempotent background job that runs after `app` starts, in batches with a pause between them, and `northmes_meta.background_migration` records its progress. A backfill keeps the release `image` class only when the old code works with every row in any state the backfill leaves and with every row the new code writes while the job runs, for example by writing a new column the old code ignores; otherwise the rollback class is computed as `restore`. `rollback.sh` pauses the job and waits for its current batch to commit before it starts the old image. A later release whose code needs it finished declares that, and `migrate --check` refuses until it has finished, naming it. Such a release is an upgrade stop under proposed [ADR 0079][adr-0079].
-* Each release manifest carries a migration time budget measured on the large nightly snapshot. The rehearsal of proposed [ADR 0079][adr-0079] prints its own time beside the budget, and the operator plans the window from it. The stop window is bounded by the run's deadline below plus a fixed 15 minutes for the backup, the boot and the smoke check, and the release workflow refuses a manifest whose budget times the safety factor plus those 15 minutes reaches 12 hours, half the shortest late window.
-* The runner sets one deadline for the whole run, the start time plus the release's budget times a safety factor, and before each file and each statement sets `statement_timeout` to the time left until that deadline. A run that passes the deadline fails, however its time is spread over statements and files, and `rollback.sh` takes over, instead of holding the plant for an unknown time.
-* Before stopping `app`, `upgrade.sh` lets running jobs finish inside the 45 s grace period of [ADR 0043][adr-0043]. Jobs still queued in Valkey carry `schema_version` ([ADR 0045][adr-0045]), and the new version accepts the previous version's payloads.
+* A backfill over more than a fixed row count is not a migration file. A migration file registers it as a batched, idempotent background job that runs after `app` starts, in batches with a pause between them, and `northmes_meta.background_migration` records its progress. A backfill keeps the release `image` class only when the old code works with every row in any state the backfill leaves and with every row the new code writes while the job runs, for example by writing a new column the old code ignores; otherwise the rollback class is computed as `restore`. The old image's `migrate` pauses the job and waits for its current batch to commit before the old version serves again. A later release whose code needs it finished declares that, and `migrate --check` refuses until it has finished, naming it. Such a release is an upgrade stop under proposed [ADR 0079][adr-0079].
+* Each release manifest carries a migration time budget measured on the large nightly snapshot. The release notes and the Updates page show it, and the operator plans the window from it; the later rehearsal of proposed [ADR 0079][adr-0079] prints the installation's own time beside it. The stop window is bounded by the run's deadline below plus a fixed 15 minutes for the pause, the restore point, the boot and the smoke check, and the release workflow refuses a manifest whose budget times the safety factor plus those 15 minutes reaches 12 hours, half the shortest late window.
+* The runner sets one deadline for the whole run, the start time plus the release's budget times a safety factor, and before each file and each statement sets `statement_timeout` to the time left until that deadline. A run that passes the deadline fails, however its time is spread over statements and files, and the operator goes back as ADR 0079 decides, instead of holding the plant for an unknown time.
+* During the pause of [ADR 0079][adr-0079] running jobs finish inside the 45 s grace period of [ADR 0043][adr-0043]. Jobs still queued in Valkey carry `schema_version` ([ADR 0045][adr-0045]), and the new version accepts the previous version's payloads.
 
 ### Before the stop
 
-* `upgrade.sh` verifies the bundle's digest and attestation as the install does (E18-S02), and refuses a version older than the installed one; going back is `rollback.sh` only.
-* The disk check requires the rehearsal's measured peak disk use plus 20 percent, because an index build or a rewrite can need the size of the table again.
+* `migrate` refuses an image older than the installed release unless the installed release is of the `image` class and the compatibility number fits, which is the rollback of [ADR 0079][adr-0079]; otherwise going back is the restore in the upgrade guide.
 * Plugin migrations follow the same markers and lint, checked at install and by `northmes plugin check` ([ADR 0075][adr-0075]).
+* Later, with `upgrade.sh` (ADR 0079): the script verifies the image's digest and attestation itself, and checks free disk space against the rehearsal's measured peak plus 20 percent, because an index build or a rewrite can need the size of the table again. In release 1 the upgrade guide gives the verify command, and the restore point needs no disk space for a backup.
 
 ### A resumable, audited upgrade
 
-* `upgrade.sh` starts itself as a transient systemd unit (`systemd-run --unit northmes-upgrade`), so it survives the operator's connection dropping. It logs to the backup disk and records each finished step in `upgrade-state.json`. `upgrade.sh --status` shows the step, and `upgrade.sh --resume` continues from the last finished step. Every step is safe to run twice, and a step is recorded as finished only after its side effect: the migrate step through `northmes_meta.migration` and the advisory lock ([ADR 0006][adr-0006]); the backup by its label, which `--resume` looks up in the repository before it takes another; the security event by an idempotency key of the upgrade id and the step, so a replay writes no second event; the start of `app` and the smoke check by checking the running image digest and re-running the read-only smoke check; and `rollback.sh` by the same checks against the old image.
-* It takes the host lock of proposed [ADR 0075][adr-0075].
-* `northmes migrate` writes a security event with the from and to versions and the image digest, so an upgrade on a platform without `upgrade.sh` is audited too. `upgrade.sh` and `rollback.sh` each write a security event through a `cli` audit context with the from and to versions, the bundle digest, the rollback class, the rehearsal result, the outcome and the operator's reason ([ADR 0051][adr-0051]).
+* A dropped connection does not stop an upgrade halfway: `migrate` runs in its own container, not in the operator's shell, and finishes its run. Running `docker compose up -d` again then finishes the upgrade. Every step of `migrate` is safe to run twice, and is recorded only after its side effect: the checks write nothing; the pause by its `upgrade` row; the restore point by `restore_point_at` on that row; each file through `northmes_meta.migration` and the advisory lock ([ADR 0006][adr-0006]); the customer file because it never deletes and changes only what differs ([ADR 0072][adr-0072]); and the security event by an idempotency key of the upgrade and the step, so a replay writes no second event.
+* `northmes migrate` writes a security event with the from and to versions, the image digest, the rollback class and the outcome through a `cli` audit context ([ADR 0051][adr-0051]), so every upgrade and every image-class rollback is audited, on the appliance and on a platform alike. A restore writes its own event when the restored database first starts the old version.
 
 ### After the start
 
-* The smoke check reads only: `/health/ready`, sign-in with a dedicated health account that holds no role, one read per module through the API, the web's module list and a realtime connection. It writes no command row.
-* `upgrade.sh` watches for 30 minutes after the smoke check: readiness, the error rate in the logs and the browser error reports of [ADR 0043][adr-0043]. It prints what it saw and recommends `rollback.sh` on a failure, without running it.
-* For the `image` class, `rollback.sh` starts the previous image at any time until the next upgrade. For the `restore` class, the operator sets a deadline at upgrade time, by default the start of the next shift; until then `rollback.sh` restores the backup, and after it `rollback.sh` refuses and names the forward fix, within the 72-hour patch target of [ADR 0038][adr-0038], so a restore never silently drops a day of production.
-* The rehearsal copy of proposed [ADR 0079][adr-0079] holds production data: it stays on a host the customer controls, on an encrypted disk, and is removed on exit and again at the start of the next rehearsal.
+* The smoke check reads only: `/health/ready`, sign-in with a dedicated health account that holds no role, one read per module through the API, the web's module list and a realtime connection. It writes no command row. In release 1 the nightly tests run it, and the upgrade guide's last step is checking that `/health` reports the new version.
+* Later, `upgrade.sh` watches for 30 minutes after the smoke check: readiness, the error rate in the logs and the browser error reports of [ADR 0043][adr-0043]. It prints what it saw and recommends going back on a failure, without doing it.
+* For the `image` class, the previous image lines in `.env` start the previous version at any time until the next upgrade. For the `restore` class, the upgrade guide restores to the restore point only until the next shift has worked on the new version; after that it names the forward fix, within the 72-hour patch target of [ADR 0038][adr-0038], so a restore never silently drops a day of production. A later `rollback.sh` enforces that deadline.
+* The later rehearsal copy of proposed [ADR 0079][adr-0079] holds production data: it stays on a host the customer controls, on an encrypted disk, and is removed on exit and again at the start of the next rehearsal.
 
 ### Machine data, stations and displays during the stop
 
 Krister Johansson named machine data as what matters most during an upgrade, and expects the gateway at the machine to keep its own store so that it works offline for a while. That is the model [ADR 0059][adr-0059] already assumes ("gateways buffer during outages and resend late, repeated and out-of-order data"). For the stop to lose nothing:
 
-* While `app` is down, Caddy answers `/api` and `/graphql` with `503` and a `Retry-After` header, never with the maintenance page's HTML and a `200`, so a gateway or a script never takes the page for an accepted batch. The maintenance page is served only to browsers that ask for HTML.
+* While `app` is paused or down, it or Caddy answers `/api` and `/graphql` with `503` and a `Retry-After` header, never with the maintenance page's HTML and a `200`, so a gateway or a script never takes the page for an accepted batch. The maintenance page is served only to browsers that ask for HTML.
 * The ingestion endpoint is idempotent per sample (series, timestamp and the gateway's sequence number), so a resent batch is stored once.
 * Data collection's late window ([ADR 0059][adr-0059]) is at least 24 hours, longer than any upgrade window, so data buffered through the stop is accepted, not refused as `beyond_late_window`.
 * The install guide states the requirement on a gateway: a local store for at least 24 hours of its signals, resend with backoff on `503` and on network errors, and in-order resend per series. An MQTT broker that NorthMES reads from runs outside the NorthMES stack, with persistent sessions and QoS 1, so it holds messages while the adapter is down.
-* An adapter that polls a machine, such as OPC UA, runs as its own process role or on an edge host with a local buffer, not inside `app`, so it keeps reading while `app` is stopped. The Data collection ADR decides where, before the adapter is built.
+* An adapter that polls a machine, such as OPC UA, runs as its own process role or on an edge host with a local buffer, not inside `app`, so it keeps reading while `app` is paused or stopped. The Data collection ADR decides where, before the adapter is built.
 * Operator stations are online only in release 1 ([ADR 0033][adr-0033]). During the stop an unsent entry stays on the screen and in local storage until the operator sends it, and paper reporting covers the window. The station outage queue that ADR 0033 moves to a later release makes the stop invisible to operators, and becomes more valuable because of this ADR.
 * Displays and boards only read. They show the maintenance page, then reconnect and refetch every query ([ADR 0018][adr-0018]), so they lose nothing.
 
 ### Consequences
 
 * Good, because most releases carry no contract step and roll back by starting the previous image, without losing a write.
-* Good, because a mislabelled release, a tampered or older bundle, or a dropped connection no longer turns into a broken installation.
+* Good, because a mislabelled release, an older image or a dropped connection no longer turns into a broken installation.
 * Good, because the window holds the schema change only, and the operator knows its length before the stop.
 * Good, because every upgrade and rollback is in the audit trail.
 * Bad, because every upgrade still stops every plant user for the migrations and the boot, and plants report on paper meanwhile.
+* Bad, because in release 1 the restore-class deadline and the watch after the start are steps in a guide, not checks in a script.
 * Bad, because removing a column takes two releases.
 * Bad, because backfills move from SQL files to jobs, which is more code per data change.
 
@@ -107,9 +108,9 @@ Krister Johansson named machine data as what matters most during an upgrade, and
 * `rollback-class.test.ts`: a release with one `contract` file computes `restore`, and a manifest that says `image` fails the release workflow; a manifest whose budget times the safety factor plus 15 minutes reaches 12 hours fails it too.
 * `migrate-timeout.int.test.ts`: a file that runs past the run's deadline fails, and `northmes_meta.migration` does not record it; three files that each stay under the per-file share but together pass the deadline make the run fail at the third.
 * `background-migration.int.test.ts`: a registered backfill runs in batches after start and survives a restart halfway; a release that needs it finished is refused by `migrate --check` until it is.
-* `infra/test/upgrade-crash.int.test.ts` (nightly): the upgrade is killed between each side effect and the checkpoint that records it (the backup, each migration file, the security event, the start of `app`), and during migrate. For an `image`-class release, each time `upgrade.sh --resume` or `rollback.sh` ends with a working installation, one backup, one security event per step and no lost rows. For a `restore`-class release, `rollback.sh` ends with a working old installation that holds every row from before the backup, and the test asserts only that. A third case kills `rollback.sh` while a background backfill is halfway and checks that the job is paused and the old image serves every row, including a row the new code wrote in the new format.
-* `infra/test/maintenance.int.test.ts`: with `app` stopped, a POST to the ingestion endpoint and to `/graphql` gets `503` with `Retry-After`, and a browser request for `/` gets the maintenance page.
-* `infra/test/upgrade.int.test.ts`: an older bundle and a bundle with a wrong digest are refused before the stop; an upgrade and a rollback each write their security event.
+* `infra/test/upgrade-crash.int.test.ts` (nightly): `migrate` is killed between each side effect and the record of it (the `upgrade` row, the restore point, each migration file, the customer file, the security event), and during a file. For an `image`-class release, each time `docker compose up -d` again, or the previous image lines and `docker compose up -d`, end with a working installation, one restore point, one security event per step and no lost rows. For a `restore`-class release, the guide's restore ends with a working old installation that holds every row from before the restore point, and the test asserts only that. A third case goes back to the previous image while a background backfill is halfway and checks that the job is paused and the old image serves every row, including a row the new code wrote in the new format.
+* `infra/test/maintenance.int.test.ts`: with `app` stopped, and again with it paused, a POST to the ingestion endpoint and to `/graphql` gets `503` with `Retry-After`, and a browser request for `/` gets the maintenance page.
+* `infra/test/upgrade.int.test.ts`: an older image of the `restore` class away is refused before the pause and names the guide; an upgrade and an image-class rollback each write one security event, also when `migrate` runs twice.
 * `infra/test/upgrade-matrix.int.test.ts`, nightly in `nightly.yml`: "the large snapshot upgrades within the release's time budget", with a snapshot at five times pilot scale.
 
 ## Pros and cons of the options
