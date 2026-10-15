@@ -82,6 +82,12 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
 
 `bootstrap` logs in as the admin and creates the roles NorthMES runs as: `nm_owner` for migrations, `nm_app` and `nm_auth` for the app, and `nm_ext`, with the passwords in `secrets/`. `bootstrap` runs on every `docker compose up -d` and changes nothing once the roles are in place, so keep the admin's password in its file. Role names are shared by every database on a server, so one server holds one NorthMES installation.
 
+## Sign-in limits
+
+NorthMES refuses a fourth sign-in from one computer within 10 seconds, and locks an email for 15 minutes after 5 wrong passwords in a row. A locked user waits, or signs in with the right password once the 15 minutes have passed. The sign-in page says how long to wait.
+
+NorthMES tells computers apart by the address that Caddy reports, so `compose.yaml` sets `NORTHMES_TRUSTED_PROXY_HOPS: "1"` for the one proxy in front of `app`. Keep it at 1 while Caddy is the only proxy.
+
 ## Upgrade
 
 1. Read the release notes. They give the new `NORTHMES_VERSION` line.

@@ -66,6 +66,8 @@ services:
       NORTHMES_ROLE: all
       PORT: "3000"
       NORTHMES_LISTEN_HOST: 0.0.0.0
+      # caddy is the one proxy in front of app: the client address is the one it reports.
+      NORTHMES_TRUSTED_PROXY_HOPS: "1"
       NORTHMES_PUBLIC_ORIGIN: https://${NORTHMES_HOST:-localhost}
       DATABASE_URL: ${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}
       NORTHMES_DB_APP_PASSWORD_FILE: /run/secrets/db_app_password

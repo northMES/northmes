@@ -44,7 +44,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
 | Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
-| Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |
+| Sign-in throttling and account lockout | built | [#476](https://github.com/northMES/northmes/issues/476); `auth-options.ts` (Better Auth's rate limit on every `NODE_ENV`, per client address), `sign-in-lockout.ts`, `trusted-proxy.module.ts`; `sign-in.int.test.ts`. The lockout is logged once the audit trail lands ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Session absolute lifetime, and JWTs ended with their session | gap | [#479](https://github.com/northMES/northmes/issues/479) |
 | The auth design (ADR 0011) matches the code | gap | [#485](https://github.com/northMES/northmes/issues/485) |
 | MFA and a password policy | accepted | ADR 0051 B2: deferred until the pilot's NIS2 status is known |
