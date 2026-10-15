@@ -280,14 +280,15 @@ async function bootSteps<
   return { env, secrets, catalog, pending, app };
 }
 
-/** The interface the server listens on. */
-const listenHost = '127.0.0.1';
-
 /**
- * Listens on PORT. A port that another process holds closes the app and stops the boot with a
+ * Listens on PORT at NORTHMES_LISTEN_HOST. A port that another process holds closes the app and stops the boot with a
  * BootError that names PORT (ADR 0058).
  */
-async function listen(app: NestExpressApplication, port: number): Promise<void> {
+async function listen(
+  app: NestExpressApplication,
+  port: number,
+  listenHost: string,
+): Promise<void> {
   try {
     await app.listen(port, listenHost);
   } catch (error) {
@@ -304,7 +305,7 @@ async function serve(options: BootOptions): Promise<INestApplication> {
   const { env, app } = await bootSteps(loadEnv(serverEnvSchema)(options.env), options);
   // The static mounts go in before listen initialises the app and adds the routes after them.
   serveWeb(app, { shellDir: builtShellDir });
-  await listen(app, env.PORT);
+  await listen(app, env.PORT, env.NORTHMES_LISTEN_HOST);
   log.info(`Listening on ${await app.getUrl()}`);
   return app;
 }

@@ -21,6 +21,8 @@ const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta
 const compose = parse(read('deploy/compose.yaml')) as Compose;
 const { services } = compose;
 const pgImage = (JSON.parse(read('infra/pg-image.json')) as { image: string }).image;
+// A Compose interpolation, not a template literal.
+// biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
 const northmesImage = 'ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}';
 
 const secretsOf = (service: Service | undefined) =>
@@ -89,6 +91,8 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(published).toEqual(['caddy']);
     expect(services.app?.environment?.NODE_ENV).toBe('production');
     expect(services.app?.environment?.NORTHMES_PUBLIC_ORIGIN).toMatch(/^https:\/\//);
+    // app listens on the Compose network, which only caddy publishes.
+    expect(services.app?.environment?.NORTHMES_LISTEN_HOST).toBe('0.0.0.0');
   });
 
   it('the example .env holds the version line and no secret', () => {

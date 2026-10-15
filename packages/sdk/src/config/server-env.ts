@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
+import { isIP } from 'node:net';
 import { z } from 'zod';
 import { configFile, databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';
 
 const PORT_RULE = 'an integer from 0 to 65535';
+const LISTEN_HOST_RULE = 'an IPv4 or IPv6 address';
 const ORIGIN_RULE =
   'an origin with no path, https:// in production, and in development and test also http://localhost or http://127.0.0.1 with a port';
 
@@ -32,6 +34,12 @@ export const serverEnvSchema = z
       .string(rule(PORT_RULE))
       .refine((value) => /^\d+$/.test(value) && Number(value) <= 65535, rule(PORT_RULE))
       .transform(Number),
+    // The address the server listens on: the host only by default, and 0.0.0.0 in a container,
+    // where only the proxy on the Compose network reaches it (ADR 0080).
+    NORTHMES_LISTEN_HOST: z
+      .string(rule(LISTEN_HOST_RULE))
+      .refine((value) => isIP(value) !== 0, rule(LISTEN_HOST_RULE))
+      .default('127.0.0.1'),
     NORTHMES_PUBLIC_ORIGIN: z.string(rule(ORIGIN_RULE)),
     // The server logs in to DATABASE_URL as nm_app with the password in this file (ADR 0060).
     DATABASE_URL: databaseUrl,

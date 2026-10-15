@@ -34,3 +34,6 @@ coverage/
 
 # Personal Claude Code instructions (maintainer only).
 CLAUDE.local.md
+
+# The secret files of a Compose installation tried from deploy/ (ADR 0080).
+/deploy/secrets/
