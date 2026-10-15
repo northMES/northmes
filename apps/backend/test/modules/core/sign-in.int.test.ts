@@ -402,14 +402,13 @@ describe('sign-in with Better Auth', () => {
     // count as production.
     const client = fromNewClient();
 
-    const statuses = [];
+    const responses = [];
     for (let attempt = 0; attempt < 4; attempt += 1) {
-      statuses.push((await signInFrom(client, unknownEmail(), 'a wrong password')).status);
+      responses.push(await signInFrom(client, unknownEmail(), 'a wrong password'));
     }
-    const throttled = await signInFrom(client, unknownEmail(), 'a wrong password');
 
-    expect(statuses).toEqual([401, 401, 401, 429]);
-    expect(Number(throttled.headers.get('x-retry-after'))).toBeGreaterThan(0);
+    expect(responses.map(({ status }) => status)).toEqual([401, 401, 401, 429]);
+    expect(Number(responses[3]?.headers.get('x-retry-after'))).toBeGreaterThan(0);
   });
 
   it('B3 two clients behind the trusted proxy are throttled apart', async () => {
@@ -451,6 +450,19 @@ describe('sign-in with Better Auth', () => {
     );
     expect(lockedBody.code).toBe('ACCOUNT_LOCKED');
     expect(unlocked.status).toBe(200);
+  });
+
+  it(`B3 ${SIGN_IN_LOCKOUT_FAILURES} failed sign-ins at the same moment each count, so the account locks`, async () => {
+    const { user } = await reader();
+    await Promise.all(
+      Array.from({ length: SIGN_IN_LOCKOUT_FAILURES }, () =>
+        signInFrom(fromNewClient(), user.email, `${user.password}x`),
+      ),
+    );
+
+    const locked = await signInFrom(fromNewClient(), user.email, user.password);
+
+    expect(locked.status).toBe(429);
   });
 
   it('B3 a successful sign-in clears the failures before it, so only failures in a row lock', async () => {

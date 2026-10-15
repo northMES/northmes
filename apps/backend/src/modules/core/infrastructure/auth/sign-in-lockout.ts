@@ -89,11 +89,11 @@ export function signInLockout() {
             }
             if (returned.statusCode !== 401) return;
             const now = Date.now();
-            // Rows past the window lock nothing, so they go, as Better Auth prunes its rate limit.
+            // Rows past the window lock nothing, so they go, this email's own too, which starts its
+            // count again.
             await adapter.deleteMany({
               model,
               where: [
-                { field: 'key', operator: 'ne', value: key },
                 {
                   field: 'lastFailure',
                   operator: 'lt',
@@ -101,19 +101,23 @@ export function signInLockout() {
                 },
               ],
             });
-            const row = await adapter.findOne<Failures>({ model, where });
-            // A failure after the window starts a new count, as the lock has lifted by then.
-            const recent = row && now - Number(row.lastFailure) < SIGN_IN_LOCKOUT_SECONDS * 1000;
-            const update = { count: recent ? row.count + 1 : 1, lastFailure: now };
-            if (row) {
-              await adapter.update({ model, where, update });
-              return;
-            }
-            // Two first failures at once both find no row, and the later insert meets the unique
-            // key: it counts as the first failure again.
-            await adapter
-              .create({ model, data: { key, ...update } })
-              .catch(() => adapter.update({ model, where, update }));
+            // Atomic, so failures at the same moment each count: an increment of the row, or the
+            // first row, or the increment again when another request wrote the first row meanwhile.
+            const increment = () =>
+              adapter.incrementOne({
+                model,
+                where,
+                increment: { count: 1 },
+                set: { lastFailure: now },
+              });
+            if (await increment()) return;
+            const created = await adapter
+              .create({ model, data: { key, count: 1, lastFailure: now } })
+              .then(
+                () => true,
+                () => false,
+              );
+            if (!created) await increment();
           }),
         },
       ],
