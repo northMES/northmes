@@ -50,7 +50,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 | M2 | Fri 2027-01-22 | Velocity checkpoint 1: the first forecast on the 1x line from at least eight weekly rows. The data processing agreement and the pilot agreement are signed. E09 is done. Live write-back is verified (target), or shadow mode runs with the daily write-back report. | A provisional pilot window |
 | M3 | Fri 2027-02-26 | E17 is done: Compose on a pilot-like VM with pgBackRest and a timed restore. If Pyramid has no write path, the product owner picks a file export that Pyramid imports, a REST bridge, or a pilot without ERP write-back. Velocity checkpoint 2. The 10 percent stabilization reserve starts. | A narrower window and a review of the cut list |
 | M4 (proposed) | Fri 2027-04-30 | Velocity checkpoint 3 | Krister fixes the pilot install date and the pilot test start from the three forecasts, and applies cuts if the forecast misses the date. |
-| Pilot install (proposed) | Set at M4, at least 4 weeks before the pilot test | The upgrade rehearsal from N to N+1 with a migration, the backup and a rollback has run on the pilot-like VM. The second NVDA pass has run. The go-live checklist is complete: TLS option, disk layout, escrow, a monitoring tool or SMTP relay, browser versions, time sync. The conditions in [01-product-and-scope.md](01-product-and-scope.md#what-done-means-for-release-1) hold. | |
+| Pilot install (proposed) | Set at M4, at least 4 weeks before the pilot test | An upgrade from N to N+1 with a migration, the restore point and a rollback has run on the pilot-like VM. The second NVDA pass has run. The go-live checklist is complete: TLS option, disk layout, escrow, a monitoring tool or SMTP relay, browser versions, time sync. The conditions in [01-product-and-scope.md](01-product-and-scope.md#what-done-means-for-release-1) hold. | |
 | Pilot test | Set at M4. The stress test estimated 2027-08-24 to 2028-01-20 on its 2x line. | The pilot acceptance criteria agreed at M0 | |
 
 Nobody installs or upgrades in the week of a daylight saving change (autumn 2027-10-31, spring 2028-03-26). If the pilot window covers the night of 2027-10-31, that night runs on the installed system with the DST suites green. The stress test gave no 1x figure for the pilot window. The estimates already assume coding agents, so the forecast uses the 1x line, and on that line the window falls later than the 2x estimate.
@@ -4790,13 +4790,15 @@ Notes: labelled `human`. This is the M3 evidence.
 
 Issue: northMES/northmes#156.
 
-Goal: every release produces signed, attested images, SBOMs and an offline amd64 image bundle that installs without internet; upgrades check first, back up, migrate and start; a rollback restores the backup taken before the upgrade. A nightly N-1 test proves both directions.
+Goal: every release produces signed, attested images, SBOMs and an offline amd64 image bundle that installs without internet; an upgrade is one new line in `.env` and `docker compose pull`, `down` and `up -d`, whose `migrate` container checks first, sets a restore point and migrates; a rollback starts the previous image or restores to that point. A nightly N-1 test proves both directions.
 
 Who it is for: Plant admin. Also: Maintainer.
 
-ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md).
+ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0081](../adr/0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md).
 
-Out of scope: `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
+Out of scope: upgrade requests from the web, `upgrade.sh`, `rollback.sh` and the rehearsal command (triggers in ADR 0080); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
+
+Order: v0.0.1 comes first (Krister, 2026-10-15). E18-S01, E18-S02 and E18-S16 ship in it with the example plugins, so the version checks and upgrade tests (E18-S03 to S15, S18 and S19) start against a published release ([0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md)).
 
 Estimate: not estimated. Depends on: E17, E01-S03. Milestone: the pilot install.
 
@@ -4817,6 +4819,7 @@ Acceptance criteria:
 - `northmes-<v>-linux-amd64-images.tar.zst` and its sha256 are attached to the draft release before it is published; releases are immutable.
 - A release job loads the bundle in a fresh amd64 VM or dind with `--network none` and checks `/health/ready` through Caddy.
 - Images are scanned with Trivy or Grype pinned by digest.
+- The first release is v0.0.1: release-please runs with `initial-version: 0.0.1` (ADR 0080).
 - A patch release is image-only: it adds no migration and its release manifest states rollback class image. The release workflow fails a patch release whose migration list differs from the previous minor's.
 
 Tests first:
@@ -4843,48 +4846,47 @@ Tests first:
 
 - `infra/test/preflight.test.ts`: "a tarball with a wrong digest stops preflight"; "Compose 4 is refused".
 
-#### E18-S03 ops: Upgrade with a check, a backup and a compatibility number
+#### E18-S03 ops: Upgrade with a check and a compatibility number
 
 Issue: northMES/northmes#159.
 
-As a plant admin, I want an upgrade that refuses an unsafe release before downtime and backs up before it migrates, so that I can always go back.
+As a plant admin, I want an upgrade that refuses an unsafe release before downtime and tells me how to go back, by the previous image for an `image`-class release or by restoring the database for a `restore`-class one, so that I can always go back.
 
-Module: ops, platform. Blocked by: E18-S02, E17-S04. Design: none.
+Module: ops, platform. Blocked by: E18-S02, E17-S04 and v0.0.1 published. Design: none.
 
 ADRs: [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 
 Acceptance criteria:
 
 - Every migration file carries an expand or contract marker; each release has one schema compatibility number in `northmes_meta`; boot accepts a newer database while the number fits, and System health shows "schema ahead by N expand migrations".
-- `upgrade.sh` runs `migrate --check` from the new image with the site's config and plugins, turns the maintenance page on, stops app, takes an incremental backup with an annotation and records its label in `upgrade-state.json`, runs bootstrap and extension updates, migrates and starts.
-- The release manifest states the rollback class (image or restore), and `upgrade.sh` prints it first.
+- The release manifest states the rollback class (image or restore), and `migrate` prints it first; the upgrade itself is E18-S08 (ADR 0080 replaces `upgrade.sh` in release 1).
 - A migration lint rejects `cascade`, `drop table`, dropping constraints on referenced tables and key type changes without the contract marker; the runner raises when a recorded inbound foreign key disappears.
 
 Tests first:
 
 - `apps/server/test/migrate-guards.test.ts`: "a module migration that drops a plugin's foreign key raises naming the key".
-- `infra/test/upgrade.int.test.ts` (nightly): "a failing migration leaves the database at the backup label".
+- `infra/test/upgrade.int.test.ts` (nightly): "an older image refuses a schema whose compatibility number does not fit".
 
-#### E18-S04 ops: Roll back to the backup taken before an upgrade
+#### E18-S04 ops: Roll back to the restore point taken before an upgrade
 
 Issue: northMES/northmes#160.
 
-As a plant admin, I want one script that restores the pre-upgrade backup and tells users what was lost, so that a failed upgrade costs minutes, not days.
+As a plant admin, I want written steps that restore the database to the point before an upgrade and tell users what was lost, so that a failed upgrade costs minutes, not days.
 
-Module: ops. Blocked by: E18-S03. Design: restore banner (part of D2).
+Module: ops. Blocked by: E18-S03, E18-S08. Design: restore banner (part of D2).
 
-ADRs: [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md).
+ADRs: [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0032](../adr/0032-pyramid-connector-polling-file-mode-and-shadow-write-back.md).
 
 Acceptance criteria:
 
-- `rollback.sh` first exports `audit.command` and `production_start.report` rows written after the recorded time to a CSV, then restores the recorded label, waits until recovery ends and runs migrate.
+- The upgrade guide's restore steps first export `audit.command` and `production_start.report` rows written after the restore point to a CSV with a command in the `migrate` container, then restore to `northmes-upgrade-<version>` with pgBackRest in the `db` container, wait until recovery ends and start the previous version; `rollback.sh` is later (ADR 0080).
 - It never rolls the database image back without a restore.
 - Restore and rollback write a security event through a CLI context, and the shell shows admins and planners "Data restored to <time>; changes after that were lost." for 24 hours.
 - The Pyramid reconcile runs as the last step, after the next poll.
 
 Tests first:
 
-- `infra/test/rollback.int.test.ts` (nightly): "rows written after the upgrade are in the export CSV"; "the banner shows for 24 hours".
+- `infra/test/rollback.int.test.ts` (nightly): "the guide's steps restore every row written before the restore point"; "rows written after the upgrade are in the export CSV"; "the banner shows for 24 hours".
 
 #### E18-S05 ops: Test each release against the previous image nightly
 
@@ -4910,7 +4912,7 @@ Tests first:
 
 Issue: northMES/northmes#162.
 
-As a plant admin, I want an upgrade from N to N+1 rehearsed and the go-live checklist done with the pilot's IT, so that the pilot install has no open items.
+As a plant admin, I want an upgrade from N to N+1 tried on the pilot-like VM and the go-live checklist done with the pilot's IT, so that the pilot install has no open items.
 
 Module: ops. Blocked by: E18-S05, E17-S07. Design: none.
 
@@ -4918,15 +4920,293 @@ ADRs: [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tl
 
 Acceptance criteria:
 
-- On the pilot-like VM an upgrade from N to N+1 with a migration, the backup and a rollback runs as documented.
+- On the pilot-like VM an upgrade from N to N+1 with a migration, the restore point and a rollback runs as documented.
 - The checklist is complete with pilot IT: TLS option, bind address and network ranges, disk layout, offsite target, escrow location, monitoring tool or SMTP relay, station and planner browser versions, NTP for stations.
 - The install date is outside the DST weeks.
 
 Tests first:
 
-- A session check: the rehearsal log and the signed-off checklist attached to the issue.
+- A session check: the upgrade log and the signed-off checklist attached to the issue.
 
 Notes: labelled `human`.
+
+#### E18-S07 platform: Record the installed release and refuse an unsupported upgrade path
+
+Issue: not created yet.
+
+As a plant admin, I want the upgrade check to tell me which version to install first when I skip too far, so that I never start an upgrade that cannot work.
+
+Module: platform, ops. Blocked by: E18-S03 and v0.0.1 published. Design: none.
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+
+Acceptance criteria:
+
+- `northmes migrate` writes one `northmes_meta.release(version, image_digest, applied_at)` row at the end of a successful run; System health and `/health` show the installed release.
+- The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
+- `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing; when the release check passes it runs boot steps 1 to 10, lists pending files at step 5 and stops before the first file.
+- `migrate --check` compares the installation's catalog with the sorted schema dump of the installed release, which the release bundle carries, and exits 1 naming each object that differs.
+- A v0.0.1 installation, which has no `northmes_meta.release` row, is adopted as v0.0.1 only when its applied migration files equal the list in v0.0.1's release manifest; the first `migrate` writes a `northmes_meta.install` row before any file, so `docker compose up -d` resumes a first install that failed partway from the same image; `migrate --check` refuses a database with applied migrations and neither row, naming its newest applied file.
+- The upgrade guide in `apps/docs` lists the upgrade stops.
+
+Tests first:
+
+- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release"; "migrate --check refuses a database with migrations and no release row"; "a v0.0.1 database whose applied files match its manifest is adopted as v0.0.1"; "a database with one file more than v0.0.1's manifest is refused".
+- `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
+- `apps/backend/src/migrate/migrate-check-drift.int.test.ts`: "a column added by hand is named before any file runs".
+
+#### E18-S08 ops: Upgrade by editing .env and running docker compose
+
+Issue: not created yet.
+
+As a plant admin, I want to upgrade by changing one line in `.env` and running `docker compose pull`, `down` and `up -d`, as with any self-hosted Compose application, with the checks available before the window, so that an upgrade needs no script and a failed one can always go back.
+
+Module: ops, platform. Blocked by: E18-S03, E18-S07. Design: none.
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md).
+
+Acceptance criteria:
+
+- `.env` holds `NORTHMES_VERSION=<version>@sha256:<digest>`, which every NorthMES image in `compose.yaml` reads; the `db` image stays pinned in `compose.yaml`; `app` depends on `migrate` with `condition: service_completed_successfully`; each release's notes give the line, the verify command and the three commands.
+- `docker compose run --rm migrate northmes migrate --check` with the new line runs every check while the old version serves, prints the running version instead of refusing it, and changes nothing.
+- `migrate` runs the checks first (the release path, another version still running by its heartbeat, enforced only by a migrating run, in `northmes_meta.instance`, the Compose version, extensions, drift, plugins, boot steps 1 to 10) and prints each; on a failure it exits 1 naming the way on and writes nothing.
+- It then writes the `upgrade` row, sets the restore point `northmes-upgrade-<version>`, switches the WAL file and prints the point, migrates, writes the `release` row, removes the `upgrade` row, applies the customer file (E18-S19) and exits 0.
+- The previous line and `docker compose up -d` go back for an `image`-class release; an older image refuses a schema whose compatibility number does not fit and names the guide.
+- The init script and `northmes db bootstrap` grant `nm_owner` `EXECUTE` on `pg_create_restore_point` and `pg_switch_wal`; `northmes-db-extensions` in the `db` image updates extensions, and `migrate` refuses while one is older.
+
+Tests first:
+
+- `apps/backend/src/migrate/migrate-running.int.test.ts`: "migrate refuses while a backend of another version has a fresh heartbeat, naming docker compose down"; "an old heartbeat does not block".
+- `infra/test/compose-upgrade.int.test.ts` (nightly): "the new line with pull, down and up -d upgrades with every row kept"; "migrate --check beside a serving N-1 changes nothing"; "a file that fails halfway leaves the stack stopped, and the restore to the point brings back every row"; "the previous line rolls back an image-class release".
+
+#### E18-S09 ops: Test every supported upgrade path on each release
+
+Issue: not created yet.
+
+As a maintainer, I want CI to upgrade a seeded database of every supported release to the candidate, so that a broken upgrade path blocks the release instead of a plant.
+
+Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- The release workflow attaches a seeded snapshot (`pg_dump` of an installation built with that release's CLI and fixtures, the example plugins included) to each release after v0.0.1; v0.0.1's snapshot is built from the `v0.0.1` tag and kept as a CI cache artifact.
+- The upgrade matrix restores the snapshot of every release from the candidate's `minimumUpgradeFrom`, runs the candidate's `migrate`, boots it, runs the smoke check and data assertions and loads the example plugins; it runs on the release-please pull request and nightly.
+- The sorted `pg_dump --schema-only` of a fresh install equals that of every upgraded snapshot, and a difference is printed.
+- A snapshot older than `minimumUpgradeFrom` is refused by `migrate --check`.
+- `pnpm upgrade:seed`, `pnpm upgrade:test`, `pnpm upgrade:path` and `pnpm upgrade:stack` run the same tests locally, as [11 quality and testing](11-quality-and-testing.md#upgrade-tests) describes; pull requests that change a `migrations/` folder, the runner or a seed fixture run the upgrade test from the latest release.
+
+Tests first:
+
+- `infra/test/upgrade-matrix.int.test.ts`: "every supported snapshot upgrades and passes the smoke check"; "a fresh install and an upgraded snapshot have the same schema".
+
+#### E18-S10 ops: Name incompatible plugins in the upgrade check and warn early
+
+Issue: not created yet.
+
+As a plant admin, I want the upgrade check to name each plugin that does not support the new release, and System health to warn before the window, so that I can get new plugin versions in time.
+
+Module: ops, core. Blocked by: E18-S07 and the plugin compatibility check of proposed ADR 0075. Design: the Updates page (E18-S16).
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- `migrate` exits 1 before the restore point when an installed plugin has no version for the new release, and names each plugin's id, version and NorthMES range, and a newer compatible version when its index has one.
+- System health and the Updates page show "N plugins have no version for <release>" once the installation knows of a newer release.
+
+Tests first:
+
+- `plugin-check.test.ts`: "a plugin whose range excludes the new release is named with its range and the upgrade stops".
+
+#### E18-S11 ops: Publish a release candidate of each minor for plugin providers and partners
+
+Issue: not created yet.
+
+As a plugin provider, I want a release candidate of the next minor with its SDK and a list of what changed for plugins, so that my plugin's new version is ready when plants upgrade.
+
+Module: ops, ci. Blocked by: E18-S01, E18-S07. Design: none.
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md).
+
+Acceptance criteria:
+
+- release-please on a `release/X.Y` branch publishes `X.Y.0-rc.N` as a GitHub pre-release at least 14 days before the final, with signed images tagged `X.Y.0-rc.N` only, the offline bundle, the seeded snapshot and the SDK tarballs.
+- The candidate's release notes have a "for plugin providers" part from the API reports, the GraphQL schema diff, the event schema diff and the changed extension points.
+- System health shows "running a release candidate"; installing one means writing its version on purpose.
+- The upgrade matrix includes the last candidate to the final.
+
+Tests first:
+
+- `test/meta/release-workflow.test.ts`: "a candidate tag publishes a pre-release with no X.Y or latest image tag".
+
+#### E18-S12 platform: Compute the rollback class and keep contract steps a release later
+
+Issue: not created yet.
+
+As a plant admin, I want almost every release to roll back by starting the previous image, and the rollback class to be computed rather than written by hand, so that a failed upgrade rarely costs data.
+
+Module: platform, ci. Blocked by: E18-S03. Design: none.
+
+ADRs: [0081](../adr/0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
+
+Acceptance criteria:
+
+- CI computes the rollback class and the schema compatibility number from the migration markers since the previous release, the backfill declarations (`previousImageReads: true` with its passing test, else `restore`), the example plugins' migrations and the recorded third-party schema changes, writes them into the release manifest, and fails the release when a hand-written value disagrees.
+- The pull request template asks a pull request with a `contract` file for the release whose code stopped using what it removes.
+- The runner sets one deadline for the whole run from the release manifest's migration time budget, stores it in the `upgrade` row so a rerun keeps it, and sets `statement_timeout` before each file and statement to the time left; past it, `migrate` applies no file and exits 1.
+
+Tests first:
+
+- `rollback-class.test.ts`: "a release with one contract file computes restore"; "a manifest that says image for it fails the release".
+- `migrate-timeout.int.test.ts`: "a file over its statement_timeout fails and is not recorded".
+
+#### E18-S13 platform: Run long backfills as background migrations after start
+
+Issue: not created yet.
+
+As a plant admin, I want large data changes to run after NorthMES is back up, so that the upgrade window holds only the schema change.
+
+Module: platform. Blocked by: E18-S07. Design: none.
+
+ADRs: [0081](../adr/0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0071](../adr/0071-jobs-on-bullmq-with-valkey-and-the-postgres-outbox-as-the-record.md).
+
+Acceptance criteria:
+
+- A migration file registers a batched, idempotent background migration that runs after start in batches with a pause; `northmes_meta.background_migration` records its progress, and System health shows it.
+- A release that needs a background migration finished declares it, and `migrate --check` refuses until it has finished, naming it.
+
+Tests first:
+
+- `background-migration.int.test.ts`: "a backfill survives a restart halfway"; "migrate --check refuses a release whose required backfill is unfinished".
+
+#### E18-S14 ops: Make the upgrade resumable and audited
+
+Issue: not created yet.
+
+As a plant admin, I want an upgrade that finishes when I run it again after my connection drops, refuses an older image that cannot run on the schema, and is recorded in the audit trail, so that a failure is caught and recoverable.
+
+Module: ops. Blocked by: E18-S08. Design: none.
+
+ADRs: [0081](../adr/0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+
+Acceptance criteria:
+
+- Every step of `migrate` is safe to run twice and is recorded only after its side effect: the `upgrade` row, `restore_point_at`, each file, the customer file and the security event; `docker compose up -d` again finishes an upgrade that was cut off.
+- `migrate` refuses an older image unless the installed release is of the `image` class and the compatibility number fits, and names the restore guide.
+- `northmes migrate` writes one security event per upgrade and per image-class rollback with the versions, image digest, rollback class and outcome, using an idempotency key of the upgrade and the step.
+- The read-only smoke check runs in the nightly tests through a health account with no role, and the upgrade guide ends by checking that `/health` reports the new version.
+
+Tests first:
+
+- `infra/test/upgrade-crash.int.test.ts` (nightly): "migrate killed after each side effect ends working after up -d again or the previous image, with one restore point, one security event per step and no lost rows".
+- `infra/test/upgrade.int.test.ts`: "an older image is refused before the restore point when the installed release is of the restore class"; "an upgrade writes one security event when migrate runs twice".
+
+#### E18-S15 ops: Time migrations on a large snapshot nightly
+
+Issue: not created yet.
+
+As a maintainer, I want each release's migrations timed on a database five times the pilot's size, so that a slow migration shows up before a plant runs it.
+
+Module: ops, ci. Blocked by: E18-S09. Design: none.
+
+ADRs: [0081](../adr/0081-safer-upgrades-with-contract-steps-a-release-later-a-computed-rollback-class-and-a-resumable-audited-upgrade.md), [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md).
+
+Acceptance criteria:
+
+- The nightly matrix upgrades a large seeded snapshot and records the time; the release manifest carries the result as the migration time budget.
+- The nightly job fails when a release candidate's migrations exceed the previous budget by more than a set factor.
+
+Tests first:
+
+- `infra/test/upgrade-matrix.int.test.ts`: "the large snapshot upgrades within the release's time budget".
+
+#### E18-S16 core: Show releases and plugins on one Updates page
+
+Issue: not created yet.
+
+As a plant admin, I want one page that shows the installed release, the next release, whether I can reach it and which plugins are ready for it, beside the plugins themselves, so that I plan an upgrade and its plugin updates in one place.
+
+Module: core, web. Blocked by: E16-S03 and the Plugins page of proposed ADR 0075; the release path and plugin readiness also wait for E18-S07 and E18-S10. Design: Updates page (a design task under this story, not started; it lays out the NorthMES and Plugins tabs, their empty, loading and stopped states, and where the later upgrade request goes).
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
+
+Acceptance criteria:
+
+- In v0.0.1 the NorthMES tab shows the installed release, read from the running image. It starts nothing.
+- After E18-S07 and E18-S10 it also shows a newer release when the installation knows of one, the path to it with any upgrade stop, its rollback class, the `.env` line to paste and each installed plugin's readiness for it.
+- The Plugins tab is the Plugins page of proposed ADR 0075, with the same actions and permission checks.
+- System health shows a one-line summary that links to the page.
+
+Tests first:
+
+- `modules/core/test/updates-page.int.test.ts`: "an admin without the permission is refused the release query"; "a plugin with no version for the next release is listed as not ready" (with E18-S10).
+
+
+#### E18-S17 core: Show maintenance and other notices to users
+
+Issue: not created yet.
+
+As a plant admin, I want to tell users about a planned maintenance window or other news in a banner at the top of every page, so that nobody is surprised when NorthMES stops for an upgrade.
+
+Module: core, web, ops. Blocked by: E04 (the shell's banner strip), E18-S16, E18-S19. Design: the notice form and list on the Updates page and in company settings (part of the Updates page design task).
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md), [0051](../adr/0051-regulated-readiness-no-regret-rules.md).
+
+Acceptance criteria:
+
+- The customer file's `notices` list holds installation-wide notices with severity, start and end time, and `migrate` applies it on `docker compose up -d` as audited commands (E18-S19).
+- A company admin with `core.notice:manage` adds and removes notices for their own company in company settings; each change is audited.
+- The shell shows each active notice in the banner strip as plain text, to every user it reaches, and drops it at its end time without a reload.
+
+Tests first:
+
+- `modules/core/test/notice.int.test.ts`: "an admin without core.notice:manage is refused"; "a company notice is not visible to another company's users"; "a notice past its end time is not returned".
+
+#### E18-S18 ops: Publish the web build and upgrade a split installation
+
+Issue: not created yet.
+
+As an operator who hosts the backend, the web and the database on separate services, I want a published web build and an upgrade guide for my setup, so that I can upgrade without the appliance's Compose file and without users losing work while the web catches up.
+
+Module: ops, web. Blocked by: E18-S01, E18-S07. Design: the "web host not updated" state of the reload dialog (part of the Updates page design task).
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0070](../adr/0070-one-nestjs-backend-with-one-graphql-schema-and-one-static-web-app.md), [0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), [0005](../adr/0005-postgres-18-official-image-with-pgbackrest-timescaledb-deferred.md).
+
+Acceptance criteria:
+
+- The release workflow publishes `northmes-web-<version>.tar.gz` with its digest and attestation beside the bundle and the backend image.
+- The upgrade guide in `apps/docs` covers a split installation: a provider snapshot after the backend stops, `northmes migrate` from the new image on a clone first for a `restore`-class release, the backend first and then the web build of the same version, and going back by the provider's point-in-time restore to the time `migrate` printed.
+- The upgrade guide for a platform gives the stop of every backend replica, a migrate job recipe for Kubernetes, Azure Container Apps and ECS as text (no example manifests or Helm chart in release 1), the direct database URL for the migrate job, plugins from a site image, and the managed Postgres steps (restore to a new host name, extensions on the provider's allow-list).
+- When a reload still serves the old web build, the shell stops reloading and says that the web host has not been updated, naming both versions; queries keep working and mutations stay refused.
+
+Tests first:
+
+- `e2e/web-lag.spec.ts`: "a web on the old build says the web host is not updated and sends no mutation".
+- `infra/test/replicas.int.test.ts`: "migrate runs as its own container, then two api replicas and a worker start; a replica started before migrate stays not ready".
+
+#### E18-S19 core: Set up an installation from the customer file on every start
+
+Issue: not created yet.
+
+As a plant admin, I want companies, plants, first admins, notices and installation settings in one file that `docker compose up -d` applies, so that I set up and change an installation without CLI commands.
+
+Module: core, ops. Blocked by: E18-S08 and the CLI commands of proposed ADR 0066. Design: none.
+
+ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0072](../adr/0072-one-installation-per-customer-and-hosting-partners-run-many-with-a-customer-folder-northmes-apply-and-the-health-endpoints.md), [0066](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md).
+
+Acceptance criteria:
+
+- `migrate` reads the customer file of ADR 0072, validated by core's Zod contract, on every run after the migrations, and applies what differs through the same commands as the ADR 0066 CLI, as `nm_app` and `nm_auth` with a `cli` audit context.
+- It never deletes: a company, plant, admin or notice missing from the file stays, and the run prints it.
+- A file with an unknown key, a password or any other secret fails validation before anything is applied, and `migrate` exits 1 naming the key.
+- The install guide sets up the first company, plant and admin from the file, with no CLI commands.
+
+Tests first:
+
+- `modules/core/contracts/test/customer-file.test.ts`: "a customer file with a password key or any unknown key fails validation".
+- `apps/backend/src/migrate/customer-file.int.test.ts`: "a second run with the same file changes nothing"; "a plant removed from the file stays".
 
 ### E19 docs: Publish the docs site at docs.northmes.dev
 
@@ -5414,7 +5694,7 @@ The path runs through dates outside the developer's control as much as through b
 2. The board: SP3 on 2026-10-26 to 2026-11-06 (E01-S04) with its verdict on 2026-11-06, a second-fail deadline on 2026-11-20, then design approval D3, then about 35 raw days of board work (E08), then the board accessibility gate (E20-S02) and the first NVDA pass (E20-S04). The second NVDA pass (E20-S05) comes before the pilot install.
 3. The skeleton: E00 ready by 2026-10-21, E02 green by 2026-11-13, required in `ci / gate` at M1 (2026-11-20), the Rsbuild exit on 2026-11-27 if still red. E04, E05 and E06 all start from it.
 4. Pyramid: write method names by 2026-11-13, a test endpoint or recorded pairs by 2026-12-18, E09 done and live write-back verified by 2027-01-22 as the target, and the product owner's fallback decision on 2027-02-26 if Pyramid has no write path (E10-S04).
-5. Operations: E16, then E17 with the timed restore on the pilot-like VM by 2027-02-26 (M3), then E18 with the upgrade rehearsal before the pilot install.
+5. Operations: E16, then E17 with the timed restore on the pilot-like VM by 2027-02-26 (M3), then E18 with the upgrade trial before the pilot install.
 6. The date: velocity checkpoints at M2, M3 and M4 forecast the install; Krister fixes the install and pilot test dates at M4, at least 4 weeks apart and outside the DST weeks.
 
 ```mermaid
@@ -5429,7 +5709,7 @@ flowchart LR
   E08core --> E08wire --> E20["E20 NVDA passes"]
   E08wire --> E06S14["E06-S14 onboarding wizard"] --> Install
   E09 --> E10["E10 write-back<br/>verified 2027-01-22 or fallback 2027-02-26"]
-  E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade rehearsal"]
+  E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade trial"]
   E20 --> Install["Pilot install<br/>set at M4"]
   E10 --> Install
   E18 --> Install
